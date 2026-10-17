@@ -22,18 +22,34 @@ public:
     }
     ~CallerLocale() { std::locale::global(previous); std::setlocale(LC_NUMERIC, numeric.c_str()); }
 };
-static Json read(const char* path) { std::ifstream file(path); return Json::parse(file); }
-static RequestItem item(const Json& value) { return RequestItem().set_original(RequestOriginalJson().set_value(value)); }
-static RequestInput evidence(const std::string& verb,const Json& original) {
+static Data read(const char* path) { std::ifstream file(path); return Data::read(file); }
+static RequestItem item(const Data& value) { return RequestItem().set_original(RequestOriginalJson().set_value(value)); }
+static RequestInput evidence(const std::string& verb,const Data& original) {
     if(verb=="filter" || verb=="rank") return RequestInputRecords().set_items({item(original)});
     if(verb=="find") { std::vector<RequestItem> items; for(const auto& value:original) items.push_back(item(value)); return RequestInputUnits().set_items(items); }
     if(verb=="relate") { std::vector<RequestItem> items; for(const auto& value:original) items.push_back(item(value)); return RequestInputEntities().set_items(items); }
     return RequestInputText().set_text(original.get<std::string>());
 }
 static Call named(Client& client,const std::string& verb,const RequestQuestion& question,const RequestInput& input) {
-#define NAMED(name) if(verb==#name) return client.name(question,input);
-    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
-    NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
+    const auto& data=::tt::results::detail::document(input);
+#define SHAPED(name,type) return client.name(question,::tt::results::detail::Loader::input<type>(data));
+#define NAMED(name) if(verb==#name) { \
+    const auto kind=data.at("kind").get<std::string>(); \
+    if(kind=="text") { SHAPED(name,RequestInputText) } \
+    if(kind=="json") { SHAPED(name,RequestInputJson) } \
+    if(kind=="records") { SHAPED(name,RequestInputRecords) } \
+    if(kind=="source") { SHAPED(name,RequestInputSource) } \
+    if(kind=="units") { SHAPED(name,RequestInputUnits) } \
+    if(kind=="entities") { SHAPED(name,RequestInputEntities) } \
+    if(kind=="feed") { SHAPED(name,RequestInputFeed) } \
+    throw std::invalid_argument("unknown fixture input"); }
+    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score)
+    NAMED(annotate) NAMED(recognize)
+    if(verb=="filter") return client.filter(question,input);
+    if(verb=="rank") return client.rank(question,input);
+    if(verb=="find") return client.find(question,input);
+    if(verb=="relate") return client.relate(question,input);
+#undef SHAPED
 #undef NAMED
     throw std::invalid_argument("unknown fixture function");
 }
@@ -52,20 +68,47 @@ int main(int argc,char** argv) {
             return answered ? 0:3;
         }
         if(argc!=4) return 2;
+        if(std::string(argv[1]).rfind("plan",0)==0) {
+            Client client;
+            const auto verb=std::string(argv[1])=="plan" ? "decide" : std::string(argv[1]).substr(5);
+            auto question=std::string(argv[1])=="plan" ? RequestQuestion(RequestQuestionText().set_text("asks for a refund"))
+                : RequestQuestion(RequestQuestionFile().set_path(argv[2]));
+            auto input=std::string(argv[1])=="plan" ? RequestInput(RequestInputText().set_text("Refund me please."))
+                : evidence(verb,read(argv[3]));
+            auto call=RequestCall().set_function(RequestFunction(verb)).set_question(question).set_input(input);
+            const bool supported=verb=="decide" || verb=="choose" || verb=="tag" || verb=="score" || verb=="filter" || verb=="rank";
+            try {
+                auto plan=client.plan(call); client.close();
+                if(!supported) throw std::logic_error("unsupported plan was accepted");
+                const auto& band=plan.estimated_input_tokens().value.value();
+                if(!plan.records().value || !plan.requests().value || !plan.estimated_bytes().value ||
+                   !plan.largest_request_bytes().value || !plan.largest_request_estimated_input_tokens().value ||
+                   !band.lower().value || !band.upper().value || !plan.token_estimate_method().value ||
+                   !plan.upper_bound().value || plan.first_body_utf8().state==results::PresenceState::absent)
+                    throw std::logic_error("plan lost a required typed field");
+                if(*plan.records().value!=1 || *plan.requests().value<1 || *band.lower().value>*band.upper().value ||
+                   *plan.largest_request_bytes().value>*plan.estimated_bytes().value || plan.token_estimate_method().value->empty())
+                    throw std::logic_error("plan estimates are inconsistent");
+                std::cout<<::tt::detail::serialize(::tt::results::detail::document(plan))<<'\n'; return 0;
+            } catch(const ::tt::Failure& error) {
+                if(supported || error.kind!=NativeFailureKind::usage || error.retryable) throw;
+                std::cout<<"plan-refusal-pass"<<'\n'; return 0;
+            }
+        }
         if(std::string(argv[1])=="closed") {
-            Client client(Json::Object{{"cache",false}});
-            auto question=RequestQuestionDefinition().set_value(RequestDefinition::from_document(Json{{"decide","Is it?"},{"item_schema",Json{{"type","string"}}}}));
+            Client client(EngineSettings().set_cache(CacheDocument(DisabledCache(false))));
+            auto question=RequestQuestionDefinition().set_value(::tt::results::detail::Loader::input<RequestDefinition>(Data{{"decide","Is it?"},{"item_schema",Data{{"type","string"}}}}));
             auto call=client.decide(question,RequestInputFeed().set_name("closed"));
-            auto invalid=RequestSessionDescriptor().set_item(item(Json(42)));
+            auto invalid=RequestSessionDescriptor().set_item(item(Data(42)));
             if(!call.try_push(invalid)) throw std::logic_error("fresh intake did not accept descriptor");
             const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(2);
             for(;;) {
                 try { call.poll(); }
-                catch(const SessionFailure&) { break; }
+                catch(const ::tt::Failure&) { break; }
                 if(std::chrono::steady_clock::now()>deadline) throw std::logic_error("invalid descriptor did not stop native intake");
                 std::this_thread::yield();
             }
-            auto next=RequestSessionDescriptor().set_item(item(Json("unreachable")));
+            auto next=RequestSessionDescriptor().set_item(item(Data("unreachable")));
             if(call.try_push(next) || !call.input_closed() || call.try_push(next)) throw std::logic_error("native closure did not stop repeat pushes");
             auto moved=std::move(call);
             if(!moved.input_closed() || !call.input_closed() || moved.try_push(next)) throw std::logic_error("moved closure reopened intake");
@@ -73,8 +116,8 @@ int main(int argc,char** argv) {
             std::cout<<"closed-push-pass\n"; return 0;
         }
         if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
-            Client client(Json::Object{{"cache",false}}); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
-            call.finish(); auto packets=call.collect(); auto earlier=packets.back().document().dump();
+            Client client(EngineSettings().set_cache(CacheDocument(DisabledCache(false)))); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
+            call.finish(); auto packets=call.collect(); auto earlier=::tt::detail::serialize(::tt::results::detail::document(packets.back()));
             bool answered=false;
             for(const auto& packet:packets) if(auto row=packet.as_SessionPacketDecideRow()) {
                 if(!row->value().value->value().value->value().get<bool>()) return 30;
@@ -91,7 +134,7 @@ int main(int argc,char** argv) {
             if(finished.state!=expected || finished.advice.has_value()!=failed) return 33;
             if(failed && *finished.advice!="check the usage folder permissions and free space") return 34;
             if(client.usage_persistence().state!=expected || client.finish_usage_status().state!=expected) return 35;
-            if(packets.back().document().dump()!=earlier) return 36;
+            if(::tt::detail::serialize(::tt::results::detail::document(packets.back()))!=earlier) return 36;
             client.close();
             try { client.usage_persistence(); return 37; } catch(const std::logic_error&) {}
             try { client.finish_usage_status(); return 38; } catch(const std::logic_error&) {}
@@ -108,22 +151,29 @@ int main(int argc,char** argv) {
             unsigned sum=0; for(unsigned i=0;i<100;++i) sum+=i;
             if(sum!=4950) return 9;
             std::cout<<"host-progress\n"<<std::flush;
-            client.close(); call.cancel();
+            std::exception_ptr unexpected;
+            std::thread reader([&] {
+                try { call.next(); unexpected=std::make_exception_ptr(std::logic_error("cancelled read returned a packet")); }
+                catch(const ::tt::Failure& error) { if(error.kind!=NativeFailureKind::cancelled) unexpected=std::current_exception(); }
+                catch(...) { unexpected=std::current_exception(); }
+            });
+            client.close(); call.cancel(); reader.join();
+            if(unexpected) std::rethrow_exception(unexpected);
             } // Destructor releases the session before the provider is released.
             std::cout<<"cleaned\n"<<std::flush; return 0;
         }
         if(std::string(argv[1])=="values") {
             using namespace tt::results;
-            Facts absent(Json::Object{});
-            Facts null(Json{{"model",nullptr},{"held_model_mismatch",false},{"input_tokens",uint64_t(-1)},{"future",Json{{"n",uint64_t(-1)}}}});
+            auto absent=::tt::results::detail::Loader::input<Facts>(Data::Object{});
+            auto null=::tt::results::detail::Loader::input<Facts>(Data{{"model",nullptr},{"held_model_mismatch",false},{"input_tokens",uint64_t(-1)},{"future",Data{{"n",uint64_t(-1)}}}});
             if(absent.model().state!=PresenceState::absent || null.model().state!=PresenceState::null) return 10;
             if(null.held_model_mismatch().state!=PresenceState::value || *null.held_model_mismatch().value) return 11;
-            if(*null.input_tokens().value!=UINT64_MAX || null.document().at("future").at("n").dump()!=std::to_string(UINT64_MAX)) return 12;
-            if(Json::parse(null.document().dump()).at("input_tokens").dump()!=std::to_string(UINT64_MAX)) return 13;
-            if(Json(5)!=Json::parse("5") || Json(UINT64_MAX)==Json(static_cast<double>(UINT64_MAX))) return 21;
-            if(Json::parse("-9223372036854775808").dump()!="-9223372036854775808") return 22;
-            SessionPacket escaped(Json::parse(R"({"kind":"termin\u0061l","facts":{},"future":false})"));
-            if(!escaped.as_SessionPacketTerminal() || escaped.document().at("future").get<bool>()) return 14;
+            if(*null.input_tokens().value!=UINT64_MAX || ::tt::detail::serialize(::tt::results::detail::document(null).at("future").at("n"))!=std::to_string(UINT64_MAX)) return 12;
+            if(::tt::detail::serialize(::tt::detail::parse_original(::tt::detail::serialize(::tt::results::detail::document(null))).at("input_tokens"))!=std::to_string(UINT64_MAX)) return 13;
+            if(Data(5)!=::tt::detail::parse_original("5") || Data(UINT64_MAX)==Data(static_cast<double>(UINT64_MAX))) return 21;
+            if(::tt::detail::serialize(::tt::detail::parse_original("-9223372036854775808"))!="-9223372036854775808") return 22;
+            auto escaped=::tt::results::detail::Loader::input<SessionPacket>(::tt::detail::parse_original(R"({"kind":"termin\u0061l","facts":{},"future":false})"));
+            if(!escaped.as_SessionPacketTerminal() || ::tt::results::detail::document(escaped).at("future").get<bool>()) return 14;
             std::cout<<"values-pass\n"; return 0;
         }
         std::string verb=argv[1];
@@ -131,35 +181,74 @@ int main(int argc,char** argv) {
         const std::string originalNumeric=std::setlocale(LC_NUMERIC,nullptr);
         std::optional<CallerLocale> locale;
         if(verb=="locale") locale.emplace();
-        Client client;
+        auto settings=EngineSettings();
+        if(auto record=std::getenv("THINKTHEN_CPP_RECORD")) settings.set_record(record);
+        Client client(settings);
         if(verb=="locale") {
-            Json original{{"nested",Json::Array{Json{{"number",0.5}},1.25}}};
+            Data original{{"nested",Data::Array{Data{{"number",0.5}},1.25}}};
             auto input=RequestInputRecords().set_items({item(original)});
             auto call=client.decide(RequestQuestionText().set_text("Is it?"),input); call.finish();
             auto packets=call.collect(); client.close(); call.close();
             bool answered=false;
             for(const auto& packet:packets) {
                 if(auto row=packet.as_SessionPacketDecideRow()) {
-                    if(row->value().value->document().at("input")!=original) return 40;
+                    if(::tt::results::detail::document(*row->value().value).at("input")!=original) return 40;
                     if(!row->value().value->value().value->value().get<bool>()) return 41;
                     auto answer=row->value().value->answer().value->as_AnswerYesNo();
                     if(!answer || *answer->probability().value!=0.9) return 45;
                     answered=true;
                 }
-                if(Json::parse(packet.document().dump())!=packet.document()) return 42;
-                std::cout<<packet.document().dump()<<'\n';
+                if(::tt::detail::parse_original(::tt::detail::serialize(::tt::results::detail::document(packet)))!=::tt::results::detail::document(packet)) return 42;
+                std::cout<<::tt::detail::serialize(::tt::results::detail::document(packet))<<'\n';
             }
             locale.reset();
             if(std::locale()!=originalLocale || originalNumeric!=std::setlocale(LC_NUMERIC,nullptr)) return 44;
             return answered && packets.back().as_SessionPacketTerminal() ? 0:43;
         }
+        if(verb=="result-rank" || verb=="result-find" || verb=="result-recognize") {
+            auto original=read(argv[3]); auto question=RequestQuestionFile().set_path(argv[2]);
+            auto emit=[&](auto call) {
+                client.close(); auto result=call.result(); call.close();
+                std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(result.value)},{"probability",::tt::results::detail::encode(result.probability)},{"results",::tt::results::detail::encode(result.results)},{"facts",::tt::results::detail::encode(result.facts)}})<<'\n';
+            };
+            if(verb=="result-recognize") emit(client.recognize(question,RequestInputText().set_text(original.get<std::string>())));
+            else {
+                std::vector<RequestItem> items; for(const auto& value:original) items.push_back(item(value));
+                if(verb=="result-rank") emit(client.rank(question,RequestInputRecords().set_items(items)));
+                else emit(client.find(question,RequestInputUnits().set_items(items)));
+            }
+            return 0;
+        }
+        if(verb=="result-decide") {
+            auto original=read(argv[3]);
+            std::vector<RequestItem> items;
+            if(original.is_array()) for(const auto& value:original) items.push_back(item(value));
+            auto emit=[&](auto call) {
+                client.close(); auto result=call.result(); call.close(); auto moved=std::move(result);
+                std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(moved.value)},{"probability",::tt::results::detail::encode(moved.probability)},{"results",::tt::results::detail::encode(moved.results)},{"facts",::tt::results::detail::encode(moved.facts)}})<<'\n';
+            };
+            auto question=RequestQuestionFile().set_path(argv[2]);
+            if(original.is_array()) emit(client.decide(question,RequestInputRecords().set_items(items)));
+            else emit(client.decide(question,RequestInputText().set_text(original.get<std::string>())));
+            return 0;
+        }
+        if(verb=="cardinality-zero" || verb=="cardinality-many") {
+            auto question=RequestQuestionText().set_text("Is it?");
+            auto call=verb=="cardinality-zero" ? client.decide(question,RequestInputFeed().set_name("empty")) : client.decide(question,RequestInputRecords().set_items({item(Data("first")),item(Data("second"))}));
+            auto result=call.result();
+            auto values=result.value;
+            auto probabilities=result.probability;
+            const size_t count=verb=="cardinality-zero" ? 0:2;
+            if(values.size()!=count || probabilities.size()!=count || result.results.size()!=count) return 48;
+            std::cout<<"cardinality-pass judgments="<<count<<'\n'; return 0;
+        }
         if(verb=="failure") {
             auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("backend-failure")); call.finish();
-            try { call.collect(); return 15; }
-            catch(const SessionFailure& error) {
-                if(error.failure.error().value->kind().value->value()!="backend" || error.failure.error().value->retryable().value.value()) return 16;
-                if(error.failure.facts().state!=results::PresenceState::value || *error.failure.facts().value->requests_sent().value!=1) return 17;
-                if(error.terminal.facts().state!=results::PresenceState::value) return 20;
+            try { call.result(); return 15; }
+            catch(const ::tt::Failure& error) {
+                if(!error.failure || error.failure->error().value->kind().value->value()!="backend" || error.failure->error().value->retryable().value.value()) return 16;
+                if(error.failure->facts().state!=results::PresenceState::value || *error.failure->facts().value->requests_sent().value!=1) return 17;
+                if(!error.terminal || error.terminal->facts().state!=results::PresenceState::value) return 20;
                 std::cout<<"failure-pass\n"; return 0;
             }
         }
@@ -168,7 +257,7 @@ int main(int argc,char** argv) {
                 if(verb=="invalid") client.decide(RequestQuestionText(),RequestInputText().set_text("unreachable"));
                 else client.tag(RequestQuestionFile().set_path(argv[2]),RequestInputText().set_text("unreachable").set_images({RequestImageBytes().set_media(ImageMedia("image/png")).set_bytes("aGVsbG8=")}));
                 return 18;
-            } catch(const NativeFailure& error) { if(error.kind!=NativeFailureKind::usage) return 19; std::cout<<"admission-pass\n"; return 0; }
+            } catch(const ::tt::Failure& error) { if(error.kind!=NativeFailureKind::usage) return 19; std::cout<<"admission-pass\n"; return 0; }
         }
         auto question=RequestQuestionFile().set_path(argv[2]);
         auto input=verb=="files" ? RequestInput(RequestInputSource().set_source(RequestSource().set_paths({argv[3]}).set_reading(RequestReader().set_unit(SourceUnit("line"))))) : evidence(verb,read(argv[3]));
@@ -192,14 +281,25 @@ int main(int argc,char** argv) {
                     auto annotation=row->value();
                     if(annotation.state!=results::PresenceState::value || annotation.value->value().state!=results::PresenceState::value) return 23;
                     auto fields=annotation.value->value().value->value();
-                    if(fields.size()!=1 || fields[0].first!="refund" || !fields[0].second.document().is_null()) return 24;
+                    if(fields.size()!=1 || fields[0].first!="refund" || !::tt::results::detail::document(fields[0].second).is_null()) return 24;
                     if(!std::visit([](const auto& value){ return std::is_same_v<std::decay_t<decltype(value)>,std::nullptr_t>; },fields[0].second.value())) return 25;
                 }
-                if(Json::parse(packet.document().dump())!=packet.document()) return 26;
+                if(::tt::detail::parse_original(::tt::detail::serialize(::tt::results::detail::document(packet)))!=::tt::results::detail::document(packet)) return 26;
             }
-            std::cout<<packet.document().dump()<<'\n';
+            // The shipped nested range form must retain its decoded container.
+            if(auto ranked=packet.as_SessionPacketRankAggregate()) {
+                for(const auto& index:*ranked->value().value) {
+                    if(*index.value().value==0) return 46;
+                }
+            }
+            if(auto found=packet.as_SessionPacketRecognizeAggregate()) {
+                for(const auto& entity:*found->value().value) {
+                    if(::tt::results::detail::document(entity).is_null()) return 47;
+                }
+            }
+            std::cout<<::tt::detail::serialize(::tt::results::detail::document(packet))<<'\n';
         }
         return terminal && answer ? 0 : 5;
-    } catch(const SessionFailure& failure) { std::cerr<<failure.failure.document().dump()<<'\n'; return 6; }
+    } catch(const ::tt::Failure& failure) { if(failure.failure) std::cerr<<::tt::detail::serialize(::tt::results::detail::document(*failure.failure))<<'\n'; else std::cerr<<failure.what()<<'\n'; return 6; }
     catch(const std::exception& failure) { std::cerr<<failure.what()<<'\n'; return 7; }
 }

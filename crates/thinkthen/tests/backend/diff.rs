@@ -1,4 +1,4 @@
-//! `thinkthen diff` matches the prototype's golden files and its hand-checked values.
+//! `thinkthen runs diff` matches the prototype's golden files and its hand-checked values.
 #![cfg(feature = "cli")]
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 

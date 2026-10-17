@@ -27,12 +27,13 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
         del session, engine
         gc.collect()
         assert pickle.loads(pickle.dumps(row)) == row
-        assert dict(row) == row.to_dict()
+        assert not hasattr(row, "to_dict")
+        assert dict(row) == row._to_dict()
         assert repr(row).startswith('<NativeResult ')
         try: row.value = None
         except AttributeError: pass
         else: raise AssertionError('result is mutable')
-        document = row.to_dict()
+        document = row._to_dict()
         for value in (None, False, 0, [], {}, {'nested': [False, None, 18446744073709551615]}):
             document['value']['value'] = value
             document['value']['error'] = None
@@ -50,12 +51,12 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
             except KeyError: pass
             else: raise AssertionError('absent index became null')
             assert 'value' in typed.value
-            assert typed.to_dict() == document
+            assert typed._to_dict() == document
             assert pickle.loads(pickle.dumps(typed)) == typed
             assert 'do-not-print' not in str(typed)
-            copied = typed.to_dict()
+            copied = typed._to_dict()
             copied['extension']['json'].append(True)
-            assert typed.to_dict() == document
+            assert typed._to_dict() == document
         failed = native._restore_native_result('completeAnnotationValue', json.dumps({
             'kind': 'failed', 'value': {'kind': 'backend', 'cause': 'missing_answer', 'value': False},
         }))
@@ -69,7 +70,7 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
             'kind': 'decision', 'value': False, 'error': None, 'failure': {'value': True},
         }))
         assert bool(decision) is False
-        assert decision.to_dict()['error'] is None
+        assert decision._to_dict()['error'] is None
         assert pickle.loads(pickle.dumps(decision)) == decision
         print('owned')
     ''', child_env(backend, tmp_path))

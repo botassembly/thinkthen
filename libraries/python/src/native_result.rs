@@ -55,17 +55,17 @@ impl NativeResult {
             .unwrap_or_default()
     }
 
-    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+    fn _to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         plain(py, &self.value)
     }
 
     fn __eq__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
         let other = if other.is_instance_of::<NativeResult>() {
-            other.call_method0("to_dict")?
+            other.call_method0("_to_dict")?
         } else {
             other.clone()
         };
-        self.to_dict(py)?.bind(py).eq(other)
+        self._to_dict(py)?.bind(py).eq(other)
     }
 
     fn __bool__(&self, py: Python<'_>) -> PyResult<bool> {

@@ -45,6 +45,7 @@ fn lexical_float(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the pre-Clap parser must recognize only complete negative threshold numbers.
     use super::arguments;
     use std::ffi::OsString;
 

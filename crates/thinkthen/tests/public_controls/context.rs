@@ -9,16 +9,10 @@ fn ineligible_calls_refuse_shared_context_before_a_send() {
     let engine = engine(listener.base());
     let one = question();
     let options = CallOptions::new().context("shared evidence");
-    let denied = [
-        (
-            "decide",
-            engine.decide_with(&one, "Ada", options).map(|_| ()),
-        ),
-        (
-            "details",
-            engine.details_with(&one, "Ada", options).map(|_| ()),
-        ),
-    ];
+    let denied = [(
+        "decide",
+        engine.decide_with(&one, "Ada", options).map(|_| ()),
+    )];
     for (name, result) in denied {
         let error = result.expect_err(name);
         assert_eq!(error.kind(), ErrorKind::Usage, "{name}");
@@ -49,7 +43,7 @@ fn find_recognize_and_relate_keep_shared_context_separate_from_evidence() {
     let found = engine
         .find_with(&find, ["Ada", "Acme"], options)
         .expect("find");
-    assert_eq!(found.value().selected(), Some(&"Ada"));
+    assert_eq!(found.value().as_ref(), Some(&"Ada"));
     assert_eq!(found.facts().requests_sent(), 1);
     let request: serde_json::Value =
         serde_json::from_slice(&listener.requests()[0].body).expect("request");

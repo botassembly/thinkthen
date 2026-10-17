@@ -113,7 +113,14 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     let home = Home::new("ollama-check");
     let ollama = ollama_mimic();
     let run = home.run(
-        &["check", "--backend", "ollama", "--url", ollama.base()],
+        &[
+            "backends",
+            "check",
+            "--backend",
+            "ollama",
+            "--url",
+            ollama.base(),
+        ],
         &[("OLLAMA_API_KEY", "")],
     );
     let (stdout, stderr) = said(&run);
@@ -132,7 +139,7 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     );
 
     // The unnamed path sends the authored bytes, which Ollama refuses.
-    let unnamed = home.run(&["check", "--url", ollama.base()], &[]);
+    let unnamed = home.run(&["backends", "check", "--url", ollama.base()], &[]);
     let (stdout, _) = said(&unnamed);
     assert_eq!(unnamed.status.code(), Some(4));
     assert!(stdout.ends_with("\ncritical 3, warning 0\n"), "{stdout}");
@@ -141,7 +148,14 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
     // Liquid's own mimic accepts the authored bytes: no null `noul` side travels.
     let liquid = liquid_mimic();
     let run = home.run(
-        &["check", "--backend", "liquid", "--url", liquid.base()],
+        &[
+            "backends",
+            "check",
+            "--backend",
+            "liquid",
+            "--url",
+            liquid.base(),
+        ],
         &[],
     );
     let (stdout, stderr) = said(&run);
@@ -154,7 +168,14 @@ fn check_warns_for_the_ollama_workaround_and_each_other_backend_sends_as_authore
 
     let typesafe = typesafe_mimic();
     let run = home.run(
-        &["check", "--backend", "typesafe", "--url", typesafe.base()],
+        &[
+            "backends",
+            "check",
+            "--backend",
+            "typesafe",
+            "--url",
+            typesafe.base(),
+        ],
         &[],
     );
     let (stdout, _) = said(&run);
@@ -188,6 +209,7 @@ fn a_plan_says_once_when_detail_is_dropped_and_pins_each_form() {
     let authored = fixture("requests.jsonl");
     let run = home.run(
         &[
+            "backends",
             "check",
             "--backend",
             "ollama",
@@ -202,7 +224,7 @@ fn a_plan_says_once_when_detail_is_dropped_and_pins_each_form() {
     assert_eq!(stderr, format!("thinkthen: {DROPPED}\n"));
     assert_eq!(planned_bodies(&stdout), text);
     // The default Ollama base plans the same bodies.
-    let run = home.run(&["check", "--backend", "ollama", "--plan"], &[]);
+    let run = home.run(&["backends", "check", "--backend", "ollama", "--plan"], &[]);
     let (stdout, stderr) = said(&run);
     assert_eq!(run.status.code(), Some(0));
     assert_eq!(stderr, format!("thinkthen: {DROPPED}\n"));
@@ -215,6 +237,7 @@ fn a_plan_says_once_when_detail_is_dropped_and_pins_each_form() {
     for (name, model) in [("typesafe", "jev-1.13.0"), ("liquid", "d1:free")] {
         let run = home.run(
             &[
+                "backends",
                 "check",
                 "--backend",
                 name,

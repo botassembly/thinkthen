@@ -167,6 +167,54 @@ fn a_placement_sends_the_levels_as_an_ordered_list_and_prints_a_number() {
 }
 
 #[test]
+fn a_one_to_five_question_prints_the_zero_based_probability_weighted_position() {
+    let response = serde_json::json!({
+        "model":"local-1",
+        "answers":{"q1":{
+            "type":"score", "score":4.0,
+            "legend":{"0":"1","1":"2","2":"3","3":"4","4":"5"},
+            "probabilities":{"0":0.05,"1":0.15,"2":0.2,"3":0.25,"4":0.35}
+        }}
+    });
+    let listener =
+        Listener::serving(vec![Canned::ok(&response.to_string())]).expect("a loopback listener");
+    let output = spawn(
+        &[
+            "score",
+            "Rate this from 1 to 5.",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        TICKET.as_bytes(),
+    )
+    .expect("the compiled binary runs");
+
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let request = requests.first().expect("one request reached the listener");
+    let body: serde_json::Value = serde_json::from_slice(&request.body).expect("a JSON request");
+    assert_eq!(
+        body["questions"]["q1"],
+        serde_json::json!({
+            "type":"score",
+            "instructions":"The text is \"The renewal charge bounced last night.\". Rate this from 1 to 5.",
+            "criteria":["1","2","3","4","5"]
+        })
+    );
+    // 0*0.05 + 1*0.15 + 2*0.2 + 3*0.25 + 4*0.35 = 2.7.
+    assert_eq!(printed(&output), "2.7\n");
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
 fn the_raw_view_drops_the_quotation_marks_and_prints_nothing_when_unresolved() {
     let (_listener, output) = choose(PICKED, &["--raw"]).expect("a loopback exchange");
     assert_eq!(printed(&output), "billing\n");
@@ -211,7 +259,7 @@ fn a_detailed_pick_keeps_every_option_in_order_and_the_backends_confidence() {
 
     let printed = printed(&output);
     let row: serde_json::Value = serde_json::from_str(&printed).unwrap();
-    let preserved = crate::native_results::compatibility::judgment(row);
+    let preserved = crate::native_results::comparison::judgment(row);
     assert_eq!(preserved["value"], "billing");
     assert_eq!(
         preserved["question"],

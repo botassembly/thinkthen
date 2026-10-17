@@ -6,7 +6,9 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance'))
 from c_parity import ERRORS
 import json
 from jsonschema import Draft202012Validator
-NATIVE=Draft202012Validator(json.loads((Path(__file__).resolve().parents[4]/'crates/thinkthen/src/public/results/complete.schema.json').read_text()))
+sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'sdlc/generators/results/templates'))
+from postgresql import sql_schema
+NATIVE=Draft202012Validator(sql_schema(json.loads((Path(__file__).resolve().parents[4]/'crates/thinkthen/src/public/results/complete.schema.json').read_text())))
 
 def projected(row,verb,index,events):
     meta=row['meta']
@@ -55,6 +57,10 @@ def project(doc,verb):
         kind=next((k for k in ERRORS if 'thinkthen '+k+':' in message),None)
         assert kind is not None,message
         return {'code':ERRORS[kind],'message':message}
+    if 'empty_sql_rows' in doc:
+        assert doc == {'empty_sql_rows': [], 'details_rows': []}, doc
+        return {'code':0,'schema':'thinkthen.result/2','rows':[],
+                'observations':0,'empty_sql_rows':[]}
     wrapper=doc
     doc=wrapper['native']
     NATIVE.validate(doc)
@@ -71,5 +77,20 @@ def project(doc,verb):
     for key in ('records','input_tokens','output_tokens'):
         if key in facts:out[key]=facts[key]
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
+    if verb=='rank':out['rows'].sort(key=lambda row:row['value'])
     if verb=='find':out['rows'][0]['index']=doc['selection']
     return out
+
+
+def assert_empty_sql(value, got, count):
+    """An empty SQL set owns no public receipt; measure sends at the backend."""
+    assert got == {'code':0,'schema':'thinkthen.result/2','rows':[],
+                   'observations':0,'empty_sql_rows':[]}, got
+    assert count == 0, count
+    if value.get('zero_observations'):
+        assert value['verb'] == 'relate' and value['expect'] == {}, value
+    else:
+        success=value['expect']['success']
+        assert value['verb'] == success['kind'] == 'filter', value
+        assert success['answers'] == [] and success['operation']['indexes'] == [], value
+        assert value.get('items',[]) == [], value

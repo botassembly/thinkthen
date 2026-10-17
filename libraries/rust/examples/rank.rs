@@ -12,8 +12,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Our checkout page is down and customers cannot pay.",
     ];
     let mut out = std::io::stdout().lock();
-    for one in tt.rank(&urgent, inbox)?.into_value() {
-        writeln!(out, "{:.2} {}", one.probability(), one.input())?;
+    let ranked = tt.rank(&urgent, inbox)?;
+    for one in ranked.results() {
+        writeln!(
+            out,
+            "{:.2} {}",
+            one.result().probability().ok_or("missing probability")?,
+            one.original()
+        )?;
     }
     Ok(())
 }

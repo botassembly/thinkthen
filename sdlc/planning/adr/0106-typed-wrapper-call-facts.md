@@ -1,5 +1,7 @@
 # ADR 0106: Owned facts on Go and PHP typed calls
 
+Superseded for the 0.2 wrapper interfaces by [the no-compatibility ruling](../../decisions/2026-10-12-no-compatibility-before-1-0.md), as tickets 0561 and 0576 require. The old C export and wrapper return shapes below are retired; current typed calls and failures retain their actual facts.
+
 - Status: Accepted after fresh High design/API review at `92cb4112` and coordinator approval on main `b6f06c4fc`. Ian can overturn the return-shape choice before 0.1.
 - Date: 2026-09-29
 

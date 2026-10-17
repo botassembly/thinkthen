@@ -6,6 +6,11 @@ Milestone: 0.2
 
 Depends on: 0561
 
+Reviews: revision e6182ac, accept
+Reviews: revision 6b2a737, accept
+Reviews: revision bec704f, accept
+Reviews: revision 0c4d3d6, accept
+
 ## Outcome
 
 ThinkThen 0.2 carries no code, tests or documents whose only job is backward compatibility. Each public surface has one current way to do each thing, and old input gets a clear refusal. This follows the [no-compatibility ruling](../decisions/2026-10-12-no-compatibility-before-1-0.md).
@@ -37,3 +42,8 @@ PM amendment, 2026-10-12. Reading an old cache to refuse it may leave the SQLite
 
 
 PM amendment, 2026-10-13. Remaining work. Close 0565 now. The 0576 Rust lane removes the `compatibility: DecisionResult` field in `core/result/complete/atomic.rs` and `tests/backend/native_results/compatibility.rs` while it merges the result families. 0578 owns the 0.1.2 README text in the R and MCP READMEs. The 0564 lane adds the outside-in test that refuses an old configuration file. At the candidate, `git grep -n -w -i -E 'legacy|compat|compatibility|frozen' crates libraries databases` finds only identifiers that the 0543 record justifies in one line each; English prose is exempt.
+
+## Progress
+
+- 2026-10-15 started
+- 2026-10-15 next: Retain unchanged count-only Facts and Attempt failure JSON and result.md for 0.2 under the PM ruling, record consistency with complete projections as a post-0.2 candidate, and qualify the four accepted cleanup repairs together on the repaired freeze.

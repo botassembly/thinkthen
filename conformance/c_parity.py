@@ -1,8 +1,6 @@
-"""Run shared fixture inputs through the installed typed C calls and readers.
+"""Shared fixture projections and assertions, plus installed C session parity.
 
-Saved grammar is imported through a native role. Calls, controls, input records
-and known result fields use counted C descriptors, never the JSON call door.
-Missing projections are reported as failures, never as successful/skipped cells.
+Missing projections fail instead of producing successful or skipped cells.
 """
 import json
 import os
@@ -13,8 +11,6 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "conformance/children"))
-from children import child_env, read_process_line
-FUNCTIONS = ['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']
 ERRORS = {'usage': 1, 'backend': 2, 'local': 4, 'cancelled': 5, 'deadline': 3, 'defect': 6}
 
 
@@ -22,21 +18,18 @@ def compact(value):
     return json.dumps(value, ensure_ascii=False, separators=(',', ':'))
 
 
-def literal(value):
-    # ASCII octal strings preserve exact UTF-8 bytes without C escape ambiguity.
-    return '"' + ''.join('\\%03o' % byte for byte in value.encode()) + '"'
-
-
-def counted(value):
-    return '(thinkthen_string_v1){%s,%d}' % (literal(value), len(value.encode()))
-
-
-def content(value, text=False):
-    return '(thinkthen_content_v1){%d,%s}' % (1 if text else 2, counted(value if text else compact(value)))
-
-
 def document(row, cases, named):
     kind = row['kind']
+    if kind == 'call-result':
+        steps = []
+        for source, expected in zip(row['input']['case_refs'], row['expect']['calls'], strict=True):
+            base = document({'id': source, 'kind': 'behavior', 'verb': cases[source]['verb'],
+                             'input': {'case_ref': source}}, cases, named)
+            base.update(arm='case/' + row['id'] + '/v1', count_delta=True,
+                        settings={'model': 'jev-1.13.0'},
+                        expect={**base['expect'], 'call_result': expected})
+            steps.append(base)
+        return {'arm': 'case/' + row['id'] + '/v1', 'steps': steps}
     if kind == 'image-admission':
         from c_images import project
         return project(row)
@@ -208,98 +201,6 @@ def document(row, cases, named):
             'metadata_only': kind in ('typed-result', 'result2', 'located')}
 
 
-def role(verb, question):
-    if verb == 'rank':
-        return 7 if 'questions' in question else 6
-    return {'annotate': 2, 'find': 8, 'recognize': 4, 'relate': 5}.get(verb, 1)
-
-
-def generated(at, value):
-    verb = value['verb']
-    kind = FUNCTIONS.index(verb) + 1
-    question = value['raw'] if value.get('raw') is not None else compact(value['question'])
-    image_paths = value.get('image_paths', [])
-    lines = ['static void case_%d(thinkthen_engine *e) {' % at,
-             'thinkthen_question *q=NULL; thinkthen_source *source=NULL; thinkthen_result *result=NULL;',
-             'thinkthen_controls_v1 controls={0}; controls.deadline_ms=-1; controls.attempts=1;',
-             'int code=0;', 'thinkthen_cancel_token *cancel=NULL;', 'thrd_t cancellation_thread; int cancellation_started=0;',
-             'thinkthen_image *images[%d]={0};' % max(1, len(image_paths)), 'char *caption_allocations[%d]={0};' % max(1, len(value['items']))]
-    if verb == 'find' and value['question'].get('none'):
-        text = value['question']['find']
-        lines.extend(['thinkthen_question_spec_v1 question_spec={0}; question_spec.kind=7; question_spec.none=1;', 'question_spec.text=%s;' % content(text, isinstance(text, str)),  ])
-        if value.get('metadata'):
-            metadata = value['metadata']
-            lines.extend(['thinkthen_question_author_v1 author={0};',
-                          'author.name=(thinkthen_optional_string_v1){1,%s};' % counted(metadata['name']),
-                          'author.wording_version=(thinkthen_optional_u64_v1){1,%d};' % metadata['wording_version'],
-                          'code=thinkthen_question_new_authored(e,&question_spec,&author,&q);'])
-        else:
-            lines.append('code=thinkthen_question_new(e,&question_spec,&q);')
-    elif value.get('loader'):
-        loader = value['loader']
-        method = {'load_named': 'load_named', 'load_reference': 'load_reference', 'load': 'load', 'named': 'load_named', 'reference': 'load_reference', 'file': 'load'}.get(loader)
-        if method is None:
-            raise ValueError('unknown native loader ' + str(loader))
-        args = ('e,%d,%s,&q' % (role(verb, value['question']), counted(value['reference']))) if method != 'load' else ('e,%s,&q' % counted(value['reference']))
-        if method == 'load':
-            args = 'e,%s,&q' % counted(value['reference'])
-        lines.append('code=thinkthen_question_%s(%s);' % (method, args))
-    elif value.get('question_form') == 'file':
-        lines.append('code=thinkthen_question_load(e,%s,&q);' % counted('fixture-question.json'))
-    else:
-        lines.append('code=thinkthen_question_parse(e,%d,%s,&q);' % (role(verb, value['question']), counted(question)))
-    if (value.get('operation') or {}).get('injection') == 'cancel_token':
-        lines.extend(['cancel=thinkthen_cancel_token_new(); if(!cancel) abort(); thinkthen_cancel(cancel); controls.cancel=cancel;'])
-    if (value.get('operation') or {}).get('injection') == 'expired_deadline':
-        lines.append('controls.deadline_ms=0;')
-    lines.append('if(code) goto finished;')
-    for index, path in enumerate(image_paths if not value.get('paths') else []):
-        raw = (ROOT / path).read_bytes()
-        data = '"' + ''.join('\\%03o' % byte for byte in raw) + '"'
-        lines.extend(['code=thinkthen_image_clone(e,(const uint8_t *)%s,%d,%d,(thinkthen_optional_string_v1){0},&images[%d]);' % (data, len(raw), 1 if value.get('media') == 'image/jpeg' else 2, index), 'if(code) goto finished;'])
-    items = value['items']
-    if value.get('paths') or (value.get('operation') or {}).get('injection') == 'recording_read_failure':
-        paths = [path if value.get('owned_jsonl') else str(ROOT / path) for path in (value.get('paths') or ['target/c-parity-missing-input'])]
-        lines.extend(['thinkthen_string_v1 paths[]={%s};' % ','.join(map(counted, paths)),
-                      'thinkthen_source_spec_v1 spec={{paths,%d},%d,%d};' % (len(paths), value.get('source_unit', 3), value.get('window', 0)),
-                      'code=thinkthen_source_%s(e,&spec,&source);' % ('image_files' if value.get('image_reader') else 'files')])
-    else:
-        lines.append('thinkthen_record_v1 records[%d]={0};' % max(1, len(items)))
-        for index, item in enumerate(items):
-            if value.get('image_only'):
-                continue
-            if value.get('caption_files'):
-                lines.append('caption_allocations[%d]=read_caption("caption-%d.txt",&records[%d].original);' % (index,index,index))
-            else:
-                lines.append('records[%d].original=(thinkthen_optional_content_v1){1,%s};' % (index, content(item, value.get('text', False) and isinstance(item, str))))
-            if value.get('candidate_orders'):
-                order=value['candidate_orders'][index]
-                lines.append('thinkthen_choice_v1 options_%d[]={%s};' % (index, ','.join('{.name=%s}' % counted(option) for option in order)))
-                lines.append('records[%d].options=(thinkthen_choices_v1){options_%d,%d};' % (index,index,len(order)))
-            if image_paths:
-                lines.append('records[%d].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % (index, len(image_paths)))
-            if value.get('context_present') or value.get('contexts') is not None:
-                context = value['contexts'][index] if value.get('contexts') is not None else value['context']
-                lines.append('records[%d].context=(thinkthen_optional_content_v1){1,%s};' % (index, content(context, isinstance(context, str))))
-        if value.get('image_only'):
-            lines.append('records[0].images=(thinkthen_images_v1){(const thinkthen_image *const *)images,%d};' % len(image_paths))
-        lines.append('code=thinkthen_source_records(e,records,%d,&source);' % len(items))
-    if value.get('shared_context') is not None:
-        context = value['shared_context']
-        lines.append('controls.context=(thinkthen_optional_content_v1){1,%s};' % content(context, isinstance(context, str)))
-    if value.get('held_cancel'):
-        lines.extend(['if(code) goto finished;', 'cancel=thinkthen_cancel_token_new(); if(!cancel) abort(); controls.cancel=cancel;', 'if(thrd_create(&cancellation_thread,cancel_on_input,cancel)!=thrd_success) { abort(); } cancellation_started=1;'])
-    if value.get('incremental'):
-        lines.extend(['if(code) goto finished;', 'thinkthen_batch *batch=NULL;',
-                      'code=thinkthen_%s_batch_start(e,q,source,&controls,&batch); if(code) goto finished;' % verb,
-                      'while((code=thinkthen_batch_next(batch,&result))==0 && result) { output(e,%d,0,result); thinkthen_result_free(result); result=NULL; }' % kind,
-                      'if(thinkthen_batch_facts(batch,&result)) abort();', 'thinkthen_batch_free(batch);'])
-    else:
-        lines.extend(['if(code) goto finished;', 'code=thinkthen_%s_complete(e,q,source,&controls,&result);' % verb])
-    lines.extend(['finished: if(cancellation_started && thrd_join(cancellation_thread,NULL)!=thrd_success) abort(); output(e,%d,code,result); thinkthen_result_free(result); thinkthen_source_free(source); thinkthen_question_free(q); thinkthen_cancel_token_free(cancel); for(size_t i=0;i<%d;++i) thinkthen_image_free(images[i]); for(size_t i=0;i<%d;++i) free(caption_allocations[i]);' % (kind, max(1, len(image_paths)), max(1,len(items))), '}'])
-    return '\n'.join(lines)
-
-
 class Backend:
     def __init__(self, binary, env):
         self.process = subprocess.Popen([str(binary)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -329,6 +230,16 @@ def equivalent(got, want):
 
 def assertions(row, value, got, count):
     expect = value['expect']
+    if 'call_result' in expect:
+        expected = expect['call_result']
+        result = got.get('call_result')
+        assert isinstance(result, dict), 'public call result is missing'
+        assert {'value', 'probability', 'results', 'facts'} <= result.keys(), result
+        assert equivalent(result['value'], expected['value']), result
+        assert equivalent(result['probability'], expected['probability']), result
+        assert isinstance(result['results'], list) and len(result['results']) == expected['results_count'], result
+        assert isinstance(result['facts'], dict) and result['facts']['requests_sent'] == expected['requests_sent'], result
+        assert count == expected['requests_sent'], (count, result)
     error = expect.get('error')
     if error is not None:
         error = error.get('kind') if isinstance(error, dict) else error
@@ -485,22 +396,7 @@ def prepare(home, value):
         (home / value['reference']).write_text(compact(value['file_body']))
 
 
-def main(*, consumer='c', header=None, library=None, compile_consumer=None,
-         adapter_header=None, initialize=''):
-    import parity
-    inventory = parity.inventory()
-    if consumer not in {row['id'] for row in parity.all_consumers(inventory)}:
-        raise ValueError('unknown C-backed public consumer')
-    if consumer != 'c' and compile_consumer is None:
-        raise ValueError('a language consumer requires its actual public compiler callback')
-    rows = list(parity.required_cases(inventory, consumer).values())
-    cases = {row['id']: row for row in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
-    named = {row['id']: row for row in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
-    names = ('PATH', 'HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN',
-             'RUSTFLAGS', 'RUSTC_WRAPPER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CFLAGS', 'TMPDIR', 'XDG_RUNTIME_DIR',
-             'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG')
-    env = {name: value for name in names if (value := os.environ.get(name)) is not None}
-    env.update(CARGO_BUILD_JOBS='1', CARGO_NET_OFFLINE='true')
+def main(*, header=None, library=None):
     header = header or os.environ.get('THINKTHEN_C_HEADER')
     library = library or os.environ.get('THINKTHEN_C_LIBRARY')
     if bool(header) != bool(library) or (os.environ.get('THINKTHEN_ARTIFACT') and not header):
@@ -509,156 +405,22 @@ def main(*, consumer='c', header=None, library=None, compile_consumer=None,
         header, library = Path(header).resolve(strict=True), Path(library).resolve(strict=True)
         if not header.is_file() or not library.is_file():
             raise ValueError('installed C parity header or library is missing')
-    else:
-        subprocess.run(['cargo', 'build', '--locked', '--offline', '--lib'], cwd=ROOT / 'libraries/c', env=env, check=True)
-        header, library = ROOT / 'libraries/c/include/thinkthen.h', ROOT / 'libraries/c/target/debug/libthinkthen_c.so'
-    subprocess.run(['cargo', 'build', '--locked', '--offline', '-p', 'conformance-backend'], cwd=ROOT, env=env, check=True)
+    from children import child_env
+    env = child_env(keep=('HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'CARGO_TARGET_DIR'),
+                    CARGO_BUILD_JOBS='2', CARGO_NET_OFFLINE='true')
+    target = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))).resolve()
+    env['CARGO_TARGET_DIR'] = str(target)
+    if not header:
+        subprocess.run(['cargo', 'build', '--locked', '--offline', '--lib'],
+                       cwd=ROOT / 'libraries/c', env=env, check=True)
+        header, library = ROOT / 'libraries/c/include/thinkthen.h', target / 'debug/libthinkthen_c.so'
+    subprocess.run(['cargo', 'build', '--locked', '--offline', '-p', 'conformance-backend'],
+                   cwd=ROOT, env=env, check=True)
+    sys.path.insert(0, str(ROOT / 'libraries/c/tests'))
+    from installed_cases import run
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-parity-') as folder:
-        scratch = Path(folder)
-        definitions, ready, errors = [], {}, {}
-        for at, row in enumerate(rows):
-            try:
-                value = document(row, cases, named)
-                if 'steps' in value:
-                    for step_at, step in enumerate(value['steps']):
-                        definitions.append(generated(10000 + at * 100 + step_at, step))
-                else:
-                    definitions.append(generated(at, value))
-                ready[at] = value
-            except (KeyError, ValueError, TypeError, AttributeError) as error:
-                errors[at] = str(error)
-        source = scratch / 'driver.c'
-        numbers = [at for at, value in ready.items() if 'steps' not in value]
-        numbers.extend(10000 + at * 100 + step for at, value in ready.items()
-                       if 'steps' in value for step in range(len(value['steps'])))
-        dispatch = '\n'.join('case %d: case_%d(e); break;' % (number, number)
-                             for number in numbers)
-        source.write_text(('#include "%s"\n' % Path(adapter_header).resolve(strict=True) if adapter_header else '')
-                          + '#include <threads.h>\n#include "%s"\n' % (ROOT / 'libraries/c/tests/c/parity_output.c')
-                          + '\nint cancel_on_input(void *token) { if(getchar()!=\'!\') abort(); thinkthen_cancel(token); fputs("cancel-fired\\n",stdout); fflush(stdout); return 0; }\n'
-                          + '\nchar *read_caption(const char *path,thinkthen_optional_content_v1 *out) { FILE *f=fopen(path,"rb"); if(!f || fseek(f,0,SEEK_END)) abort(); long n=ftell(f); if(n<0 || n>16777216 || fseek(f,0,SEEK_SET)) abort(); char *s=malloc((size_t)n+1); if(!s || fread(s,1,(size_t)n,f)!=(size_t)n || fclose(f)) abort(); s[n]=0; *out=(thinkthen_optional_content_v1){1,{1,{s,(size_t)n}}}; return s; }\n'
-                          + '\n'.join(definitions)
-                          + '\nint main(int argc,char **argv) { ' + initialize + ' if(argc!=3) return 2; '
-                          'if(!strstr(argv[2], \"\\\"base_url\\\":\\\"http://127.0.0.1:\")) return 3; '
-                          'thinkthen_engine *e=thinkthen_engine_new_with(argv[2]); '
-                          'if(!e) { output(NULL,1,thinkthen_error_code(NULL),NULL); return 0; } switch(atoi(argv[1])) {\n' + dispatch
-                          + '\ndefault: return 2; } thinkthen_engine_free(e); return 0; }\n')
-        binary = scratch / 'driver'
-        # Match the shipped soname using an owned directory; do not alter build files.
-        (scratch / 'libthinkthen.so.0').symlink_to(library)
-        if compile_consumer:
-            binary = Path(compile_consumer(scratch, env, header.parent, library, source))
-        else:
-            subprocess.run(['cc', '-pthread', '-std=c11', '-Wall', '-Wextra', '-Werror', '-g', '-fsanitize=address', '-fno-omit-frame-pointer', '-I', str(header.parent), str(source), str(library), '-Wl,-rpath,' + str(scratch), '-o', str(binary)], env=env, check=True)
-        if not binary.is_file() or not os.access(binary, os.X_OK):
-            raise ValueError('public consumer compiler did not produce an executable')
-        failures = 0
-        for at, row in enumerate(rows):
-            error = errors.get(at)
-            if error is None:
-                try:
-                    with tempfile.TemporaryDirectory(prefix='case-', dir=scratch) as owned:
-                        home = Path(owned)
-                        child = child_env(home=home, ASAN_OPTIONS='detect_leaks=1')
-                        backend = Backend(ROOT / 'target/debug/conformance-backend', child)
-                        try:
-                            value = ready[at]
-                            child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s' % (backend.port, value['arm']), THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback')
-                            prepare(home, value)
-                            steps = value.get('steps', [value])
-                            identities=[]
-                            for step_at, step in enumerate(steps):
-                                if step.get('copy_store'):
-                                    import sqlite3
-                                    (home / 'refreshed').mkdir()
-                                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as original, sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as target:
-                                        original.backup(target)
-                                if step.get('damage_store'):
-                                    import sqlite3
-                                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as db:
-                                        db.execute("UPDATE answers SET answer='damaged fixture answer'")
-                                if value.get('image_variants'):
-                                    backend.close()
-                                    backend = Backend(ROOT / 'target/debug/conformance-backend', child)
-                                    child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s' % (backend.port, step['arm'])
-                                    child['PERPLEXITY_API_KEY']='sk-conformance-loopback'
-                                    prepare(home,step)
-                                settings = {'cache': False, 'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
-                                settings.update(step.get('settings', {}))
-                                settings['base_url'] = child['THINKTHEN_BASE_URL']
-                                settings = {key: (str(home / 'saved') if entry == '$FOLDER' else str(home / 'refreshed') if entry == '$REFRESH' else str(home / 'profile.json') if entry == '$PROFILE' else entry) for key, entry in settings.items()}
-                                if row['kind'] in ('images', 'image-location'):
-                                    settings['record'] = str(home / 'recorded')
-                                number = 10000 + at * 100 + step_at if 'steps' in value else at
-                                before = int(backend.read('count'))
-                                if step.get('held_cancel'):
-                                    running=subprocess.Popen([str(binary),str(number),compact(settings)],env=child,cwd=home,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-                                    try:
-                                        assert backend.read('wait 1') == 'wait 1'
-                                        running.stdin.write('!')
-                                        running.stdin.flush()
-                                        assert read_process_line(running.stdout) == 'cancel-fired\n'
-                                        backend.process.stdin.write('release\n')
-                                        backend.process.stdin.flush()
-                                        stdout,stderr=running.communicate(timeout=60)
-                                        output=subprocess.CompletedProcess(running.args,running.returncode,stdout,stderr)
-                                    finally:
-                                        backend.process.stdin.write('release\n')
-                                        backend.process.stdin.flush()
-                                        if running.poll() is None:
-                                            running.kill()
-                                            running.wait()
-                                else:
-                                    output = subprocess.run([str(binary), str(number), compact(settings)], env=child, cwd=home, capture_output=True, text=True, timeout=120 if value.get('image_variants') else 60)
-                                assert output.returncode == 0 and not output.stderr, output.stderr
-                                if step.get('incremental'):
-                                    emitted = [json.loads(line) for line in output.stdout.splitlines()]
-                                    got = {**emitted[-1], 'completed': [answer for partial in emitted[:-1] for answer in partial['rows']]}
-                                    if step.get('owned_jsonl'):
-                                        bodies = json.loads(backend.read('capture'))['bodies']
-                                        request = json.loads(bodies[0])
-                                        expected = {'q%d' % (index + 1): {'type': 'noul', 'instructions': 'The text is %s. %s' % (compact(item), step['question']['decide'])} for index, item in enumerate(step['items'][:2])}
-                                        assert request['questions'] == expected, request
-                                else:
-                                    got = json.loads(output.stdout)
-                                if value.get('identity_steps'):
-                                    identities.append(got)
-                                if step.get('stored_answers') == 0:
-                                    import sqlite3
-                                    path=home / 'saved/thinkthen.sqlite'
-                                    if path.exists():
-                                        with sqlite3.connect(path) as db:
-                                            assert db.execute('SELECT count(*) FROM answers').fetchone()[0] == 0
-                                if value.get('image_variants'):
-                                    from c_images import assert_images
-                                    assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
-                                assertions(row, step, got, int(backend.read('count')) - (before if step.get('count_delta') else 0))
-                                if row['kind'] in ('images', 'image-location'):
-                                    before = int(backend.read('count'))
-                                    replay = {key: entry for key, entry in settings.items() if key != 'record'}
-                                    replay['replay'] = str(home / 'recorded')
-                                    repeated = subprocess.run([str(binary), str(number), compact(replay)], env=child, cwd=home, capture_output=True, text=True, timeout=60)
-                                    assert repeated.returncode == 0 and not repeated.stderr, repeated.stderr
-                                    saved = json.loads(repeated.stdout)
-                                    assertions(row, step, saved, int(backend.read('count')))
-                                    assert saved['requests_sent'] == 0 and int(backend.read('count')) == before, saved
-                                    assert saved['rows'][0]['answer_id'] == got['rows'][0]['answer_id'], saved
-                            if value.get('identity_steps'):
-                                ids=[entry['rows'][0]['observation_ids'] for entry in identities]
-                                assert ids[0] == ids[1] == ids[2] and ids[3] != ids[0] and ids[4] == ids[3] and ids[5] == ids[0], ids
-                                assert len({entry['call_id'] for entry in identities}) == 6, identities
-                                assert len({identities[i]['rows'][0]['answer_id'] for i in (0,1,2,5)}) == 1, identities
-                                assert identities[3]['rows'][0]['answer_id'] == identities[4]['rows'][0]['answer_id'] != identities[0]['rows'][0]['answer_id'], identities
-                        finally:
-                            backend.close()
-                except (AssertionError, ValueError, KeyError, subprocess.SubprocessError, OSError) as failure:
-                    error = type(failure).__name__ + ': ' + str(failure)
-            if error is not None:
-                failures += 1
-                print('C fixture %s failed: %s' % (row['id'], error), file=sys.stderr)
-            print('parity: ' + json.dumps({'consumer': consumer, 'case': row['id'], 'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail' if error is not None else 'pass'}), flush=True)
-        print('C shared fixture results: %d passed, %d failed' % (len(rows) - failures, failures))
-        return bool(failures)
+        run(None, Path(folder), header=header, library=library)
+    return 0
 
 
 if __name__ == '__main__':

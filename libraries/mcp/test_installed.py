@@ -47,10 +47,13 @@ class Installed(unittest.TestCase):
         return Client.launch((BINARY, 'mcp', '--url', f'http://127.0.0.1:{self.port}/{route}/v1',
                               '--max-retries', '0', *options), env=self.env)
 
-    def test_derived_schema_admits_dynamic_choose_and_matches_control_refusals(self):
+    def test_compact_schema_guides_calls_and_native_admission_keeps_full_refusals(self):
         from jsonschema import Draft202012Validator
         with self.launch('generic', '--no-cache') as client:
-            schemas = {tool['name']: tool['inputSchema'] for tool in client.tools()}
+            tools = client.tools()
+            self.assertLess(len(json.dumps({'tools': tools}, separators=(',', ':')).encode()), 25_000)
+            self.assertTrue(all('outputSchema' not in tool for tool in tools))
+            schemas = {tool['name']: tool['inputSchema'] for tool in tools}
             dynamic = {'question': {'choose': 'Which?'},
                        'inputs': [{'text': 'x', 'options': ['zebra', 'alpha']}]}
             self.assertTrue(Draft202012Validator(schemas['choose']).is_valid(dynamic))
@@ -67,11 +70,30 @@ class Installed(unittest.TestCase):
                     ('decide', {'question': 'Q?', 'evidence': 'x', 'options': {'top': 1}}),
                     ('rank', {'question': 'Q?', 'records': ['x'], 'options': {'none': True}}),
                     ('decide', {'question': 'Q?', 'evidence': 'x', 'records': ['x']})):
-                self.assertFalse(Draft202012Validator(schemas[name]).is_valid(arguments), (name, arguments))
                 with self.assertRaises(ToolError) as refusal:
                     getattr(client, name)(**arguments)
                 self.assertEqual(refusal.exception.result['error']['kind'], 'usage')
             self.assertEqual(self.count(), before)
+
+    def test_compact_catalog_supports_one_installed_fixture_call_per_tool(self):
+        from jsonschema import Draft202012Validator
+        from conformance import arguments, fixture
+        import parity
+        document = json.loads((ROOT / 'conformance/cases.json').read_text())
+        by_id = {case['id']: case for case in document['cases']}
+        with self.launch('generic', '--no-cache') as client:
+            tools = client.tools()
+            for tool in tools:
+                name = tool['name']
+                row = next(row for row in parity.required_cases(parity.inventory(), 'mcp').values()
+                           if row['verb'] == name and row['kind'] == 'behavior')
+                case = fixture(row, by_id, {})
+                args = arguments(case, self.home, {'batch': 1})
+                self.assertTrue(Draft202012Validator(tool['inputSchema']).is_valid(args), name)
+                result = getattr(client, name)(**args)
+                self.assertGreater(result['facts']['requests_sent'], 0, name)
+                self.assertIn('value', result, name)
+            self.assertEqual([tool['name'] for tool in tools], document['parity']['functions'])
 
     def test_repeated_image_rows_hit_aggregate_bound_before_later_paths_or_sends(self):
         image = self.home / 'image.png'

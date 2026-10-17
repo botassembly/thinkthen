@@ -1,5 +1,6 @@
 //! Private diagnostic boundary regressions.
 
+//! Stays: Private call-stop controls exercise cancellation, deadline and observer panic boundaries before workers return to the caller.
 use crate::test_deadline::child::ChildEnvironment as _;
 use std::panic::{AssertUnwindSafe, catch_unwind, panic_any};
 use std::process::Command;

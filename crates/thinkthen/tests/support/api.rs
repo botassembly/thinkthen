@@ -69,6 +69,13 @@ pub(crate) fn builder(base: &str, key: &str) -> EngineBuilder {
         .expect("isolated backend")
 }
 
+/// Bound each unopened attempt below the call budget, including slow loopback refusals.
+pub(crate) fn closed_port_builder(base: &str, key: &str) -> EngineBuilder {
+    builder(base, key)
+        .timeout(std::time::Duration::from_millis(50))
+        .expect("bounded connection attempt")
+}
+
 /// Retain the caller's remaining settings after selecting the shared test model.
 pub(crate) fn fixed(base: &str, key: &str) -> EngineBuilder {
     builder(base, key).model("fixed").expect("fixed test model")
@@ -115,7 +122,24 @@ pub(crate) fn request(
     input: thinkthen::RequestInput,
     environment: thinkthen::RequestEnvironment<'_>,
 ) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
-    let request = admitted(function, definition, input)?;
+    request_question(
+        engine,
+        function,
+        thinkthen::RequestQuestion::Definition { value: definition },
+        input,
+        environment,
+    )
+}
+
+/// Collect any public Request question, retaining its native values and failures.
+pub(crate) fn request_question(
+    engine: &Engine,
+    function: thinkthen::RequestFunction,
+    question: thinkthen::RequestQuestion,
+    input: thinkthen::RequestInput,
+    environment: thinkthen::RequestEnvironment<'_>,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
+    let request = admitted(function, question, input)?;
     match engine.execute_request(&request, environment)? {
         thinkthen::RequestOutcome::Complete(call) => Ok(call),
         thinkthen::RequestOutcome::Failed { error, .. } => Err(error),
@@ -214,13 +238,13 @@ pub(crate) fn found(
 
 fn admitted(
     function: thinkthen::RequestFunction,
-    definition: thinkthen::RequestDefinition,
+    question: thinkthen::RequestQuestion,
     input: thinkthen::RequestInput,
 ) -> Result<thinkthen::AdmittedRequest, thinkthen::Error> {
     thinkthen::Request::for_function(
         function,
         thinkthen::RequestArguments {
-            question: thinkthen::RequestQuestion::Definition { value: definition },
+            question,
             input,
             options: thinkthen::RequestOptions::default(),
         },
@@ -242,7 +266,7 @@ where
 {
     let request = admitted(
         function,
-        definition,
+        thinkthen::RequestQuestion::Definition { value: definition },
         thinkthen::RequestInput::Feed {
             name: "rows".into(),
             framing: thinkthen::RequestFraming::Document,
@@ -311,6 +335,12 @@ pull_rows!(pull_choices, Choose, choice_rows, thinkthen::CompleteChoice);
 pull_rows!(pull_tags, Tag, tag_rows, thinkthen::CompleteTags);
 pull_rows!(pull_scores, Score, score_rows, thinkthen::CompleteScore);
 pull_rows!(pull_filters, Filter, filter_rows, thinkthen::CompleteFilter);
+pull_rows!(
+    pull_annotations,
+    Annotate,
+    annotation_rows,
+    thinkthen::CompleteAnnotated
+);
 
 type RowsCall<T, R> = thinkthen::Call<Vec<thinkthen::CompleteRecord<T, R>>>;
 
@@ -390,16 +420,20 @@ pub(crate) fn decision(
 // Share the actual public settlement reader across independent integration binaries.
 pub(crate) fn session_next(session: &thinkthen::RequestSession) -> thinkthen::RequestSessionRead {
     let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    let mut last_readiness = None;
     loop {
         let packet = session.try_read();
         if !matches!(packet, thinkthen::RequestSessionRead::Pending) {
             return packet;
         }
-        assert!(std::time::Instant::now() < until, "session did not settle");
-        let _ = session.wait(
+        assert!(
+            std::time::Instant::now() < until,
+            "session did not settle: last readiness {last_readiness:?}; session {session:?}"
+        );
+        last_readiness = Some(session.wait(
             thinkthen::RequestSessionWaitInterest::Settlement,
             until.saturating_duration_since(std::time::Instant::now()),
-        );
+        ));
     }
 }
 pub(crate) fn session_drain(
@@ -456,4 +490,39 @@ pub(crate) fn dynamic_one() -> thinkthen::CallOptions<'static> {
 #[cfg(test)]
 pub(crate) fn dynamic_candidates(text: &str) -> thinkthen::RecordOptions {
     thinkthen::RecordOptions::project(text, "").unwrap()
+}
+
+/// Recover each literal decision through the canonical native request scheduler.
+pub(crate) fn recover_decisions(
+    engine: &Engine,
+    question: &thinkthen::Question,
+    records: &[String],
+    controls: thinkthen::CallOptions<'_>,
+) -> Result<thinkthen::Call<Vec<thinkthen::RequestRecoveredRow>>, thinkthen::Error> {
+    let request = admitted(
+        thinkthen::RequestFunction::Decide,
+        thinkthen::RequestQuestion::Definition {
+            value: question.clone().into(),
+        },
+        thinkthen::RequestInput::Feed {
+            name: "recovery".into(),
+            framing: thinkthen::RequestFraming::Document,
+            reading: thinkthen::ReaderOptions::default(),
+            images: Vec::new(),
+        },
+    )?;
+    let feed = thinkthen::RequestFeed::from_records(
+        "recovery",
+        records
+            .iter()
+            .map(|text| Ok(record(thinkthen::QuestionInput::Text(text.clone())))),
+    )
+    .eager();
+    engine.execute_request_recovering(
+        &request,
+        thinkthen::RequestEnvironment {
+            controls,
+            feed: Some(feed),
+        },
+    )
 }

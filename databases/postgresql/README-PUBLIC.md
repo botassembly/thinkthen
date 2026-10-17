@@ -1,0 +1,31 @@
+# ThinkThen for PostgreSQL
+
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
+
+Download and unpack the release archive for your platform and server major: `thinkthen-postgresql16-…` for PostgreSQL 16, `thinkthen-postgresql17-…` for 17, or `thinkthen-postgresql18-…` for 18. Install the extension files into that server, then enable the extension as an administrator:
+
+```sql
+CREATE EXTENSION thinkthen;
+```
+
+Set your hosted backend key in the PostgreSQL server's environment before starting the server: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. An administrator must grant the application role access to the ThinkThen functions. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
+
+```sql
+WITH refunds(body) AS (VALUES
+    ('Please refund my order. It arrived broken.'),
+    ('Thanks for the quick help yesterday!'), ('I want to send this back.'))
+SELECT refund.value AS is_refund, refund.probability
+FROM refunds, LATERAL thinkthen_decide_details(
+    'Does the customer ask for a refund?', body) AS refund;
+WITH messages(body) AS (VALUES
+    ('Please refund the extra fee on my invoice.'),
+    ('My parcel went to the wrong address.'), ('I cannot reset my password.'))
+SELECT owner.value AS team, owner.probability
+FROM messages, LATERAL thinkthen_choose_details(
+    '{"choose":"Which team owns this?","options":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}',
+    body) AS owner;
+```
+
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/databases/postgresql/) for results, failures, record inputs and offline replay.
+
+[Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

@@ -15,6 +15,8 @@ use crate::ffi::{
     run_detached, text,
 };
 
+mod details;
+
 type Ids = HashMap<(String, String), Vec<String>>;
 type Found = (Vec<Entity>, Ids);
 
@@ -209,8 +211,11 @@ fn encoded_edges(edges: Vec<thinkthen::Edge>, ids: &Ids) -> Result<Vec<u8>, Stri
 ///
 /// # Safety
 /// All input arrays and their entries remain readable through this call.
-#[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the private counted ABI retains row ownership"
+)]
+unsafe fn relate_rows(
     rule: *const u8,
     rule_len: usize,
     members: *const BridgeText,
@@ -226,6 +231,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
     call_settings_len: usize,
     settings: BridgeSettings,
     stop: BridgeStop,
+    details: bool,
 ) -> Reply {
     reply_boundary(|| {
         let rule_text = if list == 0 { text(rule, rule_len)? } else { "" };
@@ -239,7 +245,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
         let names = copied_texts(names, count)?;
         let kinds = copied_texts(kinds, count)?;
         let (entities, mapped) = entity_rows(ids, names, kinds)?;
-        if entities.is_empty() {
+        if entities.is_empty() && !details {
             return Ok(0_u32.to_ne_bytes().to_vec());
         }
         let mut asked = asked(&settings)?;
@@ -260,6 +266,11 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
         };
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
+            if details {
+                let controls =
+                    engines::options_for(due, &token, total, batch.as_deref(), context.as_deref())?;
+                return details::run(&engine, ask, entities, mapped, controls);
+            }
             let items = entities
                 .iter()
                 .map(|entity| {
@@ -392,4 +403,92 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_plan(
         }
         Ok(Vec::new())
     })
+}
+
+/// Execute admitted committed relation rows through the shared Request.
+/// # Safety
+/// Counted caller ranges remain readable through synchronous return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
+    rule: *const u8,
+    rule_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    list: i32,
+    from_file: i32,
+    ids: *const BridgeText,
+    names: *const BridgeText,
+    kinds: *const BridgeText,
+    count: usize,
+    deadline_ms: i64,
+    call_settings: *const u8,
+    call_settings_len: usize,
+    settings: BridgeSettings,
+    stop: BridgeStop,
+) -> Reply {
+    // SAFETY: this forwards every unchanged range and stop ownership to the private implementation.
+    unsafe {
+        relate_rows(
+            rule,
+            rule_len,
+            members,
+            member_count,
+            list,
+            from_file,
+            ids,
+            names,
+            kinds,
+            count,
+            deadline_ms,
+            call_settings,
+            call_settings_len,
+            settings,
+            stop,
+            false,
+        )
+    }
+}
+
+/// Execute admitted committed relation rows through the shared Request.
+/// # Safety
+/// Counted caller ranges remain readable through synchronous return.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_details_rows(
+    rule: *const u8,
+    rule_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    list: i32,
+    from_file: i32,
+    ids: *const BridgeText,
+    names: *const BridgeText,
+    kinds: *const BridgeText,
+    count: usize,
+    deadline_ms: i64,
+    call_settings: *const u8,
+    call_settings_len: usize,
+    settings: BridgeSettings,
+    stop: BridgeStop,
+) -> Reply {
+    // SAFETY: this forwards every unchanged range and stop ownership to the private implementation.
+    unsafe {
+        relate_rows(
+            rule,
+            rule_len,
+            members,
+            member_count,
+            list,
+            from_file,
+            ids,
+            names,
+            kinds,
+            count,
+            deadline_ms,
+            call_settings,
+            call_settings_len,
+            settings,
+            stop,
+            true,
+        )
+    }
 }

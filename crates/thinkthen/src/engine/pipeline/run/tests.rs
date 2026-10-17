@@ -1,3 +1,4 @@
+//! Stays: deadline and cancellation faults must stop input reads and queued work before dispatch.
 use super::*;
 use crate::core::pack::{self, PackLimits};
 use crate::core::{Evidence, ModelName, Question, QuestionText, Url, quoted_plan};

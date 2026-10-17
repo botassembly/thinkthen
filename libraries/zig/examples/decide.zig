@@ -10,22 +10,18 @@ pub fn main() !void {
         },
     };
     defer engine.deinit();
-    var call = try tt.session.decide(&engine, .{
+    var call = switch (try tt.calls.decide(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .text = .{ .text = "Is this a complaint?" } },
-        .input = .{ .text = .{ .text = "I demand a refund today" } },
-    });
-    defer call.deinit();
-    while (true) switch (try call.read()) {
-        .pending => {
-            var ready: u32 = undefined;
-            try tt.session.checked(tt.c.thinkthen_session_wait(call.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
-        },
-        .end => break,
-        .packet => |value| {
-            var packet = value;
-            defer packet.deinit();
-            if (packet.failure()) |_| return error.DecisionFailed;
-            if (packet.facts()) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
+        .input = tt.inputs.RequestInputText{ .text = "I demand a refund today" },
+    })) {
+        .ok => |result| result,
+        .failed => |failure| {
+            defer tt.releaseFailure(a, failure);
+            return error.CallFailed;
         },
     };
+    defer call.deinit();
+    const answer: ?bool = if (call.value) |value| value.boolean else null;
+    std.debug.print("answer={any}\n", .{answer});
+    if (call.facts) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
 }

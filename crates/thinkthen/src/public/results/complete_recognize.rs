@@ -14,6 +14,31 @@ pub struct CompleteRecognized {
 }
 
 impl CompleteRecognized {
+    /// Per-item probabilities in the same order as the plain answer.
+    #[must_use]
+    pub fn probability(&self) -> Vec<Option<f64>> {
+        if let Some(proposals) = self.value.proposals() {
+            return proposals
+                .iter()
+                .map(|proposal| Some(proposal.probability()))
+                .collect();
+        }
+        self.value
+            .entities()
+            .iter()
+            .map(|entity| {
+                self.probabilities()
+                    .judged_proposals()
+                    .find_map(|proposal| {
+                        (proposal.kept()
+                            && proposal.selected() == Some(entity.start()..entity.end())
+                            && proposal.kind() == Some(entity.kind()))
+                        .then_some(proposal.span_probability())
+                    })
+            })
+            .collect()
+    }
+
     /// The actual resolved aggregate question and separate thresholds.
     #[must_use]
     pub fn question(&self) -> super::RecognitionReading<'_> {
@@ -45,13 +70,6 @@ impl CompleteRecognized {
     #[must_use]
     pub const fn source_value(&self) -> Option<&super::SourceRecognition> {
         self.source_value.as_ref()
-    }
-    pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
-        &self,
-        input: Option<&T>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        self.serialize_occurrence(input, None, serializer)
     }
     pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
         &self,
@@ -114,7 +132,7 @@ impl fmt::Debug for CompleteRecognized {
 
 impl Serialize for CompleteRecognized {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_input::<S, ()>(None, serializer)
+        self.serialize_occurrence::<S, ()>(None, None, serializer)
     }
 }
 

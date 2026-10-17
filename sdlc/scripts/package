@@ -58,6 +58,7 @@ test -z "$unexpected" \
 # a binary built from the unpacked package alone prints them from an empty
 # folder after the unpacked source is gone.
 crate="$packaged/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
+python3 sdlc/scripts/registry-readmes.py crate "$crate"
 python3 sdlc/scripts/catalog.py --crate "$crate"
 scratch_dir isolated && scratch_dir source && scratch_dir built
 mkdir "$isolated/empty" "$isolated/out"

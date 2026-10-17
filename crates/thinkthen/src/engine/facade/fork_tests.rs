@@ -1,3 +1,4 @@
+//! Stays: fork ownership, held transport and cache isolation require direct process and secrecy fault checks.
 //! R5-3: a forked child's first call rebuilds before it touches inherited state.
 //!
 //! A forked child is its parent's memory under a new process ID. So each
@@ -78,6 +79,7 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
     let key = (engine.key)()?;
     let transport = engine.transport(parent);
     let exchange = Exchange {
+        headers: &[],
         url: engine.backend.url().as_str(),
         body: &body,
         key: &key,

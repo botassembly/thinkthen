@@ -16,6 +16,9 @@ sys.path.insert(0, str(ROOT / 'conformance'))
 from c_parity import Backend
 spec = importlib.util.spec_from_file_location('type_checks', ROOT / 'specification/fixtures/types/check.py')
 checks = importlib.util.module_from_spec(spec); spec.loader.exec_module(checks)
+def admitted(command):
+    return [sys.executable, os.environ['THINKTHEN_BUILD_ADMISSION'], '--lock', os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock'), '--', *command]
+
 module = Path(sys.argv[1]).resolve()
 if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
     sys.path.insert(0, str(ROOT / 'conformance/children'))
@@ -24,9 +27,10 @@ if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
         home = Path(folder)
         (home / 'go.mod').write_text('module example.org/full-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
         shutil.copy2(Path(__file__).with_name('full_consumer.go'), home / 'main.go')
+        shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), home / 'bridge.go')
         env = child_env(home=home, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(ROOT / 'target/go/cache')), GOMODCACHE=str(home / 'modcache'), CGO_ENABLED='1')
         binary = home / 'consumer-bin'
-        subprocess.run(['go', 'build', '-p', '1', '-buildvcs=false', '-o', str(binary), '.'], cwd=home, env=env, check=True)
+        subprocess.run(admitted(['go', 'build', '-p', '1', '-buildvcs=false', '-o', str(binary), '.']), cwd=home, env=env, check=True)
         def invoke(step, settings, child, work, backend):
             fixture = work / 'consumer-input.json'
             fixture.write_text(json.dumps({**descriptor(step, work), "incremental": step.get("incremental", False)}))
@@ -65,13 +69,28 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
     home=Path(folder); consumer=home/'consumer'; consumer.mkdir()
     (consumer/'go.mod').write_text('module example.org/shared-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => '+str(module)+'\n')
     shutil.copy2(Path(__file__).with_name('shared_consumer.go'), consumer/'main.go')
+    shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), consumer/'bridge.go')
     env=child_env(home=str(home),GOPROXY='off',GOSUMDB='off',GOTOOLCHAIN='local',GOCACHE=os.environ.get('GOCACHE', str(ROOT/'target/go/cache')),GOMODCACHE=str(home/'modcache'),CGO_ENABLED='1')
-    subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
+    subprocess.run(admitted(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.']),cwd=consumer,env=env,check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         shutil.copy2(home/'consumer-bin', stage / 'shared-consumer')
     server=Backend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend',env)
     try:
+        canonical = json.loads((ROOT / 'conformance/cases.json').read_text())
+        pair = next(case for case in canonical['parity']['required_cases'] if case['id'] == 'library-call-result')
+        for identifier, expected in zip(pair['input']['case_refs'], pair['expect']['calls'], strict=True):
+            case = next(case for case in canonical['cases'] if case['id'] == identifier)
+            path = home / 'call-question.json'; path.write_text(json.dumps(case['question']))
+            fixture = {'verb': case['verb'], 'items': case['exchanges'][0]['evidence'], 'question_file': str(path),
+                       'settings': {'base_url': f'http://127.0.0.1:{server.port}/case/{identifier}/v1', 'model': 'jev-1.13.0', 'max_retries': 0}}
+            before = int(server.read('count'))
+            run = subprocess.run([str(home/'consumer-bin')], input=json.dumps(fixture), env=env|{'THINKTHEN_API_KEY':'sk-conformance-loopback'}, cwd=home, text=True, capture_output=True, timeout=5)
+            assert run.returncode == 0, (identifier, run.stderr)
+            call = json.loads(run.stdout)
+            actual = {'value': call['Value'], 'probability': call['Probability'], 'results_count': len(call['Results']), 'requests_sent': call['Facts']['requests_sent']}
+            assert actual == expected and int(server.read('count')) == before + expected['requests_sent'], (identifier, actual, expected)
+        print('GO_CALL_RESULT_INSTALLED_PASS library-call-result decide refund and choose billing', flush=True)
         for case in cases:
             request=dict(case['request'])
             verb=next(v for v in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate') if v in request)
@@ -105,6 +124,16 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
                 found=aggregates[-1]
                 actual=None if found['value'] is None else {'index':found['index'],'unit':found['value'],'probability':found['answer']['probabilities'][found['answer']['pick']]}
             assert checks.subset(actual,case['response']),(case['name'],actual,case['response'])
+            if verb in ('decide', 'choose', 'tag', 'score'):
+                assert call['Value'] == rows[0]['value'], (case['name'], call['Value'])
+            elif verb == 'filter':
+                assert call['Value'] == actual and call['Probability'] == [row['answer']['probability'] for row in rows], (case['name'], call)
+            elif verb == 'rank':
+                assert call['Value'] == [row['index'] for row in aggregates[-1]] and call['Probability'] == [row['answer']['probability'] for row in aggregates[-1]], (case['name'], call)
+            elif verb == 'find':
+                assert call['Value'] == aggregates[-1]['value'] and call['Probability'] == (aggregates[-1]['answer']['probabilities'].get(aggregates[-1]['answer']['pick']) if aggregates[-1].get('index') is not None else None), (case['name'], call)
+            if verb in ('tag', 'score', 'annotate'):
+                assert call['Probability'] is None, (case['name'], call['Probability'])
             assert facts['call_id'] and any(p['kind']=='observation' for p in packets),case['name']
             print('GO_SHARED_INSTALLED_PASS',case['name'],flush=True)
         # Cache and replay observations keep their native identity and send nothing.

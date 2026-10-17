@@ -15,7 +15,7 @@ Before tuning the wording of a question that chains two facts, compare its saved
 
 ## Command line
 
-Ticket 0440 makes `runs audit` the visible spelling. Top-level `audit` remains a hidden compatibility alias with identical options, output, diagnostics and exit codes.
+Use `thinkthen runs audit`. Top-level `audit` is refused with exit 2 before setup or requests.
 
 ```text
 thinkthen runs audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]

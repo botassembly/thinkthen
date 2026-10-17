@@ -22,6 +22,7 @@ from pathlib import Path
 
 from harness import EXTENSION, STRESS, Backend, case, child_env, expect, main, said, timed, within
 from harness import select as select_cases
+from native_queries import call
 
 CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
 
@@ -121,7 +122,7 @@ def complete_file_cancel_returns_while_provider_remains_held():
         path=Path(tmp)/'source';path.write_text('Refund held file.')
         inputs=json.dumps({'files':{'paths':[str(path)]},'incremental':True})
         literal=lambda value:"'"+value.replace("'","''")+"'"
-        held_cancel("SELECT thinkthen_decide_complete('Refund?',"+literal(inputs)+",'{\"batch\":1}')",1)
+        held_cancel("SELECT failure FROM " + call("decide", "'Refund?'", inputs, '{"batch":1}'), 1)
 
 
 @case
@@ -136,9 +137,6 @@ def r5_23_a_held_batch_stops_within_100_ms():
     held_cancel(f"SELECT thinkthen_choose('Which team?', x, ['billing', 'shipping']) FROM (VALUES {texts(64, 'batch')}) t(x)", 1)
 
 
-@timed
-def a_held_details_call_stops_within_100_ms():
-    held_cancel("SELECT thinkthen_details('Is it a refund?', 'one held text')", 1)
 
 
 PAIR = "SELECT * FROM thinkthen_relate('SELECT * FROM (VALUES (1, ''Ada'', ''person''), (2, ''Acme'', ''organization'')) v(id, name, kind)', ['works_for=person:organization'])"
@@ -198,7 +196,7 @@ for thread in threads:
 
 def held_queries_stop_together(rounds: int):
     """Exercise both thread widths and keep the repeated run opt-in."""
-    queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_details('Is it a refund?', 'held b')", "SELECT count(*) FROM thinkthen_rank('Is it a refund?', '{\"c\":\"held c\"}')"]
+    queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_decide_details('Is it a refund?', 'held b')", "SELECT count(*) FROM thinkthen_rank('Is it a refund?', '{\"c\":\"held c\"}')"]
     for run_number in range(rounds):
         for width in (2, 4):
             with Backend() as backend, tempfile.TemporaryDirectory() as folder:

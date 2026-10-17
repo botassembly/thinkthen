@@ -74,6 +74,7 @@ impl super::Counters {
 }
 #[cfg(test)]
 mod tests {
+    //! Stays: overlapping HTTP intervals need direct clock arithmetic to count shared time once.
     use super::*;
     type Case = (&'static [(bool, u64)], u64);
     fn measure(base: Instant, events: &[(bool, u64)]) -> Option<Duration> {

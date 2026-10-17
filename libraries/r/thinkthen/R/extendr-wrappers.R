@@ -19,7 +19,7 @@ tt_error_native <- function(kind, message) .Call(wrap__tt_error_native, kind, me
 #' Convert host character values with the one native encoding crossing.
 tt_text_utf8 <- function(value) .Call(wrap__tt_text_utf8, value)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_requests_total, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch, backend, refresh_cache)
+tt_engine_set <- function(settings) .Call(wrap__tt_engine_set, settings)
 
 tt_complete_error_native <- function(error) .Call(wrap__tt_complete_error_native, error)
 
@@ -47,16 +47,18 @@ tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_requ
 
 tt_request_plan <- function(request) .Call(wrap__tt_request_plan, request)
 
-tt_request_batch_start <- function(request) .Call(wrap__tt_request_batch_start, request)
-
-tt_request_batch_wait <- function(batch, input) .Call(wrap__tt_request_batch_wait, batch, input)
+tt_request_batch_start <- function(request, collect) .Call(wrap__tt_request_batch_start, request, collect)
 
 tt_request_batch_poll <- function(batch) .Call(wrap__tt_request_batch_poll, batch)
+
+tt_request_batch_wait <- function(batch, input) .Call(wrap__tt_request_batch_wait, batch, input)
 
 tt_request_batch_cancel <- function(batch) .Call(wrap__tt_request_batch_cancel, batch)
 
 tt_request_batch_push <- function(batch, descriptor) .Call(wrap__tt_request_batch_push, batch, descriptor)
 
 tt_request_batch_finish <- function(batch, failure) .Call(wrap__tt_request_batch_finish, batch, failure)
+
+tt_request_batch_result <- function(batch) .Call(wrap__tt_request_batch_result, batch)
 
 # nolint end

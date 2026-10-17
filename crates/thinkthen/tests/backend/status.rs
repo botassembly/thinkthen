@@ -4,6 +4,7 @@
 use crate::child::ChildEnvironment as _;
 #[cfg(unix)]
 use crate::child::Folder;
+#[cfg(unix)]
 use crate::harness::stderr_is;
 #[cfg(unix)]
 use std::fs;
@@ -113,24 +114,23 @@ fn inspect(home: &std::path::Path) -> (Option<i32>, serde_json::Value, Vec<u8>) 
     (output.status.code(), value, output.stderr)
 }
 
-/// `status` counts the answers in `thinkthen.sqlite`, its bytes, and the old
-/// digest-named entries beside it, and writes nothing. The two usage paths
+/// `status` counts the answers in `thinkthen.sqlite` and its bytes, and
+/// writes nothing. The two usage paths
 /// scripts read stay where status v2 put them.
 #[cfg(unix)]
 #[test]
-fn status_counts_the_live_store_and_old_entries_without_writes() {
+fn status_counts_the_live_store_without_writes() {
     use conformance_backend::{Canned, Listener};
 
     let (home, cache) = private_cache("counts").expect("private cache");
     let (code, value, stderr) = inspect(&home);
     assert_eq!(code, Some(0));
     assert!(stderr.is_empty());
+    assert!(!Folder::Usage.in_home(&home).exists());
     assert_eq!(value["cache"]["entries"], 0);
     assert_eq!(value["cache"]["old_entries"], 0);
     assert_eq!(fs::read_dir(&cache).expect("empty cache").count(), 0);
 
-    let old = cache.join(format!("{}.json", "a".repeat(64)));
-    fs::write(&old, b"an old entry").expect("old entry");
     let listener = Listener::serving(vec![Canned::ok(concat!(
         r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
         r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
@@ -154,18 +154,13 @@ fn status_counts_the_live_store_and_old_entries_without_writes() {
     assert_eq!(value["schema"], "thinkthen.status/2");
     assert_eq!(value["cache"]["entries"], 1);
     assert_eq!(value["cache"]["bytes"], store.len());
-    assert_eq!(value["cache"]["old_entries"], 1);
+    assert_eq!(value["cache"]["old_entries"], 0);
     assert_eq!(value["usage"]["total"]["requests_sent"], 1);
     assert_eq!(value["usage"]["total"]["input_tokens"], 312);
     assert_eq!(
         fs::read(cache.join("thinkthen.sqlite")).expect("store"),
         store
     );
-    assert_eq!(
-        fs::read(&old).expect("unchanged old entry"),
-        b"an old entry"
-    );
-
     fs::write(cache.join("thinkthen.sqlite"), b"private damaged store").expect("damaged");
     let (code, value, stderr) = inspect(&home);
     assert_eq!(code, Some(5));
@@ -414,37 +409,5 @@ fn an_unsafe_usage_month_names_the_unsafe_fix() {
             "thinkthen: cannot read the usage totals: {} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\n",
             usage.join("2026-09.json").display()
         ),
-    );
-}
-
-#[cfg(unix)]
-#[test]
-fn old_entries_are_counted_by_name_without_leaking_local_bytes() {
-    use std::os::unix::fs::{PermissionsExt as _, symlink};
-
-    let home = std::env::temp_dir().join(format!("thinkthen-status-cache-{}", std::process::id()));
-    let _absent = fs::remove_dir_all(&home);
-    let cache = Folder::Cache.in_home(&home);
-    fs::create_dir_all(&cache).expect("cache folder");
-    fs::set_permissions(&cache, fs::Permissions::from_mode(0o700)).expect("private folder");
-    let target = cache.join("private-target");
-    fs::write(&target, b"private-cache-marker").expect("target");
-    let entry = cache.join(format!("{}.json", "a".repeat(64)));
-    symlink(&target, &entry).expect("entry symlink");
-    let temporary = cache.join(format!(".123.0.{}.json", "b".repeat(64)));
-    fs::write(&temporary, b"private-temporary-marker").expect("temporary file");
-
-    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stderr.is_empty());
-    let text = String::from_utf8(output.stdout).expect("status text");
-    let status: serde_json::Value = serde_json::from_str(&text).expect("status JSON");
-    assert_eq!(status["cache"]["entries"], 0);
-    assert_eq!(status["cache"]["old_entries"], 1);
-    assert!(!text.contains("private-cache-marker"));
-    assert!(!text.contains("private-temporary-marker"));
-    assert_eq!(
-        fs::read(target).expect("target remains"),
-        b"private-cache-marker"
     );
 }

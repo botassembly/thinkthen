@@ -7,8 +7,9 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use thinkthen::{
-    CallOptions, Engine, QuestionInput, Recognize, RecordInput, RecordObservation, Request,
-    RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestOutcome, RequestValue,
+    CallOptions, Engine, QuestionDetail, QuestionInput, Recognize, RecordInput, RecordObservation,
+    Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestOutcome,
+    RequestValue,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -77,34 +78,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut out = std::io::stdout().lock();
     for ((index, stage, position), owned) in held.iter() {
         let detail = owned.detail();
-        let question = detail.question();
         writeln!(out, "record={index} stage={stage} position={position}")?;
-        writeln!(
-            out,
-            "question={}",
-            question.text().text().ok_or("text missing")?
-        )?;
-        for option in question.options() {
-            let description = option
-                .description()
-                .map(|value| value.to_json())
-                .transpose()?;
-            writeln!(out, "option={} description={description:?}", option.name())?;
-        }
-        writeln!(
-            out,
-            "answer={:?} failure={:?} probabilities={:?}",
-            detail.value(),
-            detail.failure(),
-            detail.probabilities()
-        )?;
-        writeln!(
-            out,
-            "requests={:?} cached={} sources={:?}",
-            detail.requests(),
-            detail.cached(),
-            detail.question_sources()
-        )?;
+        write_question_detail(&mut out, detail)?;
     }
     writeln!(
         out,
@@ -121,5 +96,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         writeln!(out, "original[{}]={}", row.ordinal(), original)?;
     }
     writeln!(out, "requests_sent={}", call.facts().requests_sent())?;
+    Ok(())
+}
+
+fn write_question_detail(
+    out: &mut impl Write,
+    detail: QuestionDetail<'_>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let question = detail.question();
+    writeln!(
+        out,
+        "question={}",
+        question.text().text().ok_or("text missing")?
+    )?;
+    for option in question.options() {
+        let description = option
+            .description()
+            .map(|value| value.to_json())
+            .transpose()?;
+        writeln!(out, "option={} description={description:?}", option.name())?;
+    }
+    writeln!(
+        out,
+        "answer={:?} failure={:?} probabilities={:?}",
+        detail.value(),
+        detail.failure(),
+        detail.probabilities()
+    )?;
+    writeln!(
+        out,
+        "requests={:?} cached={} sources={:?}",
+        detail.requests(),
+        detail.cached(),
+        detail.question_sources()
+    )?;
     Ok(())
 }

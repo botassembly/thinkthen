@@ -5,13 +5,13 @@ using System.Text.Json;
 static class NativeChecks
 {
     static void Check(bool yes, string label) { if (!yes) throw new Exception(label); }
-    static InputAuthoredQuestionText Text(string value) => new InputAuthoredQuestionTextAlternative0 { Value = value };
-    static IReadOnlyList<InputAuthoredName> Names => new[] { new InputAuthoredName { Value = "first" }, new InputAuthoredName { Value = "second" } };
-    static InputRequestQuestion Define(InputRequestDefinition value) => new InputRequestQuestionDefinition { Value = value };
-    static InputRequestQuestion Decide => Define(new InputRequestDefinitionAlternative0 { Value = new InputAuthoredDecide { Decide = Text("Need attention?") } });
-    static InputRequestQuestion Choose => Define(new InputRequestDefinitionAlternative1 { Value = new InputAuthoredChoose { Choose = Text("Which?"), Options = new InputAuthoredOptionsAlternative0 { Value = Names } } });
-    static InputRequestItem Item(string value) => new() { Original = new InputRequestOriginalText { Text = value } };
-    static InputRequestInput Records => new InputRequestInputRecords { Items = new[] { Item("Maria Chen"), Item("Alex Lee") } };
+    static AuthoredQuestionText Text(string value) => new AuthoredQuestionTextString { Value = value };
+    static IReadOnlyList<AuthoredName> Names => new[] { new AuthoredName { Value = "first" }, new AuthoredName { Value = "second" } };
+    static RequestQuestion Define(RequestDefinition value) => new RequestQuestionDefinition { Value = value };
+    static RequestQuestion Decide => Define(new RequestDefinitionAuthoredDecide { Decide = Text("Need attention?") } );
+    static RequestQuestion Choose => Define(new RequestDefinitionAuthoredChoose { Choose = Text("Which?"), Options = new AuthoredOptionsList { Value = Names } } );
+    static RequestItem Item(string value) => new() { Original = new RequestOriginalText { Text = value } };
+    static RequestInput Records => new RequestInputRecords { Items = new[] { Item("Maria Chen"), Item("Alex Lee") } };
     static void Call(OwnedCall call)
     {
         Check(call.Terminal.Failure.State == R.PresenceState.Missing && call.Terminal.Facts.State == R.PresenceState.Value, "actual terminal");
@@ -31,69 +31,74 @@ static class NativeChecks
     static async Task RunAsync()
     {
         using var settings = JsonDocument.Parse(Environment.GetEnvironmentVariable("TT_NATIVE_SETTINGS")!);
-        using var engine = Engine.Open(new InputEngineSettings {
+        using var engine = Engine.Open(new EngineSettings {
             BaseUrl = settings.RootElement.GetProperty("base_url").GetString()!, Model = settings.RootElement.GetProperty("model").GetString()!,
-            Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() },
-            Batch = new InputRequestBatchAlternative1 { Value = "max" }, Throttle = 1, MaxRetries = 0
+            Cache = new CacheDocumentDisabledCache { Value = new DisabledCache() },
+            Batch = new RequestBatchString { Value = "max" }, Throttle = 1, MaxRetries = 0
         });
-        var controls = new InputRequestOptions { Attempts = true, Details = true };
-        var completeControls = new InputRequestOptions { Attempts = true };
+        var unknownChoose = await engine.ChooseAsync(Choose, new RequestInputRecords { Items = new[] { Item("text"), Item("other") } }, new RequestOptions { Threshold = new RequestThresholdNumber { Value = .95 } });
+        Check(unknownChoose.Value.All(value => value is null) && unknownChoose.Probability.All(chance => chance is null), "unresolved choice probability");
+        var findQuestionForNull = Define(new RequestDefinitionAuthoredFind { Find = Text("Which?") });
+        var nullFind = await engine.FindAsync(findQuestionForNull, new RequestInputRecords { Items = new[] { new RequestItem { Original = new RequestOriginalJson { Value = JsonSerializer.SerializeToElement((string?)null) } }, Item("other") } }, new RequestOptions { None = true });
+        Check(nullFind.Value.ValueKind == JsonValueKind.Null && nullFind.Probability == .9 && nullFind.Results.Single().Index.State == R.PresenceState.Value && nullFind.Results.Single().Index.Value == 0, "selected null original probability");
+        var controls = new RequestOptions { Attempts = true };
+        var completeControls = new RequestOptions { Attempts = true };
         foreach (bool files in new[] { false, true })
         {
-            InputRequestInput source = files ? new InputRequestInputSource { Source = new InputRequestSource {
-                Paths = new[] { Environment.GetEnvironmentVariable("TT_NATIVE_FILE")! }, Reading = new InputRequestReader { Unit = new InputSourceUnitAlternative0() }
+            RequestInput source = files ? new RequestInputSource { Source = new RequestSource {
+                Paths = new[] { Environment.GetEnvironmentVariable("TT_NATIVE_FILE")! }, Reading = new RequestReader { Unit = new SourceUnitLine() }
             } } : Records;
-            var decide = ReadDecide(await engine.DecideAsync(Decide, source, controls));
+            var decide = ReadDecide((OwnedCall)await engine.DecideAsync(Decide, (dynamic)source, controls));
             Check(decide.Count == 2 && decide[0].Value.GetBoolean() && decide[0].Answer is R.AnswerYesNo { Probability: .9 }, "decision");
             Check(decide[0].Schema.Value == "thinkthen.result/2" && decide[0].AnswerId.Length == 64, "row schema and identity");
             if (files) Check(decide[0].Source.Value.FirstLine.Value == 1 && decide[1].Source.Value.LastLine.Value == 2, "physical lines");
-            var choose = ReadChoose(await engine.ChooseAsync(Choose, source, controls));
+            var choose = ReadChoose((OwnedCall)await engine.ChooseAsync(Choose, (dynamic)source, controls));
             Check(choose.Count == 2 && choose[0].Value.Value == "first" && choose[0].Answer is R.AnswerChoice answer && answer.Probabilities.Count == 2, "choice distribution");
-            var tagQuestion = Define(new InputRequestDefinitionAlternative2 { Value = new InputAuthoredTag { Tag = Text("Which?"), Labels = new InputAuthoredLabelsAlternative0 { Value = Names } } });
-            var tag = ReadTag(await engine.TagAsync(tagQuestion, source, controls));
+            var tagQuestion = Define(new RequestDefinitionAuthoredTag { Tag = Text("Which?"), Labels = new AuthoredLabelsList { Value = Names } } );
+            var tag = ReadTag((OwnedCall)await engine.TagAsync(tagQuestion, (dynamic)source, controls));
             Check(tag.Count == 2 && tag[0].Value.Count == 2, "tag labels");
-            var scoreQuestion = Define(new InputRequestDefinitionAlternative3 { Value = new InputAuthoredScore { Score = Text("How much?"), Levels = new InputAuthoredLevelsAlternative0 { Value = Names } } });
-            var score = ReadScore(await engine.ScoreAsync(scoreQuestion, source, controls));
+            var scoreQuestion = Define(new RequestDefinitionAuthoredScore { Score = Text("How much?"), Levels = new AuthoredLevelsList { Value = Names } } );
+            var score = ReadScore((OwnedCall)await engine.ScoreAsync(scoreQuestion, (dynamic)source, controls));
             Check(score.Count == 2 && score[0].Value == .1, "score");
-            var filter = await engine.FilterAsync(new InputRequestQuestionText { Text = "Need attention?" }, source, new InputRequestOptions { Attempts = true, Threshold = new InputRequestThresholdAlternative0 { Value = .95 } });
+            OwnedCall filter = await engine.FilterAsync(new RequestQuestionText { Text = "Need attention?" }, (dynamic)source, new RequestOptions { Attempts = true, Threshold = new RequestThresholdNumber { Value = .95 } });
             Call(filter);
             Check(!filter.Packets.OfType<R.SessionPacketFilterRow>().Any(), "rejected filter selection");
             var filterEvents = filter.Packets.OfType<R.SessionPacketObservation>().Select(p => p.Value).OfType<R.SessionObservationRow>().ToArray();
             Check(filterEvents.Length == 2 && filterEvents[0].Value is R.SessionObservedRowJudgment { Value: R.SessionJudgmentDecision judgment } && judgment.Value.State == R.PresenceState.Value && !judgment.Value.Value, "rejected filter observation");
-            var rank = Aggregate<R.SessionPacketRankAggregate>(await engine.RankAsync(Decide, source, completeControls)).Value;
+            var rank = Aggregate<R.SessionPacketRankAggregate>((OwnedCall)await engine.RankAsync(Decide, (dynamic)source, completeControls)).Value;
             Check(rank.Count == 2 && rank[0].Value == 1, "rank ordinal");
-            var findQuestion = Define(new InputRequestDefinitionAlternative5 { Value = new InputAuthoredFind { Find = Text("Which?") } });
-            var find = Aggregate<R.SessionPacketFindAggregate>(await engine.FindAsync(findQuestion, source, completeControls)).Value;
+            var findQuestion = Define(new RequestDefinitionAuthoredFind { Find = Text("Which?") } );
+            var find = Aggregate<R.SessionPacketFindAggregate>((OwnedCall)await engine.FindAsync(findQuestion, (dynamic)source, completeControls)).Value;
             Check(find.Candidates.State == R.PresenceState.Value && find.Candidates.Value.Count == 2, "find candidates");
-            var annotateQuestion = Define(new InputRequestDefinitionAlternative7 { Questions = new Dictionary<string, InputRequestDefinitionAlternative7QuestionsEntry> {
-                ["check"] = new InputRequestDefinitionAlternative7QuestionsEntryAlternative0 { Decide = Text("Need attention?") },
-                ["team"] = new InputRequestDefinitionAlternative7QuestionsEntryAlternative1 { Choose = Text("Which?"), Options = new InputAuthoredOptionsAlternative0 { Value = Names } }
+            var annotateQuestion = Define(new RequestDefinitionAnnotateDefinition { Questions = new KeyValuePair<string, AnnotateQuestion>[] {
+                new("check", new AnnotateQuestionDecide { Decide = Text("Need attention?") }),
+                new("team", new AnnotateQuestionChoose { Choose = Text("Which?"), Options = new AuthoredOptionsList { Value = Names } })
             } });
-            var annotate = ReadAnnotate(await engine.AnnotateAsync(annotateQuestion, source, completeControls));
+            var annotate = ReadAnnotate((OwnedCall)await engine.AnnotateAsync(annotateQuestion, (dynamic)source, completeControls));
             Check(annotate.Count == 2 && annotate[0].Answers.Count == 2 && annotate[0].Answers["check"] is R.AnnotationMemberAnswerId { Answer: R.AnswerYesNo { Probability: .9 } }, "annotation members");
-            var recognizeQuestion = Define(new InputRequestDefinitionAlternative6 { Recognize = new InputRequestDefinitionAlternative6Recognize() });
-            var recognized = await engine.RecognizeAsync(recognizeQuestion, source, completeControls);
+            var recognizeQuestion = Define(new RequestDefinitionRecognizeDefinition { Recognize = new RecognizeQuestion() });
+            OwnedCall recognized = await engine.RecognizeAsync(recognizeQuestion, (dynamic)source, completeControls);
             Call(recognized);
             var recognize = recognized.Packets.OfType<R.SessionPacketRecognizeAggregate>().SelectMany(p => p.Value).ToArray();
             Check(recognize.Length == 2 && recognize.Select(r => r.Index.Value).SequenceEqual(new ulong[] { 0, 1 }), "recognized ordered occurrences");
             Check(recognize.Select(r => r.Input.Value.GetString()).SequenceEqual(new[] { "Maria Chen", "Alex Lee" }), "recognized originals");
-            Check(recognize.All(r => r.Value is R.RecognizeFieldsEntities entities && entities.Entities.Count > 0), "recognized spans");
+            Check(recognize.All(r => r.Value is R.RecognizeEntities entities && entities.Entities.Count > 0), "recognized spans");
             Check(recognize.All(r => (r.Source.State == R.PresenceState.Value) == files), "recognized location");
             if (files) Check(recognize[0].Source.Value.FirstLine.Value == 1 && recognize[1].Source.Value.LastLine.Value == 2, "recognized physical lines");
-            InputRequestInput relationInput = source;
+            RequestInput relationInput = source;
             if (!files)
             {
                 using var first = JsonDocument.Parse("{\"name\":\"Maria Chen\",\"kind\":\"person\"}");
                 using var second = JsonDocument.Parse("{\"name\":\"Alex Lee\",\"kind\":\"person\"}");
-                relationInput = new InputRequestInputRecords { Items = new[] {
-                    new InputRequestItem { Original = new InputRequestOriginalJson { Value = first.RootElement.Clone() } },
-                    new InputRequestItem { Original = new InputRequestOriginalJson { Value = second.RootElement.Clone() } }
+                relationInput = new RequestInputRecords { Items = new[] {
+                    new RequestItem { Original = new RequestOriginalJson { Value = first.RootElement.Clone() } },
+                    new RequestItem { Original = new RequestOriginalJson { Value = second.RootElement.Clone() } }
                 } };
             }
-            var relateQuestion = Define(new InputRequestDefinitionAlternative4 { Value = new InputAuthoredRelate { Relate = new InputAuthoredRelateRelate {
-                Relations = new[] { new InputAuthoredRelation { Name = new InputAuthoredName { Value = "supports" } } }
-            } } });
-            var relate = Aggregate<R.SessionPacketRelateAggregate>(await engine.RelateAsync(relateQuestion, relationInput, completeControls)).Value;
+            var relateQuestion = Define(new RequestDefinitionAuthoredRelate { Relate = new RelateQuestion {
+                Relations = new[] { new AuthoredRelation { Name = new AuthoredName { Value = "supports" } } }
+            } } );
+            var relate = Aggregate<R.SessionPacketRelateAggregate>((OwnedCall)await engine.RelateAsync(relateQuestion, (dynamic)relationInput, completeControls)).Value;
             Check(relate.Value.Count == 2 && relate.Answer.Questions.Count == 2, "relation endpoints");
         }
     }

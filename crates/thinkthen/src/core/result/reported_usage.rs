@@ -114,6 +114,7 @@ impl ReportedSum {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: partial usage arithmetic must not invent missing observations or overflow counts.
     use super::{ReportedSum, ReportedUsage};
 
     #[test]

@@ -3,6 +3,7 @@
 import copy
 from pathlib import Path
 import runpy
+import subprocess
 import sys
 import tempfile
 import yaml
@@ -49,6 +50,10 @@ def cases():
          ['install-check.yml: dispatch must require only a string version']),
         ('drop-runner', INSTALL, mutate_portable(lambda job: job['strategy']['matrix']['runner'].pop()),
          ['install-check.yml: job portable must retain its accepted channel and runner matrix']),
+        ('drop-ruby-version', INSTALL, mutate_portable(lambda job: job['strategy']['matrix']['include'].pop()),
+         ['install-check.yml: job portable must retain its accepted channel and runner matrix']),
+        ('unmatrixed-ruby', INSTALL, mutate_portable(lambda job: next(step for step in job['steps'] if str(step.get('uses', '')).startswith('ruby/setup-ruby@'))['with'].update({'ruby-version': '3.4.11'})),
+         ['install-check.yml: rubygems must use the matrix Ruby version']),
         ('drop-channel', INSTALL, mutate_portable(lambda job: job['strategy']['matrix']['channel'].pop()),
          ['install-check.yml: job portable must retain its accepted channel and runner matrix']),
         ('ignored-install-job', INSTALL, mutate_portable(lambda job: job.update({'continue-on-error': True})),
@@ -96,6 +101,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix='thinkthen-workflow-plant-') as own:
             folder = Path(own)
             for filename, doc in docs.items(): (folder / filename).write_text(yaml.safe_dump(doc))
+            subprocess.run(['git', 'init', '-q', str(folder)], check=True)
+            subprocess.run(['git', '-C', str(folder), 'add', '.'], check=True)
             got = workflow_guard(folder)
         if got != expected:
             failures += 1

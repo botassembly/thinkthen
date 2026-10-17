@@ -6,7 +6,7 @@ Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank
 
 The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions. The [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) defines call, request and decision.
 
-The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [0.2 upgrade guide](../libraries/UPGRADING-0.2.md) maps changed calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes the final development APIs from published 0.1.2 installation and candidate platform qualification.
+The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes the final development APIs from published 0.1.2 installation and candidate platform qualification.
 
 `RequestInput::from_json(&str) -> Result<RequestInput, Error>` decodes the existing [canonical input selector grammar](request.schema.json) beside `RequestItem::from_json` and `RequestQuestion::from_json`. It preserves serde admission and classifies failures through the shared typed context validator. Bindings retain `RequestDecodeCause` diagnostics instead of interpreting serde error text. This method changes no selector fields, optional values or null handling. [ADR 0125](../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns native admission. Ian can overturn this API detail.
 
@@ -24,7 +24,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
 | [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; native and host timing implemented |
-| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native and host adoption implemented |
+| [cache.md](cache.md) | Versioned question keys, offline validation and refusals, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native and host adoption implemented |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
 | [tag.md](tag.md) | `tag` | Settled |
@@ -69,7 +69,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `transform list`, `transform show NAME` | Lists and prints the built-in `jq` transforms |
 | `backends check` | Checks that a backend you name works with this tool, and exits 0 only when nothing is critical |
 
-The `runs` parent exposes `audit` and `diff` as settled by ticket 0440. Published top-level `audit` and `diff` remain hidden compatibility aliases with the same options, output, diagnostics and exit codes. Both spellings read saved inputs without setup or requests.
+The `runs` parent exposes `audit` and `diff`. Both commands read saved inputs without setup or requests. Top-level `audit` and `diff` are refused with exit 2.
 
 The top-level nouns `questions`, `items`, `answers`, `checks`, `datasets`, `setups`, `findings`, `people` and `search` are reserved by [ADR 0118](../sdlc/planning/adr/0118-backend-command-namespace.md). They are unimplemented and exit 2 as unrecognized commands. This adds no judging function or proxy.
 

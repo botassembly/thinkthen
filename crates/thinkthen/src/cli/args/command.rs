@@ -5,9 +5,8 @@ use std::path::PathBuf;
 use clap::{Args, Subcommand};
 
 use super::{
-    AnnotateArguments, CheckArguments, ChooseArguments, DecideArguments, FilterArguments,
-    FindArguments, RankArguments, RecognizeArguments, RelateArguments, ScoreArguments,
-    TagArguments,
+    AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
+    RankArguments, RecognizeArguments, RelateArguments, ScoreArguments, TagArguments,
 };
 
 /// The verbs the tool answers to.
@@ -21,16 +20,12 @@ pub(crate) enum Command {
     Status(StatusArguments),
 
     /// Serve the ten judging functions over local MCP stdio.
-    #[command(display_order = 1006)]
+    #[command(display_order = 1006, long_about = crate::mcp::startup::HELP)]
     Mcp(crate::mcp::startup::Arguments),
 
     /// Check that a named backend works with this tool.
     #[command(display_order = 1003, subcommand)]
     Backends(super::backends::BackendCommand),
-
-    /// Published compatibility spelling for backends check.
-    #[command(hide = true)]
-    Check(CheckArguments),
 
     /// Answer one yes or no question about a text. A record run exits 0 when
     /// it completes without a partial or whole-run failure. The printed
@@ -158,7 +153,9 @@ pub(crate) enum Command {
     ///
     /// The levels come lowest first, and the number is the backend's
     /// probability-weighted position on them, from 0 to the number of levels
-    /// minus one. `score` takes no threshold, and no answer sets the exit code.
+    /// minus one. A question that says 1 to 5 still returns a position from 0
+    /// to 4 for five levels. `score` takes no threshold, and no answer sets
+    /// the exit code.
     /// `jq -e` cuts on the number in one line and sets one:
     ///
     /// thinkthen score 'How much disruption?' none workaround blocked < t.txt | jq -e '. >= 2' > /dev/null
@@ -192,8 +189,11 @@ pub(crate) enum Command {
     ///
     /// The answer is one annotated JSON object. A record run exits 0 when it
     /// completes without a partial or whole-run failure. The printed values
-    /// carry the individual answers. A completed run with one or more failed
-    /// questions exits 6. In JSONL detailed batch-one mode, --on-error
+    /// carry the individual answers. Score values use the probability-weighted
+    /// position from 0 to the number of levels minus one; a question that says
+    /// 1 to 5 still returns a position from 0 to 4 for five levels.
+    /// A completed run with one or more failed questions exits 6.
+    /// In JSONL detailed batch-one mode, --on-error
     /// continue emits a safe error record for a missing on pointer and continues;
     /// a completed run with skipped records exits 7.
     #[command(
@@ -249,14 +249,6 @@ pub(crate) enum Command {
     /// Grade or compare saved answers without sending a request.
     #[command(display_order = 1000, subcommand)]
     Runs(super::runs::RunsCommand),
-
-    /// Published compatibility spelling for runs audit.
-    #[command(hide = true)]
-    Audit(crate::cli::audit::AuditArguments),
-
-    /// Published compatibility spelling for runs diff.
-    #[command(hide = true)]
-    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -277,11 +269,8 @@ pub(crate) enum CacheCommand {
 
 #[derive(Args, Debug)]
 pub(crate) struct ConvertArguments {
-    /// The recording or cache folder to convert. Its old files stay.
+    /// The current recording or cache folder to convert.
     pub(crate) directory: PathBuf,
-    /// Also write each single-record exchange in the quoted form.
-    #[arg(long)]
-    pub(crate) quote: bool,
 }
 
 #[derive(Args, Debug)]
@@ -380,12 +369,9 @@ impl Command {
             Self::Cache(_)
                 | Self::Status(_)
                 | Self::Mcp(_)
-                | Self::Check(_)
                 | Self::Backends(_)
                 | Self::Transform(_)
                 | Self::Runs(_)
-                | Self::Audit(_)
-                | Self::Diff(_)
         )
     }
 
@@ -405,12 +391,9 @@ impl Command {
             Self::Cache(_)
             | Self::Status(_)
             | Self::Mcp(_)
-            | Self::Check(_)
             | Self::Backends(_)
             | Self::Transform(_)
-            | Self::Runs(_)
-            | Self::Audit(_)
-            | Self::Diff(_) => None,
+            | Self::Runs(_) => None,
         }
     }
 
@@ -427,17 +410,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Check(arguments)
-            | Self::Backends(super::backends::BackendCommand::Check(arguments)) => {
-                arguments.timeout
-            }
+            Self::Backends(super::backends::BackendCommand::Check(arguments)) => arguments.timeout,
             Self::Cache(_)
             | Self::Status(_)
             | Self::Mcp(_)
             | Self::Transform(_)
-            | Self::Runs(_)
-            | Self::Audit(_)
-            | Self::Diff(_) => 1,
+            | Self::Runs(_) => 1,
         }
     }
 }

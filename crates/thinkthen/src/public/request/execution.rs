@@ -3,6 +3,7 @@
 //! Private dispatch never calls public per-function wrappers. SQL row recovery and
 //! typed entities retain distinct private modes under this same execution owner.
 use super::RequestOutcome::Complete as complete;
+pub(super) use super::native_feed::projection as feed_projection;
 use super::{
     AdmittedRequest, RequestDefinition, RequestFunction as Function, RequestInput, RequestItem,
     RequestOptions, RequestOutcome, RequestValue,
@@ -458,25 +459,53 @@ where
 {
     let request = super::admit_native(function, definition)?;
     controls.eager_inputs = true;
-    execute(
+    intake(
         engine,
         &request,
+        records,
+        controls,
+        |engine, definition, rows, controls, context| {
+            let controls = match &context {
+                Some(context) => controls.context(context),
+                None => controls,
+            };
+            run(&engine, definition, rows, controls)
+        },
+    )
+}
+
+/// Snapshot caller originals once before shared eager or pulled validation.
+pub(super) fn intake<'a, I, T, R>(
+    engine: &Engine,
+    request: &AdmittedRequest,
+    records: I,
+    controls: CallOptions<'a>,
+    run: impl FnOnce(
+        Engine,
+        RequestDefinition,
+        Validated<'a, NativeRows<I::IntoIter, T>>,
+        CallOptions<'a>,
+        Option<String>,
+    ) -> Result<R, Error>,
+) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    execute(
+        engine,
+        request,
         controls,
         false,
         |_| Ok(records.into_iter().map(snapshot_row::<T> as fn(_) -> _)),
         |Prepared {
              engine,
              definition,
-             mut controls,
+             controls,
              context,
              ..
          },
-         rows| {
-            if let Some(context) = &context {
-                controls = controls.context(context);
-            }
-            run(&engine, definition, rows, controls)
-        },
+         rows| { run(engine, definition, rows, controls, context) },
     )
 }
 
@@ -550,44 +579,6 @@ pub(super) fn prepare<'a>(
     })
 }
 
-pub(super) fn feed_projection(
-    request: &AdmittedRequest,
-    feed: Option<&RequestFeed<'_>>,
-) -> Result<bool, Error> {
-    let args = request.request.call.arguments();
-    if let RequestInput::Feed { name, .. } = &args.input
-        && feed.is_none_or(|feed| &feed.name != name)
-    {
-        return Err(Error::usage(
-            "the request requires its named caller-supplied feed",
-        ));
-    }
-    let all = feed.is_some_and(|feed| feed.all_filter_results);
-    if all
-        && (request.request.call.function() != Function::Filter
-            || !matches!(args.input, RequestInput::Feed { .. })
-            || feed.is_none_or(|feed| {
-                !matches!(
-                    feed.contents,
-                    FeedContents::Records(_) | FeedContents::Session(_)
-                )
-            }))
-    {
-        return Err(Error::usage(
-            "all filter results require a native composed filter feed",
-        ));
-    }
-    if feed.is_some_and(|feed| feed.record_reading.is_some())
-        && (!matches!(args.input, RequestInput::Feed { .. })
-            || feed.is_none_or(|feed| !matches!(feed.contents, FeedContents::Session(_)))
-            || super::composition::explicit_projection(&args.options))
-    {
-        return Err(Error::usage(
-            "owned record reading requires a session feed without request projections",
-        ));
-    }
-    Ok(all)
-}
 pub(super) fn controls<'a>(
     options: &'a RequestOptions,
     controls: CallOptions<'a>,

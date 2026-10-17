@@ -6,9 +6,10 @@ from native_guard import normalized_bytes
 
 root = pathlib.Path(sys.argv[1])
 needles = (b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-")
-files = [p for p in root.rglob("*") if p.is_file() and "fixtures" not in p.parts
-         and (p.suffix in {".go", ".md", ".mod", ".hpp", ".h", ".cpp", ".txt", ".in"}
-              or p.name.startswith("libthinkthen"))]
+files = [pathlib.Path(name) for name in pathlib.Path(sys.argv[2]).read_text().splitlines() if name]
+assert all(path.resolve().is_relative_to(root.resolve()) for path in files), 'INSTALL_MEMBER_OUTSIDE_PREFIX'
+for private in ('thinkthen.h', 'native_implementation.hpp', 'json.hpp'):
+    assert (root / 'include/thinkthen' / private).resolve() not in {path.resolve() for path in files}, 'PRIVATE_HEADER_INSTALLED ' + private
 assert files, "no source scanned"
 for path in files:
     # release-pack remaps the builder's home; scan the rest of each path.

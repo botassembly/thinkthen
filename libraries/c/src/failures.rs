@@ -3,6 +3,8 @@
 //! behind.
 
 use crate::ffi::values as abi;
+use crate::session::views::{Node, Storage, thinkthen_complete_utf8_v1, thinkthen_error_view_v1};
+use crate::session::views_generated::read_thinkthen_complete_immediate_facts_v1;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString, c_char};
@@ -19,17 +21,7 @@ pub(crate) const USAGE: i32 = abi::THINKTHEN_EUSAGE;
 /// The header's defect code, the guard's answer when a panic reached it.
 pub(crate) const DEFECT: i32 = abi::THINKTHEN_EDEFECT;
 
-/// The header's code for a kind, in the header's own order.
-const fn code_of(kind: ErrorKind) -> i32 {
-    match kind {
-        ErrorKind::Usage => USAGE,
-        ErrorKind::Backend => abi::THINKTHEN_EBACKEND,
-        ErrorKind::Deadline => abi::THINKTHEN_EDEADLINE,
-        ErrorKind::Local => abi::THINKTHEN_ELOCAL,
-        ErrorKind::Cancelled => abi::THINKTHEN_ECANCELLED,
-        ErrorKind::Defect => DEFECT,
-    }
-}
+use crate::ffi::session::{failure_code as code_of, failure_message};
 
 /// One failure the interface reports: its code, the retry signal, and a message
 /// safe to log.
@@ -38,7 +30,6 @@ pub(crate) struct Failure {
     retryable: bool,
     message: String,
     facts: Option<Box<Facts>>,
-    stopped: Option<thinkthen::Stopped>,
 }
 
 impl fmt::Debug for Failure {
@@ -60,12 +51,12 @@ pub(crate) fn facts_json(facts: &Facts) -> String {
 }
 
 impl Failure {
-    /// Project a frozen sentence without changing the native diagnostic fields.
-    pub(crate) fn with_message(mut self, message: &str) -> Self {
-        self.message = message.into();
-        self
+    pub(crate) fn carrier_overflow() -> Self {
+        Self {
+            code: crate::ffi::values::THINKTHEN_COBOL_OVERFLOW,
+            ..Self::usage("a counted COBOL scalar exceeds its representation capacity")
+        }
     }
-
     /// A refusal of the interface's own argument rules.
     pub(crate) fn usage(message: impl Into<String>) -> Self {
         Self {
@@ -73,18 +64,6 @@ impl Failure {
             retryable: false,
             message: message.into(),
             facts: None,
-            stopped: None,
-        }
-    }
-
-    /// A named local question file could not supply a valid question.
-    pub(crate) fn local(message: impl Into<String>) -> Self {
-        Self {
-            code: code_of(ErrorKind::Local),
-            retryable: false,
-            message: message.into(),
-            facts: None,
-            stopped: None,
         }
     }
 
@@ -95,15 +74,13 @@ impl Failure {
             retryable: false,
             message: format!("defect: {message}"),
             facts: None,
-            stopped: None,
         }
     }
+}
 
-    pub(crate) fn completed(mut self, facts: Option<&Facts>) -> Self {
-        if self.facts.is_none() {
-            self.facts = facts.map(|facts| Box::new(facts.clone()));
-        }
-        self
+impl From<ErrorKind> for Failure {
+    fn from(kind: ErrorKind) -> Self {
+        thinkthen::Error::new(kind, failure_message(kind)).into()
     }
 }
 
@@ -114,7 +91,6 @@ impl From<thinkthen::Error> for Failure {
             retryable: error.retryable(),
             message: error.to_string(),
             facts: error.facts().map(|facts| Box::new(facts.clone())),
-            stopped: Some(error.stopped()),
         }
     }
 }
@@ -125,15 +101,43 @@ pub(crate) struct Last {
     retryable: bool,
     message: CString,
     facts: Option<CString>,
-    native_facts: Option<Box<Facts>>,
-    stopped: Option<thinkthen::Stopped>,
+    view: Box<thinkthen_error_view_v1>,
+    _storage: Storage,
 }
 
 impl Last {
     pub(crate) fn of(failure: Failure) -> Self {
         let message = CString::new(failure.message)
             .unwrap_or_else(|_| c"defect: the message held a NUL".to_owned());
+        let mut storage = Storage::default();
+        let facts = failure
+            .facts
+            .as_ref()
+            .and_then(|facts| {
+                let text = facts
+                    .complete()
+                    .map_or_else(
+                        || serde_json::to_string(facts),
+                        |facts| serde_json::to_string(&facts),
+                    )
+                    .ok()?;
+                let node = Node::parse(&text).ok()?;
+                let facts = read_thinkthen_complete_immediate_facts_v1(&node, &mut storage).ok()?;
+                Some(storage.hold(facts))
+            })
+            .unwrap_or(std::ptr::null());
+        let view = Box::new(thinkthen_error_view_v1 {
+            code: failure.code,
+            retryable: i32::from(failure.retryable),
+            message: thinkthen_complete_utf8_v1 {
+                data: message.as_ptr(),
+                len: message.as_bytes().len(),
+            },
+            facts,
+        });
         Self {
+            view,
+            _storage: storage,
             code: failure.code,
             retryable: failure.retryable,
             message,
@@ -141,9 +145,10 @@ impl Last {
                 .facts
                 .as_ref()
                 .and_then(|facts| CString::new(facts_json(facts)).ok()),
-            native_facts: failure.facts,
-            stopped: failure.stopped,
         }
+    }
+    pub(crate) fn view(&self) -> *const thinkthen_error_view_v1 {
+        std::ptr::from_ref(self.view.as_ref())
     }
     pub(crate) fn message(&self) -> *const c_char {
         self.message.as_ptr()
@@ -155,16 +160,6 @@ impl Last {
         self.facts
             .as_ref()
             .map_or(std::ptr::null(), |facts| facts.as_ptr())
-    }
-
-    pub(crate) fn snapshot(&self) -> FailureSnapshot {
-        FailureSnapshot {
-            code: self.code,
-            retryable: self.retryable,
-            message: self.message.to_string_lossy().into_owned(),
-            facts: self.native_facts.clone(),
-            stopped: self.stopped,
-        }
     }
 }
 
@@ -208,6 +203,8 @@ thread_local! {
     /// The calling thread's last failed `thinkthen_engine_new`, which the
     /// error functions report for a null engine. A built engine clears it.
     static UNBUILT: RefCell<Option<Last>> = const { RefCell::new(None) };
+    /// Immediate session failures remain independent from constructors and engines.
+    static SESSION: RefCell<Option<Last>> = const { RefCell::new(None) };
 }
 
 /// Build an engine and keep it, or record why none came for the calling
@@ -290,7 +287,7 @@ pub(crate) fn code(held: Option<&Held>) -> i32 {
 
 /// Whether the last failure could pass later; 0 when none is held.
 pub(crate) fn retryable(held: Option<&Held>) -> i32 {
-    last(held, |last| i32::from(last.retryable)).unwrap_or(0)
+    last(held, Last::retryable).unwrap_or(0)
 }
 
 /// The last message. The pointer stays valid until the calling thread
@@ -298,7 +295,7 @@ pub(crate) fn retryable(held: Option<&Held>) -> i32 {
 /// thread exits. With a null engine, its distinct slot lasts until the
 /// next constructor call on this thread or thread exit.
 pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
-    last(held, |last| last.message.as_ptr()).unwrap_or_else(|| {
+    last(held, Last::message).unwrap_or_else(|| {
         if held.is_some() {
             c"no failure yet"
         } else {
@@ -310,32 +307,7 @@ pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
 
 /// Borrow the calling thread's last started-failure facts, if present.
 pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
-    last(held, |last| last.facts.as_ref().map(|facts| facts.as_ptr()))
-        .flatten()
-        .unwrap_or(std::ptr::null())
-}
-
-/// Independent saved-error data; no successful-result provenance is synthesized.
-#[derive(Clone)]
-pub(crate) struct FailureSnapshot {
-    pub(crate) code: i32,
-    pub(crate) retryable: bool,
-    pub(crate) message: String,
-    pub(crate) facts: Option<Box<Facts>>,
-    pub(crate) stopped: Option<thinkthen::Stopped>,
-}
-impl fmt::Debug for FailureSnapshot {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FailureSnapshot")
-            .field("code", &self.code)
-            .field("retryable", &self.retryable)
-            .field("facts", &self.facts.is_some())
-            .finish_non_exhaustive()
-    }
-}
-/// Clone under the existing thread/engine lock; never clears or replaces the saved error.
-pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
-    last(held, Last::snapshot)
+    last(held, Last::facts).unwrap_or(std::ptr::null())
 }
 
 /// Run one interface body so no panic unwinds into the host. A panic records the
@@ -344,25 +316,76 @@ pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
 /// `try_with`, so a call after thread-local teardown, such as a free from
 /// an `atexit` handler, exits clean (R2-7).
 pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> T) -> T {
-    contained(body).unwrap_or_else(|| {
+    protect(fallback, body, || {
         if let Some(held) = held {
             held.fail(Failure::defect("a panic crossed the C interface"));
         }
+    })
+}
+
+fn protect<T>(fallback: T, body: impl FnOnce() -> T, failed: impl FnOnce()) -> T {
+    contained(body).unwrap_or_else(|| {
+        failed();
         fallback
     })
 }
 
-/// The typed facts interface retains a completed call through post-reply defects.
-pub(crate) fn guard_completed<T>(
-    held: &Held,
-    completed: &mut Option<Facts>,
-    fallback: T,
-    body: impl FnOnce(&mut Option<Facts>) -> T,
-) -> T {
-    contained(|| body(completed)).unwrap_or_else(|| {
-        held.fail(Failure::defect("a panic crossed the C interface").completed(completed.as_ref()));
-        fallback
+/// Record an immediate session failure without changing either engine slot.
+fn session_fail(failure: Failure) -> i32 {
+    let code = failure.code;
+    let _ = SESSION.try_with(|slot| {
+        if let Ok(mut slot) = slot.try_borrow_mut() {
+            *slot = Some(Last::of(failure));
+        }
+    });
+    code
+}
+
+/// Run a session operation with fixed diagnostics for its error kind.
+pub(crate) fn session_call(body: impl FnOnce() -> Result<(), ErrorKind>) -> i32 {
+    session_native_call(|| body().map_err(Failure::from))
+}
+
+/// Run a session operation with its owned native diagnostics.
+pub(crate) fn session_native_call(body: impl FnOnce() -> Result<(), Failure>) -> i32 {
+    session_guard(DEFECT, || match body() {
+        Ok(()) => OK,
+        Err(failure) => session_fail(failure),
     })
+}
+
+/// Contain a session panic and record the fixed session defect message.
+pub(crate) fn session_guard<T>(fallback: T, body: impl FnOnce() -> T) -> T {
+    protect(fallback, body, || {
+        session_fail(ErrorKind::Defect.into());
+    })
+}
+
+fn session_last<T>(fallback: T, inspect: impl Fn(&Last) -> T) -> T {
+    SESSION
+        .try_with(|slot| {
+            slot.try_borrow()
+                .ok()
+                .and_then(|held| held.as_ref().map(inspect))
+        })
+        .ok()
+        .flatten()
+        .unwrap_or(fallback)
+}
+
+/// Borrow the immediate session message until the calling thread's next failure.
+pub(crate) fn session_message() -> *const c_char {
+    session_last(c"no session failure yet".as_ptr(), Last::message)
+}
+
+/// Whether the immediate session failure could pass later.
+pub(crate) fn session_retryable() -> i32 {
+    session_last(0, Last::retryable)
+}
+
+/// Borrow the immediate session failure's count-only facts, if present.
+pub(crate) fn session_facts() -> *const c_char {
+    session_last(std::ptr::null(), Last::facts)
 }
 
 /// A message the interface hands out when no engine table holds one.
@@ -372,3 +395,12 @@ pub(crate) const NO_MESSAGE: &CStr = c"the interface panicked, so no message cam
 
 #[cfg(test)]
 mod tests;
+
+/// Borrow the immutable last failure; NULL means this slot holds no failure.
+pub(crate) fn view(held: Option<&Held>) -> *const thinkthen_error_view_v1 {
+    last(held, Last::view).unwrap_or(std::ptr::null())
+}
+/// Borrow the independent immediate session failure, or NULL before a failure.
+pub(crate) fn session_view() -> *const thinkthen_error_view_v1 {
+    session_last(std::ptr::null(), Last::view)
+}

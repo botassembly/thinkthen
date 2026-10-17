@@ -2,7 +2,6 @@
 
 use pgrx::pgrx_sql_entity_graph::{PgrxSql, SqlGraphEntity, ToSql};
 
-pub(crate) const COMPLETE_TEXT: &str = "on explicit native input records encoded as text JSON and return the complete result/2 envelope as PostgreSQL json, including final facts and started failures. NULL question or inputs returns NULL before inspecting partners; NULL settings uses defaults. Questions support native catalog references and privileged/confined @files. Evidence and image files must be read by the client. Admission and backend failures return error envelopes.";
 pub(crate) const REQUIRED_SCALAR: &str =
     "A required NULL operand returns NULL before inspecting partners, reading files or sending. ";
 pub(crate) const REQUIRED_TABLE: &str =
@@ -46,9 +45,9 @@ $thinkthen_description$;
 }
 
 macro_rules! describe {
-    ($description:expr; [$($options:tt)*]; $(#[$attribute:meta])* fn $name:ident $($body:tt)*) => {
+    ($description:expr; [$($option:meta),* $(,)?]; $(#[$attribute:meta])* fn $name:ident $($body:tt)*) => {
         $(#[$attribute])*
-        #[pg_extern($($options)*, sql = $name::sql)]
+        #[pg_extern($($option,)* sql = $name::sql)]
         fn $name $($body)*
 
         mod $name {

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "relate": {
+    "relations": [
+      {
+        "name": "makes",
+        "source": "company",
+        "target": "product"
+      }
+    ]
+  }
+}

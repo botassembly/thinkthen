@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from harness import CASES, CHILD, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import native_reading
 from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
@@ -36,8 +37,10 @@ def session_batch_keeps_digit_grammar_and_exact_refusal():
     with Backend() as backend:
         for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
             got = run([f"SET thinkthen_batch = '{value}'", ASK,
-                       "SELECT thinkthen_details('Is it a refund?', 'refund now')"], backend.base())
-            expect([said(result) for result in got[1:]], [error, error], 'retained session batch refusal')
+                       "SELECT thinkthen_decide_details('Is it a refund?', 'refund now')"], backend.base())
+            expect(said(got[1]), error, "ordinary session batch refusal")
+            failure = rows(got[2])[0][0]["failure"]
+            expect((failure["kind"],failure["message"]), ("usage","batch takes max or a whole number of at least 1"), "typed session batch refusal")
         expect(backend.count(), 0, 'invalid session batches send nothing')
     for value, count in (('max', 1), ('1', 2), ('01', 2)):
         with Backend() as backend:
@@ -186,8 +189,8 @@ def saved_calibration_details_keep_the_shared_digest_and_warning():
     profile = json.dumps(shared["runtime_profile"], separators=(",", ":"))
     with Backend() as backend:
         got = run([f"SET thinkthen_profile = {literal(profile)}",
-                   f"SELECT thinkthen_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
-        details = json.loads(rows(got[1])[0][0])
+                   f"SELECT thinkthen_decide_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
+        details = native_reading(rows(got[1])[0][0])
         expect(details["meta"]["question_sha256"], shared["question_sha256"], "saved digest")
         expect(details["meta"]["profile_warning"], shared["warning"], "profile mismatch")
         expect(details["meta"]["model"], shared["model"], "actual model")
@@ -466,7 +469,7 @@ def cache_folder_shape():
 @case
 def settings_keep_the_environments_seeding():
     with Backend() as backend, tempfile.TemporaryDirectory() as cache:
-        details = "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.meta.cached' AS BOOLEAN)"
+        details = "SELECT (thinkthen_decide_details('Is it a refund?', 'refund now')).result.meta.cached"
         first = run([details], backend.base(), extra={"THINKTHEN_CACHE": cache})
         expect(rows(first[0]), [[False]], "the first run asks")
         sent = backend.count()

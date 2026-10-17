@@ -17,6 +17,15 @@ pub struct CompleteRelated {
 }
 
 impl CompleteRelated {
+    /// Per-item probabilities in the same order as the plain answer.
+    #[must_use]
+    pub fn probability(&self) -> Vec<Option<f64>> {
+        self.value
+            .iter()
+            .map(|edge| Some(edge.probability()))
+            .collect()
+    }
+
     /// The actual resolved relation plan and input mode.
     #[must_use]
     pub fn question(&self) -> super::RelationReading<'_> {
@@ -67,13 +76,6 @@ impl CompleteRelated {
         })
     }
 
-    pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
-        &self,
-        input: Option<&T>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        self.serialize_occurrence(input, None, serializer)
-    }
     pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
         &self,
         input: Option<&T>,
@@ -141,7 +143,7 @@ impl fmt::Debug for CompleteRelated {
 
 impl Serialize for CompleteRelated {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_input::<S, ()>(None, serializer)
+        self.serialize_occurrence::<S, ()>(None, None, serializer)
     }
 }
 

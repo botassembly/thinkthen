@@ -1,3 +1,4 @@
+//! Stays: host signal handlers and worker masks must survive sends and recording I/O.
 //! Host signal proofs: a host signal never fails a call on an engine worker.
 //! The file-size proofs run in a child of this binary that skips command
 //! setup, the way an embedding host would call the engine.
@@ -93,6 +94,7 @@ fn host_signal_child() {
         Client::new(SECOND * 30, false, &crate::engine::limits::process().widths).gated(widths);
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -148,16 +150,33 @@ fn host_signal_child() {
     );
 }
 
-/// Run `file_size_child` under a one-block file-size limit.
+/// Run `file_size_child` with an open default signal and a one-block limit.
 fn limited_child(mode: &str) -> std::process::Output {
+    // The parent owns cleanup because the default action kills the child.
+    struct Folder(std::path::PathBuf);
+    impl Drop for Folder {
+        fn drop(&mut self) {
+            let _removed = std::fs::remove_dir_all(&self.0);
+        }
+    }
+    let folder = Folder(
+        std::env::temp_dir().join(format!("thinkthen-host-xfsz-{}-{mode}", std::process::id())),
+    );
     crate::test_deadline::output(
-        crate::test_deadline::child::command("sh", &[])
+        // Exec preserves ignored dispositions and blocked signals from runners.
+        // Establish the embedding host's signal state before its test starts.
+        crate::test_deadline::child::command("python3", &[])
             .arg("-c")
             .arg(concat!(
-                "ulimit -f 1; exec \"$0\" --exact ",
-                "engine::host_signal_tests::file_size_child --ignored --nocapture --quiet"
+                "import os, resource, signal, sys; ",
+                "signal.signal(signal.SIGXFSZ, signal.SIG_DFL); ",
+                "signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGXFSZ}); ",
+                "resource.setrlimit(resource.RLIMIT_FSIZE, (512, 512)); ",
+                "os.execv(sys.argv[1], [sys.argv[1], '--exact', ",
+                "'engine::host_signal_tests::file_size_child', '--ignored', '--nocapture', '--quiet'])"
             ))
             .arg(std::env::current_exe().expect("test binary"))
+            .env("THINKTHEN_HOST_XFSZ_FOLDER", &folder.0)
             .env("THINKTHEN_HOST_XFSZ", mode),
     )
     .expect("limited child")
@@ -200,7 +219,9 @@ fn file_size_child() {
             signal_hook::flag::register(signal_hook::consts::signal::SIGXFSZ, Arc::clone(&ran))
                 .expect("host action");
     }
-    let folder = std::env::temp_dir().join(format!("thinkthen-host-xfsz-{}", std::process::id()));
+    let folder = std::path::PathBuf::from(
+        std::env::var_os("THINKTHEN_HOST_XFSZ_FOLDER").expect("parent-owned folder"),
+    );
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("url");
     let state = State::new(r#""The text is short.""#.to_owned(), 0);
     let question = r#"{"type":"noul","instructions":"Is it?"}"#;
@@ -211,7 +232,7 @@ fn file_size_child() {
     let row = Row {
         observation_id: crate::core::ObservationId::new("b".repeat(64)).unwrap(),
         batch_size: None,
-        key: QuestionKey::of(&url, r#""jev-1""#, state.json(), question),
+        key: QuestionKey::complete(&url, r#""jev-1""#, r#""jev-1""#, state.json(), question),
         url: url.as_str(),
         model: "jev-1",
         state: &state,
@@ -243,7 +264,6 @@ fn file_size_child() {
         ran.load(Ordering::SeqCst),
         "the host action is still installed"
     );
-    std::fs::remove_dir_all(&folder).expect("cleanup");
     let mut stdout = std::io::stdout().lock();
     writeln!(stdout, "storage failure; host action ran; still installed").expect("announce");
 }

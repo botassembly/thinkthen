@@ -1,0 +1,12 @@
+# Source after setting heavy_scripts to the repository's sdlc/scripts path
+# and clearing credentials. Only compiler commands enter shared admission.
+# Runtime checks keep the caller's shell and hold no new permit.
+heavy_compile() (
+    heavy_lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
+    if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" = "$heavy_lock" ]; then
+        "$@"
+    else
+        python3 "$heavy_scripts/build-admission.py" --lock "$heavy_lock" \
+            --priority "${heavy_priority:-normal}" -- "$@"
+    fi
+)

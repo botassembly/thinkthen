@@ -283,6 +283,7 @@ pub(crate) struct FindResult {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: aggregate choice indexing, count limits and tie arithmetic need direct numeric invariants.
     use super::Find;
     use crate::core::adapters::built_in;
     use crate::core::answer::{Answer, Distribution};

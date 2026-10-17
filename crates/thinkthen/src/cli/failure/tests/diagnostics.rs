@@ -1,3 +1,4 @@
+//! Stays: private diagnostic and signal mappings must withhold secrets and preserve cancellation counts.
 //! Failure messages and exit status retain their fixed safe forms.
 
 use super::*;
@@ -129,7 +130,7 @@ fn common_request_statuses_give_fixed_actions() {
     let cases = [
         (
             400,
-            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n",
+            "thinkthen: the backend answered with status 400: the backend refused the request\n",
         ),
         (
             500,

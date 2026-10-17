@@ -1,3 +1,4 @@
+//! Stays: private record quoting must preserve JSON data and account for the encoded evidence limit.
 //! The quoted form of one record, by ADR 0111 section 1. The packer tests
 //! in `pack` cover how questions join into requests.
 

@@ -6,6 +6,10 @@ import io
 from contextlib import redirect_stdout
 import importlib.util
 import json
+import os
+import runpy
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import urllib.request
@@ -59,7 +63,49 @@ def route(root, *, missing=False, receipt=False, extra=False):
     assert calls == ['powershell', 'pwsh'] and len(replays) == 2
 
 
+def unicode_diagnostics():
+    fixture = runpy.run_path(str(REPO / 'sdlc/scripts/windows-installer-test.py'))
+    data = io.BytesIO()
+    with io.TextIOWrapper(data, encoding='cp1252') as log, redirect_stdout(log):
+        result = fixture['run_fixture']([sys.executable, '-c',
+            "import sys; sys.stdout.buffer.write('fixture path: \\u03a9\\n'.encode('utf-8')); "
+            "sys.stderr.buffer.write('fixture diagnostic: \\u03a9\\n'.encode('utf-8')); sys.exit(7)"],
+            env={key: os.environ[key] for key in ('SystemRoot', 'SystemDrive', 'TEMP', 'TMP') if key in os.environ},
+            timeout=10, label='Unicode output')
+        assert result.returncode == 7
+        assert result.stdout == 'fixture path: \u03a9\n'.encode('utf-8')
+        assert result.stderr == 'fixture diagnostic: \u03a9\n'.encode('utf-8')
+        output = data.getvalue().decode('utf-8')
+        assert 'fixture path: \u03a9' in output and 'fixture diagnostic: \u03a9' in output
+        assert 'Unicode output exited 7' in output
+
+
+def timeout_diagnostics():
+    fixture = runpy.run_path(str(REPO / 'sdlc/scripts/windows-installer-test.py'))
+    data = io.BytesIO()
+    with io.TextIOWrapper(data, encoding='cp1252') as log, redirect_stdout(log):
+        try:
+            fixture['run_fixture']([sys.executable, '-c',
+                "import sys, threading; sys.stdout.buffer.write('fixture phase: \\u03a9 waiting\\n'.encode('utf-8')); "
+                "sys.stdout.buffer.flush(); sys.stderr.buffer.write('controlled fixture error: \\u03a9\\n'.encode('utf-8')); "
+                "sys.stderr.buffer.flush(); threading.Event().wait()"],
+                env={key: os.environ[key] for key in ('SystemRoot', 'SystemDrive', 'TEMP', 'TMP') if key in os.environ},
+                timeout=2, label='controlled timeout')
+        except ValueError as error:
+            assert isinstance(error.__cause__, subprocess.TimeoutExpired)
+            assert error.__cause__.stdout.splitlines() == ['fixture phase: \u03a9 waiting'.encode('utf-8')]
+            assert error.__cause__.stderr.splitlines() == ['controlled fixture error: \u03a9'.encode('utf-8')]
+        else:
+            raise AssertionError('controlled child did not time out')
+        output = data.getvalue().decode('utf-8')
+        assert 'fixture phase: \u03a9 waiting' in output
+        assert 'controlled fixture error: \u03a9' in output
+        assert 'controlled timeout failed' in output
+
+
 def main():
+    unicode_diagnostics()
+    timeout_diagnostics()
     with tempfile.TemporaryDirectory(prefix='thinkthen-installer-routing-') as temporary:
         root = Path(temporary)
         for name, options in (('good', {}), ('missing-host', dict(missing=True)),
@@ -74,7 +120,7 @@ def main():
             else:
                 if name != 'good':
                     raise RuntimeError(f'routing accepted {name}')
-    print('Windows installer routing: both hosts install before replay; 3 refusal plants pass; native Windows proof NOT RUN')
+    print('Windows installer routing: both hosts install before replay; 3 refusal plants and Unicode output/timeout diagnostics pass; native Windows proof NOT RUN')
 
 
 if __name__ == '__main__':

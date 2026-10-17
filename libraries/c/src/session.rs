@@ -1,5 +1,4 @@
 //! Owned native sessions and packets have no foreign or engine-table borrows.
-pub(crate) mod errors;
 pub mod views;
 pub mod views_generated;
 use std::ffi::{CString, c_char};
@@ -8,7 +7,7 @@ use thinkthen::{RequestSession, RequestSessionResult};
 
 /// Independent session owner. Free once after concurrent operations return.
 #[derive(Debug)]
-pub struct SessionHandle(pub(crate) RequestSession);
+pub struct SessionHandle(pub(crate) RequestSession, pub(crate) thinkthen::Surface);
 
 /// Independent packet owner. It remains live after its session and engine are freed.
 #[derive(Debug)]

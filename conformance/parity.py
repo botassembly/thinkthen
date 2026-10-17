@@ -66,6 +66,13 @@ CORE_SAMPLE = {
 REFERENCE_CONSUMERS = {'cli', 'rust', 'c'}
 
 
+def call_result_consumers(parity):
+    """The library result contract excludes packet, command and database doors."""
+    return [row['id'] for row in all_consumers(parity)
+            if row['surface'].startswith('libraries/')
+            and row['id'] not in ('c', 'mcp', 'rust-polars')]
+
+
 def required_cases(parity, consumer):
     """Resolve the assertions at a public door without changing shared SDK cases."""
     contract = next(row for row in all_consumers(parity) if row['id'] == consumer)
@@ -99,6 +106,16 @@ def validate_consumer_contracts(parity):
     for consumer in all_consumers(parity):
         fields = {'required_checks', 'case_rulings'} & set(consumer)
         if consumer['id'] != 'cli':
+            if consumer['id'] == 'postgresql' and fields == {'case_rulings'}:
+                rulings = consumer['case_rulings']
+                identity = 'proxy-reservation-refusal'
+                ruling = rulings.get(identity) if isinstance(rulings, dict) else None
+                if (identity not in cases or not isinstance(rulings, dict) or set(rulings) != {identity}
+                        or not isinstance(ruling, dict) or set(ruling) != {'boundary', 'reason'}
+                        or ruling.get('boundary') != 'sdk-only'
+                        or not isinstance(ruling.get('reason'), str) or not ruling['reason'].strip()):
+                    raise ValueError('postgresql: invalid closed proxy reservation boundary ruling')
+                continue
             if fields:
                 raise ValueError(f"{consumer['id']}: CLI applicability fields at another public door")
             continue
@@ -186,7 +203,11 @@ def inventory():
     for case in cases:
         if case['verb'] not in parity['functions'] or not case['expect']:
             raise ValueError(f"{case['id']}: unknown verb or empty expectation")
-        if 'consumers' in case and (not case['id'].startswith('mcp-question-') or case['consumers'] != ['mcp']):
+        library_result = (case['id'] == 'library-call-result'
+                          and case['kind'] == 'call-result'
+                          and case.get('consumers') == call_result_consumers(parity))
+        if ('consumers' in case and not library_result
+                and (not case['id'].startswith('mcp-question-') or case['consumers'] != ['mcp'])):
             raise ValueError(f"{case['id']}: shared cases cannot exclude public variants")
         if set(case.get('consumers', [])) - {row['id'] for row in all_consumers(parity)}:
             raise ValueError(f"{case['id']}: unknown public variant")
@@ -194,6 +215,10 @@ def inventory():
         if len(checks) != len(set(checks)) or set(checks) - {'named', 'compile', 'runtime'} or not {'named', 'runtime'} <= set(checks):
             raise ValueError(f"{case['id']}: invalid required checks")
         given = case['input']
+        if case['kind'] == 'call-result':
+            references = given.get('case_refs', [])
+            if not library_result or len(references) != len(case['expect'].get('calls', [])) or any(source not in canonical for source in references):
+                raise ValueError(f"{case['id']}: invalid library result calls")
         if 'scenarios_ref' in given:
             scenarios = parity['image_admission_scenarios'].get(given['scenarios_ref'])
             if not scenarios or any(row['profile_ref'] not in parity['image_profiles'] for row in scenarios):
@@ -371,6 +396,9 @@ def installed_artifacts(directory, consumers):
             artifact = select([f'thinkthen-{family}-{version}-{target}.tar.gz'])
         found[consumer] = dict(THINKTHEN_ARTIFACT=artifact,
                                THINKTHEN_C_ARTIFACT=native, THINKTHEN_DART_ARTIFACT=dart)
+        if consumer == 'postgresql':
+            for major in (16, 17, 18):
+                found[consumer][f'THINKTHEN_PG{major}_ARTIFACT'] = select([f'thinkthen-postgresql{major}-{version}-{target}.tar.gz'])
     return found, command, native
 
 
@@ -421,7 +449,8 @@ def support_table(parity, matrix):
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
             boundary = ruling['boundary']
-            coverage = ('outside CLI' if boundary == 'sdk-only'
+            coverage = (('outside PostgreSQL' if row['consumer'] == 'postgresql' else 'outside CLI')
+                        if boundary == 'sdk-only'
                         else 'boundary coverage ' + row['cells'].get(case_id, 'missing'))
             reason = ruling['reason'].replace('|', '/').replace('\n', ' ')
             remaining += f'; {case_id}: {boundary}, {coverage}, {reason}'
@@ -469,19 +498,36 @@ def run(port, baseline=False, artifact_dir=None):
 
 
 def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
-    def run_command(command, ids, preparation=None):
+    def run_command(command, ids, preparation=None, pg_major=None):
+        if ids == ['postgresql'] and pg_major is None:
+            versions = []
+            for major in (16, 17, 18):
+                source_preparation = prepare(command, major)[1] if not artifacts and not baseline else preparation
+                versions.append(run_command(command, ids, source_preparation, major)[0])
+            row = dict(versions[-1])
+            for cell in row['cells']:
+                states = [version['cells'][cell] for version in versions]
+                row['cells'][cell] = next((state for state in states if state != 'pass'), 'pass')
+            row['baseline_exit'] = next((version['baseline_exit'] for version in versions if version['baseline_exit'] != 0), 0)
+            row['baseline_error'] = next((version['baseline_error'] for version in versions if version['baseline_error']), None)
+            row['adopted_case_count'] = sum(state == 'pass' for state in row['cells'].values())
+            if any(version['named_typed_functions'] != row['named_typed_functions'] for version in versions):
+                row['named_typed_functions'] = None
+            row['duration_seconds'] = sum(version['duration_seconds'] for version in versions)
+            row['postgresql_majors'] = {str(major): version['log'] for major, version in zip((16, 17, 18), versions)}
+            return [row]
         rows = []
         started = time.monotonic()
-        label = '+'.join(ids)
+        label = '+'.join(ids) + (f'-{pg_major}' if pg_major else '')
         log = output_dir / (label + '.log')
         code, seen, error = None, {}, None
         setup_seconds = preparation[1] if preparation else 0
-        remaining = 900 - setup_seconds
+        remaining = 900 if pg_major else 900 - setup_seconds
         platform_pending = len(ids) == 1 and apple_pending(ids[0])
         execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
-            args = list(command) + ([] if command[0] == 'cargo' else [port])
+            args = list(command) + ([str(pg_major)] if pg_major else [] if command[0] == 'cargo' else [port])
             if artifacts and ids == ['cli']:
                 args.append(str(installed / 'command/thinkthen'))
             with tempfile.TemporaryDirectory(prefix='thinkthen-parity-') as scratch, log.open('w') as stream:
@@ -490,8 +536,12 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
                     env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
                                THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
                                THINKTHEN_C_LIBRARY=str(installed_library))
+                if artifacts and pg_major:
+                    env['THINKTHEN_ARTIFACT'] = artifacts['postgresql'][f'THINKTHEN_PG{pg_major}_ARTIFACT']
                 if preparation:
                     env.update(THINKTHEN_PARITY_PREPARED=preparation[0], THINKTHEN_PARITY_CONSUMER=ids[0])
+                    if pg_major:
+                        env['THINKTHEN_ARTIFACT'] = str(Path(preparation[0]) / 'postgresql.tar.gz')
                 try:
                     if preparation and (preparation[2] != 0 or remaining <= 0):
                         code = preparation[2] or 124
@@ -529,24 +579,28 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
     with ExitStack() as assets:
         paths = {command: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
                  for command in families}
-        def prepare(command):
-            ids = families[command]
-            log = output_dir / ('+'.join(ids) + '-setup.log')
+        pg_paths = {major: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
+                    for major in (16, 17, 18)} if not artifacts and not baseline and 'postgresql' in consumers else {}
+        def prepare(command, pg_major=None):
+            ids = ['postgresql'] if pg_major else families[command]
+            destination = pg_paths[pg_major] if pg_major else paths[command]
+            label = '+'.join(ids) + (f'-{pg_major}' if pg_major else '')
+            log = output_dir / (label + '-setup.log')
             started = time.monotonic()
             with tempfile.TemporaryDirectory(prefix='thinkthen-parity-setup-') as scratch, log.open('w') as stream:
                 env = consumer_environment(scratch, port)
-                env['THINKTHEN_PARITY_PREPARE'] = paths[command]
+                env['THINKTHEN_PARITY_PREPARE'] = destination
                 if artifacts:
                     env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
                                THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
                                THINKTHEN_C_LIBRARY=str(installed_library))
                 try:
-                    code = subprocess.run(['sh', 'sdlc/scripts/time-limit', '900', *command, port],
+                    code = subprocess.run(['sh', 'sdlc/scripts/time-limit', '900', *command, str(pg_major) if pg_major else port],
                                           cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT,
                                           check=False).returncode
                 except OSError:
                     code = 127
-            return command, (paths[command], time.monotonic() - started, code, str(log.relative_to(ROOT)))
+            return command, (destination, time.monotonic() - started, code, str(log.relative_to(ROOT)))
         with ThreadPoolExecutor(max_workers=4) as workers:
             prepared = dict(workers.map(prepare, families))
         jobs = [(command, [member], prepared[command]) for command, ids in families.items() for member in ids]

@@ -12,40 +12,40 @@ Run `libraries/jvm/tests/session_installed.py --jars /absolute/output/jars --out
 
 Add `--maven` to consume the assembled versioned Maven files in that installed check. This checks the supplied local artifacts without running a Maven resolver or contacting a registry.
 
-The ten functions share one typed API in each language. The recommended calls accept generated `Inputs.RequestQuestion`, `Inputs.RequestInput`, `Inputs.RequestOptions` and `Inputs.EngineSettings` builders. The shared Request schema supplies question selectors, authored definitions, sources, images, records and controls. Native code supplies defaults and rejects invalid grammar. Setting a member to null preserves explicit null; `omitMember()` removes it. Ordered lists and originals retain their values. Java and Kotlin use their ordinary lists and maps for original JSON data; Scala converts typed list arguments with `asJava`, and the facade converts nested Scala originals and numeric values. Kotlin and Scala have generated native result representations. Calls and engine settings accept only generated input carriers; arbitrary original JSON still accepts ordinary language values.
+The ten functions share one typed API in each language. The recommended calls accept generated `Inputs.RequestQuestion`, `Inputs.RequestInput`, `Inputs.RequestOptions` and `Inputs.EngineSettings` builders. The shared Request schema supplies question selectors, authored definitions, sources, images, records and controls. Native code supplies defaults and rejects invalid grammar. Setting a member to null preserves explicit null; `omitMember()` removes it. Ordered lists and originals retain their values. Java and Kotlin use their ordinary lists and maps for original JSON data; Scala converts typed list arguments with `asJava`, for every nested original value. Kotlin and Scala return their own call results with native collections and nullable or optional scalar answers. Calls and engine settings accept only generated input carriers; arbitrary original JSON still accepts ordinary language values.
 
 ```java
-try (var engine = new thinkthen.Engine(new thinkthen.Inputs.EngineSettings())) {
-    var call = engine.decide(
-        new thinkthen.Inputs.RequestQuestionText().text("Does the writer ask for a refund?"),
-        new thinkthen.Inputs.RequestInputText().text("Please refund my order."));
-    var complete = call.join();
-    // Inspect generated Results packets and terminal facts, or cancel call.
+import thinkthen.Engine;
+import thinkthen.Inputs.RequestInputText;
+import thinkthen.Inputs.RequestQuestionText;
+
+public class DeveloperExample {
+    public static void main(String[] args) {
+        var question = new RequestQuestionText()
+            .text("Does the customer ask for a refund?");
+        var broken = new RequestInputText().text(
+            "Please refund my order. It arrived broken.");
+
+        try (var tt = new Engine()) {
+            var refund = tt.decide(question, broken).join();
+            var isRefund = refund.value();
+            var probability = refund.probability();
+            assert probability.compareTo(
+                new java.math.BigDecimal("0.99")) == 0;
+            assert Boolean.TRUE.equals(isRefund);
+        }
+    }
 }
 ```
 
+The shipped `examples/` sources call all ten functions with typed questions and read one answer from each completed call. Java shares the question builders; Kotlin uses suspend functions and Scala waits for Future handles. Relation examples read `sourceName()` and `targetName()` directly. The installed routine check compiles and replays these exact sources.
+
 Run `sh libraries/jvm/check.sh` for the focused stable installed consumers. It builds the package through the ordinary builder and checks all three languages with counted loopback requests. `THINKTHEN_JVM_NATIVE` supplies an existing matching native library; otherwise the check builds the C library offline. `THINKTHEN_ARTIFACT` selects an already built stable archive. `THINKTHEN_TEST_PROFILE=full` additionally runs every required shared case through the installed named Java, Kotlin and Scala calls; `THINKTHEN_PORTABLE_BATCH=1` also selects them. This full campaign belongs to the release suite. For a focused development check, run `python3 libraries/jvm/tests/public_types.py --jars /absolute/built/jars --out /absolute/scratch --case CASE_ID`; selectors name existing shared cases and report only that subset. Final platform and distribution qualification remain required.
 
-The development Kotlin facade returns `thinkthen.kotlin.OwnedCall` with generated Kotlin packet, plan and failure views. Known fields are Kotlin properties. Optional and nullable fields return nullable values; `presence("wire_member")` distinguishes a missing field from an explicit null. Required nullable members still fail when missing. For example, `call.terminal.facts?.requestsSent` reads final run facts.
+The ten Java futures, Kotlin suspend functions and Scala Future handles return typed `CallResult` objects with `value`, `probability`, `results` and `facts`. Kotlin uses properties and ordinary lists; Scala uses properties, ordinary lists and `Option` for missing scalar answers. Java uses getters and nullable `Double` and `List<Double>` probabilities. Record inputs retain input order. Detailed `Results` getters and `Presence` retain omission, explicit null and values. Rank returns original zero-based indexes; filter returns original inputs, including explicit JSON null. `Questions` builds small authored questions and ordered description options. Native packet and error views are copied into independent values before their owners are freed. Both facades offer `plan`, `execute`, caller-owned sessions and explicit cancellation.
 
-The Scala facade returns `thinkthen.scala.Call`, whose Future holds an owned native Scala result. Generated collections and numbers use Scala types. Required nullable fields use `Option[T]`; optional nullable fields use `Option[Option[T]]` so missing is `None` and explicit null is `Some(None)`. Other optional fields use `Option[T]` and retain null versus missing through `presence`. For example, `call.terminal.facts.map(_.requestsSent)` reads final run facts. Kotlin and Scala expose native `SessionFailure` and `NativeFailure` exceptions; a session failure retains its typed complete call after cleanup. Both facades offer generated `plan` results and `execute` for a full typed request. Their ten named functions retain coroutine or Future cancellation over the shared JVM transport.
+Java, Kotlin and Scala provide `startSession(Inputs.Request)` for caller-owned feeds. One executor per engine handles blocking native work and remains alive until its last owned session closes. `push` waits for native input room on a platform worker. `nextPacket` blocks for one owned packet; `nextPacket(true)` drains final facts after cancellation. `tryRead` separates a pending read from explicit end. `waitReady` observes readiness without consuming a packet, using bounded native waits on the same worker until readiness or cancellation. Scala feed execution accepts an ordinary Scala iterable. `finish` closes intake or records a typed reader failure. `close` cancels and releases the owner after outstanding native calls return. `execute(request, feed)` transfers descriptors while the reader drains packets.
 
-These views are generated from the same Rust result graph as Java. Arbitrary original JSON remains an owned JSON value. Kotlin and Scala inputs use the shared generated JVM builders. Final platform and distribution qualification remain separate work.
-
-Java, Kotlin and Scala provide `startSession(Inputs.Request)` for caller-owned feeds. Kotlin and Scala sessions retain their language's generated packets and the owning surface identity. One producer retries the same descriptor when `tryPush` returns full; one reader drains packets while intake progresses. `finish` closes intake or records a typed reader failure. `tryRead` separates a pending read from explicit end. `cancel` stops intake while permitting a drain; `close` releases the owner. Close the session before closing its engine. The facades reuse the shared Java owner and add no scheduler or admission rules.
-
-Generated input classes offer `fromJson` for structured fixture or interchange data. It retains omission, null and unknown members and selects only the structural host carrier. It does not fill missing required tags, enforce question grammar or coerce numbers; native admission remains authoritative. Ordinary callers should use typed builders. The shared JSON encoder preserves Java `BigInteger` exactly alongside `BigDecimal`.
+Use typed input builders. They preserve omission, explicit null and arbitrary authored values; native admission validates the question grammar. Java `BigInteger` and `BigDecimal` retain their exact values.
 
 Each ordinary engine exposes `usagePersistence()` and `finishUsageStatus()`. Both return an immutable `UsagePersistence` with a native state and optional copied safe advice. Java uses a nullable `String`, Kotlin uses `String?`, and Scala uses `Option[String]`. The observation describes this engine’s current deltas. `finishUsageStatus()` waits for the writer; only usage-lock acquisition has a deadline, and other filesystem work can take longer. Persistence failure leaves valid answers and in-memory call facts intact. Retained observations remain readable after engine cleanup. Both methods reject a closed engine. The state meanings and native advice ownership follow the [C header](../c/include/thinkthen.h).
-
-## Upgrade from the old API
-
-| Old call | Development 0.2 call |
-| --- | --- |
-| `Door.decide` or `Door.decideComplete` and the other nine functions | `thinkthen.Engine.decide` and the corresponding typed named calls |
-| `KotlinFacade` or `KotlinComplete` | `thinkthen.kotlin.KotlinEngine` suspend functions |
-| `ScalaFacade` or `ScalaComplete` | `thinkthen.scala.ScalaEngine` Future calls with explicit cancellation |
-| `Requests`, JSON settings and map call overloads | Generated `Inputs` builders |
-| Handwritten `Complete` results and map facts | Generated `Results` packets and terminal facts |
-
-The preview facades and map call overloads are removed. Installed routine checks cover Linux x86-64. Windows, Apple, registry resolution and full parity belong to distribution qualification under 0530. The frozen 0.1 C exports remain available in the C package.

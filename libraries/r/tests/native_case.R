@@ -11,6 +11,10 @@ tryCatch({
     name = tt_question(name = selector$name), reference = tt_question(reference = selector$reference),
     tt_question(selector$value))
   input <- do.call(tt_input, document$input)
+  if (isTRUE(document$call_result_contract)) {
+    stopifnot(identical(document$input$kind, "records"), length(document$input$items) == 1L)
+    input <- do.call(tt_input, document$input$items[[1L]]$original)
+  }
   producer_items <- document$producer_items
   if (isTRUE(document$incremental) && identical(document$input$kind, "records"))
     producer_items <- document$input$items
@@ -70,10 +74,15 @@ tryCatch({
   }
   for (result in done$results) {
     if (inherits(result,"thinkthen_RankResult") && !inherits(result$members,"thinkthen_absent")) {
-      for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_DecideQuestion"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))
+      for (member in result$members) stopifnot(inherits(member,"thinkthen_RankMember"),inherits(member$result,"thinkthen_RankMemberResult"),inherits(member$result$answer_id,"thinkthen_AnswerId"),member$result$value>0,inherits(member$result$question,"thinkthen_QuestionDocument_decide"),inherits(member$result$answer,"thinkthen_YesNo"),inherits(member$result$meta,"thinkthen_Meta"))
     }
   }
   packet <- list(native=TRUE, results = lapply(done$results,plain), facts=plain(done$facts))
+  if (isTRUE(document$call_result_contract)) {
+    stopifnot(all(c("value", "probability", "results", "facts") %in% names(done)), !"answer" %in% names(done))
+    packet$call_result <- list(value=plain(done$value), probability=plain(done$probability),
+                              results=lapply(done$results,plain), facts=plain(done$facts))
+  }
   cat(jsonlite::toJSON(packet,auto_unbox=TRUE,null="null",digits=NA))
 }, error=function(e) {
   if (is.null(e$kind)) stop(e)

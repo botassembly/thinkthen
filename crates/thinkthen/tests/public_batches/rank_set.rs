@@ -1,7 +1,7 @@
 //! Additive eager API ownership, independent turns and combined observations.
 use super::*;
 use serde_json::{Value, json};
-use thinkthen::{Call, Evidence, RankSet, SetRanked};
+use thinkthen::{Evidence, RankSet};
 
 pub(super) const SET: &str =
     r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
@@ -75,13 +75,13 @@ fn original_items_move_once_and_member_order_and_attribution_are_independent() {
     let call = engine.rank_set(&set, items).expect("rank set call");
     assert!(!format!("{call:?}").contains("first"));
     assert_eq!(
-        call.value()
+        call.results()
             .iter()
             .map(|row| (
-                row.index(),
-                row.input().id,
-                row.question_name(),
-                row.probability()
+                row.ordinal(),
+                row.original().id,
+                row.result().question_name(),
+                row.result().result().probability().unwrap()
             ))
             .collect::<Vec<_>>(),
         [
@@ -92,11 +92,12 @@ fn original_items_move_once_and_member_order_and_attribution_are_independent() {
     );
     assert_eq!(call.facts().records(), 3);
     assert_eq!(drops.get(), 0);
-    for row in call.into_value() {
-        assert!(!format!("{row:?}").contains(row.question_name()));
-        let item = row.into_input();
-        assert!(item.id < 3);
+    for row in call.results() {
+        assert!(!format!("{row:?}").contains(row.result().question_name()));
+        assert!(row.original().id < 3);
     }
+    assert_eq!(call.value(), &[0, 1, 2]);
+    drop(call);
     assert_eq!(drops.get(), 3);
 }
 
@@ -120,7 +121,7 @@ fn member_questions_keep_receipts_and_n_record_facts_and_one_row_event_per_origi
             }
         }
     };
-    let result: Call<Vec<SetRanked<&str>>> = engine
+    let result = engine
         .rank_set_with(
             &set,
             ["a", "b", "c"],
@@ -178,23 +179,20 @@ fn reversed_members_use_literal_turns_and_equal_text_keeps_two_positions() {
     let result = engine.rank_set(&set, ["a", "b", "c"]).expect("call");
     assert_eq!(
         result
-            .value()
+            .results()
             .iter()
-            .map(|row| (row.index(), row.question_name(), row.probability()))
+            .map(|row| (
+                row.ordinal(),
+                row.result().question_name(),
+                row.result().result().probability().unwrap()
+            ))
             .collect::<Vec<_>>(),
         [(0, "second", 1.0), (2, "second", 0.99), (1, "first", 0.6)]
     );
     let result = engine
         .rank_set(&set, ["a", "a", "b"])
         .expect("equal originals");
-    assert_eq!(
-        result
-            .value()
-            .iter()
-            .map(SetRanked::index)
-            .collect::<Vec<_>>(),
-        [0, 1, 2]
-    );
+    assert_eq!(result.value(), &[0, 1, 2]);
 }
 
 #[test]

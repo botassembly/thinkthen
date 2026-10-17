@@ -17,6 +17,58 @@ from unittest.mock import patch
 from install_check import CHANNELS, Check, Failure, check_index, check_result, main as install_main, clean_environment, extract_archive, validate_version, verify_checksum
 from install_check_channels import download, python, rust, maven, c, INSTALLERS, dcf_packages, homebrew, local_tap, r_universe, selected_formula, sqlite, duckdb
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
+from inputs import selected as duckdb_identity, versions as duckdb_versions
+
+
+class ZipInstallation(unittest.TestCase):
+    def test_unpack_preserves_safe_unix_executable_modes(self):
+        from install_check_tools import unzip
+        with tempfile.TemporaryDirectory(prefix='thinkthen-install-zip-test-') as folder:
+            root = Path(folder)
+            (root / 'OWNER').write_text('install check ZIP mode regression\n')
+            archive = root / 'sdk.zip'
+            with zipfile.ZipFile(archive, 'w') as packed:
+                member = zipfile.ZipInfo('sdk/bin/compiler')
+                member.create_system = 3
+                member.external_attr = 0o107755 << 16
+                packed.writestr(member, "#!/bin/sh\nprintf '%s\\n' 'compiler fixture'\n")
+                packed.writestr('sdk/lib/data', 'runtime fixture')
+                for name, system, mode in (('sdk/lib/', 3, 0o045555),
+                                           ('sdk/lib/closed', 3, 0o100000),
+                                           ('sdk/lib/dos', 0, 0o100777)):
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = system
+                    member.external_attr = mode << 16
+                    packed.writestr(member, '')
+            tree = unzip(archive, root / 'tools')
+            binary = tree / 'sdk/bin/compiler'
+            self.assertEqual(binary.stat().st_mode & 0o7777, 0o755)
+            self.assertEqual(subprocess.check_output([str(binary)], text=True), 'compiler fixture\n')
+            self.assertEqual((tree / 'sdk/lib/data').stat().st_mode & 0o111, 0)
+            self.assertEqual((tree / 'sdk/lib').stat().st_mode & 0o7777, 0o555)
+            self.assertEqual((tree / 'sdk/lib/closed').stat().st_mode & 0o7777, 0)
+            self.assertEqual((tree / 'sdk/lib/dos').stat().st_mode & 0o111, 0)
+
+    def test_unpack_rejects_special_and_mismatched_unix_types(self):
+        from install_check_tools import unzip
+        for kind, name in ((0o010000, 'fifo'), (0o020000, 'device'),
+                           (0o060000, 'block'), (0o120000, 'link'),
+                           (0o140000, 'socket'), (0o040000, 'directory'),
+                           (0o100000, 'file/')):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                archive = root / 'unsafe.zip'
+                with zipfile.ZipFile(archive, 'w') as packed:
+                    packed.writestr('first', 'must not extract before validation')
+                    member = zipfile.ZipInfo(name)
+                    member.create_system = 3
+                    member.external_attr = (kind | 0o755) << 16
+                    packed.writestr(member, 'unexpected file type')
+                with self.assertRaisesRegex(Failure, 'unsafe entry'):
+                    unzip(archive, root / 'tools')
+                self.assertFalse((root / 'tools/first').exists())
+
 
 class NativeInstallation(unittest.TestCase):
     def test_copies_only_the_effective_cargo_artifact(self):
@@ -44,6 +96,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "%s" "$CARGO_TARGET_DIR" > "$NATIVE_BUILD_LOG"\n'
                             'printf "%s" "$CARGO_ENCODED_RUSTFLAGS" > "$NATIVE_FLAGS_LOG"\n'
                             'printf "%s" "$CFLAGS" > "$NATIVE_C_FLAGS_LOG"\n'
+                            'printf "%s" "$CXXFLAGS" > "$NATIVE_CXX_FLAGS_LOG"\n'
                             'mkdir -p "$CARGO_TARGET_DIR/debug"\n'
                             '[ ! -f "$NATIVE_SHARED" ] || cp "$NATIVE_SHARED" "$CARGO_TARGET_DIR/debug/libthinkthen_c.so"\n'
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
@@ -53,7 +106,7 @@ class NativeInstallation(unittest.TestCase):
                                    str(Path(shutil.which(tool)).parent) for tool in ('sh', 'bash', 'jq', 'cp', 'mkdir', 'ln', 'mktemp'))),
                                'HOME': str(root / 'home'), 'CARGO_HOME': str(root / 'home/.cargo'),
                                'RUSTC': rustc, 'NATIVE_CARGO': cargo, 'CARGO_NET_OFFLINE': 'true', 'LC_ALL': 'C.UTF-8',
-                               'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1'}
+                               'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1', 'CXXFLAGS': '-O2'}
                         target = native / 'target'
                         if setting in ('relative', 'spaces'):
                             value = '../relative output' if setting == 'spaces' else '../relative-output'
@@ -69,7 +122,8 @@ class NativeInstallation(unittest.TestCase):
                             target = caller / '../configured output'
                         artifact = target / 'debug/libthinkthen_c.so'
                         env.update(NATIVE_SHARED=str(artifact), NATIVE_BUILD_LOG=str(root / 'build.log'),
-                                   NATIVE_FLAGS_LOG=str(root / 'flags.log'), NATIVE_C_FLAGS_LOG=str(root / 'c-flags.log'))
+                                   NATIVE_FLAGS_LOG=str(root / 'flags.log'), NATIVE_C_FLAGS_LOG=str(root / 'c-flags.log'),
+                                   NATIVE_CXX_FLAGS_LOG=str(root / 'cxx-flags.log'))
                         artifact.parent.mkdir(parents=True)
                         if not missing:
                             artifact.write_bytes(b'selected native library')
@@ -89,7 +143,11 @@ class NativeInstallation(unittest.TestCase):
                         flags = (root / 'flags.log').read_text().split('\x1f')
                         self.assertEqual(flags[:2], ['--cfg', 'encoded_fixture' if setting == 'absolute' else 'native_fixture'])
                         self.assertIn(f'--remap-path-prefix={repo}=/build/thinkthen', flags)
-                        self.assertEqual((root / 'c-flags.log').read_text(), '-O1 -ffile-prefix-map=/home=/build/home -ffile-prefix-map=/Users=/build/users')
+                        self.assertIn('--remap-path-prefix=/home=/build/host', flags)
+                        self.assertIn('--remap-path-prefix=/Users=/build/users', flags)
+                        for prefix, name in [('-O1', 'c-flags.log'), ('-O2', 'cxx-flags.log')]:
+                            self.assertEqual((root / name).read_text(), prefix +
+                                             ' -ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users')
                         if missing:
                             self.assertEqual(done.returncode, 1)
                             self.assertEqual(done.stderr, f'native_install: missing native artifact: {owned}/debug/libthinkthen_c.so\n')
@@ -156,10 +214,15 @@ class RefusalTable(unittest.TestCase):
                     self.assertEqual(stdout.getvalue(), 'install-check: download thinkthen 0.1.2: true, requests_sent 0; version proof: fixture installed binary\n')
 
     def test_duckdb_uses_reported_host_member_and_rejects_missing_or_mismatched_bytes(self):
-        table = [('v1.5.5', 'linux_amd64', None), ('v1.5.4', 'linux_amd64', None),
-                 ('v1.5.6', 'linux_amd64', 'supported version'), ('v1.5.5', 'osx_arm64', 'native target'),
-                 ('v1.5.5', 'linux_amd64', 'missing'), ('v1.5.5', 'linux_amd64', 'footer'),
-                 ('v1.5.5', 'linux_amd64', 'linked'), ('v1.5.5', 'linux_amd64', 'hardlink')]
+        stable = duckdb_versions()[0]
+        preview = duckdb_versions()[1]
+        table = [(stable, 'linux_amd64', None), (preview, 'linux_amd64', None),
+                 (stable, 'linux_amd64', 'short source identity'),
+                 ('v0.0.0', 'linux_amd64', 'supported version'), (stable, 'osx_arm64', 'native target'),
+                 (stable, 'linux_amd64', 'source identity'), (stable, 'linux_amd64', 'version identity'),
+                 (stable, 'linux_amd64', 'missing'), (stable, 'linux_amd64', 'footer'),
+                 (stable, 'linux_amd64', 'abi'), (stable, 'linux_amd64', 'abi version'),
+                 (stable, 'linux_amd64', 'linked'), (stable, 'linux_amd64', 'hardlink')]
         for host, platform, failure in table:
             with self.subTest(host=host, failure=failure), tempfile.TemporaryDirectory() as folder:
                 root = Path(folder)
@@ -167,12 +230,15 @@ class RefusalTable(unittest.TestCase):
                 prepare_sample(check)
                 archive = root / 'package.tar.gz'
                 files = duckdb_repository_files()
-                matching = f'{host}/linux_amd64/thinkthen.duckdb_extension'
+                matching = duckdb_member(host if host in duckdb_versions() else stable)
                 if failure == 'missing':
                     # A valid old root member must not rescue a missing matching path.
                     files['thinkthen.duckdb_extension'] = files.pop(matching)
                 if failure == 'footer':
-                    files[matching] = files['v1.5.4/linux_amd64/thinkthen.duckdb_extension']
+                    files[matching] = files[duckdb_member(duckdb_versions()[1])]
+                if failure in ('abi', 'abi version'):
+                    original, changed = (b'CPP', b'CXX') if failure == 'abi' else (b'4', b'5')
+                    files[matching] = files[matching].replace(original.ljust(32, b'\0'), changed.ljust(32, b'\0'))
                 if failure == 'hardlink':
                     files = {'LICENSES/rust/example/extension': files[matching], **files}
                 with tarfile.open(archive, 'w:gz') as output:
@@ -189,17 +255,28 @@ class RefusalTable(unittest.TestCase):
                 def run(*args, **kwargs):
                     sql = kwargs['input']
                     calls.append(sql)
-                    if sql == 'SELECT version(); PRAGMA platform;':
-                        return host + '\n' + platform
-                    self.assertIn(f'{host}/{platform}/thinkthen.duckdb_extension', sql)
+                    if sql == "SELECT to_json({'version':library_version,'source_id':source_id}) FROM pragma_version(); PRAGMA platform;":
+                        identity = duckdb_identity(host if host in duckdb_versions() else stable, 'x86_64-unknown-linux-gnu')
+                        reported = {'version': host if host != preview else 'v2.0.0-dev1',
+                                    'source_id': identity['source_commit'][:10]}
+                        if failure == 'source identity': reported['source_id'] = '0000000000'
+                        if failure == 'short source identity': reported['source_id'] = identity['source_commit'][:8]
+                        if failure == 'version identity': reported['version'] = 'v0.0.0'
+                        return json.dumps(reported) + '\n' + platform
+                    self.assertIn(matching, sql)
                     self.assertIn("AND loaded", sql)
                     self.assertIn('thinkthen_replay', sql)
-                    return '0.2.0\n{"value":true,"meta":{"requests_sent":0}}'
+                    self.assertIn("SELECT to_json({'value':d.value,'requests_sent':d.facts.requests_sent})", sql)
+                    self.assertIn('FROM (SELECT thinkthen_decide_details(', sql)
+                    self.assertIn(') AS d);', sql)
+                    return '0.2.0\n{"value":true,"requests_sent":0}'
                 check.run = run
-                if failure:
+                if failure and failure != 'short source identity':
                     with patch.object(check, 'unpack', wraps=check.unpack) as unpack, self.assertRaises(Failure) as error:
                         duckdb(check)
-                    wanted = {'missing': f'{host}/{platform}/thinkthen.duckdb_extension',
+                    wanted = {'missing': matching,
+                              'source identity': 'supported version', 'version identity': 'supported version',
+                              'abi': 'footer ABI is', 'abi version': 'footer ABI version is',
                               'footer': 'DuckDB footer DuckDB version', 'linked': 'link or special member',
                               'hardlink': 'link or special member'}
                     self.assertIn(wanted.get(failure, failure), str(error.exception))
@@ -213,15 +290,42 @@ class RefusalTable(unittest.TestCase):
                     check_result('0.2.0', installed, reply)
                     self.assertEqual(len(calls), 2)
 
+    def test_duckdb_host_builds_pinned_source_and_refuses_reported_drift(self):
+        from install_check_tools import prepare
+        identity = duckdb_identity(duckdb_versions()[0], 'x86_64-unknown-linux-gnu')
+        for version, commit in ((identity['version'], identity['source_commit'][:8]),
+                                (identity['version'], identity['source_commit'][:10]),
+                                ('v0.0.0', identity['source_commit'][:8]),
+                                (identity['version'], '00000000')):
+            with self.subTest(version=version, commit=commit), tempfile.TemporaryDirectory() as own:
+                check = Fixture(Path(own), 'duckdb')
+                check.outputs = {'duckdb': version + '|' + commit}
+                with patch('source_hosts.prepare') as source:
+                    if version != identity['version'] or commit == '00000000':
+                        with self.assertRaisesRegex(Failure, 'differs from pinned source'):
+                            prepare(check)
+                    else:
+                        prepare(check)
+                source.assert_called_once_with(check.root / 'duckdb-source', identity['source_commit'],
+                                               'https://github.com/duckdb/duckdb.git', True, identity['version'])
+                configure, build, report = check.commands
+                self.assertIn('-DBUILD_EXTENSIONS=core_functions;json', configure)
+                self.assertIn('-DDISABLE_BUILTIN_EXTENSIONS=OFF', configure)
+                self.assertIn('-DENABLE_EXTENSION_AUTOINSTALL=OFF', configure)
+                self.assertIn('build-admission.py', configure[1])
+                self.assertEqual(build[-4:], ('--target', 'shell', '--parallel', '2'))
+                self.assertEqual(report[-1], 'SELECT library_version,source_id FROM pragma_version()')
+                self.assertEqual(check.env['PATH'].split(os.pathsep)[0], str(check.root / 'duckdb-host'))
+
     def test_duckdb_repository_rejects_bad_members_and_incomplete_legal_material(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/cpp'))
         from verify_repository import verify_repository
         files = duckdb_repository_files()
-        old = 'v1.5.4/linux_amd64/thinkthen.duckdb_extension'
+        old = duckdb_member(duckdb_versions()[1])
         cases = [('good', None), ('missing', 'missing ' + old), ('swap', 'footer DuckDB version'),
                  ('platform', 'footer platform'), ('duplicate', 'duplicate member'),
                  ('extra', 'unexpected member'), ('link', 'link or special member'),
-                 ('escape', 'escaping path'), ('legal', 'legal inventory for v1.5.4'),
+                 ('escape', 'escaping path'), ('legal', 'legal inventory for ' + duckdb_versions()[1]),
                  ('reference', 'missing referenced legal file')]
         for case, cause in cases:
             with self.subTest(case=case), tempfile.TemporaryDirectory() as folder:
@@ -229,7 +333,7 @@ class RefusalTable(unittest.TestCase):
                 if case == 'missing':
                     del members[old]
                 if case == 'swap':
-                    members[old] = files['v1.5.5/linux_amd64/thinkthen.duckdb_extension']
+                    members[old] = files[duckdb_member(duckdb_versions()[0])]
                 if case == 'platform':
                     members[old] = files[old].replace(b'linux_amd64', b'osx_amd64\0\0')
                 if case == 'extra':
@@ -431,13 +535,15 @@ class RefusalTable(unittest.TestCase):
             prepare_sample(check)
             archive = check.root / f'thinkthen-sqlite-{check.version}-x86_64-unknown-linux-gnu.tar.gz'
             packed(archive, {'libthinkthen0.so': b'fixture extension'})
-            check.outputs = {'--version': '3.53.4 fixture', ':memory:': '0\n{"value":true,"meta":{"requests_sent":0}}'}
+            check.outputs = {'--version': '3.53.4 fixture', ':memory:': '0\n{"value":true,"requests_sent":0}'}
             with patch.object(check, 'release', return_value=archive) as release:
                 installed, reply, proof = sqlite(check)
             release.assert_called_once_with(archive.name)
             check_result(check.version, installed, reply)
             self.assertEqual(proof, 'release-asset identity')
             self.assertTrue(check.inputs[-1].startswith(f'.load {check.root}/sqlite/libthinkthen0.so\n'))
+            self.assertIn('FROM thinkthen_decide_details(', check.inputs[-1])
+            self.assertIn('facts_requests_sent', check.inputs[-1])
             self.assertFalse(any('c-' in str(arg) for command in check.commands for arg in command))
 
     def test_r_binary_only_and_superseded_routes(self):
@@ -568,13 +674,16 @@ class RefusalTable(unittest.TestCase):
         doc = yaml.safe_load(workflow.read_text())
         self.assertEqual(doc['permissions'], {})
         self.assertEqual(set(doc.get('on', doc.get(True))), {'workflow_dispatch'})
-        cells = set()
+        cells, ruby_cells = set(), set()
         for name, job in doc['jobs'].items():
             self.assertEqual(job['permissions'], {'contents': 'read'})
             self.assertNotIn('environment', job)
             matrix = job.get('strategy', {}).get('matrix', {})
             for runner in matrix.get('runner', [job['runs-on']]):
                 for channel in matrix.get('channel', [name]): cells.add((runner, channel))
+            for included in matrix.get('include', []):
+                cells.add((included['runner'], included['channel']))
+                if included['channel'] == 'rubygems': ruby_cells.add((included['runner'], included['ruby']))
             for step in job['steps']:
                 if 'uses' in step: self.assertRegex(step['uses'], r'@[0-9a-f]{40}$')
                 self.assertNotIn('inputs.', step.get('run', ''))
@@ -584,6 +693,8 @@ class RefusalTable(unittest.TestCase):
         self.assertEqual({channel for runner, channel in cells if runner == 'windows-2025'}, windows)
         self.assertEqual({channel for _, channel in cells}, set(CHANNELS))
         all_five = {'ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26'}
+        from install_check_workflow import RUBIES
+        self.assertEqual(ruby_cells, {(runner, ruby) for runner in all_five for ruby in RUBIES})
         for channel in ('download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems'):
             self.assertEqual({runner for runner, member in cells if member == channel},
                              all_five | ({'windows-2025'} if channel in windows else set()))
@@ -641,15 +752,21 @@ class BrewFixture(Fixture):
         return version, {'value': True, 'requests_sent': 0}
 
 
+def duckdb_member(version):
+    identity = duckdb_identity(version, 'x86_64-unknown-linux-gnu')
+    return f"{identity['metadata_version']}/{identity['platform']}/thinkthen.duckdb_extension"
+
+
 def duckdb_repository_files():
     header = b'\x00\x93\x04\x10duckdb_signature\x80\x04'
     files = {'LICENSE.thinkthen': b'MIT', 'LICENSE.duckdb': b'MIT', 'LICENSES/rust/example/LICENSE': b'MIT'}
     notice, inventory = [], []
-    for version in ('v1.5.5', 'v1.5.4'):
+    for version in duckdb_versions():
+        identity = duckdb_identity(version, 'x86_64-unknown-linux-gnu')
         fields = [b''] * 16
-        fields[3:8] = [b'CPP', b'0.2.0', version.encode(), b'linux_amd64', b'4']
-        files[f'{version}/linux_amd64/thinkthen.duckdb_extension'] = b'fixture' + header + b''.join(value.ljust(32, b'\0') for value in fields)
-        notice.append(f'DuckDB {version} source and static archives: MIT (LICENSE.duckdb)')
+        fields[3:8] = [b'CPP', b'0.2.0', identity['metadata_version'].encode(), identity['platform'].encode(), b'4']
+        files[duckdb_member(version)] = b'fixture' + header + b''.join(value.ljust(32, b'\0') for value in fields)
+        notice.append(f"DuckDB {version} source: {identity['source_commit']}, MIT (LICENSE.duckdb)")
         inventory.extend((f'Pinned DuckDB {version} static archives:', f'Pinned DuckDB {version} source license and notice files:', 'LICENSE -> LICENSE.duckdb'))
     files['NOTICE'] = '\n'.join(notice).encode()
     files['DEPENDENCIES.txt'] = '\n'.join(inventory).encode()

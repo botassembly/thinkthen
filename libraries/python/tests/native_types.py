@@ -1,5 +1,7 @@
 """Installed callers access generated known fields without a hand-copied reader."""
 import thinkthen as tt
+from thinkthen._polars_calls import PolarsResult
+from thinkthen._frame_calls import PolarsFrameResult
 from thinkthen._native_results import NativeSessionPacketDecideRow, NativeSessionPacketTerminal, NativeAnswerYesNo, NativeAnswerChoice, NativeAnswerTag
 
 def known(engine: tt.Engine, question: object, source: object) -> None:
@@ -29,4 +31,13 @@ def generated_known(row: NativeSessionPacketDecideRow, terminal: NativeSessionPa
     requests: int=terminal.facts.requests_sent
     failure: str=terminal.failure.error.kind
     present: bool='failure' in terminal
-    raw: dict[str, object]=row.value.to_dict()
+    raw: dict[str, object]=row.value._to_dict()
+
+def dataframe_probabilities(column: 'PolarsResult', frame: 'PolarsFrameResult') -> None:
+    from polars import Series
+    probability: Series | None = column.probability
+    frame_probability: Series | None = frame.probability
+    if probability is not None:
+        values: list[object] = probability.to_list()
+    if frame_probability is not None:
+        frame_values: list[object] = frame_probability.to_list()

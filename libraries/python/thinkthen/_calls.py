@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+import os
 import sys
 from typing import Generic, TypeVar
 from . import _thinkthen as native
@@ -16,7 +17,7 @@ VERBS = ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate
 
 def _json(value):
     if isinstance(value, native._NativeResult):
-        return value.to_dict()
+        return value._to_dict()
     if isinstance(value, Mapping):
         return {key: _json(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
@@ -24,10 +25,50 @@ def _json(value):
     return value
 
 
+def _original(value, text=False):
+    return {'kind': 'text', 'text': value} if text else {'kind': 'json', 'value': _json(value)}
+
+
+def _item(value, verb):
+    if isinstance(value, c.Item):
+        import base64
+        descriptor = {'images': [{'kind': 'bytes', 'media': image.media, 'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]}
+        if not value.image_only: descriptor['original'] = _original(value.value, value.text)
+        if value.context is not c.ABSENT: descriptor['context'] = value.context
+        if value.options is not c.ABSENT:
+            descriptor['options'] = [dict(name=name, **({} if description is c.ABSENT else {'description': description})) for name, description in value.options]
+        return descriptor
+    if verb == 'relate':
+        if isinstance(value, tuple): value = dict(zip(('name', 'kind'), value, strict=True))
+        elif isinstance(value, native._NativeResult): value = {'name': value.text, 'kind': value.kind}
+    return {'original': _original(value, isinstance(value, str))}
+
+
+def _input(value, verb):
+    if isinstance(value, (c.Files, FileSelection)):
+        reading = {'unit': value.unit}
+        if value.window is not None and value.window is not c.ABSENT: reading['window'] = value.window
+        source = {'paths': [os.fspath(path) for path in value.paths], 'reading': reading, 'media': getattr(value, 'media', 'text')}
+        if getattr(value, 'jsonl', False): source['framing'] = 'jsonl'
+        return {'kind': 'source', 'source': source}
+    if isinstance(value, c.Records): value = value.items
+    values = value if isinstance(value, (list, tuple)) else (value,)
+    return {'kind': 'records', 'items': [_item(item, verb) for item in values]}
+
+
 def _question(verb, question, controls, frame=False):
     if verb == 'annotate' and isinstance(question, type):
         from .pydantic import question_set
         question = question_set(question)
+    if verb in ('recognize', 'relate'):
+        for key in tuple(controls):
+            if controls[key] is None and key not in ('deadline_ms', 'model', 'batch', 'context', 'field', 'context_field', 'mode', 'snippet_pieces', 'stage_context', 'seed_spans', 'examples', 'seed_spans_field', 'examples_field', 'max_requests_total', 'on'):
+                controls.pop(key)
+        if question is None and verb == 'recognize':
+            controls.setdefault('kinds', [])
+    elif verb == 'annotate':
+        for key in ('batch', 'context', 'on'):
+            if controls.get(key, object()) is None: controls.pop(key)
     from ._labels import normalize
     for key in ('options', 'labels', 'levels', 'kinds'):
         if key in controls:
@@ -43,53 +84,57 @@ def _source(verb, value):
     return value, None, not isinstance(value, (list, tuple))
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, eq=False)
 class Result(Generic[T]):
     """Owned typed results and actual final native settlement."""
     results: tuple
     terminal: object
     function: str
     scalar: bool
-    detailed: bool = False
     @property
     def value(self):
-        if self.detailed: return self.results[0] if self.scalar else list(self.results)
-        return _bare(self.function, self.results, self.scalar)
-    @property
-    def probability(self):
-        values = []
-        for row in self.results:
-            answer = getattr(row, 'answer', None)
-            chance = getattr(answer, 'probability', None)
-            if self.function == 'choose' and row.value is not None:
-                chance = answer.probabilities.get(answer.pick)
-            values.append(chance)
+        from ._native_results import _CALL_RESULTS
+        projection = _CALL_RESULTS[self.function]['value_projection']
+        if projection != 'value':
+            return [getattr(row, projection) for row in self.results]
+        if self.function == 'relate': return self.results[0].value if self.results else []
+        if self.function == 'find': return self.results[0].value if self.results else None
+        values = [row.value for row in self.results]
         return values[0] if self.scalar and values else values
     @property
-    def details(self): return self.results
-    def __bool__(self): return bool(self.value)
-    def __eq__(self, other):
-        if isinstance(other, Result): return self.to_dict() == other.to_dict()
-        return self.value == other
+    def probability(self):
+        from ._native_results import _CALL_RESULTS, _call_path
+        spec = _CALL_RESULTS[self.function]
+        mode = spec['probability_mode']
+        if mode == 'null': return None
+        values = []
+        for ordinal, row in enumerate(self.results):
+            answer = getattr(row, 'answer', None)
+            if mode == 'picked':
+                chance = answer.probabilities.get(answer.pick)
+            elif self.function == 'recognize':
+                if 'entities' in row.value:
+                    # Canonical kept proposals own span probabilities; entity strength ranks names.
+                    proposals = {(proposal.selected.start, proposal.selected.end, proposal.kind): proposal.span_probability
+                                 for proposal in row.answer.proposals if proposal.kept}
+                    chance = [proposals[(entity.start, entity.end, entity.kind)] for entity in row.value.entities]
+                else: chance = [proposal.probability for proposal in row.value.proposals]
+            elif self.function == 'relate':
+                chance = [edge.probability for edge in row.value]
+            else:
+                chance = getattr(answer, 'probability', None)
+            if 'selection_path' in spec and _call_path(row, spec['selection_path']) is None: chance = None
+            if 'resolution' in spec and not getattr(self, '_resolved', {}).get(getattr(row, 'index', ordinal), False): chance = None
+            values.append(chance)
+        if self.function == 'relate': return values[0] if values else []
+        if self.function == 'find': return values[0] if values else None
+        if self.function == 'rank': return values
+        return values[0] if self.scalar and values else values
     def __repr__(self): return '<Result: content withheld>'
     @property
     def facts(self): return getattr(self.terminal, 'facts', None)
-    def to_dict(self):
-        return {'results': [row.to_dict() for row in self.results], 'terminal': self.terminal.to_dict()}
-
-
-def _bare(verb, results, scalar):
-    if verb == 'relate': return results[0].value if results else []
-    if verb == 'filter': return [row.input for row in results]
-    if verb == 'rank':
-        return [{'index': row.index, 'record': row.input, 'probability': getattr(row.answer, 'probability', None)}
-                for row in results]
-    if verb == 'find':
-        row = results[0]
-        if row.index is None: return None
-        return {'index': row.index, 'unit': row.value, 'probability': row.answer.probabilities[row.answer.pick]}
-    values = [row.value for row in results]
-    return values[0] if scalar and values else values
+    def _to_dict(self):
+        return {'results': [row._to_dict() for row in self.results], 'terminal': self.terminal._to_dict()}
 
 
 def _cancelled():
@@ -123,7 +168,6 @@ class Operation:
                 else:
                     from ._polars_calls import records
                 value, self.present = records(self.frame, verb)
-            self.details = fields.pop('details', False)
             self.token = fields.pop('token', None)
             if 'on' in fields:
                 on = fields.pop('on')
@@ -137,6 +181,7 @@ class Operation:
             self.pending = None
             self.producer_error = None
             self.results = []
+            self.resolved = {}
             self.terminal = None
             self.closed = False
             engine._sessions.add(self)
@@ -161,6 +206,9 @@ class Operation:
         # Poll before advancing the producer. Native closure stops all further reads.
         packet = self.session._poll_typed()
         if packet is not None:
+            from ._native_results import _call_resolution
+            resolution = _call_resolution(packet, self.verb)
+            if resolution is not None: self.resolved[resolution[0]] = resolution[1]
             kind = packet['kind']
             if kind == 'end':
                 return True
@@ -226,20 +274,24 @@ class Operation:
                 self.session.close()
                 self.engine._sessions.discard(self)
 
+    def _settled(self, result):
+        object.__setattr__(result, '_resolved', dict(self.resolved))
+        return result
+
     def result(self):
         if self.on is not None:
             from ._frame_calls import FrameResult, PolarsFrameResult
             Frame = FrameResult if self.surface == 'pandas' else PolarsFrameResult
-            return Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
-                         self.details, self.frame, self.present, self.on, self.members)
+            return self._settled(Frame(tuple(self.results), self.terminal, self.verb, self.scalar,
+                         self.frame, self.present, self.on, self.members))
         if self.frame is not None:
             if self.surface == 'pandas':
                 from ._pandas_calls import PandasResult as ColumnResult
             else:
                 from ._polars_calls import PolarsResult as ColumnResult
-            return ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
-                                self.details, self.frame, self.present)
-        return Result(tuple(self.results), self.terminal, self.verb, self.scalar, self.details)
+            return self._settled(ColumnResult(tuple(self.results), self.terminal, self.verb, self.scalar,
+                                self.frame, self.present))
+        return self._settled(Result(tuple(self.results), self.terminal, self.verb, self.scalar))
 
 
 def call(engine, verb, question, value, controls):

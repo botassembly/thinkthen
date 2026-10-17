@@ -12,8 +12,8 @@ input_target() {
 }
 input_select() {
 	input_row=$(python3 "$INPUTS_HERE/inputs.py" select "$1" "$2") || return $?
-	read -r DUCKDB_VERSION target platform cli_asset cli_zip_hash cli_hash static_asset static_hash duckdb_source_commit manifest requirements <<EOF
+	read -r DUCKDB_VERSION target platform duckdb_source_commit duckdb_tools_commit duckdb_python_commit duckdb_metadata_version requirements <<EOF
 $input_row
 EOF
-	TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
+	TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/community/$DUCKDB_VERSION
 }

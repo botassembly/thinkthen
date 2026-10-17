@@ -127,6 +127,9 @@ def main() -> int:
     for version in versions():
         FAILED.extend(requirements(ROOT / "tools" / selected(version)['requirements']))
     shipped()
+    for generator in ('receipt_types.py', 'request_helpers.py'):
+        subprocess.run([sys.executable, str(ROOT / 'tools' / generator), '--check'],
+                       check=True, env=child_env(CARGO))
     for message in FAILED:
         print(f"FAIL {message}")
     if not FAILED:

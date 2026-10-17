@@ -53,7 +53,8 @@ fn a_none_question_takes_1_to_254_units() {
     usage(&engine.find(&none, units(255)).expect_err("255"), limit);
     usage(&engine.find(&none, units(0)).expect_err("0"), limit);
     assert_eq!(backend.count(), 0);
-    let found = engine.find(&none, units(1)).expect("1").into_value();
+    let call = engine.find(&none, units(1)).expect("1");
+    let found = call.results();
     assert_eq!(found.candidates().len(), 2);
     assert_eq!(
         found.candidates()[0].input().map(String::as_str),
@@ -62,7 +63,8 @@ fn a_none_question_takes_1_to_254_units() {
     assert!(found.candidates()[1].is_none());
     assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
     assert_eq!(backend.count(), 1);
-    let found = engine.find(&none, units(254)).expect("254").into_value();
+    let call = engine.find(&none, units(254)).expect("254");
+    let found = call.results();
     let last = found.candidates().last().expect("a candidate");
     assert!(last.is_none() && found.candidates().len() == 255);
     assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
@@ -104,7 +106,7 @@ fn states(set: &str, record: &str) -> Result<Vec<Value>, Error> {
     let (listener, seen) = listening();
     let engine = engine(listener.base()).expect("engine");
     let set = QuestionSet::from_json(set).expect("a set");
-    let row = engine.annotate(&set, [record]).next().expect("one row");
+    let row = engine.annotate(&set, [record]);
     let sent = seen.lock().expect("the body list").clone();
     row.map(|_| sent.iter().flat_map(quoted).collect())
         .inspect_err(|_| {
@@ -190,10 +192,8 @@ pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked 
         .flatten()
         .filter_map(Value::as_str)
         .collect();
-    let found = engine
-        .find(&question, units.clone())
-        .map_err(said)?
-        .into_value();
+    let call = engine.find(&question, units.clone()).map_err(said)?;
+    let found = call.results();
     let rows = found.candidates().iter().map(|candidate| {
         let index = candidate.input().and_then(|unit| at(&units, unit));
         json!({"index": index, "probability": candidate.probability()})
@@ -270,17 +270,16 @@ fn annotate_groups_share_one_request_and_retain_each_probability() {
             [record],
             thinkthen::CallOptions::new().observe(&observe),
         )
-        .next()
-        .expect("row")
         .expect("annotated");
+    let values = &result.value()[0];
     let bodies = captured.lock().expect("capture");
     assert_eq!(
         bodies.len(),
         case["expect"]["requests"].as_u64().expect("count") as usize
     );
     assert_eq!(bodies[0], expected_body);
-    assert_eq!(result.values().len(), 2);
-    for entry in result.values() {
+    assert_eq!(values.len(), 2);
+    for entry in values {
         assert_eq!(
             entry.value(),
             &thinkthen::Annotated::Decision(thinkthen::Answer::Yes)

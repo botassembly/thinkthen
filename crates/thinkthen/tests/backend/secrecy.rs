@@ -129,7 +129,7 @@ pub(crate) fn folder(named: &str) -> io::Result<PathBuf> {
     Ok(path)
 }
 
-/// Every file under this folder, however deep.
+/// Every file under this folder, however deep, sorted by path.
 pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
     let mut found = Vec::new();
     let Ok(entries) = fs::read_dir(folder) else {

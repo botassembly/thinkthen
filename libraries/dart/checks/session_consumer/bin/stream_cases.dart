@@ -6,18 +6,18 @@ void require(bool value, String message) {
   if (!value) throw StateError(message);
 }
 
-InputRequestSessionDescriptor descriptor(String text) =>
-    InputRequestSessionDescriptor(
-        item: InputRequestItem(
-            original: Presence.present(InputRequestOriginalText(text: text))));
+FeedItem descriptor(String text) =>
+    FeedItem(
+        item: Item(
+            original: Presence.present(OriginalText(text: text))));
 
 Future<void> streamCases(Engine engine, Future<void> arrived,
     Completer<void> release, Future<void> prefixAnswered,
     {bool cancelOnly = false}) async {
-  final question = InputRequestQuestionText(text: 'Is it?');
-  final input = InputRequestInputFeed(name: 'feed');
+  final question = QuestionText(text: 'Is it?');
+  final input = InputFeed(name: 'feed');
   if (!cancelOnly) {
-    final reader = StreamController<InputRequestSessionDescriptor>();
+    final reader = StreamController<FeedItem>();
     final reading = engine.decide(question, input, feed: reader.stream);
     reader.add(descriptor('reader-prefix'));
     await prefixAnswered.timeout(const Duration(seconds: 5));
@@ -29,26 +29,26 @@ Future<void> streamCases(Engine engine, Future<void> arrived,
     try {
       await reading.timeout(const Duration(seconds: 5));
       throw StateError('reader failure returned an answer');
-    } on SessionFailure catch (error) {
+    } on CallFailure catch (error) {
       require(
-          error.failure.error.kind == 'local', 'typed native local failure');
-      require(error.failure.error.message == 'session input could not be read',
+          error.failure!.error.kind == 'local', 'typed native local failure');
+      require(error.failure!.error.message == 'session input could not be read',
           'safe native diagnostic');
       require(
-          error.call.packets.whereType<SessionPacketDecideRow>().length == 1,
+          error.call!.packets.whereType<SessionPacketDecideRow>().length == 1,
           'completed prefix retained');
       require(
-          error.call.terminal.facts.isPresent &&
-              error.call.terminal.facts.value != null,
+          error.call!.terminal.facts.isPresent &&
+              error.call!.terminal.facts.value != null,
           'native terminal facts retained');
-      require(error.call.terminal.facts.value!.requestsSent == BigInt.one,
+      require(error.call!.terminal.facts.value!.requestsSent == BigInt.one,
           'native facts retain the observed request');
     }
   }
 
   final cleanup = Completer<void>();
   var cleanupCalls = 0, intake = 0;
-  final feed = StreamController<InputRequestSessionDescriptor>(onCancel: () {
+  final feed = StreamController<FeedItem>(onCancel: () {
     cleanupCalls++;
     return cleanup.future;
   });

@@ -62,28 +62,34 @@ native_install() {
 		for native_flag in ${RUSTFLAGS:-}; do native_flags="$native_flags${native_flags:+$native_separator}$native_flag"; done
 	fi
 	if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-	for native_flag in --remap-path-prefix=/home=/build/home --remap-path-prefix=/Users=/build/users "--remap-path-prefix=$1=/build/thinkthen"; do
+	for native_flag in --remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users "--remap-path-prefix=$1=/build/thinkthen"; do
 		native_flags="$native_flags${native_flags:+$native_separator}$native_flag"
 	done
 	fi
 	native_cflags=${CFLAGS:-}
-	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cflags="${native_cflags:+$native_cflags }-ffile-prefix-map=/home=/build/home -ffile-prefix-map=/Users=/build/users"
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cflags="${native_cflags:+$native_cflags }-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users"
+	native_cxxflags=${CXXFLAGS:-}
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cxxflags="${native_cxxflags:+$native_cxxflags }-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users"
 	CARGO_TARGET_DIR="$native_build" CARGO_ENCODED_RUSTFLAGS="$native_flags" \
-		CFLAGS="$native_cflags" \
+		CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
 		cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
 	native_metadata=$(CARGO_TARGET_DIR="$native_build" cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
 		--manifest-path "$1/libraries/c/Cargo.toml") || return
 	native_target=$(printf '%s\n' "$native_metadata" | jq -er '.target_directory') || return
-	native_artifact=$native_target/debug/libthinkthen_c.so
+	case $(uname -s) in
+	Darwin) native_dl=dylib native_soname=libthinkthen.0.dylib ;;
+	*) native_dl=so native_soname=libthinkthen.so.0 ;;
+	esac
+	native_artifact=$native_target/debug/libthinkthen_c.$native_dl
 	[ -f "$native_artifact" ] || {
 		printf 'native_install: missing native artifact: %s\n' "$native_artifact" >&2
 		return 1
 	}
 	mkdir -p "$2/include" "$2/lib/pkgconfig"
 	cp -- "$1/libraries/c/include/thinkthen.h" "$2/include/thinkthen.h"
-	cp -- "$native_artifact" "$2/lib/libthinkthen.so"
+	cp -- "$native_artifact" "$2/lib/libthinkthen.$native_dl"
 	sh "$1/libraries/c/localize.sh" "$native_target/debug/libthinkthen_c.a" "$2/lib/libthinkthen.a" || return
-	ln -sfn libthinkthen.so "$2/lib/libthinkthen.so.0"
+	ln -sfn "libthinkthen.$native_dl" "$2/lib/$native_soname"
 	printf '%s\n' "prefix=$2" 'libdir=${prefix}/lib' 'includedir=${prefix}/include' 'Name: thinkthen' \
 		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' 'Cflags: -I${includedir}' \
 		>"$2/lib/pkgconfig/thinkthen.pc"

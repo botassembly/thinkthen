@@ -1,11 +1,8 @@
 //! Python value conversion into native request arguments.
 use crate::{raised, usage};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString, PyTuple};
-use std::path::PathBuf;
-use thinkthen::{
-    RawRecord, RequestArguments, RequestInput, RequestItem, RequestOriginal, RequestQuestion,
-};
+use pyo3::types::PyDict;
+use thinkthen::{RequestArguments, RequestInput, RequestItem, RequestQuestion};
 
 pub(crate) fn json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> {
     let kwargs = PyDict::new(py);
@@ -106,94 +103,12 @@ pub(crate) fn reading(
     };
     Ok(thinkthen::ReaderOptions { unit, window })
 }
-fn original(py: Python<'_>, value: &Bound<'_, PyAny>, text: bool) -> PyResult<RequestOriginal> {
-    if text {
-        Ok(RequestOriginal::Text {
-            text: value.extract()?,
-        })
-    } else {
-        Ok(RequestOriginal::Json {
-            value: RawRecord::json(&json(py, value)?).map_err(|e| raised(py, &e))?,
-        })
-    }
-}
 pub(crate) fn item(py: Python<'_>, value: &Bound<'_, PyAny>, verb: &str) -> PyResult<RequestItem> {
-    let inputs = py.import("thinkthen._inputs")?;
-    let absent = inputs.getattr("ABSENT")?;
-    let mut item = RequestItem {
-        original: None,
-        context: None,
-        options: None,
-        seed_spans: None,
-        examples: None,
-        images: Vec::new(),
-    };
-    if value.is_instance(&inputs.getattr("Item")?)? {
-        if !value.getattr("image_only")?.extract::<bool>()? {
-            item.original = Some(original(
-                py,
-                &value.getattr("value")?,
-                value.getattr("text")?.extract()?,
-            )?);
-        }
-        for image in value.getattr("images")?.try_iter()? {
-            let image = image?;
-            item.images.push(thinkthen::RequestImage::Bytes {
-                media: decode(py, &image.getattr("media")?)?,
-                bytes: image.getattr("data")?.extract()?,
-            });
-        }
-        let context = value.getattr("context")?;
-        if !context.is(&absent) {
-            item.context = Some(if context.is_instance_of::<PyString>() {
-                thinkthen::RecordContext::Text(context.extract()?)
-            } else {
-                let raw = RawRecord::json(&json(py, &context)?).map_err(|e| raised(py, &e))?;
-                thinkthen::RecordContext::Object(
-                    thinkthen::ObjectContext::new(&raw).map_err(|e| raised(py, &e))?,
-                )
-            });
-        }
-        let options = value.getattr("options")?;
-        if !options.is(&absent) {
-            let options = options
-                .try_iter()?
-                .map(|pair| {
-                    let (name, description): (String, Py<PyAny>) = pair?.extract()?;
-                    let description = description.bind(py);
-                    Ok(thinkthen::RecordOption {
-                        name,
-                        description: description_value(py, description, &absent)?,
-                    })
-                })
-                .collect::<PyResult<Vec<_>>>()?;
-            item.options =
-                Some(thinkthen::RecordOptions::new(options).map_err(|e| raised(py, &e))?);
-        }
-    } else {
-        let entity;
-        let value = if verb == "relate" && value.is_instance_of::<PyTuple>() {
-            let (name, kind): (Py<PyAny>, Py<PyAny>) = value.extract()?;
-            entity = PyDict::new(py);
-            entity.set_item("name", name)?;
-            entity.set_item("kind", kind)?;
-            entity.as_any()
-        } else if verb == "relate"
-            && value.is_instance(
-                &py.import("thinkthen._thinkthen")?
-                    .getattr("_NativeResult")?,
-            )?
-        {
-            entity = PyDict::new(py);
-            entity.set_item("name", value.getattr("text")?)?;
-            entity.set_item("kind", value.getattr("kind")?)?;
-            entity.as_any()
-        } else {
-            value
-        };
-        item.original = Some(original(py, value, value.is_instance_of::<PyString>())?);
-    }
-    Ok(item)
+    let descriptor = py
+        .import("thinkthen._calls")?
+        .getattr("_item")?
+        .call1((value, verb))?;
+    RequestItem::from_json(&json(py, &descriptor)?).map_err(|e| raised(py, &e))
 }
 fn input(
     py: Python<'_>,
@@ -209,51 +124,11 @@ fn input(
             images: Vec::new(),
         });
     }
-    let inputs = py.import("thinkthen._inputs")?;
-    if value.is_instance(&inputs.getattr("Files")?)?
-        || value.is_instance(&py.import("thinkthen.files")?.getattr("FileSelection")?)?
-    {
-        let window = value.getattr("window")?;
-        let window = if window.is_none() || window.is(&inputs.getattr("ABSENT")?) {
-            None
-        } else {
-            crate::controls::whole_number(py, &window)?;
-            Some(window.extract()?)
-        };
-        return Ok(RequestInput::Source {
-            source: thinkthen::RequestSource {
-                paths: value.getattr("paths")?.extract::<Vec<PathBuf>>()?,
-                reading: reading(py, &value.getattr("unit")?.extract::<String>()?, window)?,
-                media: value
-                    .getattr("media")
-                    .map_or(Ok(thinkthen::ReaderMedia::Text), |v| decode(py, &v))?,
-                framing: if value
-                    .getattr("jsonl")
-                    .is_ok_and(|v| v.extract::<bool>().unwrap_or(false))
-                {
-                    Some(thinkthen::RequestFraming::Jsonl)
-                } else {
-                    None
-                },
-            },
-        });
-    }
-    let records;
-    let value = if value.is_instance(&inputs.getattr("Records")?)? {
-        records = value.getattr("items")?;
-        &records
-    } else {
-        value
-    };
-    let items = if value.is_instance_of::<PyList>() || value.is_instance_of::<PyTuple>() {
-        value
-            .try_iter()?
-            .map(|v| item(py, &v?, verb))
-            .collect::<PyResult<Vec<_>>>()?
-    } else {
-        vec![item(py, value, verb)?]
-    };
-    Ok(RequestInput::Records { items })
+    let descriptor = py
+        .import("thinkthen._calls")?
+        .getattr("_input")?
+        .call1((value, verb))?;
+    RequestInput::from_json(&json(py, &descriptor)?).map_err(|e| raised(py, &e))
 }
 fn build_request(
     py: Python<'_>,
@@ -290,17 +165,4 @@ pub(crate) fn request(
             error
         }
     })
-}
-
-fn description_value(
-    py: Python<'_>,
-    value: &Bound<'_, PyAny>,
-    absent: &Bound<'_, PyAny>,
-) -> PyResult<Option<thinkthen::Description>> {
-    if value.is(absent) {
-        return Ok(None);
-    }
-    thinkthen::Description::from_json(&json(py, value)?)
-        .map(Some)
-        .map_err(|e| raised(py, &e))
 }

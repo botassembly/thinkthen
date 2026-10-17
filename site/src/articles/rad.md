@@ -39,4 +39,4 @@ Context costs input tokens. In the [open-book report](https://github.com/botasse
 
 This is one bench on one subject. We build ThinkThen, so weigh our Jev results. The bench is public. Every answer on its pages replays from a saved recording for free. Run it yourself, and tell me where RAD breaks.
 
-The [RAD page](/learn/beatles-bench/rad/) runs this question both ways.
+The [RAD page](/learn/beatles-bench/#rad) runs this question both ways.

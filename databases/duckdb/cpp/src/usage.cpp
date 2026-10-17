@@ -23,7 +23,7 @@ void UsageStatus(DataChunk &input, ExpressionState &, Vector &output) {
 }
 
 unique_ptr<FunctionData> BindUsage(ClientContext &, TableFunctionBindInput &,
-                                   vector<LogicalType> &types, vector<string> &names) {
+                                   vector<LogicalType> &types, ThinkThenColumnNames &names) {
 	types = {LogicalType::VARCHAR, LogicalType::BIGINT};
 	names = {"metric", "value"};
 	return nullptr;

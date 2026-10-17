@@ -1,3 +1,4 @@
+//! Stays: pair generation, endpoint order and count arithmetic need direct numeric invariants.
 use serde::Deserialize;
 
 use super::{Lead, RelationEntity, RelationRule, pair_edges, plan_pairs};

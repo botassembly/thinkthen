@@ -27,7 +27,7 @@ from children import child_env  # noqa: E402  the shared helper, ticket 0127
 BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
 SUFFIX = "dylib" if sys.platform == "darwin" else "so"
 LIB = pathlib.Path(os.environ.get("THINKTHEN_SQLITE_EXTENSION", BUILT / "release" / f"libthinkthen0.{SUFFIX}"))
-BACKEND = os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend"))
+BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend")))
 CLI = os.environ.get("THINKTHEN_SQLITE_CLI", str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
 LOOPBACK_KEY = "sk-sqlite-loopback"
 LIVE: list[subprocess.Popen] = []
@@ -36,6 +36,9 @@ LIVE: list[subprocess.Popen] = []
 # helpers that turn a statement into rows or its error text.
 PRELUDE = f"""
 import json, os, sqlite3, sys, threading, time
+sys.path.insert(0, {str(HERE)!r})
+from native_receipts import call as complete, ordinary, ordinary_images
+from helper import question_directory
 LIB = {str(LIB)!r}
 def connect(path=":memory:"):
     connection = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
@@ -128,10 +131,20 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
         XDG_CONFIG_HOME=str(scratch / "xdg-config"),
         SCRATCH=str(scratch),
     )
+    held.update(THINKTHEN_SQLITE_EXTENSION=str(LIB), THINKTHEN_BACKEND_BIN=str(BACKEND),
+                THINKTHEN_SQLITE_CLI=str(CLI))
     if backend is not None:
         held.update(THINKTHEN_BASE_URL=backend.base(arm), THINKTHEN_API_KEY=LOOPBACK_KEY)
     held.update(extra)
     return held
+
+
+def question_directory(env=None):
+    """The isolated child's native named-question directory on this platform."""
+    env = os.environ if env is None else env
+    configuration = (pathlib.Path(env['HOME']) / 'Library/Application Support/thinkthen'
+                     if sys.platform == 'darwin' else pathlib.Path(env['XDG_CONFIG_HOME']) / 'thinkthen')
+    return configuration / 'questions'
 
 
 class Child:

@@ -12,9 +12,5 @@ let inbox = [
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ];
-let by_urgency = tt.rank(&urgent, inbox)?.into_value();
-let order: Vec<&str> = by_urgency
-    .iter()
-    .map(|one| *one.input())
-    .collect();
-assert_eq!(order, [inbox[1], inbox[3], inbox[2], inbox[0]]);
+let by_urgency = tt.rank(&urgent, inbox)?;
+assert_eq!(by_urgency.value(), &[1, 3, 2, 0]);

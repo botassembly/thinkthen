@@ -8,18 +8,19 @@ import java.util.*;
 /** Load only the packaged, inventory-selected asset into a private directory. */
 final class NativeLoader {
     private NativeLoader() {}
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static SymbolLookup load() {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         String platform = os.contains("linux") ? "linux" : os.contains("mac") ? "osx" : os.contains("windows") ? "win" : "unsupported";
         String machine = System.getProperty("os.arch");
         String arch = switch (machine) { case "amd64", "x86_64" -> "x64"; case "aarch64", "arm64" -> "arm64"; default -> machine; };
-        try (InputStream inventory = NativeLoader.class.getResourceAsStream("/META-INF/thinkthen/product-inventory.json")) {
+        try (InputStream inventory = NativeLoader.class.getResourceAsStream("/META-INF/thinkthen/native-bootstrap.properties")) {
             if (inventory == null) throw new IllegalStateException("Packaged product inventory is missing");
-            var products = Json.parseObject(new String(inventory.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-            var nativeJars = Values.object(products.get("native"));
-            var selected = nativeJars.get("natives-" + platform + "-" + arch);
+            var products = new Properties();
+            products.load(inventory);
+            String selected = products.getProperty("natives-" + platform + "-" + arch);
             if (selected == null) throw new IllegalStateException("Unsupported JVM native platform: " + platform + "-" + arch);
-            var files = (List<?>)Values.object(selected).get("files");
+            var files = selected.split(",");
             Path folder = Files.createTempDirectory("thinkthen-native-");
             var extracted = new ArrayList<Path>();
             try {

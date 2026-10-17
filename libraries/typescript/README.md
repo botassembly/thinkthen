@@ -1,28 +1,35 @@
-# ThinkThen for TypeScript and JavaScript
+# ThinkThen for TypeScript
 
-The public release remains 0.1.2. The owned API below requires a development 0.2 package.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 ```sh
 npm install thinkthen
 ```
 
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
+
 ```typescript
 import {Client} from 'thinkthen';
-const client = new Client({cache: false});
+const refunds = ['Please refund my order. It arrived broken.', 'Thanks for the quick help yesterday!', 'I want to send this back.'];
+const messages = ['Please refund the extra fee on my invoice.', 'My parcel went to the wrong address.', 'I cannot reset my password.'];
+const teams = {billing: 'Invoices, fees, and refunds.', shipping: 'Parcels and delivery.', account: 'Logins and passwords.'};
+const refundQuestion = 'Does the customer ask for a refund?';
+const teamQuestion = 'Which team owns this?';
+const client = new Client();
 try {
-  const call = await client.decide('Does the writer request a refund?', 'Please refund my order.');
-  console.log(call.results[0].value);
+  for (const text of refunds) {
+    const refund = await client.decide(refundQuestion, text);
+    console.log(refund.value);
+  }
+  for (const text of messages) {
+    const team = await client.choose({choose: teamQuestion, options: teams}, text);
+    console.log(team.value);
+  }
 } finally { client.close(); }
 ```
 
-CommonJS uses `const {Client} = require('thinkthen')`. Both module forms expose the same ten named Client functions: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Results and declarations are generated from Rust. `results` retains completed answers and `facts` retains final native observations. Missing properties remain distinct from present null; `.has(name)` reports presence. Unknown result members remain available. `ClientError` carries native kind, retryability, failure facts and completed results.
+Read the answer from `value`, its probability from `probability`, the per-record details from `results`, and the call observations from `facts`.
 
-Use `Client.item(value, fields)` for per-record context, options and image descriptors, `Client.files(paths, reading, media, framing)` for explicit native sources, and `Client.questionFile`, `Client.questionName` or `Client.questionReference` for saved questions. Rust owns admission and settings. Settings and call options use the native snake_case names in the [Request contract](../../specification/request.schema.json).
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/typescript/) for results, failures, record inputs and offline replay.
 
-Named calls return Promises. `client.start(function, question, input, controls)` returns an async packet iterator with `result()`, `cancel()` and `close()`. Iterable and async iterable inputs are bounded by the native session. `controls.signal` accepts an AbortSignal. Closing or cancelling releases intake and returns while a provider reply is held; final facts remain pending until native settlement.
-
-The old `Engine`, default functions, `complete`, `*_many`, `details`, `plan`, copied CompleteTypes and answer helpers are retired. Replace `engine.complete.decide(...)` or `engine.decide(...)` with `client.decide(...)`; read `call.results[0].value` instead of `call.value`. Replace batch methods with `client.start(...)`. Use generated `Results` types instead of CompleteTypes.
-
-The package loads its bundled addon automatically. The generated [platform inventory](native-platforms.json) includes Windows x64. Windows execution, registry installs and full parity run at the candidate.
-
-`setup-toolchain.sh` installs the pinned Node toolchain. `build-addon.sh` builds the addon offline. `check.sh` checks the local source package or an installed tarball named by `THINKTHEN_ARTIFACT`, using only loopback providers. Shared routine cases run through JavaScript and compiled TypeScript consumers.
+[Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

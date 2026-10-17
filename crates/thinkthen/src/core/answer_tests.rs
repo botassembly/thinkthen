@@ -1,3 +1,4 @@
+//! Stays: probability distribution tolerance, endpoint arithmetic and tie behavior need direct numeric tables.
 use super::{Answer, Distribution, Value};
 use crate::core::probability::Probability;
 use crate::core::threshold::{Outcome, Threshold};

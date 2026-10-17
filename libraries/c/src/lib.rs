@@ -16,14 +16,9 @@
 
 pub mod ffi;
 
-/// cbindgen:ignore
-mod call;
 mod current;
 mod failures;
-/// cbindgen:ignore
-mod plan;
 mod session;
-mod typed;
 /// Primitive immutable C JSON and UTF-8 views.
 pub use session::views as complete_json_views;
 /// Immutable generated complete C packet declarations.
@@ -32,38 +27,10 @@ mod settings;
 
 use failures::Held;
 
-/// The header's `thinkthen_answer`: the outcome code, then the probability
-/// of yes. Two fixed fields, never a third.
-#[repr(C)]
-#[derive(Debug)]
-pub struct Judgment {
-    /// `THINKTHEN_YES`, `THINKTHEN_NO`, or `THINKTHEN_UNSURE`.
-    pub outcome: std::ffi::c_int,
-    /// The probability the backend gave the yes side.
-    pub probability: f64,
-}
-
-/// thinkthen.h is the single C header for thinkthen, version 0.2.0.
-/// Plain calls equal their _opts twin with THINKTHEN_NO_DEADLINE and a NULL token.
-/// Engines serve concurrent callers and rebuild state after a fork; free them
-/// only after all calls return. Free owned strings with thinkthen_free_string.
-/// Error messages and failure facts are borrowed; never free their pointers.
-/// See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
-/// Nonzero returns leave all outputs unchanged. Eager calls have no partial
-/// rows; lazy batches retain completed prefixes. Bare typed, *_with_facts, collecting JSON, complete and batch forms retain their compatibility contracts. Frozen 0.1 exports keep names, layouts, signatures, codes and legacy JSON.
-/// Recommended 0.2 judgments use the owned thinkthen_session_* interface and its adjacent independent session/packet contracts. Shared engine construction and cleanup also serve it.
-/// Reference: https://github.com/botassembly/thinkthen/blob/main/libraries/c/DESIGN.md
-/// DESIGN.md references below name this online reference; archives retain
-/// their header/library contents.
-/// Argument refusals send nothing. NULL engine returns EUSAGE or NULL.
-/// question_json/request_json/spec_json must be NUL-terminated UTF-8.
-/// text reads exactly text_len bytes, never a terminator. NULL requires length
-/// zero; empty evidence still follows the engine's blank-evidence refusal.
-/// texts/lengths/bulk out have count entries; NULL is allowed only at count=0.
-/// Decide out and recognize/relate out/out_len must be nonnull.
-/// A NULL _opts token means no cancellation token.
+/// The current C interface owns engines, parsed questions, sessions and packet views.
+/// Free each owner after its last use. Request preview returns an owned string
+/// released with thinkthen_free_string. Diagnostics borrow per-thread storage.
+/// Session cancellation uses thinkthen_session_cancel.
 /// Opaque engine owner. Free after every concurrent call finishes.
 #[derive(Debug)]
 pub struct EngineHandle(Held);
-
-mod complete;

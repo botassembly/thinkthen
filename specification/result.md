@@ -145,13 +145,23 @@ Pending equal questions can coalesce and repeat their attributed shares. A repea
 
 Adoption updates generated schema, all ten detailed variants in the shared corpus, strict full-result decoders and examples together. Existing recordings remain historical fixtures until 0444 converts them in one controlled update; result/2 cannot be claimed by changing a schema label alone. The changelog distinguishes this target from behavior already built.
 
+## One library result per call
+
+Every library except C returns one object with `value`, `probability`, `results` and `facts`. `value` is the language's plain answer. One input has one answer; a list keeps answers in input order. An unresolved answer is null or none. Rank returns original indexes, filter returns selected originals, and find returns the selected unit or null. `results` retains complete canonical records, including all distributions, provenance and physical source fields. `facts` describes the invocation after its workers finish.
+
+Decide and filter expose the yes probability. Choose and find expose the selected item's probability, or null when no item is selected. Score, tag and annotate have no scalar probability; their distributions remain in `results`. Rank and relate align probabilities with their returned items. Recognition uses each kept proposal's span probability matched to the selected bounds and kind; boundary-only recognition uses each selected proposal's probability. Entity strength remains a separate record field.
+
+Rust represents this contract with `Call<T, R, P>` and function-specific aliases. Scalar probabilities are `Option<f64>`; list probabilities are ordered optional numbers. Rust filter and annotate collect their existing streams into one call. The CLI `--details` view and the C/native packet layer retain their own existing output contracts. Library calls have no details switch or separate details call.
+
 ## Landed result/1 behavior
 
 The sections below describe the existing views, shapes and examples. Result/2 above supersedes them only as its owning implementation tickets adopt it.
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
-Rust complete decision, choice, tag and score carriers expose `compatibility_details()` using the retained result/1 serializer. Their record wrappers retain the caller original in `to_json()` and omit it in `to_scalar_json()`. Both documents keep actual batch and context metadata; a batched scalar projection does not imitate a non-batched call. Complete annotation `value_json()` preserves the existing primitive named values, abstention null and failed-member markers. It does not introduce authored structured annotation meanings. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
+Rust complete decision, choice, tag and score carriers expose typed values, questions, probabilities, usage and metadata. Their `to_json()` writes canonical result/2; `to_scalar_json()` writes result/1 without a record original and keeps actual batch and context metadata. Their `to_unbatched_scalar_json()` writes single-text result/1 without scheduler batch metadata and preserves context metadata. Serializing `CompleteRecord` retains the caller original and occurrence ordinal in the canonical result/2 document.
+
+Native detail producers construct `Details` privately from the complete result. When a record original is supplied, `Details::to_json()` retains it and `Details::to_scalar_json()` omits it. Both result/1 documents keep actual batch and context metadata. Complete annotation `value_json()` preserves the existing primitive named values, abstention null and failed-member markers. It does not introduce authored structured annotation meanings. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains the engine's counters rather than a call result. Each engine counts its own calls and its clones', and a host that keeps several engines adds them; the durable usage totals give the process view.
 

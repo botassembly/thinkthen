@@ -132,24 +132,11 @@ complete!(
 macro_rules! scalar_projection {
     ($($name:ident),+ $(,)?) => { $(
         impl $name {
-            /// Write the existing scalar result/1 details without its record original.
-            /// # Errors
-            /// Returns a defect if the retained result cannot be serialized.
-            /// Write frozen single-text result/1 details without scheduler batch metadata.
-            /// This projection changes no complete reading or execution fact.
-            /// # Errors
-            /// Returns a defect if the retained result cannot be serialized.
-            pub fn to_unbatched_scalar_json(&self) -> Result<String, Error> {
-                let mut canonical = self.canonical.clone();
-                canonical.clear_batch_metadata();
-                canonical.compatibility.scalar_json()
-                    .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
-            }
             /// Write result/1 scalar details with actual batch and context metadata.
             /// # Errors
             /// Returns a defect if the retained result cannot be serialized.
             pub fn to_scalar_json(&self) -> Result<String, Error> {
-                self.canonical.compatibility.scalar_json()
+                crate::core::json_line(&self.canonical.scalar_details(None))
                     .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
             }
         }
@@ -242,5 +229,42 @@ pub(super) fn probabilities(answer: &core::Answer) -> Probabilities {
                 })
                 .collect(),
         ),
+    }
+}
+
+impl CompleteDecision {
+    /// The yes probability for a resolved yes or no reading.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        match self.value() {
+            Answer::Unsure => None,
+            _ => self.canonical.answer().yes(),
+        }
+    }
+}
+impl CompleteFilter {
+    /// The yes probability used to select this input.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.canonical.answer().yes()
+    }
+}
+impl CompleteChoice {
+    /// The selected label's probability; an unresolved choice has none.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        let pick = self.value()?;
+        self.canonical
+            .answer()
+            .named()?
+            .into_iter()
+            .find_map(|(label, probability)| (label == pick).then_some(probability))
+    }
+}
+impl CompleteRank {
+    /// The yes probability of this ranked input, absent for a score reading.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        self.canonical.answer().yes()
     }
 }

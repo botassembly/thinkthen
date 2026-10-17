@@ -1,5 +1,7 @@
 # Rust examples
 
+Read a call with `call.value()` for its plain answer, `call.probability()` for its probability, `call.results()` for its complete typed records and `call.facts()` for its usage. A decide value is `Some(true)`, `Some(false)` or `None` for not sure.
+
 One runnable program for each `thinkthen` function, plus the deck's Rust slide and an offline recognition observer recipe. Each program depends on `thinkthen` the way an outside user does: by path, with default features off and `bundled-sqlite` on, through the public API alone. A build must name `bundled-sqlite` or `host-sqlite`, the SQLite the question cache runs on; only a SQLite extension names `host-sqlite`.
 
 `choices!` keeps `Variant => "label"` for a bare label. Add `: "description"` for text, or a block returning `Result<Description, Error>` for a structured description built with `Description::builder()`. In a typed `choose` or `tag` builder, `None` takes that variant default and `Some(description)` overrides it for that label. A question loaded from JSON keeps its own complete ordered map, including explicit `null` entries; binding it to a `Choice` checks labels without replacing its descriptions.
@@ -19,11 +21,13 @@ The builder also sets `max_request_bytes`, `timeout`, `max_retries`, `profile`, 
 
 ## Run facts
 
-Each eager engine call returns `Call<T>`. Read its answer with `value()` or take it with `into_value()`. `facts()` reports this call's finished records, sent attempts, cache answers, optional provider tokens and model, and wall seconds. A started eager call that fails exposes its final facts through `Error::facts()`. These are call facts, not a delta of the process totals. No call reports price, server time, or a provider request ID.
+Each of the ten engine functions returns one `Call<T, R, P>`. Read its plain answer with `value()`, its scalar or aligned item probabilities with `probability()`, and its complete canonical records with `results()`. Take the plain answer with `into_value()`. `facts()` reports this call's finished records, sent attempts, cache answers, optional provider tokens and model, and wall seconds. A started eager call that fails exposes its final facts through `Error::facts()`. These are call facts, not a delta of the process totals. No call reports price, server time, or a provider request ID.
 
-`Engine::details` returns `Call<Details>` for one text. Its `Details::to_json()` is the command's `--details` line, schema `thinkthen.result/1`, and its accessors read the same fields: `usage()`, `requests_sent()`, `cached()`, `requests()`, `url()`, `model()`, `probabilities()` and `confidence()`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent.
+Scalar decide returns `Option<bool>`, so an unresolved reading is `None`. Choose returns an optional typed choice. Rank returns original indexes, filter returns selected inputs, and find returns an optional original unit. Filter and annotate collect the existing native stream into one call. Filter and find require `Clone` so the call retains originals in both the answer and complete records. Score, tag and annotate have no scalar probability; every distribution remains in `results()`.
 
-`decide_many`, `filter`, `rank`, `choose_many`, `score_many`, `tag_many`, `details_many`, and `annotate` run on the command's question pipeline, by ADR 0111. Each question keeps its own cache key, so a longer call over the same records asks only the new records' questions. Rows list those keys in `meta.requests` and carry no `meta.batch`. `EngineBuilder::batch` selects the default; `CallOptions::batch` overrides it for one call. `EngineBuilder::from_env` reads `THINKTHEN_BATCH`; a bare builder does not. A parsed question file's batch is the lower tier. `CallOptions::context` borrows shared text for an eligible many-record call. Single-document calls, find, annotate, recognize and relate refuse that option before sending. Lazy `Batch<T>::facts()` becomes available after exhaustion or its terminal error. An observation callback can inspect borrowed question and row events in order, including a row omitted by `filter`; copying a field inside the callback retains it. A callback panic resumes on the caller after workers join.
+Each complete record keeps the actual question, answer, usage, identity and source fields. Its `meta()` exposes the reported model, send count, cached origin, request keys and effective address. `to_json()` writes the canonical result/2 record. These fields are retained by the original call and require no second request.
+
+`Engine::execute_request_rows` returns the current typed `RequestRows` batches for decide, choose, score, tag, filter and annotate. These rows, rank and annotation calls run on the command's question pipeline, by ADR 0111. Each question keeps its own cache key, so a longer call over the same records asks only the new records' questions. Rows list those keys in `meta.requests` and carry no `meta.batch`. `EngineBuilder::batch` selects the default; `CallOptions::batch` overrides it for one call. `EngineBuilder::from_env` reads `THINKTHEN_BATCH`; a bare builder does not. A parsed question file's batch is the lower tier. `CallOptions::context` borrows shared text; Request admission validates each function's context rules before sending. Lazy `Batch<T>::facts()` becomes available after exhaustion or its terminal error. An observation callback can inspect borrowed question and row events in order, including a rejected filter occurrence; copying a field inside the callback retains it. A callback panic resumes on the caller after workers join.
 
 The pipeline runs on a background thread while the calling thread pulls each record, so records need not be `Send`. `Max` sends the open request after a size or profile limit, 4,096 records, a full window, exhaustion, a local refusal, or 50 ms with no new record, including while the iterator blocks in `next()`. An interactive caller should select `BatchSetting::Records(1)`; each answer then returns before the library asks for the next input.
 
@@ -43,15 +47,15 @@ A bare `cargo test` builds every example, then runs `tests/examples.rs`. `cargo 
 
 `RankSet::from_json` and `RankSet::load` admit ordered decide sets without authored thresholds or member pointers. `Engine::rank_set(&set, records)` and `rank_set_with` judge every member over every input, sort each member stably, then take turns at each depth in saved member order. Duplicates consume visits and each original input position appears once. Rust returns the full order; take its prefix for a top selection.
 
-`SetRanked<T>` owns the original and provides `index()`, `input()`, `into_input()`, `probability()` and `question_name()`. The probability belongs to the selecting member. Originals need no Clone, Send or Serialize implementation. One CallOptions and one facts report cover the whole call; records count inputs, not member answers. Question observations retain every named member answer and receipt. Any member failure fails the whole call. Existing `rank`, `Ranked` and `RankedRow` stay unchanged. SQL sets belong to ticket 0417 for 0.2; C and language sets belong to 0418 later.
+The call value contains original input indexes. Its results retain each original record, every member result, and the selecting member name. The aligned probability belongs to that selecting member. One CallOptions and one facts report cover the whole call; records count inputs, not member answers. Question observations retain every named member answer and receipt. Any member failure fails the whole call.
 
 ```rust
 let set = thinkthen::RankSet::from_json(
     r#"{"version":1,"questions":{"billing":{"decide":"Billing issue?"},"recovery":{"decide":"Recovery steps?"}}}"#,
 )?;
 let ranked = engine.rank_set(&set, ["First passage", "Second passage"])?;
-for row in ranked.value().iter().take(5) {
-    let _ = (row.index(), row.input(), row.question_name(), row.probability());
+for index in ranked.value().iter().take(5) {
+    let _ = index;
 }
 ```
 
@@ -73,8 +77,8 @@ The [recognition observation contract](../../specification/recognize.md#read-nat
 
 ## Owned Rust calls in 0.2
 
-Replace global calls such as `thinkthen::decide(&question, text)` with an owned `engine.decide(&question, text)`, and replace `thinkthen::usage()` with `engine.usage()`. Build that engine with `Engine::from_env()` when environment settings are wanted, or with `EngineBuilder` for explicit settings. Global judging aliases and image aliases are removed. The hidden default-engine support remains only for older language adapters until their migrations remove those calls.
+Replace global calls such as `thinkthen::decide(&question, text)` with an owned `engine.decide(&question, text)`, and replace `thinkthen::usage()` with `engine.usage()`. Build that engine with `Engine::from_env()` when environment settings are wanted, or with `EngineBuilder` for explicit settings. Global judging aliases and image aliases are removed.
 
-Construct a typed `Request::new(RequestCall::Decide(arguments))`, admit it, then call `engine.execute_request(&admitted, RequestEnvironment::default())` for the common request contract. Match its `RequestOutcome` and `RequestValue` to read Rust-owned complete results; no JSON session or result reader is needed. Typed `Engine` methods remain because this native execution path and the frozen C interface use them.
+Construct a typed `Request::new(RequestCall::Decide(arguments))`, admit it, then call `engine.execute_request(&admitted, RequestEnvironment::default())` for the common request contract. Match its `RequestOutcome` and `RequestValue` to read Rust-owned complete results; no JSON session or result reader is needed. `Call<T, R, P>` carries the plain value, probability, complete typed records and final facts. Its `to_json()` serializes the same envelope directly.
 
 The installed consumer under `consumer/` links the unpacked crate directly and runs the retained shared cases. It replaces the Rust fixture formerly copied from the Python package. Routine checks select `conformance/routine-ids.txt`; the full required matrix runs only at a candidate.

@@ -33,6 +33,8 @@ pub(crate) const BY: &str = "--by takes question, verb, or a JSON pointer such a
 pub(crate) enum Cause {
     /// The input could not be read.
     Unreadable,
+    /// A saved result uses the retired envelope version.
+    OldResults(usize),
     /// Two inputs name standard input.
     TwoStandardInputs,
     /// `diff` has neither a second run nor `--compare-threshold`.
@@ -106,6 +108,10 @@ impl fmt::Display for Refusal {
         write!(formatter, "{command}: ")?;
         match cause {
             Cause::Unreadable => write!(formatter, "cannot read the {role} file"),
+            Cause::OldResults(line) => write!(
+                formatter,
+                "{role} line {line} uses the old thinkthen.result/1 format; save the results again with the current version"
+            ),
             Cause::TwoStandardInputs => formatter.write_str("only one input may be standard input"),
             Cause::NoSecondRun => {
                 formatter.write_str("diff needs a second run or --compare-threshold")

@@ -39,7 +39,6 @@ export CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 export GOCACHE="${GOCACHE:-$repo/target/go/cache}" GOMODCACHE="${GOMODCACHE:-$repo/target/go/modcache}"
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.go.json
-node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" "$repo/sdlc/generators/results/generate.py" --target go --check
 "$python_bin" fixtures/guard.py .
 test -z "$(gofmt -l .)"
@@ -49,16 +48,19 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     module=$scratch
 else
     cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
-    out="$repo/target/go/native"
+    out="${CARGO_TARGET_DIR:-$repo/target}/go/native"
     mkdir -p "$out/include" "$out/lib"
     cp "$repo/libraries/c/include/thinkthen.h" "$out/include/thinkthen.h"
-    sh "$repo/libraries/c/localize.sh" "$repo/libraries/c/target/debug/libthinkthen_c.a" "$out/lib/libthinkthen.a"
+    sh "$repo/libraries/c/localize.sh" "${CARGO_TARGET_DIR:-$repo/libraries/c/target}/debug/libthinkthen_c.a" "$out/lib/libthinkthen.a"
     scratch_dir installed
     module="$installed/module"
     "$python_bin" fixtures/package_owned.py "$PWD" "$out" "$module"
 fi
 # All compile checks target the installed module, whose static asset is bundled.
 (cd "$module" && "$go_bin" vet .)
+cp fixtures/retention_test.go "$module/retention_test.go"
+(cd "$module" && "$go_bin" test -p 1 .)
+rm "$module/retention_test.go"
 for example in decide smoke; do
     scratch_dir caller
     mkdir "$caller/$example"
@@ -68,9 +70,11 @@ for example in decide smoke; do
     if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ] && [ "$example" = smoke ]; then "$caller/example"; exit; fi
 done
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+"$python_bin" fixtures/owned_installed.py "$module" encoding
 "$python_bin" fixtures/owned_installed.py "$module" plan
 "$python_bin" fixtures/owned_installed.py "$module"
 "$python_bin" fixtures/owned_installed.py "$module" feed
 "$python_bin" fixtures/owned_installed.py "$module" usage
+"$python_bin" fixtures/owned_installed.py "$module" example
 "$python_bin" fixtures/shared_installed.py "$module"
 echo 'go: pass'

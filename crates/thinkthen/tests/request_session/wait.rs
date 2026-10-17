@@ -1,5 +1,7 @@
 //! Native wait readiness, ownership and cancellation behavior.
 use super::*;
+use child::ChildEnvironment as _;
+use thinkthen::RequestFunction;
 
 #[test]
 fn result_wait_ignores_input_room_and_timeout_consumes_nothing() {
@@ -19,12 +21,56 @@ fn result_wait_ignores_input_room_and_timeout_consumes_nothing() {
     );
     assert!(started.elapsed() >= Duration::from_millis(30));
     assert!(matches!(session.try_read(), RequestSessionRead::Pending));
+    assert_eq!(
+        session
+            .try_push_with(|| {
+                session.finish(None)?;
+                Ok::<_, Error>(descriptor("discarded after closure"))
+            })
+            .unwrap(),
+        RequestSessionPushStatus::Closed
+    );
     session.finish(None).unwrap();
     assert_eq!(listener.count(), 0);
 }
 
 #[test]
 fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
+    const CASE: &str =
+        "wait::held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts";
+    const CHILD: &str = "THINKTHEN_TEST_HELD_SESSION_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("held-session-{}", std::process::id()));
+        std::fs::create_dir(&home).unwrap();
+        let binary = std::env::current_exe().unwrap();
+        let output = child::run::output(
+            child::command(binary.to_str().unwrap(), &[])
+                .args(["--exact", CASE, "--nocapture", "--test-threads=1"])
+                .isolated_home(&home)
+                .env(CHILD, "1"),
+        );
+        std::fs::remove_dir_all(&home).unwrap();
+        let output = output.unwrap();
+        let said = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success(),
+            "{said}\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(said.contains("1 passed"), "the child ran {CASE}");
+        return;
+    }
+    held_provider_case();
+}
+
+#[allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic,
+    reason = "the isolated child retains the original held-provider assertions"
+)]
+fn held_provider_case() {
     for framing in [RequestFraming::Document, RequestFraming::Csv] {
         let release = Arc::new(Rendezvous::new(2));
         let held = Arc::clone(&release);
@@ -34,11 +80,22 @@ fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
             sent,
         )
         .unwrap();
-        let engine = engine(&listener);
+        // A fresh child owns the process-wide throttle. One provider handler
+        // cannot release the two-party rendezvous without the caller.
+        let engine = api::fixed(listener.base(), "session-fixture")
+            .throttle(1)
+            .unwrap()
+            .no_cache()
+            .max_retries(0)
+            .build()
+            .unwrap();
         let arguments = framing::table_request(framing).call.arguments().clone();
         let session = Arc::new(
             engine
-                .request_session(Request::new(RequestCall::Decide(arguments)))
+                .request_session(Request::new(RequestCall::new(
+                    RequestFunction::Decide,
+                    arguments,
+                )))
                 .unwrap(),
         );
         if matches!(framing, RequestFraming::Csv) {
@@ -59,10 +116,39 @@ fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
                 other => panic!("feed closed before cancellation: {other:?}"),
             })
             .expect("held native work eventually backpressures the one input cell");
+        // A consumer may take the cell after the earlier Full snapshot. Check
+        // conversion against the capacity decision made by this same push.
+        let full = (0..100).any(|_| {
+            let mut converted = false;
+            let status = session
+                .try_push_with::<Error>(|| {
+                    converted = true;
+                    Ok(descriptor("next"))
+                })
+                .unwrap();
+            match status {
+                RequestSessionPushStatus::Full => {
+                    assert!(!converted, "full intake inspected payload");
+                    true
+                }
+                RequestSessionPushStatus::Accepted => {
+                    assert!(converted, "accepted intake skipped payload");
+                    false
+                }
+                other => panic!("feed closed before cancellation: {other:?}"),
+            }
+        });
+        assert!(full, "held native work eventually refuses conversion");
         session.finish(None).unwrap();
         assert_eq!(
             session.wait(RequestSessionWaitInterest::Input, Duration::ZERO),
             RequestSessionReady::Closed
+        );
+        assert_eq!(
+            session
+                .try_push_with::<Error>(|| panic!("closed intake inspected payload"))
+                .unwrap(),
+            RequestSessionPushStatus::Closed
         );
         session.finish(None).unwrap();
         assert_eq!(

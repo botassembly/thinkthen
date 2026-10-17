@@ -31,6 +31,7 @@ export R_LIBS=$libs
 Rscript --vanilla -e 'stopifnot(getRversion() >= "4.2", packageVersion("jsonlite") >= "2.0.0")' ||
   not_run "R or jsonlite prerequisites are missing"
 python3 "$root/sdlc/generators/results/generate.py" --target r --check
+python3 "$root/sdlc/generators/results/generate.py" --target r --inputs --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   artifact=$THINKTHEN_ARTIFACT
   [ -f "$artifact" ] && [ ! -L "$artifact" ] || { echo 'r: artifact is missing or linked' >&2; exit 1; }
@@ -42,8 +43,11 @@ fi
 if [ "${THINKTHEN_COVERAGE_PHASE:-}" != run ]; then
 mkdir -p "$scratch/lib"
 pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' "$root/rust-toolchain.toml")
+. "$root/sdlc/scripts/heavy-compile"
+heavy_scripts="$root/sdlc/scripts"
+export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2}
 RUSTUP_TOOLCHAIN=$pinned CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target/r}" \
-  R CMD INSTALL -l "$scratch/lib" "$artifact" >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
+  heavy_compile R CMD INSTALL -l "$scratch/lib" "$artifact" >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
 fi
 export R_LIBS="$scratch/lib:$libs"
 Rscript --vanilla -e 'stopifnot(startsWith(find.package("thinkthen"),commandArgs(TRUE)[1]))' "$scratch/lib/"
@@ -80,7 +84,7 @@ sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
 PY
-for file in tests/requests.R tests/complete_input_admission.R tests/engine.R tests/facts.R \
+for file in tests/ordinary_interrupt.R examples/examples.R tests/example_replay.R tests/requests.R tests/complete_input_admission.R tests/engine.R tests/facts.R \
   tests/verbs.R tests/files.R tests/recognize.R tests/text.R tests/threshold_strings.R tests/plan_identity.R \
   tests/portable_batch_identity.R tests/profile.R tests/fork.R tests/hook.R tests/startup.R \
   tests/settings_cases.R; do
@@ -90,6 +94,7 @@ for name in liquid ollama openrouter perplexity typesafe; do
   TT_NAMED_BACKEND=$name TT_TEST_MARKERS='{"captured":"fake-named-r-captured","later":"fake-named-r-later"}' \
     bash tests/with-backend.sh "$backend" tests/named_backends.R
 done
+python3 tests/failed_receipt.py
 python3 tests/request_surface.py
 python3 tests/record_feeds.py
 # These existing ten producer cases add feed framing, not a second full parity run.

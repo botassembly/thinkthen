@@ -2,7 +2,7 @@
 //! connection-owned packed answer slots.
 
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::ffi::{CStr, c_int};
+use std::ffi::CStr;
 use std::sync::Arc;
 
 use rusqlite::ffi::sqlite3;
@@ -10,7 +10,7 @@ use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::Filters;
 use serde::de::{Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use thinkthen::{For, Judgment, Probabilities, Question, Settings};
+use thinkthen::{For, Judgment, Probabilities, Settings};
 
 use crate::question::{Stamp, call_settings, question_with_settings, stamp};
 use crate::tables::{Scan, Table};
@@ -18,9 +18,6 @@ use crate::{Failure, worker};
 
 type Rows = Arc<Vec<Vec<Value>>>;
 type HeldRows = (Rows, Arc<HashMap<String, usize>>);
-
-/// The rank table's name, whose question never names a file.
-const RANK: &str = "thinkthen_rank";
 
 /// A slot owns its argument bytes; no SQLite-owned pointer escapes xFilter.
 #[derive(Debug)]
@@ -40,6 +37,7 @@ struct Slot {
 #[derive(Debug, Default)]
 pub(crate) struct Store {
     slots: VecDeque<Slot>,
+    pub(crate) receipts: crate::native::Cache,
 }
 
 impl Store {
@@ -51,7 +49,7 @@ impl Store {
         settings: &[u8],
         file_stamp: Option<Stamp>,
     ) -> Option<HeldRows> {
-        if kind != RANK && question.starts_with(b"@") && file_stamp.is_none() {
+        if question.starts_with(b"@") && file_stamp.is_none() {
             return None;
         }
         let at = self
@@ -164,6 +162,7 @@ pub(crate) fn keyed(source: &str) -> Result<Vec<(String, String)>, Failure> {
 fn selected(rows: Rows, positions: Arc<HashMap<String, usize>>, lookup: Option<String>) -> Scan {
     Scan {
         rows,
+        projections: None,
         selected: lookup.map(|key| positions.get(&key).copied().unwrap_or(usize::MAX)),
     }
 }
@@ -177,21 +176,24 @@ fn lookup(value: ValueRef<'_>) -> Option<String> {
     }
 }
 
-fn answer_columns(detail: &thinkthen::Details, kind: &str) -> Result<(Value, Value), Failure> {
-    match detail.value() {
+fn answer_columns(
+    detail: &crate::request::JudgmentRow,
+    kind: &str,
+) -> Result<(Value, Value), Failure> {
+    match &detail.value {
         Judgment::Decision(answer) if kind == "thinkthen_decide_many" => {
             let value = match answer {
                 thinkthen::Answer::Yes => Value::Integer(1),
                 thinkthen::Answer::No => Value::Integer(0),
                 thinkthen::Answer::Unsure => Value::Null,
             };
-            let Probabilities::YesNo { yes } = detail.probabilities() else {
+            let Probabilities::YesNo { yes } = &detail.probabilities else {
                 return Err(Failure::defect("a decide answer held no yes probability"));
             };
             Ok((value, Value::Real(*yes)))
         }
         Judgment::Choice(label) if kind == "thinkthen_choose_many" => {
-            let probability = match (label, detail.probabilities()) {
+            let probability = match (label, &detail.probabilities) {
                 (Some(label), Probabilities::Named(named)) => named
                     .iter()
                     .find(|item| item.name() == label)
@@ -221,14 +223,14 @@ fn answer_columns(detail: &thinkthen::Details, kind: &str) -> Result<(Value, Val
 
 fn scan(
     db: *mut sqlite3,
-    mask: c_int,
+    mask: u64,
     filters: &Filters<'_>,
     store: &std::sync::Mutex<Store>,
     kind: &'static str,
     verb: For,
 ) -> Result<Scan, Failure> {
     let mut given = 0;
-    let mut values = [ValueRef::Null; 4];
+    let mut values = [ValueRef::Null; 4 + crate::named::COUNT];
     for (at, value) in values.iter_mut().enumerate() {
         if mask & (1 << at) != 0 {
             *value = filters
@@ -255,13 +257,14 @@ fn scan(
         ValueRef::Text(bytes) => bytes,
         _ => return Err(Failure::usage("the settings are JSON text")),
     };
+    let effective = crate::named::settings(settings, &values[4..])?;
+    let settings = effective.as_ref();
     // A numeric or NULL equality is evaluated by SQLite with TEXT affinity;
     // returning all candidates lets its residual predicate decide. The same
     // applies to malformed text, which SQLite can compare without this host
     // interpreting it as a UTF-8 key.
     let lookup = lookup(values[3]);
-    // A rank question is literal text, as find's is, so it names no file.
-    let file_stamp = if kind == RANK { None } else { stamp(question) };
+    let file_stamp = stamp(question);
     {
         let mut held = store
             .lock()
@@ -274,13 +277,7 @@ fn scan(
     let packed_text = string(packed, "the keyed records")?;
     string(settings, "the settings")?;
     let controls = call_settings(ValueRef::Text(settings))?;
-    let rows = if kind == "thinkthen_rank_set" {
-        crate::rank_set::ranked(db, &question_text, &packed_text, values[2])?
-    } else if verb == For::Rank {
-        ranked(db, &question_text, &packed_text, controls)?
-    } else {
-        answered(db, &question_text, &packed_text, controls, kind, verb)?
-    };
+    let rows = answered(db, &question_text, &packed_text, controls, kind, verb)?;
     let positions: HashMap<_, _> = rows
         .iter()
         .enumerate()
@@ -336,7 +333,6 @@ fn answered(
             &held,
             texts.into_iter().map(crate::request::text).collect(),
             options,
-            true,
         )?
         .iter()
         .map(|row| answer_columns(row, kind))
@@ -358,65 +354,6 @@ fn answered(
         .collect())
 }
 
-/// One rank call's `(key, rank, probability)` rows, best first. The question
-/// is literal text and takes only `model` among question fields.
-fn ranked(
-    db: *mut sqlite3,
-    question: &str,
-    packed: &str,
-    controls: Settings,
-) -> Result<Vec<Vec<Value>>, Failure> {
-    controls
-        .check(For::Rank)
-        .map_err(|error| Failure::usage(error.to_string()))?;
-    let asked = Question::rank(question)?;
-    let asked = match controls.model() {
-        Some(model) => asked.with_model(model)?,
-        None => asked,
-    };
-    let records = keyed(packed)?;
-    if records.is_empty() {
-        return Ok(Vec::new());
-    }
-    let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
-    let shared = controls.context().map(str::to_owned);
-    let ranked = worker::run_settings(db, controls, move |engine, options| {
-        let options = if let Some(shared) = &shared {
-            options.context(shared)
-        } else {
-            options
-        };
-        let call = crate::request::run(
-            engine,
-            thinkthen::RequestFunction::Rank,
-            asked.into(),
-            texts.into_iter().map(crate::request::text).collect(),
-            options,
-        )?;
-        match call.into_value() {
-            thinkthen::RequestValue::Ranked(rows) => Ok(rows),
-            _ => Err(crate::request::wrong_result().into()),
-        }
-    })?;
-    ranked
-        .iter()
-        .zip(1_i64..)
-        .map(|(row, place)| {
-            let key = keys
-                .get(row.ordinal())
-                .ok_or_else(|| Failure::defect("a ranked row lost its record"))?;
-            Ok(vec![
-                Value::Text(key.clone()),
-                Value::Integer(place),
-                Value::Real(match row.result().probabilities() {
-                    Probabilities::YesNo { yes } => yes,
-                    _ => return Err(crate::request::wrong_result().into()),
-                }),
-            ])
-        })
-        .collect()
-}
-
 macro_rules! many {
     ($name:ident, $sql:literal, $schema:literal, $verb:expr) => {
         many!(
@@ -424,7 +361,7 @@ macro_rules! many {
             $sql,
             $schema,
             $verb,
-            if matches!($verb, For::Decide | For::Choose | For::Rank) {
+            if matches!($verb, For::Decide | For::Choose) {
                 3
             } else {
                 2
@@ -438,14 +375,17 @@ macro_rules! many {
             const NAME: &'static str = $sql;
             const SCHEMA: &'static CStr = $schema;
             const FIRST_HIDDEN: usize = $visible;
-            const COLUMNS: usize = Self::FIRST_HIDDEN + 4;
+            const COLUMNS: usize = Self::FIRST_HIDDEN + 4 + crate::named::COUNT;
+            fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+                crate::named::schema(Self::SCHEMA)
+            }
             const REQUIRED: usize = 2;
             fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
                 Err(Failure::defect("keyed rows lost their borrowed arguments"))
             }
             fn scan(
                 db: *mut sqlite3,
-                mask: c_int,
+                mask: u64,
                 filters: &Filters<'_>,
                 store: &std::sync::Mutex<Store>,
             ) -> Result<Scan, Failure> {
@@ -459,5 +399,24 @@ many!(DecideMany, "thinkthen_decide_many", c"CREATE TABLE x(key TEXT, value INTE
 many!(ChooseMany, "thinkthen_choose_many", c"CREATE TABLE x(key TEXT, value TEXT, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Choose);
 many!(ScoreMany, "thinkthen_score_many", c"CREATE TABLE x(key TEXT, value REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Score);
 many!(TagMany, "thinkthen_tag_many", c"CREATE TABLE x(key TEXT, value TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Tag);
-many!(Rank, "thinkthen_rank", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank);
-many!(RankSetTable, "thinkthen_rank_set", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question_name TEXT, facts TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank, 5);
+macro_rules! native_rank {
+    ($name:ident, $sql:literal, $schema:literal, $visible:expr) => {
+        #[derive(Debug)]
+        pub(crate) struct $name;
+        impl Table for $name {
+            const NAME: &'static str = $sql;
+            const SCHEMA: &'static CStr = $schema;
+            const FIRST_HIDDEN: usize = $visible;
+            const COLUMNS: usize = $visible + 4 + crate::named::COUNT;
+            const REQUIRED: usize = 2;
+            fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+                crate::named::schema(Self::SCHEMA)
+            }
+            fn rows(_: *mut sqlite3, _: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
+                Err(Failure::defect("a rank table lost its retained receipt"))
+            }
+        }
+    };
+}
+native_rank!(Rank, "thinkthen_rank", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", 3);
+native_rank!(RankSetTable, "thinkthen_rank_set", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question_name TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", 4);

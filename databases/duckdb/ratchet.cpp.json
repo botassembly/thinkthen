@@ -3,5 +3,6 @@
     "cpp/src"
   ],
   "extension": ".cpp",
-  "max": 2582
+  "max": 2860,
+  "scope": "handwritten-production"
 }

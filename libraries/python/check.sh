@@ -11,6 +11,8 @@ case "$profile" in routine|full|smoke) ;; *) echo 'unknown Python test profile' 
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "$profile" = full ] || exit 2
 fi
+python3 "$repo/sdlc/generators/results/generate.py" --target python --check
+python3 "$repo/sdlc/generators/results/generate.py" --target python --inputs --check
 command -v uv >/dev/null 2>&1 || { echo 'not run: no uv'; exit 77; }
 command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
 . ./host.sh
@@ -78,7 +80,7 @@ fi
 export THINKTHEN_TEST_REPO="$repo"
 if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ] && [ "${THINKTHEN_COVERAGE_PHASE:-shared}" = shared ]; then
     CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
-    "$python" -m mypy --strict tests/native_types.py
+    "$python" -m mypy --strict tests/native_types.py tests/options_types.py
 fi
 [ "${THINKTHEN_COVERAGE_PHASE:-}" != shared ] || exit 0
 [ -z "${THINKTHEN_PARITY_PREPARE:-}" ] || exit 0
@@ -87,7 +89,7 @@ if [ "$profile" = routine ]; then
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);selected=set((root/'conformance/routine-ids.txt').read_text().splitlines())
-selected.update(('complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
+selected.update(('library-call-result','complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
 Path(sys.argv[2]).write_text('\n'.join(sorted(selected)))
 PY
     THINKTHEN_CONFORMANCE_IDS=$scratch/ids

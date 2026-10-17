@@ -35,6 +35,7 @@ struct Bridge<'a, A: Asker> {
     asker: &'a A,
     events: Sender<Event<A>>,
     pause: Option<Duration>,
+    recovering: bool,
 }
 
 impl<A: Asker> Host<A> for Bridge<'_, A> {
@@ -47,8 +48,9 @@ impl<A: Asker> Host<A> for Bridge<'_, A> {
 
     fn row(&mut self, _place: usize, result: Row<A>) -> Flow {
         let failed = match &result {
-            Err(Failed::Asker(error)) => !self.asker.recovers(error),
-            Err(_) => true,
+            Err(Failed::Asker(error)) => !self.recovering && !self.asker.recovers(error),
+            Err(Failed::Engine { .. } | Failed::Pack { .. }) => !self.recovering,
+            Err(Failed::Stopped(_)) => true,
             Ok(_) => false,
         };
         if self.events.send(Event::Row(result)).is_err() || failed {
@@ -117,6 +119,7 @@ where
                             asker: &asker,
                             events: events.clone(),
                             pause,
+                            recovering: packing.continues,
                         }
                     },
                     &cancel,

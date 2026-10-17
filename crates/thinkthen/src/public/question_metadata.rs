@@ -25,12 +25,6 @@ macro_rules! accessors {
         pub fn with_name(mut self, name: QuestionName) -> Result<Self, Error> {
             super::question::once(&mut self.$($field)+.name, name, "the name")?; Ok(self)
         }
-        /// Attach a validated wording version, outside semantic identity.
-        /// # Errors
-        /// Returns Usage when already supplied.
-        pub fn with_wording_version(mut self, version: WordingVersion) -> Result<Self, Error> {
-            super::question::once(&mut self.$($field)+.wording_version, version, "the wording version")?; Ok(self)
-        }
         /// Declare the typed selected item without projecting or coercing it.
         /// # Errors
         /// Returns Usage when already supplied.
@@ -77,13 +71,6 @@ macro_rules! wrappers {
         /// Returns Usage when already supplied.
         pub fn with_name(mut self, value: QuestionName) -> Result<Self, Error> {
             self.0 = self.0.with_name(value)?;
-            Ok(self)
-        }
-        /// Attach a validated wording version.
-        /// # Errors
-        /// Returns Usage when already supplied.
-        pub fn with_wording_version(mut self, value: WordingVersion) -> Result<Self, Error> {
-            self.0 = self.0.with_wording_version(value)?;
             Ok(self)
         }
         /// Attach an item declaration.

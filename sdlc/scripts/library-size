@@ -1,0 +1,189 @@
+#!/usr/bin/env python3
+"""Report tracked host source size; candidate acceptance belongs to the release."""
+import argparse
+import types
+import json
+from pathlib import Path
+import statistics
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+MANIFEST = ROOT / 'conformance/library-surface.json'
+
+
+def git(root, *args):
+    return subprocess.check_output(['git', '-C', str(root), *args], text=True)
+
+
+def committed_classifier(root):
+    """Load both modules from the measured commit, including their dependency."""
+    previous = sys.modules.get('registry')
+    registry = types.ModuleType('registry')
+    classifier = types.ModuleType('surface_sources')
+    try:
+        sys.modules['registry'] = registry
+        for name, module in [('registry', registry), ('sources', classifier)]:
+            source = git(root, 'show', 'HEAD:sdlc/generators/results/' + name + '.py')
+            exec(compile(source, name + '.py', 'exec'), module.__dict__)
+    finally:
+        if previous is None:
+            sys.modules.pop('registry', None)
+        else:
+            sys.modules['registry'] = previous
+    return classifier
+
+
+def blobs(root, paths):
+    output = subprocess.check_output(['git', '-C', str(root), 'cat-file', '--batch'],
+                                     input=''.join('HEAD:' + path + '\n' for path in paths).encode())
+    cursor = 0
+    for path in paths:
+        end = output.index(b'\n', cursor)
+        size = int(output[cursor:end].split()[-1])
+        cursor = end + 1
+        yield path, output[cursor:cursor + size].decode()
+        cursor += size + 1
+
+
+
+
+def release_base(root):
+    tags = git(root, 'tag', '--list').splitlines()
+    # Release tags have a numeric version; candidate tags cannot be a baseline.
+    import re
+    tags = [tag for tag in tags if re.fullmatch(r'v?\d+\.\d+\.\d+', tag)]
+    if not tags:
+        raise ValueError('no release tag; supply --since REVISION')
+    return max(tags, key=lambda tag: tuple(int(part) for part in tag.removeprefix('v').split('.')))
+
+
+def additions(root, since, manifest, classifier, generated, outputs):
+    result = []
+    for commit in git(root, 'rev-list', '--reverse', '--topo-order', since + '..HEAD').splitlines():
+        counts = {name: 0 for name in classifier.source_owners(manifest)}
+        parents = git(root, 'rev-list', '--parents', '-1', commit).split()[1:]
+        merge = len(parents) > 1
+        prefix = '+' * len(parents) if merge else '+'
+        patch = git(root, 'show', '--format=', '--cc' if merge else '--patch', '--unified=0',
+                    '--no-renames', commit, '--',
+                    *(config['root'] for config in classifier.source_owners(manifest).values()),
+                    *sorted(generated))
+        path = None
+        for line in patch.splitlines():
+            if line.startswith('+++ b/'):
+                path = line[6:]
+            elif line.startswith('+++ '):
+                path = None
+            elif line.startswith(prefix) and line[len(prefix):].strip() and path:
+                name = classifier.owner(path, manifest, outputs)
+                if name and classifier.classification(path, name, manifest, generated) == 'handwritten':
+                    counts[name] += 1
+        result.append({'commit': commit, 'kind': 'merge_resolution' if merge else 'change',
+                       'handwritten_added': counts})
+    return result
+
+
+def measure(root, manifest, since):
+    classifier = committed_classifier(root)
+    generated, outputs = classifier.generated_paths(), classifier.output_owners()
+    counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
+                         languages={}) for name in classifier.source_owners(manifest)}
+    paths = [path for path in git(root, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
+             if classifier.owner(path, manifest, outputs) and classifier.classification(
+                 path, classifier.owner(path, manifest, outputs), manifest, generated)]
+    for path, source in blobs(root, paths):
+        name = classifier.owner(path, manifest, outputs)
+        if not name:
+            continue
+        kind = classifier.classification(path, name, manifest, generated)
+        if not kind:
+            continue
+        total = sum(bool(line.strip()) for line in source.splitlines())
+        row = counts[name]
+        row[kind] += total
+        exception = manifest.get('exceptions', {}).get(name, {})
+        if kind == 'handwritten' and path in exception.get('paths', []):
+            row['exception'] += total
+        if name == 'jvm':
+            language = {'.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.py': 'python',
+                        '.rs': 'rust', '.c': 'c', '.h': 'c'}.get(Path(path).suffix, Path(path).suffix.lstrip('.'))
+            languages = row['languages'].setdefault(language, dict(handwritten=0, generated=0, test=0))
+            languages[kind] += total
+    medians = {kind: statistics.median(row[kind] for row in counts.values())
+               for kind in ('handwritten', 'generated', 'test')}
+    for row in counts.values():
+        row['ratios'] = {kind: round(row[kind] / median, 4) if median else None
+                         for kind, median in medians.items()}
+        row['handwritten_without_exception'] = row['handwritten'] - row['exception']
+    return {'revision': git(root, 'rev-parse', 'HEAD').strip(), 'since': since,
+            'units': 'nonblank source lines', 'history_classification': 'committed registry and conventions; merges count only combined additions',
+            'medians': medians, 'libraries': counts,
+            'commits': additions(root, since, manifest, classifier, generated, outputs)}
+
+
+def summary(report):
+    lines = ['Library size at ' + report['revision'],
+             'library handwritten generated test exception handwritten/median']
+    for name, row in report['libraries'].items():
+        ratio = row['ratios']['handwritten']
+        lines.append(f"{name} {row['handwritten']} {row['generated']} {row['test']} "
+                     f"{row['exception']} {ratio if ratio is not None else 'undefined'}")
+        for language, counts in sorted(row['languages'].items()):
+            lines.append(f"  {language} {counts['handwritten']} {counts['generated']} {counts['test']}")
+    lines.append('Handwritten additions since ' + report['since'] + ':')
+    for commit in report['commits']:
+        changes = ', '.join(f'{name}={count}' for name, count in commit['handwritten_added'].items() if count)
+        if changes:
+            lines.append(commit['commit'] + ' ' + changes)
+    return '\n'.join(lines) + '\n'
+
+
+def candidate_summary(report):
+    lines = ['Library size at `' + report['revision'] + '`.',
+             'Final release baseline: `' + report['since'] + '`.',
+             '', '| Library | Handwritten | Generated | Tests | Exception | Handwritten / median |',
+             '| --- | ---: | ---: | ---: | ---: | ---: |']
+    for name, row in report['libraries'].items():
+        ratio = row['ratios']['handwritten']
+        lines.append(f"| {name} | {row['handwritten']} | {row['generated']} | {row['test']} | "
+                     f"{row['exception']} | {ratio if ratio is not None else 'undefined'} |")
+    totals = {name: sum(commit['handwritten_added'][name] for commit in report['commits'])
+              for name in report['libraries']}
+    merges = sum(commit['kind'] == 'merge_resolution' for commit in report['commits'])
+    lines += ['', f"History: {len(report['commits'])} commits, including {merges} merges. "
+              'Merge rows count additions absent from all parents. Generated and test additions are excluded.',
+              'Handwritten additions: ' + ', '.join(f'{name}={count}' for name, count in totals.items()) + '.',
+              'Counts use the committed registry and language conventions. Python dataframe and pydantic '
+              'adapter lines are shown separately within handwritten production. No candidate limit is inferred.']
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root', type=Path, default=ROOT)
+    parser.add_argument('--since', help='last release revision; defaults to latest final release tag')
+    parser.add_argument('--json', action='store_true', help='machine readable output')
+    parser.add_argument('--store', metavar='NAME', help='save a short candidate summary under sdlc/records/coverage')
+    args = parser.parse_args()
+    try:
+        root = args.root.resolve()
+        manifest = json.loads(git(root, 'show', 'HEAD:conformance/library-surface.json'))
+        since = args.since or release_base(root)
+        git(root, 'rev-parse', '--verify', since + '^{commit}')
+        report = measure(root, manifest, since)
+        print(json.dumps(report, indent=2, sort_keys=True) if args.json else summary(report), end='\n' if args.json else '')
+        if args.store:
+            if not args.store.replace('-', '').replace('_', '').isalnum():
+                raise ValueError('--store accepts a simple report name')
+            folder = root / 'sdlc/records/coverage'
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / (args.store + '-library-size.md')).write_text(candidate_summary(report))
+        return 0
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        print('library-size: ' + str(error), file=sys.stderr)
+        return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

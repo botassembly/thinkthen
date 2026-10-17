@@ -137,7 +137,7 @@ impl PlanSummary {
         self.first_body.as_deref()
     }
 
-    /// Conservative whole-token band at the measured 0.516/0.908 rates.
+    /// Empirical whole-token band; provider billing can exceed these measured byte rates.
     pub(crate) fn estimated_input_tokens(&self) -> Result<(usize, usize), PlanTooLarge> {
         let lower = self.token_bytes.checked_mul(516).ok_or(PlanTooLarge)? / 1000;
         let upper = u64::try_from(self.token_bytes)
@@ -186,6 +186,7 @@ pub(crate) struct TokenBand {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: conservative token and byte arithmetic needs an independent exact-body accounting vector.
     use super::PlanSummary;
 
     #[test]

@@ -1,3 +1,4 @@
+//! Stays: private file admission tests isolate regular-file, size and confinement rules before opens, including FIFO and descriptor boundaries.
 //! Judgment questions accept plain text, JSON, or a file named `'@path'`.
 //! Sets and specs accept JSON or `@path`. Named files use the privilege gate,
 //! 1 MiB cap, regular-file rule, and `thinkthen.file_directory` confinement.

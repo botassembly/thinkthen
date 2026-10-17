@@ -1,5 +1,5 @@
-// The live `thinkthen check` runs the Backends pages state. A live check
-// cannot replay in the smoke run, so each page shows `check --plan` and
+// The live `thinkthen backends check` runs the Backends pages state. A live check
+// cannot replay in the smoke run, so each page shows `backends check --plan` and
 // states the live result from here. Each entry copies a check run on record.
 // `source` is the URL of the ThinkThen record that holds the run, or 'site'
 // for a run a site ticket made, whose build record holds the transcript.

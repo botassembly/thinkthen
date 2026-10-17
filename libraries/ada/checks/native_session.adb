@@ -1,6 +1,8 @@
 with Ada.Command_Line;
 with Ada.Environment_Variables;
 with Thinkthen;
+with Thinkthen.Values;
+with Thinkthen.Answers;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 with Interfaces; use Interfaces;
@@ -10,23 +12,21 @@ with Interfaces.C.Strings;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 procedure Native_Session is
    Client : Thinkthen.Engine;
    use type Thinkthen.Error_Kind;
-   procedure Select_Settings (Route, Settings : String) is
+   procedure Select_Settings (Route : String; Settings : Thinkthen.Inputs.Engine_Settings) is
       Error : Thinkthen.Failure;
    begin
-      Thinkthen.Configure (Client, "{""base_url"":""" &
-        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """," & Settings & "}", Error);
+      Thinkthen.Inputs.Calls.Configure (Client, Thinkthen.Inputs.With_Base_Url (Settings,
+        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route), Error);
       if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
    end Select_Settings;
    procedure Select_Route (Route : String) is
-      Error : Thinkthen.Failure;
    begin
-      Thinkthen.Configure (Client, "{""cache"":false,""base_url"":""" &
-        Ada.Environment_Variables.Value ("TT_BACKEND_ROOT") & Route & """}", Error);
-      if Error.Kind /= Thinkthen.None then raise Program_Error with Thinkthen.Message (Error); end if;
+      Select_Settings (Route, Thinkthen.Inputs.With_Cache (Thinkthen.Inputs.Make_Engine_Settings,
+        Thinkthen.Inputs.Cache_Document_From_False));
    end Select_Route;
    Owner : Session;
    Value : Packet;
@@ -53,13 +53,9 @@ procedure Native_Session is
       Entity_Count := 0;
       Terminal := False;
       loop
-         Try_Read (Owner, Value, Read);
+         Next_Packet (Owner, Value, Read);
          case Read is
-            when Pending => declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+            when Pending => raise Program_Error with "blocking read returned pending";
             when Finished => exit;
             when Result =>
                declare
@@ -68,7 +64,7 @@ procedure Native_Session is
                   if P.kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
                      Terminal := True;
                      Close (Owner);
-                     if Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
+                     if Thinkthen.Sessions.Status (Value) /= Failure then raise Program_Error with "wrong terminal failure"; end if;
                      if Failure = Success and then State (P.data.terminal.facts.presence) /= Present then raise Program_Error with "missing facts"; end if;
                      if State (P.data.terminal.facts.presence) = Present and then Text (P.data.terminal.facts.value.call_id.value)'Length = 0 then raise Program_Error with "missing call identity"; end if;
                      if Failure = Success then
@@ -147,11 +143,11 @@ procedure Native_Session is
                         begin
                            for Row of Rows loop
                               Metadata (Row.meta);
-                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_FIELDS_ENTITIES_V1, "recognition kind changed");
+                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1, "recognition kind changed");
                               declare
                                  type Entity_Access is access constant thinkthen_complete_entity_v1;
-                                 Entities : array (1 .. Index (Row.value.data.fields_entities.entities.len)) of Entity_Access
-                                   with Import, Address => Row.value.data.fields_entities.entities.data;
+                                 Entities : array (1 .. Index (Row.value.data.entities.entities.len)) of Entity_Access
+                                   with Import, Address => Row.value.data.entities.entities.data;
                               begin
                                  for Entity of Entities loop
                                     Entity_Count := Entity_Count + 1;
@@ -175,10 +171,38 @@ procedure Native_Session is
    -- Shared corpus typed call expressions are inserted here by the installed check.
    -- DECLARATIONS
 begin
+   declare
+      use Thinkthen.Values;
+      Saved : Thinkthen.Values.Value;
+   begin
+      declare
+         Original : constant Thinkthen.Values.Value := Object_Item
+           ([Named ("first", Number_Item ("123456789012345678901234567890")),
+             Named ("second", Array_Item ([Boolean_Item (False), Null_Item,
+               String_Item ("a" & Character'Val (0) & "b")])),
+             Named ("present_null", Null_Item)]);
+      begin
+         Saved := Original;
+      end;
+      Require (Length (Saved) = 3 and then Field_Name (Saved, 1) = "first"
+        and then As_Number (Field_Value (Saved, "first")) = "123456789012345678901234567890",
+        "owned decimal or caller ordering changed");
+      Require (Has_Field (Saved, "present_null") and then not Has_Field (Saved, "missing")
+        and then Kind (Field_Value (Saved, "present_null")) = Thinkthen.Values.Null_Value,
+        "null and missing values conflated");
+      declare
+         Items : constant Thinkthen.Values.Value := Field_Value (Saved, "second");
+      begin
+         Require (not As_Boolean (Element (Items, 1)) and then
+           Kind (Element (Items, 2)) = Thinkthen.Values.Null_Value and then
+           As_String (Element (Items, 3)) = "a" & Character'Val (0) & "b",
+           "owned nested value changed");
+      end;
+   end;
    if Ada.Command_Line.Argument_Count = 0 then
       -- CALLS
    else
-      Thinkthen.Sessions.Calls.Decide (Owner, Failed); Finish (Owner); Drain (Backend);
+      Thinkthen.Native_Sessions.Start (Owner, Failed, "decide"); Finish (Owner); Drain (Backend);
    end if;
    declare
       Overflowed : Boolean := False;

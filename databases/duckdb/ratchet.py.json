@@ -1,8 +1,10 @@
 {
   "directory": [
     "tools",
-    "cpp"
+    "cpp",
+    "community"
   ],
   "extension": ".py",
-  "max": 6107
+  "max": 1426,
+  "scope": "handwritten-production"
 }

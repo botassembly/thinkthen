@@ -17,9 +17,14 @@ sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from usage import run_usage
 from native_assets import configure, package_members
+from fixture_types import write as write_fixture_types
 
 
 def run(command, cwd, env, expected=None, timeout=180):
+    if len(command) > 1 and command[1] == "build":
+        command = [sys.executable, str(ROOT / "sdlc/scripts/build-admission.py"),
+                   "--lock", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"),
+                   "--", *command]
     result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, timeout=timeout)
     if expected:
@@ -42,10 +47,11 @@ def run_prepared():
     # Flutter writes compiler and test output; each member owns its project copy.
     with tempfile.TemporaryDirectory(prefix='thinkthen-dart-member-') as owned:
         scratch = Path(owned)
-        shutil.copytree(prepared / 'packages', scratch / 'packages')
+        shutil.copytree(prepared / 'packages', scratch / 'packages',
+                        ignore=shutil.ignore_patterns('ephemeral', 'build'))
         project = settings['consumer'] if member == 'dart' else 'flutter-app'
         shutil.copytree(prepared / project, scratch / project,
-                        ignore=shutil.ignore_patterns('build', 'flutter_build'))
+                        ignore=shutil.ignore_patterns('build', 'flutter_build', 'ephemeral'))
         for config in (scratch / project / '.dart_tool').rglob('*.json'):
             config.write_text(config.read_text().replace(str(prepared), str(scratch)))
         env.update(THINKTHEN_PARITY_PACKAGE=str(scratch / 'packages/dart'),
@@ -100,7 +106,8 @@ def main():
             archive = source
         else:
             staged = scratch / 'source' / name
-            for member in package_members(source):
+            members = package_members(source)
+            for member in members:
                 target = staged / member
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source / member, target)
@@ -108,7 +115,7 @@ def main():
                 configure(staged, native, [])
             archive = scratch / f'thinkthen-{name}.tar.gz'
             with tarfile.open(archive, 'w:gz') as output:
-                for member in sorted(package_members(staged)):
+                for member in sorted(members):
                     output.add(staged / member, arcname=member)
         # The shipping Flutter archive already owns its flutter/ package root.
         target = packages if supplied and name == 'flutter' else packages / name
@@ -129,11 +136,15 @@ def main():
     consumer = scratch / 'consumer'
     (consumer / 'bin').mkdir(parents=True)
     shutil.copytree(ROOT / 'libraries/dart/checks/session_consumer/bin', consumer / 'bin', dirs_exist_ok=True)
+    shutil.copyfile(packages / 'dart/example/main.dart', consumer / 'bin/shipped_example.dart')
+    write_fixture_types(consumer / 'bin/fixture_values_generated.dart')
     data_case = consumer / 'bin/data_cases.dart'
     data_case.write_text(data_case.read_text().replace('__CANONICAL_IMAGE__', base64.b64encode((ROOT / 'specification/fixtures/images/red.png').read_bytes()).decode()))
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
+    env['TT_CALL_RESULT_FIXTURE'] = str(ROOT / 'conformance/cases.json')
+    run([str(dart), 'analyze', '--fatal-infos'], consumer, env)
     if os.environ.get('THINKTHEN_TEST_PROFILE') == 'smoke':
         env.update({name: os.environ[name] for name in ('THINKTHEN_BASE_URL', 'THINKTHEN_API_KEY',
             'THINKTHEN_CACHE', 'THINKTHEN_TEST_SMOKE_QUESTION', 'THINKTHEN_TEST_SMOKE_TEXT')})
@@ -160,6 +171,8 @@ def main():
         cached.with_suffix('.held').replace(cached)
         run([str(dart), 'run', 'bin/main.dart'], consumer, env)
         run([str(dart), 'run', 'bin/main.dart', 'stream-regressions'], consumer, env)
+        run([str(dart), 'run', 'bin/main.dart', 'examples'], consumer, env)
+        run([str(dart), 'run', 'bin/main.dart', 'call-result'], consumer, env)
         # The same installed consumer owns tiny usage cases; it runs one local call.
         for mode in ('written', 'failed', 'disabled'):
             usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
@@ -205,14 +218,13 @@ def main():
                 thread.join()
                 server.server_close()
             definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
-    if full:
-        run([str(dart), 'build', 'cli', '-t', 'bin/parity_consumer.dart', '-o', str(scratch / 'parity-build')], consumer, env)
-        parity_env = dict(env, THINKTHEN_PARITY_PACKAGE=str(packages / 'dart'),
-            THINKTHEN_DART_CONSUMER=str(consumer),
-            THINKTHEN_DART_BINARY=str(scratch / 'parity-build/bundle/bin/parity_consumer'),
-            THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
-        if not preparing:
-            run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
+    run([str(dart), 'build', 'cli', '-t', 'bin/parity_consumer.dart', '-o', str(scratch / 'parity-build')], consumer, env)
+    parity_env = dict(env, THINKTHEN_TEST_PROFILE='full' if full else 'routine', THINKTHEN_PARITY_PACKAGE=str(packages / 'dart'),
+        THINKTHEN_DART_CONSUMER=str(consumer),
+        THINKTHEN_DART_BINARY=str(scratch / 'parity-build/bundle/bin/parity_consumer'),
+        THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
+    if not preparing and member != 'flutter':
+        run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
     if member != 'flutter':
         # Run the compiled bundle after the source packages and build cache move away.
         packages.rename(scratch / 'packages-held')
@@ -227,24 +239,29 @@ def main():
         print('PASS: supplied Dart and native archives, standalone typed bundle; no source build')
         return
     app = scratch / 'flutter-app'
-    shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux')
+    shutil.copytree(ROOT / 'libraries/dart/flutter/example/linux', app / 'linux',
+                    ignore=shutil.ignore_patterns('ephemeral'))
     (app / 'lib').mkdir()
     shutil.copyfile(consumer / 'bin/stream_cases.dart', app / 'lib/stream_cases.dart')
     shutil.copyfile(consumer / 'bin/data_cases.dart', app / 'lib/data_cases.dart')
-    for streams in [app / 'lib/stream_cases.dart', app / 'lib/data_cases.dart']:
+    shutil.copyfile(consumer / 'bin/result_cases.dart', app / 'lib/result_cases.dart')
+    shutil.copyfile(consumer / 'bin/fixture_values.dart', app / 'lib/fixture_values.dart')
+    write_fixture_types(app / 'lib/fixture_values_generated.dart', 'flutter')
+    for streams in [app / 'lib/stream_cases.dart', app / 'lib/data_cases.dart', app / 'lib/result_cases.dart']:
         streams.write_text(streams.read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart'))
     source = (consumer / 'bin/main.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart').replace('(dart)', '(flutter)')
     source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise([List<String> args = const []]) async {')
-    source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
+    shutil.copyfile(packages / 'flutter/example/lib/main.dart', app / 'lib/shipped_example.dart')
+    source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); await exercise(["examples"]); await exercise(["call-result"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
     (app / 'lib/main.dart').write_text(source)
-    if full:
-        parity_source = (consumer / 'bin/parity_consumer.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart')
-        parity_source = parity_source.replace('Future<void> main(List<String> args) async {',
-                                              'Future<void> exercise(List<String> args) async {')
-        parity_source += '\nFuture<void> main(List<String> args) async {\n  try { await exercise(args); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
-        (app / 'lib/parity_consumer.dart').write_text(parity_source)
+    parity_source = (consumer / 'bin/parity_consumer.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart')
+    parity_source = parity_source.replace('Future<void> main(List<String> args) async {',
+                                          'Future<void> exercise(List<String> args) async {')
+    parity_source += '\nFuture<void> main(List<String> args) async {\n  try { await exercise(args); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
+    (app / 'lib/parity_consumer.dart').write_text(parity_source)
     (app / 'pubspec.yaml').write_text("name: thinkthen_flutter_example\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  flutter:\n    sdk: flutter\n  thinkthen_flutter:\n    path: ../packages/flutter\ndependency_overrides:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
+    run([str(flutter), 'analyze', '--no-pub', '--fatal-infos'], app, env)
     run([str(flutter), 'build', 'linux', '--release', '--no-pub'], app, env)
     bundle = app / 'build/linux/x64/release/bundle'
     assert list((bundle / 'lib').glob('*thinkthen*')), 'FLUTTER_BUNDLED_NATIVE_ASSET'
@@ -254,20 +271,19 @@ def main():
     packages.rename(scratch / 'packages-held')
     run(['/usr/bin/xvfb-run', '-a', str(standalone / 'thinkthen_flutter_example')], standalone, env)
     (scratch / 'packages-held').rename(packages)
-    if full:
-        (scratch / 'flutter-app-held').rename(app)
-        # Compile the real installed Flutter public caller once, not flutter test
-        # once per fixture. Every fixture still starts its own process and home.
-        run([str(flutter), 'build', 'linux', '--release', '--no-pub',
-             '-t', 'lib/parity_consumer.dart'], app, env)
-        parity_bundle = scratch / 'flutter-parity-bundle'
-        shutil.copytree(bundle, parity_bundle)
-        parity_env.update(THINKTHEN_FLUTTER_CONSUMER=str(app),
-                          THINKTHEN_FLUTTER_BINARY=str(parity_bundle / 'thinkthen_flutter_example'))
-        if not preparing:
-            run(['/usr/bin/xvfb-run', '-a', sys.executable,
-                 str(ROOT / 'conformance/children/complete_parity.py'), 'flutter'],
-                scratch, parity_env, timeout=None)
+    (scratch / 'flutter-app-held').rename(app)
+    # Compile the real installed Flutter public caller once, not flutter test
+    # once per fixture. Every fixture still starts its own process and home.
+    run([str(flutter), 'build', 'linux', '--release', '--no-pub',
+         '-t', 'lib/parity_consumer.dart'], app, env)
+    parity_bundle = scratch / 'flutter-parity-bundle'
+    shutil.copytree(bundle, parity_bundle)
+    parity_env.update(THINKTHEN_FLUTTER_CONSUMER=str(app),
+                      THINKTHEN_FLUTTER_BINARY=str(parity_bundle / 'thinkthen_flutter_example'))
+    if not preparing:
+        run(['/usr/bin/xvfb-run', '-a', sys.executable,
+             str(ROOT / 'conformance/children/complete_parity.py'), 'flutter'],
+            scratch, parity_env, timeout=None)
     run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
     if preparing:
         save_prepared(scratch, dart, flutter, native, consumer, has_flutter)

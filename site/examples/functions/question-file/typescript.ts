@@ -7,10 +7,10 @@ try {
   const moneyBack =
     "I would like to return this and get my money back." +
     "\n";
-  const isRefund = (await tt.decide(
+  const refundReading = (await tt.decide(
     refund, moneyBack,
-  )).results[0].value;
+  )).value;
   assert.equal(
-    isRefund, "The customer asks for money back.",
+    refundReading, "The customer asks for money back.",
   );
 } finally { tt.close(); }

@@ -18,7 +18,7 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<recognize::Document<'_, Value>>(),
         generator.subschema_for::<relate::Document<'_, Value>>(),
         generator
-            .subschema_for::<crate::public::CompleteCall<'_, wire::AtomicDocument<'_, Value>>>(),
+            .subschema_for::<crate::public::Call<wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::public::batch::CompletedPrefix<'_, wire::AtomicDocument<'_, Value>>>(),
         generator.subschema_for::<crate::SessionPacketDocument<'_>>(),
         generator.subschema_for::<crate::public::CompleteError<'_>>(),
@@ -91,7 +91,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         "else":{"properties":{"origin":{"type":"string"}}}
     }]);
     let find = definitions
-        .get_mut("completeReadableQuestion2")
+        .get_mut("completefindQuestionDocument")
         .expect("find reading");
     find["properties"]["verb"] = json!({"const":"find"});
     find["required"]
@@ -107,7 +107,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         .expect("required")
         .push(json!("kind"));
     let relate = definitions
-        .get_mut("completeReadableQuestion4")
+        .get_mut("completerelateQuestionDocument")
         .expect("relate reading");
     relate["properties"]["verb"] = json!({"const":"relate"});
     let attempt = definitions
@@ -169,8 +169,10 @@ fn locations(definitions: &mut Map<String, Value>) {
     for endpoint in ["source", "target"] {
         definitions
             .get_mut("completerelatedEntityEdge")
-            .expect("relation edge")["properties"][endpoint] =
-            super::any_of(&["completerelatedEntity", "completesourceRelationEndpoint"]);
+            .expect("relation edge")["properties"][endpoint] = json!({"title":"completeRelationEndpoint","anyOf":[
+            {"$ref":"#/$defs/completerelatedEntity"},
+            {"$ref":"#/$defs/completesourceRelationEndpoint"}
+        ]});
     }
     definitions.insert("completePosition".into(), definitions["Position"].clone());
     strict::graph(definitions, "completePosition");

@@ -4,17 +4,20 @@ import json,os,sys,subprocess,tempfile,sqlite3
 from pathlib import Path
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
 from children import child_env, read_process_line
+from native_fixture import selected_case_ids
 ROOT=Path(__file__).resolve().parents[4]
+BACKEND=Path(os.environ.get('THINKTHEN_BACKEND_BIN',os.environ.get('THINKTHEN_BACKEND',
+    str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target'))/'debug/conformance-backend'))))
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
 from c_parity import document,prepare,assertions,compact,Backend
-from project import project
+from project import project,assert_empty_sql
 from jsonschema.exceptions import ValidationError
 
 sys.path.insert(0,str(ROOT/'databases/duckdb/tools'))
 import inputs as duckdb_inputs
 DUCKDB_VERSION=duckdb_inputs.selected()['version']
-DUCKDB_PYTHON=str(Path(os.environ.get('THINKTHEN_TOOLCHAINS',Path.home()/'.cache/thinkthen-toolchains'))/'duckdb'/DUCKDB_VERSION/'venv/bin/python')
+DUCKDB_PYTHON=str(Path(os.environ.get('THINKTHEN_TOOLCHAINS',Path.home()/'.cache/thinkthen-toolchains')) /'duckdb/community'/DUCKDB_VERSION/'venv/bin/python')
 
 FUNCTIONS=('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')
 
@@ -81,17 +84,35 @@ def execute(consumer,frame,env,home,backend):
 
 def main():
     consumer=sys.argv[1]
+    selected=os.environ.get('THINKTHEN_CONFORMANCE_IDS')
+    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
+    named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
+    contract=inventory.inventory()
+    rows=list(inventory.required_cases(contract,consumer).values())
+    try:
+        if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' and (selected is not None or len(sys.argv)>2):
+            raise ValueError('full SQL parity refuses a case selector')
+        if selected is not None:
+            if len(sys.argv)>2:
+                raise ValueError('conflicting SQL case selectors')
+            ids=selected_case_ids(selected)
+            known=set(cases)|set(named)|{row['id'] for row in contract['required_cases']}
+            if ids-known:
+                raise ValueError('unknown SQL case selector: '+','.join(sorted(ids-known)))
+            rows=[row for row in rows if row['id'] in ids]
+        elif len(sys.argv)>2:
+            if len(sys.argv)!=3:
+                raise ValueError('unsupported SQL selector arguments')
+            rows=[row for row in rows if row['id']==sys.argv[2]]
+        if not rows:
+            raise ValueError('SQL case selector matches no required cases')
+    except (ValueError,OSError) as error:
+        print('SQL selector: '+str(error),file=sys.stderr)
+        return 2
     host=None
     if consumer=="postgresql":
         from postgresql_host import PostgresqlHost
         host=PostgresqlHost()
-    rows=list(inventory.required_cases(inventory.inventory(),consumer).values())
-    if len(sys.argv)>2:rows=[r for r in rows if r['id']==sys.argv[2]]
-    if not rows:
-        print(f'{consumer} complete SQL: FAIL required cases did not run',file=sys.stderr)
-        return True
-    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
-    named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     failed=0
     for row in rows:
         failure=None
@@ -103,8 +124,11 @@ def main():
                               PATH=os.environ['PATH'],
                               LANG='C.UTF-8',
                               LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''))
-                if consumer=='postgresql':env['THINKTHEN_POSTGRESQL_SOCKET']=os.environ['THINKTHEN_POSTGRESQL_SOCKET']
-                backend=Backend(ROOT/'target/debug/conformance-backend',env)
+                if consumer=='postgresql':
+                    env.update(THINKTHEN_POSTGRESQL_SOCKET=os.environ['THINKTHEN_POSTGRESQL_SOCKET'],
+                               CARGO_TARGET_DIR=str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'databases/postgresql/target')).resolve()),
+                               THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE','routine'))
+                backend=Backend(BACKEND,env)
                 try:
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
                     prepare(home,value)
@@ -119,7 +143,7 @@ def main():
                         if step.get('damage_store'):
                             with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get('image_variants'):
-                            backend.close();backend=Backend(ROOT/'target/debug/conformance-backend',env);prepare(home,step)
+                            backend.close();backend=Backend(BACKEND,env);prepare(home,step)
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{})}
                         env['THINKTHEN_BASE_URL']=f'http://127.0.0.1:{backend.port}/{step["arm"] if value.get("image_variants") else value["arm"]}'
                         settings['base_url']=env['THINKTHEN_BASE_URL']
@@ -151,7 +175,10 @@ def main():
                             path=home/'saved/thinkthen.sqlite'
                             if path.exists():
                                 with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM answers').fetchone()[0]==0
-                        assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if 'empty_sql_rows' in got:
+                            assert_empty_sql(step,got,int(backend.read('count'))-before)
+                        else:
+                            assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['kind'] in ('images','image-location'):
                             replay={k:v for k,v in engine.items() if k!='record'};replay['replay']=str(home/'recorded')
                             saved=execute(consumer,{**frame,'engine_settings':replay},env,home,backend)

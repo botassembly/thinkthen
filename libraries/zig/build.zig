@@ -48,7 +48,7 @@ pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Buil
     const header = b.pathJoin(&.{ archive, "include/thinkthen.h" });
     const bytes = std.fs.cwd().readFileAlloc(b.allocator, header, std.math.maxInt(usize)) catch @panic("thinkthen C header missing or unreadable");
     if (!headerVersionMatches(bytes)) @panic("thinkthen C header does not match package ABI 0.2.0");
-    for ([_][]const u8{ "typedef struct thinkthen_answer", "thinkthen_decide_many_opts", "thinkthen_call_opts" }) |needle| {
+    for ([_][]const u8{ "thinkthen_session_new", "thinkthen_session_result_view", "thinkthen_request_plan_json" }) |needle| {
         if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.2.0");
     }
     const lib = b.pathJoin(&.{ archive, "lib", if (mode == .shared) "libthinkthen.so" else "libthinkthen.a" });

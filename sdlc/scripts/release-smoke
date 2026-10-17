@@ -16,6 +16,7 @@ set -eu
 # Keep the build identity before macOS moves HOME into the usage sandbox.
 builder_home=$HOME
 # ADR 0113: the smoked installs write a scratch usage folder, never the real one.
+builder_home=$HOME
 usage_home
 source_packages= command_only=
 case ${1:-} in --source-packages) source_packages=1; shift ;; --command) command_only=1; shift ;; esac
@@ -92,6 +93,9 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
 	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
+	# Installed surface usage checks read totals with this same shipped command.
+	THINKTHEN_COMMAND=$prefix/thinkthen
+	export THINKTHEN_COMMAND
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.
@@ -132,7 +136,7 @@ if [ -n "$source_packages" ]; then
 		[ -f "$DIR/$1" ] && [ ! -L "$DIR/$1" ] || { echo "release-smoke: missing or linked $1" >&2; exit 1; }
 		[ -f "$DIR/$1.sha256" ] && [ ! -L "$DIR/$1.sha256" ] || { echo "release-smoke: missing or linked $1.sha256" >&2; exit 1; }
 	}
-	for family in c go cpp csharp jvm swift zig php dart ada cobol sqlite duckdb postgresql16; do
+	for family in c go cpp csharp jvm swift zig php dart ada cobol sqlite duckdb postgresql16 postgresql17 postgresql18; do
 		name=thinkthen-$family-$V-$target.tar.gz
 		for file in "$DIR"/thinkthen-"$family"-*.tar.gz*; do
 			[ -e "$file" ] || [ -L "$file" ] || continue
@@ -239,13 +243,17 @@ for file in "$DIR"/*; do
 		thinkthen-cobol-*.tar.gz) surface=libraries/cobol ;;
 	thinkthen-sqlite-*.tar.gz) surface=databases/sqlite ;;
 	thinkthen-duckdb-*.tar.gz) surface=databases/duckdb ;;
-	thinkthen-postgresql16-*.tar.gz) surface=databases/postgresql ;;
+	thinkthen-postgresql1[678]-*.tar.gz) surface=databases/postgresql ;;
 	thinkthen-*.whl) surface=libraries/python ;;
 	thinkthen-*.tgz) surface=libraries/typescript ;;
 	thinkthen-*.gem) surface=libraries/ruby ;;
 	thinkthen-"$V"-*.tar.gz) surface=command ;;
 	*) echo "release-smoke: FAIL $name (no surface packs this file)"; failed=1; continue ;;
 	esac
+    case $name in thinkthen-postgresql1[678]-*)
+        major=${name#thinkthen-postgresql}; major=${major%%-*}
+        seen="$seen postgresql$major" ;;
+    esac
 	seen="$seen $surface"
 	set +e
 	if [ "$surface" = command ]; then
@@ -262,6 +270,8 @@ for file in "$DIR"/*; do
 			THINKTHEN_ARTIFACT=$file THINKTHEN_C_ARTIFACT="$DIR/thinkthen-c-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
 				THINKTHEN_DART_ARTIFACT="$DIR/thinkthen-dart-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
 				sh "$surface/check.sh" "$port" 3>&-
+        elif [ "$surface" = databases/postgresql ]; then
+            THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$major" 3>&-
 		else
 			THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$port" 3>&-
 		fi
@@ -271,7 +281,9 @@ for file in "$DIR"/*; do
 	verdict release "$surface $name" "$code" || failed=1
 done
 # Every file the release holds for this target is here.
-for want in command libraries/c databases/sqlite databases/duckdb databases/postgresql \
+pg_families='postgresql16 postgresql17 postgresql18'
+[ "${THINKTHEN_TEST_PROFILE:-}" != routine ] || pg_families='postgresql16 postgresql18'
+for want in $pg_families command libraries/c databases/sqlite databases/duckdb databases/postgresql \
 	libraries/python libraries/typescript libraries/ruby first-run; do
 	case " $seen " in *" $want "*) ;; *) echo "release-smoke: FAIL $want (DIR holds no file for it)"; failed=1 ;; esac
 done

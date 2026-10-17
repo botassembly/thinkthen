@@ -1046,7 +1046,10 @@
     "seconds": 0,
     "input_tokens": 0,
     "output_tokens": 0,
-    "estimated_cost_usd": "0.000000"
+    "estimated_cost_usd": "0.000000",
+    "largest_request_bytes": 0,
+    "largest_request_estimated_input_tokens": 0,
+    "token_estimate_method": "encoded-body-bytes-908-v1"
   },
   "errors": [
     {
@@ -1092,7 +1095,10 @@
       "seconds": 0,
       "input_tokens": 0,
       "output_tokens": 0,
-      "estimated_cost_usd": "0.000000"
+      "estimated_cost_usd": "0.000000",
+      "largest_request_bytes": 0,
+      "largest_request_estimated_input_tokens": 0,
+      "token_estimate_method": "encoded-body-bytes-908-v1"
     },
     "attempts": [
       {

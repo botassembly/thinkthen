@@ -38,13 +38,14 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
     let asked = question();
     let (release_one, held_one) = std::sync::mpsc::channel();
     let pulled_one = std::sync::Arc::new(AtomicUsize::new(0));
-    let mut one = engine.decide_many_with(
+    let mut one = crate::api::pull_decisions(
+        &engine,
         &asked,
-        held_input(held_one, std::sync::Arc::clone(&pulled_one)),
+        crate::api::plain_records(held_input(held_one, std::sync::Arc::clone(&pulled_one))),
         CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
     );
     assert_eq!(
-        one.next().expect("first row").expect("answer").input(),
+        one.next().expect("first row").expect("answer").original(),
         &"alpha"
     );
     assert_eq!(pulled_one.load(Ordering::SeqCst), 1);
@@ -61,9 +62,13 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
         .expect("annotation set");
     let (release_annotation, held_annotation) = std::sync::mpsc::channel();
     let pulled_annotation = std::sync::Arc::new(AtomicUsize::new(0));
-    let mut annotation = engine.annotate_with(
+    let mut annotation = crate::api::pull_annotations(
+        &engine,
         &set,
-        held_input(held_annotation, std::sync::Arc::clone(&pulled_annotation)),
+        crate::api::plain_records(held_input(
+            held_annotation,
+            std::sync::Arc::clone(&pulled_annotation),
+        )),
         CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
     );
     assert_eq!(
@@ -71,7 +76,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
             .next()
             .expect("annotation row")
             .expect("answer")
-            .input(),
+            .original(),
         &"alpha"
     );
     assert_eq!(pulled_annotation.load(Ordering::SeqCst), 1);
@@ -89,9 +94,10 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
 
     let (release_max, held_max) = std::sync::mpsc::channel();
     let pulled_max = std::sync::Arc::new(AtomicUsize::new(0));
-    let mut max = engine.decide_many_with(
+    let mut max = crate::api::pull_decisions(
+        &engine,
         &asked,
-        held_input(held_max, std::sync::Arc::clone(&pulled_max)),
+        crate::api::plain_records(held_input(held_max, std::sync::Arc::clone(&pulled_max))),
         CallOptions::new().batch(BatchSetting::Max),
     );
     let (row, held) = thread::scope(|scope| {
@@ -109,7 +115,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
         (row, watcher.join().expect("watcher"))
     });
     assert_eq!(held, (2, 2), "Max sent nothing while input was held");
-    assert_eq!(row.input(), &"alpha");
+    assert_eq!(row.original(), &"alpha");
     assert!(max.next().is_none());
     assert_eq!(
         max.facts()
@@ -142,9 +148,10 @@ fn batch_one_failure_ends_without_pulling_another_caller_record() {
         }
     });
     let asked = question();
-    let mut batch = engine.decide_many_with(
+    let mut batch = crate::api::pull_decisions(
+        &engine,
         &asked,
-        records,
+        crate::api::plain_records(records),
         CallOptions::new()
             .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
             .observe_attempt(&observe),
@@ -268,7 +275,17 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         .expect("set");
     let pulls = AtomicUsize::new(0);
     reader_failure(
-        engine.try_annotate_with(&set, failing_input(&pulls), options),
+        crate::api::annotation_rows(
+            crate::api::rows(
+                &engine,
+                thinkthen::RequestFunction::Annotate,
+                set.clone().into(),
+                failing_input(&pulls).map(|row| row.map(crate::api::record)),
+                options,
+            )
+            .expect("annotation rows"),
+        )
+        .expect("annotations"),
         &pulls,
         |_| {},
     );

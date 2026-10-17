@@ -81,6 +81,7 @@ impl Engine {
                 }
             };
             let mut rows = Vec::new();
+            let in_flight = super::inflight::InFlight::default();
             let outcome = ordered::run(
                 if !eager && sink.is_none() {
                     1
@@ -90,7 +91,15 @@ impl Engine {
                 &cancel,
                 options.readiness,
                 read,
-                &|(ordinal, prepared)| answer(ordinal, prepared, limit, &cancel),
+                &|(ordinal, prepared)| {
+                    let _entered = prepared
+                        .engine
+                        .reuses_recognition_answers()
+                        .then(|| in_flight.enter(&prepared, &cancel))
+                        .transpose()
+                        .map_err(|error| error.at_record(ordinal))?;
+                    answer(ordinal, prepared, limit, &cancel)
+                },
                 |answered| {
                     let original = originals
                         .borrow_mut()

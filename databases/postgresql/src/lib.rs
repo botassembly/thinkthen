@@ -5,10 +5,10 @@
 
 use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
-use thinkthen::{Details, Engine, Error, LoadedQuestion, Recognize};
+use thinkthen::{Engine, Error, LoadedQuestion, Recognize};
 
 mod call;
-mod complete;
+mod native;
 use thinkthen_host::complete_native;
 mod descriptions;
 #[allow(
@@ -17,6 +17,7 @@ mod descriptions;
 )]
 mod ffi;
 mod files;
+mod filter;
 mod find;
 mod forms;
 mod images;
@@ -43,14 +44,12 @@ fn details(
     question: &LoadedQuestion,
     evidence: &str,
     options: thinkthen::CallOptions<'_>,
-    contextual: bool,
-) -> Result<Option<Details>, Error> {
+) -> Result<Option<crate::request::JudgmentRow>, Error> {
     request::details(
         engine,
         question,
         vec![request::text(evidence.to_owned())],
         options,
-        contextual,
     )
     .map(|rows| rows.into_iter().next())
 }

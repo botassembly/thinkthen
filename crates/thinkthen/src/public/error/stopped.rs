@@ -64,6 +64,12 @@ impl Stopped {
         self.retryable
     }
 
+    pub(super) const fn recovery_budget(mut self) -> Self {
+        self.cause = StopCause::Usage;
+        self.retryable = false;
+        self
+    }
+
     pub(super) const fn of_kind(kind: ErrorKind) -> Self {
         let cause = match kind {
             ErrorKind::Usage => StopCause::Usage,
@@ -83,7 +89,7 @@ impl Stopped {
     pub(super) fn of_engine(error: &EngineError) -> Self {
         let mut stopped = Self::of_kind(super::kind_of(error.kind()));
         stopped.retryable = error.retryable();
-        match error {
+        match error.base() {
             EngineError::NoKey(_) => stopped.cause = StopCause::NoKey,
             EngineError::Transport(_) => stopped.cause = StopCause::Transport,
             EngineError::Status(status) => {

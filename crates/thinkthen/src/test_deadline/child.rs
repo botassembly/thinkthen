@@ -16,6 +16,10 @@ pub(crate) const CARGO: &[&str] = &[
     "RUSTUP_TOOLCHAIN",
     "CARGO_TARGET_DIR",
     "RUSTC_WRAPPER",
+    "RUSTFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS",
+    "CFLAGS",
+    "CXXFLAGS",
 ];
 
 /// A `Command` whose environment holds `PATH` and `keep`; a secret or `THINKTHEN_` name panics.

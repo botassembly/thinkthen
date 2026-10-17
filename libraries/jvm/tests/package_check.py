@@ -23,7 +23,7 @@ def inspect(name, source):
     with zipfile.ZipFile(io.BytesIO(source)) as bundle:
         members = {item.filename: bundle.read(item) for item in bundle.infolist() if not item.is_dir()}
     assert members, f"empty {name} JAR"
-    legacy = {"Door", "Complete", "CompleteDetails", "CompleteEngine", "Requests", "Questions", "Ids", "KotlinComplete", "KotlinFacade", "KotlinCallerKt", "KotlinRequests", "ScalaComplete", "ScalaFacade", "ScalaCaller", "ScalaRequests"}
+    legacy = {"Door", "Complete", "CompleteDetails", "CompleteEngine", "Requests", "Ids", "KotlinComplete", "KotlinFacade", "KotlinCallerKt", "KotlinRequests", "ScalaComplete", "ScalaFacade", "ScalaCaller", "ScalaRequests"}
     assert not any(Path(member).name.split("$")[0].removesuffix(".class") in legacy for member in members if member.endswith(".class")), "retired public class escaped product JAR"
     demo_classes = {"KotlinCallerKt.class", "ScalaCaller$package.class",
                     "ScalaCaller$package$.class", "scalaCaller.class",
@@ -38,6 +38,12 @@ def inspect(name, source):
     assert manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "bad JAR manifest"
     if "META-INF/thinkthen/product-inventory.json" in members:
         assert json.loads(members.pop("META-INF/thinkthen/product-inventory.json")) == inventory.jvm_inventory(), "stale embedded JVM inventory"
+    bootstrap = members.get("META-INF/thinkthen/native-bootstrap.properties")
+    assert bootstrap is not None, "native bootstrap resource missing"
+    actual = dict(line.split("=", 1) for line in bootstrap.decode('ascii').splitlines())
+    canonical = {key: ','.join(asset['files']) for key, asset in inventory.jvm_inventory()['native'].items()}
+    assert actual == canonical, "bootstrap selection differs from packaged inventory"
+    assert not any("Json$Reader" in key or "FixtureJson" in key for key in members), "JSON reader escaped into product JAR"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"
     assert not any(token in data for member, content in members.items() for data in (member.encode(), content) for token in BAD), "private byte in JAR"
@@ -52,6 +58,34 @@ def reject(label, action):
     else:
         raise AssertionError(f"planted {label}: accepted")
 
+
+
+def example_check(inventory):
+    inventory.check_jvm_examples(TARGET)
+    with tempfile.TemporaryDirectory(prefix='jvm-example-inventory-') as folder:
+        package = Path(folder)
+        for name in inventory.jvm_inventory()['examples']:
+            destination = package / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes((ROOT / name).read_bytes())
+        inventory.check_jvm_examples(package)
+        sample = package / inventory.jvm_inventory()['examples'][0]
+        original = sample.read_bytes()
+        for label in ('stale', 'missing', 'extra'):
+            if label == 'stale':
+                sample.write_bytes(original + b'changed')
+            elif label == 'missing':
+                sample.unlink()
+            else:
+                (package / 'examples/unlisted.java').write_text('extra')
+            try:
+                inventory.check_jvm_examples(package)
+            except ValueError:
+                print('planted ' + label + ' example: rejected')
+            else:
+                raise AssertionError('planted ' + label + ' example: accepted')
+            sample.write_bytes(original)
+    print('JVM copied examples: source inventory and bytes PASS')
 
 
 def session_abi_check(header, jar, library):
@@ -88,6 +122,19 @@ def session_abi_check(header, jar, library):
     required = set(re.findall(r'"(thinkthen_\w+)"', text))
     if required != set(declarations):
         raise ValueError('C ABI mismatch: JVM session unmeasured import')
+    native = abi.header_abi(header)
+    expected = abi.represented_abi(native, [], declarations, [], signed=False)
+
+    def record(kind):
+        measured = native['records'][kind]
+        return {'size': measured['size'], 'alignment': measured['alignment'],
+                'members': [{'type': record(field['type']) if field['type'] in native['records'] else abi.wire_type(field['type'], field['width'], signed=False),
+                             'offset': field['offset'], 'width': field['width']}
+                            for field in measured['fields'].values()]}
+
+    for function in expected['functions'].values():
+        function['argument_records'] = {str(index): record(kind) for index, kind in enumerate(function['arguments']) if kind in native['records']}
+        function['arguments'] = ['record' if kind in native['records'] else kind for kind in function['arguments']]
     lines = [JVM_ABI_PROBE.split(' public static void main(')[0],
              ' public static void main(String[] args)throws Exception {',
              ' var linker=Linker.nativeLinker();',
@@ -99,20 +146,36 @@ def session_abi_check(header, jar, library):
         descriptor = f'FunctionDescriptor.ofVoid({arguments})' if returned == 'null' else f'FunctionDescriptor.of({returned},{arguments})'
         lines += ['{ var d=' + descriptor + ';',
                   ' linker.downcallHandle(symbols.find("' + name + '").orElseThrow(),d);',
-                  ' functions.put("' + name + '",Map.of("return",d.returnLayout().map(AbiProbe::kind).orElse("void"),"return_width",d.returnLayout().map(MemoryLayout::byteSize).orElse(0L),"arguments",d.argumentLayouts().stream().map(AbiProbe::kind).toList(),"argument_widths",d.argumentLayouts().stream().map(MemoryLayout::byteSize).toList(),"calling_convention",System.getProperty("os.name").startsWith("Windows")?"cdecl":"C")); }']
+                  ' functions.put("' + name + '",Map.of("return",d.returnLayout().map(AbiProbe::kind).orElse("void"),"return_width",d.returnLayout().map(MemoryLayout::byteSize).orElse(0L),"arguments",d.argumentLayouts().stream().map(AbiProbe::kind).toList(),"argument_widths",d.argumentLayouts().stream().map(MemoryLayout::byteSize).toList(),"argument_records",records(d),"calling_convention",System.getProperty("os.name").startsWith("Windows")?"cdecl":"C")); }']
     lines += [' System.out.println(Json.write(Map.of("functions",functions)));', ' }', '}']
     jdk = Path(os.environ.get('THINKTHEN_SESSION_JDK_HOME', os.environ.get('THINKTHEN_JDK_HOME', '/usr/lib/jvm/java-22-openjdk-amd64')))
     with tempfile.TemporaryDirectory(prefix='thinkthen-jvm-session-abi-') as folder:
         scratch = Path(folder)
         unit = scratch / 'AbiProbe.java'
-        unit.write_text('\n'.join(lines))
         env = child_env(HOME=str(scratch / 'home'))
-        subprocess.run([str(jdk / 'bin/javac'), '--release', '22', '-cp', str(jar), '-d', str(scratch), str(unit)], env=env, check=True, stdout=sys.stderr)
-        actual = json.loads(subprocess.check_output([str(jdk / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-XX:ActiveProcessorCount=1', '-cp', str(jar) + os.pathsep + str(scratch), 'thinkthen.AbiProbe', str(library.resolve())], env=env, text=True))
-    native = abi.header_abi(header)
-    expected = abi.represented_abi(native, [], declarations, [], signed=False)
-    abi.compare_abi(expected, actual)
-    print(f'JVM session C ABI: {len(declarations)} source-declared, compiled and linked descriptors match')
+
+        def measure(probe):
+            unit.write_text('\n'.join(probe))
+            subprocess.run([str(jdk / 'bin/javac'), '-J-XX:ActiveProcessorCount=2', '--release', '22', '-cp', str(jar), '-d', str(scratch), str(unit)], env=env, check=True, stdout=sys.stderr)
+            return json.loads(subprocess.check_output([str(jdk / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-XX:ActiveProcessorCount=1', '-cp', str(jar) + os.pathsep + str(scratch), 'thinkthen.AbiProbe', str(library.resolve())], env=env, text=True))
+
+        actual = measure(lines)
+        abi.compare_abi(expected, actual)
+        # Keep the width and member count while changing x64 aggregate register classes.
+        wrong = [line.replace('MemoryLayout.structLayout(ValueLayout.ADDRESS, SIZE)', 'MemoryLayout.structLayout(ValueLayout.JAVA_DOUBLE, ValueLayout.JAVA_DOUBLE)') for line in lines]
+        assert wrong != lines, 'same-width floating aggregate plant missed the actual descriptor'
+        mutated = measure(wrong)
+        for name, function in actual['functions'].items():
+            assert function['argument_widths'] == mutated['functions'][name]['argument_widths'], 'floating aggregate plant changed argument widths'
+        try:
+            abi.compare_abi(expected, mutated)
+        except ValueError as error:
+            if str(error) != 'C ABI mismatch: functions.thinkthen_session_new_named_with_surface':
+                raise
+            print('planted same-width floating aggregate: rejected')
+        else:
+            raise AssertionError('planted same-width floating aggregate: accepted')
+    print(f'JVM session C ABI: {len(declarations)} source-declared, compiled and linked descriptors and by-value members match')
 
 
 JVM_ABI_PROBE = r'''
@@ -127,6 +190,24 @@ public class AbiProbe {
   if(l instanceof ValueLayout.OfDouble||l instanceof ValueLayout.OfFloat)return "float"+(l.byteSize()*8);
   if(l instanceof ValueLayout)return "integer"+(l.byteSize()*8);
   throw new IllegalStateException("unrepresented ABI layout "+l);
+ }
+ static Object shape(MemoryLayout l) {
+  if(!(l instanceof GroupLayout g))return kind(l);
+  List<Object> members=new ArrayList<>();
+  long offset=0;
+  for(var member:g.memberLayouts()) {
+   if(!(member instanceof PaddingLayout))members.add(Map.of("type",shape(member),"offset",offset,"width",member.byteSize()));
+   if(!(g instanceof UnionLayout))offset+=member.byteSize();
+  }
+  return Map.of("size",g.byteSize(),"alignment",g.byteAlignment(),"members",members);
+ }
+ static Map<String,Object> records(FunctionDescriptor d) {
+  Map<String,Object> records=new TreeMap<>();
+  for(int i=0;i<d.argumentLayouts().size();i++) {
+   var layout=d.argumentLayouts().get(i);
+   if(layout instanceof GroupLayout)records.put(Integer.toString(i),shape(layout));
+  }
+  return records;
  }
  public static void main(String[] args){}
 }
@@ -145,6 +226,7 @@ def main():
     inventory = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(inventory)
     definition = inventory.jvm_inventory(TARGET)
+    example_check(inventory)
     assert json.loads((TARGET / 'jars/product-inventory.json').read_text()) == definition, 'stale generated JVM inventory'
     for name, filename in definition['jars'].items():
         jar = TARGET / "jars" / filename

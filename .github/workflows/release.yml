@@ -16,6 +16,9 @@ on:
 
 permissions: {}
 
+env:
+  PYTHONDONTWRITEBYTECODE: '1'
+
 jobs:
   resolve:
     runs-on: ubuntu-24.04
@@ -63,11 +66,12 @@ jobs:
           printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
+      # Keep the wheel floor separate from the interpreter running repository tools.
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        if: runner.os == 'macOS'
-        with: {python-version: '3.13'}
-      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        id: python-floor
         with: {python-version: '3.10'}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: {node-version: '22.22.3'}
       - name: Select x64 MSVC
@@ -90,7 +94,7 @@ jobs:
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
         run: python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
       - name: Build and pack the target
-        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
+        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}", PYO3_PYTHON: "${{ steps.python-floor.outputs.python-path }}"}
         run: |
           set -eu
           mkdir -p release-files
@@ -127,9 +131,7 @@ jobs:
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
             disk 'after the final pack'
           else
-            RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
-            PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"
-            export RUBY PG_CONFIG
+            # Each PostgreSQL archive selects its server's pg_config.
             sdlc/scripts/release-pack "$TARGET" release-files
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -176,16 +178,58 @@ jobs:
             tar -xzf "$input/$name" -C "target/apple-$arch"
             cmp "target/apple-$arch/include/thinkthen.h" libraries/c/include/thinkthen.h
           done
-          libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
+          sh libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
           cp -R target/apple-framework/CThinkThen.xcframework libraries/swift/
           mkdir target/apple-packages
           cp "target/apple-inputs/platform-$TARGET/thinkthen-c-$version-$TARGET.tar.gz"* target/apple-packages/
           sdlc/scripts/release-pack --apple-wrappers "$TARGET" target/apple-packages swift objective-c
           rm "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz" "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz.sha256"
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22.22.3'}
+      - name: Prepare the installed Apple consumer dependencies
+        run: |
+          set -eu
+          rustup toolchain install 1.95.0 --profile minimal
+          cargo fetch --locked
+          python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+          CARGO_NET_OFFLINE=true python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline -p conformance-backend
+      - name: Qualify installed Swift and Objective-C Foundation
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}", THINKTHEN_TEST_PROFILE: full}
+        run: |
+          set -eu
+          sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages swift "$SHA"
+          sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages objective-c "$SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: 'apple-packages-${{ matrix.target }}', path: target/apple-packages/, if-no-files-found: error, retention-days: 7}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: 'apple-framework-${{ matrix.target }}', path: libraries/swift/CThinkThen.xcframework/, if-no-files-found: error, retention-days: 7}
+
+  apple-coverage:
+    needs: resolve
+    if: inputs.mode == 'rehearse'
+    runs-on: macos-15
+    permissions: {contents: read}
+    env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with: {python-version: '3.13'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22.22.3'}
+      - name: Prepare the measured Apple host
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component llvm-tools-preview
+          cargo fetch --locked
+          cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+          python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+      - name: Measure installed Swift and Objective-C on the candidate
+        run: sdlc/scripts/coverage --release --platform apple --output "$RUNNER_TEMP/apple-coverage"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: 'apple-coverage-${{ needs.resolve.outputs.sha }}', path: '${{ runner.temp }}/apple-coverage/totals.json', if-no-files-found: error, retention-days: 7}
+
 
   wheels:
     needs: [resolve, build]
@@ -248,6 +292,7 @@ jobs:
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
       - run: cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
+      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
       - run: cargo fetch --locked --manifest-path libraries/python/Cargo.toml
       - run: python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
       - run: sh sdlc/scripts/package
@@ -398,6 +443,9 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: crate-package, path: crate-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with: {name: r-package, path: r-dist}
       - name: Require the selected Go/C++ family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
@@ -426,6 +474,13 @@ jobs:
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+      - name: Replay public package examples on the prepared host
+        if: matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'
+        env: {TARGET: "${{ matrix.target }}"}
+        run: |
+          cp crate-dist/*.crate smoke-files/
+          if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then cp r-dist/* smoke-files/; fi
+          sdlc/scripts/release-workflow public-examples "$TARGET" smoke-files
       - name: Validate and consume the downloaded Windows C archive
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
@@ -456,6 +511,8 @@ jobs:
         with: {name: apple-packages-x86_64-apple-darwin, path: platform/platform-x86_64-apple-darwin}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {name: r-package, path: r-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: crate-package, path: crate-dist}
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
       - run: ruby -c thinkthen.rb
@@ -475,7 +532,7 @@ jobs:
             sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
-          cp r-dist/* all-files/
+          cp r-dist/* crate-dist/*.crate all-files/
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 
   crates:

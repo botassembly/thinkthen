@@ -7,6 +7,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env, read_process_line
+from question_files import file_question_expectation
 import tempfile
 from toolchains import dotnet as resolve_dotnet
 
@@ -21,20 +22,26 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+def stop_backend(backend):
+    backend.terminate()
+    try:
+        backend.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        backend.kill()
+        backend.wait()
+
+
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
-if os.environ.get("THINKTHEN_BACKEND_BIN"):
-    backend = subprocess.Popen([os.environ["THINKTHEN_BACKEND_BIN"]],
-                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, env=child_env(), text=True)
-    try:
-        port = int(read_process_line(backend.stdout))
-    except BaseException:
-        shared.stop_backend(backend)
-        raise
-else:
-    backend, port = shared.start_backend()
+backend_path = os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))
+backend = subprocess.Popen([backend_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, env=child_env(), text=True)
+try:
+    port = int(read_process_line(backend.stdout))
+except BaseException:
+    stop_backend(backend)
+    raise
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
@@ -68,7 +75,7 @@ def native_parity(consumer, command):
         required = {key: row for key, row in required.items() if key in selected}
     elif os.environ.get("THINKTHEN_TEST_PROFILE", "routine") != "full":
         routine = {line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line and not line.startswith("#")} - {"25-defect-fault"}
-        required = {key: row for key, row in required.items() if key in routine or key.startswith("files-") or key in {"images-decide", "images-choose", "images-score"}}
+        required = {key: row for key, row in required.items() if key in routine or key.startswith("files-") or key in {"library-call-result", "images-decide", "images-choose", "images-score", "settings-max-requests-refuses-past-the-limit"}}
     for row in required.values():
         failure = None
         try:
@@ -86,6 +93,18 @@ def native_parity(consumer, command):
                     identities = []
                     for original in value.get("steps", [value]):
                         step = dict(original)
+                        definition = step.get("question", {})
+                        wording_version = definition.get("wording_version")
+                        file_authored = not step.get("loader") and step.get("question_form") != "file" and (
+                            any(key in definition and not isinstance(definition[key], dict)
+                                for key in ("item_schema", "context_schema")) or
+                            "wording_version" in definition and not (type(wording_version) is int and
+                                -(1 << 63) <= wording_version < (1 << 63)))
+                        if file_authored:
+                            # Typed carriers cannot hold these authored shapes. Keep the
+                            # original bytes on the existing public question-file path.
+                            step.update(raw=step["raw"] if step.get("raw") is not None else c_parity.compact(definition), question_form="file")
+                            (home / "fixture-question.json").write_text(step["raw"], encoding="utf-8")
                         if step.get("copy_store"):
                             (home / "refreshed").mkdir()
                             with sqlite3.connect(home / "saved/thinkthen.sqlite") as source, sqlite3.connect(home / "refreshed/thinkthen.sqlite") as target:
@@ -155,7 +174,7 @@ def native_parity(consumer, command):
                             request = json.loads(json.loads(backend.read("capture"))["bodies"][0])
                             expected = {f"q{i+1}": {"type": "noul", "instructions": f"The text is {c_parity.compact(item)}. {step['question']['decide']}"} for i, item in enumerate(step["items"][:2])}
                             assert request["questions"] == expected
-                        c_parity.assertions(row, original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
+                        c_parity.assertions(row, file_question_expectation(step) if file_authored else original, got, int(backend.read("count")) - (before if step.get("count_delta") else 0))
                         if row["kind"] in ("images", "image-location"):
                             before = int(backend.read("count"))
                             saved = invoke({**{k:v for k,v in settings.items() if k != "record"}, "replay": str(home / "recorded")})
@@ -180,7 +199,6 @@ def native_parity(consumer, command):
 
 
 try:
-    assert type_case(["carriers"], child_env(), "owned carrier fixtures") == {"carriers": "pass"}
     with tempfile.TemporaryDirectory(prefix="thinkthen-csharp-types-") as cache:
         # Ticket 0291, before any case sends: P1 and one invalid plan run with
         # no key through the public Engine.Plan; the zero budgets and the zero
@@ -188,6 +206,7 @@ try:
         env = child_env(home=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache,
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                         THINKTHEN_CACHE=str(Path(cache) / "plan"))
+        assert type_case(["carriers"], env, "owned carrier fixtures") == {"carriers": "pass"}
         p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
         actual = type_case(["plan", json.dumps(p1["plan_input"])], env, "plan-p1")
         assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
@@ -249,11 +268,11 @@ try:
                       TT_NATIVE_SETTINGS=settings,TT_NATIVE_FILE=str(path))
         before=sent()
         assert type_case(["native"],env,"native complete")=={"native":"pass"}
-        assert sent()-before==22,"complete native listener count"
+        assert sent()-before==24,"complete native listener count"
         print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:
-    shared.stop_backend(backend)
+    stop_backend(backend)
 print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} typed runtime cases, plan P1, limits and annotate fields passed; 14 frozen C JSON syntax/control cases retain schema validation")
 
 raise SystemExit(native_parity("csharp", [str(resolve_dotnet()), str(run)]))

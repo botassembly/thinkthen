@@ -24,9 +24,15 @@ check("zero-send deadline retains its native condition and facts", inherits(late
   late$facts$requests_sent == 0 && inherits(late$complete,"thinkthen_CallError"))
 structured <- list(decide=list(ask="Refund?",hints=list("one",list(a=NULL,b=1))),true=NULL)
 one <- tt_decide(structured,"gamma")
-check("structured wording retains null and nested values", is.null(one$results[[1]]$question$true) &&
+check("structured wording retains null and nested values", is.null(one$value) && identical(one$probability, 0.9) && is.null(one$results[[1]]$question$true) &&
   identical(one$results[[1]]$question$text, structured$decide) &&
   inherits(one$results[[1]]$question$false,"thinkthen_absent"))
+for (meaning in list(list(active = FALSE), list(id = 7), list("first", "second"))) {
+  authored <- tt_decide(list(decide = "Authored value?", true = meaning), "authored evidence")
+  check("authored object and list values keep nulls, booleans and selected probability",
+        identical(authored$value, meaning) && identical(authored$probability, 0.9) &&
+        identical(authored$results[[1]]$value, meaning))
+}
 with_sides <- tt_decide(list(decide="Q?",true="Yes means refund",false="No means no refund"), "semantic")
 body <- tail(capture(),1)[[1]]
 check("descriptions reach native authored wording", grepl("Yes means refund",body,fixed=TRUE) &&
@@ -54,4 +60,4 @@ capped_sends <- sent_by(capped <- child(c(
   'cat(failure$kind)'
 ), env="THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10"))
 check("token spending cap crosses from the environment without a send", capped$status==0L && capped_sends==0L && capped$text=="usage")
-finish("facts and completion",7L)
+finish("facts and completion",10L)

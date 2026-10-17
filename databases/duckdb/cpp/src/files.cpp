@@ -68,7 +68,7 @@ int64_t ReadHandle(void *pointer, uint8_t *buffer, size_t length) noexcept {
 }
 
 unique_ptr<FunctionData> BindFiles(ClientContext &, TableFunctionBindInput &input,
-                                  vector<LogicalType> &types, vector<string> &names) {
+                                  vector<LogicalType> &types, ThinkThenColumnNames &names) {
 	auto bind = make_uniq<FilesBind>();
 	types = {LogicalType::BIGINT, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::BIGINT};
 	names = {"ordinal", "record", "file", "first_line", "last_line"};

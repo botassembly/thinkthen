@@ -141,12 +141,17 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     assert_eq!(attempt["status"], 200);
     assert!(thinkthen::SdkRequestId::new(attempt["sdk_request_id"].as_str().unwrap()).is_ok());
     assert_eq!(
-        crate::native_results::compatibility::judgment(row),
+        crate::native_results::comparison::judgment(row),
         serde_json::json!({
-            "schema":"thinkthen.result/2", "value":true,
+            "schema":"thinkthen.result/2", "answer_id":"0".repeat(64), "value":true,
             "question":{"verb":"decide","text":"asks for a refund"},
             "answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,
             "meta":{
+                "origin":"live", "answered_by":"jev-1.13.0",
+                "question_sources":[{"origin":"live","answered_by":"jev-1.13.0","batch_size":1}],
+                "observations":[{"observation_id":"0".repeat(64)}],
+                "attempts":[{"ordinal":1,"request_sha256":request,"wall_ms":0,
+                    "outcome":"ok","status":200,"sdk_request_id":"0".repeat(64)}],
                 "tool":concat!("thinkthen ",env!("CARGO_PKG_VERSION")),
                 "question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79",
                 "url":detailed.url(), "model":"jev-1.13.0",

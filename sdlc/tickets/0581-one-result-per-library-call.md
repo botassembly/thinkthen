@@ -4,6 +4,46 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 3f0c285, reject
+
+Reviews: revision 0043787, accept
+
+Reviews: revision 544c42d, accept
+
+Reviews: revision 41f439a, reject
+
+Reviews: revision bca9842, accept
+Reviews: revision 46a710a, accept
+Reviews: revision 7ed1e4b, reject
+
+Reviews: revision 993bd65, accept
+Reviews: revision 566177f, accept
+
+Reviews: revision a42fd11, accept
+Reviews: revision 0d49b26, accept
+
+Reviews: revision 77ffc56, accept
+
+Reviews: revision 1d5c728, accept
+
+Reviews: revision 2aaf6f4, accept
+
+Reviews: revision 315058e, accept
+
+Reviews: revision 0fda34d, accept
+
+Reviews: revision 0c9742e, accept
+
+Reviews: revision 6f5b7fb, accept
+
+Reviews: revision 423b288, accept
+Reviews: revision fb1aff7, accept
+Reviews: revision 0f867d5, accept
+
+Reviews: revision dc0da92, accept
+
+Reviews: revision 1127ae9, accept
+
 ## Outcome
 
 In every library except C, each of the ten functions returns one result with `value`, `probability`, `results` and `facts`, and no details switch or separate details call exists.
@@ -53,3 +93,8 @@ One case in `conformance/cases.json`, replayed by every binding's installed driv
 ## Defers
 
 Registry pages (0578), the website (0575) and docs examples follow after this lands.
+
+## Progress
+
+- 2026-10-14 started
+- 2026-10-14 next: The reviewed null-probability repair covers every dataframe call; earlier accepted checks expected all-null Series and compared only the first cell, so they missed whole-call None, and the new checks verify container presence, cardinality and dtype before projection across all cases.

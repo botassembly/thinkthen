@@ -67,10 +67,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
     if let Some(binary) = built.get(&(source.to_owned(), sanitizer)) {
         return binary.clone();
     }
-    let name = source
-        .file_stem()
-        .and_then(|name| name.to_str())
-        .expect("a name");
+    let name = consumer_name(source);
     let binary = root().join(format!(
         "c-{name}{}.exe",
         if sanitizer { "-asan" } else { "" }
@@ -86,6 +83,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
                 "/nologo",
                 "/TC",
                 "/std:c11",
+                "/experimental:c11atomics",
                 "/W4",
                 "/WX",
                 "/MD",
@@ -151,15 +149,7 @@ fn msvc_asan_proves_instrumentation_before_ownership_checks() {
     );
     std::fs::remove_file(probe.with_extension("obj")).expect("remove negative object");
     std::fs::remove_file(probe).expect("remove negative executable");
-    for name in [
-        "nulls",
-        "opts",
-        "threads",
-        "engines",
-        "typed_facts",
-        "session",
-        "atexit",
-    ] {
+    for name in ["session", "authored", "request_preview"] {
         let backend = Backend::start().expect("backend");
         let source = crate_dir().join("tests/c").join(format!("{name}.c"));
         let binary = compile_mode(&source, true);

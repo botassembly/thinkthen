@@ -202,13 +202,13 @@ pub(super) fn admit(
     request: Request,
     attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 ) -> Result<AdmittedRequest, Error> {
-    admit_header(request, attachment_limit, false, false)
+    admit_header(request, attachment_limit, false)
 }
 pub(super) fn admit_native(request: Request) -> Result<AdmittedRequest, Error> {
-    admit_header(request, None, false, true)
+    admit_header(request, None, true)
 }
 pub(super) fn admit_session(request: Request) -> Result<AdmittedRequest, Error> {
-    let admitted = admit_header(request, None, true, false)?;
+    let admitted = admit_header(request, None, false)?;
     super::framing::admit(&admitted)?;
     if let Some(definition) = &admitted.definition {
         super::framing::reading(&admitted, definition)?;
@@ -218,13 +218,12 @@ pub(super) fn admit_session(request: Request) -> Result<AdmittedRequest, Error> 
 fn admit_header(
     request: Request,
     attachment_limit: Option<super::transport::TransportAttachmentLimit>,
-    located_feed: bool,
     native_originals: bool,
 ) -> Result<AdmittedRequest, Error> {
     super::transport::preflight_input(&request.call.arguments().input, attachment_limit)?;
     let function = request.call.function();
     let args = request.call.arguments();
-    admit_options(function, &args.input, &args.options, located_feed)?;
+    admit_options(function, &args.input, &args.options)?;
     admit_input(function, &args.input, &args.options)?;
     let definition = match &args.question {
         RequestQuestion::Definition { value } => Some(admit_definition_for(
@@ -339,7 +338,9 @@ fn admit_definition_for(
             _ => false,
         },
         RequestDefinition::Rank(_) | RequestDefinition::RankSet(_) => function == Function::Rank,
-        RequestDefinition::Find(_) => function == Function::Find,
+        RequestDefinition::Find(q) => {
+            function == Function::Find && q.question().kind() == QuestionKind::Find
+        }
         RequestDefinition::Annotate(_) => function == Function::Annotate,
         RequestDefinition::Recognize(_) | RequestDefinition::Recognition(_) => {
             function == Function::Recognize
@@ -367,7 +368,6 @@ fn admit_options(
     function: Function,
     input: &RequestInput,
     options: &RequestOptions,
-    located_feed: bool,
 ) -> Result<(), Error> {
     if let Some(model) = &options.model {
         crate::core::ModelName::new(model).map_err(|cause| {
@@ -432,13 +432,12 @@ fn admit_options(
     }
     if options.files_only
         && (!function.allows_option("files_only")
-            || !(matches!(input, RequestInput::Source { .. })
-                || located_feed && matches!(input, RequestInput::Feed { .. })))
+            || !matches!(
+                input,
+                RequestInput::Source { .. } | RequestInput::Feed { .. }
+            ))
     {
         return Err(Error::usage("files_only requires filter source input"));
-    }
-    if options.details && !function.allows_option("details") {
-        return Err(Error::usage("details applies only to primitive judgments"));
     }
     if let Some(batch) = &options.batch {
         batch.native()?;

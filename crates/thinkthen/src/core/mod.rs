@@ -27,9 +27,6 @@ mod digest;
 mod find;
 mod identity;
 pub(crate) use identity::answer::{AtomicReading, RecordScope};
-pub(crate) use identity::compatibility::{
-    Metadata as CompatibilityMetadata, observation as compatibility_observation,
-};
 pub(crate) mod image;
 mod json;
 pub(crate) mod measure;
@@ -169,6 +166,7 @@ pub(crate) fn version_line(version: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private version-line assembly fixes the name/version contract before command formatting.
     use super::version_line;
 
     #[test]

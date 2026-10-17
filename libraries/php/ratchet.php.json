@@ -1,9 +1,6 @@
 {
-  "directory": [
-    "src",
-    "examples",
-    "fixtures"
-  ],
+  "directory": ".",
   "extension": ".php",
-  "max": 1828
+  "max": 521,
+  "scope": "handwritten-production"
 }

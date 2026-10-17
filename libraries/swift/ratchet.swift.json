@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".swift",
-  "max": 9841
+  "max": 649,
+  "scope": "handwritten-production"
 }

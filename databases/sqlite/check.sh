@@ -12,7 +12,12 @@ cd -- "$here"
 usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
-[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = routine ]; then
+    THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS-"$here/../../conformance/routine-ids.txt"}
+    export THINKTHEN_CONFORMANCE_IDS
+else
+    unset THINKTHEN_CONFORMANCE_IDS
+fi
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$here/../../sdlc/scripts/time-limit
 source=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
@@ -125,9 +130,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ]; then
 	export THINKTHEN_SQLITE_EXTENSION
 	# Ticket 0374: the shipped library keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
-	installed_tests="tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py"
+	installed_tests="tests/test_source_filter.py tests/test_named_parameters.py tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py"
 	if [ "$profile" = full ]; then
-	    installed_tests="tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_usage.py"
+	    installed_tests="tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py tests/test_usage.py"
 	fi
 	for test in $installed_tests; do
 		step "$test, installed"
@@ -177,6 +182,10 @@ cargo clippy --locked --offline --quiet --all-targets --all-features -- -D warni
 cargo test --locked --offline --quiet --lib
 
 build_extension
+scratch_dir installed
+cp -- "$library" "$installed/"
+THINKTHEN_SQLITE_EXTENSION=$installed/libthinkthen0.$suffix
+export THINKTHEN_SQLITE_EXTENSION
 
 step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
@@ -197,7 +206,7 @@ for test in tests/test_*.py tests/examples.py tests/conformance.py; do
 	sh "$LIMIT" 300 "$python" "$test" || failed="$failed $test"
 done
 step "complete native calls"
-THINKTHEN_SQLITE_EXTENSION="$library" sh "$LIMIT" 1800 "$python" tests/complete/parity.py sqlite || failed="$failed complete"
-THINKTHEN_SQLITE_EXTENSION="$library" sh "$LIMIT" 300 "$python" tests/complete/facts.py sqlite || failed="$failed facts"
+sh "$LIMIT" 1800 "$python" tests/complete/parity.py sqlite || failed="$failed complete"
+sh "$LIMIT" 300 "$python" tests/complete/facts.py sqlite || failed="$failed facts"
 [ -z "$failed" ] || { echo "FAIL     databases/sqlite:$failed" >&2; exit 1; }
 echo "pass     databases/sqlite"

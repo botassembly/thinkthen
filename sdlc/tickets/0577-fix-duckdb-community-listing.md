@@ -4,6 +4,14 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision f825e1e, reject
+
+Reviews: revision def9879, accept
+
+Reviews: revision 01955ca, accept
+
+Reviews: revision 1a5c65b, accept
+
 ## Outcome
 
 The ThinkThen DuckDB extension builds in DuckDB's community CI on Linux x86-64 and ARM64. The listing pull request and the DuckDB README page read plainly, in a few human sentences, and say what the extension costs. Ian approves every public word before anyone posts it. The listing ships through 0.2: its descriptor pins the 0.2 release commit, and it builds against DuckDB 1.5.6 and DuckDB 2.0.
@@ -37,6 +45,8 @@ The ThinkThen DuckDB extension builds in DuckDB's community CI on Linux x86-64 a
 - Defers: Windows community targets, unless CI requires them.
 
 ## Progress
+
+- 2026-10-13 started
 
 PM amendment, 2026-10-13. The fresh-reader test of the DuckDB README page, the descriptor's `extended_description` and the PR description runs under 0575, and each opens with the site README's pitch word for word, as 0578 says.
 

@@ -54,7 +54,7 @@ fn lines(case: &str, size: usize, answer: Option<usize>) -> Vec<u8> {
 
 fn recording() -> String {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../probes/find-0040/recording")
+        .join("tests/fixtures/find-reach")
         .to_string_lossy()
         .into_owned()
 }
@@ -137,7 +137,7 @@ fn empty_input_succeeds_without_reading_a_key() {
 #[test]
 fn committed_reach_recordings_replay_the_selected_line_and_none() {
     let folder = recording();
-    // The probe's recording asked for the alias, so its replay names it.
+    // These two probe exchanges retain their requested model alias.
     let replay = ["--model", "jev-latest", "--replay", folder.as_str()];
     let answerable_question =
         "Which unit states the cobalt permit duration for marker TARGET-S100-A1?";

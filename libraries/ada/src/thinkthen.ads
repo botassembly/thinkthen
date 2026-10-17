@@ -1,8 +1,9 @@
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
-with Thinkthen_Session_C;
+with System;
+with Thinkthen_Kinds;
 package Thinkthen is
-   type Error_Kind is (None, Usage, Backend, Deadline, Local, Cancelled, Defect);
+   type Error_Kind is new Thinkthen_Kinds.Error_Kind;
    type Failure is record
       Kind : Error_Kind := None;
       Retryable : Boolean := False;
@@ -11,12 +12,20 @@ package Thinkthen is
    function Message (Error : Failure) return String;
    type Engine is new Ada.Finalization.Limited_Controlled with private;
    -- Native Rust admits settings. Failed replacement preserves the current engine.
-   procedure Configure (Client : in out Engine; Settings_JSON : String; Error : out Failure);
+   type Session_Owner is new Ada.Finalization.Limited_Controlled with private;
+   type Packet_Owner is new Ada.Finalization.Limited_Controlled with private;
 private
-   type Engine_Access is access all Thinkthen_Session_C.thinkthen_engine;
    type Engine is new Ada.Finalization.Limited_Controlled with record
-      Handle : Engine_Access := null;
+      Handle : System.Address := System.Null_Address;
    end record;
+   type Session_Owner is new Ada.Finalization.Limited_Controlled with record
+      Handle : System.Address := System.Null_Address;
+   end record;
+   type Packet_Owner is new Ada.Finalization.Limited_Controlled with record
+      Handle : System.Address := System.Null_Address;
+   end record;
+   overriding procedure Finalize (Owner : in out Session_Owner);
+   overriding procedure Finalize (Value : in out Packet_Owner);
    overriding procedure Initialize (Client : in out Engine);
    overriding procedure Finalize (Client : in out Engine);
 end Thinkthen;

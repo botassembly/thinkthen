@@ -9,11 +9,15 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from backend import Backend
+sys.path.insert(0, str(ROOT / 'conformance'))
+from c_parity import Backend as RecordedBackend, document, compact, prepare, assertions
+from session_projection import project_session
 
 
 def main():
@@ -49,21 +53,25 @@ def main():
                 THINKTHEN_API_KEY='sk-smoke-loopback')
             subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', '-r',
                 'require $argv[1]; $client = new ThinkThen\\Client(); '
-                'try { $value = $client->decide($argv[2], $argv[3])->results[0]->value()->value; '
+                'try { $value = $client->decide($argv[2], $argv[3])->value; '
                 'if (!is_bool($value)) throw new RuntimeException("expected a boolean"); '
                 'echo "smoke: ", json_encode($value, JSON_THROW_ON_ERROR), "\\n"; '
                 '} finally { $client->close(); }', str(app / 'vendor/autoload.php'),
                 os.environ['THINKTHEN_TEST_SMOKE_QUESTION'], os.environ['THINKTHEN_TEST_SMOKE_TEXT']],
                 env=env, check=True, timeout=5)
             return
+        shutil.copyfile(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so', work / 'libthinkthen.so.0')
+        subprocess.run([sys.executable, str(ROOT / 'sdlc/scripts/build-admission.py'), '--', '/usr/bin/cc', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+            '-I', str(app / 'vendor/botassembly/thinkthen/src/session'), str(Path(__file__).with_name('constructor_error.c')),
+            '-Wl,--no-as-needed', str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'), '-Wl,-rpath,' + str(work), '-o', str(work / 'constructor-error.so')], env=install_env, check=True)
         shutil.copyfile(Path(__file__).with_name('session_consumer.php'), work / 'consumer.php')
         server = Backend(work / 'barrier', key='tt-canary-291', hold_first=True)
         try:
             env = child_env(home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
-                TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
+                TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_ERROR_LIBRARY=str(work / 'constructor-error.so'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
-            for mode in ('surface', 'poll', 'named', 'presence', 'failure', 'zero', 'destroy'):
+            for mode in ('surface', 'poll', 'named', 'presence', 'native-values', 'failure', 'zero', 'destroy'):
                 before = server.attempts
                 result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
                     str(work / 'consumer.php'), mode], capture_output=True, env=env, timeout=5)
@@ -76,6 +84,53 @@ def main():
                 if mode == 'poll': assert server.attempts == before + 3, 'poll generator request count'
                 if mode == 'zero': assert server.attempts == before, 'rejected input sent a request'
                 print(result.stdout.decode(), end='')
+            process = subprocess.Popen(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
+                str(work / 'consumer.php'), 'wait-event'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            try:
+                assert process.stdout.readline() == b'PHP_WAIT_ENTER\n'
+                arrived = work / 'barrier/arrived-hold-php-event'
+                deadline = time.monotonic() + 2
+                while not arrived.exists() and time.monotonic() < deadline:
+                    time.sleep(.01)
+                assert arrived.exists(), 'native event wait never dispatched the held request'
+                try:
+                    output, errors = process.communicate(timeout=.15)
+                except subprocess.TimeoutExpired:
+                    pass
+                else:
+                    raise AssertionError(('native event wait returned before packet readiness', output, errors))
+                (work / 'barrier/release-hold-php-event').touch()
+                output, errors = process.communicate(timeout=2)
+                assert process.returncode == 0, (output, errors)
+                assert b'PHP_SESSION_PASS wait-event' in output, output
+                print(output.decode(), end='')
+            finally:
+                (work / 'barrier/release-hold-php-event').touch()
+                if process.poll() is None:
+                    process.kill(); process.communicate()
+            canonical = json.loads((ROOT / 'conformance/cases.json').read_text())
+            pair = next(row for row in canonical['parity']['required_cases'] if row['id'] == 'library-call-result')
+            cases = {row['id']: row for row in canonical['cases']}
+            value = document(pair, cases, {})
+            recorded = RecordedBackend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))) / 'debug/conformance-backend', env)
+            try:
+                env['THINKTHEN_PHP_PACKAGE'] = str(app / 'vendor/botassembly/thinkthen')
+                for step in value['steps']:
+                    prepare(work / 'home', step)
+                    env['THINKTHEN_BASE_URL'] = f'http://127.0.0.1:{recorded.port}/{step["arm"]}'
+                    env['THINKTHEN_API_KEY'] = 'sk-conformance-loopback'
+                    path = work / 'input.json'; path.write_text(compact(step))
+                    before = int(recorded.read('count'))
+                    settings = {'cache': False, 'max_retries': 0, **step['settings']}
+                    result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
+                        str(Path(__file__).with_name('session_parity.php')), str(path),
+                        str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'), compact(settings)],
+                        cwd=work / 'home', env=env, capture_output=True, text=True, timeout=5)
+                    assert result.returncode == 0, (result.stdout, result.stderr)
+                    assertions(pair, step, project_session(json.loads(result.stdout), step), int(recorded.read('count')) - before)
+                print('PHP_CALL_RESULT_INSTALLED_PASS library-call-result decide refund and choose billing')
+            finally:
+                recorded.close()
             env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),

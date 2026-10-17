@@ -29,4 +29,4 @@ def generated_known(row: NativeSessionPacketDecideRow, terminal: NativeSessionPa
     requests: int=terminal.facts.requests_sent
     failure: str=terminal.failure.error.kind
     present: bool='failure' in terminal
-    raw: dict[str, object]=row.value.to_dict()
+    raw: dict[str, object]=row.value._to_dict()

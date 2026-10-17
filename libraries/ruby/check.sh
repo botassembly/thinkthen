@@ -12,6 +12,8 @@ case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THIN
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
+THINKTHEN_TOOLCHAINS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
+export THINKTHEN_TOOLCHAINS
 usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
@@ -59,10 +61,33 @@ fi
 host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
 . ./toolchain.env
+if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
+  scratch_dir versions
+  failed=0
+  for minor in $RUBY_MINORS; do
+    code=0
+    (unset RUBY RBCONFIG; THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@") >"$versions/$minor.log" 2>&1 || code=$?
+    # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
+    # asserted results visible without emitting duplicate canonical cells.
+    if [ "$minor" = 4.0 ]; then
+      cat "$versions/$minor.log"
+    else
+      sed "s/^parity: /Ruby $minor parity: /" "$versions/$minor.log"
+    fi
+    case $code in
+      0) ;;
+      77) [ "$failed" -ne 0 ] || failed=77 ;;
+      *) failed=$code ;;
+    esac
+  done
+  exit "$failed"
+fi
+THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
+export THINKTHEN_RUBY_MINOR
 if [ "$host" = Darwin ]; then
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION-$(uname -m)-darwin
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION-$(uname -m)-darwin
 else
-  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION
 fi
 setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
 [ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"
@@ -104,7 +129,7 @@ RUBY=$prefix/bin/ruby
 "$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || fail "$RUBY is not Ruby $RUBY_VERSION behind a matching stamp"
 if [ "$host" = Darwin ]; then
   command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
-  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
+  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES" 2>/dev/null || true)}
   [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing"
   case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
   clang=$(xcrun --find clang 2>/dev/null)
@@ -135,12 +160,13 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
   python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
   ./build.sh
   cargo fmt --check
-  cargo clippy --locked --offline --all-targets --quiet -- -D warnings
+  CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$PWD/target}/ruby-$THINKTHEN_RUBY_MINOR cargo clippy --locked --offline --all-targets --quiet -- -D warnings
   THINKTHEN_ARTIFACT=$(find "$PWD" -maxdepth 1 -name 'thinkthen-*-*.gem' | head -n 1)
 fi
 THINKTHEN_ARTIFACT=$(realpath "$THINKTHEN_ARTIFACT")
 . "$repo/sdlc/scripts/installed.sh"
 installed_tests "$repo" libraries/ruby "$plant"
+cp README.md "$scratch/libraries/ruby/"
 if [ "${THINKTHEN_ARTIFACT##*/}" = "thinkthen-$(sed -n 's/^version = "\(.*\)"$/\1/p' ../../crates/thinkthen/Cargo.toml | head -n 1).gem" ]; then
   "$RUBY" tests/test_package.rb -n test_fallback_install_explains_support_and_import_refuses_to_work
   exit 0
@@ -154,9 +180,16 @@ unset RUBYLIB
   abort "loaded outside gem" unless ours.any? && ours.all? { |p| p.start_with?(ARGV[0]) }' "$scratch/gems/gems/"
 THINKTHEN_TEST_LIBRARY=$scratch/gems/gems/$(basename "$THINKTHEN_ARTIFACT" .gem)/lib
 export THINKTHEN_TEST_LIBRARY
+# Validate the shipped contract, not signatures from the source checkout.
+"$RUBY" -rrubygems/package -e 'package = Gem::Package.new(ARGV[1]).spec
+  expected = Dir.glob("sig/**/*.rbs", base: ARGV[0]).sort
+  abort "native gem signature inventory differs from manifest" unless !expected.empty? && expected == package.files.grep(/\.rbs$/).sort
+  expected.each { |path| abort "installed signature is absent" unless File.file?(File.join(ARGV[2], path)) }' \
+  "$repo/libraries/ruby" "$THINKTHEN_ARTIFACT" "${THINKTHEN_TEST_LIBRARY%/lib}"
+"$prefix/bin/rbs" "_$RUBY_RBS_VERSION"_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
-  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
+  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/$THINKTHEN_RUBY_MINOR/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
 fi
 if [ "$profile" = smoke ]; then
   smoke_guard
@@ -166,5 +199,6 @@ if [ "$profile" = smoke ]; then
   exit 0
 fi
 "$RUBY" "$scratch/libraries/ruby/tests/test_owned_session.rb"
+"$RUBY" "$scratch/libraries/ruby/tests/test_examples.rb"
 python3 "$repo/libraries/ruby/tests/native_cases.py"
 echo "check ruby: pass, installed"

@@ -1,3 +1,4 @@
+//! Stays: cache locking, private creation permissions and corruption/conflict handling need direct durability faults.
 //! The store's edge table, by ADR 0111 slice 2.
 
 use std::fs;
@@ -128,6 +129,8 @@ fn an_existing_index_needs_no_writer_and_a_missing_index_is_repaired() {
         )
         .expect("index exists");
     assert_eq!(count, 1);
+    #[cfg(windows)]
+    drop(repaired);
     #[cfg(not(windows))]
     {
         drop(holder);

@@ -44,12 +44,16 @@ jars=$package/jars
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
     floor=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from toolchains import JDK_FLOOR; print(JDK_FLOOR)' "$here/tests")
-    "$THINKTHEN_JDK_HOME/bin/javac" --release "$floor" -cp "$jars/thinkthen-session.jar" -d "$consumer" "$here/tests/SessionConsumer.java"
-    "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SessionConsumer smoke
+    "$THINKTHEN_JDK_HOME/bin/javac" --release "$floor" -cp "$jars/thinkthen-session.jar" -d "$consumer" "$here/tests/SmokeConsumer.java"
+    "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SmokeConsumer
     exit
 fi
 if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
+CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline -p conformance-backend -j2
+if [ "${THINKTHEN_TEST_PROFILE:-routine}" != full ] && [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ]; then
+    python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/call-result" --case library-call-result --case settings-max-requests-refuses-past-the-limit
+fi
 python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
 fi
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then

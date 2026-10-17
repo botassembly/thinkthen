@@ -1,3 +1,4 @@
+//! Stays: This ABI leaf owns SQLite host pointers and virtual table callbacks.
 //! Every `unsafe` block of the binding (ADR 0047 item 3): the entry point,
 //! the host's API table, the library pin, the connection handle, the
 //! virtual-table glue, and the exit hook that flushes the usage totals.
@@ -17,6 +18,7 @@ use rusqlite::vtab::{
 };
 
 use crate::many::{ChooseMany, DecideMany, Rank, RankSetTable, ScoreMany, Store, TagMany};
+use crate::native::{self, Native};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{Registration, budget, guard, scalars};
 
@@ -174,17 +176,24 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         mode,
     });
     connection.create_module(
+        c"thinkthen_filter",
+        &FILTER,
+        Some(Arc::clone(&store)),
+        Native::<crate::source_filter::Filter>::ARGUMENTS,
+        "Filter file evidence into typed file, location, answer and owning call columns.",
+    )?;
+    connection.create_module(
         c"thinkthen_recognize",
         &RECOGNIZE,
         Some(Arc::clone(&store)),
-        Recognizer::ARGUMENTS,
+        Native::<Recognizer>::ARGUMENTS,
         "Find named entities in text and return their kinds and locations.",
     )?;
     connection.create_module(
         c"thinkthen_relate",
         &RELATE,
         Some(Arc::clone(&store)),
-        Relater::ARGUMENTS,
+        Native::<Relater>::ARGUMENTS,
         "Find relations between the supplied entities and return relation rows.",
     )?;
     connection.create_module(
@@ -219,16 +228,17 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         c"thinkthen_rank",
         &RANK,
         Some(Arc::clone(&store)),
-        Rank::ARGUMENTS,
+        Native::<Rank>::ARGUMENTS,
         "Rank keyed records by their judgments.",
     )?;
     connection.create_module(
         c"thinkthen_rank_set",
         &RANK_SET,
-        Some(store),
-        RankSetTable::ARGUMENTS,
+        Some(Arc::clone(&store)),
+        Native::<RankSetTable>::ARGUMENTS,
         "Rank keyed records across an ordered question set.",
     )?;
+    register_native(&connection, &store)?;
     connection.finish()?;
     pin();
     Ok(false)
@@ -294,14 +304,99 @@ unsafe fn load(
     }
 }
 
-const RECOGNIZE: Module<'static, Tab<Recognizer>> = Module::eponymous_only_module();
-const RELATE: Module<'static, Tab<Relater>> = Module::eponymous_only_module();
+fn register_native(
+    connection: &crate::catalog::Catalog<'_>,
+    store: &Arc<Tables>,
+) -> rusqlite::Result<()> {
+    macro_rules! register {
+        ($name:literal, $kind:ty, $module:ident) => {
+            connection.create_module(
+                $name,
+                &$module,
+                Some(Arc::clone(store)),
+                Native::<$kind>::ARGUMENTS,
+                "Read native answers or named typed receipt projections.",
+            )?;
+        };
+    }
+    register!(
+        c"thinkthen_decide_details",
+        native::details::Decide,
+        DECIDE_DETAILS
+    );
+    register!(
+        c"thinkthen_choose_details",
+        native::details::Choose,
+        CHOOSE_DETAILS
+    );
+    register!(c"thinkthen_tag_details", native::details::Tag, TAG_DETAILS);
+    register!(
+        c"thinkthen_score_details",
+        native::details::Score,
+        SCORE_DETAILS
+    );
+    register!(
+        c"thinkthen_find_details",
+        native::details::Find,
+        FIND_DETAILS
+    );
+    register!(
+        c"thinkthen_annotate_details",
+        native::details::Annotate,
+        ANNOTATE_DETAILS
+    );
+    register!(
+        c"thinkthen_filter_details",
+        native::details::Filter,
+        FILTER_DETAILS
+    );
+    register!(
+        c"thinkthen_rank_details",
+        native::details::Rank,
+        RANK_DETAILS
+    );
+    register!(
+        c"thinkthen_recognize_details",
+        native::details::Recognize,
+        RECOGNIZE_DETAILS
+    );
+    register!(
+        c"thinkthen_relate_details",
+        native::details::Relate,
+        RELATE_DETAILS
+    );
+    Ok(())
+}
+const DECIDE_DETAILS: Module<'static, Tab<Native<native::details::Decide>>> =
+    Module::eponymous_only_module();
+const CHOOSE_DETAILS: Module<'static, Tab<Native<native::details::Choose>>> =
+    Module::eponymous_only_module();
+const TAG_DETAILS: Module<'static, Tab<Native<native::details::Tag>>> =
+    Module::eponymous_only_module();
+const SCORE_DETAILS: Module<'static, Tab<Native<native::details::Score>>> =
+    Module::eponymous_only_module();
+const FIND_DETAILS: Module<'static, Tab<Native<native::details::Find>>> =
+    Module::eponymous_only_module();
+const ANNOTATE_DETAILS: Module<'static, Tab<Native<native::details::Annotate>>> =
+    Module::eponymous_only_module();
+const FILTER_DETAILS: Module<'static, Tab<Native<native::details::Filter>>> =
+    Module::eponymous_only_module();
+const RANK_DETAILS: Module<'static, Tab<Native<native::details::Rank>>> =
+    Module::eponymous_only_module();
+const RECOGNIZE_DETAILS: Module<'static, Tab<Native<native::details::Recognize>>> =
+    Module::eponymous_only_module();
+const RELATE_DETAILS: Module<'static, Tab<Native<native::details::Relate>>> =
+    Module::eponymous_only_module();
+const FILTER: Module<'static, Tab<Native<crate::source_filter::Filter>>> =
+    Module::eponymous_only_module();
+const RECOGNIZE: Module<'static, Tab<Native<Recognizer>>> = Module::eponymous_only_module();
+const RELATE: Module<'static, Tab<Native<Relater>>> = Module::eponymous_only_module();
 const DECIDE_MANY: Module<'static, Tab<DecideMany>> = Module::eponymous_only_module();
 const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_module();
 const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
 const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
-const RANK: Module<'static, Tab<Rank>> = Module::eponymous_only_module();
-const RANK_SET: Module<'static, Tab<RankSetTable>> = Module::eponymous_only_module();
+const RANK: Module<'static, Tab<Native<Rank>>> = Module::eponymous_only_module();
+const RANK_SET: Module<'static, Tab<Native<RankSetTable>>> = Module::eponymous_only_module();
 
 /// Table registration state owned by one connection, beside its shared rows.
 #[derive(Debug)]
@@ -329,6 +424,7 @@ struct Cursor<T> {
     store: Arc<Mutex<Store>>,
     rows: Arc<Vec<Vec<Value>>>,
     selected: Option<usize>,
+    projections: Option<Arc<Vec<crate::receipt::Cells>>>,
     row: usize,
     kind: PhantomData<T>,
 }
@@ -354,7 +450,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
         // SAFETY: the handle belongs to this connection and outlives the table.
         let handle = unsafe { db.handle() };
         Ok((
-            Cow::Borrowed(T::SCHEMA),
+            T::schema().map_err(rusqlite::Error::from)?,
             Self {
                 base: ffi::sqlite3_vtab::default(),
                 db: handle,
@@ -375,6 +471,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
             store: Arc::clone(&self.store),
             rows: Arc::new(Vec::new()),
             selected: None,
+            projections: None,
             row: 0,
             kind: PhantomData,
         })
@@ -386,13 +483,17 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     fn filter(
         &mut self,
         mask: c_int,
-        _: Option<&str>,
+        selection: Option<&str>,
         filters: &Filters<'_>,
     ) -> rusqlite::Result<()> {
+        let mask = selection
+            .map_or(Ok(mask as u64), str::parse::<u64>)
+            .map_err(|_| rusqlite::Error::InvalidQuery)?;
         let db = self.db;
         let scan = guard(T::NAME, || T::scan(db, mask, filters, &self.store))?;
         self.rows = scan.rows;
         self.selected = scan.selected;
+        self.projections = scan.projections;
         self.row = 0;
         Ok(())
     }
@@ -411,10 +512,14 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     }
 
     fn column(&self, cell: &mut Cell, at: c_int) -> rusqlite::Result<()> {
+        let position = self.selected.unwrap_or(self.row);
+        let at = usize::try_from(at).map_err(|_| rusqlite::Error::InvalidQuery)?;
         let value = self
-            .rows
-            .get(self.selected.unwrap_or(self.row))
-            .and_then(|row| usize::try_from(at).ok().and_then(|at| row.get(at)))
+            .projections
+            .as_ref()
+            .and_then(|rows| rows.get(position))
+            .and_then(|row| row.get(&at))
+            .or_else(|| self.rows.get(position).and_then(|row| row.get(at)))
             .unwrap_or(&Value::Null);
         cell.set_result(value)
     }
@@ -451,6 +556,7 @@ pub(crate) fn path_of(file: &std::fs::File) -> Option<std::path::PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private host-version guard must refuse boundary versions before SQLite permits extension registration.
     use super::version_refusal;
 
     /// R2-1: an old host is refused by name, and the floor passes.

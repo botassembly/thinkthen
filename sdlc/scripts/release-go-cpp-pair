@@ -98,23 +98,26 @@ if [ "$mode" = swift-zig ]; then
 		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
 		case $name in
 		"$first")
-			printf '%s\n' ./ ./LICENSE ./README.md ./Package.swift ./Examples/ ./Examples/main.swift \
-				./Sources/ ./Sources/CThinkThen/ ./Sources/CThinkThen/include/ \
-				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/include/loader.h ./Sources/CThinkThen/module.modulemap \
-				./Sources/CThinkThen/bridge.c \
-				./Sources/ThinkThen/ \
-				./Sources/ThinkThen/ABIGenerated.swift ./Sources/ThinkThen/InputsGenerated.swift ./Sources/ThinkThen/ResultsGenerated.swift \
-				./Sources/ThinkThen/NativePackage.swift ./Sources/ThinkThen/OwnedJSON.swift ./Sources/ThinkThen/OwnedSession.swift ./Sources/ThinkThen/OwnedInputs.swift \
-				./Sources/ThinkThen/Native/ ./Sources/ThinkThen/Native/README.txt "./Sources/ThinkThen/Native/$target/" "./Sources/ThinkThen/Native/$target/libthinkthen.so" ./Tests/ ./Tests/TypeCase/ \
-				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
+			git ls-tree -r --name-only HEAD -- libraries/swift/Sources/ThinkThen >"$work/swift-source" || fail 'cannot list committed Swift source'
+			{
+				printf '%s\n' ./ ./LICENSE ./README.md ./Package.swift ./Examples/ ./Examples/main.swift \
+					./Sources/ ./Sources/CThinkThen/ ./Sources/CThinkThen/include/ \
+					./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/include/loader.h ./Sources/CThinkThen/module.modulemap \
+					./Sources/CThinkThen/bridge.c ./Sources/ThinkThen/ \
+					./Sources/ThinkThen/Native/ ./Sources/ThinkThen/Native/README.txt "./Sources/ThinkThen/Native/$target/" "./Sources/ThinkThen/Native/$target/libthinkthen.so" ./Tests/ ./Tests/TypeCase/ \
+					./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS
+				sed -n 's|^libraries/swift/Sources/ThinkThen/\([^/]*\.swift\)$|./Sources/ThinkThen/\1|p' "$work/swift-source"
+			} | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
+			git ls-tree -r --name-only HEAD -- libraries/zig/src >"$work/zig-source" || fail 'cannot list committed Zig source'
+			{
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
-				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/session.zig ./src/authored.zig \
-				./src/request_generated.zig ./src/plan_generated.zig \
+				./examples/decide.zig ./src/ \
 				./native/ "./native/$target/" "./native/$target/include/" "./native/$target/include/thinkthen.h" \
 				"./native/$target/lib/" "./native/$target/lib/libthinkthen.a" \
-				./THINKTHEN-PACKAGE-INPUTS \
-				| LC_ALL=C sort >"$work/expected-members" ;;
+				./THINKTHEN-PACKAGE-INPUTS
+				sed -n 's|^libraries/zig/src/\([^/]*\.zig\)$|./src/\1|p' "$work/zig-source"
+			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	done
@@ -134,7 +137,7 @@ source_members() {
 check_dart_archive() {
 	name=$1
 	tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
-	source_members libraries/dart/ libraries/dart/lib libraries/dart/hook >"$work/dart-source"
+	source_members libraries/dart/ libraries/dart/lib libraries/dart/hook libraries/dart/example >"$work/dart-source"
 	{
 		printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
 			./pubspec.lock ./native-assets.json ./THINKTHEN-PACKAGE-INPUTS
@@ -217,7 +220,7 @@ PY
 fi
 if [ "$mode" = ada-objective-c-cobol ]; then
 	tar -tzf "$dir/$c" | LC_ALL=C sort >"$work/members" || fail 'cannot list C members'
-	printf '%s\n' ./ ./include/ ./include/thinkthen.h ./lib/ ./lib/pkgconfig/ \
+	printf '%s\n' ./ ./README.md ./include/ ./include/thinkthen.h ./lib/ ./lib/pkgconfig/ \
 		./lib/pkgconfig/thinkthen.pc ./lib/libthinkthen.a ./lib/libthinkthen.so \
 		./lib/libthinkthen.so.0 | LC_ALL=C sort >"$work/expected-members"
 	cmp -s "$work/members" "$work/expected-members" || fail 'C members differ'
@@ -236,8 +239,9 @@ if [ "$mode" = ada-objective-c-cobol ]; then
 				printf '%s\n' ./ ./LICENSE ./README.md \
 					./source-package.json ./copybooks/ \
 					./copybooks/tt-native-generated.cpy ./src/ ./src/tt_session.h ./src/tt_session.c \
-					./src/tt_requests_generated.h ./src/tt_requests_generated.c ./examples/ \
-					./examples/session.cob ./THINKTHEN-PACKAGE-INPUTS ./native/
+					./src/tt_requests_generated.h ./src/tt_requests_generated.c \
+					./THINKTHEN-PACKAGE-INPUTS ./native/
+				source_members libraries/cobol/ libraries/cobol/examples
 				tar -tzf "$dir/$c" | sed -n '\|^\./include/|s|^\./|./native/|p; \|^\./lib/|s|^\./|./native/|p'
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac
@@ -288,7 +292,8 @@ with tarfile.open(sys.argv[1]) as archive:
         if relative.startswith('CThinkThen.xcframework/'):
             assert data == pathlib.Path('libraries/swift', relative).read_bytes(), relative
         elif relative != 'THINKTHEN-PACKAGE-INPUTS':
-            assert data == subprocess.check_output(['git','show','HEAD:libraries/objective-c/'+relative]), relative
+            source = 'README-PUBLIC.md' if relative == 'README.md' else relative
+            assert data == subprocess.check_output(['git','show','HEAD:libraries/objective-c/'+source]), relative
     package = json.load(archive.extractfile('./source-package.json'))
     assert package == {'name':'thinkthen-objective-c','version':sys.argv[2],'source_only':False,'native_dependency':'thinkthen-c','bundles_native':True}
 PYTHON
@@ -303,7 +308,8 @@ with tarfile.open(sys.argv[1]) as archive:
         if relative.startswith('CThinkThen.xcframework/'):
             assert data == pathlib.Path('libraries/swift', relative).read_bytes(), relative
         elif relative != 'THINKTHEN-PACKAGE-INPUTS':
-            source = 'libraries/c/include/thinkthen.h' if relative == 'Sources/CThinkThen/include/thinkthen.h' else 'libraries/swift/' + relative
+            member = 'README-PUBLIC.md' if relative == 'README.md' else relative
+            source = 'libraries/c/include/thinkthen.h' if member == 'Sources/CThinkThen/include/thinkthen.h' else 'libraries/swift/' + member
             assert data == subprocess.check_output(['git', 'show', 'HEAD:' + source]), relative
 PYTHON
 fi

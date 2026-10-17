@@ -1,3 +1,4 @@
+//! Stays: signal delivery, mask restoration and cleanup races need direct cancellation and process checks.
 //! Native console proof; subprocess helpers are excluded from routine selection.
 use super::{Environment, Routing, State};
 use crate::test_deadline::child;

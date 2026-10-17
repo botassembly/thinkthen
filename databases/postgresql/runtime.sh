@@ -1,13 +1,21 @@
-# The local PostgreSQL 16.15 runtime and the per-test loopback backend,
+# The selected pinned PostgreSQL runtime and the per-test loopback backend,
 # sourced by check.sh. It never fetches. A missing or mismatched toolchain
 # reports "not run" with the fetch command and exits 77 (R6-2).
 
+# Resolve the existing per-crate default before a child changes directory.
+runtime_target() {
+    CARGO_TARGET_DIR=$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "${CARGO_TARGET_DIR:-target}")
+    export CARGO_TARGET_DIR
+}
+
+PG_MAJOR=${PG_MAJOR:-16}
+case $PG_MAJOR in 16|17|18) ;; *) echo "runtime: unsupported PostgreSQL major $PG_MAJOR" >&2; exit 2 ;; esac
 TOOLCHAIN=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/postgresql
 PG_HOST=$(uname -s)
 if [ "$PG_HOST" = Darwin ]; then
 	. ./runtime-darwin.env
 	if command -v brew >/dev/null; then
-		PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@16)/bin/pg_config}
+		PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@$PG_MAJOR)/bin/pg_config}
 		PATH=${PG_CONFIG%/pg_config}:$PATH
 		export PATH
 	else
@@ -17,19 +25,26 @@ fi
 # One pinned server package per CPU (ticket 0369). PINNED is empty on any other CPU.
 case $(uname -m) in x86_64) DEB_ARCH=amd64 ;; aarch64) DEB_ARCH=arm64 ;; *) DEB_ARCH=none ;; esac
 read -r PINNED PACKAGE_NAME <<EOF
-$(awk -v name="_$DEB_ARCH.deb" 'substr($2, length($2) - length(name) + 1) == name { print $1, $2 }' runtime.sha256)
+$(awk -v major="$PG_MAJOR" -v name="_$DEB_ARCH.deb" '$2 ~ "^postgresql-" major "_" && substr($2, length($2) - length(name) + 1) == name { print $1, $2 }' runtime.sha256)
 EOF
 PACKAGE=$TOOLCHAIN/$PACKAGE_NAME
 PACKAGE_URL=
-[ -z "$PACKAGE_NAME" ] || PACKAGE_URL=$(grep -Fx "https://launchpad.net/ubuntu/+archive/primary/+files/$PACKAGE_NAME" runtime.url || true)
+[ -z "$PACKAGE_NAME" ] || PACKAGE_URL=$(awk -v name="/$PACKAGE_NAME" 'substr($0, length($0) - length(name) + 1) == name' runtime.url)
 VERSION=16.15-0ubuntu0.24.04.1
+if [ "$PG_MAJOR" != 16 ]; then
+    VERSION=${PACKAGE_NAME#*_}
+    VERSION=${VERSION%_*}
+fi
 EXTRACTED=$TOOLCHAIN/$VERSION
+if [ "$PG_HOST" = Linux ]; then
+    PG_CONFIG=${PG_CONFIG:-$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config}
+fi
 FAKE_KEY=tt-loopback-fake
 
 not_run() {
 	echo "not run: $1"
 	if [ "$PG_HOST" = Darwin ]; then
-		echo "setup: install the pinned Homebrew postgresql@16 bottle named in runtime-darwin.env"
+		echo "setup: install the pinned Homebrew postgresql@$PG_MAJOR bottle named in runtime-darwin.env"
 	else
 		echo "fetch: run databases/postgresql/setup.sh once"
 	fi
@@ -45,19 +60,30 @@ runtime_ready() {
 		[ -x "$PG_CONFIG" ] || not_run "the pinned pg_config at $PG_CONFIG is missing"
 		# The bottle's own line names its builder (ticket 0369).
 		[ "$("$PG_CONFIG" --version)" = "PostgreSQL $PG_DARWIN_VERSION (Homebrew)" ] || not_run "pg_config is not PostgreSQL $PG_DARWIN_VERSION"
-		[ "$(brew list --versions postgresql@16 | awk '{print $2}')" = "$PG_DARWIN_VERSION" ] || not_run "the Homebrew server is not $PG_DARWIN_VERSION"
-		case $(uname -m) in arm64) tag=arm64_sequoia; bottle=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; bottle=$PG_BOTTLE_X86_64_SONOMA ;; *) not_run "no PostgreSQL bottle for $(uname -m)" ;; esac
-		actual=$(brew info --json=v2 postgresql@16 | python3 -c 'import json,sys; p=json.load(sys.stdin)["formulae"][0]["bottle"]["stable"]["files"][sys.argv[1]]["sha256"]; print(p)' "$tag")
-		[ "$actual" = "$bottle" ] || not_run "the Homebrew bottle pin changed: $actual"
-		archive=$(brew --cache --bottle-tag="$tag" postgresql@16)
-		[ -f "$archive" ] || not_run "the $tag bottle is not cached; brew fetch --bottle-tag=$tag postgresql@16"
-		[ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$bottle" ] || not_run "the cached $tag bottle differs from its pin"
+		[ "$(brew list --versions postgresql@$PG_MAJOR | awk '{print $2}')" = "$PG_DARWIN_PACKAGE" ] || not_run "the Homebrew server package is not $PG_DARWIN_PACKAGE"
+		case $(uname -m) in
+        arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
+        x86_64) tag=sonoma; pin=${PG_BOTTLE_X86_64_SONOMA:-} ;;
+        *) not_run "no PostgreSQL host for $(uname -m)" ;;
+        esac
+        if [ -n "$pin" ]; then
+            actual=$(brew info --json=v2 postgresql@$PG_MAJOR | python3 -c 'import json,sys; print(json.load(sys.stdin)["formulae"][0]["bottle"]["stable"]["files"][sys.argv[1]]["sha256"])' "$tag")
+            [ "$actual" = "$pin" ] || not_run "the Homebrew bottle pin changed: $actual"
+            archive=$(brew --cache --bottle-tag="$tag" postgresql@$PG_MAJOR)
+        else
+            pin=$PG_SOURCE_SHA256
+            actual=$(brew info --json=v2 postgresql@$PG_MAJOR | python3 -c 'import json,sys; s=json.load(sys.stdin)["formulae"][0]["urls"]["stable"]; print(s["url"],s["checksum"])')
+            [ "$actual" = "$PG_SOURCE_URL $pin" ] || not_run "the Homebrew PostgreSQL source pin changed"
+            archive=$(brew --cache --build-from-source postgresql@$PG_MAJOR)
+        fi
+        [ -f "$archive" ] || not_run "the pinned Homebrew PostgreSQL archive is not cached"
+        [ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$pin" ] || not_run "the cached Homebrew PostgreSQL archive differs from its pin"
 		[ "$(cargo pgrx --version)" = 'cargo-pgrx 0.17.0' ] || not_run 'cargo-pgrx is not 0.17.0'
 		clang=$(xcrun --find clang 2>/dev/null) || not_run 'the Xcode clang is missing'
 		LIBCLANG_PATH=${clang%/bin/clang}/lib
 		[ -f "$LIBCLANG_PATH/libclang.dylib" ] || not_run "libclang.dylib is missing from $LIBCLANG_PATH"
 		export LIBCLANG_PATH
-		EXTRACTED=$(brew --prefix postgresql@16)
+		EXTRACTED=$(brew --prefix postgresql@$PG_MAJOR)
 		BIN=$EXTRACTED/bin
 		RUNTIME_EXTENSION_DIR=$("$PG_CONFIG" --sharedir)/extension
 		return
@@ -76,13 +102,28 @@ runtime_ready() {
 	[ -f "$PACKAGE" ] || not_run "the server package $PACKAGE is missing"
 	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
 	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
-	if [ ! -x "$EXTRACTED/usr/lib/postgresql/16/bin/postgres" ]; then
-		scratch_dir partial "$EXTRACTED.XXXXXX"
-		dpkg-deb -x "$PACKAGE" "$partial" && mv "$partial" "$EXTRACTED"
-	fi
+	if [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" ] ||
+       [ ! -f "$EXTRACTED/usr/include/postgresql/$PG_MAJOR/server/postgres.h" ] ||
+       [ ! -x "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config" ]; then
+        scratch_dir partial "$TOOLCHAIN/pg$PG_MAJOR.XXXXXX"
+        while read -r digest name; do
+            case $name in *-"$PG_MAJOR"_*_"$DEB_ARCH".deb) ;; libpq5_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" != 16 ] || continue ;; liburing2_*_"$DEB_ARCH".deb) [ "$PG_MAJOR" = 18 ] || continue ;; *) continue ;; esac
+            [ -f "$TOOLCHAIN/$name" ] || not_run "the pinned package $name is missing"
+            [ "$(sha256sum "$TOOLCHAIN/$name" | cut -d' ' -f1)" = "$digest" ] || not_run "the package $name differs from its pin"
+            dpkg-deb -x "$TOOLCHAIN/$name" "$partial"
+        done <runtime.sha256
+        mkdir -p "$EXTRACTED"
+        cp -a "$partial/." "$EXTRACTED/"
+    fi
+
+    if [ "$PG_MAJOR" != 16 ]; then
+        case $DEB_ARCH in amd64) pg_triplet=x86_64-linux-gnu ;; arm64) pg_triplet=aarch64-linux-gnu ;; esac
+        LD_LIBRARY_PATH=$EXTRACTED/usr/lib/$pg_triplet${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+        export LD_LIBRARY_PATH
+    fi
 	[ -z "${THINKTHEN_ARTIFACT:-}" ] || return 0
-	header=$(/usr/bin/pg_config --version | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
-	server=$("$EXTRACTED/usr/lib/postgresql/16/bin/postgres" -V | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
+	header=$("$PG_CONFIG" --version | sed 's/^PostgreSQL //')
+	server=$("$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/postgres" -V | sed 's/^postgres (PostgreSQL) //')
 	if [ -z "$header" ] || [ "$header" != "$server" ]; then
 		not_run "header version ${header:-unknown} (pg_config) differs from server version ${server:-unknown} (postgres -V)"
 	fi
@@ -105,29 +146,40 @@ runtime_open() {
 	mkdir -p "$SOCK" "$SCRATCH"
 }
 
-BIN=.runtime/tree/usr/lib/postgresql/16/bin
+BIN=.runtime/tree/usr/lib/postgresql/$PG_MAJOR/bin
 
 # Copy the extracted tree, install the module from $1 and the extension files of
 # EXT_VERSION from $2, and make a cluster. $2 can keep an earlier version's SQL.
 runtime_install() {
 	if [ "$PG_HOST" = Darwin ]; then
 		RUNTIME_LIBRARY_DIR=$("$PG_CONFIG" --pkglibdir)
-		[ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.so" ] && [ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" ] && [ ! -e "$RUNTIME_EXTENSION_DIR/thinkthen.control" ] || {
-			echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1;
-		}
+		for path in "$RUNTIME_LIBRARY_DIR/thinkthen.so" "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" "$RUNTIME_EXTENSION_DIR/thinkthen.control" "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql; do
+			if [ -e "$path" ] || [ -L "$path" ]; then
+				echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1
+			fi
+		done
+		RUNTIME_INSTALL_OWNED=1
 		cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" "$RUNTIME_EXTENSION_DIR/"
 		cp "$1"/thinkthen.* "$RUNTIME_LIBRARY_DIR/"
 		BIN=$EXTRACTED/bin
 	else
 	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
-	cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" .runtime/tree/usr/share/postgresql/16/extension/
-	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
-	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
-	RUNTIME_EXTENSION_DIR=$(pwd)/.runtime/tree/usr/share/postgresql/16/extension
+	cp "$2/thinkthen.control" "$2/thinkthen--$EXT_VERSION.sql" .runtime/tree/usr/share/postgresql/$PG_MAJOR/extension/
+	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/$PG_MAJOR/lib/
+	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/$PG_MAJOR/bin
+	RUNTIME_EXTENSION_DIR=$(pwd)/.runtime/tree/usr/share/postgresql/$PG_MAJOR/extension
 	fi
 	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"
 	cp "$DATA/postgresql.conf" "$RUN/postgresql.conf.base"
+}
+
+# Both check entry points remove only files this process installed into an empty keg.
+runtime_remove() {
+	if [ "$PG_HOST" = Darwin ] && [ "${RUNTIME_INSTALL_OWNED:-}" = 1 ]; then
+		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
+		RUNTIME_INSTALL_OWNED=
+	fi
 }
 
 # The host of an address, or nothing when it names user information.

@@ -10,7 +10,7 @@ card: /og/introducing-thinkthen.png
 cardAlt: "The talk's title slide: Introducing ThinkThen, October 1, 2026"
 youtube: YbzrlpAyCV4
 links:
-  - { href: "/install/", text: "Install ThinkThen" }
+  - { href: "/start/", text: "Install ThinkThen" }
   - { href: "/functions/", text: "The ten functions" }
 ---
 
@@ -44,7 +44,7 @@ Add a band, and the middle gets its own answer. Here the band runs from 0.2 to 0
 
 <!-- example: functions/decide/2-case -->
 
-Not sure exits 3, so a person reads it. A failure gets its own [exit code](/learn/answers/#exit-codes), such as 4 when the backend fails. A failure never looks like an answer.
+Not sure exits 3, so a person reads it. A failure gets its own [exit code](/functions/answers/#exit-codes), such as 4 when the backend fails. A failure never looks like an answer.
 
 ## No training data to start
 
@@ -54,27 +54,27 @@ You still measure before you trust it. Label some real cases, then run `thinkthe
 
 ## It runs in your language
 
-ThinkThen is one command-line tool and [24 bindings](/install/). Every binding calls the same Rust engine.
+ThinkThen is one command-line tool and [24 bindings](/languages/). Every binding calls the same Rust engine.
 
-The bindings include [DuckDB](/install/duckdb/), [SQLite](/install/sqlite/) and [PostgreSQL](/install/postgresql/). In those, a question sits in a SQL `WHERE` clause like any other condition.
+The bindings include [DuckDB](/databases/duckdb/), [SQLite](/databases/sqlite/) and [PostgreSQL](/databases/postgresql/). In those, a question sits in a SQL `WHERE` clause like any other condition.
 
 ## Cheap and fast
 
 On Beatles Bench, 1,000 Jev answers cost about $0.016. That's from the bench's [cost table](https://github.com/botassembly/beatles-bench/blob/970907659abd5d8cefe1a975bca79b9d1b1c88df/results/tables/cost.tsv).
 
-A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. From the command line, each run starts a new process and opens a new connection. A live command run took a median of 219 ms. The [overhead page](/learn/overhead/) has every measurement.
+A live call through a library binding took a median of 138 ms on 2026-10-01. ThinkThen's own work was about 1 to 2 ms of it. From the command line, each run starts a new process and opens a new connection. A live command run took a median of 219 ms. The [overhead page](/start/speed/) has every measurement.
 
 ## An open standard
 
 ThinkThen speaks System One, the request format [Jev](https://typesafe.ai) answers. Any System One server works.
 
-Jev, from TypeSafe, is the default. Liquid AI's d1 works through the [Liquid backend](/install/backends/liquid/). A local model works through [Ollama](/install/backends/ollama/), with no key. `thinkthen backends check` tells you whether a server works with ThinkThen.
+Jev, from TypeSafe, is the default. Liquid AI's d1 works through the [Liquid backend](/models/liquid/). A local model works through [Ollama](/models/ollama/), with no key. `thinkthen backends check` tells you whether a server works with ThinkThen.
 
 One caution: a threshold belongs to one model. Switch models, and you measure again.
 
 ## Test it like ordinary code
 
-ThinkThen can record the answers a run gets. A test replays them later with no network and no key. [Caching and replay](/learn/caching/) shows how.
+ThinkThen can record the answers a run gets. A test replays them later with no network and no key. [Replay in tests](/start/replay/) shows how.
 
 That's how this site works. Every example on it is a replayed test, and the build fails when one changes.
 
@@ -100,4 +100,4 @@ One line installs it:
 
 <!-- install: shell -->
 
-The [tutorial](/learn/tutorial/) asks your first question.
+The [tutorial](/start/tutorial/) asks your first question.

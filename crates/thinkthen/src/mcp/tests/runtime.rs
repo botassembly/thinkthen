@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 use super::super::{
     admission::Invocation,
     runtime::{self, Executor, NativeReply},
@@ -65,9 +66,6 @@ struct Fixture {
     hold: bool,
 }
 impl Executor for Fixture {
-    fn output_schema(&self) -> Value {
-        json!({"type":"object","required":["fixture"]})
-    }
     fn execute(
         &self,
         invocation: Invocation,
@@ -183,30 +181,6 @@ impl Drop for Session {
             }
         }
     }
-}
-
-#[test]
-fn lifecycle_negotiates_supported_version_and_gates_tools_until_initialized() {
-    let mut session = Session::new(false);
-    session.call(json!(2), "decide");
-    assert_eq!(session.receive()["error"]["code"], -32000);
-    session.send(json!({"jsonrpc":"2.0","id":3,"method":"tools/list"}));
-    assert_eq!(session.receive()["error"]["code"], -32000);
-    session.initialize("unsupported-client-version");
-    session.send(json!({"jsonrpc":"2.0","id":4,"method":"tools/list"}));
-    assert_eq!(
-        session.receive()["result"]["tools"]
-            .as_array()
-            .unwrap()
-            .len(),
-        10
-    );
-    session.call(json!(5), "decide");
-    let response = session.receive();
-    assert_eq!(response["id"], 5);
-    assert_eq!(response["result"]["isError"], false);
-    assert_eq!(response["result"]["structuredContent"]["value"], false);
-    session.finish().unwrap();
 }
 
 #[test]

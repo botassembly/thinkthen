@@ -17,8 +17,11 @@ import sys
 import tempfile
 import tomllib
 import xml.etree.ElementTree as ET
+from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "conformance/children"))
+from children import child_env
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
 ALLOWED_LICENSES = {
     "MIT",
@@ -76,49 +79,11 @@ BINDING_SOURCE_EXTENSIONS = {
     ".swift", ".zig", ".php", ".dart", ".adb", ".ads", ".m", ".mm", ".cob", ".cpy", ".sql",
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
-GENERATED_BINDING_SOURCES = {
-    "libraries/swift/Sources/ThinkThen/ABIGenerated.swift",
-    "libraries/swift/Sources/CThinkThen/bridge.c",
-    "libraries/swift/Sources/ThinkThen/InputsGenerated.swift",
-    "libraries/swift/Sources/ThinkThen/ResultsGenerated.swift",
-    "libraries/ada/src/thinkthen-requests.ads",
-    "libraries/ada/src/thinkthen-requests.adb",
-    "libraries/ada/src/thinkthen-sessions-calls.ads",
-    "libraries/ada/src/thinkthen-sessions-calls.adb",
-    "libraries/ada/src/thinkthen_session_c.ads",
-    "libraries/dart/lib/src/session/results_generated.dart",
-    "libraries/dart/lib/src/session/inputs_generated.dart",
-    "libraries/dart/lib/src/session/abi_generated.dart",
-    "libraries/cpp/include/thinkthen/results_generated.hpp",
-    "libraries/cpp/include/thinkthen/inputs_generated.hpp",
-    "libraries/typescript/results_generated.js",
-    "libraries/typescript/results_generated.d.ts",
-    "libraries/go/owned_results_generated.go",
-    "libraries/php/src/session/ffi_generated.h",
-    "libraries/ruby/src/ffi/results_generated.rs",
-    "libraries/ruby/lib/thinkthen/results_generated.rb",
-    "libraries/objective-c/Sources/Foundation/TTResults.g.h",
-    "libraries/objective-c/Sources/Foundation/TTResults.g.m",
-    "libraries/jvm/session/thinkthen/Results.java",
-    "libraries/jvm/session/thinkthen/Inputs.java",
-    "libraries/jvm/session/kotlin/Results.kt",
-    "libraries/jvm/session/scala/Results.scala",
-    "libraries/jvm/session/thinkthen/RequestVersion.java",
-    "libraries/python/src/results_generated.rs",
-    "libraries/python/thinkthen/_native_results.py",
-    "libraries/python/thinkthen/_native_results.pyi",
-    "libraries/c/include/thinkthen.h",
-    "libraries/cobol/copybooks/tt-native-generated.cpy",
-    "libraries/cobol/src/tt_requests_generated.c",
-    "libraries/cobol/src/tt_requests_generated.h",
-    "libraries/c/src/session/views_generated.rs",
-    "libraries/zig/src/request_generated.zig",
-    "libraries/zig/src/plan_generated.zig",
-    "libraries/r/thinkthen/src/rust/document.rs",
-    "libraries/r/thinkthen/src/rust/src/results_generated.rs",
-    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc",
-    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h",
-}
+sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+from registry import generated_paths
+from sources import TOOL_GENERATED, tracked_files
+GENERATED_BINDING_SOURCES = generated_paths() | TOOL_GENERATED
+
 # Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
 MAX_FORMAT_SKIPS = 3
 INHERITED = {"workspace": True}
@@ -618,16 +583,16 @@ def crate_failures(crates: dict[str, str]) -> list[str]:
 
 
 def binding_files(name: str, crate: str) -> dict[str, str]:
-    """One binding's manifest, lock, Clippy settings, and Rust sources, without build output, and its deny.toml."""
+    """One binding's indexed manifest, lock, Clippy settings, Rust sources and deny.toml."""
     folder = REPO / crate
+    indexed = set(tracked_files(REPO / name))
     files = {name: (folder / name).read_text(encoding="utf-8")
-             for name in ("Cargo.toml", "Cargo.lock", "clippy.toml") if (folder / name).is_file()}
-    # Every Rust file under the binding folder, so a crate folder hides none.
-    for source in (REPO / name).rglob("*.rs"):
-        if "target" not in source.relative_to(REPO / name).parts:
+             for name in ("Cargo.toml", "Cargo.lock", "clippy.toml") if folder / name in indexed}
+    for source in sorted(indexed):
+        if source.suffix == ".rs":
             files[posixpath.relpath(source.as_posix(), folder.as_posix())] = source.read_text(encoding="utf-8")
     deny = REPO / name / "deny.toml"
-    return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
+    return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny in indexed else files
 
 
 def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",),
@@ -773,7 +738,9 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
                     if reached.startswith("../") or reached.startswith("/"):
                         held.append(f"{name}/{relative} imports source outside its crate; use a normal dependency")
             tokens = rust_tokens(text)
-            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
+            generated_ffi = (name == "libraries/c" and relative.startswith("src/ffi/")
+                             and f"{name}/{relative}" in GENERATED_BINDING_SOURCES)
+            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs" and not generated_ffi:
                 held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")
             if "unexpected_cfgs" in tokens:
                 held.append(f"{name}/{relative} names unexpected_cfgs outside the lint table")
@@ -964,7 +931,11 @@ def check_bindings() -> None:
     crates = {name: crate for name, crate in crates.items() if not crate_failures({name: crate})}
     if not all(crate_failures({"libraries/r": crate}) for crate in ("libraries/r/../rust", "libraries/r//tmp/rust")):
         fail("binding", "R's crate folders ../rust and /tmp/rust are refused")
-    for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
+    folders = {REPO.joinpath(*path.relative_to(REPO).parts[:2])
+               for path in tracked_files(REPO)
+               if path.relative_to(REPO).parts[0] in {"libraries", "databases"}
+               and len(path.relative_to(REPO).parts) > 2}
+    for folder in sorted(folders):
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
         # MCP consumes the main executable; its Rust is covered by crate policy.
@@ -1024,6 +995,44 @@ def check_bindings() -> None:
     if "../tests/examples.rs" not in binding_files(BINDING_PLANT_BASE, f"{BINDING_PLANT_BASE}/src"):
         fail("binding", "Rust files outside the crate folder go unread")
     base = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
+    with tempfile.TemporaryDirectory(prefix="policy source ", suffix=" ") as scratch:
+        folder = pathlib.Path(scratch)
+        authored = {"src/planted.rs", "tests/planted.rs", "src/ffi.rs", "build/authored.rs"}
+        outputs = {f"{output}/nested/out/bindgen.rs" for output in SOURCE_OUTPUT_FOLDERS}
+        outputs.add("untracked/planted.rs")
+        for relative in authored | outputs:
+            source = folder / relative
+            source.parent.mkdir(parents=True, exist_ok=True)
+            source.write_text("unsafe fn planted() {}\n", encoding="utf-8")
+        (folder / ".gitignore").write_text("**/nested/\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q", scratch], check=True, env=child_env())
+        subprocess.run(["git", "-C", scratch, "add", "--", *sorted(authored)], check=True, env=child_env())
+        # Unreadable text proves ignored and untracked output is never opened.
+        for relative in outputs:
+            (folder / relative).write_bytes(b"\xff")
+        files = binding_files(scratch, scratch)
+        if set(files) != authored:
+            fail("binding", "collect only indexed Rust, including staged source in build-named folders")
+        unsafe = [held for held in binding_failures(BINDING_PLANT_BASE, {**base, **files})
+                  if "holds unsafe outside" in held]
+        expected = {f"{BINDING_PLANT_BASE}/{relative} holds unsafe outside the binding's FFI module"
+                    for relative in authored if relative != "src/ffi.rs"}
+        if set(unsafe) != expected:
+            fail("binding", "indexed authored unsafe is refused while the FFI module remains allowed")
+        # Git's process environment must not redirect a named checkout to another index.
+        with tempfile.TemporaryDirectory() as unrelated:
+            subprocess.run(["git", "init", "-q", unrelated], check=True, env=child_env())
+            with patch.dict("os.environ", {"GIT_DIR": str(pathlib.Path(unrelated) / ".git"),
+                                           "GIT_WORK_TREE": unrelated,
+                                           "GIT_INDEX_FILE": str(pathlib.Path(unrelated) / "empty-index")}):
+                if set(binding_files(scratch, scratch)) != authored:
+                    fail("binding", "the named checkout's index wins over inherited Git locations")
+    c_files = binding_files("libraries/c", "libraries/c")
+    generated_ffi = {path.removeprefix("libraries/c/"): "unsafe fn planted() {}\n"
+                     for path in GENERATED_BINDING_SOURCES if path.startswith("libraries/c/src/ffi/")}
+    if not generated_ffi or any("holds unsafe outside" in held for held in binding_failures(
+            "libraries/c", {**c_files, **generated_ffi})):
+        fail("binding", "registered generated C FFI modules remain allowed")
     for label, relative, plant in BINDING_PLANTS:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
@@ -1061,7 +1070,7 @@ RUNGS = ("install", "lint", "test", "spec", "surfaces", "package")
 
 
 def check_polars_feature() -> None:
-    tests = sorted((REPO / POLARS_TESTS).rglob("*.rs"))
+    tests = [path for path in tracked_files(REPO / POLARS_TESTS) if path.suffix == ".rs"]
     if not tests:
         fail("polars", f"{POLARS_TESTS} holds the Polars door's tests")
     for path in tests:
@@ -1123,9 +1132,10 @@ def check_postgresql_binding() -> None:
         return
     files = binding_files(POSTGRESQL, POSTGRESQL)
     scripts = {script.relative_to(folder).as_posix(): script.read_text(encoding="utf-8")
-               for script in folder.rglob("*.sh") if "target" not in script.relative_to(folder).parts}
+               for script in tracked_files(folder) if script.suffix == ".sh"}
+    indexed = set(tracked_files(REPO))
     configs = [f"{place}/.cargo/{name}" for place in (POSTGRESQL, "databases", ".")
-               for name in ("config", "config.toml") if (REPO / place / ".cargo" / name).exists()]
+               for name in ("config", "config.toml") if (REPO / place / ".cargo" / name) in indexed]
     for failure in postgresql_failures(files, scripts, configs):
         fail("binding", failure)
     restart = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" restart\n'}
@@ -1177,13 +1187,20 @@ def rust_char_end(text: str, quote: int) -> int | None:
     return place + 1 if place < len(text) and text[place] == "'" else None
 
 
-def rust_tokens(text: str, literals: bool = False) -> list[str]:
+def rust_tokens(text: str, literals: bool = False, offsets: list[int] | None = None,
+                docs: list[tuple[int, str]] | None = None) -> list[str]:
     """Skip comments and literals, retaining literal tokens only for attributes."""
     tokens = []
     place = 0
+    def emit(token: str, offset: int) -> None:
+        tokens.append(token)
+        if offsets is not None:
+            offsets.append(offset)
     while place < len(text):
         if text.startswith("//", place):
             end = text.find("\n", place + 2)
+            if docs is not None and text.startswith("//!", place):
+                docs.append((place, text[place:len(text) if end < 0 else end]))
             place = len(text) if end < 0 else end + 1
             continue
         if text.startswith("/*", place):
@@ -1207,7 +1224,7 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
             end = text.find('"' + hashes, place)
             place = len(text) if end < 0 else end + len(hashes) + 1
             if literals:
-                tokens.append(text[start:place])
+                emit(text[start:place], start)
             continue
         prefix = 1 if text.startswith(("b\"", "c\"", "b'"), place) else 0
         quote = text[place + prefix] if place + prefix < len(text) else ""
@@ -1222,7 +1239,7 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
                 else:
                     end += 1
             if literals:
-                tokens.append(text[place:end])
+                emit(text[place:end], place)
             place = end
             continue
         if quote == "'":
@@ -1237,15 +1254,15 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
             end = place + 1
             while end < len(text) and (text[end].isalnum() or text[end] == "_"):
                 end += 1
-            tokens.append(text[place:end])
+            emit(text[place:end], place)
             place = end
             continue
         if text.startswith("::", place):
-            tokens.append("::")
+            emit("::", place)
             place += 2
             continue
         if not text[place].isspace():
-            tokens.append(text[place])
+            emit(text[place], place)
         place += 1
     return tokens
 
@@ -1413,7 +1430,7 @@ def engine_policy_failures(text: str) -> list[str]:
 
 def check_engine_policy() -> None:
     engine = REPO / "crates/thinkthen/src/engine"
-    for source in sorted(engine.rglob("*.rs")):
+    for source in (path for path in tracked_files(engine) if path.suffix == ".rs"):
         held = engine_policy_failures(source.read_text(encoding="utf-8"))
         if held:
             fail("engine", f"{source.relative_to(REPO)} reaches the public API: {held}")
@@ -1465,7 +1482,7 @@ def check_core_policy() -> None:
     core = REPO / "crates/thinkthen/src/core"
     manifest = read_toml("crates/thinkthen/Cargo.toml")
     dependencies = normal_dependencies(manifest)
-    for source in sorted(core.rglob("*.rs")):
+    for source in (path for path in tracked_files(core) if path.suffix == ".rs"):
         text = source.read_text(encoding="utf-8")
         held = core_policy_failures(text)
         if held:
@@ -1736,7 +1753,7 @@ def route_failures(text: str) -> list[str]:
     read = first(("Environment", "read"))
     held = []
     for command in MEASURE_COMMANDS:
-        found = first(("Command", command))
+        found = first(("args", "RunsCommand", command))
         if found is None or read is None or found > read:
             held.append(f"{command} returns after Environment::read")
     return held
@@ -1812,7 +1829,8 @@ def check_measure_policy() -> None:
     ):
         if measure_policy_failures(control, writer=True):
             fail("measure", f"the writer's exact new-output call {control!r} stays allowed")
-    audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
+    audit = "if let Some(Command::Runs(args::RunsCommand::Audit(a))) = c {}"
+    diff = "if let Some(Command::Runs(args::RunsCommand::Diff(a))) = c {}"
     read = "let e = Environment::read();"
     if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
             or route_failures(audit + diff + read):
@@ -1854,7 +1872,7 @@ def door_failures(sources: dict[str, list[str]]) -> list[str]:
 def check_doors() -> None:
     text_sources = {
         source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
-        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+        for source in (path for path in tracked_files(REPO / "crates/thinkthen/src") if path.suffix == ".rs")
     }
     sources = {relative: rust_tokens(text) for relative, text in text_sources.items()}
     if WIDTH_STATE not in sources.get(WIDTH_DOOR, []):
@@ -1991,7 +2009,7 @@ def judgment_engine_path(path: tuple[str, ...], mcp: bool) -> bool:
 def check_facade() -> None:
     text_sources = {
         source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
-        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+        for source in (path for path in tracked_files(REPO / "crates/thinkthen/src") if path.suffix == ".rs")
     }
     raw_sources = {relative: rust_tokens(text) for relative, text in text_sources.items()}
     sources = {
@@ -2135,8 +2153,8 @@ def windows_unsafe_failures(sources: dict[str, str]) -> list[str]:
 
 def check_windows_unsafe() -> None:
     sources = {source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
-               for folder in MEMBERS.values() for source in (REPO / folder).rglob("*.rs")
-               if "target" not in source.relative_to(REPO).parts}
+               for folder in MEMBERS.values() for source in tracked_files(REPO / folder)
+               if source.suffix == ".rs"}
     for relative in WINDOWS_UNSAFE_LEAVES:
         if relative not in sources:
             fail("unsafe", f"{relative}: the reviewed FFI leaf exists")
@@ -2195,7 +2213,6 @@ def binding_source(relative: str) -> bool:
     path = pathlib.PurePosixPath(relative)
     return (path.parts[0] in {"libraries", "databases"}
             and path.suffix in BINDING_SOURCE_EXTENSIONS
-            and not SOURCE_OUTPUT_FOLDERS.intersection(path.parts)
             and relative not in GENERATED_BINDING_SOURCES)
 
 
@@ -2221,23 +2238,22 @@ def check_source_size_cases() -> None:
                 fail("size", f"the hand-written source {relative} is counted")
     excluded = [*GENERATED_BINDING_SOURCES, "libraries/example/README.md", "databases/example/data.json",
                 "specification/planted.py"]
-    excluded += [f"libraries/example/{folder}/planted.py" for folder in SOURCE_OUTPUT_FOLDERS]
     if any(binding_source(relative) for relative in excluded):
-        fail("size", "generated source, vendor/build output and non-source files remain excluded")
+        fail("size", "generated source and non-source files remain excluded")
 
 
 def check_sources() -> None:
     check_source_size_cases()
     sources = sorted(
-        source for folder in ("crates", "conformance") for source in (REPO / folder).rglob("*.rs")
-        if "target" not in source.relative_to(REPO).parts
+        source for folder in ("crates", "conformance") for source in tracked_files(REPO / folder)
+        if source.suffix == ".rs"
     )
     if not sources:
         fail("size", "the workspace holds at least one Rust source file")
     # Keep the tracked binding inventory: each binding has its own build folders.
     listed = subprocess.run(
         ["git", "ls-files", "-z", "--", "libraries", "databases"],
-        cwd=REPO, capture_output=True, check=True,
+        cwd=REPO, env=child_env(), capture_output=True, check=True,
     ).stdout.decode("utf-8").split("\0")
     bindings = [REPO / relative for relative in listed if relative and binding_source(relative)]
     for source in [*sources, *bindings]:
@@ -2281,7 +2297,7 @@ def check_seam() -> None:
     """Hold the vendor's words inside the adapter, the fixtures, and the tests."""
     adapter = adapter_paths()
     unused = set(SEAM_ALLOWED)
-    for source in sorted((REPO / "crates").rglob("*.rs")):
+    for source in (path for path in tracked_files(REPO / "crates") if path.suffix == ".rs"):
         relative = source.relative_to(REPO).as_posix()
         # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
         # a file under tests/ is an integration test. Both are tests.
@@ -2562,7 +2578,7 @@ def check_recordings() -> None:
     for plant in ({"request": {"headers": {}}}, {"Authorization": "x"}, {"response": ["Bearer x"]}):
         if not recording_failures(plant):
             fail("recordings", f"the planted entry {plant!r} is refused")
-    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for relative in listed.stdout.decode().split("\0"):
         if "/recording" not in f"/{relative}":
             continue
@@ -2581,7 +2597,7 @@ def check_recordings() -> None:
     for plant in fixture_plants:
         if not fixture_failures(plant):
             fail("recordings", f"the planted fixture line {plant.strip()!r} is refused")
-    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for relative in listed.stdout.decode().split("\0"):
         if posixpath.basename(relative) != "thinkthen.jsonl":
             continue
@@ -2626,7 +2642,7 @@ def live_store_failures(paths: list[str]) -> list[str]:
 def check_live_stores() -> None:
     if not live_store_failures(["demos/01/recording/thinkthen.sqlite"]):
         fail("recordings", "a planted committed thinkthen.sqlite is refused")
-    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, env=child_env(), capture_output=True, check=True)
     for failure in live_store_failures(listed.stdout.decode().split("\0")):
         fail("recordings", failure)
 
@@ -2662,8 +2678,8 @@ def check_interface_names() -> None:
             fail("interface", "obsolete terminology must fail in identifiers, docs and diagnostics")
     roots = (REPO / "crates/thinkthen/src", REPO / "libraries/c/src")
     sources = {str(path.relative_to(REPO)): path.read_text(encoding="utf-8")
-               for root in roots for path in root.rglob("*.rs")
-               if not is_test_source(str(path.relative_to(REPO)))}
+               for root in roots for path in tracked_files(root)
+               if path.suffix == ".rs" and not is_test_source(str(path.relative_to(REPO)))}
     header = "libraries/c/include/thinkthen.h"
     sources[header] = (REPO / header).read_text(encoding="utf-8")
     for failure in obsolete_interface_failures(sources):
@@ -2677,7 +2693,7 @@ def check_markers() -> None:
     if marker_failures([f"src/planted.rs:1:// {MARKERS[1]}: sdlc/issues/planted.md"]):
         fail("debt", "a planted comment marker that names its issue is allowed")
     listed = subprocess.run(["git", "grep", "-n", "-I", "-E", "|".join(MARKERS), "--", ":!*.md"],
-                            cwd=REPO, capture_output=True, text=True)
+                            cwd=REPO, env=child_env(), capture_output=True, text=True)
     if listed.returncode > 1:
         fail("debt", f"git grep for comment markers failed (exit {listed.returncode})")
     for failure in marker_failures(listed.stdout.splitlines()):
@@ -2703,7 +2719,7 @@ def check_loopback_servers() -> None:
     if loopback_server_failures({"planted.py": f"class H({HANDLER}):\n    x = ({CLOSES})\n"}):
         fail("loopback", "a planted server that closes each reply is allowed")
     listed = subprocess.run(["git", "grep", "-l", "-I", "-F", HANDLER, "--", ":!*.md"],
-                            cwd=REPO, capture_output=True, text=True)
+                            cwd=REPO, env=child_env(), capture_output=True, text=True)
     if listed.returncode > 1:
         fail("loopback", f"git grep for test servers failed (exit {listed.returncode})")
     sources = {path: (REPO / path).read_text(encoding="utf-8") for path in listed.stdout.split()}
@@ -2729,6 +2745,8 @@ def main() -> int:
     check_doors()
     check_facade()
     check_sources()
+    from unit_rationale import check_unit_rationale
+    check_unit_rationale(REPO, rust_tokens, fail)
     check_seam()
     check_interface_names()
     check_license_grammar()

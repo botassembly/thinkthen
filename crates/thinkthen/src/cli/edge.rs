@@ -371,6 +371,7 @@ mod deadline_tests;
 
 #[cfg(test)]
 mod tests {
+    //! Stays: direct I/O fault and secrecy checks cover replaced handles, broken pipes and bounded incremental reads.
     use super::{Chunks, Environment, open_read, opened, write_line};
     use crate::failure::Failure;
     use std::fs::{self, File};

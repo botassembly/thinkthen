@@ -20,40 +20,18 @@ import (
 	"fmt"
 	"math"
 	"runtime"
-	"strings"
 	"sync"
 	"unsafe"
 )
 
-var errEmbeddedNUL = errors.New("NUL in a C-string argument")
 var ErrClosed = errors.New("ThinkThen engine is closed")
-
-// ErrorKind names a failure with the C interface's codes 1 to 6.
-type ErrorKind int
-
-const (
-	KindUsage ErrorKind = 1 + iota
-	KindBackend
-	KindDeadline
-	KindLocal
-	KindCancelled
-	KindDefect
-)
-
-func (k ErrorKind) String() string {
-	names := [...]string{"", "usage", "backend", "deadline", "local", "cancelled", "defect"}
-	if k > 0 && int(k) < len(names) {
-		return names[k]
-	}
-	return "defect"
-}
 
 type Error struct {
 	Code      int
 	Kind      ErrorKind
 	Retryable bool
 	Message   string
-	Facts     json.RawMessage
+	Facts     Facts
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("thinkthen code %d: %s", e.Code, e.Message) }
@@ -73,9 +51,9 @@ func failure(raw *C.thinkthen_engine, code C.int) error {
 		kind = ErrorKind(code)
 	}
 	borrowed := C.thinkthen_error_facts_json(raw)
-	var facts json.RawMessage
+	facts := Facts{ownedJSON{raw: json.RawMessage("{}")}}
 	if borrowed != nil {
-		facts = json.RawMessage([]byte(C.GoString(borrowed)))
+		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
 	}
 	return &Error{Code: int(code), Kind: kind, Retryable: C.thinkthen_error_retryable(raw) != 0,
 		Message: C.GoString(C.thinkthen_error_message(raw)), Facts: facts}
@@ -83,22 +61,11 @@ func failure(raw *C.thinkthen_engine, code C.int) error {
 
 // The engine accepts only generated settings marshalled by NewClient.
 func newNativeWith(settingsJSON string) (*nativeEngine, error) {
-	settings, err := checkedCString(settingsJSON)
-	if err != nil {
-		return nil, err
-	}
+	settings := C.CString(settingsJSON)
 	defer C.free(unsafe.Pointer(settings))
-	return newNativeEngine(settings)
-}
-func newNativeEngine(settings *C.char) (*nativeEngine, error) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	var raw *C.thinkthen_engine
-	if settings == nil {
-		raw = C.thinkthen_engine_new()
-	} else {
-		raw = C.thinkthen_engine_new_with(settings)
-	}
+	raw := C.thinkthen_engine_new_with(settings)
 	if raw == nil {
 		return nil, failure(nil, C.thinkthen_error_code(nil))
 	}
@@ -111,12 +78,6 @@ func (e *nativeEngine) Close() {
 		C.thinkthen_engine_free(e.raw)
 		e.raw = nil
 	}
-}
-func checkedCString(s string) (*C.char, error) {
-	if strings.IndexByte(s, 0) >= 0 {
-		return nil, errEmbeddedNUL
-	}
-	return C.CString(s), nil
 }
 
 // copyCountedResult refuses a C size_t that cannot fit GoStringN's C.int.

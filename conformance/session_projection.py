@@ -36,4 +36,8 @@ def project_session(payload, fixture):
                   'observations': sum(packet['kind'] == 'observation' for packet in packets)}
     output.update({key: facts[key] for key in ('requests_sent', 'records', 'cache_answers',
                   'call_id', 'input_tokens', 'output_tokens') if key in facts})
+    # Installed drivers read these fields from the public result object. Do not
+    # synthesize them from packets: that would let the old records-only API pass.
+    if 'call_result' in payload:
+        output['call_result'] = payload['call_result']
     return output

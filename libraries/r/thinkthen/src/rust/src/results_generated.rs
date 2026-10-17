@@ -62,7 +62,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -97,7 +97,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -117,6 +117,55 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                         convert("completeUsage", value)
                     }
                 }),
+            ],
+        ),
+        "completeAnnotationValue" => {
+            if value.get("kind").and_then(Value::as_str) == Some("decision") {
+                return convert("completeAnnotationValue_decision", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("choice") {
+                return convert("completeAnnotationValue_choice", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("score") {
+                return convert("completeAnnotationValue_score", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("tags") {
+                return convert("completeAnnotationValue_tags", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("failed") {
+                return convert("completeAnnotationValue_failed", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completeAnnotationValue_choice" => object(
+            value,
+            "AnnotationValue_choice",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completeAnnotationValue_decision" => object(
+            value,
+            "AnnotationValue_decision",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completeAnnotationValue_failed" => object(
+            value,
+            "AnnotationValue_failed",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| convert("completefailure", value)),
+            ],
+        ),
+        "completeAnnotationValue_score" => object(
+            value,
+            "AnnotationValue_score",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completeAnnotationValue_tags" => object(
+            value,
+            "AnnotationValue_tags",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| array(value, plain)),
             ],
         ),
         "completeAnswerId" => tagged(plain(value)?, "AnswerId", "thinkthen_identity"),
@@ -145,7 +194,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -184,7 +233,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -223,7 +272,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -262,7 +311,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -301,7 +350,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -340,7 +389,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
                 ("schema", true, |value| convert("completeVersion", value)),
@@ -422,6 +471,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         ),
         "completeCallId" => tagged(plain(value)?, "CallId", "thinkthen_identity"),
         "completeDecideValue" => plain(value),
+        "completeEntityDocument" => object(
+            value,
+            "EntityDocument",
+            &[("kind", true, plain), ("name", true, plain)],
+        ),
         "completeError" => object(
             value,
             "Error",
@@ -527,7 +581,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion2", value)
+                    convert("completefindQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("threshold", true, plain),
@@ -563,16 +617,16 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         "completeImageMedia" => plain(value),
         "completeInputDeclaration" => {
             if value.get("type").and_then(Value::as_str) == Some("string") {
-                return convert("completeInputDeclaration_string", value);
+                return convert("completeInputDeclaration_StringRoot", value);
             }
             if value.get("type").and_then(Value::as_str) == Some("object") {
-                return convert("completeInputDeclaration_object", value);
+                return convert("completeInputDeclaration_ObjectRoot", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
-        "completeInputDeclaration_object" => object(
+        "completeInputDeclaration_ObjectRoot" => object(
             value,
-            "InputDeclaration_object",
+            "InputDeclaration_ObjectRoot",
             &[
                 ("properties", true, |value| {
                     mapping(value, |value| convert("completeInputPropertyType", value))
@@ -581,9 +635,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("type", true, |value| convert("completeObjectType", value)),
             ],
         ),
-        "completeInputDeclaration_string" => object(
+        "completeInputDeclaration_StringRoot" => object(
             value,
-            "InputDeclaration_string",
+            "InputDeclaration_StringRoot",
             &[("type", true, |value| convert("completeStringType", value))],
         ),
         "completeInputPropertyType" => {
@@ -794,7 +848,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("meta", true, |value| convert("completeMeta", value)),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
@@ -806,404 +860,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("threshold", true, plain),
                 ("value", true, plain),
-            ],
-        ),
-        "completeReadableQuestion" => {
-            if value.get("verb").and_then(Value::as_str) == Some("decide") {
-                return convert("completeReadableQuestion_decide", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("choose") {
-                return convert("completeReadableQuestion_choose", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("tag") {
-                return convert("completeReadableQuestion_tag", value);
-            }
-            if value.get("verb").and_then(Value::as_str) == Some("score") {
-                return convert("completeReadableQuestion_score", value);
-            }
-            Err(crate::defect("native result has no generated alternative"))
-        }
-        "completeReadableQuestion2" => object(
-            value,
-            "ReadableQuestion2",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("none", true, plain),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("text", true, plain),
-                ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion3" => object(
-            value,
-            "ReadableQuestion3",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("entity_definition", false, plain),
-                ("instructions", false, plain),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("kinds", true, |value| mapping(value, plain)),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("mode", false, |value| {
-                    convert("completeRecognitionMode", value)
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("relation_threshold", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completethreshold", value)
-                    }
-                }),
-                ("relations", false, |value| {
-                    array(value, |value| convert("completerelationRule", value))
-                }),
-                ("snippet_pieces", false, plain),
-                ("stage_context", false, |value| {
-                    convert("completeRecognitionStageContext", value)
-                }),
-                ("threshold", true, |value| {
-                    convert("completethreshold", value)
-                }),
-                ("verb", true, |value| convert("completeVerb", value)),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion4" => object(
-            value,
-            "ReadableQuestion4",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("fields", true, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completerelateFields", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("relations", true, |value| {
-                    array(value, |value| convert("completerelationRule", value))
-                }),
-                ("threshold", true, |value| {
-                    convert("completethreshold", value)
-                }),
-                ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-            ],
-        ),
-        "completeReadableQuestion_choose" => object(
-            value,
-            "ChooseQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("options", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_decide" => object(
-            value,
-            "DecideQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("false", false, plain),
-                ("text", true, plain),
-                ("true", false, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_score" => object(
-            value,
-            "ScoreQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("levels", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
-            ],
-        ),
-        "completeReadableQuestion_tag" => object(
-            value,
-            "TagQuestion",
-            &[
-                ("batch", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeBatch", value)
-                    }
-                }),
-                ("context_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("item_schema", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeInputDeclaration", value)
-                    }
-                }),
-                ("label_details", false, |value| {
-                    array(value, |value| convert("completeLabel", value))
-                }),
-                ("model", false, plain),
-                ("name", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeQuestionName", value)
-                    }
-                }),
-                ("on", false, |value| array(value, plain)),
-                ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
-                ("labels", true, |value| array(value, plain)),
-                ("text", true, plain),
-                ("verb", true, plain),
             ],
         ),
         "completeRecognition" => object(
@@ -1226,7 +882,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion3", value)
+                    convert("completerecognizeQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("source", false, |value| {
@@ -1239,6 +895,17 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("value", true, |value| convert("completerecognize", value)),
             ],
         ),
+        "completeRecognitionEdgeDocument" => object(
+            value,
+            "RecognitionEdgeDocument",
+            &[
+                ("either", true, plain),
+                ("probability", true, plain),
+                ("relation", true, plain),
+                ("source", true, |value| convert("completeentity", value)),
+                ("target", true, |value| convert("completeentity", value)),
+            ],
+        ),
         "completeRecognitionMode" => plain(value),
         "completeRecognitionOdds" => {
             if value.get("names").is_some()
@@ -1246,23 +913,32 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 && value.get("pieces").is_some()
                 && value.get("proposals").is_some()
             {
-                return convert(
-                    "completeRecognitionOdds_fields_names_pairs_pieces_proposals",
-                    value,
-                );
+                return convert("completeRecognitionOdds_recognizeAnswer", value);
             }
             if value.get("pieces").is_some()
                 && value.get("proposals").is_some()
                 && value.get("names").is_none()
                 && value.get("pairs").is_none()
             {
-                return convert("completeRecognitionOdds_fields_pieces_proposals", value);
+                return convert("completeRecognitionOdds_BoundaryOdds", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
-        "completeRecognitionOdds_fields_names_pairs_pieces_proposals" => object(
+        "completeRecognitionOdds_BoundaryOdds" => object(
             value,
-            "RecognitionOdds_fields_names_pairs_pieces_proposals",
+            "RecognitionOdds_BoundaryOdds",
+            &[
+                ("pieces", true, |value| {
+                    array(value, |value| convert("completepieceOdds", value))
+                }),
+                ("proposals", true, |value| {
+                    array(value, |value| convert("completeBoundaryProposal", value))
+                }),
+            ],
+        ),
+        "completeRecognitionOdds_recognizeAnswer" => object(
+            value,
+            "RecognitionOdds_recognizeAnswer",
             &[
                 ("names", true, |value| {
                     array(value, |value| convert("completenameOdds", value))
@@ -1275,18 +951,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("proposals", true, |value| {
                     array(value, |value| convert("completeRecognitionProposal", value))
-                }),
-            ],
-        ),
-        "completeRecognitionOdds_fields_pieces_proposals" => object(
-            value,
-            "RecognitionOdds_fields_pieces_proposals",
-            &[
-                ("pieces", true, |value| {
-                    array(value, |value| convert("completepieceOdds", value))
-                }),
-                ("proposals", true, |value| {
-                    array(value, |value| convert("completeBoundaryProposal", value))
                 }),
             ],
         ),
@@ -1339,7 +1003,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completePosition", value)
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion4", value)
+                    convert("completerelateQuestionDocument", value)
                 }),
                 ("schema", true, |value| convert("completeVersion", value)),
                 ("value", true, |value| {
@@ -1348,6 +1012,43 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completeRelationDirection" => plain(value),
+        "completeRelationEndpoint" => {
+            if value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("file").is_none()
+                && value.get("ordinal").is_none()
+                && value.get("record").is_none()
+            {
+                return convert("completeRelationEndpoint_relatedEntity", value);
+            }
+            if value.get("file").is_some()
+                && value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("ordinal").is_some()
+                && value.get("record").is_some()
+            {
+                return convert("completeRelationEndpoint_source", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completeRelationEndpoint_relatedEntity" => object(
+            value,
+            "RelationEndpoint_relatedEntity",
+            &[("kind", true, plain), ("name", true, plain)],
+        ),
+        "completeRelationEndpoint_source" => object(
+            value,
+            "RelationEndpoint_source",
+            &[
+                ("file", true, plain),
+                ("first_line", false, plain),
+                ("kind", true, plain),
+                ("last_line", false, plain),
+                ("name", true, plain),
+                ("ordinal", true, plain),
+                ("record", true, plain),
+            ],
+        ),
         "completeRelationMember" => {
             if value.get("answer_id").is_some() {
                 return convert("completeRelationMember_answer_id", value);
@@ -1371,7 +1072,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -1421,7 +1122,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     array(value, |value| convert("completeObservation", value))
                 }),
                 ("question", true, |value| {
-                    convert("completeReadableQuestion", value)
+                    convert("completequestionDocument", value)
                 }),
                 ("question_sources", true, |value| {
                     array(value, |value| convert("completeQuestionSource", value))
@@ -1456,6 +1157,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completeRelationMethod" => plain(value),
+        "completeRequestFunction" => plain(value),
         "completeSdkRequestId" => tagged(plain(value)?, "SdkRequestId", "thinkthen_identity"),
         "completeSendBudgetDenial" => {
             if value.get("kind").and_then(Value::as_str) == Some("before_first_send") {
@@ -1636,6 +1338,56 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("probabilities", true, |value| mapping(value, plain)),
             ],
         ),
+        "completefindQuestionDocument" => object(
+            value,
+            "FindQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("none", true, plain),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("text", true, plain),
+                ("verb", true, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
+        ),
         "completenameOdds" => object(
             value,
             "NameOdds",
@@ -1670,23 +1422,256 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "Place",
             &[("end", true, plain), ("start", true, plain)],
         ),
+        "completeplan" => object(
+            value,
+            "Plan",
+            &[
+                ("estimated_bytes", true, plain),
+                ("estimated_input_tokens", true, |value| {
+                    convert("completetokenBand", value)
+                }),
+                ("first_body_utf8", true, plain),
+                ("largest_request_bytes", true, plain),
+                ("largest_request_estimated_input_tokens", true, plain),
+                ("records", true, plain),
+                ("requests", true, plain),
+                ("token_estimate_method", true, plain),
+                ("upper_bound", true, plain),
+            ],
+        ),
         "completeprofileWarning" => object(
             value,
             "ProfileWarning",
             &[("running", true, plain), ("tuned_for", true, plain)],
+        ),
+        "completequestionDocument" => {
+            if value.get("verb").and_then(Value::as_str) == Some("decide") {
+                return convert("completequestionDocument_decide", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("choose") {
+                return convert("completequestionDocument_choose", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("tag") {
+                return convert("completequestionDocument_tag", value);
+            }
+            if value.get("verb").and_then(Value::as_str) == Some("score") {
+                return convert("completequestionDocument_score", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completequestionDocument_choose" => object(
+            value,
+            "QuestionDocument_choose",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("options", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_decide" => object(
+            value,
+            "QuestionDocument_decide",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("false", false, plain),
+                ("text", true, plain),
+                ("true", false, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_score" => object(
+            value,
+            "QuestionDocument_score",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("levels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
+        ),
+        "completequestionDocument_tag" => object(
+            value,
+            "QuestionDocument_tag",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+                ("labels", true, |value| array(value, plain)),
+                ("text", true, plain),
+                ("verb", true, plain),
+            ],
         ),
         "completerecognize" => {
             if value.get("entities").is_some()
                 && value.get("mode").is_none()
                 && value.get("proposals").is_none()
             {
-                return convert("completerecognize_fields_entities", value);
+                return convert("completerecognize_entities", value);
             }
             if value.get("mode").is_some()
                 && value.get("proposals").is_some()
                 && value.get("entities").is_none()
             {
-                return convert("completerecognize_fields_mode_proposals", value);
+                return convert("completerecognize_mode_proposals", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
@@ -1708,9 +1693,80 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
             ],
         ),
-        "completerecognize_fields_entities" => object(
+        "completerecognizeQuestionDocument" => object(
             value,
-            "Recognize_fields_entities",
+            "RecognizeQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("entity_definition", false, plain),
+                ("instructions", false, plain),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("kinds", true, |value| mapping(value, plain)),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("mode", false, |value| {
+                    convert("completeRecognitionMode", value)
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("relation_threshold", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completethreshold", value)
+                    }
+                }),
+                ("relations", false, |value| {
+                    array(value, |value| convert("completerelationRule", value))
+                }),
+                ("snippet_pieces", false, plain),
+                ("stage_context", false, |value| {
+                    convert("completeRecognitionStageContext", value)
+                }),
+                ("threshold", true, |value| {
+                    convert("completethreshold", value)
+                }),
+                ("verb", true, |value| convert("completeVerb", value)),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
+        ),
+        "completerecognize_entities" => object(
+            value,
+            "Recognize_entities",
             &[
                 ("entities", true, |value| {
                     array(value, |value| convert("completeentity", value))
@@ -1720,9 +1776,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
             ],
         ),
-        "completerecognize_fields_mode_proposals" => object(
+        "completerecognize_mode_proposals" => object(
             value,
-            "Recognize_fields_mode_proposals",
+            "Recognize_mode_proposals",
             &[
                 ("mode", true, |value| convert("completeBoundaryMode", value)),
                 ("proposals", true, |value| {
@@ -1734,6 +1790,67 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "RelateFields",
             &[("kind", true, plain), ("name", true, plain)],
+        ),
+        "completerelateQuestionDocument" => object(
+            value,
+            "RelateQuestionDocument",
+            &[
+                ("batch", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeBatch", value)
+                    }
+                }),
+                ("context_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("fields", true, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completerelateFields", value)
+                    }
+                }),
+                ("item_schema", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeInputDeclaration", value)
+                    }
+                }),
+                ("label_details", false, |value| {
+                    array(value, |value| convert("completeLabel", value))
+                }),
+                ("model", false, plain),
+                ("name", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeQuestionName", value)
+                    }
+                }),
+                ("on", false, |value| array(value, plain)),
+                ("profile", false, plain),
+                ("relations", true, |value| {
+                    array(value, |value| convert("completerelationRule", value))
+                }),
+                ("threshold", true, |value| {
+                    convert("completethreshold", value)
+                }),
+                ("verb", true, plain),
+                ("wording_version", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeWordingVersion", value)
+                    }
+                }),
+            ],
         ),
         "completerelatedEntity" => object(
             value,
@@ -1748,57 +1865,12 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("probability", true, plain),
                 ("relation", true, plain),
                 ("source", true, |value| {
-                    convert("completerelatedEntityEdge_properties_source", value)
+                    convert("completeRelationEndpoint", value)
                 }),
                 ("target", true, |value| {
-                    convert("completerelatedEntityEdge_properties_source", value)
+                    convert("completeRelationEndpoint", value)
                 }),
             ],
-        ),
-        "completerelatedEntityEdge_properties_source" => {
-            if value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("file").is_none()
-                && value.get("ordinal").is_none()
-                && value.get("record").is_none()
-            {
-                return convert(
-                    "completerelatedEntityEdge_properties_source_fields_kind_name",
-                    value,
-                );
-            }
-            if value.get("file").is_some()
-                && value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("ordinal").is_some()
-                && value.get("record").is_some()
-            {
-                return convert(
-                    "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                    value,
-                );
-            }
-            Err(crate::defect("native result has no generated alternative"))
-        }
-        "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record" => {
-            object(
-                value,
-                "RelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                &[
-                    ("file", true, plain),
-                    ("first_line", false, plain),
-                    ("kind", true, plain),
-                    ("last_line", false, plain),
-                    ("name", true, plain),
-                    ("ordinal", true, plain),
-                    ("record", true, plain),
-                ],
-            )
-        }
-        "completerelatedEntityEdge_properties_source_fields_kind_name" => object(
-            value,
-            "RelatedEntityEdge_properties_source_fields_kind_name",
-            &[("kind", true, plain), ("name", true, plain)],
         ),
         "completerelationRule" => object(
             value,
@@ -1812,6 +1884,16 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("target", true, plain),
             ],
         ),
+        "completesessionAnnotation" => object(
+            value,
+            "SessionAnnotation",
+            &[
+                ("name", true, plain),
+                ("value", true, |value| {
+                    convert("completeAnnotationValue", value)
+                }),
+            ],
+        ),
         "completesessionInputSource" => object(
             value,
             "SessionInputSource",
@@ -1819,6 +1901,596 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("index", true, plain),
                 ("source", true, |value| {
                     convert("completePhysicalSource", value)
+                }),
+            ],
+        ),
+        "completesessionJudgment" => {
+            if value.get("kind").and_then(Value::as_str) == Some("decision") {
+                return convert("completesessionJudgment_decision", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("choice") {
+                return convert("completesessionJudgment_choice", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("score") {
+                return convert("completesessionJudgment_score", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("tags") {
+                return convert("completesessionJudgment_tags", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesessionJudgment_choice" => object(
+            value,
+            "SessionJudgment_choice",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completesessionJudgment_decision" => object(
+            value,
+            "SessionJudgment_decision",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completesessionJudgment_score" => object(
+            value,
+            "SessionJudgment_score",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completesessionJudgment_tags" => object(
+            value,
+            "SessionJudgment_tags",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| array(value, plain)),
+            ],
+        ),
+        "completesessionNamedProbability" => object(
+            value,
+            "SessionNamedProbability",
+            &[("name", true, plain), ("probability", true, plain)],
+        ),
+        "completesessionObservation" => {
+            if value.get("kind").and_then(Value::as_str) == Some("question") {
+                return convert("completesessionObservation_question", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("row") {
+                return convert("completesessionObservation_row", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesessionObservation_question" => object(
+            value,
+            "SessionObservation_question",
+            &[
+                ("detail", true, |value| {
+                    convert("completesessionQuestionDetail", value)
+                }),
+                ("index", true, plain),
+                ("kind", true, plain),
+                ("member", false, plain),
+                ("position", true, plain),
+                ("stage", false, plain),
+            ],
+        ),
+        "completesessionObservation_row" => object(
+            value,
+            "SessionObservation_row",
+            &[
+                ("index", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completesessionObservedRow", value)
+                }),
+            ],
+        ),
+        "completesessionObservedRow" => {
+            if value.get("kind").and_then(Value::as_str) == Some("judgment") {
+                return convert("completesessionObservedRow_judgment", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("annotated") {
+                return convert("completesessionObservedRow_annotated", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("recognized") {
+                return convert("completesessionObservedRow_recognized", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("find") {
+                return convert("completesessionObservedRow_find", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("relations") {
+                return convert("completesessionObservedRow_relations", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesessionObservedRow_annotated" => object(
+            value,
+            "SessionObservedRow_annotated",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completesessionAnnotation", value))
+                }),
+            ],
+        ),
+        "completesessionObservedRow_find" => object(
+            value,
+            "SessionObservedRow_find",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completesessionObservedRow_judgment" => object(
+            value,
+            "SessionObservedRow_judgment",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completesessionJudgment", value)
+                }),
+            ],
+        ),
+        "completesessionObservedRow_recognized" => object(
+            value,
+            "SessionObservedRow_recognized",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completesessionRecognition", value)
+                }),
+            ],
+        ),
+        "completesessionObservedRow_relations" => object(
+            value,
+            "SessionObservedRow_relations",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completesessionRelationEdge", value))
+                }),
+            ],
+        ),
+        "completesessionPacket" => {
+            if value.get("function").and_then(Value::as_str) == Some("decide")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_decide_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("choose")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_choose_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("tag")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_tag_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("score")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_score_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("filter")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_filter_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("annotate")
+                && value.get("kind").and_then(Value::as_str) == Some("row")
+            {
+                return convert("completesessionPacket_annotate_row", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("decide")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_decide_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("choose")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_choose_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("tag")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_tag_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("score")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_score_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("filter")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_filter_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("rank")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_rank_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("find")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_find_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("annotate")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_annotate_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("recognize")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_recognize_aggregate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("relate")
+                && value.get("kind").and_then(Value::as_str) == Some("aggregate")
+            {
+                return convert("completesessionPacket_relate_aggregate", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("observation") {
+                return convert("completesessionPacket_observation", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("terminal") {
+                return convert("completesessionPacket_terminal", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesessionPacket_annotate_aggregate" => object(
+            value,
+            "SessionPacket_annotate_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeAnnotation", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_annotate_row" => object(
+            value,
+            "SessionPacket_annotate_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| convert("completeAnnotation", value)),
+            ],
+        ),
+        "completesessionPacket_choose_aggregate" => object(
+            value,
+            "SessionPacket_choose_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| {
+                        convert("completeAtomic_Nullable_string", value)
+                    })
+                }),
+            ],
+        ),
+        "completesessionPacket_choose_row" => object(
+            value,
+            "SessionPacket_choose_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completeAtomic_Nullable_string", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_decide_aggregate" => object(
+            value,
+            "SessionPacket_decide_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeAtomic_DecideValue", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_decide_row" => object(
+            value,
+            "SessionPacket_decide_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completeAtomic_DecideValue", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_filter_aggregate" => object(
+            value,
+            "SessionPacket_filter_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeAtomic_boolean", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_filter_row" => object(
+            value,
+            "SessionPacket_filter_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completeAtomic_boolean", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_find_aggregate" => object(
+            value,
+            "SessionPacket_find_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| convert("completeFind", value)),
+            ],
+        ),
+        "completesessionPacket_observation" => object(
+            value,
+            "SessionPacket_observation",
+            &[
+                ("function", true, |value| {
+                    convert("completeRequestFunction", value)
+                }),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completesessionObservation", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_rank_aggregate" => object(
+            value,
+            "SessionPacket_rank_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeAtomic_NonZeroUsize", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_recognize_aggregate" => object(
+            value,
+            "SessionPacket_recognize_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeRecognition", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_relate_aggregate" => object(
+            value,
+            "SessionPacket_relate_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| convert("completeRelation", value)),
+            ],
+        ),
+        "completesessionPacket_score_aggregate" => object(
+            value,
+            "SessionPacket_score_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| convert("completeAtomic_double", value))
+                }),
+            ],
+        ),
+        "completesessionPacket_score_row" => object(
+            value,
+            "SessionPacket_score_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completeAtomic_double", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_tag_aggregate" => object(
+            value,
+            "SessionPacket_tag_aggregate",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| {
+                        convert("completeAtomic_Array_of_string", value)
+                    })
+                }),
+            ],
+        ),
+        "completesessionPacket_tag_row" => object(
+            value,
+            "SessionPacket_tag_row",
+            &[
+                ("function", true, plain),
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    convert("completeAtomic_Array_of_string", value)
+                }),
+            ],
+        ),
+        "completesessionPacket_terminal" => object(
+            value,
+            "SessionPacket_terminal",
+            &[
+                ("facts", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeFacts", value)
+                    }
+                }),
+                ("failure", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeCallError", value)
+                    }
+                }),
+                ("kind", true, plain),
+            ],
+        ),
+        "completesessionProbabilities" => {
+            if value.get("kind").and_then(Value::as_str) == Some("yes_no") {
+                return convert("completesessionProbabilities_yes_no", value);
+            }
+            if value.get("kind").and_then(Value::as_str) == Some("named") {
+                return convert("completesessionProbabilities_named", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesessionProbabilities_named" => object(
+            value,
+            "SessionProbabilities_named",
+            &[
+                ("kind", true, plain),
+                ("value", true, |value| {
+                    array(value, |value| {
+                        convert("completesessionNamedProbability", value)
+                    })
+                }),
+            ],
+        ),
+        "completesessionProbabilities_yes_no" => object(
+            value,
+            "SessionProbabilities_yes_no",
+            &[("kind", true, plain), ("value", true, plain)],
+        ),
+        "completesessionQuestionDetail" => object(
+            value,
+            "SessionQuestionDetail",
+            &[
+                ("answer_id", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeAnswerId", value)
+                    }
+                }),
+                ("cached", true, plain),
+                ("confidence", false, plain),
+                ("failed_questions", true, plain),
+                ("failure", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completefailure", value)
+                    }
+                }),
+                ("failure_id", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeFailureId", value)
+                    }
+                }),
+                ("input", false, plain),
+                ("input_source", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completePhysicalSource", value)
+                    }
+                }),
+                ("input_sources", true, |value| {
+                    array(value, |value| convert("completesessionInputSource", value))
+                }),
+                ("inputs", true, |value| array(value, plain)),
+                ("model", true, plain),
+                ("observations", true, |value| {
+                    array(value, |value| convert("completeObservation", value))
+                }),
+                ("probabilities", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completesessionProbabilities", value)
+                    }
+                }),
+                ("question", true, |value| {
+                    convert("completequestionDocument", value)
+                }),
+                ("question_sha256", true, plain),
+                ("question_sources", true, |value| {
+                    array(value, |value| convert("completeQuestionSource", value))
+                }),
+                ("raw_pick", false, plain),
+                ("reported_usage", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completeUsage", value)
+                    }
+                }),
+                ("requests", true, |value| array(value, plain)),
+                ("requests_sent", true, plain),
+                ("threshold", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completethreshold", value)
+                    }
+                }),
+                ("url", true, plain),
+                ("usage", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completetokenUsage", value)
+                    }
+                }),
+                ("value", false, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completevalue", value)
+                    }
+                }),
+            ],
+        ),
+        "completesessionRecognition" => object(
+            value,
+            "SessionRecognition",
+            &[
+                ("entities", true, |value| {
+                    array(value, |value| convert("completeentity", value))
+                }),
+                ("mode", true, |value| {
+                    convert("completeRecognitionMode", value)
+                }),
+                ("proposals", false, |value| {
+                    array(value, |value| convert("completeBoundaryProposal", value))
+                }),
+                ("relations", false, |value| {
+                    array(value, |value| {
+                        convert("completeRecognitionEdgeDocument", value)
+                    })
+                }),
+            ],
+        ),
+        "completesessionRelationEdge" => object(
+            value,
+            "SessionRelationEdge",
+            &[
+                ("either", true, plain),
+                ("probability", true, plain),
+                ("relation", true, plain),
+                ("source", true, |value| {
+                    convert("completeEntityDocument", value)
+                }),
+                ("target", true, |value| {
+                    convert("completeEntityDocument", value)
                 }),
             ],
         ),
@@ -1836,7 +2508,333 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completethreshold" => plain(value),
+        "completetokenBand" => object(
+            value,
+            "TokenBand",
+            &[("lower", true, plain), ("upper", true, plain)],
+        ),
+        "completetokenUsage" => object(
+            value,
+            "TokenUsage",
+            &[
+                ("input_tokens", true, plain),
+                ("output_tokens", true, plain),
+            ],
+        ),
         "completevalue" => plain(value),
         _ => Err(crate::defect("unknown generated R result type")),
     }
+}
+fn member<'a>(mut value: &'a Value, path: &[&str]) -> Option<&'a Value> {
+    for key in path {
+        value = value.get(*key)?;
+    }
+    Some(value)
+}
+#[expect(
+    clippy::too_many_lines,
+    reason = "mechanical projection generated from the shared result graph"
+)]
+pub(crate) fn call_value(function: &str, rows: &Value, scalar: bool) -> Crossed<Robj> {
+    match function {
+        "decide" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completeDecideValue",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completeDecideValue",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "choose" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "tag" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => array(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                        plain,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    array(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                        plain,
+                    )
+                })
+            }
+        }
+        "score" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    plain(
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "filter" => array(rows, |row| {
+            plain(
+                row.get("input")
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
+            )
+        }),
+        "rank" => array(rows, |row| {
+            plain(
+                row.get("index")
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
+            )
+        }),
+        "find" => {
+            let row = rows;
+            plain(
+                row.get("value")
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
+            )
+        }
+        "annotate" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completeannotatedRow",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completeannotatedRow",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "recognize" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => convert(
+                        "completerecognize",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    ),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| {
+                    convert(
+                        "completerecognize",
+                        row.get("value")
+                            .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                    )
+                })
+            }
+        }
+        "relate" => {
+            let row = rows;
+            array(
+                row.get("value")
+                    .ok_or_else(|| crate::defect("native result has no projected value"))?,
+                |value| convert("completerelatedEntityEdge", value),
+            )
+        }
+        _ => Err(crate::defect("native result has no named value")),
+    }
+}
+pub(crate) fn call_probability(
+    function: &str,
+    rows: &Value,
+    observations: &[Value],
+    scalar: bool,
+) -> Crossed<Robj> {
+    match function {
+        "decide" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_decide(row, observations),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_decide(row, observations))
+            }
+        }
+        "choose" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_choose(row, observations),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_choose(row, observations))
+            }
+        }
+        "tag" => plain(&Value::Null),
+        "score" => plain(&Value::Null),
+        "filter" => array(rows, |row| probability_filter(row, observations)),
+        "rank" => array(rows, |row| probability_rank(row)),
+        "find" => {
+            let row = rows;
+            probability_find(row, observations)
+        }
+        "annotate" => plain(&Value::Null),
+        "recognize" => {
+            if scalar {
+                match rows.as_array().and_then(|rows| rows.first()) {
+                    Some(row) => probability_recognize(row),
+                    None => plain(&Value::Null),
+                }
+            } else {
+                array(rows, |row| probability_recognize(row))
+            }
+        }
+        "relate" => {
+            let row = rows;
+            probability_relate(row)
+        }
+        _ => Err(crate::defect("native result has no named probability")),
+    }
+}
+fn probability_decide(row: &Value, observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if observations.iter().any(|observation| {
+            member(observation, &["kind"]).and_then(Value::as_str) == Some("observation")
+                && member(observation, &["value", "kind"]).and_then(Value::as_str) == Some("row")
+                && member(observation, &["value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("judgment")
+                && member(observation, &["value", "value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("decision")
+                && member(observation, &["value", "index"]).and_then(Value::as_u64)
+                    == row.get("index").and_then(Value::as_u64)
+                && member(observation, &["value", "value", "value", "value"])
+                    .is_some_and(|value| !value.is_null())
+        }) {
+            member(row, &["answer", "probability"]).filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_choose(row: &Value, observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if observations.iter().any(|observation| {
+            member(observation, &["kind"]).and_then(Value::as_str) == Some("observation")
+                && member(observation, &["value", "kind"]).and_then(Value::as_str) == Some("row")
+                && member(observation, &["value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("judgment")
+                && member(observation, &["value", "value", "value", "kind"]).and_then(Value::as_str)
+                    == Some("choice")
+                && member(observation, &["value", "index"]).and_then(Value::as_u64)
+                    == row.get("index").and_then(Value::as_u64)
+                && member(observation, &["value", "value", "value", "value"])
+                    .is_some_and(|value| !value.is_null())
+        }) {
+            member(row, &["answer", "probabilities"])
+                .and_then(|values| {
+                    member(row, &["answer", "pick"])
+                        .and_then(Value::as_str)
+                        .and_then(|pick| values.get(pick))
+                })
+                .filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_filter(row: &Value, _observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (member(row, &["answer", "probability"]).filter(|value| !value.is_null()))
+            .unwrap_or(&Value::Null),
+    )
+}
+fn probability_find(row: &Value, _observations: &[Value]) -> Crossed<Robj> {
+    plain(
+        (if member(row, &["index"]).is_some_and(|value| !value.is_null()) {
+            member(row, &["answer", "probabilities"])
+                .and_then(|values| {
+                    member(row, &["answer", "pick"])
+                        .and_then(Value::as_str)
+                        .and_then(|pick| values.get(pick))
+                })
+                .filter(|value| !value.is_null())
+        } else {
+            None
+        })
+        .unwrap_or(&Value::Null),
+    )
+}
+fn probability_rank(row: &Value) -> Crossed<Robj> {
+    plain(member(row, &["answer", "probability"]).unwrap_or(&Value::Null))
+}
+fn probability_relate(row: &Value) -> Crossed<Robj> {
+    array(
+        member(row, &["value"]).ok_or_else(|| crate::defect("native relation has no edges"))?,
+        |edge| plain(member(edge, &["probability"]).unwrap_or(&Value::Null)),
+    )
+}
+fn probability_recognize(row: &Value) -> Crossed<Robj> {
+    if let Some(entities) = member(row, &["value", "entities"]) {
+        return array(entities, |entity| {
+            let proposal = member(row, &["answer", "proposals"])
+                .and_then(Value::as_array)
+                .and_then(|proposals| {
+                    proposals.iter().find(|proposal| {
+                        proposal.get("kept").and_then(Value::as_bool) == Some(true)
+                            && member(proposal, &["selected", "start"]) == entity.get("start")
+                            && member(proposal, &["selected", "end"]) == entity.get("end")
+                            && proposal.get("kind") == entity.get("kind")
+                    })
+                })
+                .ok_or_else(|| crate::defect("native entity has no kept proposal"))?;
+            plain(member(proposal, &["span_probability"]).unwrap_or(&Value::Null))
+        });
+    }
+    array(
+        member(row, &["value", "proposals"])
+            .ok_or_else(|| crate::defect("native recognition has no proposals"))?,
+        |proposal| plain(member(proposal, &["probability"]).unwrap_or(&Value::Null)),
+    )
 }

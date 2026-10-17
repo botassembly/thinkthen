@@ -34,7 +34,8 @@ impl Failure {
                     }
                 }
             }
-            Self::Transport(_)
+            Self::Provider { .. }
+            | Self::Transport(_)
             | Self::Status(_)
             | Self::TokenLimit
             | Self::ReplyTooLarge(_)
@@ -79,6 +80,7 @@ pub(super) fn stopped(
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private diagnostic and signal mappings must withhold secrets and preserve cancellation counts.
     use super::*;
     use crate::core::adapters::built_in::DecodeError;
     use crate::engine::error::TransportKind;

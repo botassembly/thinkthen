@@ -1,8 +1,6 @@
 {
-  "directory": [
-    "include",
-    "fixtures"
-  ],
+  "directory": ".",
   "extension": ".hpp",
-  "max": 3727
+  "scope": "handwritten-production",
+  "max": 423
 }

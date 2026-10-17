@@ -236,6 +236,7 @@ fn split_label(entry: &str) -> Result<(String, Option<String>), Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private option parser must split only the first equals sign and refuse missing separators.
     use super::split;
     use crate::failure::Failure;
 

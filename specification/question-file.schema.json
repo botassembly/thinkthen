@@ -91,16 +91,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -146,16 +137,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -201,16 +183,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -253,16 +226,7 @@
           "$ref": "#/$defs/profile"
         },
         "batch": {
-          "description": "`max`, or a whole number of at least 1.",
-          "anyOf": [
-            {
-              "const": "max"
-            },
-            {
-              "type": "integer",
-              "minimum": 1
-            }
-          ]
+          "$ref": "#/$defs/questionBatch"
         },
         "name": {
           "type": "string",
@@ -314,7 +278,8 @@
                 "kind": {
                   "type": "string"
                 }
-              }
+              },
+              "title": "RelateFields"
             },
             "relations": {
               "type": "array",
@@ -323,7 +288,8 @@
                 "$ref": "#/$defs/relation"
               }
             }
-          }
+          },
+          "title": "RelateQuestion"
         },
         "threshold": {
           "$ref": "#/$defs/cut"
@@ -452,7 +418,8 @@
             "$ref": "#/$defs/description"
           },
           "minProperties": 2,
-          "maxProperties": 255
+          "maxProperties": 255,
+          "x-preserve-order": true
         }
       ]
     },
@@ -1184,6 +1151,18 @@
               }
             }
           }
+        }
+      ]
+    },
+    "questionBatch": {
+      "description": "`max`, or a whole number of at least 1.",
+      "anyOf": [
+        {
+          "const": "max"
+        },
+        {
+          "type": "integer",
+          "minimum": 1
         }
       ]
     }

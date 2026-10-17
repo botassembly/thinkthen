@@ -11,7 +11,7 @@ try {
     "and I was charged twice.\n";
   const fittingLabels = (await tt.tag(
     {tag: question, labels}, message,
-  )).results[0].value;
+  )).value;
   assert.deepEqual(fittingLabels, [
     "praise",
     "bug",

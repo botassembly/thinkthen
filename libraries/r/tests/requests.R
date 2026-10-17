@@ -39,6 +39,14 @@ plan <- tt_plan("Plan question?", c("first", "second"))
 check("native preview sends nothing", plan$records == 2 && backend_count() == arrivals)
 check("plan prints safely", identical(capture.output(print(plan)), "<complete carrier: content withheld>"))
 
+item <- tt_item("Item evidence", context = "Per-record reference", options = list(list(name = "shipping"), list(name = "billing")))
+check("item printing withholds evidence", identical(capture.output(print(item)), "<complete carrier: content withheld>"))
+item_call <- tt_choose(list(choose = "Item question?", options = c("billing", "shipping")), item)
+check("item controls reach native admission and judgment", identical(item_call$value[[1]], "shipping") &&
+      grepl("Per-record reference", tt_plan(list(choose = "Item question?", options = c("billing", "shipping")), item, function_name = "choose")$first_body_utf8, fixed = TRUE))
+check("native plan exposes largest request estimates and method", plan$largest_request_bytes > 0 &&
+      plan$largest_request_estimated_input_tokens > 0 && is.character(plan$token_estimate_method) &&
+      is.character(plan$first_body_utf8) && !"first_body" %in% names(plan))
 questions <- list(
   decide = "Decide Q?",
   choose = list(choose = "Choose Q?", options = c("first", "second")),
@@ -123,4 +131,4 @@ failed_batch <- tt_batch("decide", "Session deadline?", "not sent", list(deadlin
 failure <- tryCatch(failed_batch$next_result(), error = identity)
 check("native session failures retain their condition", inherits(failure, "thinkthen_error") && failure$kind == "deadline" && inherits(failure$complete, "thinkthen_CallError"))
 failed_batch$close()
-finish("canonical requests", 27L)
+finish("canonical requests", 28L)

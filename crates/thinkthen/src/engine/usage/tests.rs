@@ -1,3 +1,4 @@
+//! Stays: counter overflow, unsafe paths and interrupted writes need direct persistence fault and concurrency checks.
 use std::fs;
 use std::io::ErrorKind;
 use std::net::TcpListener;
@@ -46,6 +47,7 @@ fn an_uncountable_attempt_is_refused_before_transport() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,

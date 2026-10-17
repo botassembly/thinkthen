@@ -1,7 +1,7 @@
 //! Pull-based frame calls enter Request through the native borrowed-row scheduler.
 use super::typed::present;
 use crate::public::{
-    Batch, Call, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
+    Batch, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
     CompleteRecord, CompleteScore, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error,
     InputEvidence, Question, QuestionSet, RecordChooseQuestion, RecordInput, Surface,
 };
@@ -245,40 +245,6 @@ impl Engine {
                     )),
                 }),
             ),
-            positions,
-        ))
-    }
-
-    /// Complete per-record dynamic choose candidates associated with actual frame rows.
-    /// # Errors
-    /// Refuses invalid frame associations/candidates; otherwise returns native errors.
-    #[allow(
-        clippy::type_complexity,
-        reason = "typed native results and frame positions stay separate"
-    )]
-    pub fn choose_dynamic_input_column_complete<T: InputEvidence>(
-        &self,
-        question: &RecordChooseQuestion,
-        column: &Series,
-        records: Vec<Option<RecordInput<T>>>,
-        options: CallOptions<'_>,
-    ) -> Result<(Call<Vec<CompleteRecord<T, CompleteChoice>>>, Vec<usize>), Error> {
-        let (records, positions) = present(column, records)?;
-        Ok((
-            crate::public::request::native(
-                self,
-                crate::RequestFunction::Choose,
-                question.clone().into(),
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
-                |engine, definition, records, controls| {
-                    let q = definition.dynamic_choose()?;
-                    Ok(crate::public::request::restore(
-                        engine
-                            .execute_choose_dynamic_records_complete_with(&q, records, controls)?,
-                    ))
-                },
-            )?,
             positions,
         ))
     }

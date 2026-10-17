@@ -31,8 +31,9 @@ check("R6-10: one label stays an array", identical(tt_tag(list(tag = "Tags?", la
 # Filter, rank and find retain typed values, originals and native indexes.
 check("filter keeps the records that held", identical(vapply(tt_filter("Is this a complaint?", c("x1", "x2"))$results, `[[`, "", "input"), c("x1", "x2")))
 check("filter refuses a band", identical(kind_of(tt_filter("Q?", "x", options = list(threshold = "0.2:0.8"))), "usage"))
-ranked <- tt_rank("Is this urgent?", c("r1", "r2", "r3"))$results
-check("rank returns typed places and original records", all(vapply(ranked, inherits, TRUE, "thinkthen_RankResult")) &&
+rank_call <- tt_rank("Is this urgent?", c("r1", "r2", "r3"))
+ranked <- rank_call$results
+check("rank returns typed places and original records", identical(rank_call$probability, list(0.9, 0.9, 0.9)) && all(vapply(ranked, inherits, TRUE, "thinkthen_RankResult")) &&
       identical(vapply(ranked, `[[`, 0, "value"), c(1, 2, 3)) && identical(vapply(ranked, `[[`, "", "input"), c("r1", "r2", "r3")))
 check("rank top", length(tt_rank("Is this urgent?", c("r1", "r2"), options = list(top = 1L))$results) == 1L)
 found <- tt_find(list(find = "Which line asks for money?"), c("u1", "u2"))$results[[1L]]
@@ -45,8 +46,8 @@ check("a none other than TRUE or FALSE is refused before any request", sent_by(c
 check("tied duplicates keep original places", identical(
   vapply(tt_rank("Duplicate order?", c("same", "other", "same"))$results, `[[`, 0, "index"), c(0, 1, 2)))
 check("empty rank has no native rows and sends nothing", sent_by(check("empty rank shape",
-  identical(tt_rank("Empty order?", character())$results,
-    list()))) == 0L)
+  identical((empty_rank <- tt_rank("Empty order?", character()))$results,
+    list()) && identical(empty_rank$probability, list()))) == 0L)
 check("empty find is usage and sends nothing", sent_by(check("empty find kind",
   identical(kind_of(tt_find(list(find = "Empty selection?"), character())), "usage"))) == 0L)
 

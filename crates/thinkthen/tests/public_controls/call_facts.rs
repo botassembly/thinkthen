@@ -2,6 +2,51 @@
 
 use super::*;
 
+#[test]
+fn a_refused_connection_retries_with_a_live_deadline_and_stops_when_spent() {
+    let _serial = serial();
+    let port = std::net::TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("a free port")
+        .port();
+    let engine = crate::api::closed_port_builder(
+        &format!("http://127.0.0.1:{port}/v1"),
+        "sk-public-controls",
+    )
+    .no_cache()
+    .build()
+    .expect("engine");
+    let token = CancelToken::new();
+    token.cancel();
+    for (options, expected, sends) in [
+        (CallOptions::new(), ErrorKind::Backend, 2),
+        (
+            CallOptions::new()
+                .deadline_after(Duration::from_secs(2))
+                .expect("deadline"),
+            ErrorKind::Backend,
+            2,
+        ),
+        (
+            CallOptions::new()
+                .deadline_after(Duration::ZERO)
+                .expect("spent deadline"),
+            ErrorKind::Deadline,
+            0,
+        ),
+        (CallOptions::new().cancel(&token), ErrorKind::Cancelled, 0),
+    ] {
+        let before = engine.usage();
+        let error = engine
+            .decide_with(&question(), "Refund me.", options)
+            .expect_err("refusal");
+        assert_eq!(error.kind(), expected);
+        let after = engine.usage();
+        assert_eq!(after.requests_sent() - before.requests_sent(), sends);
+        assert_eq!(after.retries() - before.retries(), u64::from(sends == 2));
+    }
+}
+
 fn priced(base: &str, input: &str, output: &str) -> thinkthen::EngineBuilder {
     crate::api::builder(base, "sk-public-controls")
         .prices_usd_per_million(input, output)
@@ -188,9 +233,13 @@ fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_re
         .expect("engine");
     let rows = vec!["First.".to_owned(), "Second.".to_owned()];
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(1).expect("one"));
-    let call = engine
-        .details_many_recoverable_with(&question(), &rows, CallOptions::new().batch(setting))
-        .expect("two complete replies");
+    let call = crate::api::recover_decisions(
+        &engine,
+        &question(),
+        &rows,
+        CallOptions::new().batch(setting),
+    )
+    .expect("two complete replies");
     assert_eq!(call.facts().requests_sent(), 2);
     assert_eq!(call.facts().input_tokens(), None);
     assert_eq!(call.facts().estimated_cost_usd(), None);
@@ -212,7 +261,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         .expect("engine");
     let asked = question();
     let sent = engine.decide(&asked, "Refund me.").expect("live answer");
-    assert_eq!(*sent.value(), Answer::Yes);
+    assert_eq!(*sent.value(), Some(true));
     assert_eq!(
         (sent.facts().records(), sent.facts().requests_sent()),
         (1, 1)
@@ -222,7 +271,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         (Some(3), Some(1))
     );
     let cached = engine.decide(&asked, "Refund me.").expect("cached answer");
-    assert_eq!(*cached.value(), Answer::Yes);
+    assert_eq!(*cached.value(), Some(true));
     assert_eq!(
         (
             cached.facts().records(),
@@ -366,9 +415,10 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
     };
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
     let asked = question();
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["alpha", "first", "beta", "second"],
+        crate::api::plain_records(["alpha", "first", "beta", "second"]),
         CallOptions::new().batch(setting).observe(&observe),
     );
     let later_released = AtomicUsize::new(0);
@@ -410,7 +460,7 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
             .decide(&question(), "gamma")
             .expect("next call")
             .value(),
-        Answer::Yes
+        Some(true)
     );
 }
 

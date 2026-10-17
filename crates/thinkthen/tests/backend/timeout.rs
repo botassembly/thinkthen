@@ -39,13 +39,12 @@ fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_arg
     }
 
     // `check` keeps its own timeout field and reads no input.
-    for command in [&["backends", "check"][..], &["check"][..]] {
-        let arguments = [command, &["--url", listener.base(), "--timeout", "86401"]].concat();
-        let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
-        assert_eq!(output.status.code(), Some(2), "{command:?}");
-        assert!(output.stdout.is_empty(), "{command:?}");
-        stderr_is(&output, MESSAGE);
-    }
+    let command = &["backends", "check"][..];
+    let arguments = [command, &["--url", listener.base(), "--timeout", "86401"]].concat();
+    let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2), "{command:?}");
+    assert!(output.stdout.is_empty(), "{command:?}");
+    stderr_is(&output, MESSAGE);
 
     assert!(
         listener.requests().is_empty(),

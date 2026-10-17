@@ -1,4 +1,4 @@
-//! `thinkthen audit --write` records the model a bar was tuned on beside the
+//! `thinkthen runs audit --write` records the model a bar was tuned on beside the
 //! bar, in a single question file only (ticket 0159). A question set holds no
 //! model: `audit_write.rs`, `inserts_when_absent`, pins a set's whole bytes
 //! after a write.

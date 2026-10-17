@@ -7,23 +7,30 @@ import sys
 import tempfile
 import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
-from backend import Backend
+from backend import Backend, unquoted_single
 from children import child_env
 from usage import run_usage
 
+def admitted(command):
+    return [sys.executable, os.environ['THINKTHEN_BUILD_ADMISSION'], '--lock', os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock'), '--', *command]
+
 module = Path(sys.argv[1]).resolve()
+encoding_only = len(sys.argv) > 2 and sys.argv[2] == 'encoding'
 plan_only = len(sys.argv) > 2 and sys.argv[2] == 'plan'
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
 usage_only = len(sys.argv) > 2 and sys.argv[2] == 'usage'
 feed_only = len(sys.argv) > 2 and sys.argv[2] == 'feed'
+example_only = len(sys.argv) > 2 and sys.argv[2] == 'example'
 with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     home = Path(folder)
     consumer = home / 'consumer'
     consumer.mkdir()
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
-    shutil.copy2(Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
+    shutil.copy2(Path(__file__).parents[1] / 'examples/decide/main.go' if example_only else Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
+    if not example_only:
+        shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), consumer / 'bridge.go')
     env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(Path(__file__).resolve().parents[3]/'target/go/cache')), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
-    subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
+    subprocess.run(admitted(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.']),cwd=consumer,env=env,check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         label = sys.argv[2] if len(sys.argv) > 2 else 'owned'
@@ -32,10 +39,40 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     assert 'libthinkthen' not in linked, linked
     barrier = home/'barrier'
     barrier.mkdir()
-    server = Backend(barrier, key='tt-canary-274', packed_questions={'Is it?'}, distinct_packed=True)
+    server = Backend(barrier, key='tt-canary-274', packed_questions=None if example_only else {'Is it?'}, distinct_packed=not example_only)
     user_agents = server.user_agents
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
+        if feed_only:
+            before = server.attempts
+            result = subprocess.run([str(home/'consumer-bin'), 'nil-feed'], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=5)
+            assert result.returncode == 0 and result.stdout.strip() == 'nil-feed-usage-pass requests=0', (result.stdout, result.stderr)
+            assert server.attempts == before == 0 and not user_agents, server.attempts
+            print('GO_NIL_FEED_INSTALLED_PASS ten calls nil interface and five typed nil kinds typed usage zero-send')
+        if encoding_only:
+            result=subprocess.run([str(home/'consumer-bin'),'encoding'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
+            assert result.returncode==0,(result.stdout,result.stderr)
+            states=[unquoted_single(request)['state'] for request in server.requests]
+            assert states==['QQ==',{'label':'kept','count':'7'},{'bytes':'QQ=='},{'custom':True},'custom text'],states
+            before=server.attempts
+            result=subprocess.run([str(home/'consumer-bin'),'cyclic'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
+            assert result.returncode==0 and result.stdout.strip()=='cyclic-authored-refusal-pass',(result.stdout,result.stderr)
+            assert server.attempts==before==5,server.attempts
+            print('GO_ENCODING_INSTALLED_PASS standard authored bytes embedded tags empty collections cyclic refusal zero-send')
+            sys.exit(0)
+        if example_only:
+            result = subprocess.run([str(home/'consumer-bin')], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=20)
+            assert result.returncode == 0, (result.stdout, result.stderr)
+            assert len(result.stdout.splitlines()) >= 10 and server.attempts == 10, (server.attempts, server.arrivals)
+            expected_options = ['billing', 'shipping', 'account', 'fraud', 'returns']
+            expected_kinds = ['person', 'organization', 'location', 'product', 'event']
+            criteria = [list(question.get('criteria', {})) for request in server.requests for question in request['questions'].values()]
+            assert any([key for key in keys if key in expected_options] == expected_options for keys in criteria), criteria
+            assert any([key for key in keys if key in expected_kinds] == expected_kinds for keys in criteria), criteria
+            authored = [question['instructions'] for request in server.requests for question in request['questions'].values() if any('Is ' + key + '?' in question.get('instructions', '') for key in expected_options)]
+            assert len(authored) == 5 and all('Is ' + key + '?' in text for key, text in zip(expected_options, authored)), authored
+            print('GO_EXAMPLE_PASS ten typed answer calls and direct edge names')
+            sys.exit(0)
         if plan_only:
             result=subprocess.run([str(home/'consumer-bin'),'plan'],env=env|{'THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'},cwd=consumer,text=True,capture_output=True,timeout=5)
             assert result.returncode==0,(result.stdout,result.stderr)

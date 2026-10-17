@@ -202,6 +202,7 @@ impl Serialize for Threshold {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: cut/band endpoints and round-trip grammar need direct numeric/property checks.
     use super::{Outcome, Threshold, ThresholdError};
     use crate::core::probability::Probability;
     use proptest::strategy::Strategy;

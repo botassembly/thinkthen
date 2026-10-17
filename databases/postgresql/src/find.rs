@@ -1,6 +1,6 @@
 //! One ordered PostgreSQL array enters one public find call.
 
-use pgrx::datum::{Array, JsonB};
+use pgrx::datum::Array;
 use pgrx::prelude::*;
 use thinkthen::{Error, For, Question};
 
@@ -35,7 +35,7 @@ fn found(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
     raw: Option<RawJson>,
-) -> Option<JsonB> {
+) -> Option<String> {
     let (Some(question), Some(units)) = (question, units) else {
         return None;
     };
@@ -68,49 +68,26 @@ fn found(
             _ => Err(crate::request::wrong_result()),
         }
     });
-    let selected = match answer.selection() {
-        thinkthen::FindSelection::Unit(at) => Some(at),
-        thinkthen::FindSelection::None => None,
-    };
-    let candidates = answer.candidates();
-    let winner = match selected {
-        Some(at) => candidates.get(at),
-        None => candidates.last().filter(|candidate| candidate.is_none()),
-    }
-    .ok_or_else(|| call::defect("a find answer selected no candidate"))
-    .or_raise();
-    let probabilities: Vec<_> = candidates
-        .iter()
-        .enumerate()
-        .map(|(at, candidate)| {
-            serde_json::json!({
-                "index": candidate.input().map(|_| at),
-                "probability": candidate.probability(),
-            })
-        })
-        .collect();
-    Some(JsonB(serde_json::json!({
-        "index": selected,
-        "value": answer.selected().map(|unit| match unit {
-            thinkthen::QuestionInput::Text(text) => text.as_str(),
-            thinkthen::QuestionInput::Record(record) => record.original().literal()
-                .unwrap_or_else(|| call::raise(crate::request::wrong_result())),
-            _ => call::raise(crate::request::wrong_result()),
-        }),
-        "probability": winner.probability(),
-        "candidates": probabilities,
-    })))
+    answer.selected().map(|unit| match unit {
+        thinkthen::QuestionInput::Text(text) => text.to_owned(),
+        thinkthen::QuestionInput::Record(record) => record
+            .original()
+            .literal()
+            .unwrap_or_else(|| call::raise(crate::request::wrong_result()))
+            .to_owned(),
+        _ => call::raise(crate::request::wrong_result()),
+    })
 }
 
 crate::descriptions::describe! {
-"Find one original unit in an ordered text[]; return zero-based index, value, probability and candidates as jsonb. Settings may admit explicit none. NULL question or units returns NULL before checking partners; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
+"Find one original unit in an ordered text[]; return the selected text, or NULL. Settings may admit explicit none. NULL question or units returns NULL before checking partners; NULL settings uses defaults. Failures raise SQL errors; evidence files must be read by the client.";
 [name = "thinkthen_find", parallel_restricted];
 /// Find one original unit, or explicit none, in an ordered text array.
 fn thinkthen_find(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
     settings: default!(Option<RawJson>, "NULL"),
-) -> Option<JsonB> {
+) -> Option<String> {
     call::guarded(|| found(question, units, settings))
 }
 }
@@ -123,7 +100,7 @@ fn thinkthen_find_none(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
     _none: Option<bool>,
-) -> Option<JsonB> {
+) -> Option<String> {
     call::guarded(|| {
         let _ = (question, units);
         call::raise(call::usage(

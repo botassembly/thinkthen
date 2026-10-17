@@ -30,13 +30,10 @@ int main(int argc, char **argv) {
     if(strcmp(argv[3],"cancel")==0) thinkthen_session_cancel(session);
     thinkthen_session_result **results=NULL;size_t count=0;
     for(int i=5;i<argc;++i) {
-        for(;;) {
-            uint32_t pushed,status;
-            if(thinkthen_session_try_push(session,argv[i],strlen(argv[i]),&pushed))return 1;
-            if(pushed!=THINKTHEN_SESSION_FULL_V1)break;
-            if(read_packet(session,&results,&count,&status))return 1;
-            if(status==THINKTHEN_SESSION_PENDING_V1){uint32_t ready;if(thinkthen_session_wait(session,THINKTHEN_SESSION_WAIT_INPUT_V1,50,&ready))return 1;}
-        }
+        uint32_t pushed;
+        if(thinkthen_session_push(session,argv[i],strlen(argv[i]),&pushed))return 1;
+        if(pushed==THINKTHEN_SESSION_CLOSED_V1)break;
+        if(pushed!=THINKTHEN_SESSION_ACCEPTED_V1)return 1;
     }
     if(thinkthen_session_finish(session,NULL,0)) return 1;
     if(strcmp(argv[4],"held")==0) {

@@ -1,14 +1,21 @@
 <?php
 declare(strict_types=1);
-namespace ThinkThen\Inputs;
+namespace ThinkThen\Internal;
 
 /** Input documents retain present nulls and unknown fields for native admission. */
-abstract class Document implements \JsonSerializable
+abstract class Document
 {
     public function __construct(private readonly array $fields) {}
-    public function jsonSerialize(): object { return (object)$this->fields; }
     public function __debugInfo(): array { return ['type' => static::class]; }
 }
+
+function descriptor(mixed $value): array
+    {
+        $fields = $value instanceof \ThinkThen\Item ? $value->fields : [];
+        $original = !($value instanceof \ThinkThen\Item) || $value->original;
+        if ($value instanceof \ThinkThen\Item) $value = $value->value;
+        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
+    }
 
 /** Keep one validated JSON value unchanged for the native definition parser. */
 final readonly class RawJson
@@ -43,10 +50,10 @@ final class Encoder
         if (is_object($value)) {
             if ($objects->contains($value)) return $objects[$value];
             if ($active->contains($value)) throw new \JsonException('recursive serializer result');
-            if ($value instanceof \JsonSerializable) {
+            if ($value instanceof Document || $value instanceof \JsonSerializable) {
                 $active->attach($value);
                 try {
-                    $serialized = $value->jsonSerialize();
+                    $serialized = $value instanceof Document ? (object)(new \ReflectionProperty(Document::class, 'fields'))->getValue($value) : $value->jsonSerialize();
                     if ($serialized === $value) $serialized = (object)get_object_vars($value);
                     return $objects[$value] = self::materialize($serialized, $objects, $active, $arrays, $depth);
                 } finally { $active->detach($value); }

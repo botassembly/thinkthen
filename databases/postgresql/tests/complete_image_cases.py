@@ -1,4 +1,4 @@
-"""Installed complete image calls preserve native bytea, errors and replay."""
+"""Installed typed record image calls preserve native bytea, errors and replay."""
 import json
 import os
 import sys
@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / 'databases/sqlite/tests/complete'))
 from postgresql_host import PostgresqlHost
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+from typed_results import native
 
 
 def main():
@@ -31,18 +32,18 @@ def main():
                 out, err = sql(host.socket, "SET thinkthen.model='d1'", statement)
                 assert not err, (out, err)
                 return out
-            query('CREATE TABLE images(ordinal integer, image thinkthen_image_value)')
-            query('INSERT INTO images SELECT n, (ARRAY[' + images + '])[n] FROM generate_series(1,3) n')
-            source = '(SELECT array_agg(image ORDER BY ordinal) FROM images)'
+            query('CREATE TABLE complete_images(ordinal integer, image thinkthen_image_value)')
+            query('INSERT INTO complete_images SELECT n, (ARRAY[' + images + '])[n] FROM generate_series(1,3) n')
+            source = '(SELECT array_agg(image ORDER BY ordinal) FROM complete_images)'
             def complete(options):
                 controls = {'record': '', 'replay': '', 'max_requests_total': -1, 'max_retries': 0}
                 controls.update(json.loads(options) if options is not None else {})
                 controls['cache'] = str(home / 'cache') if controls.get('cache', True) else 'off'
                 statements = ['SET thinkthen.' + key + '=' + quoted(str(value)) for key, value in controls.items()]
                 out, err = sql(host.socket, "SET thinkthen.model='d1'", *statements,
-                               "SELECT thinkthen_decide_images_complete('Is red visible?'," + source + ',NULL)')
+                               "SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[thinkthen_record(images=>" + source + ')]) r')
                 assert not err, (out, err)
-                return json.loads(out)
+                return native([json.loads(row) for row in out.splitlines()], 'decide')
             completed = complete(settings)
             assert completed['ordinals'] == [0], completed
             got = completed['native']
@@ -53,15 +54,15 @@ def main():
             assert 'facts' in replay, replay
             assert replay['facts']['requests_sent'] == 0 and backend.count() == 1, replay
             assert [(r['value'], r['answer_id'], r['input']) for r in replay['value']] == [(r['value'], r['answer_id'], r['input']) for r in got['value']]
-            for statement in ["SELECT thinkthen_decide_images_complete(NULL,ARRAY[NULL]::thinkthen_image_value[],'bad') IS NULL",
-                              "SELECT thinkthen_decide_images_complete('@unread-question.json',NULL,'bad') IS NULL"]:
+            for statement in ["SELECT count(*) = 0 FROM thinkthen_decide_details(NULL,ARRAY[thinkthen_record(images=>ARRAY[NULL]::thinkthen_image_value[])],thinkthen_reading(batch=>'bad'))",
+                              "SELECT count(*) = 0 FROM thinkthen_decide_details('@unread-question.json',NULL::thinkthen_record[],thinkthen_reading(batch=>'bad'))"]:
                 assert query(statement) == 't'
             for value in ('ARRAY[]::thinkthen_image_value[]', 'ARRAY[NULL]::thinkthen_image_value[]',
                           "ARRAY[ROW('image/png','private-image-evidence'::bytea,NULL)::thinkthen_image_value]"):
-                failed = json.loads(query("SELECT thinkthen_decide_images_complete('Is red visible?'," + value + ')'))
+                failed = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[thinkthen_record(images=>" + value + ')]) r').splitlines()], 'decide')
                 assert failed['native']['error']['kind'] == 'usage' and 'private-image-evidence' not in json.dumps(failed), failed
             assert backend.count() == 1
-            bad_text = json.loads(query("SELECT thinkthen_decide_complete('Is red visible?','bad')"))
+            bad_text = native([json.loads(row) for row in query("SELECT to_jsonb(r) FROM thinkthen_decide_details('Is red visible?',ARRAY[NULL]::thinkthen_record[]) r").splitlines()], 'decide')
             assert bad_text['native']['error']['kind'] == 'usage', bad_text
             first = complete(None)['native']
             cached = complete(None)['native']
@@ -78,7 +79,7 @@ def main():
             assert failed['native']['error']['kind'] == 'backend' and failed['native']['facts']['requests_sent'] == 1, failed
             assert 'private-backend-response' not in json.dumps(failed) and 'sk-sql-image-loopback' not in json.dumps(failed)
             assert backend.count() == 4
-            print('postgresql: native complete image order, replay, NULL, malformed input and secret failure pass')
+            print('postgresql: native typed image order, replay, NULL, malformed input and secret failure pass')
         finally:
             host.stop()
 

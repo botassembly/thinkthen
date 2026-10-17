@@ -93,6 +93,10 @@ fn input(
     Ok((function.host_input(items, scalar), column))
 }
 fn item(value: &Robj) -> Crossed<thinkthen::RequestItem> {
+    if flag(value, "item") {
+        return thinkthen::RequestItem::from_json(&super::text_of(value, "item")?)
+            .map_err(|e| crate::carry(&e));
+    }
     Ok(thinkthen::RequestItem {
         original: Some(original(value)?),
         context: None,

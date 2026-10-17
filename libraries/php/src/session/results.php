@@ -12,93 +12,97 @@ final readonly class Presence
 /** An owned PHP value; unknown members remain available without affecting truth. */
 class Node
 {
-    public function __construct(private readonly \stdClass $raw, private readonly array $values,
-        private readonly ?string $wireJson = null) {}
-    public function has(string $name): bool { return property_exists($this->raw, $name); }
+    public function __construct(private readonly array $values) {}
+    public function has(string $name): bool { return array_key_exists($name, $this->values); }
     public function field(string $name): Presence
     {
         $present = $this->has($name);
-        $value = array_key_exists($name, $this->values) ? $this->values[$name] : ($present ? $this->raw->$name : null);
+        $value = $present ? $this->values[$name] : null;
         return new Presence($present, $value);
     }
     public function __get(string $name): mixed { return $this->field($name)->value; }
-    public function toObject(): \stdClass { return unserialize(serialize($this->raw)); }
-    /** The complete native packet bytes, including numbers outside PHP's integer range. */
-    public function nativeJson(): ?string { return $this->wireJson; }
     public function __debugInfo(): array { return ['type' => static::class]; }
 }
 
-/** Schema-directed conversion; field inventories come only from the generator. */
-final class Decoder
+require_once __DIR__.'/results_generated.php';
+
+/**
+ * @template T
+ * @template P of float|array|null
+ */
+final readonly class Result
 {
-    private static ?array $graph = null;
-    public static function packet(string $json): Node
-    {
-        self::$graph ??= json_decode(file_get_contents(__DIR__.'/graph_generated.json'), true, flags: JSON_THROW_ON_ERROR);
-        return self::convert(json_decode($json, flags: JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING),
-            ['$ref' => '#/$defs/completesessionPacket'], $json);
-    }
-    private static function matches(\stdClass $value, array $tag): bool
-    {
-        [$mode, $field, $wanted] = $tag;
-        return match ($mode) {
-            'literal' => property_exists($value, $field) && $value->$field === $wanted,
-            'literals' => self::literals($value, $wanted),
-            'member' => property_exists($value, $field),
-            'structure' => self::structure($value, $wanted),
-            default => throw new \LogicException('unknown generated discriminator'),
-        };
-    }
-    private static function literals(\stdClass $value, array $wanted): bool
-    {
-        foreach ($wanted as $field => $literal) if (!property_exists($value, $field) || $value->$field !== $literal) return false;
-        return true;
-    }
-    private static function structure(\stdClass $value, array $wanted): bool
-    {
-        foreach ($wanted['required'] as $field) if (!property_exists($value, $field)) return false;
-        foreach ($wanted['excluded'] as $field) if (property_exists($value, $field)) return false;
-        return true;
-    }
-    private static function convert(mixed $value, array|bool $schema, ?string $wireJson = null): mixed
-    {
-        if ($value === null || $schema === true) return $value;
-        if (isset($schema['$ref'])) $schema = self::$graph[substr($schema['$ref'], strlen('#/$defs/'))];
-        if (is_array($schema['type'] ?? null)) {
-            $kinds = array_values(array_filter($schema['type'], fn($kind) => $kind !== 'null'));
-            if (count($kinds) === 1) $schema['type'] = $kinds[0];
-        }
-        if (isset($schema['anyOf'])) {
-            $nonnull = array_values(array_filter($schema['anyOf'], fn($s) => is_array($s) && ($s['type'] ?? '') !== 'null'));
-            if (count($nonnull) === 1) return self::convert($value, $nonnull[0]);
-        }
-        if (isset($schema['variants'])) {
-            foreach ($schema['variants'] as [$child, $tag]) {
-                if ($value instanceof \stdClass && self::matches($value, $tag)) return self::convert($value, self::$graph[$child], $wireJson);
-            }
-            throw new \LogicException('native result does not match its generated variants');
-        }
-        if (isset($schema['class'])) {
-            $fields = [];
-            foreach ($schema['properties'] as $name => $field) {
-                if (property_exists($value, $name)) $fields[$name] = self::convert($value->$name, $field);
-            }
-            $class = __NAMESPACE__.'\\'.$schema['class'];
-            return new $class($value, $fields, $wireJson);
-        }
-        if (($schema['type'] ?? null) === 'array') return array_map(fn($item) => self::convert($item, $schema['items']), $value);
-        if (($schema['type'] ?? null) === 'object' && is_array($schema['additionalProperties'] ?? null)) {
-            $result = new \stdClass();
-            foreach ($value as $name => $item) $result->$name = self::convert($item, $schema['additionalProperties']);
-            return $result;
-        }
-        return $value;
-    }
+    /**
+     * @param T $value
+     * @param P $probability
+     * @param list<Node> $results
+     */
+    public function __construct(public mixed $value, public float|array|null $probability,
+        public array $results, public Facts $facts, public array $packets = []) {}
+    public function __debugInfo(): array { return ['type' => self::class]; }
 }
 
-final readonly class Completed
+namespace ThinkThen\Internal;
+
+/** Project owned receipts once; native admission and settlement stay authoritative. */
+final class ResultBuilder
 {
-    /** @param list<Node> $results */
-    public function __construct(public array $results, public Node $terminal, public array $packets = []) {}
-    public function facts(): ?Node { return $this->terminal->facts; }
+    public static function complete(string $function, bool $single, array $rows,
+        \ThinkThen\Results\SessionPacketTerminal $terminal, array $packets): \ThinkThen\Results\Result
+    {
+        $shape = CallShapes::VALUES[$function];
+        $values = []; $probabilities = [];
+        $resolved = self::resolved($shape, $packets);
+        foreach ($rows as $row) {
+            $values[] = $row->{$shape['value_projection']};
+            $probabilities[] = self::probability($function, $shape, $row, $resolved);
+        }
+        $scalar = $shape['call_shape'] === 'aggregate' || ($shape['call_shape'] === 'input' && $single);
+        return new \ThinkThen\Results\Result($scalar ? ($values[0] ?? null) : $values,
+            $shape['probability_mode'] === 'null' ? null : ($scalar ? ($probabilities[0] ?? null) : $probabilities),
+            $rows, $terminal->facts, $packets);
+    }
+    private static function read(mixed $value, array $path): mixed
+    {
+        foreach ($path as $field) $value = $value?->$field;
+        return $value;
+    }
+    private static function resolved(array $shape, array $packets): array
+    {
+        if (!isset($shape['resolution'])) return [];
+        $route = $shape['resolution']; $resolved = [];
+        foreach ($packets as $packet) {
+            foreach ($route['guards'] as [$path, $literal]) {
+                if (self::read($packet, $path) !== $literal) continue 2;
+            }
+            $resolved[self::read($packet, $route['index_path'])] = self::read($packet, $route['path']) !== null;
+        }
+        return $resolved;
+    }
+    private static function probability(string $function, array $shape, \ThinkThen\Results\Node $row, array $resolved): float|array|null
+    {
+        if ($shape['probability_mode'] === 'null') return null;
+        if (isset($shape['resolution']) && !($resolved[$row->index] ?? false)) return null;
+        if (isset($shape['selection_path']) && self::read($row, $shape['selection_path']) === null) return null;
+        if ($shape['probability_mode'] === 'yes') return (float)self::read($row, $shape['probability_path']);
+        if ($shape['probability_mode'] === 'picked') {
+            $pick = self::read($row, $shape['pick_path']);
+            $odds = self::read($row, $shape['probability_path']);
+            return isset($odds->$pick) ? (float)$odds->$pick : null;
+        }
+        if ($function === 'rank') return $row->answer instanceof \ThinkThen\Results\AnswerYesNo ? (float)$row->answer->probability : null;
+        if ($function === 'relate') return array_map(fn($edge) => (float)$edge->probability, $row->value);
+        if ($row->value instanceof \ThinkThen\Results\RecognizeModeProposals) {
+            return array_map(fn($proposal) => (float)$proposal->probability, $row->value->proposals);
+        }
+        return array_map(function($entity) use ($row) {
+            foreach ($row->answer->proposals as $proposal) {
+                if ($proposal->kept && $proposal->kind === $entity->kind
+                    && $proposal->selected->start === $entity->start && $proposal->selected->end === $entity->end) {
+                    return (float)$proposal->span_probability;
+                }
+            }
+            throw new \ThinkThen\DefectFailure('recognized entity has no kept proposal');
+        }, $row->value->entities);
+    }
 }

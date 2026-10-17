@@ -158,6 +158,7 @@ impl Serialize for Pointer {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: JSON pointer escapes, list indices and malformed paths need direct parser/property boundaries.
     use super::{Pointer, PointerError};
     use crate::core::json::Json;
     use proptest::collection::vec;

@@ -11,7 +11,7 @@ use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, guarded};
 use crate::public::question::{ChooseQuestion, Kind, LoadedQuestion, Question, TagQuestion};
-use crate::public::results::{Answer, Call, Counters, Details};
+use crate::public::results::Counters;
 use crate::public::settings::EngineBuilder;
 
 /// One judgment and the question keys behind it.
@@ -59,14 +59,14 @@ pub(crate) trait Sealed {
     fn question(&self) -> &Question;
 }
 
-/// A question `decide` and `decide_many` accept.
+/// A question `decide` accepts.
 #[expect(
     private_bounds,
     reason = "the sealed bound keeps the question kinds closed"
 )]
 pub trait DecisionQuestion: Sealed {}
 
-/// A question `details` accepts.
+/// A primitive question the planning methods accept.
 #[expect(
     private_bounds,
     reason = "the sealed bound keeps the question kinds closed"
@@ -127,8 +127,6 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
 pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
     Error::usage("evidence is text, not white space")
 }
-
-pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
 
 impl Engine {
     /// Check a zero-based record ordinal against this engine's call admission cap.
@@ -247,7 +245,7 @@ impl Engine {
         &self,
         question: &Q,
         evidence: &str,
-    ) -> Result<Call<Answer>, Error> {
+    ) -> Result<crate::DecisionCall, Error> {
         self.decide_with(question, evidence, CallOptions::new())
     }
 
@@ -261,12 +259,21 @@ impl Engine {
         question: &Q,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Answer>, Error> {
-        self.decide_input_with(
+    ) -> Result<crate::DecisionCall, Error> {
+        self.decide_input_complete_with(
             question,
             &super::QuestionInput::Text(evidence.to_owned()),
             options,
-        )
+        )?
+        .project(|result| {
+            let probability = result.probability();
+            let value = match result.value() {
+                crate::Answer::Yes => Some(true),
+                crate::Answer::No => Some(false),
+                crate::Answer::Unsure => None,
+            };
+            Ok((value, vec![result], probability))
+        })
     }
 
     /// Pick one option of `C`, or `None` when the answer is not sure.
@@ -278,7 +285,7 @@ impl Engine {
         &self,
         question: &ChooseQuestion<C>,
         evidence: &str,
-    ) -> Result<Call<Option<C>>, Error> {
+    ) -> Result<crate::ChoiceCall<C>, Error> {
         self.choose_with(question, evidence, CallOptions::new())
     }
 
@@ -292,12 +299,26 @@ impl Engine {
         question: &ChooseQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Option<C>>, Error> {
-        self.choose_input_with(
-            question,
+    ) -> Result<crate::ChoiceCall<C>, Error> {
+        self.atomic_complete(
+            super::InputFunction::Choose,
+            question.question(),
             &super::QuestionInput::Text(evidence.to_owned()),
             options,
-        )
+        )?
+        .try_map(super::complete::choice)?
+        .project(|result| {
+            let probability = result.probability();
+            let value = result
+                .value()
+                .map(|label| {
+                    C::from_label(label).ok_or(Error::defect(
+                        "the backend answered a label the choice does not hold",
+                    ))
+                })
+                .transpose()?;
+            Ok((value, vec![result], probability))
+        })
     }
 
     /// Place the evidence on the question's levels: 0 at the lowest, 1 at the highest.
@@ -305,7 +326,7 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of question.
-    pub fn score(&self, question: &Question, evidence: &str) -> Result<Call<f64>, Error> {
+    pub fn score(&self, question: &Question, evidence: &str) -> Result<crate::ScoreCall, Error> {
         self.score_with(question, evidence, CallOptions::new())
     }
 
@@ -319,12 +340,15 @@ impl Engine {
         question: &Question,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<f64>, Error> {
-        self.score_input_with(
+    ) -> Result<crate::ScoreCall, Error> {
+        self.atomic_complete(
+            super::InputFunction::Score,
             question,
             &super::QuestionInput::Text(evidence.to_owned()),
             options,
-        )
+        )?
+        .try_map(super::complete::score)?
+        .project(|result| Ok((result.value(), vec![result], None::<f64>)))
     }
 
     /// Every label of `C` that reached the cut, in declared order.
@@ -336,7 +360,7 @@ impl Engine {
         &self,
         question: &TagQuestion<C>,
         evidence: &str,
-    ) -> Result<Call<Vec<C>>, Error> {
+    ) -> Result<crate::TagCall<C>, Error> {
         self.tag_with(question, evidence, CallOptions::new())
     }
 
@@ -350,7 +374,7 @@ impl Engine {
         question: &TagQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<C>>, Error> {
+    ) -> Result<crate::TagCall<C>, Error> {
         self.atomic_complete(
             super::InputFunction::Tag,
             question.question(),
@@ -358,8 +382,8 @@ impl Engine {
             options,
         )?
         .try_map(super::complete::tags)?
-        .try_map(|result| {
-            result
+        .project(|result| {
+            let value = result
                 .value()
                 .iter()
                 .map(|label| {
@@ -367,39 +391,9 @@ impl Engine {
                         "the backend answered a label the choice does not hold",
                     ))
                 })
-                .collect()
+                .collect::<Result<Vec<_>, Error>>()?;
+            Ok((value, vec![result], None::<f64>))
         })
-    }
-
-    /// One judgment with its probabilities and request facts.
-    ///
-    /// # Errors
-    ///
-    /// As [`Engine::decide`], and [`Error::Usage`] for a `rank` or `find` question.
-    pub fn details<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        evidence: &str,
-    ) -> Result<Call<Details>, Error> {
-        self.details_with(question, evidence, CallOptions::new())
-    }
-
-    /// [`Engine::details`] under these controls.
-    ///
-    /// # Errors
-    ///
-    /// As [`Engine::details`].
-    pub fn details_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        evidence: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Details>, Error> {
-        self.details_input_with(
-            question,
-            &super::QuestionInput::Text(evidence.to_owned()),
-            options,
-        )
     }
 
     /// The facade engine that asks this question's model.

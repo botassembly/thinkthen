@@ -68,8 +68,8 @@ class FrameResult(PandasResult):
     on: object = None
     members: tuple = ()
 
-    def to_dict(self):
-        return {**Result.to_dict(self), 'present': list(self.present), 'columns': list(self.source.columns)}
+    def _to_dict(self):
+        return {**Result._to_dict(self), 'present': list(self.present), 'columns': list(self.source.columns)}
 
     def _column(self, rows, positions=None):
         import pandas as pd
@@ -83,7 +83,7 @@ class FrameResult(PandasResult):
             for name, value in result.value.items():
                 if hasattr(value, 'failed'):
                     if failures[at] is None: failures[at] = {}
-                    failures[at][name] = value.to_dict()
+                    failures[at][name] = value._to_dict()
                 else:
                     columns[name][at] = value
         return columns, failures
@@ -100,13 +100,13 @@ class FrameResult(PandasResult):
 
     @property
     def value(self):
-        if self.function == 'annotate' and not self.detailed:
+        if self.function == 'annotate':
             return self._annotated()
-        if self.function != 'recognize' or self.detailed:
+        if self.function != 'recognize':
             return super().value
         rows = [None] * len(self.source)
         for at, result in zip(self.positions, self.results, strict=True):
-            rows[at] = [entity.to_dict() for entity in result.value.entities]
+            rows[at] = [entity._to_dict() for entity in result.value.entities]
         out = self.source.copy()
         out['names'] = self._column(rows)
         return out
@@ -115,43 +115,54 @@ class FrameResult(PandasResult):
 @dataclass(frozen=True, repr=False, eq=False)
 class PolarsFrameResult(FrameResult):
     def _column(self, rows, positions=None):
-        import polars as pl
-        return pl.Series(str(self.on), list(rows), dtype=pl.Object)
+        from ._polars_calls import answer_column
+        return answer_column(str(self.on), rows, self.function)
+
+    @property
+    def probability(self):
+        from ._polars_calls import probability_column
+        return probability_column(self, str(self.on))
 
     def _selected(self):
         return self.source[list(self.positions), :]
 
     def __reduce__(self):
         columns = [(name, self.source[name].to_list(), self.source[name].dtype) for name in self.source.columns]
-        return (_restore, (self.results, self.terminal, self.function, self.scalar, self.detailed,
-                           columns, self.present, self.on, self.members))
+        return (_restore, (self.results, self.terminal, self.function, self.scalar,
+                           columns, self.present, self.on, self.members), {'_resolved': getattr(self, '_resolved', {})})
 
     def _annotated(self):
         import polars as pl
+        from ._polars_calls import answer_column, _dtype
+        from ._native_results import NativeFailed
         columns, failures = self._annotation_columns()
-        kinds = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))
-        marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
-        failure_type = pl.Struct({name: marker for name, _ in self.members})
-        added = [pl.Series(name, columns[name], dtype=kinds[kind]) for name, kind in self.members]
+        added = [answer_column(name, columns[name], kind) for name, kind in self.members]
+        failure_type = pl.Struct({name: _dtype([], NativeFailed._column_schema) for name, _ in self.members})
         added.append(pl.Series('failed', failures, dtype=failure_type))
         return self.source.with_columns(added)
 
     @property
     def value(self):
-        if self.function == 'annotate' and not self.detailed:
+        if self.function == 'annotate':
             return self._annotated()
-        if self.function != 'recognize' or self.detailed:
-            return PandasResult.value.fget(self)
+        if self.function != 'recognize':
+            value = PandasResult.value.fget(self)
+            if self.function not in ('rank', 'find', 'relate'): return value
+            return self._column([value] if self.function == 'find' else value)
         import polars as pl
-        rows = [dict(row=at + 1, **entity.to_dict())
-                for at, result in zip(self.positions, self.results, strict=True)
-                for entity in result.value.entities]
-        schema = dict(row=pl.Int64, text=pl.String, start=pl.Int64, end=pl.Int64,
-                      length=pl.Int64, kind=pl.String, strength=pl.Float64)
-        return pl.DataFrame(rows, schema=schema)
+        from ._polars_calls import answer_column, _dtype
+        from ._native_results import NativeEntity
+        entities = [(at + 1, entity) for at, result in zip(self.positions, self.results, strict=True)
+                    for entity in result.value.entities]
+        schema = {name: NativeEntity._column_schema[name] for name in NativeEntity._column_required}
+        column = (answer_column('names', [entity for _, entity in entities], 'recognize') if entities
+                  else pl.Series('names', [], dtype=_dtype([], schema)))
+        frame = pl.DataFrame({'row': pl.Series([at for at, _ in entities], dtype=pl.Int64), 'names': column})
+        return (frame.unnest('names').select('row', *NativeEntity._column_required, pl.exclude('row', *NativeEntity._column_required))
+                if column.dtype.base_type() == pl.Struct else frame)
 
 
-def _restore(results, terminal, function, scalar, detailed, columns, present, on, members):
+def _restore(results, terminal, function, scalar, columns, present, on, members):
     import polars as pl
     source = pl.DataFrame([pl.Series(name, values, dtype=dtype) for name, values, dtype in columns])
-    return PolarsFrameResult(results, terminal, function, scalar, detailed, source, present, on, members)
+    return PolarsFrameResult(results, terminal, function, scalar, source, present, on, members)

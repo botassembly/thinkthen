@@ -3,11 +3,7 @@
 # sure", a column in and a column out, and the six error kinds as R
 # conditions with the retry signal.
 
-# Every call runs through here (ADR 0042). The guarded check runs before the
-# crossing is forced and after it returns, and the Rust half checks before
-# its worker starts and at each 100 ms tick. A user's options(error = ...)
-# hook is held aside while the checks run and restored before anything is
-# raised, because R consults the hook at signal time (R7-13).
+# Guard native session waits and restore R error hooks before raising.
 .tt_call <- function(expr) {
   had_hook <- getOption("error")
   if (!is.null(had_hook)) {
@@ -36,9 +32,7 @@
   value
 }
 
-# Claim before evaluating any asking argument or the first guarded interrupt
-# check. An early exit settles only a still-claimed receipt; a running worker
-# owns final settlement after its already-sent work ends.
+# Claim before evaluating asking arguments; native sessions own final settlement.
 .tt_asking <- function(completion, expr) {
   if (!is.null(completion)) {
     .tt_native(tt_completion_claim(completion))
@@ -56,8 +50,7 @@
   })
 }
 
-# R catches names its formal arguments do not use. Every caught name is a
-# usage error, including the old deadline spelling and core-only settings.
+# R rejects unknown formal arguments.
 .tt_unknown <- function(...) {
   names <- names(list(...))
   if ("deadline" %in% names) .tt_usage("deadline was renamed deadline_ms, in milliseconds")
@@ -65,7 +58,7 @@
 }
 
 tt_completion <- function() tt_completion_new()
-tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completion_read_native(handle)))
+tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle))
 
 .tt_usage <- function(message) .tt_call(tt_error_native("usage", message))
 .tt_local <- function(message) .tt_call(tt_error_native("local", message))
@@ -105,21 +98,8 @@ tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completi
 }
 
 
-tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
+tt_usage <- function() .tt_call(tt_usage_counters())
 
 # Live durability for the selected native engine; no facts-snapshot timestamp.
 tt_usage_persistence <- function() .tt_call(tt_usage_persistence_native())
 tt_finish_usage_status <- function() .tt_call(tt_finish_usage_status_native())
-
-
-tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
-                      max_requests_total = NULL, max_request_bytes = NULL,
-                      cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL,
-                      ..., backend = NULL, refresh_cache = FALSE) {
-  if (length(list(...))) .tt_unknown(...)
-  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
-                        max_request_bytes, cache, timeout, max_retries, record,
-                        replay, profile, batch, backend, refresh_cache))
-  invisible(NULL)
-}

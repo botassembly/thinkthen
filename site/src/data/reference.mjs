@@ -72,7 +72,7 @@ export const FRAMING_DEFAULT = {
 export const BARE = {
   decide: '`true`, `false`, or `null`.',
   choose: 'A JSON string, or `null`. `--raw` prints the bare label.',
-  tag: 'A JSON array of every label that reaches the bar. An empty array `[]` is a good answer.',
+  tag: 'A JSON array of every label that reaches the threshold. An empty array `[]` is a good answer.',
   score: 'A JSON number, from 0 to the number of levels minus one.',
   filter: 'Each kept line or JSONL record as it arrived, in input order. A kept table row prints as compact JSON.',
   rank: 'Every line or record again, most likely yes first. An exact tie keeps input order. With a saved `score` question, `rank @FILE` puts the highest score first.',
@@ -151,12 +151,11 @@ export const QUESTION_SETS_SEE = {
   '1-plan': 'The plan shows each question\'s pointers. urgent reads both fields as one object, keyed subject and body. team reads only the body.',
 };
 
-// Captions for the recording page, keyed by script name. Its examples sit
-// in examples/reference/answer-cache/, because check-samples skips any folder
+// Captions for the replay and plan pages, keyed by script name. Its examples sit
+// in examples/start/answer-cache/, because check-samples skips any folder
 // named recording.
 export const RECORDING_SEE = {
   '1-plan': 'The plan ends with a summary line: one record, one request, and the size of what it would send.',
-  '2-dry-run': 'The old flag is refused at exit 2, and the message names the new one.',
   '3-miss': 'The folder holds one answer, and this question is not it. The run exits 5 and names the missing key.',
   '4-facts': 'The answer came from a replay folder. The facts line counts one record, no request sent and no cache answer. Seconds change on every run. jq drops them.',
 };

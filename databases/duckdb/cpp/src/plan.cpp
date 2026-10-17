@@ -34,7 +34,7 @@ struct PlanBind : FunctionData {
 	}
 };
 
-unique_ptr<FunctionData> Bind(ClientContext &context, ScalarFunction &, vector<unique_ptr<Expression>> &) {
+unique_ptr<FunctionData> Bind(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	return make_uniq<PlanBind>(context.shared_from_this());
 }
@@ -77,7 +77,7 @@ Value Decode(const ThinkThenReply &reply) {
 }
 
 void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PlanBind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PlanBind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<std::optional<Input>> calls(args.size());
@@ -88,7 +88,7 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || keyed.IsNull()) { continue; }
 		live = true;
 		const auto type = args.data[3].GetValue(row).GetValue<string>();
-		if (type != "\"NULL\"" && type != "VARCHAR") {
+		if (!PortableSettingsType(type)) {
 			throw OrdinaryError("thinkthen usage: plan settings are one JSON text object");
 		}
 		auto setting = args.data[2].GetValue(row);
@@ -119,12 +119,12 @@ void RegisterPlan(ExtensionLoader &loader) {
 	const string purpose = "Prepare request counts, token estimates and the first body without sending.";
 	ScalarFunction function("thinkthen_native_plan", {LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                                                LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                        PlanType(), Plan, Bind);
-	function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                        PlanType(), Plan, ThinkThenBindScalar<Bind>);
+	ThinkThenSpecialNulls(function);
 	function.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, function, purpose);
-	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_plan(question, keyed_json, settings := NULL) AS "
-	                              "thinkthen_native_plan(question, keyed_json, CAST(settings AS VARCHAR), typeof(settings))", purpose);
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_plan(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") AS "
+	                              "thinkthen_native_plan(" + PortableJSONArgument("question") + ", " + PortableJSONArgument("keyed_json") + ", " + PortableOptions("settings", "question IS NULL OR keyed_json IS NULL") + ", typeof(settings))", purpose);
 }
 
 } // namespace duckdb

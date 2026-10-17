@@ -128,7 +128,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--extension", required=True, type=Path)
     extension = parser.parse_args().extension.resolve(strict=True)
-    held(extension, "SELECT thinkthen_details('Is it a refund?', 'one held text')")
+    held(extension, "SELECT thinkthen_decide_details('Is it a refund?', 'one held text')")
     held(extension, "SELECT thinkthen_choose('Which team?', 'one held text', ['billing', 'shipping'])")
     held(extension, "SELECT thinkthen_recognize('one held text', ['person'])")
     late(extension)

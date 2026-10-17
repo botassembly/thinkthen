@@ -42,15 +42,6 @@ struct Decide<'a> {
     instructions: &'a str,
 }
 
-#[derive(Serialize)]
-struct Recording<'a> {
-    schema: &'static str,
-    adapter: &'static str,
-    url: &'a str,
-    request: Box<RawValue>,
-    response: Box<RawValue>,
-}
-
 #[allow(
     clippy::expect_used,
     reason = "an infallible test fixture encoder should stop the test if its schema changes"
@@ -104,45 +95,6 @@ pub(crate) fn reported_keys(url: &str, body: &[u8], reported: &str) -> Vec<Strin
     shared_keys::keys(url, body, reported).expect("v2 question keys")
 }
 
-/// Unversioned saved rows retain the original LF-framed v1 identity.
-pub(crate) fn legacy_keys(url: &str, body: &[u8]) -> Vec<String> {
-    #[derive(serde::Deserialize)]
-    struct Parts<'a> {
-        #[serde(borrow)]
-        state: &'a RawValue,
-        #[serde(borrow)]
-        model: &'a RawValue,
-        #[serde(borrow)]
-        questions: std::collections::BTreeMap<String, &'a RawValue>,
-    }
-    let parts: Parts<'_> = serde_json::from_slice(body).expect("a request body");
-    let mut questions: Vec<_> = parts
-        .questions
-        .into_iter()
-        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
-        .collect();
-    questions.sort_by_key(|(place, _)| *place);
-    questions
-        .into_iter()
-        .map(|(_, question)| {
-            let mut digest = Sha256::new();
-            let parts = [
-                "systemone",
-                url,
-                parts.model.get(),
-                parts.state.get(),
-                question.get(),
-            ];
-            digest.update(parts.join("\n").as_bytes());
-            digest
-                .finalize()
-                .iter()
-                .map(|byte| format!("{byte:02x}"))
-                .collect()
-        })
-        .collect()
-}
-
 /// Every answer a live store in `folder` holds, as its fixture lines read,
 /// sorted by key. `cache convert` reads a copy, so the folder stays as it was.
 pub(crate) fn stored(folder: &Path) -> io::Result<Vec<serde_json::Value>> {
@@ -182,6 +134,28 @@ pub(crate) fn plant_fixture(
     answers: &[&str],
     usage: Option<(u64, u64)>,
 ) -> io::Result<Vec<String>> {
+    let parsed: serde_json::Value = serde_json::from_slice(body).map_err(io::Error::other)?;
+    plant_fixture_reported(
+        folder,
+        url,
+        body,
+        answers,
+        usage.map(|(input, output)| (Some(input), Some(output))),
+        parsed
+            .get("model")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| io::Error::other("model"))?,
+    )
+}
+
+fn plant_fixture_reported(
+    folder: &Path,
+    url: &str,
+    body: &[u8],
+    answers: &[&str],
+    usage: Option<(Option<u64>, Option<u64>)>,
+    reported: &str,
+) -> io::Result<Vec<String>> {
     #[derive(serde::Deserialize)]
     struct Parts<'a> {
         #[serde(borrow)]
@@ -197,7 +171,7 @@ pub(crate) fn plant_fixture(
         .map(|(name, question)| (name[1..].parse::<usize>().unwrap_or(0), question.get()))
         .collect();
     questions.sort_by_key(|(place, _)| *place);
-    let keys = legacy_keys(url, body);
+    let keys = reported_keys(url, body, reported);
     let state = parts.state.get();
     let state_sha256: String = Sha256::digest(state.as_bytes())
         .iter()
@@ -213,15 +187,18 @@ pub(crate) fn plant_fixture(
         .map(|(place, ((key, (_, question)), answer))| {
             let place = u64::try_from(place).unwrap_or(0);
             let line = serde_json::json!({
+                "key_version": 2,
+                "adapter": "systemone",
+                "observation_id": key,
                 "key": key,
                 "url": url,
                 "model": parts.model,
                 "state": state_sha256,
                 "question": question,
                 "answer": answer,
-                "answered_by": parts.model,
-                "input_tokens": usage.map(|(input, _)| share(input, place)),
-                "output_tokens": usage.map(|(_, output)| share(output, place)),
+                "answered_by": reported,
+                "input_tokens": usage.and_then(|(input, _)| input.map(|input| share(input, place))),
+                "output_tokens": usage.and_then(|(_, output)| output.map(|output| share(output, place))),
                 "taken_at": 0,
                 "origin": "live",
             });
@@ -246,19 +223,38 @@ pub(crate) fn plant_recording(
     request: &[u8],
     response: &str,
 ) -> Option<String> {
-    let name = format!("{}.json", digest(url, request));
-    let entry = Recording {
-        schema: "thinkthen.recording/1",
-        adapter: "systemone",
+    #[derive(serde::Deserialize)]
+    struct Response<'a> {
+        model: String,
+        #[serde(borrow)]
+        answers: std::collections::BTreeMap<String, &'a RawValue>,
+        usage: Option<Usage>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Usage {
+        input_tokens: Option<u64>,
+        output_tokens: Option<u64>,
+    }
+    let response: Response<'_> = serde_json::from_str(response).ok()?;
+    let mut answers: Vec<_> = response
+        .answers
+        .iter()
+        .map(|(name, answer)| (name[1..].parse::<usize>().ok(), answer.get()))
+        .collect();
+    answers.sort_by_key(|(at, _)| *at);
+    let answers: Vec<_> = answers.into_iter().map(|(_, answer)| answer).collect();
+    plant_fixture_reported(
+        folder,
         url,
-        request: RawValue::from_string(String::from_utf8(request.to_vec()).ok()?).ok()?,
-        response: RawValue::from_string(response.to_owned()).ok()?,
-    };
-    let mut written = serde_json::to_string_pretty(&entry).ok()?;
-    written.push('\n');
-    fs::create_dir_all(folder).ok()?;
-    fs::write(folder.join(&name), written).ok()?;
-    Some(name)
+        request,
+        &answers,
+        response
+            .usage
+            .map(|usage| (usage.input_tokens, usage.output_tokens)),
+        &response.model,
+    )
+    .ok()?;
+    Some("thinkthen.jsonl".to_owned())
 }
 
 /// Run `decide` against one URL, with no environment but what the case names.

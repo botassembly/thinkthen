@@ -8,11 +8,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseSettings, plain, SURFACES, ABSENT, LEFT_OUT } from '../src/lib/settings-table.mjs';
+import { trackedFiles } from './binding-samples.mjs';
 import { backends } from '../src/lib/backends-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const spec = fs.readFileSync(path.join(site, '..', 'specification', 'settings.md'), 'utf8');
-const page = fs.readFileSync(path.join(site, 'dist', 'install', 'settings', 'index.html'), 'utf8');
+const page = fs.readFileSync(path.join(site, 'dist', 'start', 'settings', 'index.html'), 'utf8');
 const parsed = parseSettings(spec);
 const { precedence } = parsed;
 const rows = parsed.rows.filter((r) => !LEFT_OUT.has(r.name));
@@ -87,7 +88,7 @@ const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =
   const p = path.join(dir, e.name);
   return e.isDirectory() ? walk(p) : [p];
 });
-for (const file of walk(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.endsWith('settings-table.mjs'))) {
+for (const file of trackedFiles(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.endsWith('settings-table.mjs'))) {
   const lines = fs.readFileSync(file, 'utf8').split('\n');
   lines.forEach((line, i) => {
     for (const m of line.matchAll(TYPED)) {
@@ -113,7 +114,7 @@ for (const file of walkHtml(path.join(site, 'dist'))) {
 
 // The Backends overview must show every built-in backend as
 // specification/backends.md holds it: name, address, key variables, model.
-const overview = fs.readFileSync(path.join(site, 'dist', 'install', 'backends', 'index.html'), 'utf8');
+const overview = fs.readFileSync(path.join(site, 'dist', 'models', 'index.html'), 'utf8');
 const shown = [...overview.matchAll(/<tr[^>]*data-backend="([^"]+)"[^>]*>([\s\S]*?)<\/tr>/g)];
 const builtIns = backends();
 if (shown.length !== builtIns.length) problems.push(`the Backends overview shows ${shown.length} backends and specification/backends.md holds ${builtIns.length}`);

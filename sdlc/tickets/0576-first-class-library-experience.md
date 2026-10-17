@@ -6,6 +6,162 @@ Milestone: 0.2
 
 Depends on: 0562, 0568, 0574
 
+Reviews: revision 243002f, reject
+
+Reviews: revision 340f966, accept
+
+Reviews: revision bd54638, accept
+
+Reviews: revision f6f4f90, accept
+
+Reviews: revision d84408e, accept
+
+Reviews: revision 721f505, reject
+
+Reviews: revision 87d2896, accept
+
+Reviews: revision c8805a2, accept
+
+Reviews: revision fac3992, accept
+
+Reviews: revision a82cc47, reject
+
+Reviews: revision 6bc15d6, accept
+
+Reviews: revision e1fd5b9, accept
+
+Reviews: revision 3b3d67b, reject
+
+Reviews: revision 1d312d5, accept
+
+Reviews: revision 43923ee, reject
+
+Reviews: revision fab1322, accept
+
+Reviews: revision 394de24, reject
+
+Reviews: revision ed62acd, accept
+
+Reviews: revision 0301bb6, accept
+
+Reviews: revision b0042d9, accept
+
+Reviews: revision cd5ccdb, accept
+
+Reviews: revision 5f9680d, accept
+
+Reviews: revision c63b1fe, accept
+
+Reviews: revision 6f8962f, reject
+
+Reviews: revision 1edec6e, accept
+
+Reviews: revision 17d3301, reject
+
+Reviews: revision 9d0b261, accept
+
+Reviews: revision 0296829, accept
+
+Reviews: revision d6f05b1, accept
+
+Reviews: revision 60eaaef, reject
+
+Reviews: revision 35f104f, accept
+
+Reviews: revision 09622f6, reject
+
+Reviews: revision 09622f6, accept
+
+Reviews: revision 1890659, accept
+
+Reviews: revision 470ba03, reject
+
+Reviews: revision bb1ce71, accept
+
+Reviews: revision 68866c2, reject
+
+Reviews: revision 72812a2, reject
+
+Reviews: revision c89a5ee, reject
+
+Reviews: revision db407b3, accept
+
+Reviews: revision 4001d49, accept
+
+Reviews: revision 281cba6, accept
+
+Reviews: revision 16ae7ce, accept
+
+Reviews: revision e363ee5, reject
+
+Reviews: revision 10020da, accept
+
+Reviews: revision c451630, accept
+
+Reviews: revision 3dfe085, accept
+
+Reviews: revision dbb86bc, accept
+
+Reviews: revision f64a780, accept
+
+Reviews: revision b63c597, reject
+
+Reviews: revision 7df92cb, accept
+
+Reviews: revision 7f445b1, accept
+
+Reviews: revision f21ad8a, accept
+
+Reviews: revision a5d7ebf, accept
+
+Reviews: revision e5892dd, accept
+
+Reviews: revision a47be8c, reject
+
+Reviews: revision 1980ac6, accept
+
+Reviews: revision b5ab4ea, reject
+
+Reviews: revision c77da7c, accept
+
+Reviews: revision ec08393, accept
+
+Reviews: revision 02621bc, accept
+
+Reviews: revision 9105d64, accept
+
+Reviews: revision ad2c361, accept
+
+Reviews: revision d705dfc, accept
+
+Reviews: revision 1423089, accept
+
+Reviews: revision 15d416c, reject
+
+Reviews: revision d8d1108, accept
+
+Reviews: revision 2ee2a3e, reject
+
+Reviews: revision da14cdf, reject
+
+Reviews: revision ac54e24, reject
+
+Reviews: revision 47501bc, reject
+
+Reviews: revision cddc589, reject
+
+Reviews: revision af1a102, reject
+
+Reviews: revision f0b0422, reject
+
+Reviews: revision 1a166b0, accept
+
+Reviews: revision 8cfc15a, accept
+
+Reviews: revision 164b2ca, accept
+
+Reviews: revision 5ca7f35, accept
+
 ## Outcome
 
 On the 0.2 candidate, a fresh read-only grader gives every language library, database extension and the MCP server B or better on the seven-point library rubric, and no public API exposes transport JSON, schema-path names or raw C layouts.
@@ -49,3 +205,11 @@ On the 0.2 candidate, a fresh read-only grader gives every language library, dat
 The 0581 result shape, the 0582 details routes outside SQLite and the 0580 Polars shape stay with those tickets. Generated names stay with 0562.
 
 ## Progress
+
+- 2026-10-13 started
+- 2026-10-13 next: Merged the reviewed native helper slice as 8b2a47981a416a324514920e8b72197a89b263e5 after installed C ownership, all 42 shared cases, fourteen ASan door checks and unchanged Ada prerequisite passed; continue the language slices and combined checkpoint.
+- 2026-10-14 next: Merged the freshly accepted located-feed file selection repair at 959ed3c7 with 40 request and 39 session checks passing; continue the database and language migrations on the combined branch.
+- 2026-10-13 next: Merged reviewed Zig native helpers and strengthened find receipt as 1d9fb9ccccb047b8a3d1717fd959fde8831c05ab with installed ownership and all forty-two routine cases passing; continue remaining language quality work.
+- 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.
+- 2026-10-14 next: Merged the accepted B+ PostgreSQL typed family at d6145fa84 with obsolete exports removed, unchanged accepted source, 225 retained parity passes and focused rebuilt native checks passing; continue remaining libraries and the candidate ceiling reconciliation.
+- 2026-10-14 next: Merged the freshly accepted Objective-C library at 038586e17 with unchanged reviewed source, passing source gates and retained exact-revision Mac installed checks; finish remaining library reviews and shared candidate proof.

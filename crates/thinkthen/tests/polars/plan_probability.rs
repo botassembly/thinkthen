@@ -5,7 +5,7 @@ use conformance_backend::{Canned, Listener};
 use thinkthen::{Description, PolarsCallOptions};
 
 #[test]
-fn probability_frame_keeps_value_and_probability_in_one_call_and_refuses_other_kinds() {
+fn column_keeps_value_and_probability_in_one_call() {
     const DECIDE: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.8}}}"#;
     const CHOOSE: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","probabilities":{"billing":0.9,"outage":0.1}}}}"#;
     let listener = Listener::answering(|body| {
@@ -24,7 +24,7 @@ fn probability_frame_keeps_value_and_probability_in_one_call_and_refuses_other_k
     assert_eq!((plan.records(), plan.requests()), (1, 1));
     assert_eq!(listener.count(), 0, "a frame plan sends nothing");
     let decided = engine
-        .probability_frame(&decide(), &text, CallOptions::new())
+        .column_with(&decide(), &text, PolarsCallOptions::new())
         .expect("decide");
     assert_eq!(
         decided
@@ -55,7 +55,7 @@ fn probability_frame_keeps_value_and_probability_in_one_call_and_refuses_other_k
         .build()
         .expect("choose");
     let chosen = engine
-        .probability_frame(&choose, &text, CallOptions::new())
+        .column_with(&choose, &text, PolarsCallOptions::new())
         .expect("choose");
     assert_eq!(
         chosen
@@ -91,7 +91,7 @@ fn nullable_choose_probability(engine: &thinkthen::Engine, choose: &Question) {
         [Some("Refund me."), None, Some("Refund me.")],
     );
     let duplicated = engine
-        .probability_frame(choose, &nullable, CallOptions::new())
+        .column_with(choose, &nullable, PolarsCallOptions::new())
         .expect("nullable choose");
     assert_eq!(
         duplicated
@@ -124,7 +124,7 @@ fn nullable_choose_probability(engine: &thinkthen::Engine, choose: &Question) {
 }
 
 #[test]
-fn call_level_meanings_change_the_body_and_score_tag_refuse_probability() {
+fn call_level_meanings_change_the_body() {
     const DECIDE: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.8}}}"#;
     let listener = Listener::answering(|_| Canned::ok(DECIDE)).expect("listener");
     let engine = common::engine(listener.base());
@@ -138,8 +138,7 @@ fn call_level_meanings_change_the_body_and_score_tag_refuse_probability() {
             PolarsCallOptions::new()
                 .threshold("0.9")
                 .true_meaning(&yes)
-                .false_meaning(&no)
-                .probability(true),
+                .false_meaning(&no),
         )
         .expect("call-level settings");
     assert_eq!(
@@ -166,23 +165,6 @@ fn call_level_meanings_change_the_body_and_score_tag_refuse_probability() {
     let body = String::from_utf8(last.body).expect("request UTF-8");
     assert!(body.contains(r#""criteria":{"true":"The writer requests money back.","false":"The writer asks for something else."}"#), "{body}");
     assert_eq!(listener.count(), 1);
-    let tag = Question::tag_labels("Which tags?")
-        .expect("tag")
-        .label("billing", None)
-        .expect("label")
-        .build()
-        .expect("tag question");
-    for question in [&score(), &tag] {
-        let error = engine
-            .probability_frame(question, &text, CallOptions::new())
-            .expect_err("no selected probability");
-        assert_eq!(error.kind(), ErrorKind::Usage);
-    }
-    assert_eq!(
-        listener.count(),
-        1,
-        "score and tag were refused before a send"
-    );
 }
 
 #[test]
@@ -200,7 +182,7 @@ fn a_null_middle_row_keeps_its_place_without_becoming_a_question() {
     assert_eq!((plan.records(), plan.requests()), (2, 2));
     assert_eq!(listener.count(), 0);
     let out = engine
-        .probability_frame(&decide(), &column, CallOptions::new())
+        .column_with(&decide(), &column, PolarsCallOptions::new())
         .expect("frame");
     let values = out
         .value()

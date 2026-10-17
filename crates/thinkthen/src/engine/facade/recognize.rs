@@ -58,6 +58,11 @@ fn asked_stages(asked: &[Asked]) -> impl Iterator<Item = &'static str> + '_ {
 }
 
 impl Engine {
+    /// Only ordinary answer caching can reuse a concurrent recognition writer.
+    pub(crate) const fn reuses_recognition_answers(&self) -> bool {
+        self.storage.cache_answers && !self.storage.refresh_cache
+    }
+
     /// Admit all first-stage/profile/context boundaries before a whole input set starts.
     pub(crate) fn admit_recognition_limit(
         &self,

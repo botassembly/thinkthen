@@ -48,7 +48,7 @@ def cobol_source(package):
        move all "z" to output-text move 37 to written
        call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
           output-text written returning status-code
-       if status-code not = tt-n-cobol-overflow-constant or written not = 37
+       if status-code not = tt-n-cobol-overflow-k or written not = 37
           or output-text not = all "z" move 41 to return-code goback end-if
        move 8192 to v-len of tt-n-complete-utf8-v1
        call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
@@ -60,36 +60,36 @@ def cobol_source(package):
     end-if''')
     source = source.replace('call "thinkthen_engine_new" returning engine',
                             'call "thinkthen_engine_new_with" using by reference settings-text returning engine')
-    source = source.replace('    allocate tt-n-cobol-RequestCall-decide', '''    call "TT_ENGINE_USAGE_PERSISTENCE" using by value engine
+    source = source.replace('    allocate tt-n-cobol-RequestCall', '''    call "TT_ENGINE_USAGE_PERSISTENCE" using by value engine
        by reference tt-n-complete-usage-persistence-v1 saved-advice saved-length
        returning status-code
     if status-code not = 0 move 30 to return-code goback end-if
     if mode-text = "disabled"
        if v-kind of tt-n-complete-usage-persistence-v1 not =
-          tt-n-complete-usage-persistence-disabled-v1-constant
+          tt-n-complete-usage-persistence-disabled-v1-k
           move 31 to return-code goback end-if
        call "TT_ENGINE_FINISH_USAGE_STATUS" using by value engine
           by reference tt-n-complete-usage-persistence-v1 saved-advice saved-length
           returning status-code
        if status-code not = 0 or saved-length not = 0 or
           v-kind of tt-n-complete-usage-persistence-v1 not =
-          tt-n-complete-usage-persistence-disabled-v1-constant
+          tt-n-complete-usage-persistence-disabled-v1-k
           move 32 to return-code goback end-if
        call "thinkthen_engine_free" using by value engine returning omitted
        free tt-n-complete-usage-persistence-v1
        display "DISABLED_PASS" move 0 to return-code goback
     end-if
     if v-kind of tt-n-complete-usage-persistence-v1 not =
-       tt-n-complete-usage-persistence-written-v1-constant
+       tt-n-complete-usage-persistence-written-v1-k
        move 33 to return-code goback end-if
-    allocate tt-n-cobol-RequestCall-decide''', 1)
+    allocate tt-n-cobol-RequestCall''', 1)
     close = '    call "thinkthen_engine_free" using by value engine returning omitted\n    if terminal-owner'
     source = source.replace(close, '''    call "TT_ENGINE_USAGE_PERSISTENCE" using by value engine
        by reference tt-n-complete-usage-persistence-v1 saved-advice saved-length
        returning status-code
     if status-code not = 0 or saved-length not = 0 or
        v-kind of tt-n-complete-usage-persistence-v1 not =
-       tt-n-complete-usage-persistence-pending-v1-constant
+       tt-n-complete-usage-persistence-pending-v1-k
        move 34 to return-code goback end-if
     display "PENDING"
     accept continue-text
@@ -99,10 +99,10 @@ def cobol_source(package):
     if status-code not = 0 move 35 to return-code goback end-if
     move v-kind of tt-n-complete-usage-persistence-v1 to saved-kind
     if mode-text = "written"
-       if saved-kind not = tt-n-complete-usage-persistence-written-v1-constant
+       if saved-kind not = tt-n-complete-usage-persistence-written-v1-k
           or saved-length not = 0 move 36 to return-code goback end-if
     else
-       if saved-kind not = tt-n-complete-usage-persistence-failed-v1-constant
+       if saved-kind not = tt-n-complete-usage-persistence-failed-v1-k
           or saved-advice not = "check the usage folder permissions and free space"
           move 37 to return-code goback end-if
     end-if
@@ -118,13 +118,13 @@ def cobol_source(package):
     call "TT_ENGINE_USAGE_PERSISTENCE" using by value engine
        by reference tt-n-complete-usage-persistence-v1 output-text written
        returning status-code
-    if status-code not = tt-n-eusage-constant or saved-kind not =
+    if status-code not = tt-n-eusage-k or saved-kind not =
        v-kind of tt-n-complete-usage-persistence-v1 or output-text not = saved-advice
        or written not = saved-length move 39 to return-code goback end-if
     call "TT_ENGINE_FINISH_USAGE_STATUS" using by value engine
        by reference tt-n-complete-usage-persistence-v1 output-text written
        returning status-code
-    if status-code not = tt-n-eusage-constant move 40 to return-code goback end-if
+    if status-code not = tt-n-eusage-k move 40 to return-code goback end-if
     allocate tt-n-complete-utf8-v1
     call "thinkthen_session_error_message" returning diagnostic
     set v-data of tt-n-complete-utf8-v1 to diagnostic

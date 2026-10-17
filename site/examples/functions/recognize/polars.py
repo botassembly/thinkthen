@@ -1,17 +1,17 @@
 import polars as pl
 import thinkthen as tt
 
-kinds = ["person", "organization", "place"]
+kinds = ["person", "product", "place"]
 tickets = pl.DataFrame({
     "body": [
-        "Maria Chen joined Northwind Freight, "
-        "a company in Chicago.",
+        "Sam Patel says his Kindle arrived broken "
+        "in Denver.",
     ],
 })
 names = tt.recognize(tickets, kinds=kinds, on="body").value
 assert names["text"].to_list() == [
-    "Maria Chen",
-    "Northwind Freight",
-    "Chicago",
+    "Sam Patel",
+    "Kindle",
+    "Denver",
 ]
 assert names["kind"].to_list() == kinds

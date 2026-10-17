@@ -1,6 +1,6 @@
 # thinkthen-cpp
 
-This C++17 header-only CMake package installs its matching native library and header with the C++ headers. It owns C++ argument, result and error lifetimes; Rust owns question grammar and judgment. The package and its installed consumers have passed locally on Linux x86_64. Final release archives and other hosts need separate qualification.
+This C++17 CMake package builds its C++ implementation and installs its matching native library with the public C++ headers. It owns C++ argument, result and error lifetimes; Rust owns question grammar, parsing and judgment. The C header stays private to the build. The package and its installed consumers have passed locally on Linux x86_64. Final release archives and other hosts need separate qualification.
 
 Build the matching native C artifacts from this checkout, then install the CMake package into a local prefix:
 
@@ -18,33 +18,40 @@ cmake --install target/thinkthen-cpp
 
 A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `find_package(thinkthen-cpp CONFIG REQUIRED)`. Link `thinkthen::thinkthen_cpp_shared` or `thinkthen::thinkthen_cpp_static`; both provide `<thinkthen/client.hpp>`. Shared mode needs the installed library directory in the runtime loader path. Static-C mode still depends on Linux system libraries. The package config uses `PACKAGE_PREFIX_DIR` and also resolves a multi-component `lib/x86_64-linux-gnu` installation. It does not ship a shim library or download a native binary.
 
-`sh libraries/cpp/check.sh` tests the installed CMake package with shared and static consumers, all ten typed calls, parser boundaries, presence and null, usage persistence, locale independence, file locations and cancellation. The routine shared cases use a counted local backend. Set `THINKTHEN_TEST_PROFILE=full` only at a candidate to run the entire required shared inventory through the same owned API.
+`sh libraries/cpp/check.sh` tests the installed CMake package with shared and static consumers, AddressSanitizer on all ten installed examples, all ten typed calls, parser boundaries, presence and null, usage persistence, locale independence, file locations and cancellation. The routine shared cases use a counted local backend. Set `THINKTHEN_TEST_PROFILE=full` only at a candidate to run the entire required shared inventory through the same owned API.
 
 For Linux x86-64, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versioned Go, C++ and C archives from one clean source commit. Run `sdlc/scripts/release-go-cpp-pair OUT` before using the files together. Unpack the C++ source and the matching C archive into separate folders, then pass the C archive's `include/thinkthen.h`, `lib/libthinkthen.so`, and `lib/libthinkthen.a` to CMake through the three `THINKTHEN_` inputs above. The C++ archive's `THINKTHEN-PACKAGE-INPUTS` records the exact C archive digest. Each GitHub release ships these archives, and an installed `find_package` consumer check covers them. No CMake registry package is published.
 
-The owned caller API uses `tt::Client` and ten named methods: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each starts a native-owned session and returns a move-only `tt::Call`. The native engine admits the generated input values and owns validation, defaults, files, images, cache and replay behavior.
+The owned caller API uses `tt::Client` and ten named methods: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each starts a native-owned session and returns a move-only `tt::ResultCall`. The native engine admits the generated input values and owns validation, defaults, files, images, cache and replay behavior.
 
 ```cpp
+#include <cassert>
 #include <thinkthen/client.hpp>
 using namespace tt::inputs;
 
-tt::Client client;
-auto call = client.decide(
-    RequestQuestionText().set_text("Does the customer ask for money back?"),
-    RequestInputText().set_text("Please refund my order."));
-call.finish();
-for (const auto& packet : call.collect()) {
-    if (auto row = packet.as_SessionPacketDecideRow()) {
-        auto value = row->value().value->value();
-        // Presence distinguishes an absent value, explicit null and a present value.
-        (void)value;
-    }
+int main() {
+    tt::Client client;
+    auto question = RequestQuestionText().set_text(
+        "Does the customer ask for a refund?");
+    auto message = RequestInputText().set_text(
+        "Please refund my order. It arrived broken.");
+    auto refund = client.decide(question, message).result();
+    auto is_refund = refund.value.get<bool>();
+    assert(is_refund);
+    assert(refund.probability == 0.99);
+    assert(refund.results.size() == 1);
 }
 ```
 
-`collect` blocks explicitly. An event loop uses `poll`, whose state is `pending`, `result` or `end`; a worker can own a moved call and use `collect`. A single host thread owns each call. `try_push` admits one generated feed descriptor without waiting and returns false when the native queue is full or closed. Callers stop feeding when `input_closed()` is true and retry only while it is false. Native closure, cancellation and close retain this stop state. `finish` declares input EOF. `cancel` signals stop without waiting; `close` and destruction cancel and free the native owner without joining the provider. Closing the client leaves existing calls valid. Generated C++ packet values own their data after native result cleanup.
+Each named method starts work immediately and returns a move-only `tt::ResultCall`. Its `result()` method closes input and waits for successful settlement. The returned `tt::results::CallResult<Value, Probability, Row>` owns `value`, `probability`, `results` and `facts`. Failures raise `tt::Failure` and retain earlier packets.
 
-Generated input `from_document` loaders accept explicitly saved JSON without guessing paths; native admission validates its grammar. Named setters remain the ordinary construction API. Generated input builders accept standard strings, vectors, ordered member lists, booleans and integers. Generated result classes expose known fields and typed alternatives. Each field returns `tt::results::Presence<T>` with `absent`, `null` or `value` state. `document()` retains unknown extensions and unrestricted authored JSON. Integer conversion preserves all signed and unsigned 64-bit values. `tt::SessionFailure` retains the generated `CallError`, including native kind, retryability and facts; immediate admission errors throw `tt::NativeFailure` with the actual native error kind.
+Concrete text and JSON input overloads return scalar views for primitive calls. Decide returns `tt::Data`, including authored JSON readings and explicit null; choose returns `std::optional<std::string>`. Their probabilities are `std::optional<double>`. Record, file and feed overloads return vectors of values and optional probabilities. Keep the concrete input type when calling a primitive method. Tag returns labels and score returns a number; both have an empty optional probability.
+
+Filter returns original inputs and aligned optional probabilities. Rank returns zero-based original indexes and aligned optional probabilities. Find returns the picked input or null with an optional probability. Annotate returns named typed fields and an empty optional probability. Recognition returns entity or boundary-proposal vectors; its aligned probabilities come from retained span proposals or boundary proposals, never entity strength. Relate returns typed edges and their aligned optional probabilities. The `results` rows retain all generated fields and `facts` retains settlement evidence. The ten standalone programs in `examples/` exercise this API through the installed package.
+
+`collect` blocks explicitly and drains settlement packets. `next` blocks for one ready packet and returns promptly when cancelled. `push` waits for input room and parks unread answers in session order. Neither `push` nor `try_push` waits on unread answers; pushing every record before reading costs memory like collecting the results. An event loop uses `poll`, whose state is `pending`, `result` or `end`; a worker can own a moved call and use `collect`. A single host thread owns each call. `try_push` admits one generated feed descriptor without waiting and returns false when the native queue is full or closed. Callers stop feeding when `input_closed()` is true and retry only while it is false. Native closure, cancellation and close retain this stop state. `finish` declares input EOF. `cancel` signals stop without waiting; `close` and destruction cancel and free the native owner without joining the provider. Closing the client leaves existing calls valid. Generated C++ packet values own their data after native result cleanup.
+
+Generated input builders accept standard strings, vectors, ordered member lists, booleans and integers. Use `tt::Data` for arbitrary original values, and `Data::read` to import an original value through Rust. Generated result classes expose known fields and typed alternatives. Each field returns an owner-backed reference to `tt::results::Presence<T>` with `absent`, `null` or `value` state. Integer conversion preserves all signed and unsigned 64-bit values. `tt::Failure` carries the native error kind and retryability, typed immediate facts, or the generated call error and terminal packet. Failures retain earlier packets.
 
 The installed consumer covers all ten named calls, presence, null, false, unknown fields, wide integers, native failure facts, file locations and held-provider cancellation and destruction. Shared cases also exercise images, cache and replay; full parity and platform qualification run at the candidate.
 
@@ -56,9 +63,9 @@ The installed consumer covers all ten named calls, presence, null, false, unknow
 | Cancel token and joined worker | `Call::cancel`, `close` and RAII cleanup |
 | JSON result envelopes and hand-copied views | Generated session packets with explicit presence |
 
-The old headers and public names have been removed. The local JSON parser preserves insertion order, rejects duplicate keys and invalid strings, and retains signed and unsigned 64-bit integers without rounding. Runtime model selection, grammar, file reading and cache behavior remain in Rust.
+Original value admission preserves insertion order, rejects duplicate keys and invalid strings, and retains signed and unsigned 64-bit integers without rounding. Runtime model selection, grammar, file reading and cache behavior remain in Rust.
 
-Client settings accept a named backend, for example `tt::Client({{"backend", "local"}})`, or a direct base URL. A missing or invalid backend name fails before sending. Explicit files follow the [library reader contract](../files.md); pass a generated `RequestInputSource` with its paths and reading unit.
+`tt::inputs::EngineSettings` supplies typed settings setters. Select a named backend with `tt::Client(EngineSettings().set_backend("local"))`, or set a direct base URL. A missing or invalid backend name fails before sending. Explicit files follow the [library reader contract](../files.md); pass a generated `RequestInputSource` with its paths and reading unit.
 
 ## Live usage persistence
 

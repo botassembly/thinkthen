@@ -1,3 +1,4 @@
+#import "TTResults.g.h"
 #import "TTResultPrivate.h"
 #import <CoreFoundation/CoreFoundation.h>
 static id TTFreeze(id value) {
@@ -12,6 +13,9 @@ static id TTFreeze(id value) {
 @property(nonatomic, strong, nullable) id value;
 @end
 @implementation TTPresence
+@end
+@interface TTResultNode ()
+@property(nonatomic, copy) NSDictionary<NSString *, id> *rawFields;
 @end
 @implementation TTResultNode
 - (instancetype)initWithFields:(NSDictionary *)fields {

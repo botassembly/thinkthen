@@ -54,8 +54,6 @@ preparation!(rank, Rank, Question);
 preparation!(rank_set, RankSet, RankSet);
 preparation!(recognition, Recognition, Recognize);
 preparation!(relation, Relate, Relate);
-#[cfg(feature = "polars")]
-preparation!(dynamic_choose, DynamicChoose, RecordChooseQuestion);
 impl RequestDefinition {
     pub(in crate::public) fn atomic(self) -> Result<Question, Error> {
         match self {
@@ -94,6 +92,16 @@ impl From<RankSet> for RequestDefinition {
 impl From<FindQuestionFile> for RequestDefinition {
     fn from(q: FindQuestionFile) -> Self {
         Self::Find(q)
+    }
+}
+impl From<(Question, crate::RecordReading)> for RequestDefinition {
+    fn from((question, reading): (Question, crate::RecordReading)) -> Self {
+        Self::Find(FindQuestionFile::from_parts(question, reading))
+    }
+}
+impl From<(Recognize, crate::RecordReading)> for RequestDefinition {
+    fn from((question, reading): (Recognize, crate::RecordReading)) -> Self {
+        Self::Recognize(RecognizeQuestionFile::from_parts(question, reading))
     }
 }
 impl From<RecognizeQuestionFile> for RequestDefinition {

@@ -10,10 +10,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'tools'))
 from inputs import selected, versions  # noqa: E402
 from verify_footer import FOOTER_BYTES, verify_common  # noqa: E402
 
+PUBLIC_README = Path(__file__).resolve().parents[1] / 'README-PUBLIC.md'
+
 
 def verify_repository(source: Path, target: str, release: str) -> None:
     platform = selected(versions()[0], target)['platform']
-    wanted = {f'{version}/{platform}/thinkthen.duckdb_extension': version for version in versions()}
+    wanted = {f"{selected(version, target)['metadata_version']}/{platform}/thinkthen.duckdb_extension": version for version in versions()}
     files: dict[str, bytes] = {}
     if source.is_dir():
         for path in source.rglob('*'):
@@ -48,11 +50,13 @@ def verify_repository(source: Path, target: str, release: str) -> None:
         if name not in files:
             raise ValueError(f'DuckDB repository is missing {name}')
     for name in files:
-        if name not in wanted and name not in ('LICENSE.thinkthen', 'LICENSE.duckdb', 'NOTICE', 'DEPENDENCIES.txt') and not name.startswith('LICENSES/'):
+        if name not in wanted and name not in ('README.md', 'LICENSE.thinkthen', 'LICENSE.duckdb', 'NOTICE', 'DEPENDENCIES.txt') and not name.startswith('LICENSES/'):
             raise ValueError(f'DuckDB repository has unexpected member {name}')
+    if 'README.md' in files and files['README.md'] != PUBLIC_README.read_bytes():
+        raise ValueError('DuckDB repository README.md differs from README-PUBLIC.md')
     for name, version in wanted.items():
         fields = verify_common(files[name], platform)
-        for index, expected, label in ((4, release, 'extension version'), (5, version, 'DuckDB version')):
+        for index, expected, label in ((4, release, 'extension version'), (5, selected(version, target)['metadata_version'], 'DuckDB version')):
             if fields[index] != expected.encode():
                 raise ValueError(f'DuckDB footer {label} is {fields[index]!r}, expected {expected!r}')
     for name in ('LICENSE.thinkthen', 'LICENSE.duckdb', 'NOTICE', 'DEPENDENCIES.txt'):
@@ -60,7 +64,7 @@ def verify_repository(source: Path, target: str, release: str) -> None:
             raise ValueError(f'DuckDB repository is missing legal file {name}')
     notice, inventory = (files[name].decode('utf-8') for name in ('NOTICE', 'DEPENDENCIES.txt'))
     for version in versions():
-        if f'DuckDB {version} source and static archives:' not in notice or f'Pinned DuckDB {version} static archives:' not in inventory or f'Pinned DuckDB {version} source license and notice files:' not in inventory:
+        if f'DuckDB {version} source:' not in notice or f'Pinned DuckDB {version} source license and notice files:' not in inventory:
             raise ValueError(f'DuckDB repository lacks legal inventory for {version}')
     references = re.findall(r'\((LICENSE[^)]+)\)', notice) + re.findall(r' -> (LICENSE[^\n]+)', inventory)
     if not references or not any(name.startswith('LICENSES/rust/') for name in files):

@@ -19,7 +19,7 @@ mod complete_call;
 mod complete_schema;
 pub use complete_schema::complete_call_schema;
 mod complete_facts;
-pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
+pub use complete_call::{CompleteError, ErrorSnapshot};
 mod complete_find;
 pub use complete_facts::CompleteFacts;
 mod complete_recognize;
@@ -46,17 +46,14 @@ pub use complete_record::CompleteRecord;
 pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
-pub use call::{Call, CallReply, Facts};
+pub use call::{
+    AnnotationCall, Call, CallReply, ChoiceCall, DecisionCall, Facts, FilterCall, FindCall,
+    RankCall, RecognitionCall, RelationCall, ScoreCall, SetRankCall, TagCall,
+};
 pub use found::{Candidate, Found, Picked};
-mod ranked;
-pub use ranked::{Ranked, RankedRow};
-mod set_ranked;
-pub use set_ranked::SetRanked;
 mod tally;
 pub use tally::{Tally, TallyStart};
-mod compatibility;
 mod member;
-pub(crate) use member::Member;
 pub(crate) use member::batch_warning;
 mod observation;
 mod owned_observation;
@@ -408,7 +405,7 @@ macro_rules! withheld_debug {
     };
 }
 
-/// One `decide_many` record and its answer.
+/// One record and its answer.
 #[derive(Clone, PartialEq)]
 pub struct Row<T, V> {
     input: T,
@@ -423,6 +420,7 @@ impl<T, V> fmt::Debug for Row<T, V> {
 }
 
 impl<T, V> Row<T, V> {
+    #[cfg(test)]
     pub(crate) const fn new(input: T, value: V, probability: f64) -> Self {
         Self {
             input,

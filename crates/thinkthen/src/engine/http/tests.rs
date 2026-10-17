@@ -1,4 +1,8 @@
+//! Stays: transport retry timing, cancellation and address diagnostics need direct fault and secrecy checks.
 //! Focused HTTP parsing and transport checks.
+
+#[cfg(feature = "cli")]
+mod ollama;
 
 use super::{
     Client, Exchange, Key, bounded_wait, draw, honored, io_transport, is_retried, transport,
@@ -190,6 +194,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     );
     let attempts = Cell::new(0_u32);
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -217,6 +222,7 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -254,6 +260,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -316,6 +323,7 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
     );
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -363,6 +371,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     });
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -391,11 +400,10 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     assert!(budget.reserve(Some(2), None).is_err());
 }
 
-/// Port zero can never listen, so the refusal is deterministic.
 // Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
 #[cfg(unix)]
 #[test]
-fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
+fn a_connection_that_never_opened_is_retried_once_and_keeps_the_refused_kind() {
     let key = Key::of("sk-test-value");
     let client = Client::new(
         Duration::from_secs(4),
@@ -414,6 +422,7 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         .port();
     let url = format!("http://127.0.0.1:{port}/v1/systemone");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,
@@ -425,10 +434,10 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         observed.set(observed.get() + 1)
     });
 
-    assert_eq!(observed.get(), 1);
-    assert_eq!(counts.snapshot().requests_sent, 1);
-    assert_eq!(counts.snapshot().retries, 0);
-    assert_eq!(facts.snapshot().requests_sent, 1);
+    assert_eq!(observed.get(), 2);
+    assert_eq!(counts.snapshot().requests_sent, 2);
+    assert_eq!(counts.snapshot().retries, 1);
+    assert_eq!(facts.snapshot().requests_sent, 2);
     assert!(matches!(
         result,
         Err(Error::Transport(TransportKind::Refused))
@@ -469,6 +478,7 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     });
     let key = Key::of("");
     let exchange = Exchange {
+        headers: &[],
         url: &url,
         body: b"{}",
         key: &key,

@@ -38,7 +38,7 @@ def saved_calibration(socket: str) -> None:
     profile = json.dumps(case["runtime_profile"], separators=(",", ":"))
     done = query(socket, [f"SET thinkthen.profile = {quote(profile)}",
                           "SET thinkthen.cache = 'off'",
-                          f"SELECT thinkthen_details({quote(question)}, {quote(case['evidence'])})::text"])
+                          f"SELECT to_jsonb(r.result) FROM thinkthen_decide_details({quote(question)}, ARRAY[thinkthen_record(text=>{quote(case['evidence'])})]) r"])
     assert done.returncode == 0, (done.stdout, done.stderr)
     detail = json.loads(done.stdout.strip().splitlines()[-1])
     assert detail["meta"]["question_sha256"] == case["question_sha256"], detail
@@ -123,7 +123,7 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             records = json.dumps({str(index): value for index, value in enumerate(step["records"])})
             sql = f"SELECT * FROM thinkthen_decide_many({QUESTION}, {quote(records)}::jsonb)"
         elif "model" in step:
-            sql = f"SELECT thinkthen_details({QUESTION}, {quote(step['text'])}) -> 'meta' ->> 'model'"
+            sql = f"SELECT (((observations)[1]).detail).model FROM thinkthen_decide_details({QUESTION}, {quote(step['text'])})"
         else:
             sql = f"SELECT thinkthen_decide({QUESTION}, {quote(step['text'])})"
         done = query(socket, [*settings, sql])

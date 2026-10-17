@@ -135,7 +135,12 @@ fn function_kind(function: thinkthen::RequestFunction) -> Crossed<&'static str> 
     )
 }
 
-pub(crate) fn request_packet(text: &str, function: thinkthen::RequestFunction) -> Crossed<Robj> {
+pub(crate) fn request_packet(
+    text: &str,
+    function: thinkthen::RequestFunction,
+    observations: &[Value],
+    scalar: bool,
+) -> Crossed<Robj> {
     let value = decoded(text)?;
     let kind = function_kind(function)?;
     let rows = value
@@ -146,7 +151,18 @@ pub(crate) fn request_packet(text: &str, function: thinkthen::RequestFunction) -
     } else {
         List::from_values([convert(kind, rows)?]).into()
     };
-    let mut fields = vec![("results", results)];
+    let function = serde_json::to_value(function)
+        .map_err(|_| crate::defect("native function could not be written"))?;
+    let name = function
+        .as_str()
+        .ok_or_else(|| crate::defect("native function has no name"))?;
+    let answer = crate::results_generated::call_value(name, rows, scalar)?;
+    let probability = crate::results_generated::call_probability(name, rows, observations, scalar)?;
+    let mut fields = vec![
+        ("value", answer),
+        ("probability", probability),
+        ("results", results),
+    ];
     if let Some(facts) = value.get("facts") {
         fields.push(("facts", convert("completeFacts", facts)?));
     }
@@ -199,4 +215,12 @@ pub(crate) fn request_event(text: &str) -> Crossed<Robj> {
         "SessionEvent",
         "thinkthen_complete",
     )
+}
+
+pub(crate) fn plan(value: &Value) -> Crossed<Robj> {
+    convert("completeplan", value)
+}
+
+pub(crate) fn facts(value: &Value) -> Crossed<Robj> {
+    convert("completeFacts", value)
 }

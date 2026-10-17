@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The PostgreSQL surface's check (ticket 0111). It builds the
-# extension against pinned PostgreSQL 16.15 headers and runs a local server from
+# extension against the selected pinned PostgreSQL headers and runs a local server from
 # the pinned package as this user on a socket with no TCP port, and restarts
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
@@ -23,6 +23,9 @@ unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.
 export THINKTHEN_BATCH=1
 cd "$(dirname "$0")"
+PG_MAJOR=${1:-16}
+case $PG_MAJOR in 16|17|18) ;; *) echo 'usage: check.sh [16|17|18]' >&2; exit 2 ;; esac
+export PG_MAJOR
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
@@ -32,59 +35,76 @@ case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route 
 usage_home
 . ./runtime.sh
 runtime_ready
+runtime_target
 REPO=$(cd ../.. && pwd)
+if [ "$profile" = routine ]; then
+	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}
+fi
 if [ "$profile" = full ]; then . "$REPO/sdlc/scripts/full-compiler"; fi
 # macOS has no `timeout` (ticket 0128). runtime.sh uses it too.
 LIMIT=$REPO/sdlc/scripts/time-limit
 # The extension version names its SQL files (ticket 0128).
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
-COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
+COMMAND=${THINKTHEN_COMMAND:-${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen}
 # The client reader test binary uses this workspace's pgrx dependency. Give its
 # build the same pinned headers used for source packages without requiring a
 # cargo-pgrx home in the installed-archive smoke.
-PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
+PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo "$EXTRACTED/usr/lib/postgresql/$PG_MAJOR/bin/pg_config"; fi)}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$PG_HOST" = Linux ]; then
-	[ -x "$PG_CONFIG" ] || not_run "the PostgreSQL 16 pg_config at $PG_CONFIG is missing"
-	case $("$PG_CONFIG" --version) in 'PostgreSQL 16.'*) ;; *) not_run "the PostgreSQL client reader needs PostgreSQL 16 headers at $PG_CONFIG" ;; esac
-	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL 16 server headers at $PG_CONFIG are missing"
+	[ -x "$PG_CONFIG" ] || not_run "the PostgreSQL $PG_MAJOR pg_config at $PG_CONFIG is missing"
+	case $("$PG_CONFIG" --version) in "PostgreSQL $PG_MAJOR."*) ;; *) not_run "the PostgreSQL client reader needs PostgreSQL $PG_MAJOR headers at $PG_CONFIG" ;; esac
+	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL $PG_MAJOR server headers at $PG_CONFIG are missing"
 fi
 
 export PGRX_PG_CONFIG_PATH="$PG_CONFIG"
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ] || {
 	echo "== build"
 	cargo fmt --check
-	cargo clippy --locked --offline --all-targets -- -D warnings
-	cargo test --locked --offline --lib
+	cargo clippy --locked --offline --all-targets --no-default-features --features "pg$PG_MAJOR" -- -D warnings
+	cargo test --locked --offline --lib --no-default-features --features "pg$PG_MAJOR"
 }
 reader_profile=
 [ "$profile" != full ] || reader_profile=--release
-if [ "$PG_HOST" = Darwin ]; then
-	# Cargo also links this package's library when it builds the client reader.
-	# Its PostgreSQL symbols resolve when the server loads the extension (ticket 0336).
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
-		cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
-else
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
-fi
+# A client build also links this package's extension library. Its PostgreSQL
+# symbols resolve when the server loads it, including the client_files example.
+postgresql_client_build() {
+    if [ "$PG_HOST" = Darwin ]; then
+        RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
+            cargo build --locked --offline "$@"
+    else
+        cargo build --locked --offline "$@"
+    fi
+}
+postgresql_client_build --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs --no-default-features --features "pg$PG_MAJOR"
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
 if [ "$profile" != full ]; then export RUSTFLAGS="--remap-path-prefix=$HOME=/build"; fi
 # package.sh reads the same pg_config and target folder (ticket 0128).
-EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
+EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg$PG_MAJOR
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
+
+# Source parity prepares the same release archive before installed qualification.
+# The reader and fixture binaries above remain in this source's target directory.
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+    sh ./package.sh "$PG_MAJOR" "$THINKTHEN_PARITY_PREPARE/package"
+    tar -czf "$THINKTHEN_PARITY_PREPARE/postgresql.tar.gz" -C "$THINKTHEN_PARITY_PREPARE/package" lib extension
+    scratch_clean
+    exit 0
+fi
 
 runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true
-	if [ "$PG_HOST" = Darwin ] && [ -n "${RUNTIME_LIBRARY_DIR:-}" ]; then
-		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
-	fi
+	runtime_remove
 	[ -z "${BPID:-}" ] || backend_stop
 	scratch_clean
 	rm -f .runtime/last-run
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 PASSED=0 FAILED=0
 # Each step runs in a subshell under errexit, so its first failing line fails
@@ -100,10 +120,16 @@ check() {
 	fi
 	case " ${STEPS:-$1} " in *" $1 "*) ;; *) return 0 ;; esac
 	set +e
-	(
-		set -e
-		"$@"
-	)
+    (
+        set -e
+        # ALTER SYSTEM survives restarts. Restore each case's starting settings
+        # even when an assertion fails, so the next case has its own server state.
+        if [ -f "$DATA/postgresql.auto.conf" ]; then
+            cp "$DATA/postgresql.auto.conf" "$RUN/postgresql.auto.conf.step"
+            trap 'cp "$RUN/postgresql.auto.conf.step" "$DATA/postgresql.auto.conf"' EXIT
+        fi
+        "$@"
+    )
 	code=$?
 	set -e
 	if [ "$code" = 0 ]; then
@@ -172,20 +198,20 @@ echo "== package"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	PACKAGE_LIB=$RUN/artifact/lib
 	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
-	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
+	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases native_record_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
-	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
+	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR" >/dev/null
 	mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
 	if [ "$profile" != full ]; then
-	    ./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+	    ./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR,panic-probe" >/dev/null
 	fi
 	runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 	PACKAGE_LIB=$SHIPPED$("$PG_CONFIG" --pkglibdir)
 	PACKAGE_SQL=$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql
 }
 if [ "$profile" = full ]; then
-    STEPS=${STEPS:-shipped_lacks_probe no_home_in_library start_refuses_other_hosts examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases complete_image_contract_cases find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending public_holds_nothing batch_signatures_are_extension_owned_and_private the_grant_reaches_the_extension_alone a_deliberate_grant_survives an_update_cannot_grant_public usage_persistence_status a_cancelled_send_counts_toward_the_total keyed_answers_reuse_without_sending keyed_banded_file_reuses single_cancel batch_cancel preload_forks_cleanly signal_masks single_statement_timeout a_timed_out_batch_leaves_the_session_working benign_interrupt_finishes single_deadline batch_deadline}
+    STEPS=${STEPS:-shipped_lacks_probe no_home_in_library start_refuses_other_hosts examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases native_record_contract_cases complete_image_contract_cases find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending public_holds_nothing batch_signatures_are_extension_owned_and_private the_grant_reaches_the_extension_alone a_deliberate_grant_survives an_update_cannot_grant_public usage_persistence_status a_cancelled_send_counts_toward_the_total keyed_answers_reuse_without_sending keyed_banded_file_reuses single_cancel batch_cancel preload_forks_cleanly signal_masks single_statement_timeout a_timed_out_batch_leaves_the_session_working benign_interrupt_finishes single_deadline batch_deadline}
 fi
 cp fixtures/*.json "$DATA/"
 fresh generic
@@ -214,7 +240,7 @@ check no_home_in_library
 one_catch_unwind() { same "$(grep -rl catch_unwind src)" src/call.rs; same "$(grep -c catch_unwind src/call.rs)" 1; }
 check one_catch_unwind
 every_function_is_guarded() {
-	same "$(cat src/*.rs | grep -c '^#\[pg_extern')" "$(cat src/*.rs | grep -c '^    call::guarded(||')"
+	same "$(cat src/*.rs | grep -Ec '^#\[pg_extern|^crate::descriptions::describe!')" "$(cat src/*.rs | grep -c '^    call::guarded(||')"
 }
 check every_function_is_guarded
 every_cargo_call_is_locked_and_offline() {
@@ -276,10 +302,10 @@ plain_question_contract() {
 	same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('Does this need attention?', '{\"a\":\"A short note.\"}'::jsonb)")" 1
 	same "$(bcount)" 1
 	fresh generic
-	same "$(q -c "SELECT thinkthen_try_details('Does this need attention?', 'A short note.')->>'status'")" answered
+	same "$(q -c "SELECT value FROM thinkthen_decide_details('Does this need attention?', 'A short note.')")" t
 	same "$(bcount)" 1
 	fresh arm/full/capture
-	digest=$(q -c "SELECT thinkthen_details('Does this need attention?', 'A short note.')->'meta'->'requests'->>0")
+	digest=$(q -c "SELECT (((observations)[1]).detail).requests[1] FROM thinkthen_decide_details('Does this need attention?', 'A short note.')")
 	same "$(bcount)" 1
 	# A row names its question keys, not a request digest (ADR 0111 section 2).
 	bcapture | python3 -c '
@@ -398,7 +424,7 @@ named_bindings() {
 	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', misspelled => 'x')")
 	has "$out" 'does not exist'
 	same "$(bcount)" 0
-	out=$(q -c "SELECT thinkthen_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')->'meta'->>'model'")
+	out=$(q -c "SELECT (((observations)[1]).detail).model FROM thinkthen_decide_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')")
 	same "$out" judge-b
 	same "$(bcount)" 1
 	fresh generic
@@ -480,7 +506,7 @@ rank_empty_null_and_refusals_send_nothing() {
 	fresh generic "thinkthen.batch = 'max'"
 	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{}'::jsonb)")" 0
 	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', NULL)")" 0
-	has "$(q -c "SELECT count(*) FROM thinkthen_rank(NULL, '{\"a\":\"b\"}'::jsonb)")" 'thinkthen usage: the question is empty (retryable: no)'
+	same "$(q -c "SELECT count(*) FROM thinkthen_rank(NULL, '{\"a\":\"b\"}'::jsonb)")" 0
 	local name value
 	for name in threshold:0.7 'true:"yes"' none:true 'options:["a","b"]'; do
 		value=${name#*:} name=${name%%:*}
@@ -488,6 +514,7 @@ rank_empty_null_and_refusals_send_nothing() {
 			"thinkthen usage: the settings key \`$name\` does not belong to this verb (retryable: no)"
 	done
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{\"a\":\"x\"}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":4}'::jsonb)")" 'thinkthen usage: keyed input value for a is text (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"1\":\"one\",\"2\":\"two\",\"3\":\"three\",\"4\":\"  \",\"5\":\"five\",\"6\":\"six\",\"7\":\"seven\"}'::jsonb)")" \
 		'thinkthen usage: the evidence is empty or blank (retryable: no)'
@@ -549,7 +576,7 @@ check rank_set_backend_failure_preserves_error_and_secrecy
 find_settings_choose_the_model() {
 	fresh arm/full/capture
 	local out
-	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)->>'value'")
+	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)")
 	hasnt "$out" ERROR
 	same "$(bcount)" 1
 	bcapture | python3 -c 'import json,sys
@@ -733,11 +760,11 @@ stored_image_composites_use_native_order_and_strict_replay() {
 check stored_image_composites_use_native_order_and_strict_replay
 client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
 	fresh generic
-	cargo build --locked --offline --example client_files
+	postgresql_client_build --example client_files --no-default-features --features "pg$PG_MAJOR"
 	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
-	# Two rank records, one find, two native recognition stages per source,
+	# One coalesced rank judgment retains two records, one find, two recognition stages per source,
 	# and one relation request; readers and span mapping add no sends.
-	same "$(bcount)" 8
+	same "$(bcount)" 7
 }
 check client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends
 DID_NOT_READ="did not read: it must be a regular file at most 1048576 bytes"
@@ -786,33 +813,34 @@ complete_question_resolution_keeps_privilege_and_content_boundaries() {
 	printf '{"decide":"private-complete-evidence"' >"$allowed/broken.json"
 	printf '{"decide":"Refund?","threshold":0.6}' >"$allowed/context.json"
 	fresh generic
-	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_complete(text,text,text) TO tt_complete' >/dev/null
-	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_complete$' AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
+	q -c 'CREATE ROLE tt_complete LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_decide_details(text,thinkthen_record[],thinkthen_reading) TO tt_complete' >/dev/null
+	q -c "$(q -c "SELECT 'GRANT EXECUTE ON FUNCTION ' || oid::regprocedure || ' TO tt_complete' FROM pg_proc WHERE proname = 'thinkthen_reading'")" >/dev/null
+	same "$(q -c "SELECT count(*) FROM pg_proc WHERE proname ~ '^thinkthen_(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)_details$' AND proargtypes[1] = 'thinkthen_record[]'::regtype AND pronargdefaults = 1 AND proparallel = 'r' AND NOT has_function_privilege('public', oid, 'EXECUTE')")" 10
 	# Metadata selection cannot disclose a missing/invalid catalog to an unauthorized role.
 	for name in '@@bad/name' '@@absent' '@missing.json'; do
-		has "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('$name','{\"records\":[]}')->'native'->'error'->>'message'")" "a named file needs pg_read_server_files"
+		has "$(PGUSER_AS=tt_complete q -c "SELECT (failure).message FROM thinkthen_decide_details('$name',ARRAY[]::thinkthen_record[])")" "a named file needs pg_read_server_files"
 	done
-	same "$(q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
-	same "$(q -c "SELECT thinkthen_decide_complete('@@bad/name','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
+	same "$(q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
+	same "$(q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@bad/name',ARRAY[]::thinkthen_record[])")" usage
 	same "$(bcount)" 0
 	fresh generic "thinkthen.file_directory = '$allowed'"
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@refund.json','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error'->>'kind'")" local
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@refund.json',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[])")" local
 	ln -s refund.json "$allowed/symlink.json"
 	ln "$allowed/refund.json" "$allowed/hardlink.json"
 	ln -s "$catalog" "$allowed/hop"
 	mkfifo "$allowed/fifo"
 	python3 -c 'import pathlib,sys; pathlib.Path(sys.argv[1]).write_bytes(b" " * 1048577)' "$allowed/big.json"
 	for name in symlink.json hardlink.json hop/refund.json fifo big.json duplicate.json broken.json ../complete-questions/refund.json; do
-		kind=$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@$name','{\"records\":[]}')->'native'->'error'->>'kind'")
+		kind=$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@$name',ARRAY[]::thinkthen_record[])")
 		same "$kind" local
 	done
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@wrong.json','{\"records\":[]}')->'native'->'error'->>'kind'")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"threshold\":0.7}')->'native'->'error'->>'kind'")" usage
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@context.json','{\"records\":[]}','{\"context\":\" \"}')->'native'->'error'->>'kind'")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT (failure).kind FROM thinkthen_decide_details('@wrong.json',ARRAY[]::thinkthen_record[])")" usage
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(threshold=>'0.7')) WHERE failure IS NOT NULL)")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@context.json',ARRAY[]::thinkthen_record[],thinkthen_reading(context=>'')) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 	q -c 'GRANT pg_read_server_files TO tt_complete' >/dev/null
-	same "$(PGUSER_AS=tt_complete q -c "SELECT thinkthen_decide_complete('@@refund','{\"records\":[]}')->'native'->'error' IS NOT NULL")" f
+	same "$(PGUSER_AS=tt_complete q -c "SELECT EXISTS(SELECT 1 FROM thinkthen_decide_details('@@refund',ARRAY[]::thinkthen_record[]) WHERE failure IS NOT NULL)")" f
 	same "$(bcount)" 0
 }
 check complete_question_resolution_keeps_privilege_and_content_boundaries
@@ -1084,10 +1112,15 @@ usage_total() {
 		python3 -c 'import json, sys; print(json.load(sys.stdin)["usage"]["total"][sys.argv[1]])' "$1"
 }
 usage_requests() { usage_total requests_sent; }
+usage_folder() {
+    case $PG_HOST in
+    Darwin) printf '%s\n' "$SCRATCH/Library/Application Support/thinkthen/usage" ;;
+    *) printf '%s\n' "$SCRATCH/.local/state/thinkthen" ;;
+    esac
+}
 each_backend_adds_its_sends_at_exit() {
 	fresh generic
-	folder=$SCRATCH/.local/state/thinkthen
-	[ "$PG_HOST" != Darwin ] || folder="$SCRATCH/Library/Application Support/thinkthen/usage"
+	folder=$(usage_folder)
 	mkdir -p -m 700 "$folder"
 	(umask 077 && : >>"$folder/.lock")
 	before=$(usage_requests)
@@ -1195,60 +1228,6 @@ a_changed_throttle_refuses() {
     same "$(bcount)" 2
 }
 check a_changed_throttle_refuses
-try_details_keeps_later_rows() {
-    fresh generic
-    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '{broken', 'bad'), (3, '@missing-private-question.json', 'bad'), (4, '$Q', 'last')),
-        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
-        SELECT i::text || ':' || coalesce(v->>'status', 'null') || ':' ||
-            coalesce(v->'error'->>'kind', 'ok') FROM measured ORDER BY i")
-    same "$out" "$(printf '1:answered:ok\n2:failed:usage\n3:failed:local\n4:answered:ok')"
-    same "$(bcount)" 2
-}
-check try_details_keeps_later_rows
-try_details_keeps_good_after_backend_failure() {
-    fresh generic
-    pg_stop
-    proxy_start proxy python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence'
-    pg_start "http://127.0.0.1:$PROXYPORT/v1" "$CACHEDIR"
-    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
-        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
-        SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
-            CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
-    same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
-    same "$(bcount)" 2
-    proxy_stop
-    same "$PROXYCOUNT" 3
-}
-check try_details_keeps_good_after_backend_failure
-try_details_null_skips_settings() {
-    fresh generic
-    out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
-        -c "SELECT thinkthen_try_details(NULL, 'private evidence') IS NULL")
-    has "$out" "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment"
-    same "$(tail -n1 <<<"$out")" t
-    same "$(bcount)" 0
-}
-check try_details_null_skips_settings
-try_details_keeps_unresolved_and_spent_total_distinct() {
-    fresh generic "thinkthen.max_requests_total = 1"
-    out=$(q -c "SELECT (v->>'status') || ':' || coalesce(v->'details'->>'value', 'null') || ':' || (v ? 'error')::text
-        FROM (SELECT thinkthen_try_details('{\"decide\":\"Is it red?\",\"threshold\":\"0:1\"}', 'red door') AS v) s" \
-        -c "SELECT (v->>'status') || ':' || (v->'error'->>'kind') || ':' || (v->'error'->>'message') || ':' || (v->'error'->>'retryable') || ':' || (v ? 'details')::text
-        FROM (SELECT thinkthen_try_details('$Q', 'second row') AS v) s")
-    same "$out" "$(printf 'answered:null:false\nfailed:usage:check the row\047s question and arguments, or raise the process request total when it is spent:false:false')"
-    same "$(bcount)" 1
-}
-check try_details_keeps_unresolved_and_spent_total_distinct
-try_details_keeps_native_timeout() {
-    fresh arm/held
-    held "SET statement_timeout = '300ms'; SELECT thinkthen_try_details('$Q', 'held')"
-    bwait 1
-    wait "$HELD" || true
-    has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
-    brelease
-    same "$(bcount)" 1
-}
-check try_details_keeps_native_timeout
 a_role_limit_applies() {
 	fresh generic
 	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide_many(text,jsonb,json) TO tt_limited" \
@@ -1332,33 +1311,6 @@ portable_batch_identity() {
 }
 check portable_batch_identity
 
-context_settings_keep_shapes_and_legacy_refusal() {
-    fresh generic
-    out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
-        -c "SET thinkthen.record = '$RUN/context-packed'" \
-        -c "SELECT key || ':' || coalesce(value::text, 'null') FROM thinkthen_decide_many('$Q', '{\"a\":\"b\",\"b\":\"a\"}'::jsonb, '{\"context\":\"shared reference\"}'::json) ORDER BY key")
-    same "$out" $'a:true\nb:true'
-    same "$(bcount)" 1
-    same "$(python3 tests/batching_cases.py context "$RUN/context-packed")" 'pass context'
-    fresh generic
-    same "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => 'shared reference')")" t
-    same "$(bcount)" 1
-    fresh generic
-    out=$(q -c "SET thinkthen.cache = 'off'" \
-        -c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', context => 'shared reference')" \
-        -c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', context => 'shared reference')" \
-        -c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', context => 'shared reference'), 1)" \
-        -c "SELECT thinkthen_details('$Q', 'one', context => 'shared reference')->>'value'" \
-        -c "SELECT thinkthen_try_details('$Q', 'one', context => 'shared reference')->>'status'")
-    same "$out" $'first\n0.1\n2\ntrue\nanswered'
-    same "$(bcount)" 5
-    fresh generic
-    same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', context => 'shared reference') IS NULL")" t
-    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', 'shared reference')")" 'the context argument moved into the settings object'
-    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => '   ')")" '`context` is text that is not blank'
-    same "$(bcount)" 0
-}
-check context_settings_keep_shapes_and_legacy_refusal
 
 keyed_contexts_do_not_project_a_scalar_cache_entry() {
     fresh generic "thinkthen.batch = '2'"
@@ -1453,7 +1405,7 @@ check shared_settings_cases
 usage_persistence_status() {
 	for mode in held written; do
 		fresh generic
-		python3 tests/settings_cases.py usage-status "$SOCK" "$SCRATCH/.local/state/thinkthen" "$mode"
+		python3 tests/settings_cases.py usage-status "$SOCK" "$(usage_folder)" "$mode"
 		same "$(bcount)" 1
 	done
 }
@@ -1585,9 +1537,31 @@ complete_environment() {
     export THINKTHEN_POSTGRESQL_BIN=$BIN THINKTHEN_POSTGRESQL_DATA=$DATA THINKTHEN_POSTGRESQL_SOCKET=$SOCK
 }
 complete_cases() {
+    failed=0
     complete_environment
-    sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
-    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
+    if [ "$profile" = routine ]; then
+        python3 tests/runner.py plan >"$RUN/complete.plan"
+        python3 - "$RUN/complete.plan" >"$RUN/complete.ids" <<'PY'
+import pathlib, sys
+sys.path.insert(0, "../../conformance")
+import parity
+required = parity.required_cases(parity.inventory(), "postgresql")
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    identity, arm, _ = line.split("\t")
+    if identity in required:
+        print(identity)
+    else:
+        assert arm == "-", f"routine case lacks native parity: {identity}"
+        print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
+PY
+        while IFS= read -r id; do
+            sh "$LIMIT" 300 env -u THINKTHEN_CONFORMANCE_IDS python3 ../sqlite/tests/complete/parity.py postgresql "$id" || failed=1
+        done <"$RUN/complete.ids"
+    else
+        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql || failed=1
+    fi
+    sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql || failed=1
+    [ "$failed" -eq 0 ]
 }
 check complete_cases
 complete_request_contract_cases() {
@@ -1595,6 +1569,11 @@ complete_request_contract_cases() {
     sh "$LIMIT" 300 python3 tests/complete_request_cases.py
 }
 check complete_request_contract_cases
+native_record_contract_cases() {
+    complete_environment
+    sh "$LIMIT" 300 python3 tests/native_records.py
+}
+check native_record_contract_cases
 complete_image_contract_cases() {
     complete_environment
     sh "$LIMIT" 60 python3 tests/complete_image_cases.py

@@ -1,4 +1,4 @@
-//! `thinkthen check`: rich probes and minimal production function calls.
+//! `thinkthen backends check`: rich probes and minimal production function calls.
 //!
 //! Each probe goes through the production encoder, engine, and decoder, so a
 //! critical finding is what a real run would meet. `core::check` holds the
@@ -12,7 +12,7 @@ use crate::cli::args::{CheckArguments, DEFAULT_MAX_RETRIES};
 use crate::cli::edge::{self, Environment};
 use crate::core::adapters::built_in;
 use crate::core::check::{self, Probe, Report};
-use crate::core::{NAME, PlanSummary, json_line};
+use crate::core::{PlanSummary, json_line};
 use crate::engine::error::Error;
 use crate::engine::facade::{Engine, Settings, Storage};
 use crate::failure::{self, Failure};
@@ -75,7 +75,7 @@ pub(crate) fn run(
     }
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
-        format!("provider {}", check::PROVIDER),
+        format!("provider {}", engine.backend().api_type().provider_name()),
         format!("model asked {}", asked.unwrap_or("unspecified")),
         format!("model sent {}", engine.backend().model().as_str()),
     ];
@@ -104,6 +104,7 @@ pub(crate) fn run(
             .map_err(|_| Failure::Defect("a plan is too large"))?;
         lines.push(format!("rich-probes {}", json_line(&counts)?));
         lines.extend(function_plans);
+        lines.push(engine.backend().api_type().plan_estimate_note().to_owned());
         lines.push(format!(
             "prepared-requests upper-bound {} before retries and refusal splits",
             probes.len() + function_requests
@@ -182,28 +183,19 @@ fn send(
         }
         Err(error) => error,
     };
-    let gate = match &error {
+    let gate = match error.base() {
         Error::Transport(_) => Some("connection"),
         Error::Status(401..=403) => Some("key"),
         Error::Status(404) => Some("endpoint"),
         Error::Status(_) | Error::TokenLimit | Error::ReplyTooLarge(_) | Error::Reply(_) => None,
         _ => return Err(error.into()),
     };
-    let sentence = sentence(&Failure::from(error));
+    let error_can_continue =
+        !matches!(&error, Error::Provider { diagnostic, .. } if diagnostic.quota);
+    let (_, sentence) = failure::sentence(&Failure::from(error));
     match gate {
         Some(gate) => report.stopped(probe, gate, sentence),
         None => report.failed(probe, sentence),
     }
-    Ok(gate.is_none())
-}
-
-/// The sentence every command prints for this failure, without its prefix.
-fn sentence(failure: &Failure) -> String {
-    let mut said = Vec::new();
-    let _code = failure::report(failure, &mut said);
-    let said = String::from_utf8_lossy(&said);
-    let said = said.trim_end();
-    said.strip_prefix(&format!("{NAME}: "))
-        .unwrap_or(said)
-        .to_owned()
+    Ok(gate.is_none() && error_can_continue)
 }

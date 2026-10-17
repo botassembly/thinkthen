@@ -1,3 +1,4 @@
+//! Stays: encoded request limits, cache key framing and usage division need direct byte and arithmetic checks.
 use std::sync::Arc;
 
 use super::{Entry, PackError, PackLimits, Packed, Packer};

@@ -18,7 +18,7 @@ name = "thinkthen_ruby"
 
 [dependencies]
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
-magnus = { version = "=0.7.1", features = ["rb-sys"] }
+magnus = { version = "=0.8.0", features = ["rb-sys"] }
 rb-sys = "=0.9.130"
 # Results cross to Ruby as JSON, which Ruby's own json library reads.
 serde = { version = "=1.0.229", features = ["derive"] }

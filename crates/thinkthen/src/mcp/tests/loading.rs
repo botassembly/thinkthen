@@ -1,3 +1,4 @@
+//! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 //! Native grammar/loading boundaries exercised before any engine sends.
 use super::super::admission::{CallParams, Invocation};
 use conformance_backend::Backend;

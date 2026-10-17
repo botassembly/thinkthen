@@ -1,3 +1,4 @@
+//! Stays: private complete-result serialization must preserve partial failures and exclusive typed identities.
 use crate::core::probability::Probability;
 use crate::core::result::complete::{
     MemberIdentity, Recognition, Relation, RelationDirection, RelationEntry, RelationMethod,
@@ -49,7 +50,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
                 probability: 0.3,
             }],
         }),
-        meta: base.compatibility.meta,
+        meta: base.meta,
     };
     let document: serde_json::Value =
         serde_json::from_str(&json_line(&canonical).unwrap()).unwrap();
@@ -76,7 +77,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
 
 fn member() -> RelationEntry {
     RelationEntry {
-        question: super::atomic(Vec::new(), Vec::new()).compatibility.question,
+        question: super::atomic(Vec::new(), Vec::new()).question,
         threshold: crate::core::Threshold::default(),
         sources: Vec::new(),
         observations: Vec::new(),
@@ -172,7 +173,7 @@ fn empty_complete_relation_is_a_zero_observation_aggregate() {
         question: RelateSpec::parse(
             r#"{"version":1,"relate":{"relations":[{"name":"link","source":"*","target":"*","single":true}]}}"#,
         ).unwrap(),
-        meta: base.compatibility.meta,
+        meta: base.meta,
     };
     let document: serde_json::Value =
         serde_json::from_str(&json_line(&canonical).unwrap()).unwrap();

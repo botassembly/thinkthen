@@ -17,7 +17,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
-from coverage_report import report, UNIT_COLLECTIONS
+from coverage_report import report, UNIT_COLLECTIONS, join_platforms
 
 NATIVE_COLLECTIONS = ('rust-integration', *UNIT_COLLECTIONS)
 
@@ -208,11 +208,11 @@ def collect_tests(run, env, artifacts, name):
                 folder / f'{target}.log', timeout=1800)
 
 
-def collect(run, env, artifacts):
+def collect(run, env, artifacts, native_tests=True):
     executable = run / 'target/debug/thinkthen'
     folder = activate(run, 'inventory')
     command([str(executable), '--version'], ROOT, env, folder / 'version.log')
-    for name in NATIVE_COLLECTIONS:
+    for name in NATIVE_COLLECTIONS if native_tests else ():
         collect_tests(run, env, artifacts, name)
     return executable
 
@@ -271,7 +271,7 @@ def installed_helpers():
     return helpers
 
 
-def prepare_installed(run, env, initializer, native, helpers):
+def prepare_installed(run, env, initializer, native, helpers, platform_slice=None):
     tool_env = {key: value for key, value in env.items()
                 if key not in ('CARGO_ENCODED_RUSTFLAGS', 'RUSTFLAGS', 'LLVM_PROFILE_FILE')}
     tool_env['CARGO_TARGET_DIR'] = str(run / 'target-tools')
@@ -280,12 +280,14 @@ def prepare_installed(run, env, initializer, native, helpers):
     runtime_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-tools')}
     context = dict(root=ROOT, run=run, env=runtime_env, command=command, missing_tool=MissingTool,
                    initializer=initializer, c_target=run / 'target-c', c_shared=native)
+    if platform_slice == 'apple':
+        return importlib.import_module('coverage_installed_managed').prepare_apple(context)
     collections = [collection for helper in helpers for collection in helper.prepare(context)]
     names = [collection['name'] for collection in collections]
     declared = [name for helper in helpers for name in helper.COLLECTIONS]
     if len(set(names)) != len(names) or set(names) != set(declared):
         raise RuntimeError('installed helper collections differ from their declarations')
-    return collections
+    return [row for row in collections if row['name'] != 'installed-objective-c'] if platform_slice == 'linux' else collections
 
 
 def measured_export(*args):
@@ -295,7 +297,7 @@ def measured_export(*args):
         raise RuntimeError(f'coverage export failed: {error}') from error
 
 
-def measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous):
+def measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous, platform_slice=None):
     completed = []
     missing = {}
     # Each runner finishes and retains its loaded native objects before switching.
@@ -318,11 +320,11 @@ def measure(run, env, llvm, executable, native, artifacts, installed, revision, 
     production = measured_export(run, llvm, production_objects, 'inventory', env)
     objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
     collections = {name: measured_export(run, llvm, objects, name, env)
-                   for name in NATIVE_COLLECTIONS}
+                   for name in (() if platform_slice == 'apple' else NATIVE_COLLECTIONS)}
     for collection in completed:
         collections[collection['name']] = measured_export(run, llvm,
                 list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
-    report(ROOT, run, revision, production, collections, time.monotonic() - started, missing=missing, missing_reasons=missing, continuous=continuous)
+    report(ROOT, run, revision, production, collections, time.monotonic() - started, missing=missing, missing_reasons=missing, continuous=continuous, platform_slice=platform_slice)
     if missing:
         raise MissingTool('unmeasured installed collections: ' + ', '.join(missing) +
                           f'; completed measurements retained in {run}')
@@ -331,9 +333,21 @@ def measure(run, env, llvm, executable, native, artifacts, installed, revision, 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true')
+    parser.add_argument('--platform', choices=('linux', 'apple'), help='Measure required collections on their own host; join both before acceptance')
+    parser.add_argument('--join', nargs=2, type=Path, metavar=('LINUX', 'APPLE'), help='Require successful same-commit Linux and Apple coverage reports')
     parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
     parser.add_argument('--output', type=Path, help='New owned build directory (installed default: /tmp; native default: target/coverage/TIMESTAMP)')
     args = parser.parse_args()
+    if args.join:
+        if args.native or args.platform or args.output:
+            raise RuntimeError('--join only reads the two required platform reports')
+        join_platforms(*args.join, subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+                       set(NATIVE_COLLECTIONS) | {name for helper in installed_helpers() for name in helper.COLLECTIONS})
+        return
+    if args.native and args.platform:
+        raise RuntimeError('--native cannot qualify a platform collection')
+    if args.platform and sys.platform != ('darwin' if args.platform == 'apple' else 'linux'):
+        raise RuntimeError('coverage platform collection requires its own host')
     helpers = [] if args.native else installed_helpers()
     llvm = tools()
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
@@ -354,7 +368,9 @@ def main():
     initializer = run / 'profile.o'
     continuous = sys.platform == 'linux'
     pattern = '%p-%m%c.profraw' if continuous else '%m.profraw'
-    remaps = [(Path.home(), '/build/home'), (ROOT, '/build/source'),
+    home_destination = '/build/users' if Path.home().is_relative_to('/Users') else '/build/host'
+    remaps = [(Path('/home'), '/build/host'), (Path('/Users'), '/build/users'),
+              (Path.home(), home_destination), (ROOT, '/build/source'),
               (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
@@ -366,18 +382,25 @@ def main():
                     '-DPROFILE_PATH=' + json.dumps(str(run / 'active' / pattern)), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
     env.update(CFLAGS=' '.join(filter(None, (env.get('CFLAGS'), cflags))), LLVM_PROFILE_FILE=str(run / 'active' / pattern), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+               CXXFLAGS=' '.join(filter(None, (env.get('CXXFLAGS'), cflags))),
                CARGO_ENCODED_RUSTFLAGS='\x1f'.join(flags),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
-    artifacts = build(run, env)
+    if args.platform == 'apple':
+        artifacts = []
+        command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'], ROOT, env, run / 'build-production.log')
+        command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'], ROOT, {**env, 'CARGO_TARGET_DIR': str(run / 'target-c')}, run / 'build-c.log')
+    else:
+        artifacts = build(run, env)
     libraries = list((run / 'target-c/debug').glob('libthinkthen_c.*'))
     native = [path for path in libraries if path.suffix in ('.so', '.dylib', '.dll')]
     if len(native) != 1:
         raise RuntimeError('expected one instrumented C shared library')
-    installed = prepare_installed(run, env, initializer, native[0], helpers) if helpers else []
-    executable = collect(run, env, artifacts)
-    measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous)
-    print(f'Partial native measurement: {run}; installed surfaces remain unmeasured' if args.native
+    installed = prepare_installed(run, env, initializer, native[0], helpers, args.platform) if helpers else []
+    executable = collect(run, env, artifacts, args.platform != 'apple')
+    measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous, args.platform)
+    print(f'{args.platform} platform measurement: {run}; join both hosts before acceptance' if args.platform
+          else f'Partial native measurement: {run}; installed surfaces remain unmeasured' if args.native
           else f'Native and installed library measurement: {run}')
 
 

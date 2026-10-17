@@ -11,9 +11,13 @@ from pathlib import Path
 import re
 import tarfile
 import zipfile
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
+PROJECT = ET.parse(ROOT / "ThinkThen.csproj").getroot()
+README = ROOT / next(member.attrib["Include"] for member in PROJECT.findall("./ItemGroup/None")
+                     if member.attrib.get("Pack") == "true" and member.attrib.get("PackagePath") == PROJECT.findtext("./PropertyGroup/PackageReadmeFile"))
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 from native_guard import normalized_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
@@ -44,7 +48,7 @@ def inspect(header, package, native, expected=None):
         assert {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE"} <= members
         assert bundle.read('runtimes/linux-x64/native/libthinkthen.so') == NATIVE.read_bytes(), 'tampered packaged native asset'
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
-        assert bundle.read("README.md") == (ROOT / "README.md").read_bytes(), "stale package README"
+        assert bundle.read("README.md") == README.read_bytes(), "stale package README"
         for name in members:
             safe(name, name.encode() + bundle.read(name))
     with tarfile.open(fileobj=io.BytesIO(native), mode="r:gz") as bundle:
@@ -110,9 +114,9 @@ def abi_check(header, package):
     # Validate every installed SDK import against its generated C declaration.
     required_imports = set(actual['functions'])
     assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
-    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1'}
+    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1'}
     assert set(actual['records']) == carriers, 'unused native layouts retained'
-    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_LOAD_', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
+    constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_',)) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
     expected = abi.represented_abi(native, carriers, required_imports, constant_names)
     for name, prototype in actual['functions'].items():
         pointees = prototype.pop('argument_pointees')
@@ -121,6 +125,32 @@ def abi_check(header, package):
                 raise ValueError(f'C# typed reference differs from C: {name}')
     abi.compare_abi(expected, actual)
     print(f'C# C ABI: {len(actual["records"])} actual layouts, {len(actual["constants"])} represented constants, {len(actual["functions"])} reflected imports match')
+
+
+
+def transport_privacy(package):
+    """An external subclass cannot reach decoder JSON through protected members."""
+    from children import child_env
+    from toolchains import dotnet
+    with tempfile.TemporaryDirectory(prefix='thinkthen-csharp-privacy-') as folder:
+        scratch = Path(folder)
+        with zipfile.ZipFile(package) as bundle:
+            (scratch / 'ThinkThen.dll').write_bytes(bundle.read('lib/net8.0/ThinkThen.dll'))
+        (scratch / 'Probe.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><Reference Include="ThinkThen"><HintPath>ThinkThen.dll</HintPath></Reference></ItemGroup></Project>')
+        config = scratch / 'NuGet.Config'
+        config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+        env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
+                        DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
+        probes = {
+            'object': 'class Probe : ResultObject { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => RequiredElement("call_id"); }',
+            'union': 'class Probe : Answer { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => RequiredElement("kind"); }',
+            'primitive': 'class Probe : Threshold { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => Document; }',
+        }
+        for kind, probe in probes.items():
+            (scratch / 'Probe.cs').write_text('using System.Text.Json; using ThinkThen.Results; ' + probe)
+            result = subprocess.run([str(dotnet()), 'build', str(scratch / 'Probe.csproj'), '--configfile', str(config), '-v', 'quiet', '-m:1'], env=env, capture_output=True, text=True)
+            assert result.returncode != 0 and ('CS0122' in result.stdout or 'CS1729' in result.stdout), 'external subclass exposes decoder transport: ' + kind
+    print('C# external subclass decoder privacy PASS')
 
 
 def abi_plants(header):
@@ -141,8 +171,8 @@ def abi_plants(header):
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
-        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
-                  ('enum', 'NativeBridge.g.cs', 'Atomic = 1', 'Atomic = 19'),
+        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n    public nuint len;', 'public nuint len;\n    public IntPtr data;'),
+                  ('enum', 'NativeBridge.g.cs', 'Backend = 2', 'Backend = 19'),
                   ('return', 'NativeSession.cs', 'extern void thinkthen_session_cancel(', 'extern long thinkthen_session_cancel(')]
         for name, file, before, after in plants:
             copied = source / file
@@ -216,8 +246,6 @@ class Probe {
    }
   }
   var constants=new Dictionary<string,int>();
-  var authored=assembly.GetType("ThinkThen.AuthoredQuestionKind",true)!;
-  foreach(var value in Enum.GetValues(authored))constants.Add("THINKTHEN_LOAD_"+Regex.Replace(Enum.GetName(authored,value)!,"(?<!^)(?=[A-Z])","_").ToUpperInvariant()+"_V1",Convert.ToInt32(value));
   var failure=assembly.GetType("ThinkThen.FailureKind",true)!;
   foreach(var value in Enum.GetValues(failure))constants.Add("THINKTHEN_E"+Enum.GetName(failure,value)!.ToUpperInvariant(),Convert.ToInt32(value));
   var persistence=assembly.GetType("ThinkThen.UsagePersistenceState",true)!;
@@ -245,13 +273,16 @@ def main():
     tampered = rewrite_tar(native)
     fail("tampered-native-member", lambda: inspect(header, package, tampered))
     fail("tampered-native-hash", lambda: inspect(header, package, tampered, receipt))
-    safe("remapped-native", b"/build/home/workspace/source.rs")
+    safe("remapped-native", b"/build/host/workspace/source.rs")
+    fail("old-home-remap", lambda: safe("plant", b"/build/home/workspace/source.rs"))
     fail("private-byte", lambda: safe("plant", b"/home/private/file"))
     secret_zip = rewrite_zip(package, "README.md", b"tt-canary-290")
     fail("compressed-private-byte", lambda: inspect(header, secret_zip, native))
     print("C# local packages: source members, hash receipt, header version, managed secrecy and planted negatives PASS")
 
     abi_check(HEADER, NUPKG)
+
+    transport_privacy(NUPKG)
 
     abi_plants(HEADER)
 

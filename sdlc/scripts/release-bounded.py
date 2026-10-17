@@ -9,11 +9,12 @@ import tempfile
 import time
 
 
-def capture(args, *, env, timeout, input=None, text=False):
+def capture(args, *, env, timeout, input=None, text=False, cwd=None):
     tool = Path(args[0]).name if not isinstance(args, str) else args.split()[0]
     deadline = time.monotonic() + timeout
     job = None
     child = None
+    timed_out = None
     # Files cannot fill a pipe or wait for a descendant to close an inherited writer.
     with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr, tempfile.TemporaryFile() as stdin:
         if input is not None:
@@ -23,7 +24,7 @@ def capture(args, *, env, timeout, input=None, text=False):
             if os.name == 'nt':
                 import runpy
                 job = runpy.run_path(str(Path(__file__).with_name('release-owned-job.py')))['Job']()
-            child = subprocess.Popen(args, env=env, stdin=stdin, stdout=stdout, stderr=stderr,
+            child = subprocess.Popen(args, env=env, cwd=cwd, stdin=stdin, stdout=stdout, stderr=stderr,
                 start_new_session=os.name != 'nt', creationflags=4 if job else 0)
             if job:
                 # The root is suspended: no compiler/setup descendant can escape assignment.
@@ -31,7 +32,7 @@ def capture(args, *, env, timeout, input=None, text=False):
             try:
                 child.wait(timeout=max(0, deadline - time.monotonic()))
             except subprocess.TimeoutExpired as error:
-                raise ValueError(f'{tool} timed out after {timeout} seconds') from error
+                timed_out = error
         finally:
             try:
                 if job:
@@ -59,4 +60,7 @@ def capture(args, *, env, timeout, input=None, text=False):
         if text:
             outputs = [value.decode(locale.getpreferredencoding(False)).replace('\r\n', '\n').replace('\r', '\n')
                        for value in outputs]
+        if timed_out is not None:
+            timed_out.output, timed_out.stderr = outputs
+            raise ValueError(f'{tool} timed out after {timeout} seconds') from timed_out
         return subprocess.CompletedProcess(args, child.returncode, *outputs)

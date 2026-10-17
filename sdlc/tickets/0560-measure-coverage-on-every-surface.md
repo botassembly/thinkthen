@@ -6,6 +6,10 @@ Milestone: 0.2
 
 Depends on: 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558
 
+Reviews: revision 41499bf, accept
+
+Reviews: revision 8b96113, reporting repair accepted; coverage baseline accepted by PM amendment; ticket remains open until candidate.
+
 ## Outcome
 
 A committed release-suite script measures how much of the Rust core and the C library each public surface reaches. The surfaces are CLI commands, the public Rust API and each installed language library. The script also measures the inside unit tests separately. Each run stores a summary under `sdlc/records/coverage/`, so later runs can be compared. The first recorded run gives the baseline that the outside-in test cleanup works from.
@@ -46,4 +50,21 @@ PM amendment, 2026-10-12. Accept the 2026-10-12 installed pair at da1e3bb17 as t
 
 
 PM amendment, 2026-10-13. Remaining work. Close 0560 now; its tooling and baseline are done and reviewed. 0543 runs `sdlc/scripts/coverage --release` once on the candidate SHA and stores only its summary. The deleted-line allowance equals 59,962 minus the candidate's mapped line count. Each collection passes when its reached count is at least its lower baseline count minus that allowance. The candidate record shows this in one table, and no new script is written for it. Delete the stale branch `ticket/0560-measure-coverage`.
+
+## Post-0.2 coverage item
+
+PM ruling, 2026-10-16: accept the honest C source-unit floor of 5,598 after approved obsolete API and private projection test deletions; the 124 surviving lines with no observed hit do not hold the 0.2 tag. Each uncovered accessor or helper below must gain an outside-in check through a library or be deleted after proving it unused. Keep the collector and retired tests unchanged. The exact line list and unchanged-source accounting are in `sdlc/records/0543-core-wave-evidence.md`.
+
+- `crates/thinkthen/src/core/answer.rs`
+- `crates/thinkthen/src/public/recognize.rs`
+- `crates/thinkthen/src/public/request.rs`
+- `crates/thinkthen/src/public/results.rs`
+- `crates/thinkthen/src/public/results/aggregate_reading.rs`
+- `crates/thinkthen/src/public/results/complete_facts.rs`
+- `crates/thinkthen/src/public/results/complete_recognize.rs`
+- `crates/thinkthen/src/public/results/metadata.rs`
+- `crates/thinkthen/src/public/results/observation.rs`
+- `crates/thinkthen/src/public/results/owned_observation.rs`
+- `crates/thinkthen/src/public/results/reading.rs`
+
 - 2026-10-17 next: Integrated on the 0.2 release branch ticket/0543-final; lands with 0543 once the frozen candidate qualifies, so it runs no separate lane.

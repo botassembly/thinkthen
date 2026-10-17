@@ -1,3 +1,4 @@
+//! Stays: blocked pipe ownership and cancellation joins need direct platform I/O fault checks.
 //! Real owned subprocess pipes; these tests require a Windows runner.
 use super::{PipeInput, PipeOutput};
 use crate::CancelToken;
@@ -138,4 +139,16 @@ fn owned_peer_exit_becomes_input_eof_and_an_observed_output_error() {
     assert_eq!(failure.kind(), std::io::ErrorKind::BrokenPipe);
     drop(input);
     drop(output);
+}
+
+#[test]
+fn accepted_output_bytes_remain_written_when_shutdown_races_completion() {
+    let mut peer = Peer::new();
+    let file = File::from(OwnedHandle::from(peer.0.stdin.take().unwrap()));
+    let stop = CancelToken::new();
+    let output = PipeOutput::new(file, stop.clone()).unwrap();
+    let written = output.file.as_ref().write(b"x");
+    assert_eq!(written.as_ref().unwrap(), &1);
+    stop.cancel();
+    assert_eq!(output.completed(written).unwrap(), 1);
 }

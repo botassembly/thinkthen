@@ -1,3 +1,4 @@
+//! Stays: canonical request encoding must preserve authored order and keep hostile content as data.
 //! The request writer against its fixtures.
 
 use super::{Request, RequestQuestion, drops_detail, encode};

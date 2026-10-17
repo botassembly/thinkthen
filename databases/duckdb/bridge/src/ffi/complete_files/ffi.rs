@@ -234,7 +234,7 @@ fn descriptor_item(
 /// Session is live and unique; counted bytes are readable through return.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_push(
-    session: *mut thinkthen::RequestSession,
+    session: *mut thinkthen::RequestRecoveringSession,
     descriptor: BridgeText,
 ) -> Reply {
     reply_boundary(|| {
@@ -256,18 +256,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_push(
 /// Session remains live through return.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_read(
-    session: *mut thinkthen::RequestSession,
+    session: *mut thinkthen::RequestRecoveringSession,
 ) -> Reply {
     reply_boundary(|| {
         // SAFETY: caller owns the existing allocation throughout this call.
         let session = unsafe { session.as_ref() }
             .ok_or_else(|| "thinkthen defect: missing session".to_owned())?;
         match session.try_read() {
-            thinkthen::RequestSessionRead::Pending => Ok(Vec::new()),
-            thinkthen::RequestSessionRead::End => Ok(b"E".to_vec()),
-            thinkthen::RequestSessionRead::Result(packet) => render::packet(packet)
+            thinkthen::RequestRecoveringRead::Pending => Ok(Vec::new()),
+            thinkthen::RequestRecoveringRead::End => Ok(b"E".to_vec()),
+            thinkthen::RequestRecoveringRead::Result(packet) => render::packet(packet)
                 .map(|v| v.to_string().into_bytes())
-                .map_err(|e| crate::complete_native::failure(&e).to_string()),
+                .map_err(|e| crate::errors::RowError::from(e).text),
         }
     })
 }
@@ -276,7 +276,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_read(
 /// Caller uniquely owns both allocations, with reader optional at EOF/host failure.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_finish(
-    session: *mut thinkthen::RequestSession,
+    session: *mut thinkthen::RequestRecoveringSession,
     reader: *mut Reader,
     host_failure: i32,
 ) -> Reply {
@@ -304,7 +304,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_finish(
 /// The caller relinquishes this allocation once, after freeing its reader.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_free(
-    session: *mut thinkthen::RequestSession,
+    session: *mut thinkthen::RequestRecoveringSession,
 ) {
     let _ = super::panic::caught(|| {
         if !session.is_null() {

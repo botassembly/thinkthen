@@ -27,7 +27,7 @@ def shape(raw, presence=False):
         if not alternatives and isinstance(raw.get("type"),list): alternatives=[{**raw,"type":kind} for kind in raw["type"]]
         if not alternatives: raise
         return {"cpp_alternatives": alternatives}
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 
 def name(key):
     return ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
@@ -47,37 +47,53 @@ def typ(raw, presence=False):
     if 'primitive_variants' in s:
         schemas=s.get('primitive_schemas',{})
         return 'std::variant<'+', '.join(dict.fromkeys(typ(schemas.get(k,{'type':k})) for k in s['primitive_variants'] if not presence or k != 'null'))+'>'
-    return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Json') if isinstance(kind,str) else 'Json'
+    return {'string':'std::string','boolean':'bool','integer':integer_type(s),'number':'double','null':'std::nullptr_t'}.get(kind,'Data') if isinstance(kind,str) else 'Data'
 
 def condition(tag):
     mode,member,value=tag
-    if mode=='literal': return f'literal(value_, {json.dumps(member)}, {json.dumps(value)})'
-    if mode=='literals': return ' && '.join(f'literal(value_, {json.dumps(k)}, {json.dumps(v)})' for k,v in value.items())
+    if mode=='literal': return f'detail::literal(value_, {json.dumps(member)}, {json.dumps(value)})'
+    if mode=='literals': return ' && '.join(f'detail::literal(value_, {json.dumps(k)}, {json.dumps(v)})' for k,v in value.items())
     if mode=='member': return f'value_.contains({json.dumps(member)})'
     return ' && '.join([f'value_.contains({json.dumps(k)})' for k in value['required']]+[f'!value_.contains({json.dumps(k)})' for k in value['excluded']])
 
+def cache_field(value_type, method):
+    slot = 'std::shared_ptr<const ' + value_type + '>'
+    return f'private: std::shared_ptr<{slot}> cached_{method}_ = std::make_shared<{slot}>();'
+
+
+def cache_body(owner, value_type, method, expression):
+    return f'inline const {value_type}& {owner}::{method}() const {{ auto stored = std::atomic_load(cached_{method}_.get()); if (!stored) {{ auto candidate = std::make_shared<const {value_type}>({expression}); if (std::atomic_compare_exchange_strong(cached_{method}_.get(), &stored, candidate)) stored = std::move(candidate); }} return *stored; }}'
+
+
 def render(definitions,version):
-    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
+    from generate import ROOT, SCHEMA, graph, immediate_schema, prepare
+    extras = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())), ('completeImmediateFacts',)))
+    definitions = dict(sorted({**extras, **definitions}.items()))
+    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','#include <atomic>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
     for key in definitions: lines += [f'class {name(key)};']
     bodies=[]
     for key,raw in definitions.items():
         n=name(key); s=shape(raw)
-        lines += [f'class {n} : public Node {{ public: using Node::Node;']
+        lines += [f'class {n} final : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct detail::Loader;', 'public:']
         if 'properties' in s:
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
-                lines += [f'    Presence<{t}> {method}() const;']
-                bodies += [f'inline Presence<{t}> {n}::{method}() const {{ return member_value<{t}>(value_, {json.dumps(member)}); }}']
+                lines += [cache_field(f'Presence<{t}>', method), f'public: const Presence<{t}>& {method}() const;']
+                bodies += [cache_body(n, f'Presence<{t}>', method, f'detail::member_value<{t}>(value_, {json.dumps(member)})')]
+        from host_answers import named_object_fields
+        for member in named_object_fields(s, definitions):
+            lines += [f'    std::string {member}_name() const;']
+            bodies += [f'inline std::string {n}::{member}_name() const {{ return value_.at({json.dumps(member)}).at("name").get<std::string>(); }}']
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'    std::optional<{cn}> as_{cn}() const;']
-            bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return {cn}(value_); return std::nullopt; }}']
+            bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return detail::Loader::input<{cn}>(value_); return std::nullopt; }}']
         if 'properties' not in s and 'variants' not in s:
             t=typ(s)
-            lines += [f'    {t} value() const;']
-            bodies += [f'inline {t} {n}::value() const {{ return decode<{t}>(value_); }}']
+            lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']
+            bodies += [cache_body(n, t, 'value', f'detail::decode<{t}>(value_)')]
         lines += ['};']
-    return '\n'.join(lines+bodies+['}'])+'\n'
+    return usage((ROOT / 'libraries/c/include/thinkthen.h').read_text()) + '\n'.join(lines+bodies+['}'])+'\n' + result_helpers(definitions) + native_values(definitions)
 
 def input_render(definitions):
     lines=['// Generated from request.schema.json; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::inputs {','using results::Node;']
@@ -85,11 +101,11 @@ def input_render(definitions):
     bodies=[]
     for key,raw in definitions.items():
         n=name(key);s=shape(raw)
-        lines += [f'class {n} : public Node {{', f'    {n}(const Json& value, int):Node(value) {{}}', f'public: static {n} from_document(const Json& value) {{ return {n}(value,0); }}']
+        lines += [f'class {n} : public Node {{', f'    {n}(const Data& value, int):Node(value) {{}}', 'friend struct ::tt::results::detail::Loader;', 'public:']
         if 'variants' in s:
             for child,_ in s['variants']:
                 cn=name(child); lines += [f'    {n}(const {cn}& value);']
-                bodies += [f'inline {n}::{n}(const {cn}& value):Node(value.document()) {{}}']
+                bodies += [f'inline {n}::{n}(const {cn}& value):Node(::tt::results::detail::document(value)) {{}}']
         elif 'properties' in s:
             constants={k:v['const'] for k,v in s['properties'].items() if isinstance(v,dict) and 'const' in v}
             for member, field in s['properties'].items():
@@ -98,22 +114,169 @@ def input_render(definitions):
                     values = enum_values(resolved)
                     if values and len(values) == 1:
                         constants[member] = values[0]
-            expr='Json::Object{'+','.join('{'+json.dumps(k)+',Json('+json.dumps(v)+')}' for k,v in constants.items())+'}'
-            lines += [f'    {n}():Node(Json({expr})) {{}}']
+            expr='Data::Object{'+','.join('{'+json.dumps(k)+',Data('+json.dumps(v)+')}' for k,v in constants.items())+'}'
+            lines += [f'    {n}():Node(Data({expr})) {{}}']
             for member,field in s['properties'].items():
                 if isinstance(field,dict) and 'const' in field: continue
                 t=typ(field); lines += [f'    {n}& set_{member}(const {t}& value);']
-                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ set_member({json.dumps(member)},results::encode(value)); return *this; }}']
+                bodies += [f'inline {n}& {n}::set_{member}(const {t}& value) {{ set_member({json.dumps(member)},results::detail::encode(value)); return *this; }}']
         else:
             t=typ(s)
             lines += [f'    explicit {n}(const {t}& value);']
-            bodies += [f'inline {n}::{n}(const {t}& value):Node(results::encode(value)) {{}}']
+            bodies += [f'inline {n}::{n}(const {t}& value):Node(results::detail::encode(value)) {{}}']
         lines += ['};']
-    return '\n'.join(lines+bodies+['}'])+'\n'
+    lines = lines + bodies
+    lines += [
+        'inline RequestQuestion question_file(const std::string& path) { return RequestQuestionFile().set_path(path); }',
+        'inline RequestQuestion question_name(const std::string& name) { return RequestQuestionName().set_name(name); }',
+        'inline RequestQuestion question_reference(const std::string& reference) { return RequestQuestionReference().set_reference(reference); }',
+        'inline RequestItem item(const RequestOriginal& original) { return RequestItem().set_original(original); }',
+        'inline RequestInput files(const std::vector<std::string>& paths, const RequestReader& reading={}) { return RequestInputSource().set_source(RequestSource().set_paths(paths).set_reading(reading)); }',
+    ]
+    return '\n'.join(lines+['}'])+'\n'
+
 
 
 def usage(header):
     members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
-    lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <thinkthen/thinkthen.h>', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
-    lines += [word.lower() + ' = ' + symbol + ',' for symbol, word, _ in members]
+    lines = ['// Generated from the compiler-derived C header; do not edit.', '#pragma once', '#include <cstdint>', '#include <string>', '#ifndef THINKTHEN_CPP_ENUMS', '#define THINKTHEN_CPP_ENUMS', 'namespace tt {', 'enum class UsagePersistenceState : uint32_t {']
+    lines += [word.lower() + ' = ' + value + ',' for _, word, value in members]
+    lines += ['};', 'enum class NativeFailureKind {']
+    lines += [word.lower() + ' = ' + value + ',' for word, value in re.findall(r'^#define THINKTHEN_E(\w+) (\d+)\s*$', header, re.M)]
+    lines += ['};', 'inline NativeFailureKind failure_kind(const std::string& name) {']
+    lines += [f'if(name=="{word.lower()}") return NativeFailureKind::{word.lower()};' for word, _ in re.findall(r'^#define THINKTHEN_E(\w+) (\d+)\s*$', header, re.M)]
+    return '\n'.join(lines + ['return NativeFailureKind::defect;', '}', '}', '#endif']) + '\n'
+
+
+def named_calls(functions, native_functions):
+    from host_answers import usage_operations
+    lines = ['// Generated from RequestFunction and the compiler-derived ABI; do not edit.', '#pragma once',
+             'namespace tt {', 'template<class Owner> class NamedCalls {', 'public:']
+    from host_answers import call_results, scalar_input_selectors
+    from generate import SCHEMA, graph, prepare
+    descriptors = call_results(prepare(graph(json.loads(SCHEMA.read_text()), ROOTS)))
+    from generate import ROOT
+    requests = prepare(graph(json.loads((ROOT / 'specification/request.schema.json').read_text()), ('RequestInput',)))
+    singles = set(scalar_input_selectors(requests))
+    for function in functions:
+        scalar = descriptors[function]['call_shape'] == 'input'
+        input_types = [(name(child), child in singles) for child, _ in requests['RequestInput']['variants']] if scalar else [('RequestInput', False)]
+        for input_type, single in input_types:
+            project = f'results::detail::project_{function}' + ('<'+str(single).lower()+'>' if scalar else '')
+            lines += [f'ResultCall<{project}> {function}(const inputs::RequestQuestion& question, const inputs::{input_type}& input, const inputs::RequestOptions& options={{}}) const {{',
+                      f'return ResultCall<{project}>(static_cast<const Owner*>(this)->start({json.dumps(function)}, question, input, options));', '}']
+    if 'thinkthen_request_plan_named_value' in native_functions:
+        lines += ['results::Plan plan(const inputs::RequestCall& call) const {',
+                  'return static_cast<const Owner*>(this)->plan_impl(call);', '}']
+    for _, operation in usage_operations(native_functions):
+        lines += [f'UsageStatus {operation}() const {{',
+                  f'return static_cast<const Owner*>(this)->usage_impl({str(operation == "finish_usage_status").lower()});', '}']
     return '\n'.join(lines + ['};', '}']) + '\n'
+
+
+def result_helpers(definitions):
+    from cpp_results import render
+    failure = '\n'.join(['namespace tt {',
+        'class Failure : public std::runtime_error { public:',
+        'NativeFailureKind kind; bool retryable=false;',
+        'std::optional<results::ImmediateFacts> facts; std::optional<results::CallError> failure;',
+        'std::optional<results::SessionPacketTerminal> terminal; std::vector<results::SessionPacket> packets;',
+        'Failure(int code, const std::string& message);',
+        'Failure(const char* message, const std::vector<results::SessionPacket>& values);',
+        'explicit Failure(results::SessionPacketTerminal value);', '};', '}']) + '\n'
+    return failure + render(definitions, typ, name)
+
+
+def native_values(definitions):
+    """Copy compiler-derived native views into immutable host values, without parsing."""
+    import c
+    from generate import SCHEMA, graph, immediate_schema, prepare, references
+    all_definitions = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())),
+                                    ('completesessionPacket', 'completeImmediateFacts')))
+    definitions, pending = {}, ['completesessionPacket', 'completeImmediateFacts']
+    while pending:
+        key = pending.pop()
+        if key in definitions:
+            continue
+        schema = definitions[key] = all_definitions[key]
+        pending.extend(references(schema))
+        pending.extend(child for child, _ in schema.get('variants', []))
+    class Layout(c.Target):
+        def __init__(self):
+            super().__init__(definitions)
+            self.members = {}
+            self.arms = {}
+        def structure(self, key, members):
+            self.members[key] = members
+            super().structure(key, members)
+        def union(self, key, arms):
+            self.arms[c.ident(key)] = arms
+            super().union(key, arms)
+    target = Layout()
+    for key, schema in definitions.items():
+        target.definition(key, schema)
+    lines = ['#ifdef THINKTHEN_CPP_IMPLEMENTATION', '#include <thinkthen/thinkthen.h>', 'namespace tt::results::detail {']
+    lines += [f'inline Data native_value(const {key}& value);' for key in target.members]
+    lines += ['inline Data native_value(const thinkthen_complete_json_v1& value);',
+              'inline Data native_value(const thinkthen_complete_utf8_v1& value) { return Data(std::string(value.data ? value.data : "", value.len)); }',
+              'template<class T> Data native_value(const T* value) { if(!value) throw std::invalid_argument("missing native value"); return native_value(*value); }',
+              'template<class T, std::enable_if_t<std::is_arithmetic_v<T>, int> = 0> Data native_value(T value) { return Data(value); }',
+              'inline Data native_value(const thinkthen_complete_json_v1& value) {',
+              'switch(value.kind) {',
+              'case THINKTHEN_COMPLETE_JSON_NULL_V1: return Data(nullptr);',
+              'case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return Data(bool(value.data.boolean));',
+              'case THINKTHEN_COMPLETE_JSON_STRING_V1: return native_value(value.data.string);',
+              'case THINKTHEN_COMPLETE_JSON_NUMBER_V1: { auto text=native_value(value.data.number).get<std::string>();',
+              'if(text.find_first_of(".eE")==std::string::npos) { if(!text.empty() && text[0]==\'-\') { int64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } else { uint64_t number{}; auto parsed=std::from_chars(text.data(),text.data()+text.size(),number); if(parsed.ec==std::errc{}) return Data(number); } throw std::invalid_argument("native integer is outside the C++ range"); }',
+              'std::istringstream stream(text); stream.imbue(std::locale::classic()); double number{}; stream >> number; if(stream.fail() || !stream.eof() || !std::isfinite(number)) throw std::invalid_argument("invalid native number"); return Data(number); }',
+              'case THINKTHEN_COMPLETE_JSON_ARRAY_V1: { Data::Array items; for(size_t i=0;i<value.data.array.len;++i) items.push_back(native_value(value.data.array.data[i])); return Data(std::move(items)); }',
+              'case THINKTHEN_COMPLETE_JSON_OBJECT_V1: { Data::Object items; for(size_t i=0;i<value.data.object.len;++i) { auto& item=value.data.object.data[i]; auto name=native_value(item.name).get<std::string>(); for(const auto& prior:items) if(prior.first==name) throw std::invalid_argument("duplicate original member"); items.emplace_back(std::move(name),native_value(item.value)); } return Data(std::move(items)); }',
+              'default: throw std::invalid_argument("invalid native value kind"); } }']
+    for key, members in target.members.items():
+        schema = target.schemas.get(key, {})
+        body = []
+        if key in target.arms:
+            body += ['switch(value.kind) {']
+            for arm, _, field_type, _ in target.arms[key]:
+                symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                field = arm + '_' if arm in ('true', 'false') else arm
+                expression = 'Data(nullptr)' if arm == 'null' else f'native_value(value.data.{field})'
+                if field_type == 'u32' and arm != 'null': expression = f'Data(bool(value.data.{field}))'
+                body += [f'case {symbol}: return {expression};']
+            body += ['default: throw std::invalid_argument("invalid native alternative"); }']
+        elif 'enum' in schema:
+            body += ['switch(value.kind) {']
+            for value in schema['enum']:
+                symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                body += [f'case {symbol}: return Data({json.dumps(value)});']
+            body += ['default: throw std::invalid_argument("invalid native enum"); }']
+        elif 'properties' in schema:
+            body += ['Data::Object items;']
+            for member, field_type in members:
+                if member == 'extensions': continue
+                expression = f'value.{member + "_" if member in ("true", "false") else member}'
+                if field_type.endswith('_presence_v1'):
+                    decoded = f'native_value({expression}.value)'
+                    if c.normalized(schema['properties'][member]).get('type') == 'boolean':
+                        decoded = f'Data(bool({expression}.value))'
+                    body += [f'if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back({json.dumps(member)},Data(nullptr));',
+                             f'else if({expression}.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back({json.dumps(member)},{decoded});']
+                else:
+                    decoded = f'native_value({expression})'
+                    if c.normalized(schema['properties'][member]).get('type') == 'boolean': decoded = f'Data(bool({expression}))'
+                    body += [f'items.emplace_back({json.dumps(member)},{decoded});']
+            body += ['for(size_t i=0;i<value.extensions.len;++i) { auto& item=value.extensions.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value)); }', 'return Data(std::move(items));']
+        elif members[0][0] == 'presence':
+            body += ['return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);']
+        elif members[0][0] == 'data':
+            mapping = key.endswith('_map_v1')
+            body += ['Data::Object items;' if mapping else 'Data::Array items;', 'for(size_t i=0;i<value.len;++i) {']
+            body += ['auto& item=value.data[i]; items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));' if mapping else 'items.push_back(native_value(value.data[i]));']
+            body += ['}', 'return Data(std::move(items));']
+        elif members[0][0] == 'name':
+            body += ['return native_value(value.value);']
+        else:
+            expression = 'Data(bool(value.value))' if schema.get('type') == 'boolean' else 'native_value(value.value)'
+            body += [f'return {expression};']
+        lines += [f'inline Data native_value(const {key}& value) {{'] + body + ['}']
+    return '\n'.join(lines + ['}', '#endif']) + '\n'

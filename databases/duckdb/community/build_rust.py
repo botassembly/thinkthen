@@ -6,8 +6,14 @@ import os
 from pathlib import Path
 import re
 import shlex
+import shutil
 import subprocess
 import sys
+# Build helpers run from the selected release archive, which must stay unchanged.
+sys.dont_write_bytecode = True
+from python_host import require_tomllib
+
+require_tomllib()
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -88,10 +94,11 @@ def main():
     if not re.fullmatch(r"(?:x86_64|aarch64)-(?:unknown-linux-(?:gnu|musl)|apple-darwin)", args.target):
         raise SystemExit("community: the bridge supports only native Linux and Apple targets")
     env = environment(args)
+    target_dir = Path(env.get("CARGO_TARGET_DIR", args.output)).absolute()
     result = subprocess.run(["cargo", f"+{VERSION}", "rustc", "--locked", "--offline", "--release",
                              "--target", args.target, "--manifest-path",
                              str(ROOT / "databases/duckdb/bridge/Cargo.toml"),
-                             "--target-dir", str(args.output), "--", "--print", "native-static-libs"],
+                             "--target-dir", str(target_dir), "--", "--print", "native-static-libs"],
                             env=env, text=True, stdout=sys.stdout, stderr=subprocess.PIPE)
     sys.stderr.write(result.stderr)
     if result.returncode:
@@ -99,6 +106,11 @@ def main():
     match = re.search(r"native-static-libs: ([^\n]+)", result.stderr)
     if match is None:
         raise SystemExit("community: Rust did not report the bridge's native static libraries")
+    archive = Path(args.target) / "release/libthinkthen_duckdb_bridge.a"
+    args.output.mkdir(parents=True, exist_ok=True)
+    if target_dir != args.output.absolute():
+        (args.output / archive).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target_dir / archive, args.output / archive)
     # GNU and Apple linkers both accept their native library flags in a response file.
     (args.output / "native-libs.rsp").write_text(match.group(1) + "\n")
 

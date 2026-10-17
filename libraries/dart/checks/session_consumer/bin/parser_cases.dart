@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
-import 'package:thinkthen_dart/src/session/values.dart' show decodeNative;
+import 'fixture_values.dart';
 
 void main(List<String> args) {
   final cases = (jsonDecode(File(args.single).readAsStringSync())
@@ -32,12 +32,12 @@ void main(List<String> args) {
   }
   for (final malformed in ['true false', '{"x":}', '[1,]', '"unterminated']) {
     try {
-      decodeNative(malformed);
+      decodeFixture(malformed);
       throw StateError('malformed native JSON accepted');
     } on FormatException {}
   }
   final parsed =
-      decodeNative('{"wide":18446744073709551615,"null":null,"false":false}')
+      decodeFixture('{"wide":18446744073709551615,"null":null,"false":false}')
           as Map;
   if (parsed['wide'] != BigInt.parse('18446744073709551615') ||
       parsed['null'] != null ||

@@ -186,7 +186,7 @@ fn judgment(value: &Judgment) -> Option<String> {
 }
 
 /// One question over the texts: the door's column against the slice form,
-/// `decide_many` for a decision and `details` for the others.
+/// `decide_many` for a decision and native records for the others.
 fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cells, Cells) {
     let column = common::column(texts);
     let options = common::singleton;
@@ -196,9 +196,13 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
     };
     let answered = match Question::from_json(question).expect("the case's question") {
         LoadedQuestion::Banded(banded) => {
-            let listed = slice
-                .decide_many_with(&banded, texts.to_vec(), options())
-                .map(|row| row.map(|row| *row.value()));
+            let listed = crate::api::pull_decisions(
+                slice,
+                &thinkthen::LoadedQuestion::Banded(banded.clone()),
+                crate::api::plain_records(texts.to_vec()),
+                options(),
+            )
+            .map(|row| row.map(|row| row.result().value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(
@@ -210,9 +214,13 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
             );
         }
         LoadedQuestion::Question(asked) if asked.kind() == QuestionKind::Decide => {
-            let listed = slice
-                .decide_many_with(&asked, texts.to_vec(), options())
-                .map(|row| row.map(|row| *row.value()));
+            let listed = crate::api::pull_decisions(
+                slice,
+                &asked,
+                crate::api::plain_records(texts.to_vec()),
+                options(),
+            )
+            .map(|row| row.map(|row| row.result().value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(
@@ -230,16 +238,61 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
         QuestionKind::Score => door.score_series(&answered, &column, options()),
         _ => door.tag_series(&answered, &column, options()),
     };
+    let function = match answered.kind() {
+        QuestionKind::Choose => thinkthen::RequestFunction::Choose,
+        QuestionKind::Score => thinkthen::RequestFunction::Score,
+        _ => thinkthen::RequestFunction::Tag,
+    };
     let listed = texts
         .iter()
-        .map(|one| {
-            slice
-                .details(&answered, one)
-                .map(|found| judgment(found.value().value()))
-        })
+        .map(|one| atomic_text(slice, function, &answered, one))
         .collect::<Result<_, _>>()
         .expect("the one-text form");
     (cells(through_door.expect("the door").value()), listed)
+}
+
+fn atomic_text(
+    engine: &Engine,
+    function: thinkthen::RequestFunction,
+    question: &Question,
+    one: &str,
+) -> Result<Option<String>, thinkthen::Error> {
+    let call = crate::api::whole(
+        engine,
+        function,
+        question.clone().into(),
+        crate::api::plain_records([one]),
+        common::singleton(),
+    )?;
+    let value = match call.value() {
+        thinkthen::RequestValue::Choices(rows) => Judgment::Choice(
+            rows.first()
+                .expect("one native atomic row")
+                .result()
+                .value()
+                .map(str::to_owned),
+        ),
+        thinkthen::RequestValue::Scores(rows) => Judgment::Score(
+            rows.first()
+                .expect("one native atomic row")
+                .result()
+                .value(),
+        ),
+        thinkthen::RequestValue::Tags(rows) => Judgment::Tags(
+            rows.first()
+                .expect("one native atomic row")
+                .result()
+                .value()
+                .to_vec(),
+        ),
+        _ => {
+            return Err(thinkthen::Error::new(
+                thinkthen::ErrorKind::Defect,
+                "native atomic result",
+            ));
+        }
+    };
+    Ok::<_, thinkthen::Error>(judgment(&value))
 }
 
 /// A set over the texts: each typed answer against its record's JSON member.
@@ -251,11 +304,15 @@ fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<C
     let out = door
         .annotate_frame(&set, &frame, "record", common::singleton())
         .expect("the door");
-    let records: Vec<String> = slice
+    let annotated = slice
         .annotate_with(&set, texts.to_vec(), common::singleton())
-        .map(|record| record.map(|record| record.value_json()))
-        .collect::<Result<_, _>>()
         .expect("the slice form");
+    let records: Vec<String> = annotated
+        .results()
+        .iter()
+        .map(|record| record.result().value_json())
+        .collect::<Result<_, _>>()
+        .expect("record JSON");
     let mut through_door = Vec::new();
     let mut through_slice = Vec::new();
     for (name, _) in set.members() {

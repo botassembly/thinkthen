@@ -26,7 +26,7 @@ def consume(archive):
         binary = root / 'consumer.exe'
         shutil.copyfile(root / 'bin/thinkthen.dll', root / 'thinkthen.dll')
         C.run(['cl.exe', '/nologo', '/TC', '/std:c11', '/W4', '/WX', '/MD', '/D_CRT_SECURE_NO_WARNINGS',
-               '/I' + str(root / 'include'), str(C.REPO / 'libraries/c/tests/c/driver.c'),
+               '/I' + str(root / 'include'), str(C.REPO / 'libraries/c/examples/session.c'),
                '/Fo' + str(root / 'consumer.obj'), '/Fe' + str(binary), '/link',
                str(root / 'lib/thinkthen.dll.lib')])
         C.inspect(root, binary)
@@ -58,19 +58,19 @@ def consume(archive):
             thread.start()
             try:
                 base = f'http://127.0.0.1:{server.server_port}/generic/v1'
-                fields = (base, '{"decide":"asks for a refund"}', 'Refund me.')
-                payload = ('decide 3\n' + ''.join(f'{len(field.encode())}\n{field}\n' for field in fields)).encode()
                 refusal = "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
                 for capped in (True, False):
-                    child_env = env | {'THINKTHEN_CACHE': str(root / ('capped' if capped else 'open'))}
+                    child_env = env | {'THINKTHEN_CACHE': str(root / ('capped' if capped else 'open')), 'THINKTHEN_BASE_URL': base}
                     if capped:
                         child_env['THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL'] = '10'
-                    result = C.CAPTURE([str(binary)], input=payload, env=child_env, timeout=60)
-                    if result.returncode != 0 or result.stderr or b'sk-c-archive-loopback' in result.stdout:
-                        raise ValueError('downloaded C consumer failed or exposed its key')
-                    expected = f'1 {len(refusal)}\n{refusal}\n'.encode() if capped else b'0 21\n1 0.90000000000000002\n'
-                    if result.stdout != expected or len(requests) != (0 if capped else 1):
-                        raise ValueError('downloaded C consumer refusal/result or counted requests differ')
+                    result = C.CAPTURE([str(binary)], env=child_env, timeout=60)
+                    expected_error = f'failure 1: {refusal}\n'.encode() if capped else b''
+                    expected_output = b'records=0 requests=0\n' if capped else b'records=1 requests=1\n'
+                    if (result.returncode != (1 if capped else 0) or result.stderr != expected_error
+                            or result.stdout != expected_output or len(requests) != (0 if capped else 1)):
+                        raise ValueError('downloaded C session consumer refusal/facts or counted requests differ')
+                    if b'sk-c-archive-loopback' in result.stdout + result.stderr:
+                        raise ValueError('downloaded C session consumer exposed its key')
             finally:
                 server.shutdown()
                 thread.join(timeout=10)

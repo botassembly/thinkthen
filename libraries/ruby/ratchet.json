@@ -3,5 +3,6 @@
     "src"
   ],
   "extension": ".rs",
-  "max": 1629
+  "max": 675,
+  "scope": "handwritten-production"
 }

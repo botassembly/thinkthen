@@ -21,7 +21,7 @@ import tempfile
 from pathlib import Path
 
 import harness
-from harness import ROOT, Backend, expect, rows, run, said
+from harness import ROOT, Backend, expect, rows, run, said, native_reading
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/"sqlite/tests"))
 from question_keys import question_keys
 from signal_suite import CANCELLED, held_cancel
@@ -94,11 +94,22 @@ def digest(url: str, request: str) -> str:
 
 
 def single(case: dict, base: str) -> list:
-    """decide, choose, tag, and score: the whole line `thinkthen_details` returns."""
+    """Atomic details expose the native complete result without transport JSON."""
     question = quoted(json.dumps(case["question"]))
-    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
-    lines = [json.loads(line) for (line,) in rows(got[0])]
-    return [{"bare": line["value"], "answer": line["answer"], "url": line["meta"]["url"]} | {name: line["meta"].get(name, "absent") for name in FIELDS} for line in lines]
+    verb = next(name for name in ("decide","choose","tag","score") if name in case["question"])
+    got = run([f"SELECT thinkthen_{verb}_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
+    receipts = [line for (line,) in rows(got[0])]
+    readings = [native_reading(receipt) for receipt in receipts]
+    answer_fields = []
+    for reading in readings:
+        answer = {key: value for key, value in reading['answer'].items() if value is not None}
+        if 'probabilities' in answer:
+            answer['probabilities'] = {entry['name']: entry['value'] for entry in answer['probabilities']}
+        answer_fields.append(answer)
+    return [{"bare": receipt["value"],
+             "answer": answer, "url": reading['meta']['url']} |
+            {name: reading['meta'].get(name) for name in FIELDS}
+            for receipt, reading, answer in zip(receipts, readings, answer_fields)]
 
 
 def single_wanted(case: dict, base: str) -> list:
@@ -108,7 +119,7 @@ def single_wanted(case: dict, base: str) -> list:
     wanted = []
     for answer in case["expect"]["success"]["answers"]:
         details = answer["details"] | {"requests": [key for held in answer["details"]["requests"] for key in renamed[held]]}
-        wanted.append({"bare": answer["bare"], "answer": details["answer"], "url": served} | {name: details.get(name, "absent") for name in FIELDS})
+        wanted.append({"bare": answer["bare"], "answer": details["answer"], "url": served} | {name: details.get(name) for name in FIELDS})
     return wanted
 
 

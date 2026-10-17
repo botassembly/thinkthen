@@ -1,10 +1,10 @@
 kinds=(
   person
-  organization
+  product
   place
 )
-text="Maria Chen joined Northwind Freight, a company"
-text+=" in Chicago."
+text="Sam Patel says his Kindle arrived broken"
+text+=" in Denver."
 
 printf '%s' "$text" |
 thinkthen recognize "${kinds[@]}" |

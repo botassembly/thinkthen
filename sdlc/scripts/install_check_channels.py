@@ -150,7 +150,7 @@ def rubygems(check):
 
 
 def nuget(check):
-    check.run('dotnet', 'new', 'console', '--name', 'InstallCheck', '--framework', 'net8.0')
+    check.run('dotnet', 'new', 'console', '--name', 'InstallCheck', '--output', '.', '--framework', 'net8.0')
     check.run('dotnet', 'add', 'package', 'Botassembly.ThinkThen', '--version', check.version)
     source = write_consumer(check.project, 'csharp', 'Program.cs')
     assets = json.loads((check.project / 'obj/project.assets.json').read_text())
@@ -265,10 +265,13 @@ def sqlite(check):
     settings = (check.root / 'settings.json').read_text()
     evidence = (check.sample / 'report.txt').read_text()
     question = (check.sample / 'question.txt').read_text()
-    sql = f'.load {extension}\nSELECT thinkthen_configure({sql_quote(settings)});\nSELECT thinkthen_details({sql_quote(question)},{sql_quote(evidence)});\n'
+    sql = f'.load {extension}\nSELECT thinkthen_configure({sql_quote(settings)});\n'
+    sql += ("SELECT json_object('value',json(CASE value WHEN 1 THEN 'true' WHEN 0 THEN 'false' ELSE 'null' END),"
+            "'requests_sent',facts_requests_sent) "
+            f'FROM thinkthen_decide_details({sql_quote(question)},{sql_quote(evidence)});\n')
     lines = check.run('sqlite3', '-bail', ':memory:', input=sql).splitlines()
     details = json.loads(lines[-1])
-    return check.version, {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'release-asset identity'
+    return check.version, details, 'release-asset identity'
 
 
 def duckdb(check):
@@ -284,38 +287,64 @@ def duckdb(check):
         raise Failure(f'DuckDB archive validation failed: {error}') from error
     folder = check.unpack(archive, check.root / 'duckdb')
     host = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:',
-                     input='SELECT version(); PRAGMA platform;').splitlines()
-    if len(host) != 2 or host[0] not in versions():
+                     input="SELECT to_json({'version':library_version,'source_id':source_id}) FROM pragma_version(); PRAGMA platform;").splitlines()
+    if len(host) != 2:
         raise Failure('DuckDB host must report one supported version and platform')
-    identity = selected(host[0], TARGET)
+    try:
+        reported = json.loads(host[0])
+    except json.JSONDecodeError as error:
+        raise Failure('DuckDB host must report one supported version and platform') from error
+    if not isinstance(reported, dict) or not isinstance(reported.get('version'), str) or not reported['version']:
+        raise Failure('DuckDB host must report one supported version and platform')
+    identities = [selected(version, TARGET) for version in versions()]
+    matching = [item for item in identities if reported.get('source_id') in (item['source_commit'][:8], item['source_commit'][:10])
+                and (item['metadata_version'] != item['version'] or reported.get('version') == item['version'])]
+    if len(matching) != 1:
+        raise Failure('DuckDB host must report one supported version and platform')
+    identity = matching[0]
     if host[1] != identity['platform']:
         raise Failure('DuckDB host platform differs from its native target')
-    extension = folder / host[0] / host[1] / 'thinkthen.duckdb_extension'
+    extension = folder / identity['metadata_version'] / host[1] / 'thinkthen.duckdb_extension'
     if not extension.is_file() or extension.is_symlink():
         raise Failure(f'DuckDB archive is missing regular member {extension.relative_to(folder)}')
     try:
-        verify(extension, TARGET, host[0], check.version)
+        verify(extension, TARGET, identity['metadata_version'], check.version)
     except (OSError, ValueError) as error:
         raise Failure(str(error)) from error
     sql = f'LOAD {sql_quote(extension)}; SET thinkthen_replay={sql_quote(check.sample / "recording")}; SET thinkthen_cache=\'off\';\n'
     sql += "SELECT extension_version FROM duckdb_extensions() WHERE extension_name='thinkthen' AND loaded;\n"
-    sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
+    sql += ("SELECT to_json({'value':d.value,'requests_sent':d.facts.requests_sent}) "
+            f'FROM (SELECT thinkthen_decide_details({sql_quote((check.sample / "question.txt").read_text())},'
+            f'{sql_quote((check.sample / "report.txt").read_text())}) AS d);\n')
     lines = check.run('duckdb', '-unsigned', '-noheader', '-list', ':memory:', input=sql).splitlines()
     if len(lines) != 2:
         raise Failure('DuckDB replay must report one loaded ThinkThen version and one answer')
     details = json.loads(lines[-1])
-    return lines[-2], {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}, 'loaded extension version'
+    return lines[-2], details, 'loaded extension version'
 
 
 def postgresql(check):
-    folder = check.unpack(check.release(f'thinkthen-postgresql16-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
+    root, environment = check.root, check.env.copy()
+    try:
+        for major in (16, 17, 18):
+            check.root = root / f'postgresql{major}'
+            check.root.mkdir()
+            check.env = environment.copy()
+            result = postgresql_major(check, major)
+        return result
+    finally:
+        check.root, check.env = root, environment
+
+
+def postgresql_major(check, major):
+    folder = check.unpack(check.release(f'thinkthen-postgresql{major}-{check.version}-{TARGET}.tar.gz'), check.root / 'postgresql')
     # Runtime setup supplies a private relocatable PGDG tree inside this run's scratch.
     runtime = check.root / 'pg-runtime'
     from install_check_tools import postgres_tools
-    postgres_tools(check, runtime)
-    binary = runtime / 'usr/lib/postgresql/16/bin'
-    shared = runtime / 'usr/share/postgresql/16/extension'
-    library = runtime / 'usr/lib/postgresql/16/lib'
+    postgres_tools(check, runtime, major)
+    binary = runtime / f'usr/lib/postgresql/{major}/bin'
+    shared = runtime / f'usr/share/postgresql/{major}/extension'
+    library = runtime / f'usr/lib/postgresql/{major}/lib'
     for source in (folder / 'extension').iterdir():
         shutil.copy2(source, shared / source.name)
     for source in (folder / 'lib').iterdir():
@@ -328,10 +357,10 @@ def postgresql(check):
         check.run(binary / 'pg_ctl', '-D', data, '-l', check.root / 'postgres.log', '-o', f"-k {socket} -c listen_addresses=''", 'start', '-w')
         sql = f'CREATE EXTENSION thinkthen; SET thinkthen.replay={sql_quote(check.sample / "recording")}; SET thinkthen.cache=\'off\';\n'
         sql += "SELECT extversion FROM pg_extension WHERE extname='thinkthen';\n"
-        sql += f'SELECT thinkthen_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n'
+        sql += ("SELECT json_build_object('value',value,'requests_sent',(facts).requests_sent) "
+                f'FROM thinkthen_decide_details({sql_quote((check.sample / "question.txt").read_text())},{sql_quote((check.sample / "report.txt").read_text())});\n')
         lines = check.run(binary / 'psql', '-XAt', '-v', 'ON_ERROR_STOP=1', '-h', socket, '-d', 'postgres', input=sql).splitlines()
-        details = json.loads(lines[-1])
-        reply = {'value': details.get('value'), 'requests_sent': details.get('meta', {}).get('requests_sent')}
+        reply = json.loads(lines[-1])
         check_result(check.version, lines[-2], reply)
         return lines[-2], reply, 'installed SQL extension version'
     except Exception as error:

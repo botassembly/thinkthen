@@ -9,7 +9,7 @@ use child::ChildEnvironment as _;
 use conformance_backend::{Canned, Listener};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use thinkthen::{Answer, BatchSetting, CallOptions, Engine, ErrorKind, Question};
+use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, Question};
 
 const YES: &str = r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 const NO: &str = r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.1}}}"#;
@@ -61,12 +61,12 @@ fn repeated_fields_and_exceeded_parser_bounds_forbid_actual_cache_writes() {
         let question = Question::decide("Refund?").unwrap().cut();
         assert_eq!(
             engine.decide(&question, "Refund me.").unwrap().value(),
-            &Answer::Yes
+            &Some(true)
         );
         assert!(!folder.0.join("thinkthen.sqlite").exists());
         assert_eq!(
             engine.decide(&question, "Refund me.").unwrap().value(),
-            &Answer::No
+            &Some(false)
         );
         let requests = listener.requests();
         assert_eq!(requests.len(), 2);
@@ -88,7 +88,12 @@ fn explicit_record_forbids_every_good_answer_of_a_nonstorable_partial_packed_rep
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
     ));
-    let mut batch = engine.decide_many_with(&question, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     let errors = batch.by_ref().collect::<Vec<_>>();
     assert_eq!(errors.len(), 1); // The released batch stops at its first terminal failure.
     for row in errors {
@@ -125,7 +130,12 @@ fn native_refresh_marks_status_retries_and_split_children_without_changing_reque
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
     ));
-    let mut batch = engine.decide_many_with(&question, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     assert_eq!(
         batch.by_ref().collect::<Result<Vec<_>, _>>().unwrap().len(),
         2
@@ -170,22 +180,31 @@ fn partial_nonstorable_refresh_evicts_accepted_answers_and_preserves_failed_ques
         ))
     };
     assert_eq!(
-        engine
-            .decide_many_with(&question, ["alpha", "beta"], options())
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-            .len(),
+        crate::api::pull_decisions(
+            &engine,
+            &question,
+            crate::api::plain_records(["alpha", "beta"]),
+            options()
+        )
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .len(),
         2
     );
-    let mut rows = refresh.decide_many_with(&question, ["alpha", "beta"], options());
+    let mut rows = crate::api::pull_decisions(
+        &refresh,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options(),
+    );
     assert!(rows.next().unwrap().is_ok());
     assert_eq!(rows.next().unwrap().unwrap_err().kind(), ErrorKind::Backend);
     assert!(rows.next().is_none());
     let failed = engine.decide(&question, "beta").unwrap();
-    assert_eq!(failed.value(), &Answer::Yes);
+    assert_eq!(failed.value(), &Some(true));
     assert_eq!(failed.facts().requests_sent(), 0);
     let accepted = engine.decide(&question, "alpha").unwrap();
-    assert_eq!(accepted.value(), &Answer::No);
+    assert_eq!(accepted.value(), &Some(false));
     assert_eq!(accepted.facts().requests_sent(), 1);
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
@@ -211,12 +230,12 @@ fn nonstorable_answers_succeed_without_reuse_and_valid_quoted_text_still_caches(
             .unwrap();
         let question = Question::decide("Refund?").unwrap().cut();
         let first = engine.decide(&question, "Refund me.").unwrap();
-        assert_eq!(first.value(), &Answer::Yes);
+        assert_eq!(first.value(), &Some(true));
         let second = engine.decide(&question, "Refund me.").unwrap();
-        assert_eq!(second.value(), &Answer::No);
+        assert_eq!(second.value(), &Some(false));
         assert_eq!(second.facts().requests_sent(), 1);
         let held = engine.decide(&question, "Refund me.").unwrap();
-        assert_eq!(held.value(), &Answer::No);
+        assert_eq!(held.value(), &Some(false));
         assert_eq!(held.facts().requests_sent(), 0);
         let requests = listener.requests();
         assert_eq!(requests.len(), 2);
@@ -235,7 +254,7 @@ fn nonstorable_answers_succeed_without_reuse_and_valid_quoted_text_still_caches(
     let question = Question::decide("Refund?").unwrap().cut();
     assert_eq!(
         engine.decide(&question, "Refund me.").unwrap().value(),
-        &Answer::Yes
+        &Some(true)
     );
     assert_eq!(
         engine
