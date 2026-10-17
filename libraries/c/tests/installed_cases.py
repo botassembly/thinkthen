@@ -1,6 +1,7 @@
 """Run canonical cases through the installed C session packet graph."""
 import json
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 ROOT = Path(__file__).resolve().parents[3]
@@ -13,9 +14,9 @@ from session_views import render
 def static_flags(native, env):
     """Use the installed package's platform-specific static link contract."""
     env = {**env, 'PKG_CONFIG_PATH': str(native / 'lib/pkgconfig')}
-    flags = subprocess.check_output(
+    flags = shlex.split(subprocess.check_output(
         ['pkg-config', '--cflags', '--libs', '--static', 'thinkthen'],
-        env=env, text=True).split()
+        env=env, text=True))
     # Name the archive explicitly so no installed case can select the shared library.
     return [str(native / 'lib/libthinkthen.a') if flag == '-lthinkthen' else flag
             for flag in flags]
