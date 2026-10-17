@@ -175,7 +175,10 @@ def consume(npm, registry, work):
             (jvm / 'InstallScala.scala').write_text(SCALA, encoding='utf-8')
             run(['javac', '--release', floor, '-cp', cp, '-d', app, jvm / 'InstallCheck.java'], jvm, env)
             run([kotlin / 'bin/kotlinc.bat', '-jvm-target', floor, '-classpath', cp, '-d', app, jvm / 'InstallKotlin.kt'], jvm, env)
-            run([scala / 'bin/scalac.bat', '-classpath', cp, '-d', app, jvm / 'InstallScala.scala'], jvm, env)
+            # Scala 3.9.0 scalac.bat concatenates its toolchain and -classpath
+            # without a separator. Invoke the same installed compiler directly.
+            scala_compiler = os.pathsep.join(str(scala / 'lib' / jar) for jar in ('scala.jar', 'with_compiler.jar'))
+            run(['java', '-cp', scala_compiler, 'dotty.tools.dotc.Main', '-classpath', cp, '-d', app, jvm / 'InstallScala.scala'], jvm, env)
             for language, main in (('java', 'InstallCheck'), ('kotlin', 'InstallKotlinKt'), ('scala', 'InstallScala')):
                 call(language, ['java', '--enable-native-access=ALL-UNNAMED', '-cp', str(app) + os.pathsep + cp, main], jvm)
         finally:

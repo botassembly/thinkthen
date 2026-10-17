@@ -226,6 +226,7 @@ def sdk_project_locations(root):
     def tool(command, project, env):
         args = list(map(str, command))
         if args[0].endswith(('.bat', '.cmd')):
+            assert Path(args[0]).name != 'scalac.bat', 'SCALA_BATCH_CLASSPATH_MISSING_SEPARATOR'
             def capture(packed, **kwargs):
                 # cmd's batch parameter parser splits unquoted semicolons, even
                 # though Python's executable argument quoting leaves them bare.
@@ -238,6 +239,13 @@ def sdk_project_locations(root):
                 return subprocess.CompletedProcess(packed, 0, '', '')
             with mock.patch.object(SDK, 'CAPTURE', side_effect=capture):
                 return sdk_run(command, project, env)
+        if 'dotty.tools.dotc.Main' in args:
+            toolchain = args[args.index('-cp') + 1].split(';')
+            assert toolchain == [str(root / 'lib' / jar) for jar in ('scala.jar', 'with_compiler.jar')], toolchain
+            cp = args[args.index('-classpath') + 1].split(';')
+            assert len(cp) == 3 and all(Path(jar).is_file() for jar in cp), cp
+            assert args[-2:] == [str(project / 'app'), str(project / 'InstallScala.scala')], args
+            compilers.append('dotty.tools.dotc.Main')
         if args[0] == 'dotnet':
             if args[1] == 'new':
                 # dotnet new defaults to a subdirectory when --name differs from cwd.
@@ -296,7 +304,7 @@ def sdk_project_locations(root):
     with mock.patch.object(SDK, 'run', side_effect=tool), mock.patch.object(SDK, 'sdk', return_value=root), \
             mock.patch.object(SDK.os, 'pathsep', ';'):
         SDK.consume(root / 'npm', registry, work)
-    assert compilers == ['kotlinc.bat', 'scalac.bat'], compilers
+    assert compilers == ['kotlinc.bat', 'dotty.tools.dotc.Main'], compilers
     (root / 'channel').mkdir()
     check = Check(root / 'channel', 'nuget', version)
     check.run = lambda *args: tool(args, check.project, check.env)
