@@ -161,7 +161,7 @@ def inputs(definitions):
                 value='v.'+ident(member)
                 if not required: lines.append(f'if {value}!=nil {{'); value='*'+value
                 if ft == 'any':
-                    lines.append(f'raw,err:=json.Marshal({value}); if err!=nil {{ return nil,err }}; object[{json.dumps(member)}]=raw')
+                    lines.append(f'raw,err:=authoredMarshal({value}); if err!=nil {{ return nil,err }}; object[{json.dumps(member)}]=raw')
                 else:
                     lines.append(f'if err:=transportMember(object,{json.dumps(member)},{encoded(value,ft)});err!=nil {{ return nil,err }}')
                 if not required: lines.append('}')
@@ -173,7 +173,8 @@ def inputs(definitions):
         nullable = isinstance(s.get('type'),list) and 'null' in s['type']
         lines.append(f'type {n} = *{ft}' if nullable else f'type {n} {ft}')
         if not nullable and (ft.startswith('[]') and not s.get('x-preserve-order') or ft.startswith('map[string]')):
-            lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{ return json.Marshal({encoded(ft + "(v)", ft)}) }}']
+            marshal = 'authoredMarshal' if ft in ('[]any', 'map[string]any') else 'json.Marshal'
+            lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{ return {marshal}({encoded(ft + "(v)", ft)}) }}']
         if s.get('x-preserve-order'):
             lines += [f'func (v {n}) marshalJSON() ([]byte,error) {{ return {ft}(v).marshalJSON() }}', f'func (v *{n}) UnmarshalJSON(data []byte) error {{ return (*{ft})(v).UnmarshalJSON(data) }}']
     return '\n'.join(lines)+'\n'
