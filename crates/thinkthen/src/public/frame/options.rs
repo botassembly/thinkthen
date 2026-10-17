@@ -13,7 +13,6 @@ pub struct PolarsCallOptions<'a> {
     threshold: Option<&'a str>,
     yes: Option<&'a Description>,
     no: Option<&'a Description>,
-    probability: bool,
 }
 
 impl fmt::Debug for PolarsCallOptions<'_> {
@@ -23,7 +22,6 @@ impl fmt::Debug for PolarsCallOptions<'_> {
             .field("threshold", &self.threshold.is_some())
             .field("true", &self.yes.is_some())
             .field("false", &self.no.is_some())
-            .field("probability", &self.probability)
             .finish_non_exhaustive()
     }
 }
@@ -37,7 +35,6 @@ impl<'a> PolarsCallOptions<'a> {
             threshold: None,
             yes: None,
             no: None,
-            probability: false,
         }
     }
 
@@ -69,17 +66,7 @@ impl<'a> PolarsCallOptions<'a> {
         self
     }
 
-    /// Include a probability column on decide or choose.
-    #[must_use]
-    pub const fn probability(mut self, value: bool) -> Self {
-        self.probability = value;
-        self
-    }
-
-    pub(super) fn apply(
-        self,
-        source: &Question,
-    ) -> Result<(Question, CallOptions<'a>, bool), Error> {
+    pub(super) fn apply(self, source: &Question) -> Result<(Question, CallOptions<'a>), Error> {
         let mut question = source.clone();
         if let Some(text) = self.threshold {
             if question.kind() == QuestionKind::Score {
@@ -99,7 +86,7 @@ impl<'a> PolarsCallOptions<'a> {
                 *no = Some(value.meaning()?);
             }
         }
-        Ok((question, self.call, self.probability))
+        Ok((question, self.call))
     }
 }
 

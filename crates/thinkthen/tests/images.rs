@@ -302,7 +302,7 @@ fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
         ("perplexity", "unknown"),
         ("llamacpp", "local"),
         ("openrouter", "liquid/lfm-2.5-clef"),
-        ("typesafe", "jev-1.13.0"),
+        ("typesafe", "jev-1.13"),
         ("mlx", "local"),
         ("ollama", "local"),
     ] {
@@ -513,3 +513,6 @@ mod local;
 
 #[path = "support/image_builder.rs"]
 mod image_builder;
+
+#[path = "images/typesafe.rs"]
+mod typesafe;

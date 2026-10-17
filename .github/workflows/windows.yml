@@ -6,6 +6,16 @@ name: windows
 
 on:
   workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Exact candidate commit for Windows qualification
+        type: string
+        required: true
+      lane:
+        description: Run Windows core checks or the DuckDB community build
+        type: choice
+        default: windows
+        options: [windows, duckdb-community, recognition-cancel]
 
 permissions:
   contents: read
@@ -15,7 +25,11 @@ defaults:
     shell: bash
 
 jobs:
+  duckdb-community:
+    if: inputs.lane == 'duckdb-community'
+    uses: ./.github/workflows/duckdb-community.yml
   stage-0:
+    if: inputs.lane != 'duckdb-community' && inputs.lane != 'recognition-cancel'
     name: Windows core tests and installed CLI, Rust, C and Python packages
     runs-on: windows-2025
     timeout-minutes: 120
@@ -33,6 +47,15 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false
+
+      - name: Require the standard Windows lane
+        env: {LANE: "${{ inputs.lane }}"}
+        run: test "$LANE" = windows
+
+      - name: Require the exact candidate commit
+        id: candidate
+        env: {CANDIDATE_SHA: "${{ inputs.candidate_sha }}", DISPATCH_SHA: "${{ github.sha }}"}
+        run: python3 sdlc/scripts/hosted-candidate.py checkout "$CANDIDATE_SHA" "$DISPATCH_SHA"
 
       - name: Install the toolchain that rust-toolchain.toml pins
         run: rustup show active-toolchain || rustup toolchain install
@@ -86,29 +109,29 @@ jobs:
       # every result, and `--keep-going` checks every crate past a failing one.
       # The job still fails if any check fails.
       - name: Clippy, root workspace
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: cargo clippy --locked --offline --keep-going --workspace --all-targets -- -D warnings
 
       - name: Tests, root workspace
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: cargo test --locked --offline --no-fail-fast --workspace --all-targets
 
       - name: Clippy, libraries/c
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         working-directory: libraries/c
         run: cargo clippy --locked --offline --keep-going --all-targets -- -D warnings
 
       - name: Tests, libraries/c
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         working-directory: libraries/c
         run: cargo test --locked --offline --no-fail-fast
 
       - name: Build and test the installed Windows Python wheel
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: python3 libraries/python/check-windows.py --packages "$RUNNER_TEMP/python-packages"
 
       - name: Pack the Windows core and consume the native C archive
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.candidate.outcome == 'success' }}
         run: |
           set -eu
           export CARGO_NET_OFFLINE=true
@@ -120,7 +143,7 @@ jobs:
           python3 sdlc/scripts/release-windows-smoke.py target/native-platform --crate-dir target/native-crate
 
       - name: Save the cargo registry and the build directories
-        if: ${{ always() && steps.cache.outputs.cache-hit != 'true' }}
+        if: ${{ always() && steps.candidate.outcome == 'success' && steps.cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
@@ -130,3 +153,47 @@ jobs:
             target
             libraries/c/target
           key: ${{ steps.cache.outputs.cache-primary-key }}
+
+  recognition-cancel:
+    if: inputs.lane == 'recognition-cancel'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      CARGO_TERM_COLOR: never
+      CARGO_BUILD_JOBS: '4'
+      PYTHONUTF8: '1'
+    steps:
+      - name: Keep line endings as committed
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - name: Require the exact candidate commit
+        id: candidate
+        env: {CANDIDATE_SHA: "${{ inputs.candidate_sha }}", DISPATCH_SHA: "${{ github.sha }}"}
+        run: python3 sdlc/scripts/hosted-candidate.py checkout "$CANDIDATE_SHA" "$DISPATCH_SHA"
+      - name: Install the pinned toolchain
+        run: rustup show active-toolchain || rustup toolchain install
+      - name: Restore the existing Windows cargo cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+            libraries/c/target
+          key: windows-${{ hashFiles('Cargo.lock', 'libraries/c/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: windows-
+      - name: Isolate default folders
+        run: |
+          set -eu
+          printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/thinkthen-appdata/Roaming" "$RUNNER_TEMP/thinkthen-appdata/Local"
+      - name: Select x64 MSVC
+        run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+      - name: Download locked crates
+        run: cargo fetch --locked
+      - name: Diagnose recognition cancellation once
+        run: cargo test --locked --offline -p thinkthen --test request_session recognize::cancellation_stops_waiting_duplicate_recognition_without_extra_sends -- --exact --nocapture

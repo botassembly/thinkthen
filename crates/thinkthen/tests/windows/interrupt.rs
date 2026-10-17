@@ -215,6 +215,9 @@ fn release_binary_console_interrupt() {
             serde_json::json!({
                 "schema":"thinkthen.run/1", "records":0, "requests_sent":1,
                 "retries":0, "cache_answers":0,
+                "largest_request_bytes":170,
+                "largest_request_estimated_input_tokens":155,
+                "token_estimate_method":"encoded-body-bytes-908-v1",
                 "stopped":{"cause":"cancelled","retryable":false}
             })
         );

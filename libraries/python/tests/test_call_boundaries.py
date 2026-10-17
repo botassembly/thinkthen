@@ -1,6 +1,6 @@
 """Named calls keep credentials private, native limits and actual settlement."""
 import pytest
-from conftest import child_env, run, FAKE, REPO
+from conftest import child_env, clean_env, run, FAKE, REPO
 
 @pytest.mark.parametrize('arm', ['arm/401', 'arm/503', 'arm/refuse'])
 def test_named_failure_messages_and_result_reprs_do_not_expose_credentials(backend,tmp_path,arm):
@@ -116,7 +116,7 @@ def test_inline_label_conversion_preserves_order_and_refuses_invalid_labels_with
         for labels in (Labels, Literal["zebra", "alpha"]):
             answer = engine.choose("Which?", "a", options=labels)
             assert answer.value == "zebra"
-            assert list(answer.details[0].question.options) == ["zebra", "alpha"]
+            assert list(answer.results[0].question.options) == ["zebra", "alpha"]
         for labels, message in ((Aliases, "Enum labels must not have aliases"),
                                 (Literal[1, "alpha"], "Literal labels are strings")):
             try: engine.choose("Which?", "a", options=labels)
@@ -129,3 +129,50 @@ def test_inline_label_conversion_preserves_order_and_refuses_invalid_labels_with
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ["ordered labels"]
     assert backend.count() == 2
+
+
+def test_native_typed_controls_preview_and_null_refusals_send_nothing(backend, tmp_path):
+    output = run('''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False, backend=None, model=None, max_requests_total=0)
+        plan = engine.plan('decide', 'Late?', ['note'], attempts=True,
+                           batch=1, deadline_ms=-1, context='', model='local', threshold=.5)
+        assert plan['records'] == plan['requests'] == 1
+        assert plan['estimated_bytes'] > 0
+        assert plan['upper_bound'] is False
+        for controls in ({'model': None}, {'deadline_ms': None}, {'context': None},
+                         {'attempts': 'yes'}, {'seed_spans': [{'start': 0}]}, {'stage_context': {'boundary': 9}}):
+            try: engine.plan('decide', 'Late?', ['note'], **controls)
+            except tt.UsageError as error: assert error.kind == 'usage'
+            else: raise AssertionError('malformed control admitted')
+        print('typed controls')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['typed controls']
+    assert backend.count() == 0
+
+
+def test_native_plan_exposes_generated_estimates_without_a_key_or_send(backend, tmp_path):
+    output = run('''
+        import pickle
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        plan = engine.plan('decide', 'Late?', ['note', 'later'], batch=1)
+        assert isinstance(plan, tt.Plan)
+        assert plan.records == plan.requests == 2
+        assert plan.estimated_bytes > plan.largest_request_bytes > 0
+        assert plan.largest_request_estimated_input_tokens > 0
+        assert plan.estimated_input_tokens.lower > 0
+        assert plan.estimated_input_tokens.upper >= plan.estimated_input_tokens.lower
+        assert plan.token_estimate_method
+        assert plan.upper_bound is False
+        assert isinstance(plan.first_body_utf8, str)
+        assert 'first_body' not in plan
+        assert 'note' not in repr(plan)
+        assert pickle.loads(pickle.dumps(plan)) == plan
+        empty = engine.plan('decide', 'Late?', [], batch=1)
+        assert empty.records == empty.requests == empty.estimated_bytes == 0
+        assert empty.first_body_utf8 is None
+        print('native plan')
+    ''', clean_env(home=tmp_path, THINKTHEN_BASE_URL=backend.base(), THINKTHEN_CACHE=str(tmp_path / 'cache')))
+    assert output.splitlines() == ['native plan']
+    assert backend.count() == 0

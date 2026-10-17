@@ -1,6 +1,7 @@
-// The Beatles Bench pages under /learn/beatles-bench/, in the order of the
-// talk "Introducing ThinkThen". Each page is a short article: the
-// slide, the idea, one example, the same example at another bar, and the
+// The Beatles Bench page at /learn/beatles-bench/ holds one section per
+// slide, in the order of the talk "Introducing ThinkThen". Each section is a
+// short article: the
+// slide, the idea, one example, the same example at another threshold, and the
 // lesson. A page with no example shows the slide and the idea. `goal` says
 // what the page must communicate. `lesson` says what the runs showed, and
 // `takeaway` is the one line a reader keeps. `files` maps each file the page
@@ -34,7 +35,7 @@ export const GROUPS = [
   ['Scripts', ['bash']],
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
-  ['Tune your bar', ['audit', 'diff']],
+  ['Tune your threshold', ['audit', 'diff']],
   ['Agents', ['use-cases', 'shell-uses', 'data-uses', 'retrieval']],
   ['The field', ['competitors', 'bench-field', 'backends']],
 ];
@@ -54,10 +55,10 @@ const ARTICLES = {
     credit: "Ringo Starr photo: UPI, 1964, public domain in the US, via Wikimedia Commons.",
     see: {
       '1-grep': "`grep` finds nothing and exits 1.",
-      '2-decide': "At the default bar of 0.5, Octopus's Garden is yes and the others are no.",
+      '2-decide': "At the default threshold of 0.5, Octopus's Garden is yes and the others are no.",
       '3-band': "The band 0.3:0.7 turns Penny Lane into not sure.",
     },
-    headings: { '3-band': "Change the bar" },
+    headings: { '3-band': "Change the threshold" },
     lesson: "Octopus's Garden is the only one of the three on Abbey Road. Penny Lane falls inside the band and goes to a person as not sure.",
     takeaway: "A question about meaning finds what no pattern can match.",
     link: tree('filter'),
@@ -74,12 +75,12 @@ const ARTICLES = {
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     source: record('jev'),
     see: {
-      '1-choose': "At a bar of 0.8, Jev picks Ringo.",
-      '2-bar': "A bar of 0.9 asks for more. The answer is not sure.",
+      '1-choose': "At a threshold of 0.8, Jev picks Ringo.",
+      '2-bar': "A threshold of 0.9 asks for more. The answer is not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "Ringo is right. Jev's probability for Ringo clears 0.8 and falls short of 0.9. A bar of 0.9 asks for more than Jev gives.",
-    takeaway: "Jev answers with a probability, and your bar decides what counts.",
+    headings: { '2-bar': "Change the threshold" },
+    lesson: "Ringo is right. Jev's probability for Ringo clears 0.8 and falls short of 0.9. A threshold of 0.9 asks for more than Jev gives.",
+    takeaway: "Jev answers with a probability, and your threshold decides what counts.",
     link: tree('choose'),
   },
 
@@ -88,9 +89,9 @@ const ARTICLES = {
     label: "Functions and bindings",
     goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
     idea: [
-      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/install/shell/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
+      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/languages/bash/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
       `Bindings bring the same ten functions to ${BINDINGS.length} programming languages and databases: ${BINDINGS.map((b, i) => `${i === BINDINGS.length - 1 ? 'and ' : ''}[${b.name}](${b.route})`).join(', ')}.`,
-      "To set one up, start at [Install](/install/).",
+      "To set one up, start at [Languages](/languages/).",
     ],
     see: {
       '1-help': "The first ten names are the functions. `help` and the six tools follow.",
@@ -104,15 +105,15 @@ const ARTICLES = {
     title: "decide answers yes, no, or not sure.",
     goal: "A band turns the close calls of decide into not sure.",
     idea: [
-      "`decide` is an if statement that reads. Ask one yes or no question about a text. Jev returns the probability of yes. Your threshold turns it into yes, no, or not sure.",
+      "The [decide page](/functions/decide/) explains the function. Here it asks one yes or no question of each song.",
     ],
     see: {
-      '1-lines': "At the default bar of 0.5, three songs are love songs.",
-      '2-bar': "At a bar of 0.6, Yesterday turns to no.",
+      '1-lines': "At the default threshold of 0.5, three songs are love songs.",
+      '2-bar': "At a threshold of 0.6, Yesterday turns to no.",
       '3-band': "Inside the band 0.3:0.7, Yesterday is not sure.",
     },
-    headings: { '2-bar': "Change the bar", '3-band': "Set a band" },
-    lesson: "Yesterday sits between 0.5 and 0.6. A bar of 0.5 calls it yes, and a bar of 0.6 calls it no. The band calls it not sure. The bench has no answer key for this question.",
+    headings: { '2-bar': "Change the threshold", '3-band': "Set a band" },
+    lesson: "Yesterday sits between 0.5 and 0.6. A threshold of 0.5 calls it yes, and a threshold of 0.6 calls it no. The band calls it not sure. The bench has no answer key for this question.",
     takeaway: "You decide how sure a yes must be.",
     link: tree('decide'),
   },
@@ -120,33 +121,33 @@ const ARTICLES = {
   choose: {
     title: "choose selects one option.",
     credit: FACES,
-    goal: "A bar on choose turns a weak pick into not sure and leaves the strong picks alone.",
+    goal: "A threshold on choose turns a weak pick into not sure and leaves the strong picks alone.",
     idea: [
-      "`choose` is a switch statement that reads. You list the options, and Jev puts a probability on each. The top option is the pick.",
+      "The [choose page](/functions/choose/) explains the function. Here it picks who sings the lead on each song.",
     ],
     see: {
       '1-lines': "Every song gets a pick.",
-      '2-bar': "Under a bar of 0.5, She Loves You is not sure.",
+      '2-bar': "Under a threshold of 0.5, She Loves You is not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "John and Paul sing She Loves You together. Jev's pick of John does not reach 0.5. The bar turns it into not sure. The four sure picks stay the same, and all four are right.",
-    takeaway: "A bar keeps the sure picks and hands a person the weak one.",
+    headings: { '2-bar': "Change the threshold" },
+    lesson: "John and Paul sing She Loves You together. Jev's pick of John does not reach 0.5. The threshold turns it into not sure. The four sure picks stay the same, and all four are right.",
+    takeaway: "A threshold keeps the sure picks and hands a person the weak one.",
     link: tree('choose'),
   },
 
   tag: {
     title: "tag applies labels to data.",
-    goal: "Each tag label clears the bar on its own, and a higher bar keeps fewer labels.",
+    goal: "Each tag label clears the threshold on its own, and a higher threshold keeps fewer labels.",
     idea: [
-      "`tag` names every label that fits. Each label gets its own probability. A label counts when it clears the bar, and the default bar is 0.5.",
+      "The [tag page](/functions/tag/) explains the function. Each label clears the threshold on its own, and the default threshold is 0.5.",
     ],
     see: {
       '1-lines': "At 0.5, Octopus's Garden gets three labels.",
       '2-bar': "At 0.7, two songs lose psychedelic.",
     },
-    headings: { '2-bar': "Change the bar" },
+    headings: { '2-bar': "Change the threshold" },
     lesson: "Penny Lane and Octopus's Garden are psychedelic at 0.5 and lose the label at 0.7. The bench has no answer key for tag.",
-    takeaway: "A higher bar keeps fewer labels.",
+    takeaway: "A higher threshold keeps fewer labels.",
     link: tree('tag'),
   },
 
@@ -160,8 +161,8 @@ const ARTICLES = {
       '1-lines': "Each song gets a length in minutes.",
       '2-cut': "Your code keeps the songs at 5 minutes or more.",
     },
-    headings: { '2-cut': "Set the bar" },
-    lesson: "`score` has no threshold. A Day in the Life runs over five minutes. Jev scores it 4.868686868687, and a bar of 5 leaves it out.",
+    headings: { '2-cut': "Set the threshold" },
+    lesson: "`score` has no threshold. A Day in the Life runs over five minutes. Jev scores it 4.868686868687, and a threshold of 5 leaves it out.",
     takeaway: "A score is a position. Your code draws the line.",
     link: tree('score'),
   },
@@ -185,18 +186,18 @@ const ARTICLES = {
   },
 
   filter: {
-    title: "filter keeps what clears your bar.",
-    goal: "A higher bar on filter drops weak yeses and keeps a sure mistake.",
+    title: "filter keeps what clears your threshold.",
+    goal: "A higher threshold on filter drops weak yeses and keeps a sure mistake.",
     idea: [
-      "`filter` is a grep that reads. It keeps each record where the answer is yes and passes it through unchanged.",
+      "The [filter page](/functions/filter/) explains the function. Here it keeps the songs where the answer is yes.",
     ],
     see: {
       '1-bar': "At 0.7, seven songs stay.",
       '2-bar': "At 0.9, five songs stay.",
     },
-    headings: { '2-bar': "Change the bar" },
+    headings: { '2-bar': "Change the threshold" },
     lesson: "Six of the seven songs at 0.7 are on Abbey Road. A Day in the Life came out on Sgt. Pepper's Lonely Hearts Club Band. At 0.9, Octopus's Garden and Something drop out. A Day in the Life stays.",
-    takeaway: "A higher bar cannot remove a mistake Jev is sure of.",
+    takeaway: "A higher threshold cannot remove a mistake Jev is sure of.",
     link: tree('filter'),
   },
 
@@ -204,7 +205,7 @@ const ARTICLES = {
     title: "rank sorts by your criteria.",
     goal: "rank orders every record and drops none, and you choose where the list ends.",
     idea: [
-      "`rank` is a sort that reads. It asks one yes or no question of each record and sorts the records by the probability of yes.",
+      "The [rank page](/functions/rank/) explains the function. Here it sorts the songs by the probability of yes.",
     ],
     see: {
       '1-lines': "All twelve songs, likeliest hit first.",
@@ -220,7 +221,7 @@ const ARTICLES = {
     title: "find picks one from many.",
     goal: "Without `--none`, find always names one line.",
     idea: [
-      "`find` reads every line together and picks the one that answers the question. Each line sees the others. An answer can depend on the whole set.",
+      "The [find page](/functions/find/) explains the function. Each line sees the others. An answer can depend on the whole set.",
     ],
     see: {
       '1-find': "`find` picks Love Me Do.",
@@ -232,19 +233,19 @@ const ARTICLES = {
 
   annotate: {
     title: "annotate answers a question set.",
-    goal: "annotate asks a set of questions about each record in one run, and each question carries its own bar.",
+    goal: "annotate asks a set of questions about each record in one run, and each question carries its own threshold.",
     idea: [
       "`annotate` answers many questions at once. The question set holds four questions you have already seen. choose asks who sings the lead vocal. tag asks which labels fit. Two decide questions ask whether the song is on Abbey Road and whether it is one of the biggest hits.",
       "One run asks all four about each song. `--field /title` sends only the title. Each record comes back with one field for each question.",
     ],
     files: { 'questions.json': "questions.json, the question set" },
     see: {
-      '1-card': "Every question uses the default bar of 0.5.",
+      '1-card': "Every question uses the default threshold of 0.5.",
       '2-band': "`jq` sets the band 0.2:0.8 on the two decide questions. Three answers turn not sure.",
     },
     headings: { '2-band': "Set a band" },
-    lesson: "At the default bar, every field fills. Paul sings Yesterday, and Ringo sings Octopus's Garden. Octopus's Garden is on Abbey Road, and Yesterday is not. Under the band, Yesterday's Abbey Road answer and both of Octopus's Garden's decide answers fall inside it. A person checks them.",
-    takeaway: "One question set fills every field of a record, and each question keeps its own bar.",
+    lesson: "At the default threshold, every field fills. Paul sings Yesterday, and Ringo sings Octopus's Garden. Octopus's Garden is on Abbey Road, and Yesterday is not. Under the band, Yesterday's Abbey Road answer and both of Octopus's Garden's decide answers fall inside it. A person checks them.",
+    takeaway: "One question set fills every field of a record, and each question keeps its own threshold.",
     link: REPO,
   },
 
@@ -252,7 +253,7 @@ const ARTICLES = {
     title: "recognize labels things it finds.",
     goal: "recognize works in three steps: it finds the names, labels each one, and relates the pairs your rules allow.",
     idea: [
-      "`recognize` finds every name in a text and gives each one a kind from your list. It works in three steps.",
+      "The [recognize page](/functions/recognize/) explains the function. It works in three steps.",
       "First it finds the names. It splits the text into pieces and asks one question about each piece. Does the piece begin a name, sit inside one, end one, stand alone as a name, or sit outside every name? Then it labels each name with one of your kinds. Last it relates the names. Each rule names a relation, a subject kind, and an object kind. `recognize` asks one yes or no question for each pair a rule allows.",
     ],
     see: {
@@ -268,7 +269,7 @@ const ARTICLES = {
 
   relate: {
     title: "relate asks what Jev knows about the names.",
-    goal: "relate asks Jev about the names your rules allow, a menu gives each song at most one album, and a higher bar does not remove a confident wrong edge.",
+    goal: "relate asks Jev about the names your rules allow, a menu gives each song at most one album, and a higher threshold does not remove a confident wrong edge.",
     slideNote: "The slide shows the talk's run, which asked one yes or no question for each pair. The example below marks the song-to-album rule single, so it asks one menu for each song.",
     idea: [
       "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows. `recognize --relation` links names by what a text states.",
@@ -279,12 +280,12 @@ const ARTICLES = {
       'rules.json': "rules.json, the two rules",
     },
     see: {
-      '1-edges': "Nine edges come out at the default bar of 0.5. Each song gets one album.",
+      '1-edges': "Nine edges come out at the default threshold of 0.5. Each song gets one album.",
       '2-bar': "At 0.8, eight edges stay.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "One of the nine edges is wrong. Jev puts Octopus's Garden on Revolver at 0.91. It first appeared on Abbey Road. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, Yesterday on Help! drops out at 0.62, and it is right. The wrong edge stays.",
-    takeaway: "A menu gives each song one album. A bar of 0.8 keeps the confident wrong answer.",
+    headings: { '2-bar': "Change the threshold" },
+    lesson: "One of the nine edges is wrong. Jev puts Octopus's Garden on Revolver at 0.91. It first appeared on Abbey Road. No edge says who sings Taxman. George sings it, and Jev's answer fell under the threshold. At 0.8, Yesterday on Help! drops out at 0.62, and it is right. The wrong edge stays.",
+    takeaway: "A menu gives each song one album. A threshold of 0.8 keeps the confident wrong answer.",
     link: tree('relate'),
   },
 
@@ -314,7 +315,7 @@ const ARTICLES = {
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
       "The script reads one song per line on standard input and asks whether a Beatle wrote each one. It passes the question and its flags on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. A probability of 0.8 or more is yes, and one under 0.2 is no. Between them is not sure. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The previous page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
-      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
+      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/languages/bash/not-sure/) teaches the same form.",
     ],
     files: {
       'setlist.sh': "setlist.sh, the script",
@@ -336,7 +337,7 @@ const ARTICLES = {
     idea: [
       "On the slide, Python and C ask Jev the same `decide` question: does Ringo Starr sing the lead vocal on Octopus's Garden? Each stores the answer in `is_ringo` and asserts it. Both get yes.",
       "On the slide, Python heads the scripting languages and C heads the systems languages.",
-      "Each binding calls the same engine as the command. To set one up, start at [Install](/install/).",
+      "Each binding calls the same engine as the command. To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Pick your language. The question stays the same.",
     link: REPO,
@@ -350,7 +351,7 @@ const ARTICLES = {
       "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey`. The question and the band 0.3:0.7 sit inside the query as one JSON string.",
       "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Penny Lane and Hey Jude fall inside the band. Both come back not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
       "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
-      "To set one up, start at [Install](/install/).",
+      "To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Ask the question where your data already lives.",
     link: REPO,
@@ -358,19 +359,19 @@ const ARTICLES = {
 
   audit: {
     title: "audit grades a run.",
-    goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
+    goal: "audit grades saved answers against answers you already know, at any threshold, and sends no request.",
     idea: [
-      "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any threshold. It sends no request.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/#diff) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
-      '2-default': "At the default bar of 0.5, 5 are right. Jev says yes wrongly 5 times.",
+      '2-default': "At the default threshold of 0.5, 5 are right. Jev says yes wrongly 5 times.",
       '3-bar': "At 0.78, 8 are right. audit suggests 0.78 for the whole recorded run.",
     },
-    headings: { '2-default': "Try the default bar", '3-bar': "Change the bar" },
+    headings: { '2-default': "Try the default threshold", '3-bar': "Change the threshold" },
     lesson: "From the title alone, half the answers fall inside the band. At 0.5, Jev says yes to 5 songs from other albums. At 0.78, only A Day in the Life and The Long and Winding Road remain wrong, and no Abbey Road song is lost.",
-    takeaway: "The answers you already know grade any bar, at no cost.",
+    takeaway: "The answers you already know grade any threshold, at no cost.",
     link: tree('audit'),
   },
 
@@ -379,13 +380,13 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit section](/learn/beatles-bench/#audit). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
-      '2-bar': "At a bar of 0.5, 5 changed. Each was a wrong yes that turned right.",
+      '2-bar': "At a threshold of 0.5, 5 changed. Each was a wrong yes that turned right.",
     },
-    headings: { '2-bar': "Change the bar" },
+    headings: { '2-bar': "Change the threshold" },
     lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that settled, right or wrong. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
     takeaway: "diff shows what a change fixed and what it broke.",
     link: tree('audit'),
@@ -402,11 +403,11 @@ const ARTICLES = {
     slideNote: "The slide shows the bench's Jev run of 2026-09-30. There Jev picks Ringo for Nothin' Shakin'. The examples below replay the bench's recording of 2026-09-26, where Jev picks John.",
     source: record('catches'),
     see: {
-      '1-choose': "With no bar, Jev picks `john`.",
-      '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
+      '1-choose': "With no threshold, Jev picks `john`.",
+      '2-bar': "Under a threshold of 0.5, the wrong pick becomes not sure.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "With no bar, the answer is John, and John is wrong. A bar of 0.5 sends this question to a person.",
+    headings: { '2-bar': "Change the threshold" },
+    lesson: "With no threshold, the answer is John, and John is wrong. A threshold of 0.5 sends this question to a person.",
     takeaway: "A low probability is Jev saying it does not know.",
     link: REPO,
   },
@@ -414,7 +415,7 @@ const ARTICLES = {
   rad: {
     title: "Retrieval-augmented decisions (RAD)",
     label: "RAD",
-    goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
+    goal: "Putting the facts in the text fixes a sure miss that no threshold can fix.",
     idea: [
       "Giving Jev context improves accuracy. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions. ThinkThen sends this context as `state`.",
       "The song catalog covers 1,075 of the bench's questions. From memory, Jev gets 68% of them right. With the catalog in the text, the bench's report estimates about 97%. Context makes each request longer, and a longer request costs more.",
@@ -425,7 +426,7 @@ const ARTICLES = {
       '2-context': "With the catalog entry, the same band gives no.",
     },
     headings: { '2-context': "Add context" },
-    lesson: "No sensible bar fixes a miss this sure. With the catalog entry, the answer turns right.",
+    lesson: "No sensible threshold fixes a miss this sure. With the catalog entry, the answer turns right.",
     takeaway: "When memory fails, put the facts in the text.",
     link: tree('decide'),
   },
@@ -454,7 +455,7 @@ const ARTICLES = {
       "`decide` answers in its exit code: 0 for yes and 1 for no. With a band such as `--threshold 0.1:0.9`, not sure exits 3. Alert triage uses all three. The script pages a person, logs the alert, or queues it. Flaky test retries a flaky failure and fails the build on any other.",
       "`choose` prints its pick, and failure routing runs that kind's runbook. `filter` keeps the lines where the answer is yes. Grep by meaning keeps the log lines about an outage, whatever words they use. Sample sheet keeps the complete rows and stops before hours of compute.",
       "`score` places a login session on five levels, and the top two go to a person. `tag` labels each commit as a feature, a fix, or a breaking change, and the labels bump the version. `annotate` reads an incident email and hands its service, severity, and start time to `jq` as JSON. `rank` puts the error that hurts users most first.",
-      "[Bash techniques](/how-tos/bash/) teach these forms with real runs.",
+      "[Bash techniques](/languages/bash/#techniques) teach these forms with real runs.",
     ],
     takeaway: "An answer is an exit code or a line of output, and the shell does the rest.",
     link: REPO,
@@ -469,7 +470,7 @@ const ARTICLES = {
       "Filter by meaning keeps the rows that are complaints. Category column picks a category for each row, and the query groups by it. Extract fields turns a receipt's free text into amount, date, and vendor columns.",
       "Find duplicates asks whether two rows name the same company and merges the matching pairs. Score and average rates how happy each review is and averages by product. Count topics tags each ticket with its topics and counts them.",
       "Check at load sends incomplete addresses to quarantine. Top N per group keeps the 3 leads in each account likeliest to buy. Second opinion lists the rows where the model and the existing label disagree.",
-      "The [tables and frames page](/learn/beatles-bench/data/) shows a real query on Beatles songs. To set one up, start at [Install](/install/).",
+      "The [tables and frames section](/learn/beatles-bench/#data) shows a real query on Beatles songs. To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Ask your data a question, row by row, where it already lives.",
     link: REPO,
@@ -496,10 +497,10 @@ const ARTICLES = {
     goal: "Within two weeks of Jev's launch, other decision models arrived, and ThinkThen speaks to the ones that share Jev's interface.",
     idea: [
       "TypeSafe launched Jev on 2026-09-15. Two weeks later, the field had moved on four fronts.",
-      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/install/backends/liquid/).",
-      "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/install/backends/ollama/).",
+      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/models/liquid/).",
+      "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/models/ollama/).",
       "On 2026-09-30, Benchmark Heaven's JevBench board ranked 106 systems. Three days earlier it listed 62 open models. Cygnet tops its composite score, and Jev is third.",
-      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/install/backends/openai/).",
+      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/models/openai/).",
       "The slide's last line names the aim: ThinkThen is one SDK for every decision API.",
     ],
     source: [
@@ -536,9 +537,9 @@ const ARTICLES = {
   backends: {
     title: "Bring your own backend.",
     label: "Your own backend",
-    goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
+    goal: "Any server with Jev's interface can answer, and a threshold must be tuned again on the new model.",
     idea: [
-      "Any server with [the same interface as Jev](/install/backends/system-one/) can answer. Name it with `--url`.",
+      "Any server with [the same interface as Jev](/models/system-one/) can answer. Name it with `--url`.",
       "`thinkthen backends check` sends four fixed requests to check that a server works. With `--plan`, it prints its plan and sends nothing.",
     ],
     see: {
@@ -546,14 +547,14 @@ const ARTICLES = {
     },
     slideNote: "The slide's console is a real run of thinkthen check on 2026-10-01, from thinkthen 55db6f59f. It checked ThinkThen's conformance server on the same machine, with no key.",
     source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
-    lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
-    takeaway: "A new model needs its own bar.",
+    lesson: "A threshold tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
+    takeaway: "A new model needs its own threshold.",
     link: REPO,
   },
 };
 
-// The ordered list the side list and the pager follow. The section's first
-// page comes first.
+// The ordered list the side list follows. The page itself comes first, then
+// each slide's section.
 export const FIRST = { slug: '', title: 'Beatles Bench', label: 'Beatles Bench', route: '/learn/beatles-bench/', group: null };
 
 export const PAGES = [FIRST, ...GROUPS.flatMap(([group, slugs]) => slugs.map((slug) => {
@@ -565,7 +566,7 @@ export const PAGES = [FIRST, ...GROUPS.flatMap(([group, slugs]) => slugs.map((sl
     group,
     label: a.label || slug,
     command: a.command ?? !a.label,
-    route: `/learn/beatles-bench/${slug}/`,
+    route: `/learn/beatles-bench/#${slug}`,
     slide: `/learn/beatles-bench/${slug}.webp`,
   };
 }))];

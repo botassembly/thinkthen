@@ -4,6 +4,8 @@
 # `maven-upload` and `pub-publish` change a remote service, and the workflow
 # gates those jobs separately.
 set -eu
+# Release helpers import modules from source that must stay unchanged.
+export PYTHONDONTWRITEBYTECODE=1
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repo"
 . "$repo/sdlc/scripts/scratch.sh"
@@ -114,6 +116,12 @@ install_dart() {
 		fail 'cached ffi 2.2.0 differs from official digest'
 	[ "$(find "$pub_cache/hosted/pub.dev" -maxdepth 1 -name 'ffi-*' -type d | wc -l | tr -d ' ')" = 1 ] ||
 		fail 'isolated pub cache has another ffi version'
+	# Resolve the complete native-assets dependency closure before offline consumers.
+	# An owned manifest copy keeps generated package state out of the source tree.
+	scratch_dir dart_dependencies
+	cp libraries/dart/pubspec.yaml libraries/dart/pubspec.lock "$dart_dependencies/"
+	(cd "$dart_dependencies" && PUB_CACHE=$pub_cache "$dart_bin" pub get --enforce-lockfile) ||
+		fail 'pinned Dart dependency cache fill failed'
 }
 case ${1:-} in
 disk)
@@ -140,6 +148,25 @@ linux-work)
 	else
 		printf '%s\n' "$2"
 	fi
+	;;
+apple-check)
+	[ "$#" = 5 ] || fail 'apple-check TARGET DIR swift|objective-c SHA'
+	case $(uname -s):$(uname -m):$2 in
+	Darwin:arm64:aarch64-apple-darwin | Darwin:x86_64:x86_64-apple-darwin) ;;
+	*) fail 'Apple installed check requires its matching macOS host' ;;
+	esac
+	case $4 in swift | objective-c) ;; *) fail 'select exactly one Apple language' ;; esac
+	python3 sdlc/scripts/hosted-candidate.py checkout "$5" "$5"
+	archive=$3/thinkthen-$4-$version-$2.tar.gz
+	(cd "$3" && sha256 -c "${archive##*/}.sha256") || fail 'Apple package checksum differs'
+	tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+		grep -Fxq "source_commit=$5" || fail 'Apple package source differs from candidate SHA'
+	THINKTHEN_ARTIFACT=$(CDPATH='' cd -- "$3" && pwd)/${archive##*/}
+	export THINKTHEN_ARTIFACT
+	# Only a completed check qualifies. A missing tool or package (77) fails.
+	sh "libraries/$4/check.sh" && code=0 || code=$?
+	. sdlc/scripts/verdict.sh
+	verdict release "libraries/$4" "$code"
 	;;
 source-capture)
 	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
@@ -319,30 +346,28 @@ PYWIN
 		[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
 	fi
 	if [ "$(uname -s)" = Darwin ]; then
-		. databases/postgresql/runtime-darwin.env
-		MACOSX_DEPLOYMENT_TARGET=15.0
-		SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-		export MACOSX_DEPLOYMENT_TARGET SDKROOT
-		case $(uname -m) in arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; pin=$PG_BOTTLE_X86_64_SONOMA ;; *) fail 'unknown Mac chip' ;; esac
-		brew fetch --bottle-tag="$tag" postgresql@16
-		bottle=$(brew --cache --bottle-tag="$tag" postgresql@16)
-		[ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
-		brew install --force-bottle postgresql@16
-		brew install pkgconf jq openssl@3
-		# python@3.14 comes before the OpenSSL check, since its install may upgrade openssl@3 (ticket 0369).
+        MACOSX_DEPLOYMENT_TARGET=15.0
+        SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+        export MACOSX_DEPLOYMENT_TARGET SDKROOT
+        for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
+		. libraries/ruby/toolchain.env
+		brew install pkgconf jq "openssl@$RUBY_OPENSSL_SERIES"
+		# Check OpenSSL after the remaining Homebrew installs.
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
 			brew install coreutils python@3.14 bash
 			# macOS's own bash is 3.2. The PostgreSQL check re-runs itself under PATH's bash (ticket 0375).
 			bash -c '[ "${BASH_VERSINFO[0]}" -ge 5 ]' || fail 'the PostgreSQL check needs bash 5 on PATH'
 		fi
-		. libraries/ruby/toolchain.env
-		case $("$(brew --prefix openssl@3)/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
+		case $("$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES")/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
 		cargo install --locked --version 0.17.0 cargo-pgrx
 		# cargo pgrx package needs PGRX_HOME. It defaults to ~/.pgrx. The Linux container writes the same file.
 		# A host that already has one keeps it. package.sh passes --pg-config either way.
 		if [ ! -e "$HOME/.pgrx/config.toml" ]; then
 			mkdir -p "$HOME/.pgrx"
-			printf '[configs]\npg16 = "%s"\n' "$(brew --prefix postgresql@16)/bin/pg_config" >"$HOME/.pgrx/config.toml"
+            printf '[configs]\n' >"$HOME/.pgrx/config.toml"
+            for major in 16 17 18; do
+                printf 'pg%s = "%s"\n' "$major" "$(brew --prefix postgresql@$major)/bin/pg_config" >>"$HOME/.pgrx/config.toml"
+            done
 		fi
 		sh libraries/ruby/setup-ruby.sh
 		sh databases/sqlite/setup.sh
@@ -365,10 +390,19 @@ PYWIN
 		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
 		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			# The pinned server packages need the host's client, headers and runtime libraries.
+			sudo apt-get update
+			sudo apt-get install -y postgresql-server-dev-16
 			sh libraries/ruby/setup-ruby.sh
 			sh databases/duckdb/tools/setup.sh --fetch
 			sh databases/sqlite/setup.sh
-			sh databases/postgresql/setup.sh
+			for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
+			if [ "$2" = x86_64-unknown-linux-gnu ]; then
+				# Installed coverage and full TypeScript checks use the pinned cache, not PATH's Node.
+				sh libraries/typescript/setup-toolchain.sh
+				sudo apt-get install -y r-base-dev
+				bash libraries/r/tools/setup.sh
+			fi
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
@@ -381,9 +415,17 @@ PYWIN
 		. libraries/python/host.sh
 		python=$(python_host)
 		[ -n "$python" ] || fail 'the installed Python smoke needs a stable Python 3.12 or later'
-		scratch_dir seed
-		uv venv --quiet --python "$python" "$seed/venv"
-		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt
+		generator_tools=${RUNNER_TEMP:?}/thinkthen-generators
+		uv venv --quiet --python "$python" "$generator_tools/python"
+		uv pip install --quiet --require-hashes --python "$generator_tools/python/bin/python" -r libraries/python/requirements-dev.txt
+		# Match the verified development formatters that produced the checked-in sources.
+		uv pip install --python "$generator_tools/python/bin/python" 'ruff==0.13.2'
+		npm install --no-audit --no-fund --no-package-lock --prefix "$generator_tools" 'prettier@3.6.2'
+		mkdir -p "$generator_tools/bin"
+		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
+		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
+		# setup.sh fetched the pinned inputs; installed checks require their built CLIs too.
+		python3 databases/duckdb/tools/source_hosts.py
 	fi
 	;;
 resolve)
@@ -391,10 +433,15 @@ resolve)
 	mode=$2 ref=$3
 	case $mode in
 	rehearse)
-		candidate_number=
-		case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
-		case $candidate_number in '' | 0* | *[!0-9]*)
-			fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref" ;;
+		case $ref in
+		refs/heads/main | refs/heads/ticket/0543-final) ;;
+		*)
+			candidate_number=
+			case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
+			case $candidate_number in '' | 0* | *[!0-9]*)
+				fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref" ;;
+			esac
+			;;
 		esac
 		;;
 	release) case $ref in refs/tags/v*) ;; *) fail "release must run from a v* tag, got $ref" ;; esac ;;
@@ -413,6 +460,7 @@ verify-family)
 	for file in "$2"/*/$3; do
 		[ -f "$file" ] || continue
 		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		case ${file##*/} in thinkthen-first-run*) ;; *) python3 sdlc/scripts/registry-readmes.py auto "$file" ;; esac
 		count=$((count + 1))
 	done
 	[ "$count" = "$4" ] || fail "wanted $4 files matching $3, got $count"
@@ -686,6 +734,7 @@ npm-assemble)
 	for file in "$input"/*/thinkthen-"$version".tgz; do
 		[ -f "$file" ] || continue
 		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		python3 sdlc/scripts/registry-readmes.py typescript "$file"
 		entry=$(tar -tzf "$file" | sed -n '/^package\/thinkthen-.*\.node$/p')
 		[ "$(printf '%s\n' "$entry" | wc -l | tr -d ' ')" = 1 ] || fail "wanted one addon in $file"
 		tar -xOf "$file" "$entry" >"$work/${entry##*/}"
@@ -693,6 +742,7 @@ npm-assemble)
 	done
 	python3 sdlc/scripts/package-inventory.py npm --check "$work" >/dev/null
 	(cd "$work" && npm pack --silent --offline --pack-destination "$output" >/dev/null)
+	python3 sdlc/scripts/registry-readmes.py typescript "$output/thinkthen-$version.tgz"
 	(cd "$output" && sha256 "thinkthen-$version.tgz" >"thinkthen-$version.tgz.sha256")
 	;;
 smoke-bundle)
@@ -743,6 +793,23 @@ installer-smoke)
 	THINKTHEN_INSTALL_BASE="http://127.0.0.1:$(cat "$work/port")" THINKTHEN_INSTALL_DIR="$work/bin" \
 		sh install.sh --version "$version"
 	[ "$("$work/bin/thinkthen" --version)" = "thinkthen $version" ] || fail 'loopback installed command reports another version'
+	;;
+public-examples)
+	[ "$#" = 3 ] || fail 'public-examples TARGET DIR'
+	case $2 in
+	x86_64-unknown-linux-gnu)
+		python3 sdlc/scripts/registry-readmes.py examples "$3" \
+			--family command --family crate --family python --family typescript \
+			--family ruby --family go --family cpp --family c --family csharp \
+			--family jvm --family swift --family zig --family php --family dart --family flutter \
+			--family ada --family cobol --family r --family sqlite \
+			--family duckdb --family packagist --family postgresql
+		;;
+	*-apple-darwin)
+		python3 sdlc/scripts/registry-readmes.py examples "$3" --family objective-c
+		;;
+	*) fail 'public examples require the prepared Linux x86 or Apple smoke host' ;;
+	esac
 	;;
 crate-smoke)
 	[ "$#" = 3 ] || fail 'crate-smoke CRATE_DIR SAMPLE_DIR'
@@ -806,7 +873,27 @@ collect)
 draft)
 	[ "$#" = 5 ] || fail 'draft MODE NAME SHA DIR'
 	mode=$2 name=$3 sha=$4; files=$5
+	case $mode in release | rehearse) ;; *) fail 'draft mode must be release or rehearse' ;; esac
+	if [ "$mode" = release ]; then
+		[ "${GITHUB_REF:-}" = "refs/tags/$name" ] || fail 'release ref differs from name'
+	fi
 	[ "$sha" = "$(git rev-parse HEAD)" ] || fail 'draft checkout differs from resolve SHA'
+	for document in "release-notes/$version.md" "release-notes/$version-known-gaps.md"; do
+		[ -s "$document" ] || fail "missing release document $document"
+	done
+	scratch_dir notes_work
+	notes=$notes_work/notes.md
+	if [ "$mode" = rehearse ]; then
+		printf 'Rehearsal from %s; do not publish\n\n' "$sha" > "$notes"
+	fi
+	cat "release-notes/$version.md" >> "$notes"
+	printf '\n' >> "$notes"
+	cat "release-notes/$version-known-gaps.md" >> "$notes"
+	python3 sdlc/scripts/registry-readmes.py sources
+	for package in "$files"/*; do
+		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
+		python3 sdlc/scripts/registry-readmes.py auto "$package"
+	done
 	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
 	if [ "$mode" = rehearse ]; then
 		# GitHub names a missing tag in a draft but should create its ref only
@@ -818,10 +905,9 @@ draft)
 		[ "$(tag_status)" = 404 ] || fail 'a rehearsal tag exists or its absence could not be proved'
 	fi
 	if [ "$mode" = release ]; then
-		[ "$GITHUB_REF" = "refs/tags/$name" ] || fail 'release ref differs from name'
-		gh release create "$name" --draft --verify-tag --title "$name" --notes "ThinkThen $name"
+		gh release create "$name" --draft --verify-tag --title "$name" --notes-file "$notes"
 	else
-		gh release create "$name" --draft --target "$sha" --title "$name" --notes "Rehearsal from $sha; do not publish"
+		gh release create "$name" --draft --target "$sha" --title "$name" --notes-file "$notes"
 		[ "$(tag_status)" = 404 ] || fail 'draft created a rehearsal tag; stop before uploading assets'
 	fi
 	gh release upload "$name" "$files"/*
@@ -902,6 +988,7 @@ tap)
 publish)
 	[ "$#" = 3 ] || fail 'publish NAME SHA'
 	[ "$(git rev-parse HEAD)" = "$3" ] || fail 'publish checkout differs from resolve SHA'
+	python3 sdlc/scripts/registry-readmes.py sources
 	# The Go module lives in libraries/go, so proxy.golang.org reads only a tag with that prefix.
 	go_tag=libraries/go/v$version
 	go_status=$(gh api --include "repos/$GITHUB_REPOSITORY/git/ref/tags/$go_tag" 2>&1 |

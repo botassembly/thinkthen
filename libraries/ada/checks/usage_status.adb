@@ -5,18 +5,20 @@ with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use type Interfaces.Unsigned_32; use type Interfaces.Unsigned_64;
 with Interfaces.C; use Interfaces.C;
+with Thinkthen.Inputs;
+with Thinkthen.Inputs.Calls;
 with Thinkthen; use Thinkthen;
+with Thinkthen.Answers;
+with Thinkthen.Values;
 with Thinkthen.Persistence; use Thinkthen.Persistence;
-with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
 procedure Usage_Status is
+   use type Thinkthen.Answers.Completion_Status;
    Mode : constant String := Ada.Command_Line.Argument (1);
-   Output : Packet;
-   Terminal : Packet;
+   Completed : Thinkthen.Answers.Completion;
+   Answer : Thinkthen.Values.Value;
    Owner : Session;
-   Read : Read_Status;
    Saved : Thinkthen.Persistence.Observation;
    procedure Require (Condition : Boolean) is
    begin
@@ -26,9 +28,8 @@ begin
    declare
       Client : Engine;
       Error : Failure;
-      Request : T_RequestCall_decide;
    begin
-      Configure (Client, "{""cache"":false,""max_retries"":0}", Error);
+      Thinkthen.Inputs.Calls.Configure (Client, Thinkthen.Inputs.With_Max_Retries (Thinkthen.Inputs.With_Cache (Thinkthen.Inputs.Make_Engine_Settings, Thinkthen.Inputs.Cache_Document_From_False), 0), Error);
       Require (Error.Kind = None);
       if Mode = "disabled" then
          Require (Usage_Persistence (Client).State = Disabled);
@@ -37,38 +38,15 @@ begin
          return;
       end if;
       Require (Usage_Persistence (Client).State = Written);
-      Request.T_question.V_0.T_text := T_RequestQuestion_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("Is it?"));
-      Request.T_input.V_0.T_text := T_RequestInput_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("usage-ada-" & Mode));
-      Thinkthen.Sessions.Calls.Decide (Client, Owner, Request);
-      Finish (Owner);
-      loop
-         Try_Read (Owner, Output, Read);
-         if Read = Pending then declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
-         elsif Read = Result then
-            if View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1 then exit; end if;
-         else raise Program_Error with "missing owned answer";
-         end if;
-      end loop;
-      Require (View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1);
-      loop
-         Try_Read (Owner, Terminal, Read);
-         if Read = Pending then declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
-         elsif Read = Result then
-            if View (Terminal).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then exit; end if;
-         else raise Program_Error with "missing terminal facts";
-         end if;
-      end loop;
-      Close (Owner);
-      Require (Status (Terminal) = Success and then
-        View (Terminal).data.terminal.facts.value.requests_sent = 1);
+      Thinkthen.Sessions.Calls.Decide (Client, Owner, Thinkthen.Inputs.Text_Question ("Is it?"),
+        Thinkthen.Inputs.Text_Input ("usage-ada-" & Mode));
+      Thinkthen.Sessions.Finish (Owner);
+      Completed := Thinkthen.Answers.Collect (Owner);
+      declare Call : constant Thinkthen.Answers.Decide_Result := Thinkthen.Answers.Decide (Completed); begin Answer := Call.Value; end;
+      Require (Thinkthen.Values.As_Boolean (Answer));
+      Thinkthen.Sessions.Close (Owner);
+      Require (Thinkthen.Answers.Status (Completed) = Thinkthen.Answers.Succeeded and then
+        Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 1);
       Require (Usage_Persistence (Client).State = Pending);
       Put_Line ("PENDING"); Flush;
       declare Continue : constant String := Get_Line; begin Require (Continue = "continue"); end;
@@ -77,7 +55,7 @@ begin
       Require (Usage_Persistence (Client) = Saved);
       -- Seed the separate failed-build slot before closing through the existing
       -- controlled lifecycle. A status failure must read the session slot.
-      Configure (Client, "{""unknown_setting"":true}", Error);
+      Thinkthen.Inputs.Calls.Configure (Client, Thinkthen.Inputs.With_Base_Url (Thinkthen.Inputs.Make_Engine_Settings, "invalid endpoint"), Error);
       Require (Error.Kind = Usage);
       Ada.Finalization.Finalize (Ada.Finalization.Limited_Controlled'Class (Client));
       for Finish in Boolean loop
@@ -96,8 +74,8 @@ begin
          end;
       end loop;
    end;
-   Require (View (Output).data.decide_row.value.value.value.value.data.boolean = 1);
-   Require (View (Terminal).data.terminal.facts.value.requests_sent = 1);
+   Require (Thinkthen.Values.As_Boolean (Answer));
+   Require (Thinkthen.Answers.Requests_Sent (Thinkthen.Answers.Call_Facts (Completed)) = 1);
    Require (To_String (Saved.Advice) =
      (if Mode = "written" then "" else "check the usage folder permissions and free space"));
    Put_Line ("ADA_USAGE_PASS");

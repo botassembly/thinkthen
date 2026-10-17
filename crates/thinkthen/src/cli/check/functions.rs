@@ -46,6 +46,9 @@ pub(super) fn check(
                 if let Some(reason) = error.estimated_input_denial() {
                     return Err(crate::failure::Failure::EstimatedInput(reason));
                 }
+                if error.stopped().status() == Some(429) && !error.stopped().retryable() {
+                    stopped.store(true, Ordering::Relaxed);
+                }
                 Some(error.to_string())
             }
         };
@@ -81,10 +84,30 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
             engine.score_with(&question, TEXT, options).map(|_| ())
         }
         "filter" => {
-            for row in engine.filter_with(&decide, [TEXT], options) {
-                row?;
+            let request = crate::Request::for_function(
+                crate::RequestFunction::Filter,
+                crate::RequestArguments {
+                    question: crate::RequestQuestion::Definition {
+                        value: decide.into(),
+                    },
+                    input: crate::RequestInput::Text {
+                        text: TEXT.into(),
+                        images: Vec::new(),
+                    },
+                    options: crate::RequestOptions::default(),
+                },
+            )
+            .admit()?;
+            match engine.execute_request(
+                &request,
+                crate::RequestEnvironment {
+                    controls: options,
+                    feed: None,
+                },
+            )? {
+                crate::RequestOutcome::Complete(_) => Ok(()),
+                crate::RequestOutcome::Failed { error, .. } => Err(error),
             }
-            Ok(())
         }
         "rank" => {
             let question = Question::rank("Did the parcel arrive undamaged?")?;
@@ -98,10 +121,9 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
         }
         "annotate" => {
             let set = QuestionSet::builder().question("intact", decide)?.build()?;
-            for row in engine.annotate_with(&set, [TEXT], options) {
-                let row = row?;
+            let call = engine.annotate_with(&set, [TEXT], options)?;
+            for row in call.value() {
                 if row
-                    .values()
                     .iter()
                     .any(|held| matches!(held.value(), Annotated::Failed(_)))
                 {

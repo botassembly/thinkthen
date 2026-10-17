@@ -101,7 +101,7 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
     assert_eq!(held["value"], live["value"]);
     let mut expected_answer = live["answer"].clone();
     expected_answer["questions"] =
-        compatibility::retrieved_members(expected_answer["questions"].clone(), "replay");
+        comparison::retrieved_members(expected_answer["questions"].clone(), "replay");
     assert_eq!(held["answer"], expected_answer);
     assert_eq!(held["meta"]["attempts"], json!([]));
     assert_eq!(held["meta"]["question_sources"][0]["batch_size"], 1);

@@ -1,47 +1,12 @@
-//! The digest of one request, and the old request-level entry `cache
-//! convert` reads, by ADR 0111 section 9.
+//! The digest of one request.
 
 use std::fmt;
 
-use serde::Deserialize;
-use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
-use thiserror::Error;
 
 use crate::core::adapters::built_in;
 use crate::core::digest::hex;
 use crate::core::text::{Url, Withheld};
-
-mod convert;
-pub(crate) use convert::{Converting, convert};
-
-/// The schema string a version one recording entry carries.
-const SCHEMA: &str = "thinkthen.recording/1";
-
-/// Why a file under a folder is not an old entry this version reads.
-#[derive(Clone, Debug, Eq, Error, PartialEq)]
-pub(crate) enum EntryError {
-    /// The bytes are not a recording entry.
-    ///
-    /// The message names the place and never the text. An entry is written
-    /// around the evidence that was sent, and a JSON reader quotes the text it
-    /// stopped on, so quoting the reader would print the evidence.
-    #[error("the file is not a recording entry: the JSON at line {0} column {1} is not one")]
-    Malformed(usize, usize),
-    /// The entry was written by a version that names another schema.
-    ///
-    /// The message names only this version's trusted fixed schema. It never
-    /// repeats the schema field from the entry: that field is unbounded text
-    /// from a file and can hold a control byte or private evidence.
-    #[error(
-        "the entry names a schema this version does not read, \
-             and this version reads `{SCHEMA}`"
-    )]
-    Schema,
-    /// The entry names an address this version refuses.
-    #[error("the entry records a different exchange, so the file was damaged or hand-edited")]
-    Mismatched,
-}
 
 /// The name one exchange is filed under: its SHA-256 in lowercase hex.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -103,37 +68,10 @@ impl<'a> Exchange<'a> {
     }
 }
 
-/// One recorded exchange, in the five fields a recording file holds.
-#[derive(Deserialize)]
-pub(crate) struct Entry {
-    schema: String,
-    adapter: String,
-    url: String,
-    request: Box<RawValue>,
-    response: Box<RawValue>,
-    /// Slice 1 of ADR 0111 rewrote this exchange into the quoted form.
-    #[serde(default)]
-    quoted: bool,
-}
-
-impl fmt::Debug for Entry {
-    /// Name the entry and show nothing of it.
-    ///
-    /// Every field an entry holds was read out of a file, so no field of it
-    /// reaches a line a person or a log will read.
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("Entry(<withheld>)")
-    }
-}
-
-/// Where a JSON reader stopped, with nothing of what it stopped on.
-fn place(error: serde_json::Error) -> EntryError {
-    EntryError::Malformed(error.line(), error.column())
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{Converting, EntryError, Exchange, SCHEMA, convert};
+    //! Stays: recording identities and replay bytes require direct private serialization contract checks.
+    use super::Exchange;
     use crate::core::adapters::built_in;
     use crate::core::plan::Plan;
     use crate::core::question::Question;
@@ -159,66 +97,10 @@ mod tests {
         .expect("a plan of one question")
     }
 
-    /// Why `convert` refused an entry as unreadable.
-    fn unreadable(entry: &str) -> EntryError {
-        match convert(entry.as_bytes(), false) {
-            Err(Converting::Unreadable(error)) => error,
-            other => panic!("an unreadable entry, not {other:?}"),
-        }
-    }
-
     #[test]
     fn the_digest_of_the_fixture_request_is_pinned() {
         let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("not blank");
         let request = built_in::encode(&plan()).expect("a plan is writable");
         assert_eq!(Exchange::new(&url, &request).digest().as_str(), PINNED);
-    }
-
-    /// A file in a converted folder is untrusted, and no message repeats a field.
-    ///
-    /// Every field of an entry comes out of a file. A file that parses and
-    /// names another schema would otherwise print whatever that field held:
-    /// unbounded text, control bytes, and whatever the evidence was.
-    #[test]
-    fn no_refusal_of_a_parseable_entry_repeats_a_field_it_read() {
-        // The escape is written the way JSON writes it, so the file is a file a
-        // reader takes and the field carries a control byte all the same.
-        let hostile = r"\u001b[31mPWNED\u001b[0m marker-evidence-7b3ac5";
-        let entry = format!(
-            "{{\"schema\":\"{hostile}\",\"adapter\":\"systemone\",\
-             \"url\":\"{hostile}\",\"request\":{{}},\"response\":{{}}}}"
-        );
-
-        let error = unreadable(&entry);
-
-        assert_eq!(error, EntryError::Schema);
-        assert_eq!(
-            error.to_string(),
-            "the entry names a schema this version does not read, \
-             and this version reads `thinkthen.recording/1`"
-        );
-        assert!(!format!("{error:?}").contains("PWNED"), "{error:?}");
-    }
-
-    /// A damaged entry holds the evidence it recorded, and no message quotes it.
-    ///
-    /// A JSON reader names the text it stopped on. The entry is a file this
-    /// tool wrote around the evidence, so that text is the evidence, and the
-    /// message says where the file broke and never what it held.
-    #[test]
-    fn no_refusal_of_a_damaged_entry_quotes_the_evidence_inside_it() {
-        let evidence = "marker-evidence-7b3ac5";
-        let damaged = format!(
-            "{{\"schema\":\"{SCHEMA}\",\"adapter\":\"systemone\",\
-             \"request\":{{\"evidence\":\"{evidence}\"}} \"response\":{{}}}}"
-        );
-
-        let error = unreadable(&damaged);
-
-        assert!(!error.to_string().contains(evidence), "{error}");
-        assert_eq!(
-            error.to_string(),
-            "the file is not a recording entry: the JSON at line 1 column 105 is not one"
-        );
     }
 }

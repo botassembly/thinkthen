@@ -1,3 +1,4 @@
+//! Stays: the private rank_set_complete_with, execute_relate_records_complete_with, try_find_complete_with, decide_input_complete_with and try_choose_dynamic_records_complete_with primitives preserve opaque caller ownership that public carriers cannot show.
 //! Complete ownership contracts that require opaque caller originals.
 use crate::{
     CallOptions, Engine, ErrorKind, InputEvidence, Question, QuestionInput, RankSet, RawRecord,
@@ -248,7 +249,7 @@ fn complete_find_serialization_retains_the_original_payload_selected_by_native_e
     let doc: Value = serde_json::from_str(&call.value().to_json().unwrap()).unwrap();
     assert_eq!(doc["value"], json!({"z":true,"body":"Second.","a":[3,2]}));
     assert_eq!(
-        serde_json::to_value(call.complete().unwrap()).unwrap()["value"]["value"],
+        serde_json::to_value(&call).unwrap()["value"]["value"],
         doc["value"]
     );
     assert_eq!(listener.count(), 1);
@@ -329,12 +330,12 @@ fn moved_file_names_do_not_change_existing_identity_and_source_has_no_lines() {
     );
     assert_eq!(first_complete.facts().requests_sent(), 0);
     assert_eq!(second_complete.facts().requests_sent(), 0);
-    let first_doc = serde_json::to_value(first_complete.complete().unwrap()).unwrap();
+    let first_doc = serde_json::to_value(&first_complete).unwrap();
     assert_eq!(
         first_doc["value"]["source"],
         serde_json::json!({"file":"original.png"})
     );
-    let complete = serde_json::to_value(second_complete.complete().unwrap()).unwrap();
+    let complete = serde_json::to_value(&second_complete).unwrap();
     assert_eq!(
         complete["value"]["source"],
         serde_json::json!({"file":"elsewhere/image.dat"})
@@ -389,7 +390,7 @@ mod scalar_decision {
                 call.value().question().yes().unwrap().is_null(),
                 meaning.is_null()
             );
-            let document = serde_json::to_value(call.complete().unwrap()).unwrap();
+            let document = serde_json::to_value(&call).unwrap();
             assert_eq!(document["value"]["value"], meaning);
             super::schema::check(&document, "completeDecide");
         }
@@ -448,3 +449,5 @@ mod dynamic_choose {
         assert_eq!(listener.count(), 1);
     }
 }
+
+mod bulk_details_tests;

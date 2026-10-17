@@ -1,18 +1,18 @@
-// Independent numerical controls and four visibility states; no catalog promotion.
+// Independent numerical and evidence-rendering controls; no catalog promotion.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { recipeProblems, recipeSelection } from '../src/data/recipes.mjs';
+import { recipeProblems } from '../src/data/recipes.mjs';
 import { renderedProblems, fixtureAssertionProblems } from './check-recipes.mjs';
-import { ALIASES, preserver, validateCompatibility } from './redirect-contract.mjs';
+import { ALIASES } from './redirect-contract.mjs';
 const own=fs.mkdtempSync(path.join(os.tmpdir(),'thinkthen-recipe-check-'));
 const cleanup=dir=>{ if(dir!==own)throw Error('cleanup refuses unowned path');fs.rmSync(dir,{recursive:true}); };
 assert.throws(()=>cleanup(process.cwd()),/refuses unowned/);
 const source='https://github.com/botassembly/thinkthen/blob/ea615c0e6a3412bb4716ad97b704a3f698be30cb/sdlc/records/2026-10-05-reviewed-experiment-planning.md';
-const fixture={slug:'fixture-number',title:'A supported comparison',goal:'Inspect a matched comparison.',job:'Keep measured support visible.',wait:'Waiting for publication.',draft:true,publication:'waiting',owner:'Queue owner',issue:'sdlc/issues/fixture.md',sourceCommit:'ea615c0e6a3412bb4716ad97b704a3f698be30cb',sourceRecord:'sdlc/records/2026-10-05-reviewed-experiment-planning.md',example:'site/examples/recipes/fixture-number',functions:['choose'],measured:[{id:'supported',evidenceClass:'measured',value:'503/626',denominator:'626',cohort:'Matched cohort: 849 fields on 144 documents',definition:'Exact-value precision',resolved:'849',unresolved:'0',backend:'TypeSafe',model:'unknown; scoped aggregate',qualification:'Tested choose confirmation only; equivalent decide performance was not established.',source}],fixtureAssertions:[],body:[{kind:'evidence',id:'supported'}]};
+const fixture={slug:'fixture-number',title:'A supported comparison',gain:'Keep measured support visible.',sourceCommit:'ea615c0e6a3412bb4716ad97b704a3f698be30cb',sourceRecord:'sdlc/records/2026-10-05-reviewed-experiment-planning.md',example:'site/examples/recipes/fixture-number',functions:['choose'],measured:[{id:'supported',evidenceClass:'measured',value:'503/626',denominator:'626',cohort:'Matched cohort: 849 fields on 144 documents',definition:'Exact-value precision',resolved:'849',unresolved:'0',backend:'TypeSafe',model:'unknown; scoped aggregate',qualification:'Tested choose confirmation only; equivalent decide performance was not established.',source}],fixtureAssertions:[],body:[{kind:'evidence',id:'supported'}]};
 let count=0;
 try {
   const file=path.join(own,'fixture.json'),checker=new URL('./check-recipes.mjs',import.meta.url).pathname;
@@ -27,8 +27,8 @@ try {
   check({...fixture,body:[{kind:'text',text:'Accuracy is ９７ percent.'}]},1,'recipe unsupported numerical prose: fixture-number: body[0]\n');
   check({...fixture,body:[{kind:'text',text:'Accuracy is &#57; percent.'}]},1,'recipe unsupported numerical prose: fixture-number: body[0]\n');
   const visible='503/626; denominator 626; Exact-value precision; Matched cohort: 849 fields on 144 documents; fields with answers 849, fields without answers 0; backend TypeSafe, model unknown; scoped aggregate; Tested choose confirmation only; equivalent decide performance was not established.';
-  const html=`<main data-recipe="fixture-number" data-draft><h1>A supported comparison</h1><p>Draft: a supported comparison awaits publication.</p><table data-recipe-evidence="supported" data-evidence-class="measured"><thead><tr><th>Evidence</th><th>Source</th></tr></thead><tbody><tr><td>${visible}</td><td><a href="${source}">Owning record</a></td></tr></tbody></table></main>`;
-  const md=`# A supported comparison\n\nDraft: a supported comparison awaits publication.\n\n| Evidence | Source |\n| --- | --- |\n| ${visible} | [Owning record](${source}) |\n`;
+  const html=`<main data-recipe="fixture-number"><h1>A supported comparison</h1><table data-recipe-evidence="supported" data-evidence-class="measured"><thead><tr><th>Evidence</th><th>Source</th></tr></thead><tbody><tr><td>${visible}</td><td><a href="${source}">Source</a></td></tr></tbody></table></main>`;
+  const md=`# A supported comparison\n\n| Evidence | Source |\n| --- | --- |\n| ${visible} | [Source](${source}) |\n`;
   const llms='Source: https://thinkthen.dev/recipes/fixture-number/\n'+md;
   assert.deepEqual(renderedProblems(fixture,html,md,llms),[]);count++;
   for (const needle of ['503/626','denominator 626','Tested choose confirmation only;',source]) {
@@ -50,15 +50,14 @@ try {
   const replacement=structuredClone(fixture);replacement.body[0].value='97.3';assert.deepEqual(recipeProblems(replacement),['recipe carrier-shape: fixture-number: body[0]']);count++;
   const missing=structuredClone(fixture);delete missing.measured[0].unresolved;assert.ok(recipeProblems(missing).includes('recipe measurement-definition: fixture-number: supported/unresolved'));count++;
   const unpinned=structuredClone(fixture);unpinned.measured[0].source=source.replace(/[a-f0-9]{40}/,'main');assert.deepEqual(recipeProblems(unpinned),[]);count++;
-  const drafts=[{slug:'draft',draft:true}],mixed=[{slug:'published',draft:false},{slug:'draft',draft:true}];
-  for(const [catalog,preview,index,navigation,draftIndex,pages] of [[drafts,false,false,false,false,[]],[drafts,true,true,false,true,['draft']],[mixed,false,true,true,false,['published']],[mixed,true,true,true,true,['published','draft']]]) {
-    const selected=recipeSelection(catalog,preview);assert.equal(selected.index,index);assert.equal(selected.navigation,navigation);assert.equal(selected.draftIndex,draftIndex);assert.deepEqual(selected.pages.map(r=>r.slug),pages);count++;
-    if(index) {
-      const h=`<link rel="canonical" href="https://thinkthen.dev/recipes/"><main${draftIndex?' data-draft':''}><p>${draftIndex?'Draft catalog:':'Published catalog'}</p></main>`;
-      assert.equal(validateCompatibility(h,'/recipes',ALIASES['/recipes'],own,true,selected),null);
-      assert.throws(()=>validateCompatibility(h.replace('<main','<meta http-equiv="refresh"><main'),'/recipes',ALIASES['/recipes'],own,true,selected),/found redirect/);count++;
-    }
-  }
-  assert.equal(Object.keys(ALIASES).length,61);
-  console.log(`recipe independent controls: ${count} passed; exact unsupported-literal exit/cause, supported HTML/Markdown/llms and four selection states`);
+  const cell=(key,value)=>({id:`rules-full-${key}`,evidenceClass:'measured',value,denominator:'10',cohort:'Ten fields',definition:key,resolved:'10',unresolved:'0',backend:'not applicable',model:'not applicable',qualification:'Fixture.',source});
+  const grid={...fixture,measured:[cell('tp','7'),cell('fp','2'),cell('fn','1')],body:[{kind:'evidence-grid',methods:['rules'],cohorts:['full']}]};
+  assert.deepEqual(recipeProblems(grid),[]);count++;
+  assert.ok(recipeProblems({...grid,measured:grid.measured.slice(0,2)}).includes('recipe carrier-shape: fixture-number: body[0]/rules-full'));count++;
+  const gridHtml=`<main data-recipe="fixture-number"><h1>A supported comparison</h1><table data-recipe-evidence-grid><tbody><tr data-grid-row="rules-full"><td>rules</td><td>Ten fields</td><td>7</td><td>2</td><td>1</td><td><a href="${source}">Source</a></td></tr></tbody></table></main>`;
+  const gridMd=`| rules | Ten fields | 7 | 2 | 1 | [Source](${source}) |`;
+  assert.deepEqual(renderedProblems(grid,gridHtml,gridMd,gridMd),[]);count++;
+  assert.ok(renderedProblems(grid,gridHtml.replace('<td>7</td>','<td>8</td>'),gridMd,gridMd).some(p=>p.includes('rendered-evidence: fixture-number: grid rules-full')));count++;
+  assert.equal(Object.keys(ALIASES).length,169);
+  console.log(`recipe independent controls: ${count} passed; exact unsupported-literal exit/cause and supported HTML/Markdown/llms`);
 } finally {cleanup(own);}

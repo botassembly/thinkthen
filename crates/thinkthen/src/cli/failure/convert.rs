@@ -62,6 +62,10 @@ impl From<RenderError> for Failure {
 impl From<EngineError> for Failure {
     fn from(error: EngineError) -> Self {
         match error {
+            EngineError::Provider { cause, diagnostic } => Self::Provider {
+                cause: Box::new(Self::from(*cause)),
+                diagnostic,
+            },
             EngineError::Transport(message) => Self::Transport(message),
             EngineError::Status(status) => Self::Status(status),
             EngineError::SendBudgetFirst => Self::Usage("the process send budget was spent"),
@@ -82,6 +86,7 @@ impl From<EngineError> for Failure {
             EngineError::QuestionMiss(key) => Self::QuestionMiss { key, context: None },
             EngineError::StoreAmbiguous => Self::StoreAmbiguous,
             EngineError::StoreHotJournal => Self::StoreHotJournal,
+            EngineError::StoreVersion(file) => Self::StoreVersion(file),
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingForbidden => Self::RecordingForbidden,
@@ -138,7 +143,11 @@ impl From<crate::Error> for Failure {
             Some(Diagnostic::EngineRange { cause, first, last }) => {
                 let cause = Self::from(cause);
                 match cause {
-                    Self::Transport(_) | Self::Status(_) | Self::TokenLimit | Self::Reply(_)
+                    Self::Transport(_)
+                    | Self::Status(_)
+                    | Self::Provider { .. }
+                    | Self::TokenLimit
+                    | Self::Reply(_)
                         if last > first =>
                     {
                         Self::BatchFailed {

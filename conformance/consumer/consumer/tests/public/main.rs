@@ -30,3 +30,6 @@ use child::run;
 )]
 mod settings;
 mod values;
+
+#[path = "../../../../../crates/thinkthen/tests/support/api.rs"]
+mod api;

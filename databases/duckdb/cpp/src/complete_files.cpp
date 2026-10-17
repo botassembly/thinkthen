@@ -13,7 +13,7 @@ ThinkThenReply thinkthen_cpp_complete_admission_error(ThinkThenText,ThinkThenTex
 ThinkThenReply thinkthen_cpp_complete_reader_new(ThinkThenText, ThinkThenText, int32_t, void *, int64_t (*)(void *,uint8_t *,size_t),void **);
 ThinkThenReply thinkthen_cpp_complete_reader_next(void *);
 void thinkthen_cpp_complete_reader_free(void *);
-ThinkThenReply thinkthen_cpp_complete_feed_new(ThinkThenText,ThinkThenText,ThinkThenText,ThinkThenText,const void *,int64_t,ThinkThenSettings,void **);
+ThinkThenReply thinkthen_cpp_complete_feed_new(ThinkThenText,ThinkThenText,ThinkThenText,ThinkThenText,const void *,int64_t,ThinkThenSettings,ThinkThenText,void **);
 ThinkThenReply thinkthen_cpp_complete_feed_push(void *,ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_feed_read(void *);
 ThinkThenReply thinkthen_cpp_complete_feed_finish(void *,void *,int32_t);
@@ -57,7 +57,7 @@ string CompleteAdmissionError(const std::exception &error) {
     Checked(reply.value);
     return ReplyText(reply.value);
 }
-bool CompleteFileCall(ClientContext &context,const string &verb,const string &question,const string &inputs,const string &controls,const void *reference,int64_t deadline,ThinkThenSettings settings,string &result) {
+bool CompleteFileCall(ClientContext &context,const string &verb,const string &question,const string &inputs,const string &controls,const void *reference,int64_t deadline,ThinkThenSettings settings,string &result,const string &native_reading) {
     RustReply planned(thinkthen_cpp_complete_file_plan(View(inputs)));
     if (planned.value.status!=0) {
         RustReply failed(thinkthen_cpp_complete_failure_envelope(View(ReplyText(planned.value))));
@@ -78,7 +78,7 @@ bool CompleteFileCall(ClientContext &context,const string &verb,const string &qu
         void *value=nullptr;
         ~Feed() { thinkthen_cpp_complete_feed_free(value); }
     } feed;
-    RustReply started(thinkthen_cpp_complete_feed_new(View(verb),View(question),View(inputs),View(controls),reference,deadline,settings,&feed.value));
+    RustReply started(thinkthen_cpp_complete_feed_new(View(verb),View(question),View(inputs),View(controls),reference,deadline,settings,View(native_reading),&feed.value));
     Checked(started.value);
     if (!feed.value) { result=ReplyText(started.value); return true; }
     string packets="[";
@@ -136,6 +136,9 @@ bool CompleteFileCall(ClientContext &context,const string &verb,const string &qu
         if (!closed) { finish(nullptr,0); }
     } catch (const Exception &error) {
         if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(context)) { throw; }
+        const auto message = ErrorData(error).RawMessage();
+        if (message.rfind("thinkthen cancelled: ", 0) == 0 || message.rfind("thinkthen deadline: ", 0) == 0 ||
+            message.rfind("thinkthen defect: ", 0) == 0) { throw; }
         finish(nullptr,1);
     }
     while (!ended) { drain(); if (!ended) { pause(); } }

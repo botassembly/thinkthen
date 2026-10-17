@@ -43,88 +43,11 @@ cargo build --release
 mkdir -p lib
 cp target/release/libthinkthen_c.so lib/libthinkthen.so
 ln -sf libthinkthen.so lib/libthinkthen.so.0
-cc -std=c11 -I include examples/slide.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib" -o slide
+cc -std=c11 -I include examples/session.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib" -o session
 ```
 
 A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `localize.sh` writes the release `libthinkthen.a` so that it defines only the header's `thinkthen_` functions as global names, and a program can link its own SQLite beside it. On macOS it needs the `rust-objcopy` that ships inside the Rust toolchain. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
 
 `thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, request-byte ceiling, cache, timeout, retries, profile, batch default, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
-## Upgrade from collecting calls
-
-| Earlier call | Current call |
-| --- | --- |
-| Bare typed functions, JSON calls and counted complete calls | `thinkthen_session_new`, then `thinkthen_session_try_read` |
-| Complete snapshots and lazy batches | Owned session packets and `thinkthen_session_result_view` |
-| Borrowed error-slot facts | Terminal packet failure and final facts |
-| `thinkthen_plan_json` | `thinkthen_request_plan_json` with the canonical Request |
-
-All frozen compatibility exports remain available with their original symbols, signatures, layouts, errors and lifetime rules. The [compatibility header table](DESIGN.md#the-header-table) and [counted interface](TYPED.md) describe those contracts. They retain separate ownership rules. New callers use sessions.
-
-## Compatibility exports
-
-The frozen 0.1 exports retain their symbols, signatures, layouts, error codes and accepted legacy JSON behavior. Existing consumers may keep using them. The [existing header table](DESIGN.md#the-header-table) describes these families; the generated header remains the declaration authority. Shared engine construction, cancellation and cleanup functions also serve the recommended API.
-
-The bare typed calls, their `_opts` forms, later `*_with_facts` forms, collecting JSON door and older plan door remain available for compatibility. The [counted complete and batch interface](TYPED.md) retains its separate ownership rules; it does not acquire session lifetimes. No compatibility entrypoint redirects to the new session contract.
-
-`thinkthen_question_file(engine, path, &json, &length)` reads one named UTF-8 question file of at most 1 MiB and returns its validated source JSON. Pass that owned string to `thinkthen_decide_with_facts` or use it to construct a JSON-door request, then free it once with `thinkthen_free_string`. A bad file returns non-retryable `THINKTHEN_ELOCAL` without changing either output or sending a request. The existing bare question and inline JSON arguments remain literal and report typed grammar errors as `THINKTHEN_EUSAGE`.
-
-`thinkthen_plan_json(engine, plan_json, &json, &length)` previews a judgment call and sends nothing. Pass `{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}}`: bare question text takes its fields, such as `options`, from `settings`, and a question object takes only `batch`, `context` and `deadline_ms` from it. The owned JSON holds `records`, `requests`, `estimated_bytes`, `estimated_input_tokens` as `{"lower","upper"}`, `upper_bound` and `first_body_utf8`, the result schema's `plan` definition. It needs no key. Free it once with `thinkthen_free_string`.
-
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
-
-## Counted typed calls
-
-[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. These compatibility views retain their original ownership rules. Sessions expose the generated complete graph described above.
-
-## Windows x86-64
-
-The development archive `thinkthen-c-0.2.0-x86_64-pc-windows-msvc.zip` contains exactly `include/thinkthen.h`, `bin/thinkthen.dll` and `lib/thinkthen.dll.lib`, with a separate SHA-256 sidecar. The `.lib` imports the public DLL; it is not a static implementation. From an x64 MSVC developer shell, compile a consumer after extraction:
-
-```console
-cl.exe /nologo /TC /std:c11 /W4 /WX /MD /Iinclude consumer.c /link lib\thinkthen.dll.lib
-copy bin\thinkthen.dll .
-consumer.exe
-```
-
-Free owned strings and facts through `thinkthen_free_string`, and engines and tokens through their DLL free functions. Error messages and error facts remain borrowed. Windows static libraries and other bindings remain separate work. Development files are unsigned; public distribution and native runner proof remain pending.
-
-## Compatibility call facts
-
-Every successful asking JSON call returns `{"value":...,"facts":...}`. `value` keeps the verb's prior bare JSON shape. `facts` reports this call's finished records, sent attempts, cache answers and elapsed seconds, with provider token counts and model only when available. A failed call still returns `NULL`; after it, `thinkthen_error_facts_json` borrows final facts from the same calling-thread and engine slot as `thinkthen_error_message`. A refusal before a call starts has no facts. The direct `{"usage":true}` process totals remain a separate shape.
-
-For compatibility typed calls that need facts, use `thinkthen_decide_with_facts`, `thinkthen_decide_many_with_facts`, `thinkthen_recognize_with_facts`, or `thinkthen_relate_with_facts`. Each also has an `_opts` form. Pass result outputs followed by `char **facts_json` and `size_t *facts_len`; free the owned facts JSON with `thinkthen_free_string`. Recognition and relation return a separate owned result JSON string. The older eight typed names remain compatible bare-result calls and do not return facts. The new forms preserve their results, options and failure codes. A failure changes no output slot; started-failure facts remain available through the borrowed error accessor.
-
-The four judgments also accept `"records":["...",...]` with one runtime question and ordered answers. The closed `"call":{"batch":10,"context":"..."}` object controls eligible record arrays; `"batch":"max"` selects maximal packing. `call.batch` outranks the engine default, which outranks a saved question's batch. A top-level `batch` remains part of the saved question. A context is shared evidence, changes request identity, and is refused on unsupported routes. With `"details":true`, `value` is an array of complete `thinkthen.result/1` record objects including each whole `input`, request and batch metadata.
-
-For one text, `"details":true` puts the command's `--details` object under `value`. The backend's reply supplies `meta.model`, `meta.usage` and probabilities, with `answer.confidence` when present. `meta.requests` holds request digests; `meta.url` names the address. A field the backend did not report is absent.
-
-The JSON call keeps a question's saved calibration `profile` in `meta.question_sha256`. When `thinkthen_engine_new_with` selects a different runtime profile, details include `meta.profile_warning` with `tuned_for` and `running`. The selected profile enforces request limits before a send.
-
-A call of `{"usage": true}` returns this engine's running totals of requests sent, retries, cache answers and tokens.
-
-Owned-session callers use `thinkthen_engine_usage_persistence_v1` for a nonblocking live observation and `thinkthen_engine_finish_usage_status_v1` to finish current deltas. Each copies the generated persistence state and a counted UTF-8 advice view into caller-owned outputs. Failed persistence returns `THINKTHEN_OK` with the Failed state and native fixed advice; it never changes a valid answer or adds a model call. Other states return `{NULL, 0}` advice. Advice has static library lifetime, survives engine destruction and must not be freed. Written covers only this engine's current deltas. Only usage-lock acquisition has a deadline; other filesystem work can take longer.
-
-Both outputs must be nonnull, aligned, writable and nonoverlapping. A null engine, a null output or exactly equal output addresses refuses before observation or finalization. Every nonzero return preserves both outputs and updates the calling-thread session diagnostic; success preserves it. Keep the engine live during calls and wait for concurrent callers before destruction. Partial overlaps, invalid extents and forged pointers remain caller obligations.
-
-Use `thinkthen_engine_usage_persistence_v1` in place of the removed JSON `usage_status` request, and `thinkthen_engine_finish_usage_status_v1` in place of `finish_usage_status`.
-
-## Throttle is per loaded copy
-
-The engine's throttle is the limit on requests in flight at once. It holds per loaded copy of the engine. A process that loads two copies, such as a C host and a native extension built from another surface, can run up to twice the throttle (ADR 0047 item 5).
-
-## Checks
-
-`cargo test` builds the door and compiles each C program against it. Unix uses AddressSanitizer and leak checking; Windows uses MSVC `/W4 /WX /MD`, linked through the header and the public library as a host links it. The Windows fixture compiler alone defines `_CRT_SECURE_NO_WARNINGS` for the framing driver. A separate native MSVC ASan test first requires a detected use-after-free; it covers C consumers, not the Rust DLL or Unix LSan. `tests/door/main.rs` checks the soname and the exported symbols, the examples' pinned output, and the C rows in `tests/c/`. `tests/door/cases.rs` feeds every applicable shared case through `tests/c/driver.c`. `tests/door/bytes.rs` holds the `value` field's bytes to the command's output.
-
-The committed header is generated from Rust exports, descriptors, values and ownership comments. Install the external development tool with `cargo install --locked cbindgen@0.29.4`, then run `python3 sdlc/scripts/generate-c-header.py` from the repository root after changing the C interface. `python3 sdlc/scripts/generate-c-header.py --check` refuses header drift. Generation uses offline stable source parsing without Cargo metadata. Ordinary library builds and installed C consumers need no generator. [cbindgen.toml](cbindgen.toml) preserves C spellings and imports only the native cancellation token's opaque name; the native dependency retains its implementation.
-
-The loopback backend's generic arm answers every question by a fixed rule: the first option, level, label, or yes gets 0.9. The pinned text shows that rule's answers. A model would answer differently.
-
-`check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It exits 77 when no C compiler is found. It runs the formatter, Clippy, and the tests, and then runs the slide against the rung's own loopback backend.
-
-`thinkthen_engine_new_with("{\"backend\":\"liquid\"}")` selects a named backend in code. The Rust builder captures its key from that backend's environment variable. Explicit `backend` outranks environment and configuration selection. With `base_url` too, the selected key, posting path, description form and setup prices/profile apply at that address. Explicit model, profile and price settings override their setup values. The `refresh_cache` boolean setting requests a fresh native exchange while retaining the same cache folder. The door accepts no key. Every package forwarding settings JSON to this door inherits `"backend"` without an ABI change.
-
-Explicit files and folders use the [library reader contract](../files.md), with line, window or whole-file units and located results. Existing text, record and column methods retain their arguments.
-
-The compatibility C calls use the same admitted Rust request as the session API. Collecting calls run `Engine::execute_request`; lazy batches run `Engine::execute_request_rows`, which retains the native reader, completed prefix, callbacks and final facts. These calls keep the frozen 0.1 symbols and reply grammar, including the count-only `{"usage":true}` request.
+`thinkthen_request_plan_value` accepts the same counted full Request UTF-8 as `thinkthen_request_plan_json` and returns an independent immutable value owner through the same Rust admission and Plan serializer. Unknown fields refuse before planning. `thinkthen_value_parse` parses arbitrary counted JSON without Request admission and retains exact number bytes and counted object keys. Free both owners with `thinkthen_value_free`; roots borrowed through `thinkthen_value_view` remain valid until that free, even after source bytes and engines are destroyed. NULL input requires zero length; empty input, malformed JSON or UTF-8, nonrepresentable extents, and NULL output return `THINKTHEN_EUSAGE` without changing the output. Failures use the calling thread immediate session diagnostic and preserve constructor and engine diagnostics.

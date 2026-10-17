@@ -96,7 +96,7 @@ fn pulled_originals_need_no_clone_send_or_serialize_and_collection_keeps_complet
     .unwrap();
     assert_eq!(call.facts().records(), 2);
     assert_eq!(call.facts().requests_sent(), 1);
-    assert!(call.complete().is_some());
+    assert!(call.facts().call_id().is_some());
     assert_eq!(call.value()[0].result().value(), Answer::No);
     assert_eq!(call.value()[1].original().number, 1);
     assert_eq!(Rc::strong_count(&call.value()[1].original().local), 1);
@@ -240,7 +240,7 @@ fn pulled_annotations_preserve_partial_member_failure_original_location_and_owne
             .unwrap(),
         r#"{"z":false,"body":"Original."}"#
     );
-    let doc = serde_json::to_value(call.complete().unwrap()).unwrap();
+    let doc = serde_json::to_value(&call).unwrap();
     assert!(doc["value"][0]["answers"]["bad"]["failure_id"].is_string());
     assert_eq!(observations.lock().unwrap().len(), 3);
     assert_eq!(listener.count(), 1);

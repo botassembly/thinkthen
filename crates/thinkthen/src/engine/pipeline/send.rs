@@ -214,6 +214,7 @@ impl<'a> Sender<'a> {
         .with_attempt_digest(digest.as_str());
         let sent = AtomicU64::new(0);
         let exchange = Exchange {
+            headers: asks.first().map_or(&[], |(ask, _)| ask.state.headers()),
             url: url.as_str(),
             body,
             key: &key,

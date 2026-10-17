@@ -1,3 +1,4 @@
+//! Stays: unstarted work must refund request and token estimates together under cancellation.
 //! Per-attempt process and explicit call-budget reservations.
 
 use std::sync::atomic::Ordering;

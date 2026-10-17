@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { childEnv } from '../../conformance/children/children.mjs';
 import { namedAnswerProblems } from '../../site/scripts/named-answers.mjs';
 
 const folders = ['demos', 'specification', 'spec', 'libraries', 'databases'];
@@ -81,8 +85,16 @@ function dartForShared(source) {
 }
 
 function pages() {
-  return execFileSync('git', ['ls-files', '-co', '--exclude-standard', '--', ...folders], { encoding: 'utf8' })
-    .trim().split('\n').filter((path) => path.endsWith('.md'))
+  const script = [
+    'import os, sys',
+    'from pathlib import Path',
+    'sys.path.insert(0, sys.argv[1])',
+    'from sources import tracked_files',
+    'root = Path.cwd()',
+    'sys.stdout.buffer.write(b"\\0".join(os.fsencode(path.relative_to(root)) for path in tracked_files(root)))',
+  ].join('\n');
+  return execFileSync('python3', ['-c', script, fileURLToPath(new URL('../generators/results', import.meta.url))], { encoding: 'utf8' })
+    .split('\0').filter((path) => path.endsWith('.md') && folders.some((folder) => path.startsWith(`${folder}/`)))
     .map((path) => [path, readFileSync(path, 'utf8')]);
 }
 
@@ -145,6 +157,35 @@ function check(entries) {
 function selfTest() {
   const real = pages();
   const before = check(real).lines;
+  const fixture = mkdtempSync(join(tmpdir(), 'named-answers-'));
+  try {
+    const nested = join(fixture, 'checkout', 'nested');
+    const foreign = join(fixture, 'foreign');
+    const env = childEnv({ home: fixture });
+    mkdirSync(nested, { recursive: true });
+    for (const root of [join(fixture, 'checkout'), foreign]) {
+      mkdirSync(root, { recursive: true });
+      execFileSync('git', ['init', '-q'], { cwd: root, env });
+    }
+    // Exercise a subdirectory of the checkout, not its top-level directory.
+    const page = join(nested, 'demos', 'target', 'README.md');
+    mkdirSync(join(nested, 'demos', 'target'), { recursive: true });
+    writeFileSync(page, '```python\nresult = tt.decide(question, message)\n```\n');
+    const options = { cwd: nested, env: { ...env,
+      GIT_DIR: join(foreign, '.git'), GIT_WORK_TREE: foreign,
+      GIT_COMMON_DIR: join(foreign, '.git'), GIT_INDEX_FILE: join(foreign, '.git', 'index') },
+      encoding: 'utf8', stdio: 'pipe' };
+    const command = fileURLToPath(import.meta.url);
+    execFileSync(process.execPath, [command], options);
+    execFileSync('git', ['add', '.'], { cwd: nested, env });
+    let refused = false;
+    try { execFileSync(process.execPath, [command], options); }
+    catch (error) { refused = error.status === 1 && error.stderr.includes('demos/target/README.md:2: generic:'); }
+    if (!refused) throw new Error('staged source page escaped the checkout scan');
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+
   const plants = [
     ['demos', 'bash', "if thinkthen decide 'Q?' --quiet < m.txt; then echo yes; fi", 'direct'],
     ['specification', 'sh', "thinkthen decide 'Q?' --quiet < m.txt\ncase $? in", 'bare-exit'],
@@ -218,9 +259,14 @@ function selfTest() {
   }
   const dartReadme = real.find(([path]) => path === 'libraries/dart/README.md');
   if (!dartReadme || scan(...dartReadme).problems.length) throw new Error('real Dart README is not clean');
-  const genericReadme = dartReadme[1].replaceAll('refundDecision', 'result');
+  const dartCall = /^([ \t]*final[ \t]+)([A-Za-z_]\w*)([ \t]*=[ \t]*await[ \t]+engine\.decide[ \t]*\()/m.exec(dartReadme[1]);
+  if (!dartCall) throw new Error('real Dart call did not reach the shared generic-name rule');
+  const genericReadme = dartReadme[1].replace(dartCall[0], `${dartCall[1]}result${dartCall[3]}`);
+  const callLine = dartReadme[1].slice(0, dartCall.index).split('\n').length;
+  const genericProblems = scan(dartReadme[0], genericReadme).problems;
+  const expectedGeneric = `named answers: ${dartReadme[0]}:${callLine}: generic: the answer is named result. Name it for its meaning.`;
   if (genericReadme === dartReadme[1] ||
-      !scan(dartReadme[0], genericReadme).problems.some((line) => /: generic: /.test(line))) {
+      genericProblems.length !== 1 || genericProblems[0] !== expectedGeneric) {
     throw new Error('real Dart call did not reach the shared generic-name rule');
   }
   console.log('named answers: self-test passed');

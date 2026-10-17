@@ -1,3 +1,4 @@
+//! Stays: a stop must interrupt private process-state rebuild waits.
 //! The one owner of a process's send limits. One process has one throttle,
 //! by Ian's ruling in ticket 0077, and the gates and totals follow it. One
 //! fork rebuild replaces all three (ticket 0304 slice 3d). Ian can overturn it.

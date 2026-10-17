@@ -1,0 +1,87 @@
+//! Independent recognition failures retain the existing per-record stage scheduler.
+use super::records::{answer, prepare};
+use crate::public::{
+    Call, CallOptions, Engine, Error, QuestionInput, Recognize, RecordInput, RequestRecoveredRow,
+    RequestValue, options::Stop,
+};
+impl Engine {
+    pub(in crate::public) fn recover_recognition(
+        &self,
+        ask: &Recognize,
+        records: Vec<Result<RecordInput<QuestionInput>, Error>>,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
+        ask.0.validate_mode().map_err(Error::refused)?;
+        let engine = super::super::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
+        let limit = options
+            .cli_text_limit
+            .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
+        let (admitted, rejected) = super::super::recovering::prepare(records, |_, record| {
+            let unit = prepare(&engine, ask, record, options.context_text())?;
+            unit.prepared.admit(limit)?;
+            Ok((unit, ()))
+        })?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        stop.run_call(0, |cancel| {
+            let cancel = cancel.with_storage_scope();
+            let mut output = rejected;
+            for (ordinal, unit, ()) in admitted {
+                cancel.stop_or_remaining().map_err(Error::from)?;
+                let outcome = answer(ordinal, unit, &stop, &cancel, false)
+                    .map(|row| RequestValue::Recognized(vec![row]));
+                output.push(crate::public::request::recovery_row(ordinal, outcome)?);
+                cancel.finished_records(1);
+            }
+            output.sort_by_key(RequestRecoveredRow::ordinal);
+            Ok(output)
+        })
+    }
+}
+
+impl Engine {
+    pub(in crate::public) fn recover_recognition_stream<'a, I>(
+        &self,
+        ask: &Recognize,
+        records: I,
+        options: CallOptions<'a>,
+        sink: &dyn Fn(RequestRecoveredRow),
+    ) -> Result<Call<()>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a,
+    {
+        ask.0.validate_mode().map_err(Error::refused)?;
+        let engine = super::super::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
+        let limit = options
+            .cli_text_limit
+            .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        let mut records = records.into_iter();
+        stop.run_call(0, |cancel| {
+            let cancel = cancel.with_storage_scope();
+            let mut ordinal = 0;
+            while let Some(record) = next_record(&mut records, &cancel)? {
+                self.check_record_limit(ordinal)?;
+                let unit = record
+                    .and_then(|record| prepare(&engine, ask, record, options.context_text()))
+                    .map_err(|error| error.at_record(ordinal))?;
+                unit.prepared
+                    .admit(limit)
+                    .map_err(|error| error.at_record(ordinal))?;
+                let outcome = answer(ordinal, unit, &stop, &cancel, false)
+                    .map(|row| RequestValue::Recognized(vec![row]));
+                sink(crate::public::request::recovery_row(ordinal, outcome)?);
+                cancel.finished_records(1);
+                ordinal += 1;
+            }
+            Ok(())
+        })
+    }
+}
+
+fn next_record<I: Iterator>(
+    records: &mut I,
+    cancel: &crate::engine::Cancel<'_>,
+) -> Result<Option<I::Item>, Error> {
+    cancel.stop_or_remaining().map_err(Error::from)?;
+    Ok(records.next())
+}

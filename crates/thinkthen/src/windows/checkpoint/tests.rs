@@ -1,3 +1,4 @@
+//! Stays: file identity, replacement races and protected creation permissions need direct platform durability checks.
 //! Public API work pauses with the actual writer's directory or temporary file alive.
 use super::{OBSERVER, Point};
 use crate::test_deadline::child;
@@ -100,12 +101,14 @@ fn descriptors(paths: &[PathBuf]) -> Vec<String> {
 fn a_real_writer_retains_its_directory_through_a_synchronized_replacement_attempt() {
     let root = Scratch::new();
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("counted loopback");
+    let output = launch(&root, &listener, "initialize")
+        .finish()
+        .expect("initialize");
     assert!(
-        launch(&root, &listener, "initialize")
-            .finish()
-            .expect("initialize")
-            .status
-            .success()
+        output.status.success(),
+        "initialize: {}; {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
     );
     counts(&root, 1);
     let before = fs::read(month(&root)).expect("existing exact bytes");
@@ -141,7 +144,13 @@ fn a_real_writer_retains_its_directory_through_a_synchronized_replacement_attemp
     );
     drop(retained);
     release(&root);
-    assert!(child.finish().expect("writer finish").status.success());
+    let output = child.finish().expect("writer finish");
+    assert!(
+        output.status.success(),
+        "writer finish: {}; {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
+    );
     counts(&root, 2);
     assert_eq!(listener.requests().len(), 2);
 }
@@ -183,12 +192,12 @@ fn newly_created_temporary_has_explicit_protected_user_system_access_before_publ
         "inspect temporary, usage directory and lock"
     );
     release(&root);
+    let output = child.finish().expect("publication and finish");
     assert!(
-        child
-            .finish()
-            .expect("publication and finish")
-            .status
-            .success()
+        output.status.success(),
+        "publication and finish: {}; {}",
+        output.status,
+        String::from_utf8_lossy(&output.stderr)
     );
     counts(&root, 1);
     assert_eq!(
@@ -249,7 +258,7 @@ fn usage_child() {
     let answer = engine
         .decide(&question, "fixture evidence")
         .expect("canned public answer");
-    assert_eq!(answer.into_value(), crate::Answer::Yes);
+    assert_eq!(answer.into_value(), Some(true));
     if selected.is_some() {
         // The writer may pause longer than the public flush deadline while
         // the parent inspects its native descriptor. Keep the host alive.

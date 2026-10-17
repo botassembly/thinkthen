@@ -6,16 +6,11 @@ use super::{
 };
 use crate::{Call, CancelToken, Engine, Error, RequestEnvironment, RequestOutcome, RequestValue};
 use serde::Serialize;
-use serde_json::Value;
 
 pub(super) struct NativeExecutor {
     pub(super) engine: Engine,
-    pub(super) schema: Value,
 }
 impl Executor for NativeExecutor {
-    fn output_schema(&self) -> Value {
-        self.schema.clone()
-    }
     fn execute(&self, invocation: Invocation, token: &CancelToken) -> Result<NativeReply, Error> {
         let token = invocation.call_token(token);
         let controls = invocation.controls(&token)?.started()?;
@@ -138,11 +133,8 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
     }
 }
 fn reply<T: Serialize>(call: Call<T>, failed: bool) -> Result<NativeReply, Error> {
-    let complete = call
-        .complete()
-        .ok_or_else(|| Error::defect("native complete call has no identity"))?;
     Ok(NativeReply {
-        object: NativeObject::new(&complete)
+        object: NativeObject::new(&call)
             .map_err(|_| Error::defect("native complete call could not be written"))?,
         failed,
     })

@@ -13,10 +13,12 @@ scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
 unset THINKTHEN_API_KEY
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$REPO/libraries/c/target}
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build --remap-path-prefix=$REPO=/build/thinkthen"
+export CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build -ffile-prefix-map=$REPO=/build/thinkthen"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/thinkthen-target-ada}
 THINKTHEN_C_LIBRARY=${THINKTHEN_C_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.so}
 THINKTHEN_C_STATIC_LIBRARY=${THINKTHEN_C_STATIC_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.a}
-THINKTHEN_BACKEND_BIN=${THINKTHEN_BACKEND_BIN:-$REPO/target/debug/conformance-backend}
+THINKTHEN_BACKEND_BIN=${THINKTHEN_BACKEND_BIN:-$CARGO_TARGET_DIR/debug/conformance-backend}
 export THINKTHEN_C_LIBRARY THINKTHEN_C_STATIC_LIBRARY THINKTHEN_BACKEND_BIN
 if [ -n "${THINKTHEN_C_ARTIFACT:-}" ]; then
   . "$REPO/sdlc/scripts/installed.sh"
@@ -25,11 +27,11 @@ if [ -n "${THINKTHEN_C_ARTIFACT:-}" ]; then
   THINKTHEN_C_LIBRARY=$native/lib/libthinkthen.so
   THINKTHEN_C_STATIC_LIBRARY=$native/lib/libthinkthen.a
 fi
-if [ ! -f "$THINKTHEN_C_LIBRARY" ] || [ ! -f "$THINKTHEN_C_STATIC_LIBRARY" ]; then
+if [ -z "${THINKTHEN_C_ARTIFACT:-}" ]; then
   cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
 fi
 if [ ! -x "$THINKTHEN_BACKEND_BIN" ]; then
-  CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
+  cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 fi
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done

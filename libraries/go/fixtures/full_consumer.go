@@ -195,13 +195,42 @@ func main() {
 			}
 		}
 	}
+	callResult := fixture["call_result_contract"] != nil && scalar[bool](fixture["call_result_contract"])
+	if callResult {
+		original := object(object(scalar[[]json.RawMessage](input["items"])[0])["original"])
+		if scalar[string](original["kind"]) == "text" {
+			source = tt.TextInput(scalar[string](original["text"]))
+		} else {
+			source = tt.RequestInputJson{Value: scalar[any](original["value"])}
+		}
+	}
 	client, err := tt.NewClient(settings([]byte(os.Args[2])))
 	if err != nil {
-		emit(tt.OwnedCall{}, err)
+		emit(tt.Call{}, err, false)
 		return
 	}
 	defer client.Close()
-	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
+	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.Call, error){"decide": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Decide(ctx, q, fixtureInput(input), o)
+	}, "choose": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Choose(ctx, q, fixtureInput(input), o)
+	}, "tag": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Tag(ctx, q, fixtureInput(input), o)
+	}, "score": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Score(ctx, q, fixtureInput(input), o)
+	}, "filter": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Filter(ctx, q, fixtureInput(input), o)
+	}, "rank": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Rank(ctx, q, fixtureInput(input), o)
+	}, "find": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Find(ctx, q, fixtureInput(input), o)
+	}, "annotate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Annotate(ctx, q, fixtureInput(input), o)
+	}, "recognize": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Recognize(ctx, q, fixtureInput(input), o)
+	}, "relate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Relate(ctx, q, fixtureInput(input), o)
+	}}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if raw := fixture["cancel"]; raw != nil && scalar[bool](raw) {
@@ -217,7 +246,7 @@ func main() {
 	}
 	controls := options(fixture["options"])
 	call, err := calls[scalar[string](fixture["verb"])](ctx, q, source, &controls)
-	emit(call, err)
+	emit(call, err, callResult)
 }
 func mustRead(path string) []byte {
 	data, err := os.ReadFile(path)
@@ -226,7 +255,7 @@ func mustRead(path string) []byte {
 	}
 	return data
 }
-func emit(call tt.OwnedCall, err error) {
+func emit(call tt.Call, err error, callResult bool) {
 	if errors.Is(err, context.Canceled) {
 		json.NewEncoder(os.Stdout).Encode(map[string]any{"admission": map[string]any{"code": 5, "message": err.Error()}})
 		return
@@ -240,5 +269,10 @@ func emit(call tt.OwnedCall, err error) {
 	if err != nil && !errors.As(err, &started) {
 		panic(err)
 	}
-	json.NewEncoder(os.Stdout).Encode(map[string]any{"packets": call.Packets})
+	result := fixtureCall(call).(map[string]any)
+	payload := map[string]any{"packets": result["Packets"]}
+	if callResult {
+		payload["call_result"] = map[string]any{"value": result["Value"], "probability": result["Probability"], "results": result["Results"], "facts": result["Facts"]}
+	}
+	json.NewEncoder(os.Stdout).Encode(payload)
 }

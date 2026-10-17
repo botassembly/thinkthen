@@ -7,8 +7,12 @@ runs the check against a small tree with one good link and one dead link.
 
 import pathlib
 import re
+import subprocess
 import sys
 import tempfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'generators/results'))
+from sources import tracked_files
 
 LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 FENCE = re.compile(r"^\s*```")
@@ -29,9 +33,12 @@ def links(path):
 
 
 def check(root):
+    root = root.resolve()
     pages = [root / "README.md", root / "demos" / "README.md",
              root / "sdlc" / "planning" / "documentation-plan.md"]
-    pages += sorted((root / "demos").glob("[0-9]*/README.md"))
+    tracked = set(tracked_files(root))
+    pages += [path for path in sorted(tracked)
+              if path.parent.parent == root / 'demos' and path.relative_to(root).match('demos/[0-9]*/README.md')]
     bad = []
     for path in pages:
         if not path.is_file():
@@ -48,8 +55,15 @@ def self_test():
         root = pathlib.Path(tmp)
         (root / "demos" / "01-gate").mkdir(parents=True)
         (root / "demos" / "README.md").write_text("[gate](01-gate/)\n")
-        (root / "demos" / "01-gate" / "README.md").write_text("```\n[x](nowhere)\n```\n")
-        (root / "README.md").write_text("[the list](demos/LIST.md) [web](https://x)\n")
+        (root / "demos" / "01-gate" / "README.md").write_text("[x](nowhere)\n")
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        if check(root)[0]:
+            raise AssertionError('pages read an untracked source fixture')
+        (root / 'demos/01-gate/README.md').write_text('```\n[x](nowhere)\n```\n')
+        (root / 'README.md').write_text('[the list](demos/LIST.md) [web](https://x)\n')
+        if not check(root)[0]:
+            raise AssertionError('pages skipped a fixed input outside the index')
+        subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
         bad, _ = check(root)
     wanted = ["pages: README.md: links [the list] to demos/LIST.md, and nothing is there"]
     if bad != wanted:

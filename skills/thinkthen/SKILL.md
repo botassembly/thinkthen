@@ -9,7 +9,11 @@ Examples target ThinkThen 0.2 or newer.
 
 ThinkThen judges evidence and returns typed values. It never executes commands or selected labels. Use ordinary search, exact matching and code for deterministic work. Use ThinkThen when the next decision needs a judgment about meaning. Read the selected evidence before making a claim; a model answer is not proof that a source is correct.
 
-The development command exposes the ten judging tools through `thinkthen mcp`. Launch it directly as a local stdio subprocess; keys come from approved environment variables. Supply ordinary question files through `question_file`, explicit catalog names through `question_name`, and file/folder inputs through `source`; inline `@` strings remain literal. The server creates no questions and never acts on answers. Native typed source locations and dynamic choose saved-model/on controls are integrated. Fresh review, full parity, landing gates, timing and final Windows qualification remain pending. [MCP installation and integration status](../../libraries/mcp/README.md) and [contract](../../specification/mcp.md) give the boundary.
+`thinkthen mcp` exposes the ten judging tools over local stdio through the same engine and cache as the command line. Install the command, put it on `PATH`, and launch it with `{"command":"thinkthen","args":["mcp"]}` in your MCP client. Keys come from `THINKTHEN_API_KEY` or the selected backend's own key variable; tool arguments cannot change the backend or key. Use Jev, TypeSafe's decision model, OpenAI or a local model through the ordinary backend settings.
+
+Read `tools/list` for compact input guidance. It omits output schemas; native validation owns the full argument grammar. Run `thinkthen mcp --help` and read the [MCP guide](../../libraries/mcp/README.md) for setup and a saved-answer example. Supply question files through `question_file`, catalog names through `question_name`, explicit `@` references through `question_reference`, and file or folder inputs through `source`. Inline `@` strings remain literal. The server creates no questions and never acts on answers.
+
+MCP returns complete native call objects in `structuredContent` and equivalent JSON text. Preserve false, null, source locations and per-record failures; inspect `isError` for a failed call. The included Python client returns that call object or raises `ToolError` with native error and call facts. CLI exit codes below describe command-line calls. See the [MCP contract](../../specification/mcp.md) for protocol and result details.
 
 ## Pick the function
 
@@ -36,7 +40,7 @@ Completed record runs and explicit multiple-document runs exit 0 even when indiv
 
 Exit 2 means invalid usage/input, 4 backend failure, 5 local failure and 70 a defect. Failed streams can leave a completed prefix; do not treat it as a finished dataset. Capture the status under `set -e` with `command && rc=0 || rc=$?`. Read stderr for the cause; failure is never a negative answer.
 
-For saved run analysis, use `thinkthen runs audit results.jsonl key.jsonl` to grade answers against a key, and `thinkthen runs diff before.jsonl after.jsonl` to show changed answers. Both run offline without a key or request. Published top-level `audit` and `diff` remain hidden compatibility aliases; use the `runs` forms in new commands.
+For saved run analysis, use `thinkthen runs audit results.jsonl key.jsonl` to grade answers against a key, and `thinkthen runs diff before.jsonl after.jsonl` to show changed answers. Both run offline without a key or request. Top-level `audit` and `diff` are refused; use the `runs` commands.
 
 ## Shortlists and abstention
 

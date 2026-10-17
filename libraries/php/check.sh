@@ -25,9 +25,9 @@ else
  node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
  node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
  for file in autoload.php src/session/*.php examples/*.php fixtures/*.php; do "$php_bin" -n -l "$file" >/dev/null; done
- library=${THINKTHEN_COMPLETE_LIBRARY:-$repo/libraries/c/target/debug/libthinkthen_c.so}
+ library=${THINKTHEN_COMPLETE_LIBRARY:-${CARGO_TARGET_DIR:-$repo/target}/debug/libthinkthen_c.so}
  if [ -z "${THINKTHEN_COMPLETE_LIBRARY:-}" ]; then
-  CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
+  env CARGO_NET_OFFLINE=true RUSTC_WRAPPER= cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib --target-dir "${CARGO_TARGET_DIR:-$repo/target}" -j2
  fi
  "$python_bin" fixtures/package.py --library "$library" --out "$output/package"
  archive=$output/package.tar.gz

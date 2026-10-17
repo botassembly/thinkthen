@@ -171,6 +171,13 @@ for statement in statements:
 """
 
 
+def native_reading(receipt: dict) -> dict:
+    """Read the single actual result from an ordinary typed details column."""
+    if not isinstance(receipt, dict) or receipt.get('result') is None:
+        raise AssertionError('ordinary details must return one typed native reading')
+    return receipt['result']
+
+
 def run(
     statements: list,
     base: str,

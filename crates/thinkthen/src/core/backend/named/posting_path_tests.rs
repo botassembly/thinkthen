@@ -1,3 +1,4 @@
+//! Stays: endpoint parsing and credential-host isolation need exhaustive closed-grammar and secrecy tables.
 //! Ticket 0399: built-in path grammar and exact posting identity for rates.
 use super::{Named, choose, valid_path};
 use crate::core::Backend;

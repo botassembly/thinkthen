@@ -7,7 +7,7 @@ try {
   const triage = (await tt.annotate(
     Client.questionFile("form.json"),
     [report],
-  )).results.map(row => row.value);
+  )).value;
   assert.deepEqual(triage, [
     { steps: true, area: "login", impact: 1.98 },
   ]);

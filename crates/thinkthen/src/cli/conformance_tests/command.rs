@@ -1,29 +1,20 @@
-//! Shared cases that cross the command itself: staged verbs, question forms, and counters.
+//! Stays: saved-response parser and fault tables exercise private command preparation without provider calls.
+//! Direct question-form and child environment regressions stay to pin exact diagnostics
+//! and prove refusal sends nothing even when the parent has a key and address.
 
-use super::conformance_support::{Case, Counters, Document, QuestionForm, Success};
-use super::{CASES, asked, same_json};
+use super::CASES;
+use super::conformance_support::{Case, Document, QuestionForm};
 use crate::args::{Cli, Command};
-use crate::core::recording::Exchange as Recorded;
-use crate::core::{Backend, DEFAULT_MODEL, ModelName, Url};
 use crate::edge::Environment;
-use crate::engine::Cancel;
-use crate::engine::facade::{Asks, Bound, Engine, Settings, Storage};
-use crate::engine::http::Key;
-use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
 use crate::test_deadline::child::ChildEnvironment as _;
 use clap::Parser as _;
-use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::io::{Cursor, ErrorKind, Read as _, Write as _};
+use std::fs;
+use std::io::{Cursor, ErrorKind, Write as _};
 use std::net::{TcpListener, ToSocketAddrs as _};
 use std::path::{Path, PathBuf};
 use std::process::{self, ExitCode, Output};
-use std::time::Duration;
-use std::{fs, thread};
-
-#[path = "../../../../../conformance/consumer/consumer/tests/public/keys.rs"]
-mod shared_keys;
 
 /// A case's temporary folder, removed when the case ends, pass or fail.
 pub(super) struct Scratch(PathBuf);
@@ -93,152 +84,9 @@ fn dispatch(arguments: &[String], input: Vec<u8>) -> (Result<ExitCode, Failure>,
             input,
             &mut output,
         ),
-        Some(Command::Recognize(held)) => crate::cli::recognize::run(
-            held,
-            &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("recognize request"),
-            input,
-            &mut output,
-        ),
-        Some(Command::Relate(held)) => crate::cli::relate::run(
-            held,
-            &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("relate request"),
-            input,
-            &mut output,
-        ),
         _ => panic!("no command runner arm for {arguments:?}"),
     };
     (result, output)
-}
-
-#[derive(Deserialize)]
-struct Printed {
-    value: Box<serde_json::value::RawValue>,
-    meta: PrintedMeta,
-}
-
-#[derive(Deserialize)]
-struct PrintedMeta {
-    question_sha256: String,
-    model: String,
-    requests: Vec<String>,
-}
-
-/// Replay a recognize or relate case through the command with `--details`.
-/// A case's scratch folder and, inside it, a replay folder that holds every
-/// exchange of the case under the canonical address.
-pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
-    let scratch = folder(case);
-    let replay = scratch.0.join("replay");
-    fs::create_dir_all(&replay).expect("replay folder");
-    let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
-    for exchange in &case.exchanges {
-        let recorded = Recorded::new(&url, exchange.request.as_bytes());
-        // The old entry's five fields, the request and response kept byte
-        // for byte, since a question key reads the state's exact JSON.
-        let entry = format!(
-            r#"{{"schema":"thinkthen.recording/1","adapter":{},"url":{},"request":{},"response":{}}}"#,
-            serde_json::to_string(crate::core::adapters::built_in::NAME).expect("adapter"),
-            serde_json::to_string(url.as_str()).expect("address"),
-            exchange.request,
-            exchange.response.get(),
-        );
-        let name = format!("{}.json", recorded.digest().as_str());
-        fs::write(replay.join(name), entry).expect("old entry");
-    }
-    // The shared cases hold whole exchanges, so `cache convert` turns them
-    // into the question store's fixture, as it does a committed old folder.
-    crate::engine::store::convert(&replay, false).expect("converted replay");
-    for item in fs::read_dir(&replay).expect("replay folder") {
-        let path = item.expect("replay item").path();
-        if path
-            .file_name()
-            .is_some_and(|name| name != crate::engine::store::JSONL)
-        {
-            fs::remove_file(path).expect("old entry removed");
-        }
-    }
-    (scratch, replay)
-}
-
-/// Map original exchange digests to independently framed v2 metadata keys.
-pub(super) fn metadata_keys(case: &Case, url: &Url) -> BTreeMap<String, Vec<String>> {
-    let exchanges = case
-        .exchanges
-        .iter()
-        .map(|exchange| {
-            serde_json::json!({
-                "request":exchange.request,
-                "response":serde_json::from_str::<serde_json::Value>(exchange.response.get()).expect("saved reply")
-            })
-        })
-        .collect::<Vec<_>>();
-    shared_keys::fixture_keys(url.as_str(), url.as_str(), &exchanges)
-        .expect("independent v2 fixture keys")
-        .into_iter()
-        .map(|(digest, keys)| (digest, serde_json::from_value(keys).expect("question keys")))
-        .collect()
-}
-
-pub(super) fn staged(case: &Case, success: &Success) {
-    let (scratch, replay) = replay(case);
-    let folder = scratch.0.clone();
-    let input = match (&case.text, &case.entities) {
-        (Some(text), None) => text.clone().into_bytes(),
-        (None, Some(entities)) => entities.get().as_bytes().to_vec(),
-        _ => panic!("{} has no staged input", case.id),
-    };
-    let question = question_file(case, &folder);
-    let replayed = replay.display().to_string();
-    let arguments = [
-        "thinkthen",
-        case.verb.as_str(),
-        question.as_str(),
-        "--url",
-        "https://api.typesafe.ai/v1",
-        "--replay",
-        replayed.as_str(),
-        "--details",
-    ]
-    .map(str::to_owned);
-    let (result, output) = dispatch(&arguments, input);
-    assert_eq!(
-        result.expect("staged run"),
-        ExitCode::SUCCESS,
-        "{}",
-        case.id
-    );
-    let printed: Printed = serde_json::from_slice(&output).expect("one detailed result");
-    let [held] = success.answers.as_slice() else {
-        panic!("{} has no whole-result answer", case.id);
-    };
-    assert!(
-        same_json(printed.value.get(), held.bare.get()).expect("JSON"),
-        "{}",
-        case.id
-    );
-    assert_eq!(
-        printed.meta.question_sha256, held.details.question_sha256,
-        "{}",
-        case.id
-    );
-    assert_eq!(printed.meta.model, held.details.model, "{}", case.id);
-    let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
-    let expected = metadata_keys(case, &url);
-    let keys: Vec<String> = case
-        .exchanges
-        .iter()
-        .flat_map(|exchange| {
-            let digest = Recorded::new(&url, exchange.request.as_bytes()).digest();
-            expected[digest.as_str()].clone()
-        })
-        .collect();
-    assert_eq!(printed.meta.requests, keys, "{}", case.id);
 }
 
 /// Names a form child's job: a case id, or `probe` for a valid question.
@@ -460,84 +308,4 @@ fn rule_breaking(case: &Case, kind: &str) {
     );
     assert!(output.is_empty(), "{}", case.id);
     no_connection(&listener, &case.id);
-}
-
-/// Answer one request on loopback, then refuse any later one.
-fn serve_once(listener: TcpListener, request: Vec<u8>, response: Vec<u8>) {
-    let (mut stream, _) = listener.accept().expect("one request");
-    let mut received = Vec::new();
-    let mut buffer = [0_u8; 4096];
-    while !received.ends_with(&request) {
-        let read = stream.read(&mut buffer).expect("request bytes");
-        assert!(read > 0, "the request ended early");
-        received.extend_from_slice(buffer.get(..read).expect("read bytes"));
-    }
-    let head = format!(
-        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        response.len()
-    );
-    stream.write_all(head.as_bytes()).expect("response head");
-    stream.write_all(&response).expect("response body");
-}
-
-/// Repeat one call through a cache folder and read the process counters around it.
-pub(super) fn counters(case: &Case, expected: &Counters) {
-    let scratch = folder(case);
-    let folder = scratch.0.clone();
-    let cache = folder.join("cache");
-    let totals = folder.join("usage");
-    let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
-    let address = listener.local_addr().expect("loopback address");
-    let exchange = case.exchanges.first().expect("one exchange");
-    let request = exchange.request.clone().into_bytes();
-    let response = exchange.response.get().as_bytes().to_vec();
-    let server = thread::spawn(move || serve_once(listener, request, response));
-    let backend = Backend::from_parts(
-        Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
-        ModelName::new(DEFAULT_MODEL).expect("model"),
-    );
-    let process = std::sync::Arc::new(usage::Counters::new(Some(totals.clone())));
-    let engine = Engine::new(Settings {
-        backend,
-        profile: None,
-        timeout: Duration::from_secs(30),
-        max_retries: 0,
-        retry_wait: Duration::ZERO,
-        width: None,
-        per_minute: None,
-        storage: Storage {
-            record: Some(cache.clone()),
-            replay: Some(cache),
-            private_default: true,
-            cache_answers: true,
-            refresh_cache: false,
-        },
-        key: std::sync::Arc::new(|| Ok(Key::of("offline"))),
-        usage: std::sync::Arc::clone(&process),
-    })
-    .expect("a caching engine");
-    let before = usage::read(&totals, &month_now())
-        .expect("totals before")
-        .total;
-    let plan = asked(case, 0, exchange).expect("case plan").plan;
-    let mut asks = Asks::default();
-    asks.add(engine.backend(), &plan).expect("case questions");
-    for _ in 0..expected.calls {
-        engine
-            .ask_each(&asks, Bound::WHOLE, &Cancel::default(), |_, _| Ok(()))
-            .expect("counted call");
-    }
-    server.join().expect("loopback server");
-    process.finish();
-    let after = usage::read(&totals, &month_now())
-        .expect("totals after")
-        .total;
-    let requests = after.requests_sent - before.requests_sent;
-    assert_eq!(requests, expected.requests, "{} requests", case.id);
-    let cache_answers = after.cache_answers - before.cache_answers;
-    assert_eq!(
-        cache_answers, expected.cache_answers,
-        "{} cache answers",
-        case.id
-    );
 }

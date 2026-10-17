@@ -9,6 +9,6 @@ try {
     "Please refund my order. It arrived broken.";
   const isRefund = (await tt.decide(
     question, broken,
-  )).results[0].value;
+  )).value;
   assert.equal(isRefund, true);
 } finally { tt.close(); }

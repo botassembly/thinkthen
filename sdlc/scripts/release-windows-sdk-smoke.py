@@ -7,14 +7,15 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shutil
-import subprocess
 import sys
 import tempfile
 import threading
 import xml.etree.ElementTree as ET
 
 REPO = Path(__file__).resolve().parents[2]
+CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 sys.path.insert(0, str(REPO / 'conformance/children'))
 from children import child_env
 from install_check_consumers import SOURCES
@@ -24,19 +25,20 @@ TOOLS = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(TOOLS)
 
 KOTLIN = '''import thinkthen.kotlin.KotlinEngine
-import thinkthen.kotlin.Results
+import thinkthen.Results
 import thinkthen.Inputs
 import kotlinx.coroutines.runBlocking
 fun main() = runBlocking {
   KotlinEngine(Inputs.EngineSettings().cache(Inputs.CacheDocument(false)).maxRetries(0)).use { engine ->
     val call = engine.decide(Inputs.RequestQuestionText().text("Is it?"), Inputs.RequestInputText().text("consumer-kotlin"))
     val row = call.packets.filterIsInstance<Results.SessionPacketDecideRow>().single()
-    check(row.value.value.value == true && call.terminal.facts!!.requestsSent.intValueExact() == 1)
-    println("{\\\"value\\\":true,\\\"requests_sent\\\":1}")
+    check(row.value().value().value() == true && call.terminal.facts().value().requestsSent().intValueExact() == 1)
+    println("""{"value":true,"requests_sent":1}""")
   }
 }
 '''
-SCALA = '''import thinkthen.scala.{ScalaEngine, Results}
+SCALA = '''import thinkthen.scala.ScalaEngine
+import thinkthen.Results
 import thinkthen.Inputs
 import scala.concurrent.Await
 import scala.concurrent.duration.*
@@ -45,9 +47,9 @@ object InstallScala {
     val engine = new ScalaEngine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0))
     try {
       val call = Await.result(engine.decide(new Inputs.RequestQuestionText().text("Is it?"), new Inputs.RequestInputText().text("consumer-scala")).result, 10.seconds)
-      val row = call.packets.collect { case value: Results.SessionPacketDecideRow => value }.head
-      assert(row.value.value.value == true && call.terminal.facts.get.requestsSent.toInt == 1)
-      println("{\\\"value\\\":true,\\\"requests_sent\\\":1}")
+      val row = call.packets().collect { case value: Results.SessionPacketDecideRow => value }.head
+      assert(row.value().value().value() == true && call.terminal().facts().value().requestsSent().intValueExact() == 1)
+      println("""{"value":true,"requests_sent":1}""")
     } finally engine.close()
   }
 }
@@ -55,8 +57,12 @@ object InstallScala {
 
 
 def run(command, project, env):
-    result = subprocess.run(list(map(str, command)), cwd=project, env=env,
-                            capture_output=True, text=True, timeout=600)
+    args = list(map(str, command))
+    if Path(args[0]).suffix.lower() in ('.bat', '.cmd'):
+        # Batch parameters split on unquoted semicolons. Quote our controlled
+        # tool paths and arguments explicitly, including the complete classpath.
+        args = 'cmd.exe /d /s /c "' + ' '.join('"' + arg + '"' for arg in args) + '"'
+    result = CAPTURE(args, cwd=project, env=env, text=True, timeout=600)
     if result.returncode:
         raise RuntimeError(f'{command[0]} failed ({result.returncode}): {result.stdout}\n{result.stderr}')
     return result.stdout.strip()
@@ -90,7 +96,7 @@ def consume(npm, registry, work):
     version = metadata.findtext('{*}version')
     floor = metadata.findtext('{*}properties/{*}thinkthen.session.jdk')
     coroutines = metadata.findtext('{*}properties/{*}thinkthen.kotlin.coroutines.version')
-    env = child_env(keep=('JAVA_HOME',), home=work / 'home',
+    env = child_env(keep=('JAVA_HOME', 'PROGRAMFILES', 'PROGRAMFILES(X86)'), home=work / 'home',
                     NUGET_PACKAGES=str(work / 'nuget-cache'), DOTNET_CLI_HOME=str(work / 'dotnet-home'),
                     DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1',
                     npm_config_cache=str(work / 'npm-cache'))
@@ -141,7 +147,7 @@ def consume(npm, registry, work):
             call('node', ['node', node / 'consumer.cjs'], node)
 
             net = work / 'csharp'; net.mkdir()
-            run(['dotnet', 'new', 'console', '--name', 'InstallCheck', '--framework', 'net8.0', '--no-restore'], net, env)
+            run(['dotnet', 'new', 'console', '--name', 'InstallCheck', '--output', '.', '--framework', 'net8.0', '--no-restore'], net, env)
             (net / 'NuGet.Config').write_text(f'<configuration><packageSources><clear/><add key="candidate" value="{registry / "nuget"}"/></packageSources></configuration>')
             run(['dotnet', 'add', 'package', 'Botassembly.ThinkThen', '--version', version], net, env)
             (net / 'Program.cs').write_text(live_source('csharp'), encoding='utf-8')

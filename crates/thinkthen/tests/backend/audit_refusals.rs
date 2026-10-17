@@ -1,4 +1,4 @@
-//! `thinkthen audit` refuses bad input in one line that echoes nothing, sends
+//! `thinkthen runs audit` refuses bad input in one line that echoes nothing, sends
 //! no request, reads no key, and names itself in help.
 #![cfg(feature = "cli")]
 #![allow(
@@ -350,7 +350,8 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
     for (arguments, input, expected, sentence) in REFUSALS {
         let arguments = words(arguments, &root);
         let arguments: Vec<&str> = arguments.iter().map(String::as_str).collect();
-        let (code, stdout, stderr) = measure(&arguments, input.as_bytes());
+        let (code, stdout, stderr) =
+            measure(&[&["runs"][..], &arguments].concat(), input.as_bytes());
         assert_eq!(
             stderr,
             format!("thinkthen: {}: {sentence}\n", arguments[0]),
@@ -457,48 +458,41 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     #[cfg(unix)]
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o000)).expect("locked");
     for (arguments, input) in offline_cases(&root) {
-        let nested = [&["runs".to_owned()][..], &arguments].concat();
-        let mut baseline = None;
-        for arguments in [arguments, nested] {
-            let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-            command
-                .args(&arguments)
-                .clear_environment()
-                .current_dir(fixtures())
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped());
-            for variable in [
-                "HOME",
-                "XDG_CONFIG_HOME",
-                "XDG_CACHE_HOME",
-                "THINKTHEN_CACHE",
-            ] {
-                command.env(variable, root.join("locked").join(variable));
-            }
-            let mut child = command
-                .env("THINKTHEN_API_KEY", "canary-0113")
-                .env("THINKTHEN_BASE_URL", &url)
-                .spawn()
-                .expect("the binary runs");
-            let mut stdin = child.stdin.take().expect("standard input");
-            let _ignored = stdin.write_all(input.as_bytes());
-            drop(stdin);
-            let output = wait::finish(child, "thinkthen").expect("the binary finishes");
+        let arguments = [&["runs".to_owned()][..], &arguments].concat();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command
+            .args(&arguments)
+            .clear_environment()
+            .current_dir(fixtures())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        for variable in [
+            "HOME",
+            "XDG_CONFIG_HOME",
+            "XDG_CACHE_HOME",
+            "THINKTHEN_CACHE",
+        ] {
+            command.env(variable, root.join("locked").join(variable));
+        }
+        let mut child = command
+            .env("THINKTHEN_API_KEY", "canary-0113")
+            .env("THINKTHEN_BASE_URL", &url)
+            .spawn()
+            .expect("the binary runs");
+        let mut stdin = child.stdin.take().expect("standard input");
+        let _ignored = stdin.write_all(input.as_bytes());
+        drop(stdin);
+        let output = wait::finish(child, "thinkthen").expect("the binary finishes");
+        assert!(
+            matches!(output.status.code(), Some(0 | 2 | 5)),
+            "{arguments:?}"
+        );
+        for channel in [&output.stdout, &output.stderr] {
             assert!(
-                matches!(output.status.code(), Some(0 | 2 | 5)),
+                !String::from_utf8_lossy(channel).contains("canary-0113"),
                 "{arguments:?}"
             );
-            for channel in [&output.stdout, &output.stderr] {
-                assert!(
-                    !String::from_utf8_lossy(channel).contains("canary-0113"),
-                    "{arguments:?}"
-                );
-            }
-            let observed = (output.status.code(), output.stdout, output.stderr);
-            if let Some(previous) = baseline.replace(observed.clone()) {
-                assert_eq!(observed, previous, "{arguments:?}");
-            }
         }
     }
     #[cfg(unix)]

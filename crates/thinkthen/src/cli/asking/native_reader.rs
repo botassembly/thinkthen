@@ -138,6 +138,7 @@ fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Sha
     reason = "poison a real reader lock and require its observable failure"
 )]
 mod tests {
+    //! Stays: fault injection proves poisoned reader state becomes failure rather than fabricated EOF.
     #[test]
     fn a_poisoned_reader_reports_failure_instead_of_end_of_input() {
         let reader = super::Reader::<()>::new(std::iter::empty());

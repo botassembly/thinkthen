@@ -43,6 +43,11 @@ unset THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_PROFILE
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# Isolated source-check children retain PATH, while they discard RUBY and HOME.
+. libraries/ruby/toolchain.env
+ruby=$(ruby_source_host)
+PATH=${ruby%/*}:$PATH
+export PATH
 # ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard
@@ -57,8 +62,11 @@ cargo test --locked --offline --workspace --doc
 cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
     --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
+python3 sdlc/scripts/release-python-self-test.py
 python3 conformance/parity.py --validate
 python3 -m unittest conformance.test_parity conformance.test_campaign_env conformance.test_candidate_campaign conformance.test_stress_selection
+python3 conformance/library-surface-test.py
+python3 conformance/library-surface-size-test.py
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
 sh conformance/children/test.sh

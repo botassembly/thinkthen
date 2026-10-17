@@ -1,3 +1,4 @@
+//! Stays: signal delivery, mask restoration and cleanup races need direct cancellation and process checks.
 use super::{ACTIONS, Action, Routing, StartError, State};
 use crate::cli::edge::Environment;
 use crate::cli::failure::{Failure, report};
@@ -157,6 +158,7 @@ fn a_cancelled_run_on_windows_returns_130_without_a_re_raise() {
 
 #[cfg(unix)]
 mod unix {
+    //! Stays: signal delivery, mask restoration and cleanup races need direct cancellation and process checks.
     use super::*;
     use crate::cli::interrupt::{Acknowledgment, UnixRouting, carrier, sigint_set};
     use crate::test_deadline::child::ChildEnvironment as _;

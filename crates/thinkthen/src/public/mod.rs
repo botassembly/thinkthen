@@ -35,9 +35,9 @@ mod choice;
 pub(crate) mod complete;
 mod engine;
 pub(crate) mod error;
+mod filter;
 #[cfg(feature = "polars")]
 mod frame;
-mod native_batch;
 mod options;
 pub(crate) use options::readiness;
 mod panic;
@@ -81,7 +81,7 @@ pub use crate::core::{RelationDirection, RelationMethod, ReportedUsage};
 /// can wait too (ticket 0365). It is for the bindings, not a documented API.
 #[doc(hidden)]
 pub use crate::engine::fork_safe;
-pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
+pub use annotated::{Annotated, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
@@ -89,7 +89,6 @@ pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
-pub use native_batch::RecoverableDetails;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
     process_requests_sent,
@@ -114,9 +113,8 @@ pub use results::{
     CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
     CompleteFacts, CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord,
     CompleteScore, CompleteSetRank, CompleteTags, Counters, Details, Facts, Found, Judgment,
-    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
-    RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
-    complete_call_schema,
+    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail,
+    RecordObservation, ResultMetadata, Row, Tally, TallyStart, Usage, complete_call_schema,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,
@@ -139,7 +137,7 @@ pub use results::{
 
 pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
 
-pub use results::{CompleteCall, CompleteError, ErrorSnapshot};
+pub use results::{CompleteError, ErrorSnapshot};
 
 mod declarations;
 pub use crate::core::{
@@ -160,3 +158,8 @@ pub use results::{
 
 #[cfg(feature = "cli")]
 pub(crate) use options::AnnotationRecovery;
+
+pub use results::{
+    AnnotationCall, ChoiceCall, DecisionCall, FilterCall, FindCall, RankCall, RecognitionCall,
+    RelationCall, ScoreCall, SetRankCall, TagCall,
+};

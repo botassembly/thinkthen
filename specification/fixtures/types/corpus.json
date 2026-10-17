@@ -122,31 +122,6 @@
       "case_id": "13-filter-records"
     },
     {
-      "name": "15-rank-records",
-      "definition": "rank",
-      "request": {
-        "rank": "How relevant is this?",
-        "call": {"batch": 1},
-        "records": [
-          "item 0",
-          "item 1",
-          "item 2"
-        ]
-      },
-      "response": [
-        {"index": 1, "record": "item 1", "probability": 0.9},
-        {"index": 2, "record": "item 2", "probability": 0.5},
-        {"index": 0, "record": "item 0", "probability": 0.2}
-      ],
-      "case_id": "15-rank-records"
-    },
-    {
-      "name": "rank-without-probability",
-      "definition": "rank",
-      "response": ["item 1", "item 2", "item 0"],
-      "response_valid": false
-    },
-    {
       "name": "18-find-second",
       "definition": "find",
       "request": {
@@ -527,7 +502,6 @@
     {"name":"annotate-failed-entry","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"}},
     {"name":"annotate-failed-entry-with-value","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x","value":null},"response_valid":false},
     {"name":"annotate-find-not-a-member","definition":"annotateEntry","response":{"question":{"verb":"find","text":"Which?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"},"response_valid":false},
-    {"name":"recognize-details","definition":"recognizeDetails","response":{"schema":"thinkthen.result/1","value":{"entities":[]},"question":{"verb":"recognize"},"answer":{"pieces":[],"names":[],"pairs":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate","fields":null,"relations":[],"threshold":0.5},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"c-call-success","definition":"callSuccess","response":{"value":[true,null],"facts":{"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","records":2,"requests_sent":1,"cache_answers":0,"seconds":0.01,"input_tokens":5,"output_tokens":3,"model":"jev-latest"}}},
     {"name":"c-call-success-missing-facts","definition":"callSuccess","response":{"value":true},"response_valid":false},

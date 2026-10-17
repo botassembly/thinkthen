@@ -6,12 +6,14 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from conformance import parity
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_files, stage_generated_source
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -51,13 +53,70 @@ class CandidatePlatforms(unittest.TestCase):
 
 
 class CandidateSmokes(unittest.TestCase):
+    @unittest.skipUnless(shutil.which('cc'), 'C compiler required')
+    def test_four_smokes_admit_real_nested_compilers(self):
+        # Four orchestrators must leave all four permits for their child builds.
+        with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-nested-') as folder:
+            root = Path(folder)
+            scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
+            for directory in (scripts, tools, binaries):
+                directory.mkdir(parents=True)
+            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh',
+                         'heavy-lock', 'allow-list', 'build-admission.py'):
+                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+            (binaries / 'conformance-backend').write_text(
+                '#!/bin/sh\necho 12345\nwhile read line; do echo 1; done\n')
+            (binaries / 'thinkthen').write_text('#!/bin/sh\ncat >/dev/null\necho true\n')
+            (tools / 'jq').write_text('#!/bin/sh\necho true\n')
+            for executable in (*binaries.iterdir(), tools / 'jq'):
+                executable.chmod(0o755)
+            (root / 'main.c').write_text('int main(void) { return 0; }\n')
+            # Rendezvous makes the old four outer reservations deadlock reliably.
+            (root / 'compile.py').write_text(
+                'from pathlib import Path\nimport os,subprocess,sys,time\n'
+                'slot=sys.argv[1]; Path("ready-"+slot).touch()\n'
+                'env={"PATH":os.environ["PATH"]}\n'
+                'deadline=time.monotonic()+5\n'
+                'while len(list(Path(".").glob("ready-*"))) != 4:\n'
+                ' assert time.monotonic()<deadline, "smoke children did not start"\n'
+                ' time.sleep(0.01)\n'
+                # This fixture tests reservations; host load has its own admission cases.
+                'subprocess.run([sys.executable,"-c",'
+                '"import os,runpy,sys; os.getloadavg=lambda:(0,0,0); '
+                'sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name=\'__main__\')",'
+                '"sdlc/scripts/build-admission.py",'
+                '"--lock","build.lock","--timeout","3","--","cc","main.c","-o","built-"+slot],env=env,check=True)\n'
+                'subprocess.run(["./built-"+slot],env=env,check=True)\n'
+                'print("smoke: true")\n')
+            env = child_env(home=root / 'home')
+            env['PATH'] = str(tools) + os.pathsep + env['PATH']
+            children = []
+            try:
+                for slot in range(4):
+                    surface = 'libraries/child' + str(slot)
+                    (root / surface).mkdir(parents=True)
+                    (root / surface / 'check.sh').write_text(
+                        'exec python3 compile.py ' + str(slot) + '\n')
+                    children.append(subprocess.Popen(
+                        ['sh', str(scripts / 'smoke'), '--full-functional', '--one', str(binaries), surface],
+                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True))
+                for child in children:
+                    log, _ = child.communicate(timeout=10)
+                    self.assertEqual(child.returncode, 0, log)
+                self.assertEqual(len(list(root.glob('built-*'))), 4)
+            finally:
+                for child in children:
+                    if child.poll() is None:
+                        child.kill()
+                    child.wait()
+
     def test_full_smoke_fails_exit77_and_only_delegates_apple(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
             root = Path(folder)
             scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
             for directory in (scripts, tools, binaries):
                 directory.mkdir(parents=True)
-            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh'):
+            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh', 'allow-list'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'heavy-lock').write_text('')
             backend = binaries / 'conformance-backend'
@@ -102,24 +161,32 @@ class RetainedNpmArtifact(unittest.TestCase):
             tools = root / 'home/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
             for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
                 directory.mkdir(parents=True)
+            stage_generated_source(parity.ROOT, root, 'typescript')
+            stage_files(parity.ROOT, root, ('README.md', 'sdlc/scripts/registry-readmes.py',
+                        'libraries/typescript/README.md', 'libraries/typescript/package.json',
+                        'crates/thinkthen/Cargo.toml'))
             shutil.copyfile(parity.ROOT / 'libraries/typescript/check.sh', library / 'check.sh')
             shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
-            (root / 'sdlc/generators/results/generate.py').write_text('')
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
-            (library / 'package.json').write_text('{"name":"thinkthen","version":"0.2.0","license":"MIT"}\n')
-            (tools / 'node').write_text('#!/bin/sh\ncase "$*" in --version) echo v22.22.3 ;; *version*) echo 0.2.0 ;; *) echo linux-x64 ;; esac\n')
+            (library / 'fixture').write_text('package')
+            packed_input = root / 'packed-input.tgz'
+            with tarfile.open(packed_input, 'w:gz') as archive:
+                for name in ('README.md', 'package.json', 'fixture'):
+                    archive.add(library / name, arcname='package/' + name)
+            node = shutil.which('node')
+            (tools / 'node').write_text('#!/bin/sh\ncase "$*" in *prettier*) exec "' + node + '" "$@" ;; --version) echo v22.22.3 ;; *version*) echo 0.2.0 ;; *) echo linux-x64 ;; esac\n')
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             (tools / 'npm').write_text('''#!/bin/sh
 set -eu
 while [ "$1" != --pack-destination ]; do shift; done
 mkdir -p "$2"
-printf package > "$2/thinkthen-0.2.0.tgz"
+cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
 ''')
             for path in tools.iterdir():
                 path.chmod(0o755)
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
-                   'PATH': str(tools) + ':' + os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+                   'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)
             # Stop at installation: the real full preparation must already retain its input.
@@ -127,12 +194,11 @@ printf package > "$2/thinkthen-0.2.0.tgz"
                                     capture_output=True, text=True, check=False)
             artifact = library / 'target/pack/thinkthen-0.2.0.tgz'
             self.assertTrue(artifact.is_file(), result.stdout + result.stderr)
-            self.assertEqual(artifact.read_text(), 'package')
+            self.assertEqual(artifact.read_bytes(), packed_input.read_bytes())
+            with tarfile.open(artifact) as archive:
+                self.assertEqual(archive.extractfile('package/fixture').read(), b'package')
             self.assertEqual(result.returncode, 91, result.stdout + result.stderr)
             shutil.copyfile(parity.ROOT / 'sdlc/scripts/release-pack', scripts / 'release-pack')
-            crate = root / 'crates/thinkthen'
-            crate.mkdir(parents=True)
-            (crate / 'Cargo.toml').write_text('version = "0.2.0"\n')
             (tools / 'rustc').write_text('#!/bin/sh\necho "host: x86_64-unknown-linux-gnu"\n')
             (tools / 'rustc').chmod(0o755)
             output = root / 'output'

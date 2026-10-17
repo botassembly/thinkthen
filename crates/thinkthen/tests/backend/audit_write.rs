@@ -1,4 +1,4 @@
-//! `thinkthen audit --write` changes one threshold in the question file the
+//! `thinkthen runs audit --write` changes one threshold in the question file the
 //! results came from, and nothing else.
 #![cfg(feature = "cli")]
 #![allow(

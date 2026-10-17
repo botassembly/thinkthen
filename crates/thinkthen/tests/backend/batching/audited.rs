@@ -83,7 +83,7 @@ fn audit_and_diff_read_the_setting_the_command_writes() {
         ),
         (&max, &max, ""),
     ] {
-        let (code, _, stderr) = measure(&["diff", a, b, "--id", ""], b"");
+        let (code, _, stderr) = measure(&["runs", "diff", a, b, "--id", ""], b"");
         assert_eq!((code, stderr.as_str()), (0, warned), "{a} {b}");
     }
 }
@@ -104,7 +104,7 @@ fn audit_reads_the_runs(place: &str, [one, max, later]: [&String; 3]) {
     .expect("both runs");
     let audit = |results: &str, extra: &[&str]| {
         measure(
-            &[&["audit", results, &key, "--id", ""][..], extra].concat(),
+            &[&["runs", "audit", results, &key, "--id", ""][..], extra].concat(),
             b"",
         )
     };

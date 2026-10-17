@@ -1,3 +1,4 @@
+//! Stays: configuration parsing and permission refusals must withhold values and obey platform ownership rules.
 //! Configuration edge and canonical setup selection contract for ticket 0400.
 use super::Config;
 use crate::core::named;

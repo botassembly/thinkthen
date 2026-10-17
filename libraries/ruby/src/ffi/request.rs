@@ -234,7 +234,7 @@ fn plan(
             )
         }),
     )?;
-    super::native_result::plain(ruby, &json)
+    super::native_result::convert(ruby, "completeplan", &json)
 }
 pub(super) fn register(ruby: &Ruby, native: RModule, engine: RClass) -> Result<(), Error> {
     native.define_module_function("request_engine", function!(request_engine, 1))?;

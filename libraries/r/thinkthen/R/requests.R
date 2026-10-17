@@ -5,6 +5,12 @@
   else list(kind = "json", value = value)
 }
 
+tt_item <- function(original, context = NULL, options = NULL, seed_spans = NULL, examples = NULL, images = NULL) {
+  fields <- list(original = .tt_selector(original, "thinkthen_input"), context = context, options = options,
+                 seed_spans = seed_spans, examples = examples, images = images)
+  structure(fields[!vapply(fields, is.null, TRUE)], class = c("thinkthen_item", "thinkthen_complete"))
+}
+
 tt_input <- function(kind, ...) structure(c(list(kind = kind), list(...)), class = "thinkthen_input")
 
 # These selectors distinguish authority and evidence; they perform no admission.
@@ -33,9 +39,9 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
   else {
     collection <- is.data.frame(input) || (column && length(input) != 1L)
     if (is.data.frame(input)) input <- lapply(seq_len(nrow(input)), function(at) lapply(input, `[[`, at))
-    scalar <- if (collection) NULL else structure(.tt_json(input), text = is.character(input) && length(input) == 1L)
-    cells <- unname(lapply(input, function(value) structure(.tt_json(if (inherits(value, "thinkthen_input")) unclass(value) else value),
-      text = is.character(value) && length(value) == 1L, selector = inherits(value, "thinkthen_input"), missing = column && is.na(value))))
+    scalar <- if (collection) NULL else structure(.tt_json(if (inherits(input, "thinkthen_item")) unclass(input) else input), text = is.character(input) && length(input) == 1L, item = inherits(input, "thinkthen_item"))
+    cells <- if (inherits(input, "thinkthen_item")) list() else unname(lapply(input, function(value) structure(.tt_json(if (inherits(value, "thinkthen_input") || inherits(value, "thinkthen_item")) unclass(value) else value),
+      item = inherits(value, "thinkthen_item"), text = is.character(value) && length(value) == 1L, selector = inherits(value, "thinkthen_input"), missing = column && is.na(value))))
     input <- structure(cells, scalar = scalar, column = column)
   }
   if (is.list(options) && !length(options)) options <- NULL else options <- .tt_json(options)
@@ -57,24 +63,16 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
     result
   })
 }
-tt_decide <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("decide", question, input, options, deadline_ms, completion)
-tt_choose <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("choose", question, input, options, deadline_ms, completion)
-tt_tag <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("tag", question, input, options, deadline_ms, completion)
-tt_score <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("score", question, input, options, deadline_ms, completion)
-tt_filter <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("filter", question, input, options, deadline_ms, completion)
-tt_rank <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("rank", question, input, options, deadline_ms, completion)
-tt_find <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("find", question, input, options, deadline_ms, completion)
-tt_annotate <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("annotate", question, input, options, deadline_ms, completion)
-tt_recognize <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("recognize", question, input, options, deadline_ms, completion)
-tt_relate <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("relate", question, input, options, deadline_ms, completion)
 
 tt_plan <- function(question, input, function_name = "decide", options = list()) {
   request <- .tt_request(function_name, question, input, options)
   .tt_call(tt_request_plan(request))
 }
 
-tt_batch <- function(function_name, question, input, options = list()) {
-  native <- .tt_call(tt_request_batch_start(.tt_request(function_name, question, input, options)))
+tt_batch <- function(function_name, question, input, options = list()) .tt_batch(function_name, question, input, options, FALSE)
+
+.tt_batch <- function(function_name, question, input, options, collect) {
+  native <- .tt_call(tt_request_batch_start(.tt_request(function_name, question, input, options), collect))
   state <- new.env(parent = emptyenv())
   state$facts <- NULL
   state$ended <- FALSE
@@ -98,6 +96,7 @@ tt_batch <- function(function_name, question, input, options = list()) {
   }
   push <- function(record) {
     descriptor <- if (inherits(record, "thinkthen_record")) unclass(record)
+      else if (inherits(record, "thinkthen_item")) list(item = unclass(record))
       else list(item = list(original = .tt_selector(record, "thinkthen_input")))
     .tt_call(tt_request_batch_push(native, .tt_json(descriptor)))
   }
@@ -144,9 +143,11 @@ tt_batch <- function(function_name, question, input, options = list()) {
     }, interrupt = function(e) { cancel(); stop(e) })
   }
   close <- function() { cancel(); state$ended <- TRUE; invisible(NULL) }
-  structure(list(next_result = pull, poll = poll, push = push, finish = finish,
+  methods <- list(next_result = pull, poll = poll, push = push, finish = finish,
                  cancel = cancel, close = close, facts = function() state$facts,
-                 positions = attr(native, "positions"), length = attr(native, "length")), class = "thinkthen_batch")
+                 positions = attr(native, "positions"), length = attr(native, "length"))
+  if (collect) methods$result <- function() .tt_call(tt_request_batch_result(native))
+  structure(methods, class = "thinkthen_batch")
 }
 print.thinkthen_question <- function(x, ...) { cat("<question: content withheld>\n"); invisible(x) }
 print.thinkthen_input <- function(x, ...) { cat("<input: content withheld>\n"); invisible(x) }

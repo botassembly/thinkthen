@@ -217,6 +217,7 @@ fn print(
 
 #[cfg(test)]
 mod tests {
+    //! Stays: dry-run probability accounting requires direct numeric boundary checks.
     use super::{DryRun, Request};
     use crate::core::{KEY_VAR, json_line};
 

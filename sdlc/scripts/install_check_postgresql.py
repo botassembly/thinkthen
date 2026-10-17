@@ -33,7 +33,10 @@ def stop_postgres(check, data, socket, binary):
         if select.select([handle], [], [], 0)[0]:
             return
         process = Path('/proc') / fields[0]
-        expected = root / 'pg-runtime/usr/lib/postgresql/16/bin/postgres'
+        major = binary.parent.name
+        if major not in ('16', '17', '18'):
+            raise Failure('PostgreSQL cleanup refuses an unsupported server major')
+        expected = root / f'pg-runtime/usr/lib/postgresql/{major}/bin/postgres'
         if binary / 'postgres' != expected or (process / 'exe').resolve() != expected:
             raise Failure('PostgreSQL cleanup refuses a process outside this run\'s runtime')
         args = (process / 'cmdline').read_bytes().rstrip(b'\0').split(b'\0')

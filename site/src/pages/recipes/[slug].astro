@@ -1,34 +1,45 @@
 ---
-// Goal: keep measured evidence separate from controlled repeatability proof.
+// Goal: show one finished job end to end. A measured recipe keeps its
+// evidence apart from its controlled repeatability proof; a reader's recipe
+// and a shell job show their real runs. Each page's own goal sits in its
+// catalog entry.
 import fs from 'node:fs';
 import path from 'node:path';
 import Base from '../../layouts/Base.astro';
 import RecipeNode from '../../components/RecipeNode.astro';
-import { RECIPE_PAGES } from '../../data/catalog.mjs';
-import { recipeSelection, recipeProblems } from '../../data/recipes.mjs';
+import HowToPage from '../../components/HowToPage.astro';
+import { RECIPE_PAGES, HOWTOS, SHELL_JOBS } from '../../data/catalog.mjs';
+import { recipeProblems } from '../../data/recipes.mjs';
 export function getStaticPaths() {
   for (const r of RECIPE_PAGES) {
     const problems = recipeProblems(r);
     if (problems.length) throw new Error(problems.join('\n'));
   }
-  return recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1').pages.map(recipe => ({ params: { slug: recipe.slug }, props: { recipe } }));
+  const measured = RECIPE_PAGES.map(recipe => ({ params: { slug: recipe.slug }, props: { recipe } }));
+  const jobs = [
+    ...HOWTOS.map((job) => ({ params: { slug: job.slug }, props: { job, dir: `how-tos/${job.slug}`, eyebrow: job.group } })),
+    ...SHELL_JOBS.map((job) => ({ params: { slug: job.slug }, props: { job, dir: `how-tos/bash/${job.slug}`, eyebrow: 'Shell jobs' } })),
+  ];
+  const all = [...measured, ...jobs].map((p) => p.params.slug);
+  const twice = all.filter((slug, i) => all.indexOf(slug) !== i);
+  if (twice.length) throw new Error(`recipes: two pages claim ${twice.join(', ')}`);
+  return [...measured, ...jobs];
 }
-const { recipe: r } = Astro.props;
-const evidence = new Map([...r.measured,...r.fixtureAssertions].map(e => [e.id,e]));
+const { recipe: r, job, dir, eyebrow } = Astro.props;
+const evidence = r ? new Map([...r.measured,...r.fixtureAssertions].map(e => [e.id,e])) : null;
 const artifact = file => fs.readFileSync(path.join(process.cwd(),r.example.replace(/^site\//,''),file), 'utf8');
 ---
-<Base title={r.title} description={r.job} reading recipe={r.slug} draft={r.draft}>
+{job ? <HowToPage job={job} dir={dir} eyebrow={eyebrow} /> : <Base title={r.title} description={r.gain} reading recipe={r.slug}>
   <Fragment>
     <h1>{r.title}</h1>
-    {r.draft && <p>Draft: {r.title} stays unpublished for later.</p>}
-    {!r.draft && <p>Published recipe: {r.title}.</p>}
-    <p class="lede">{r.goal}</p>
-    <p>{r.job}</p>
+    <div class="eyebrow"><a href="/recipes/">Recipes</a> · Pipelines</div>
+    <p class="lede">{r.gain}</p>
     <p>Functions: {r.functions.map((f,i) => (<Fragment>{i ? ', ' : ''}<a href={`/functions/${f}/`}>{f}</a></Fragment>))}</p>
     <p>To run {r.title}, open its <a href={`https://github.com/botassembly/thinkthen/tree/main/${r.example}`}>example folder</a> in a checkout. Run the numbered shell scripts in order from that folder.</p>
     {r.body.map(node => (
       <RecipeNode node={node} recipe={r} evidence={evidence} artifact={artifact} />
     ))}
-    <p>Read the <a href="/learn/recording/">recording contract</a>, <a href="/functions/audit/">audit contract</a> and <a href="/functions/choose/#flags">reading rules</a> before adapting a recipe.</p>
+    <p>These commands are Bash. The same functions run in <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a>, <a href="/languages/">every other language</a> and <a href="/databases/">every database</a>.</p>
+    <p>Read the <a href="/start/replay/">recording contract</a>, <a href="/functions/audit/">audit contract</a> and <a href="/functions/choose/#flags">reading rules</a> before adapting a recipe.</p>
   </Fragment>
-</Base>
+</Base>}

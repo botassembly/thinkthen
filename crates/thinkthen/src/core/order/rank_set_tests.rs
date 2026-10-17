@@ -1,3 +1,4 @@
+//! Stays: permutation, duplicate attribution and stable tie ordering need direct numeric invariants.
 //! Independent literal turns and attribution, including uneven saved lists.
 use super::turns;
 

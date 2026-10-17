@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 
 from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import native_reading
 
 
 @case
@@ -16,7 +17,7 @@ def required_null_skips_partners_session_settings_files_and_sends():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         missing = folder + "/unread-question.json"
         scalars = []
-        for verb in ("decide", "choose", "score", "tag", "details", "try_details", "annotate"):
+        for verb in ("decide", "choose", "score", "tag", "annotate", "decide_details"):
             scalars += [f"thinkthen_{verb}(NULL, 'private-input', 'bad')",
                         f"thinkthen_{verb}('@{missing}', NULL, 'bad')"]
         scalars += ["thinkthen_native_many(NULL, 'bad', 'bad', 0)",
@@ -33,7 +34,7 @@ def required_null_skips_partners_session_settings_files_and_sends():
         scalars += ["(SELECT thinkthen_recognize(evidence, ['person','person'], 'bad') FROM (VALUES (NULL::VARCHAR)) t(evidence))",
                     f"(SELECT thinkthen_relations(evidence, '@{missing}', 'bad') FROM (VALUES (NULL::VARCHAR)) t(evidence))"]
         bad_images = "[{media:'bad',data:'bad'::BLOB,file:NULL}]"
-        for verb in ("decide", "choose", "score", "details"):
+        for verb in ("decide", "choose", "score"):
             scalars += [f"thinkthen_{verb}_images(NULL, {bad_images}, NULL, 'bad')",
                         f"thinkthen_{verb}_images('@{missing}', NULL::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[], NULL, 'bad')"]
         tables = ["thinkthen_rank(NULL, 'bad', 'bad')", "thinkthen_rank('question', NULL, 'bad')",
@@ -119,6 +120,12 @@ def discovery_describes_every_registered_function_without_sending():
         expect("removed" in purposes["thinkthen_probability"], True, "probability documents its refusal")
         expect(rows(got[5]), [["disabled"]], "discovery creates no engine")
         expect(backend.count(), 0, "loading and discovery send nothing")
+
+
+@case
+def named_typed_controls_share_native_admission_and_cache_identity():
+    from named_options import check
+    check(run)
 
 
 @case
@@ -292,35 +299,27 @@ def rank_and_details_share_one_portable_request():
     with Backend() as backend:
         got = run([
             "SELECT key, rank, probability FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}', '{\"batch\":1}')",
-            "SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"batch\":1}')",
+            "SELECT thinkthen_decide_details('Is it a refund?', 'refund now', '{\"batch\":1}')",
             "SELECT * FROM thinkthen_rank('Is it a refund?', '{\"a\":\"refund now\"}', '{\"threshold\":0.7}')",
         ], backend.base())
         expect(rows(got[0]), [["a", 1, 0.9]], "rank row from one answer")
-        detail = json.loads(rows(got[1])[0][0])
-        expect(detail["value"], True, "details retains the decision")
+        detail = native_reading(rows(got[1])[0][0])
+        expect(rows(got[1])[0][0]["value"], True, "details retains the decision")
         expect(said(got[2]), "thinkthen usage: the settings key `threshold` does not belong to this verb (retryable: no)",
                "rank refuses a threshold")
         expect(backend.count(), 1, "rank and details read one cache identity")
         json_rows = run([
-            "SELECT typeof(d), d->>'$.value' FROM (SELECT thinkthen_details('Is it a refund?', 'refund now', '{\"batch\":1}') AS d)",
-            "SELECT typeof(d), d->>'$.status', d->>'$.error.kind' FROM (SELECT thinkthen_try_details('', 'x') AS d)",
+            "SELECT starts_with(typeof(d), 'STRUCT('), d.value FROM (SELECT thinkthen_decide_details('Is it a refund?', 'refund now', '{\"batch\":1}') AS d)",
+            "SELECT starts_with(typeof(d), 'STRUCT('), d.failure.kind FROM (SELECT thinkthen_decide_details('', 'x') AS d)",
             "SELECT typeof(thinkthen_usage_status()), json_type(thinkthen_usage_status())",
             "SELECT typeof(thinkthen_native_many(NULL, 'malformed', 'malformed', 0))",
         ], backend.base())
-        expect(rows(json_rows[0]), [["JSON", "true"]], "details JSON operations")
-        expect(rows(json_rows[1]), [["JSON", "failed", "usage"]], "try-details failure JSON operations")
+        expect(rows(json_rows[0]), [[True, True]], "details native receipt operations")
+        expect(rows(json_rows[1]), [[True, "usage"]], "typed recoverable failure")
         expect(rows(json_rows[2]), [["JSON", "OBJECT"]], "usage JSON operations")
         expect(rows(json_rows[3]), [["JSON"]], "native keyed result JSON type")
         complete = rows(run(["SELECT function_name FROM duckdb_functions() WHERE function_type='macro' AND starts_with(function_name, 'thinkthen_') AND ends_with(function_name, '_complete') ORDER BY function_name"], backend.base())[0])
-        expect(bool(complete), True, "registered complete functions are present")
-        calls = []
-        for (name,) in complete:
-            calls += [f"SELECT typeof(d), d IS NULL FROM (SELECT {name}(NULL, 'malformed', 'malformed') AS d)",
-                      f"SELECT typeof(d), d->>'$.native.error.kind' FROM (SELECT {name}('malformed', 'malformed') AS d)"]
-        results = run(calls, backend.base())
-        for index, (name,) in enumerate(complete):
-            expect(rows(results[2 * index]), [["JSON", True]], name + " NULL before malformed partners")
-            expect(rows(results[2 * index + 1]), [["JSON", "usage"]], name + " failure JSON operations")
+        expect(complete, [], "parallel complete aliases are retired")
         expect(backend.count(), 2, "only the additional live details call sends")
 
 
@@ -344,24 +343,6 @@ def annotate_accepts_call_settings_and_refuses_question_only_keys():
         expect(backend.count(), 1, "invalid annotation settings send nothing")
 
 
-@case
-def try_details_keeps_recoverable_settings_failures_beside_an_answer():
-    with Backend() as backend:
-        got = run([
-            "SELECT thinkthen_try_details('Is it a refund?', 'refund now', '{\"threshold\":0.7}')",
-            "SELECT thinkthen_try_details('Is it a refund?', 'refund now', '{\"threshold\":1.5}')",
-            "SELECT thinkthen_try_details('Is it a refund?', 'refund now', NULL)",
-            "SELECT thinkthen_try_details('Is it a refund?', 'refund now', 1)",
-        ], backend.base())
-        expect(json.loads(rows(got[0])[0][0])["status"], "answered", "portable answer")
-        failed = json.loads(rows(got[1])[0][0])
-        expect((failed["status"], failed["error"]["kind"]), ("failed", "usage"),
-               "invalid settings retain the safe failure carrier")
-        expect(json.loads(rows(got[2])[0][0])["status"], "answered", "NULL settings are absent")
-        expect(said(got[3]),
-               "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
-               "removed try-details deadline")
-        expect(backend.count(), 1, "only one request identity was sent")
 
 
 @case

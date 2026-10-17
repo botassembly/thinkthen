@@ -42,7 +42,11 @@ enum Verb {
     Recognize,
 }
 #[derive(Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "recognizeQuestion")
+)]
 pub(crate) struct QuestionDocument<'a> {
     verb: Verb,
     #[serde(skip_serializing_if = "crate::core::RecognitionMode::is_whole")]
@@ -498,6 +502,7 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: recognition examples and authored rule parsing need direct closed-grammar boundaries.
     use super::{RecognizeSpec, recognize_sha256};
 
     #[test]

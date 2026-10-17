@@ -1,0 +1,15 @@
+---
+// Goal: show one language's install line, a first call, all ten functions
+// in that language, and what is different there.
+import SurfacePage from '../../components/SurfacePage.astro';
+import { SURFACES, BINDINGS } from '../../data/catalog.mjs';
+
+export function getStaticPaths() {
+  return SURFACES
+    .filter((s) => BINDINGS.some((b) => b.slug === s.slug && !b.database))
+    .map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
+}
+
+const { surface } = Astro.props;
+---
+<SurfacePage surface={surface} route={`/languages/${surface.slug}/`} />

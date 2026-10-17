@@ -4,6 +4,7 @@
 #include "bridge.hpp"
 #include "files_manifest.hpp"
 #include "portable.hpp"
+#include "native_input.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
 #include "duckdb/common/file_system.hpp"
@@ -22,6 +23,7 @@ ThinkThenReply thinkthen_cpp_images(ThinkThenText, int32_t, const ThinkThenImage
 ThinkThenReply thinkthen_cpp_image_read(void *, int64_t (*)(void *, uint8_t *, size_t));
 }
 
+
 namespace duckdb {
 namespace {
 constexpr size_t MAX_IMAGE_BYTES = 24 * 1024 * 1024;
@@ -36,7 +38,7 @@ struct Bind : FunctionData {
 	unique_ptr<FunctionData> Copy() const override { return make_uniq<Bind>(context); }
 	bool Equals(const FunctionData &other) const override { return context.lock() == other.Cast<Bind>().context.lock(); }
 };
-unique_ptr<FunctionData> BindImages(ClientContext &context, ScalarFunction &, vector<unique_ptr<Expression>> &) {
+unique_ptr<FunctionData> BindImages(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	return make_uniq<Bind>(context.shared_from_this());
 }
@@ -56,7 +58,7 @@ int64_t ReadHandle(void *opaque, uint8_t *bytes, size_t count) noexcept {
 	catch (...) { return -1; }
 }
 void File(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<Bind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<Bind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto &files = FileSystem::GetFileSystem(*context);
 	for (idx_t row = 0; row < args.size(); ++row) {
@@ -92,7 +94,6 @@ struct Json {
 	~Json() { duckdb_yyjson::yyjson_doc_free(doc); }
 };
 Value Answer(const ThinkThenReply &reply, int32_t kind) {
-	if (kind == 2) { return ThinkThenJSON(ReplyText(reply)); }
 	Json json(reply);
 	auto value = duckdb_yyjson::yyjson_obj_get(duckdb_yyjson::yyjson_doc_get_root(json.doc), "value");
 	if (!value) { throw OrdinaryError("thinkthen defect: image details omitted value"); }
@@ -104,10 +105,10 @@ Value Answer(const ThinkThenReply &reply, int32_t kind) {
 }
 void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &expr = state.expr.Cast<BoundFunctionExpression>();
-	auto context = expr.bind_info->Cast<Bind>().context.lock();
+	auto context = ThinkThenBindData(expr).Cast<Bind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-	const auto name = expr.function.name;
+	const auto name = ThinkThenFunctionName(expr);
 	const int32_t kind = name == "thinkthen_native_decide_images" ? 0 : name == "thinkthen_native_choose_images" ? 4 : name == "thinkthen_native_score_images" ? 5 : 2;
 	vector<std::optional<Input>> inputs(args.size());
 	bool live = false;
@@ -131,6 +132,7 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!inputs[row]) { result.SetValue(row, Value(result.GetType())); continue; }
 		auto &input = *inputs[row];
+
 		auto views = input.Views();
 		RustReply reply(thinkthen_cpp_images(View(input.question.text), input.question.from_file, views.data(), views.size(), input.Text(), View(input.settings), kind, owner->Remaining(*context), session->Bridge(), StopFor(*context)));
 		Checked(reply.value);
@@ -139,8 +141,8 @@ void Judge(DataChunk &args, ExpressionState &state, Vector &result) {
 }
 void Register(ExtensionLoader &loader, const string &name, vector<LogicalType> arguments, LogicalType result,
               scalar_function_t function, bool bind, const string &purpose) {
-	ScalarFunction scalar(name, std::move(arguments), std::move(result), function, bind ? BindImages : nullptr);
-	scalar.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	ScalarFunction scalar(ThinkThenIdentifier(name), std::move(arguments), std::move(result), function, bind ? ThinkThenBindScalar<BindImages> : nullptr);
+	ThinkThenSpecialNulls(scalar);
 	scalar.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, scalar, purpose);
 }
@@ -172,12 +174,12 @@ vector<ThinkThenImage> ImageViews(const vector<std::pair<string, string>> &image
 void RegisterImages(ExtensionLoader &loader) {
 	Register(loader, "thinkthen_image", {LogicalType::BLOB, LogicalType::VARCHAR}, ImageType(), Constructor, false, "Construct image evidence from native bytes and a media type.");
 	Register(loader, "thinkthen_image_file", {LogicalType::VARCHAR}, ImageType(), File, true, "Read an authorized local image file as image evidence.");
-	for (auto verb : {"decide", "choose", "score", "details"}) {
+	for (auto verb : {"decide", "choose", "score"}) {
 		const string name = string("thinkthen_native_") + verb + "_images";
-		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return judgment details for image evidence and optional text as JSON.";
+		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return typed native judgment receipts for image evidence and optional text.";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},
-		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? LogicalType::JSON() : LogicalType::VARCHAR, Judge, true, purpose);
-		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL) AS " + name + "(question, images, text, settings)", purpose);
+		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : LogicalType::VARCHAR, Judge, true, purpose);
+		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL" + PortableOptionParameters() + ") AS " + name + "(question, images, text, " + PortableOptions("settings", "question IS NULL OR images IS NULL", false) + ")", purpose);
 	}
 }
 } // namespace duckdb

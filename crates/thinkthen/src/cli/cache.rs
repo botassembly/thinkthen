@@ -51,28 +51,19 @@ pub(crate) fn unused(
 }
 
 /// Merge a folder into its fixture, and say on standard error what was
-/// written and each old entry that was skipped.
+/// written.
 pub(crate) fn convert(arguments: &ConvertArguments) -> Result<ExitCode, Failure> {
     if !fs::metadata(&arguments.directory).is_ok_and(|metadata| metadata.is_dir()) {
         return Err(Failure::ConvertFolder);
     }
-    let summary = crate::engine::store::convert(&arguments.directory, arguments.quote)?;
+    let summary = crate::engine::store::convert(&arguments.directory)?;
     let stderr = std::io::stderr();
     let mut diagnostic = stderr.lock();
-    for (name, why) in &summary.skipped {
-        edge::write_line(
-            &mut diagnostic,
-            &format!("thinkthen: cache convert: skipped `{name}`; {why}"),
-        )?;
-    }
     edge::write_line(
         &mut diagnostic,
         &format!(
-            "thinkthen: cache convert: wrote {} answers to thinkthen.jsonl, {} from old entries, {} left unquoted; skipped {} entries",
-            summary.answers,
-            summary.converted,
-            summary.unquoted,
-            summary.skipped.len()
+            "thinkthen: cache convert: wrote {} answers to thinkthen.jsonl",
+            summary.answers
         ),
     )?;
     Ok(ExitCode::SUCCESS)
@@ -167,6 +158,7 @@ fn duration(text: &str) -> Result<Duration, Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the duration parser protects exact count and unit boundaries before cache operations.
     use std::time::Duration;
 
     use super::duration;

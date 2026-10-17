@@ -1,4 +1,5 @@
 #include "relate_query.hpp"
+#include "duckdb_api.hpp"
 #include "bridge.hpp"
 #include "scalar_owner.hpp"
 #include "duckdb/catalog/catalog.hpp"
@@ -33,8 +34,7 @@ string Boundary(ClientContext &caller, const string &raw) {
 	while (!name.empty() && (name.back() == '"' || name.back() == ' ')) { name.pop_back(); }
 	if (name.empty()) { return message; }
 	try {
-		EntryLookupInfo lookup(CatalogType::TABLE_ENTRY, name);
-		if (Catalog::GetEntry(caller, "temp", "main", lookup, OnEntryNotFound::RETURN_NULL)) {
+		if (ThinkThenTemporaryTable(caller, name)) {
 			return "thinkthen local: the relate query names the temporary table " + name +
 			       ", and relate runs on a separate connection, so it cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly";
 		}
@@ -45,7 +45,7 @@ string Boundary(ClientContext &caller, const string &raw) {
 	return first + "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying" + later;
 }
 
-unique_ptr<MaterializedQueryResult> Query(Connection &connection, ClientContext &caller, const string &sql) {
+auto Query(Connection &connection, ClientContext &caller, const string &sql) {
 	auto result = connection.Query(sql);
 	if (!result || result->HasError()) {
 		if (result && result->GetErrorType() == ExceptionType::INTERRUPT) {
@@ -128,10 +128,10 @@ RelateFound QueryRows(Connection &connection, ClientContext &caller, const strin
 		}
 	}
 	auto plan = Query(connection, caller, "EXPLAIN (FORMAT JSON) " + capped);
-	if (plan->RowCount() == 0 || plan->ColumnCount() < 2 || plan->GetValue(1, 0).IsNull()) {
+	if (plan->RowCount() == 0 || plan->ColumnCount() < 2 || ThinkThenQueryValue(*plan, 1, 0).IsNull()) {
 		throw OrdinaryError("thinkthen defect: the relate plan came back empty");
 	}
-	const auto plan_text = plan->GetValue(1, 0).GetValue<string>();
+	const auto plan_text = ThinkThenQueryValue(*plan, 1, 0).GetValue<string>();
 	RustReply checked(thinkthen_cpp_relate_plan(reinterpret_cast<const uint8_t *>(plan_text.data()), plan_text.size(), holding));
 	Checked(checked.value);
 	auto found = Query(connection, caller, capped);
@@ -140,7 +140,7 @@ RelateFound QueryRows(Connection &connection, ClientContext &caller, const strin
 	for (idx_t row = 0; row < found->RowCount(); ++row) {
 		vector<std::optional<string>> values;
 		for (idx_t column = 0; column < rows.columns; ++column) {
-			auto value = found->GetValue(column, row);
+			auto value = ThinkThenQueryValue(*found, column, row);
 			values.push_back(value.IsNull() ? std::nullopt : std::optional<string>(value.GetValue<string>()));
 		}
 		rows.rows.push_back(std::move(values));

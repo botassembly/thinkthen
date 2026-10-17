@@ -3,15 +3,15 @@
 #include <iostream>
 using namespace tt;
 using namespace tt::inputs;
-static std::string text(const Json& value) { return value.get<std::string>(); }
-static RequestQuestion question(const Json& v) {
+static std::string text(const Data& value) { return value.get<std::string>(); }
+static RequestQuestion question(const Data& v) {
     auto kind=text(v.at("kind"));
-    if(kind=="definition") return RequestQuestionDefinition().set_value(RequestDefinition::from_document(v.at("value")));
+    if(kind=="definition") return RequestQuestionDefinition().set_value(::tt::results::detail::Loader::input<RequestDefinition>(v.at("value")));
     if(kind=="name") return RequestQuestionName().set_name(text(v.at("name")));
     if(kind=="reference") return RequestQuestionReference().set_reference(text(v.at("reference")));
     return RequestQuestionFile().set_path(text(v.at("path")));
 }
-static RequestInput input(const Json& v) {
+static RequestInput input(const Data& v) {
     auto kind=text(v.at("kind"));
     if(kind=="feed") return RequestInputFeed().set_name(text(v.at("name")));
     if(kind=="source") {
@@ -60,8 +60,8 @@ static RequestInput input(const Json& v) {
 int main(int argc,char** argv) {
     if(argc!=3) return 2;
     try {
-        std::ifstream file(argv[1]); auto v=Json::parse(file);
-        Client client(Json::parse(argv[2]).object());
+        std::ifstream file(argv[1]); auto v=Data::read(file);
+        Client client(::tt::results::detail::Loader::input<EngineSettings>(::tt::detail::parse_original(argv[2])));
         auto q=question(v.at("question"));auto in=input(v.at("input"));
         auto opts=v.at("options");RequestOptions options;options.set_attempts(true);
         if(opts.contains("deadline_ms")) options.set_deadline_ms(opts.at("deadline_ms").get<int64_t>());
@@ -70,13 +70,54 @@ int main(int argc,char** argv) {
         if(opts.contains("none")) options.set_none(opts.at("none").get<bool>());
         if(opts.contains("context")) options.set_context(text(opts.at("context")));
         auto verb=text(v.at("verb"));
+        const auto& data=::tt::results::detail::document(in);
         auto start=[&]() -> Call {
-#define NAMED(name) if(verb==#name) return client.name(q,in,options);
-            NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
-            NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
+#define SHAPED(name,type) return client.name(q,::tt::results::detail::Loader::input<type>(data),options);
+#define NAMED(name) if(verb==#name) { \
+    auto kind=data.at("kind").get<std::string>(); \
+    if(kind=="records") { SHAPED(name,RequestInputRecords) } \
+    if(kind=="source") { SHAPED(name,RequestInputSource) } \
+    if(kind=="units") { SHAPED(name,RequestInputUnits) } \
+    if(kind=="entities") { SHAPED(name,RequestInputEntities) } \
+    if(kind=="feed") { SHAPED(name,RequestInputFeed) } \
+    throw std::invalid_argument("unknown fixture input"); }
+            NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score)
+            NAMED(annotate) NAMED(recognize)
+            if(verb=="filter") return client.filter(q,in,options);
+            if(verb=="rank") return client.rank(q,in,options);
+            if(verb=="find") return client.find(q,in,options);
+            if(verb=="relate") return client.relate(q,in,options);
+#undef SHAPED
 #undef NAMED
             throw std::invalid_argument("unknown fixture function");
         };
+        if(v.contains("call_result_contract") && v.at("call_result_contract").get<bool>()) {
+            const auto& original=data.at("items").at(0).at("original");
+            auto emit=[&](auto call) {
+                Data::Array packets;
+                auto result=[&] {
+                    auto owned=std::move(call); owned.finish();
+                    if(verb=="decide") owned.collect();
+                    auto result=owned.result(); auto repeated=owned.result();
+                    auto copied=owned.collect(); auto collected=owned.collect();
+                    if(::tt::results::detail::encode(result.value)!=::tt::results::detail::encode(repeated.value) ||
+                       ::tt::results::detail::encode(result.probability)!=::tt::results::detail::encode(repeated.probability) ||
+                       ::tt::results::detail::encode(copied)!=::tt::results::detail::encode(collected) ||
+                       *result.facts.requests_sent().value!=1) throw std::logic_error("result cache changed the completed call");
+                    for(const auto& packet:copied) packets.push_back(::tt::results::detail::document(packet));
+                    client.close(); return result;
+                }(); // The operation and native session are destroyed before these fields are read.
+                auto fields=Data{{"value",::tt::results::detail::encode(result.value)},{"probability",::tt::results::detail::encode(result.probability)},{"results",::tt::results::detail::encode(result.results)},{"facts",::tt::results::detail::encode(result.facts)}};
+                std::cout<<::tt::detail::serialize(Data{{"packets",packets},{"call_result",fields}})<<'\n';
+            };
+#define CONTRACT(name) if(verb==#name) { \
+    if(text(original.at("kind"))=="text") emit(client.name(q,RequestInputText().set_text(text(original.at("text"))),options)); \
+    else emit(client.name(q,RequestInputJson().set_value(original.at("value")),options)); \
+    return 0; }
+            CONTRACT(decide) CONTRACT(choose)
+#undef CONTRACT
+            throw std::invalid_argument("unsupported result contract fixture");
+        }
         auto call=start();
         if(v.at("cancel").get<bool>()) {
             call.cancel();
@@ -86,28 +127,26 @@ int main(int argc,char** argv) {
             if(!moved.input_closed() || !call.input_closed() || moved.try_push(item)) throw std::logic_error("moved closed intake reopened");
             call=std::move(moved);
         }
-        Json::Array packets;
+        Data::Array packets;
         try {
+            // Feed every record before reading any packets.
             if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
                 if(call.input_closed()) break;
-                auto next=RequestSessionDescriptor().set_item(RequestItem::from_document(item));
-                while(!call.try_push(next) && !call.input_closed()) {
-                    auto packet=call.poll();
-                    if(packet.packet) packets.push_back(packet.packet->document());
-                    else call.wait(true);
-                }
+                auto next=RequestSessionDescriptor().set_item(::tt::results::detail::Loader::input<RequestItem>(item));
+                if(!call.push(next)) break;
             }
             call.finish();
             if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }
-            for(const auto& packet:call.collect()) packets.push_back(packet.document());
+            for(const auto& packet:call.collect()) packets.push_back(::tt::results::detail::document(packet));
         }
-        catch(const SessionFailure& error) {
-            for(const auto& packet:error.packets) packets.push_back(packet.document());
-            packets.push_back(error.terminal.document());
+        catch(const ::tt::Failure& error) {
+            if(!error.terminal) throw;
+            for(const auto& packet:error.packets) packets.push_back(::tt::results::detail::document(packet));
+            packets.push_back(::tt::results::detail::document(*error.terminal));
         }
         client.close();call.close();
-        std::cout<<Json{{"packets",packets}}.dump()<<'\n';
-    } catch(const NativeFailure& error) {
-        std::cout<<Json{{"admission",Json{{"code",static_cast<int>(error.kind)},{"message",std::string(error.what())}}}}.dump()<<'\n';
+        std::cout<<::tt::detail::serialize(Data{{"packets",packets}})<<'\n';
+    } catch(const ::tt::Failure& error) {
+        std::cout<<::tt::detail::serialize(Data{{"admission",Data{{"code",static_cast<int>(error.kind)},{"message",std::string(error.what())}}}})<<'\n';
     } catch(const std::exception& error) { std::cerr<<error.what()<<'\n';return 1; }
 }

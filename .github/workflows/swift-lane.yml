@@ -1,0 +1,100 @@
+name: Check Swift branch package
+run-name: Check Swift on ${{ github.ref_name }}
+on:
+  workflow_dispatch:
+    inputs:
+      language:
+        description: Installed package to check
+        required: true
+        type: choice
+        default: swift
+        options: [swift]
+permissions:
+  contents: read
+jobs:
+  swift:
+    runs-on: macos-15
+    env:
+      CARGO_BUILD_JOBS: '2'
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - name: Build the matching native package and universal framework
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          export CARGO_TARGET_DIR=/tmp/thinkthen-target-swift
+          python3 sdlc/scripts/build-admission.py -- sdlc/scripts/release-pack aarch64-apple-darwin "$RUNNER_TEMP/native" c
+          swift_rust_remaps="--remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users --remap-path-prefix=$PWD=/build/source --remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/build/cargo --remap-path-prefix=$HOME=/build/users"
+          swift_c_remaps="-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users -ffile-prefix-map=$PWD=/build/source -ffile-prefix-map=${CARGO_HOME:-$HOME/.cargo}=/build/cargo -ffile-prefix-map=$HOME=/build/users"
+          RUSTFLAGS="$swift_rust_remaps" CFLAGS="$swift_c_remaps" CXXFLAGS="$swift_c_remaps" python3 sdlc/scripts/build-admission.py -- cargo build --locked --manifest-path libraries/c/Cargo.toml --target x86_64-apple-darwin --release --jobs 2
+          mkdir -p "$RUNNER_TEMP/x64/lib" "$RUNNER_TEMP/x64/include" "$RUNNER_TEMP/arm64"
+          tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
+          sh libraries/c/localize.sh "$CARGO_TARGET_DIR/x86_64-apple-darwin/release/libthinkthen_c.a" "$RUNNER_TEMP/x64/lib/libthinkthen.a"
+          cp "$RUNNER_TEMP/arm64/include/thinkthen.h" "$RUNNER_TEMP/x64/include/thinkthen.h"
+          sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
+          cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
+          python3 sdlc/scripts/build-admission.py -- sdlc/scripts/release-pack --reuse aarch64-apple-darwin "$RUNNER_TEMP/package" c swift
+      - name: Check Darwin admission and exclusive barriers
+        run: python3 sdlc/scripts/build-admission-test.py
+      - name: Check admission and the installed Swift package on ARM macOS
+        run: |
+          export CARGO_TARGET_DIR=/tmp/thinkthen-target-swift
+          python3 sdlc/scripts/build-admission.py -- cargo build --locked --package conformance-backend --jobs 2
+          export THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend"
+          export THINKTHEN_ARTIFACT="$RUNNER_TEMP/package/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
+          python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
+          export THINKTHEN_COVERAGE_STAGE="$RUNNER_TEMP/swift-consumer"
+          python3 - <<'PYTHON'
+          import importlib.util, json, os, pathlib, subprocess, sys, time
+          from contextlib import ExitStack
+          sys.path.insert(0, str(pathlib.Path('conformance/children').resolve()))
+          from children import child_env
+          helper = pathlib.Path('sdlc/scripts/build-admission.py').resolve()
+          spec = importlib.util.spec_from_file_location('admission', helper)
+          gate = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(gate)
+          lock_path = pathlib.Path('/tmp/thinkthen-heavy.lock')
+          directory = pathlib.Path(str(lock_path.resolve()) + '.priority')
+          directory.mkdir(mode=0o700, exist_ok=True)
+          result = {'pool': 'macos-15', 'cpu_count': os.cpu_count(), 'actual_load': os.getloadavg()}
+          with ExitStack() as stack:
+              lock = stack.enter_context(lock_path.open('a+b'))
+              resources = gate.Resources(lock.fileno(), directory, stack)
+              result['canonical_barrier_acquired'] = gate.available(lock.fileno(), lambda fd: gate.fcntl.flock(fd, gate.fcntl.LOCK_SH | gate.fcntl.LOCK_NB))
+              result['admission_resource_acquired'] = resources.acquire(gate.PERMITS) if result['canonical_barrier_acquired'] else False
+              result['permits_acquired'] = sum(resources.acquire(index) for index in range(gate.PERMITS)) if result['admission_resource_acquired'] else 0
+          stage = pathlib.Path(os.environ['THINKTHEN_COVERAGE_STAGE'])
+          (stage / 'home').mkdir(parents=True, exist_ok=True)
+          env = child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=stage / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8')
+          started = time.monotonic()
+          observed = subprocess.run([sys.executable, str(helper), '--timeout', '3', '--', sys.executable, '-u', '-c', 'print("ADMISSION_GRANTED")'], env=env, capture_output=True, timeout=5)
+          result.update(gate_return_code=observed.returncode, admitted_command_started=b'ADMISSION_GRANTED' in observed.stdout, gate_elapsed_seconds=time.monotonic()-started)
+          text = json.dumps(result, sort_keys=True)
+          (stage / 'admission-preflight.log').write_text(text+'\n')
+          print(text)
+          if observed.returncode != 0 or not result['admitted_command_started']:
+              print('ARM macOS admission prerequisite blocked; Swift compiler was not started')
+              sys.exit(77)
+          PYTHON
+          sh libraries/swift/check.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-installed-package
+          path: ${{ runner.temp }}/package/thinkthen-swift-*
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: swift-apple-consumer-logs
+          path: ${{ runner.temp }}/swift-consumer/*.log
+          if-no-files-found: error
+          retention-days: 7

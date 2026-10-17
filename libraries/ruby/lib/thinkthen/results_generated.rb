@@ -243,12 +243,12 @@ module ThinkThen
       define_method('media') { self['media'] }
       define_method('width') { self['width'] }
     end
-    class NativeInputDeclarationObject < Native::Result
+    class NativeInputDeclarationObjectRoot < Native::Result
       define_method('properties') { self['properties'] }
       define_method('required') { self['required'] }
       define_method('type') { self['type'] }
     end
-    class NativeInputDeclarationString < Native::Result
+    class NativeInputDeclarationStringRoot < Native::Result
       define_method('type') { self['type'] }
     end
     class NativeInputPropertyTypeArray < Native::Result
@@ -336,113 +336,6 @@ module ThinkThen
       define_method('threshold') { self['threshold'] }
       define_method('value') { self['value'] }
     end
-    class NativeReadableQuestion2 < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('none') { self['none'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('text') { self['text'] }
-      define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
-    end
-    class NativeReadableQuestion3 < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('entity_definition') { self['entity_definition'] }
-      define_method('instructions') { self['instructions'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('kinds') { self['kinds'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('mode') { self['mode'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('relation_threshold') { self['relation_threshold'] }
-      define_method('relations') { self['relations'] }
-      define_method('snippet_pieces') { self['snippet_pieces'] }
-      define_method('stage_context') { self['stage_context'] }
-      define_method('threshold') { self['threshold'] }
-      define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
-    end
-    class NativeReadableQuestion4 < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('fields') { self['fields'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('relations') { self['relations'] }
-      define_method('threshold') { self['threshold'] }
-      define_method('verb') { self['verb'] }
-      define_method('wording_version') { self['wording_version'] }
-    end
-    class NativeReadableQuestionChoose < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
-      define_method('options') { self['options'] }
-      define_method('text') { self['text'] }
-      define_method('verb') { self['verb'] }
-    end
-    class NativeReadableQuestionDecide < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
-      define_method('false') { self['false'] }
-      define_method('text') { self['text'] }
-      define_method('true') { self['true'] }
-      define_method('verb') { self['verb'] }
-    end
-    class NativeReadableQuestionScore < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
-      define_method('levels') { self['levels'] }
-      define_method('text') { self['text'] }
-      define_method('verb') { self['verb'] }
-    end
-    class NativeReadableQuestionTag < Native::Result
-      define_method('batch') { self['batch'] }
-      define_method('context_schema') { self['context_schema'] }
-      define_method('item_schema') { self['item_schema'] }
-      define_method('label_details') { self['label_details'] }
-      define_method('model') { self['model'] }
-      define_method('name') { self['name'] }
-      define_method('on') { self['on'] }
-      define_method('profile') { self['profile'] }
-      define_method('wording_version') { self['wording_version'] }
-      define_method('labels') { self['labels'] }
-      define_method('text') { self['text'] }
-      define_method('verb') { self['verb'] }
-    end
     class NativeRecognition < Native::Result
       define_method('answer') { self['answer'] }
       define_method('answer_id') { self['answer_id'] }
@@ -465,13 +358,13 @@ module ThinkThen
       define_method('source') { self['source'] }
       define_method('target') { self['target'] }
     end
-    class NativeRecognitionOddsFieldsNamesPairsPiecesProposals < Native::Result
-      define_method('names') { self['names'] }
-      define_method('pairs') { self['pairs'] }
+    class NativeRecognitionOddsBoundaryOdds < Native::Result
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
-    class NativeRecognitionOddsFieldsPiecesProposals < Native::Result
+    class NativeRecognitionOddsRecognizeAnswer < Native::Result
+      define_method('names') { self['names'] }
+      define_method('pairs') { self['pairs'] }
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
@@ -503,6 +396,19 @@ module ThinkThen
       define_method('question') { self['question'] }
       define_method('schema') { self['schema'] }
       define_method('value') { self['value'] }
+    end
+    class NativeRelationEndpointRelatedEntity < Native::Result
+      define_method('kind') { self['kind'] }
+      define_method('name') { self['name'] }
+    end
+    class NativeRelationEndpointSource < Native::Result
+      define_method('file') { self['file'] }
+      define_method('first_line') { self['first_line'] }
+      define_method('kind') { self['kind'] }
+      define_method('last_line') { self['last_line'] }
+      define_method('name') { self['name'] }
+      define_method('ordinal') { self['ordinal'] }
+      define_method('record') { self['record'] }
     end
     class NativeRelationMemberAnswerId < Native::Result
       define_method('direction') { self['direction'] }
@@ -616,6 +522,20 @@ module ThinkThen
       define_method('pick') { self['pick'] }
       define_method('probabilities') { self['probabilities'] }
     end
+    class NativeFindQuestionDocument < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('none') { self['none'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('text') { self['text'] }
+      define_method('verb') { self['verb'] }
+      define_method('wording_version') { self['wording_version'] }
+    end
     class NativeNameOdds < Native::Result
       define_method('edges') { self['edges'] }
       define_method('end') { self['end'] }
@@ -637,9 +557,78 @@ module ThinkThen
       define_method('end') { self['end'] }
       define_method('start') { self['start'] }
     end
+    class NativePlan < Native::Result
+      FIELDS = ['estimated_bytes', 'estimated_input_tokens', 'first_body_utf8', 'largest_request_bytes', 'largest_request_estimated_input_tokens', 'records', 'requests', 'token_estimate_method', 'upper_bound'].freeze
+      define_method('estimated_bytes') { self['estimated_bytes'] }
+      define_method('estimated_input_tokens') { self['estimated_input_tokens'] }
+      define_method('first_body_utf8') { self['first_body_utf8'] }
+      define_method('largest_request_bytes') { self['largest_request_bytes'] }
+      define_method('largest_request_estimated_input_tokens') { self['largest_request_estimated_input_tokens'] }
+      define_method('records') { self['records'] }
+      define_method('requests') { self['requests'] }
+      define_method('token_estimate_method') { self['token_estimate_method'] }
+      define_method('upper_bound') { self['upper_bound'] }
+    end
     class NativeProfileWarning < Native::Result
       define_method('running') { self['running'] }
       define_method('tuned_for') { self['tuned_for'] }
+    end
+    class NativeQuestionDocumentChoose < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('wording_version') { self['wording_version'] }
+      define_method('options') { self['options'] }
+      define_method('text') { self['text'] }
+      define_method('verb') { self['verb'] }
+    end
+    class NativeQuestionDocumentDecide < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('wording_version') { self['wording_version'] }
+      define_method('false') { self['false'] }
+      define_method('text') { self['text'] }
+      define_method('true') { self['true'] }
+      define_method('verb') { self['verb'] }
+    end
+    class NativeQuestionDocumentScore < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('wording_version') { self['wording_version'] }
+      define_method('levels') { self['levels'] }
+      define_method('text') { self['text'] }
+      define_method('verb') { self['verb'] }
+    end
+    class NativeQuestionDocumentTag < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('wording_version') { self['wording_version'] }
+      define_method('labels') { self['labels'] }
+      define_method('text') { self['text'] }
+      define_method('verb') { self['verb'] }
     end
     class NativeRecognizeAnswer < Native::Result
       define_method('names') { self['names'] }
@@ -647,17 +636,53 @@ module ThinkThen
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
-    class NativeRecognizeFieldsEntities < Native::Result
+    class NativeRecognizeQuestionDocument < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('entity_definition') { self['entity_definition'] }
+      define_method('instructions') { self['instructions'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('kinds') { self['kinds'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('mode') { self['mode'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('relation_threshold') { self['relation_threshold'] }
+      define_method('relations') { self['relations'] }
+      define_method('snippet_pieces') { self['snippet_pieces'] }
+      define_method('stage_context') { self['stage_context'] }
+      define_method('threshold') { self['threshold'] }
+      define_method('verb') { self['verb'] }
+      define_method('wording_version') { self['wording_version'] }
+    end
+    class NativeRecognizeEntities < Native::Result
       define_method('entities') { self['entities'] }
       define_method('relations') { self['relations'] }
     end
-    class NativeRecognizeFieldsModeProposals < Native::Result
+    class NativeRecognizeModeProposals < Native::Result
       define_method('mode') { self['mode'] }
       define_method('proposals') { self['proposals'] }
     end
     class NativeRelateFields < Native::Result
       define_method('kind') { self['kind'] }
       define_method('name') { self['name'] }
+    end
+    class NativeRelateQuestionDocument < Native::Result
+      define_method('batch') { self['batch'] }
+      define_method('context_schema') { self['context_schema'] }
+      define_method('fields') { self['fields'] }
+      define_method('item_schema') { self['item_schema'] }
+      define_method('label_details') { self['label_details'] }
+      define_method('model') { self['model'] }
+      define_method('name') { self['name'] }
+      define_method('on') { self['on'] }
+      define_method('profile') { self['profile'] }
+      define_method('relations') { self['relations'] }
+      define_method('threshold') { self['threshold'] }
+      define_method('verb') { self['verb'] }
+      define_method('wording_version') { self['wording_version'] }
     end
     class NativeRelatedEntity < Native::Result
       define_method('kind') { self['kind'] }
@@ -669,19 +694,6 @@ module ThinkThen
       define_method('relation') { self['relation'] }
       define_method('source') { self['source'] }
       define_method('target') { self['target'] }
-    end
-    class NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord < Native::Result
-      define_method('file') { self['file'] }
-      define_method('first_line') { self['first_line'] }
-      define_method('kind') { self['kind'] }
-      define_method('last_line') { self['last_line'] }
-      define_method('name') { self['name'] }
-      define_method('ordinal') { self['ordinal'] }
-      define_method('record') { self['record'] }
-    end
-    class NativeRelatedEntityEdgePropertiesSourceFieldsKindName < Native::Result
-      define_method('kind') { self['kind'] }
-      define_method('name') { self['name'] }
     end
     class NativeRelationRule < Native::Result
       define_method('either') { self['either'] }
@@ -898,9 +910,30 @@ module ThinkThen
       define_method('ordinal') { self['ordinal'] }
       define_method('record') { self['record'] }
     end
+    class NativeTokenBand < Native::Result
+      define_method('lower') { self['lower'] }
+      define_method('upper') { self['upper'] }
+    end
     class NativeTokenUsage < Native::Result
       define_method('input_tokens') { self['input_tokens'] }
       define_method('output_tokens') { self['output_tokens'] }
+    end
+    CALL_RESULTS = JSON.parse('{"decide": {"value_projection": "value", "call_shape": "input", "probability_mode": "yes", "resolution": {"path": ["value", "value", "value", "value"], "guards": [[["kind"], "observation"], [["value", "kind"], "row"], [["value", "value", "kind"], "judgment"], [["value", "value", "value", "kind"], "decision"]], "index_path": ["value", "index"]}, "probability_path": ["answer", "probability"]}, "choose": {"value_projection": "value", "call_shape": "input", "probability_mode": "picked", "resolution": {"path": ["value", "value", "value", "value"], "guards": [[["kind"], "observation"], [["value", "kind"], "row"], [["value", "value", "kind"], "judgment"], [["value", "value", "value", "kind"], "choice"]], "index_path": ["value", "index"]}, "probability_path": ["answer", "probabilities"], "pick_path": ["answer", "pick"]}, "tag": {"value_projection": "value", "call_shape": "input", "probability_mode": "null"}, "score": {"value_projection": "value", "call_shape": "input", "probability_mode": "null"}, "filter": {"value_projection": "input", "call_shape": "collection", "probability_mode": "yes", "probability_path": ["answer", "probability"]}, "rank": {"value_projection": "index", "call_shape": "collection", "probability_mode": "items"}, "find": {"value_projection": "value", "call_shape": "aggregate", "probability_mode": "picked", "selection_path": ["index"], "probability_path": ["answer", "probabilities"], "pick_path": ["answer", "pick"]}, "annotate": {"value_projection": "value", "call_shape": "input", "probability_mode": "null"}, "recognize": {"value_projection": "value", "call_shape": "input", "probability_mode": "items"}, "relate": {"value_projection": "value", "call_shape": "aggregate", "probability_mode": "items"}}').freeze
+  end
+  class Client
+    def self.choose_question(text, options:)
+      {choose: text, options: options}.freeze
+    end
+    def self.recognize_question(kinds:, **fields)
+      {version: 1, recognize: {kinds: kinds, **fields}}.freeze
+    end
+    def self.relation(name, **fields)
+      {name: name, **fields}.freeze
+    end
+    def self.relate_question(relations:, fields: nil)
+      body = {relations: relations}
+      body[:fields] = fields unless fields.nil?
+      {version: 1, relate: body}.freeze
     end
   end
 end

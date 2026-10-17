@@ -18,6 +18,37 @@ static class Conformance
         return new Facts(document.RootElement);
     }
 
+    static void Refuses(Action action)
+    {
+        try { action(); }
+        catch (Exception error) when (error is JsonException or System.Collections.Generic.KeyNotFoundException or InvalidOperationException or NotSupportedException) { return; }
+        throw new Exception("invalid field accepted");
+    }
+
+    static void RequiredPresence()
+    {
+        using var document = JsonDocument.Parse("{\"call_id\":\"owned\",\"cache_answers\":0,\"records\":0,\"requests_sent\":0,\"seconds\":0,\"input_tokens\":0,\"estimated_cost_usd\":\"0.000000\",\"largest_request_bytes\":0,\"largest_request_estimated_input_tokens\":null,\"token_estimate_method\":\"native\",\"future\":{\"n\":1}}");
+        var facts = new Facts(document.RootElement);
+        Check(facts.CallId == "owned" && facts.InputTokens.State == PresenceState.Value && facts.InputTokens.Value == 0 && facts.OutputTokens.State == PresenceState.Missing && facts.EstimatedCostUsd.Value == "0.000000" && facts.LargestRequestEstimatedInputTokens.State == PresenceState.Null, "owned generated carrier contract");
+        Check(facts.ToJson().GetProperty("future").GetProperty("n").GetInt32() == 1, "owned generated carrier contract");
+        using var missing = JsonDocument.Parse("{}");
+        Refuses(() => _ = new Facts(missing.RootElement).CallId);
+        Refuses(() => _ = new Facts(missing.RootElement).LargestRequestEstimatedInputTokens);
+        using var odds = JsonDocument.Parse("{\"kind\":\"choice\",\"pick\":\"β\",\"probabilities\":{\"β\":0.7,\"a\":0.3},\"confidence\":0}");
+        var choice = (AnswerChoice)Answer.Read(odds.RootElement);
+        Check(choice.Probabilities.Keys.First() == "β" && choice.Confidence.State == PresenceState.Value && choice.Confidence.Value == 0, "owned generated carrier contract");
+        Refuses(() => ((System.Collections.Generic.IDictionary<string, double>)choice.Probabilities).Clear());
+        using var unknown = JsonDocument.Parse("{\"kind\":\"other\"}");
+        Refuses(() => Answer.Read(unknown.RootElement));
+        using var nullOdds = JsonDocument.Parse("{\"kind\":\"yes_no\",\"probability\":null}");
+        Refuses(() => _ = ((AnswerYesNo)Answer.Read(nullOdds.RootElement)).Probability);
+        foreach (string member in new[] { "true", "null", "\"billing\"", "[\"billing\",\"urgent\"]", "1.2", "{\"failed\":{\"kind\":\"backend\",\"cause\":\"missing_probability\",\"later\":1}}" })
+        {
+            using var value = JsonDocument.Parse(member);
+            Check(AnnotatedField.Read(value.RootElement).ToJsonString() == member, "owned generated carrier contract");
+        }
+    }
+
     static void RoundTrip(JsonNode source)
     {
         var facts = Read(source);
@@ -202,20 +233,20 @@ static class Conformance
     static void NativePresentation(JsonObject fixture)
     {
         var questions = fixture["native_presentation"]!["questions"]!.AsArray();
-        var choice = (QuestionChoose)Read(questions[0]!, Question.Read);
+        var choice = (QuestionDocumentChoose)Read(questions[0]!, QuestionDocument.Read);
         Check(choice.Options.SequenceEqual(new[] { "second", "first" }), "native choice order survives");
         Check(choice.LabelDetails.Value[0].Description.Value.GetProperty("z").ValueKind == JsonValueKind.Null && choice.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native description content and absence survive");
         Check(choice.Model.Value == "fixed" && choice.Profile.Value == "authored" && choice.Batch.Value is BatchString maximum && maximum.Value == "max" && choice.On.Value.Single() == "", "native authored reading survives");
-        var score = (QuestionScore)Read(questions[1]!, Question.Read);
+        var score = (QuestionDocumentScore)Read(questions[1]!, QuestionDocument.Read);
         Check(score.Levels.SequenceEqual(new[] { "low", "high" }) && score.LabelDetails.Value[0].Description.Value.GetString() == "Lower." && score.LabelDetails.Value[1].Description.Value.GetString() == "Higher.", "native typed score retains descriptions");
-        var nullScore = (QuestionScore)Read(questions[2]!, Question.Read);
+        var nullScore = (QuestionDocumentScore)Read(questions[2]!, QuestionDocument.Read);
         Check(nullScore.LabelDetails.Value[0].Description.State == PresenceState.Null && nullScore.LabelDetails.Value[1].Description.Value.ValueKind == JsonValueKind.Array, "native null score description differs from absence");
-        var tag = (QuestionTag)Read(questions[3]!, Question.Read);
+        var tag = (QuestionDocumentTag)Read(questions[3]!, QuestionDocument.Read);
         Check(tag.LabelDetails.Value[0].Description.Value.GetString() == "Topic." && tag.LabelDetails.Value[1].Description.State == PresenceState.Missing, "native tag retains described and bare labels");
-        var decision = (QuestionDecide)Read(questions[4]!, Question.Read);
+        var decision = (QuestionDocumentDecide)Read(questions[4]!, QuestionDocument.Read);
         Check(decision.Model.Value == "fixed" && decision.Profile.State == PresenceState.Missing && decision.Batch.Value is BatchInteger records && records.Value == 2 && decision.On.Value.Single() == "", "native numeric batch and absent profile survive");
-        Check(decision.ItemSchema.Value is InputDeclarationString, "native declared input remains typed");
-        for (var at = 0; at < questions.Count; at++) Retains(questions[at]!, Read(questions[at]!, Question.Read));
+        Check(decision.ItemSchema.Value is InputDeclarationStringRoot, "native declared input remains typed");
+        for (var at = 0; at < questions.Count; at++) Retains(questions[at]!, Read(questions[at]!, QuestionDocument.Read));
         var endpoints = fixture["native_presentation"]!["endpoints"]!.AsArray();
         for (var at = 0; at < endpoints.Count; at++)
         {
@@ -285,8 +316,8 @@ static class Conformance
                 Retains(original, result);
                 Retains(original["answer"]!, result.Answer);
                 Retains(original["value"]!, result.Value);
-                sawWhole |= result.Answer is RecognitionOddsFieldsNamesPairsPiecesProposals;
-                sawBoundary |= result.Answer is RecognitionOddsFieldsPiecesProposals;
+                sawWhole |= result.Answer is RecognitionOddsRecognizeAnswer;
+                sawBoundary |= result.Answer is RecognitionOddsBoundaryOdds;
                 var future = original["answer"]!.DeepClone().AsObject();
                 future["future"] = JsonNode.Parse("{\"owned\":[null,false,0]}");
                 Retains(future, Read(future, RecognitionOdds.Read));
@@ -315,6 +346,7 @@ static class Conformance
 
     public static void Main(string[] args)
     {
+        RequiredPresence();
         var fixture = JsonNode.Parse(File.ReadAllText(args[0]))!.AsObject();
         var annotation = fixture["results"]!.AsArray().Single(row => row!["type"]!.GetValue<string>() == "AnnotateResult")!["result"]!;
         var member = annotation["answers"]!["ok"]!;
@@ -331,13 +363,13 @@ static class Conformance
             try { Threshold.Read(document.RootElement); throw new Exception("unsupported threshold kind accepted"); }
             catch (JsonException) { }
         }
-        var question = (QuestionDecide)Read(member["question"]!, Question.Read);
+        var question = (QuestionDocumentDecide)Read(member["question"]!, QuestionDocument.Read);
         Check(question.Text.ValueKind == JsonValueKind.Array, "authored question content remains an owned array");
         Check(question.True.State == PresenceState.Null && question.False.Value.ValueKind == JsonValueKind.Object, "authored readings retain null and object presence");
         Retains(member["question"]!, question);
         var missingReading = member["question"]!.DeepClone().AsObject();
         missingReading.Remove("true");
-        Check(((QuestionDecide)Read(missingReading, Question.Read)).True.State == PresenceState.Missing, "missing authored reading differs from null");
+        Check(((QuestionDocumentDecide)Read(missingReading, QuestionDocument.Read)).True.State == PresenceState.Missing, "missing authored reading differs from null");
         if (args.Length > 1)
         {
             var native = JsonNode.Parse(File.ReadAllText(args[1]))!["results"]!.AsArray();
@@ -352,7 +384,7 @@ static class Conformance
                 Check(sources.Single().AnsweredBy == "fixed" && sources.Single().BatchSize.Value == 2, "generated member retains actual native batch source");
                 Check(nativeObservations.Count == 1, "generated member retains actual native observation");
                 Retains(source!["observations"]![0]!, nativeObservations.Single());
-                Check(((QuestionDecide)reading).Text.GetString() == source!["question"]!["text"]!.GetValue<string>(), "generated member retains actual native question");
+                Check(((QuestionDocumentDecide)reading).Text.GetString() == source!["question"]!["text"]!.GetValue<string>(), "generated member retains actual native question");
                 Check(rule is ThresholdNumber numeric && numeric.Value == 0.5, "generated member retains actual native threshold");
                 Retains(source!, nativeMember);
             }

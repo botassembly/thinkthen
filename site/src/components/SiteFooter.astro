@@ -5,8 +5,6 @@
 // The legend stays here because coloured exit codes show on most pages, and
 // WRITING.md asks for a legend beside every coloured mark.
 // `mdHref` is this page's Markdown twin. An unlisted page has none.
-import { RECIPE_PAGES } from '../data/catalog.mjs';
-import { recipeSelection } from '../data/recipes.mjs';
 import Icon from './Icon.astro';
 import { TAGLINE, REPO } from '../data/catalog.mjs';
 import { COMPANY, LICENSE, AUTHOR } from '../data/about.mjs';
@@ -15,26 +13,29 @@ const { mdHref } = Astro.props;
 const year = new Date().getFullYear();
 const columns = [
   ['Product', [
-    ['/install/', 'Install'],
+    ['/start/', 'Start'],
     ['/functions/', 'Functions'],
-    ['/how-tos/', 'How-tos'],
-    ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
-    ['/learn/', 'Learn'],
-    ['/guides/', 'Guides'],
-    ['/blog/', 'Blog'],
+    ['/models/', 'Models'],
+    ['/languages/', 'Languages'],
+    ['/databases/', 'Databases'],
+    ['/recipes/', 'Recipes'],
   ]],
-  ['Project', [
-    [REPO, 'GitHub repository', 'github'],
+  ['Learn more', [
+    ['/learn/beatles-bench/', 'Beatles Bench'],
+    ['/blog/', 'Blog'],
     ['/about/', 'About'],
     ['/trust/', 'Trust'],
     ['/refusals/', 'What it will not do'],
-    ['/version.json', 'Build proof'],
   ]],
-  ['For machines', [
+  ['Project', [
+    [REPO, 'GitHub repository', 'github'],
+    [`${REPO}/blob/main/specification/README.md`, 'Specification', 'doc'],
+    [`${REPO}/tree/main/skills/thinkthen`, 'Agent skill', 'doc'],
     ['/llms.txt', 'llms.txt', 'doc'],
     ['/llms-full.txt', 'llms-full.txt', 'doc'],
     ['/sitemap.xml', 'Sitemap', 'doc'],
     ...(mdHref ? [[mdHref, 'This page as Markdown', 'doc']] : []),
+    ['/version.json', 'Build proof'],
   ]],
 ];
 ---

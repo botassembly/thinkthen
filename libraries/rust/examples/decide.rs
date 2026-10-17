@@ -12,7 +12,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Please refund my order. It arrived broken.",
         "Thanks for the quick help yesterday!",
     ] {
-        writeln!(out, "{:?}: {text}", tt.decide(&ask, text)?.into_value())?;
+        let answer = match tt.decide(&ask, text)?.into_value() {
+            Some(true) => "Yes",
+            Some(false) => "No",
+            None => "Unsure",
+        };
+        writeln!(out, "{answer}: {text}")?;
     }
     Ok(())
 }

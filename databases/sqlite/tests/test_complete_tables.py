@@ -13,8 +13,7 @@ for format, text in [('csv','body,policy\\n"Alpha.\\nBeta.",Refund policy\\n'),
                      ('tsv','body\\tpolicy\\n"Alpha.\\nBeta."\\tRefund policy\\n')]:
     source=root/('input.'+format);source.write_text(text)
     inputs={'files':{'paths':[str(source)],'format':format},'reading':{'fields':['/body'],'context':'/policy'}}
-    value=json.loads(db.execute('SELECT thinkthen_filter_complete(?,?)',
-        [json.dumps({'decide':'Fits?','threshold':0.95}),json.dumps(inputs)]).fetchone()[0])
+    value=complete(db, 'filter', *[json.dumps({'decide': 'Fits?', 'threshold': 0.95}), json.dumps(inputs)])
     assert 'error' not in value['native'], value
     assert value['native']['value'][0]['value'] is False, value
     assert value['ordinals']==[0] and value['native']['facts']['requests_sent']==1,value
@@ -42,8 +41,7 @@ for format, delimiter in [('csv',','),('tsv','\\t')]:
     ]:
         source=root/('bad.'+format);source.write_text(text)
         inputs={'files':{'paths':[str(source)],'format':format,'options':options},'reading':reading}
-        value=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
-            [json.dumps({'decide':'Fits?'}),json.dumps(inputs)]).fetchone()[0])
+        value=complete(db, 'decide', *[json.dumps({'decide': 'Fits?'}), json.dumps(inputs)])
         assert value['native']['error']['kind']=='usage',value
         assert value['native'].get('facts',{}).get('requests_sent',0)==0,value
 say(ok=True)
@@ -63,8 +61,7 @@ for format, delimiter in [('csv',','),('tsv','\\t')]:
     source.write_text('body\\nAlpha.\\nBeta.'+delimiter+'extra\\n')
     for incremental in (False, True):
         inputs={'files':{'paths':[str(source)],'format':format},'incremental':incremental}
-        value=json.loads(db.execute('SELECT thinkthen_decide_complete(?,?)',
-            [json.dumps({'decide':'Fits?'}),json.dumps(inputs)]).fetchone()[0])
+        value=complete(db, 'decide', *[json.dumps({'decide': 'Fits?'}), json.dumps(inputs)])
         assert value['native']['error']['kind']=='usage',value
         assert len(value.get('completed',[]))==int(incremental),value
         assert value['native'].get('facts',{}).get('requests_sent',0)==int(incremental),value

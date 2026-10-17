@@ -9,7 +9,5 @@ let urgency_scale = Question::score(question)?
     .build()?;
 let outage =
     "Our checkout page is down and customers cannot pay.\n";
-let urgency = tt
-    .score(&urgency_scale, outage)?
-    .into_value();
-assert_eq!(urgency, 2.0);
+let urgency = tt.score(&urgency_scale, outage)?;
+assert_eq!(urgency.value(), &2.0);

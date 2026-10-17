@@ -222,7 +222,7 @@ export function setting(name) {
   const value = plain(row.default.value);
   return {
     name: row.name,
-    href: `/install/settings/#${row.id}`,
+    href: `/start/settings/#${row.id}`,
     // The Default value, such as "2", "30 seconds" or "Off".
     default: value,
     // The note that goes with the default, such as a fixed value on the libraries.

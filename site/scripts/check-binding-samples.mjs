@@ -53,14 +53,18 @@ const PACKAGE = {
 };
 // Each release archive an install line names is one release-pack makes.
 const pack = read('sdlc/scripts/release-pack');
+const postgresql = pack.match(/part_postgresql\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
+const pgMajors = postgresql.match(/majors='([^']+)'/)?.[1].split(' ') || [];
+const pgTemplate = postgresql.includes('pack "thinkthen-postgresql$major-$V-$TARGET.tar.gz"');
 for (const surface of SURFACES) {
   for (const [line] of surface.install) {
     const archive = /^thinkthen-([a-z0-9-]+?)-VERSION-TARGET\.tar\.gz$/.exec(line);
     if (!archive) continue;
     // A wrapper name ends at a space or a semicolon, so a prefix such as co never matches cobol.
     const wrapper = new RegExp(`part_source_wrapper ${archive[1]}[ ;]`);
-    const made = pack.includes(`pack "thinkthen-${archive[1]}-$V-$TARGET.tar.gz"`) || wrapper.test(pack);
-    if (!made) problems.push(`/install/${surface.slug}/: release-pack makes no archive named ${line}.`);
+    const made = pack.includes(`pack "thinkthen-${archive[1]}-$V-$TARGET.tar.gz"`) || wrapper.test(pack)
+      || (pgTemplate && pgMajors.some((major) => archive[1] === `postgresql${major}`));
+    if (!made) problems.push(`${surface.slug}: release-pack makes no archive named ${line}.`);
   }
 }
 
@@ -72,7 +76,7 @@ for (const surface of SURFACES) {
   const pattern = new RegExp(`(^|[\\s"'/:])${escaped}($|[\\s"'\\[@:])`);
   // A release archive row names the C library, which the archive check covers.
   for (const [line] of surface.install.filter(([l]) => !l.endsWith('.tar.gz'))) {
-    if (!pattern.test(line)) problems.push(`/install/${surface.slug}/: the install line "${line}" does not name the package ${want}.`);
+    if (!pattern.test(line)) problems.push(`${surface.slug}: the install line "${line}" does not name the package ${want}.`);
   }
 }
 

@@ -4,7 +4,8 @@
 # The container runs as the calling user on its own copy of the commit in WORK, and never
 # on this checkout. WORK/cache keeps the pinned downloads between runs. Each toolchain has
 # one source: rustup-init and the channel rust-toolchain.toml names, the image's CPython
-# 3.10 with maturin and PyPI's libclang wheel, the nodejs.org Node 22 tarball, the PGDG EL8
+# 3.13 with maturin and PyPI's libclang wheel, CPython 3.10 for the release wheel,
+# the nodejs.org Node 22 tarball, the PGDG EL8
 # PostgreSQL 16 RPMs unpacked as this user, cargo-pgrx 0.17.0, and the image's gcc.
 # RELEASE_CARGO_REGISTRY names this user's crate registry to share, and the release files
 # then build offline. cargo-pgrx, a tool outside every lock here, still fetches. It builds
@@ -47,7 +48,7 @@ else
 fi
 tar -x -f "$RUN/source.tar" -C "$RUN/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
-set -- "$@" -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
+set -- "$@" -e PYTHONDONTWRITEBYTECODE=1 -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
 	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi
@@ -80,43 +81,52 @@ docker run "$@" "$IMAGE" sh -euc '
 	fetch "$node.tar.xz" "https://nodejs.org/dist/v22.22.3/$node.tar.xz" "$node_hash"
 	fetch "$libclang" "$libclang_url" "$libclang_hash"
 	mkdir -p /work/home/pg
-	if [ "$ARCH" = x86_64 ]; then
-		rpms="299c44fbae190bcf462bc98ceaca719771af2f03bf4822a188c9f39065712674:postgresql16 85414ad9e7cf7dc50e6d7b1fefb706351166164de3bf6f102fae6796b973692b:postgresql16-libs 13df7b9f5373777bf7d0d30b7bcd8cdee2c50fe2a128be42a802a64fa7eeabf4:postgresql16-devel 6f68ccd50fdfe92e636bd45bd798b62750a633adfb1cc2a251d133573a67bafc:postgresql16-server"
-	else
-		rpms="1e059adae2e983b300a095cec1aa9e56758781b6208c58d8f89fa5818f0d9550:postgresql16 2dff825e1754b2522b4de8d0914436a5a43bbb85520829852d9b5ad4037f83d1:postgresql16-libs 3e4271348d9f24303376428416ee26b055f35903b4db190e908ac93781396cc6:postgresql16-devel 8162bff1a024464d281b36aa7e2a20ca6e328d0d15cd4ac670d6593584d81a03:postgresql16-server"
-	fi
-	for rpm in $rpms; do
-		file=${rpm#*:}-16.15-1PGDG.rhel8.10.$ARCH.rpm
-		fetch "$file" "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-$ARCH/$file" "${rpm%%:*}"
-		cp "$cache/$file" /work/home/ && (cd /work/home && rpm2archive "$file" && tar -xzf "$file.tgz" -C pg)
-	done
+	for major in 16 17 18; do
+	case $major:$ARCH in
+	16:x86_64) version=16.15; rpms="299c44fbae190bcf462bc98ceaca719771af2f03bf4822a188c9f39065712674:postgresql16 85414ad9e7cf7dc50e6d7b1fefb706351166164de3bf6f102fae6796b973692b:postgresql16-libs 13df7b9f5373777bf7d0d30b7bcd8cdee2c50fe2a128be42a802a64fa7eeabf4:postgresql16-devel 6f68ccd50fdfe92e636bd45bd798b62750a633adfb1cc2a251d133573a67bafc:postgresql16-server" ;;
+	16:aarch64) version=16.15; rpms="1e059adae2e983b300a095cec1aa9e56758781b6208c58d8f89fa5818f0d9550:postgresql16 2dff825e1754b2522b4de8d0914436a5a43bbb85520829852d9b5ad4037f83d1:postgresql16-libs 3e4271348d9f24303376428416ee26b055f35903b4db190e908ac93781396cc6:postgresql16-devel 8162bff1a024464d281b36aa7e2a20ca6e328d0d15cd4ac670d6593584d81a03:postgresql16-server" ;;
+	17:x86_64) version=17.11; rpms="24619db548e35a5ab781f1c4239ef8e7583cd9e8b161595a0c208585385ac0a7:postgresql17 220892e02236989e1a7db62ba7a92b6c3976f41d3f4f10038e043c938b22481f:postgresql17-libs 870b5bf2276f8f3c4315db03eb7b5b783ab20da7413ca24afba1b300cf7ae21e:postgresql17-devel 4b378d17d1e79907fb3b9930b07ba52d3f2cf527c8966b15b0cc7e913562a48a:postgresql17-server" ;;
+	17:aarch64) version=17.11; rpms="34ce7afcf4bab59c5fe2761d8ab77cdf2d95866dc32c378f14875c3091cd4289:postgresql17 ab61a71a8f8ba4d34f4ae4d0cb54b323ba81c2d3729ab89fe9303ecfeb95122b:postgresql17-libs 404213551f751840a2cf8cd50386c14e467cf751dfb74014520c8de096b3dec3:postgresql17-devel a5aba22ca0bf2e5c0c5529ea094a5ef812b26baf143625f749d3263178bac35f:postgresql17-server" ;;
+	18:x86_64) version=18.6; rpms="a2bdef765ea46cdcbf38062e9a5aba0838a2e56ec9b2d03b6c956dbbf33935ac:postgresql18 9a8831cfa157163f7ca183820a8836b5ac5cf995db3df4032b875d96fd61bb3a:postgresql18-libs 2ab86eff363fa7da7da4714c43166e38c8d3d7cc66fc5effadc418df9d062d17:postgresql18-devel 271d0a53fc71bb5cdd82ed7935e4ed8eadf6b3930ec3a5bac2e34b11ba4ac161:postgresql18-server" ;;
+	18:aarch64) version=18.6; rpms="fd222207aa9385d379411b087f2e6e75ebd65fc745f4d30f351574756247a5d2:postgresql18 3280aea60296b8dbfe1d709a670bb3fddb4bf8e814ea3c2c2bbb8121ae9c1f61:postgresql18-libs 128cb597ab71db5bc969a8ae8c15b698727c0c7d70ddf7051fe1afeb6a86dbbb:postgresql18-devel 2c329017cd2ae2d31c48ecc5faf9ba88c2cb60447f1e47fe43abc690cd3d18c9:postgresql18-server" ;;
+	esac
+    for rpm in $rpms; do
+        file=${rpm#*:}-$version-1PGDG.rhel8.10.$ARCH.rpm
+        fetch "$file" "https://download.postgresql.org/pub/repos/yum/$major/redhat/rhel-8-$ARCH/$file" "${rpm%%:*}"
+        cp "$cache/$file" /work/home/ && (cd /work/home && rpm2archive "$file" && tar -xzf "$file.tgz" -C pg)
+    done
+    done
 	chmod +x "$cache/rustup-init"
 	"$cache/rustup-init" -y --quiet --no-modify-path --profile minimal --default-toolchain none
 	cd /work/src
-	/work/home/.cargo/bin/rustup toolchain install --no-self-update --profile minimal \
+	/work/home/.cargo/bin/rustup toolchain install --no-self-update --profile minimal --component clippy --component rustfmt \
 		"$(sed -n "s/^channel = \"\(.*\)\"$/\1/p" rust-toolchain.toml)"
-	/opt/python/cp310-cp310/bin/python -m venv /work/home/venv
+	/opt/python/cp313-cp313/bin/python -m venv /work/home/venv
+	PYO3_PYTHON=/opt/python/cp310-cp310/bin/python
+	export PYO3_PYTHON
 	/work/home/venv/bin/pip install --quiet --no-index --no-deps "$cache/$maturin" "$cache/$libclang"
 	tar -xJf "$cache/$node.tar.xz" -C /work/home
 	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:/work/home/pgrx/bin:$PATH
 	CARGO_NET_OFFLINE=false cargo install --quiet --locked --no-default-features --root /work/home/pgrx cargo-pgrx --version 0.17.0
 	# bindgen reads the headers of the image gcc beside the libclang of the wheel.
-	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
+	LIBCLANG_PATH=/work/home/venv/lib/python3.13/site-packages/clang/native
 	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
 	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
-	mkdir -p /work/home/.pgrx && printf "[configs]\npg16 = \"%s\"\n" "$PG_CONFIG" >/work/home/.pgrx/config.toml
+	mkdir -p /work/home/.pgrx
+    printf "[configs]\n" >/work/home/.pgrx/config.toml
+    for major in 16 17 18; do
+        printf "pg%s = \"%s\"\n" "$major" "/work/home/pg/usr/pgsql-$major/bin/pg_config" >>/work/home/.pgrx/config.toml
+    done
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
 	INPUTS_HERE=/work/src/databases/duckdb/tools
-	. "$INPUTS_HERE/inputs.sh"
-	. /work/src/sdlc/scripts/scratch.sh
-	. "$INPUTS_HERE/prepare_inputs.sh"
 	THINKTHEN_TOOLCHAINS=/work/cache/toolchains/$TARGET
 	export THINKTHEN_TOOLCHAINS
-	DUCKDB_VERSIONS=$(input_versions)
-	for version in $DUCKDB_VERSIONS; do
-		input_select "$version" "$TARGET"
-		input_prepare_source_static
+	python3 -m pip install --disable-pip-version-check -r "$INPUTS_HERE/requirements.txt"
+	for tool in make cmake ninja cc c++; do
+		command -v "$tool" >/dev/null || { echo "release-container: missing DuckDB build tool: $tool" >&2; exit 1; }
 	done
+	python3 "$INPUTS_HERE/source_hosts.py" --fetch
+	python3 /work/src/databases/duckdb/community/prepare.py
 	# The image carries OpenSSL 1.1.1k runtime libraries but no headers. Its
 	# matching AlmaLinux development RPM supplies the build-only headers and
 	# linker names without changing the pinned image or installed runtime.
@@ -137,8 +147,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	THINKTHEN_RUBY_OPENSSL=/work/home/openssl/usr
 	export THINKTHEN_RUBY_OPENSSL
 	sh libraries/ruby/setup-ruby.sh
-	RUBY=/work/home/.cache/thinkthen-toolchains/ruby/3.4.11/bin/ruby
-	export RUBY
+	/opt/python/cp313-cp313/bin/python sdlc/scripts/hosted-preflight.py container "$TARGET"
 	if [ "$ARCH" = x86_64 ]; then
 		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart ada cobol
 	else

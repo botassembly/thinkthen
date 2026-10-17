@@ -394,6 +394,11 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
     );
     assert_eq!(line(&output)["requests_sent"], 0);
 
+    // Port zero is an invalid destination on Windows, rather than a refused connection.
+    let closed = std::net::TcpListener::bind("127.0.0.1:0").expect("unused loopback port");
+    let address = closed.local_addr().expect("loopback address");
+    drop(closed);
+    let url = format!("http://{address}/v1/systemone");
     let refused = spawn(
         &[
             "decide",
@@ -403,7 +408,7 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
             "--max-retries",
             "0",
             "--url",
-            "http://127.0.0.1:0/v1/systemone",
+            &url,
         ],
         &[KEY],
         b"line 1",
@@ -414,7 +419,8 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
         line(&refused)["stopped"],
         json!({"at":1,"cause":"transport","retryable":false})
     );
-    assert_eq!(line(&refused)["requests_sent"], 1);
+    assert_eq!(line(&refused)["requests_sent"], 2);
+    assert_eq!(line(&refused)["retries"], 1);
 }
 
 // It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).

@@ -21,7 +21,7 @@ thinkthen backends check [--url BASE] [--backend NAME] [--model NAME] [--timeout
 - Its attempts and reported tokens count in the usage totals, as every live request does.
 - `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` binds each probe as it binds every live request, by [backends.md](backends.md). `backends check` has no flag for it. A probe the cap cannot admit stops the check before that probe is sent: the command prints the asking commands' sentence, such as `thinkthen usage: max_estimated_input_tokens_total=1 (encoded-body-bytes-908-v1) would be exceeded before this call's first request`, prints no report, and exits 2.
 
-`thinkthen check` remains a hidden compatibility alias. Both spellings accept the same options and produce identical request bodies, reports, diagnostics, secrecy, timeout and exit behavior. Help advertises only `backends`.
+Top-level `thinkthen check` is refused with exit 2 before setup or requests. Use `thinkthen backends check`.
 
 ## The four probes
 
@@ -51,7 +51,7 @@ After the rich probes, the check calls the production public functions with mini
 
 A function row reports the result of request construction, transport, decoding and production interpretation. A valid empty filter, tag, find, recognize or relate result is answered. The check requires no guessed label, span or edge and compares no model accuracy. A successful row covers these minimal inputs; it promises no other question kinds, question sets or model behavior. The four rich probes remain separate, so a rich score refusal remains critical even when the minimal string score answers.
 
-`--plan` retains the four rich request bodies. Their count line starts `rich-probes` to identify its scope. Ten `function-plan NAME JSON` lines follow, from the production planners. Ordinary native function plans count admitted wire-question occurrences as an initial-request bound; the two-label tag plan therefore counts two even when its preview packs one body. Their bytes and tokens describe the uncoalesced uninterrupted preview. The remaining plans count their prepared requests; recognize also counts one possible kind request and marks `upper_bound` true. The ending `prepared-requests upper-bound N before retries and refusal splits` line includes every function and the rich probes. It totals conservative function bounds and rich prepared probes, and excludes the one-time splits after a size refusal. No body exists for the conditional kind request until a boundary reply arrives. Its bytes and tokens are absent from estimates. The ordinary function plans and recognition kind feasibility are checked before any live send or plan output.
+`--plan` retains the four rich request bodies. Their count line starts `rich-probes` to identify its scope. Ten `function-plan NAME JSON` lines follow, from the production planners. Ordinary native function plans count admitted wire-question occurrences as an initial-request bound; the two-label tag plan therefore counts two even when its preview packs one body. Their bytes and tokens describe the uncoalesced uninterrupted preview. The remaining plans count their prepared requests; recognize also counts one possible kind request and marks `upper_bound` true. The ending `prepared-requests upper-bound N before retries and refusal splits` line includes every function and the rich probes. It totals conservative function bounds and rich prepared probes, and excludes the one-time splits after a size refusal. No body exists for the conditional kind request until a boundary reply arrives. Its bytes and tokens are absent from estimates. The token estimate uses measured byte rates rather than the provider tokenizer or its internal prompt. Actual billed input can exceed the upper estimate; the observed Jev check exceeded it by about 22%. The plan states this margin without changing the versioned admission coefficient. The ordinary function plans and recognition kind feasibility are checked before any live send or plan output.
 
 ## Findings
 
@@ -112,7 +112,7 @@ answered function relate
 critical 0, warning 0
 ```
 
-`provider` names the wire interface the tool speaks, `systemone`. It does not name who runs the server, because the tool knows nothing about that.
+`provider` names the static provider of the selected request shape: `systemone` or `openai`. It does not name who runs the server, because the tool knows nothing about that.
 
 Each `reply PROBE JSON` line holds one decoded reply: `model` is the model that reply names, `answers` lists each logical answer in plan order as a result prints `answer`, and `usage` is the reply's token counts or `null`. A failed logical question prints the failure marker a result prints. The JSON writer escapes every control character in a model name.
 

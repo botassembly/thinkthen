@@ -1,73 +1,108 @@
 //! Generated payloads and owned native admission. Constructors copy caller bytes.
 const std = @import("std");
+const codec = @import("request_codec_generated.zig");
 const tt = @import("thinkthen.zig");
-const c = tt.c;
+const c = @import("native.zig").c;
+const values = @import("results_generated.zig");
 pub const inputs = @import("request_generated.zig");
 pub const results = @import("plan_generated.zig");
 
 pub const Role = enum(u32) { atomic = 1, set, dynamic_choose, recognize, relate, rank, rank_set, find };
 pub const Question = struct {
-    raw: *c.thinkthen_question,
+    handle: *anyopaque,
     pub fn init(engine: *tt.Engine, role: Role, definition: inputs.RequestDefinition) !tt.Result(Question) {
         if (engine.closed) return error.ClosedEngine;
-        const json = try std.json.Stringify.valueAlloc(engine.allocator, definition, .{ .emit_null_optional_fields = false });
+        const json = try codec.encode(engine.allocator, definition);
         defer engine.allocator.free(json);
         var raw: ?*c.thinkthen_question = null;
-        const code = c.thinkthen_question_parse(engine.raw, @intFromEnum(role), .{ .data = json.ptr, .len = json.len }, &raw);
-        if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, engine.raw, code) };
-        return .{ .ok = .{ .raw = raw orelse return error.Defect } };
+        const code = c.thinkthen_question_parse(@as(*c.thinkthen_engine, @ptrCast(engine.handle)), @intFromEnum(role), .{ .data = json.ptr, .len = json.len }, &raw);
+        if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, engine, code) };
+        return .{ .ok = .{ .handle = raw orelse return error.Defect } };
     }
-    /// The generated native author view borrows this immutable question.
-    pub fn author(self: Question) tt.session.Error!c.thinkthen_question_author_v1 {
+    pub fn recognize(engine: *tt.Engine, definition: inputs.RequestDefinitionRecognizeDefinition) !tt.Result(Question) {
+        return init(engine, .recognize, .{ .RecognizeDefinition = definition });
+    }
+    pub fn relate(engine: *tt.Engine, definition: inputs.RequestDefinitionAuthoredRelate) !tt.Result(Question) {
+        return init(engine, .relate, .{ .Authored_relate = definition });
+    }
+    pub fn name(self: Question) !?[]const u8 {
         var value: c.thinkthen_question_author_v1 = undefined;
-        try tt.session.checked(c.thinkthen_question_author(self.raw, &value));
-        return value;
+        try tt.session.checked(c.thinkthen_question_author(@ptrCast(self.handle), &value));
+        return if (value.name.present != 0) tt.session.bytes(value.name.value) else null;
     }
     pub fn deinit(self: Question) void {
-        c.thinkthen_question_free(self.raw);
+        c.thinkthen_question_free(@ptrCast(self.handle));
     }
 };
 
-/// One owned canonical request, usable for preview or session admission.
-pub const Request = struct {
+const RequestStorage = struct {
     allocator: std.mem.Allocator,
-    json: []const u8,
-    pub fn init(allocator: std.mem.Allocator, call: inputs.RequestCall) !Request {
-        return .{ .allocator = allocator, .json = try std.json.Stringify.valueAlloc(allocator, inputs.Request{ .call = call }, .{ .emit_null_optional_fields = false }) };
+    function: []const u8,
+    question: []const u8,
+    input: []const u8,
+    options: []const u8,
+};
+/// The request owns its arguments for preview and admission.
+pub const Request = opaque {
+    fn storage(self: *const Request) *const RequestStorage {
+        return @ptrCast(@alignCast(self));
     }
-    pub fn deinit(self: Request) void {
-        self.allocator.free(self.json);
+    pub fn init(allocator: std.mem.Allocator, function: []const u8, question_value: inputs.RequestQuestion, input_value: inputs.RequestInput, option_value: ?inputs.RequestOptions) !*Request {
+        const owned = try allocator.create(RequestStorage);
+        errdefer allocator.destroy(owned);
+        const question = try codec.encode(allocator, question_value);
+        errdefer allocator.free(question);
+        const input = try codec.encode(allocator, input_value);
+        errdefer allocator.free(input);
+        const options = if (option_value) |value| try codec.encode(allocator, value) else try allocator.dupe(u8, "{}");
+        errdefer allocator.free(options);
+        const copied_function = try allocator.dupe(u8, function);
+        owned.* = .{ .allocator = allocator, .function = copied_function, .question = question, .input = input, .options = options };
+        return @ptrCast(owned);
     }
-    pub fn start(self: Request, engine: *tt.Engine) tt.session.Error!tt.session.Session {
+    pub fn deinit(self: *Request) void {
+        const owned: *RequestStorage = @ptrCast(@alignCast(self));
+        const allocator = owned.allocator;
+        allocator.free(owned.function);
+        allocator.free(owned.question);
+        allocator.free(owned.input);
+        allocator.free(owned.options);
+        allocator.destroy(owned);
+    }
+    fn descriptor(self: *const Request) c.thinkthen_named_request_v1 {
+        const owned = self.storage();
+        return .{ .function = utf8(owned.function), .question_json = utf8(owned.question), .input_json = utf8(owned.input), .options_json = utf8(owned.options) };
+    }
+    pub fn start(self: *const Request, engine: *tt.Engine) !tt.session.Session {
         if (engine.closed) return error.ClosedEngine;
         var raw: ?*c.thinkthen_session = null;
-        try tt.session.checked(c.thinkthen_session_new_with_surface(engine.raw, self.json.ptr, self.json.len, "zig", "zig".len, &raw));
-        return .{ .raw = raw orelse return error.Defect };
+        const request = self.descriptor();
+        try tt.session.checked(c.thinkthen_session_new_named_with_surface(@ptrCast(engine.handle), &request, utf8("zig"), &raw));
+        return .{ .handle = raw orelse return error.Defect, .allocator = engine.allocator };
     }
-    /// Native preview reads no key or cache and sends no request.
-    pub fn plan(self: Request, engine: *tt.Engine) !Plan {
+    /// Native preview sends nothing and never reads credentials.
+    pub fn plan(self: *const Request, engine: *tt.Engine) !Plan {
         if (engine.closed) return error.ClosedEngine;
-        var raw: [*c]u8 = null;
-        var len: usize = 0;
-        try tt.session.checked(c.thinkthen_request_plan_json(engine.raw, self.json.ptr, self.json.len, &raw, &len));
-        if (raw == null) return error.Defect;
-        errdefer c.thinkthen_free_string(raw);
-        const parsed = try std.json.parseFromSlice(results.Plan, self.allocator, raw[0..len], .{ .allocate = .alloc_always, .ignore_unknown_fields = true });
-        return .{ .raw = raw, .len = len, .parsed = parsed, .value = parsed.value };
+        var raw: ?*c.thinkthen_value = null;
+        const request = self.descriptor();
+        try tt.session.checked(c.thinkthen_request_plan_named_value(@ptrCast(engine.handle), &request, &raw));
+        const owner = raw orelse return error.Defect;
+        defer c.thinkthen_value_free(owner);
+        var view: [*c]const c.thinkthen_complete_json_v1 = null;
+        try tt.session.checked(c.thinkthen_value_view(owner, &view));
+        var arena = std.heap.ArenaAllocator.init(self.storage().allocator);
+        errdefer arena.deinit();
+        const value = try values.readValue(arena.allocator(), view[0]);
+        return .{ .arena = arena, .value = try values.readAs(results.Plan, value) };
     }
 };
-
-/// Typed fields and extension JSON remain live until explicit release.
+fn utf8(value: []const u8) c.thinkthen_complete_utf8_v1 {
+    return .{ .data = value.ptr, .len = value.len };
+}
 pub const Plan = struct {
-    raw: [*c]u8,
-    len: usize,
-    parsed: std.json.Parsed(results.Plan),
+    arena: std.heap.ArenaAllocator,
     value: results.Plan,
-    pub fn json(self: Plan) []const u8 {
-        return self.raw[0..self.len];
-    }
-    pub fn deinit(self: Plan) void {
-        self.parsed.deinit();
-        c.thinkthen_free_string(self.raw);
+    pub fn deinit(self: *Plan) void {
+        self.arena.deinit();
     }
 };

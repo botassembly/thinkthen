@@ -1,3 +1,4 @@
+//! Stays: private result serialization and usage overflow need direct shape and numeric contract checks.
 use super::{DecisionResult, Meta, RequestMeta, SCHEMA, Usage};
 use crate::core::answer::{Answer, Value};
 use crate::core::probability::Probability;

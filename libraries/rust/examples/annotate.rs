@@ -17,12 +17,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "I was charged twice this month.",
     ];
     let mut out = std::io::stdout().lock();
-    for record in tt.annotate(&form, reports) {
-        let record = record?;
-        for value in record.values() {
+    let annotated = tt.annotate(&form, reports)?;
+    for (record, values) in annotated.results().iter().zip(annotated.value()) {
+        for value in values {
             write!(out, "{}={:?} ", value.name(), value.value())?;
         }
-        writeln!(out, "| {}", record.input())?;
+        writeln!(out, "| {}", record.original())?;
     }
     Ok(())
 }

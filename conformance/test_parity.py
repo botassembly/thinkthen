@@ -14,6 +14,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
+from conformance.source_fixtures import stage_files, stage_generated_source
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -31,8 +32,80 @@ class NativeFixtureEnvironment(unittest.TestCase):
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
 
+    def test_shared_routine_selects_call_result_once_without_followup(self):
+        sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import session_cases
+        for consumer in ('cpp', 'zig', 'objective-c'):
+            for profile in ('routine', 'full'):
+                with self.subTest(consumer=consumer, profile=profile):
+                    output = io.StringIO()
+                    with patch.object(os, 'environ', {'THINKTHEN_TEST_PROFILE': profile}), patch.object(session_cases.shared, 'document', side_effect=OSError('no native execution')), contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+                        with self.assertRaises(SystemExit):
+                            session_cases.native_cases(Path('/unused'), consumer=consumer)
+                    cases = parity.required_cases(parity.inventory(), consumer)
+                    seen = parity.cells(output.getvalue(), [consumer], cases, parity.inventory())
+                    self.assertIn((consumer, 'library-call-result'), seen)
+                    if profile == 'full': self.assertEqual(len(seen), len(cases))
+
+
 
 class BindingCaseTiers(unittest.TestCase):
+    def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
+        from sdlc.generators.results.templates.host_answers import scalar_input_selectors
+        definitions = {
+            'RequestInput': {'variants': [('Text', None), ('Json', None), ('Feed', None)]},
+            'Text': {'properties': {'kind': {'const': 'text'}, 'text': {'type': 'string'}}, 'required': ['kind', 'text']},
+            'Json': {'properties': {'kind': {'const': 'json'}, 'value': {}}, 'required': ['kind', 'value']},
+            'Feed': {'properties': {'kind': {'const': 'feed'}, 'name': {'type': 'string'}}, 'required': ['kind', 'name']},
+        }
+        self.assertEqual(scalar_input_selectors(definitions), ['Text', 'Json'])
+        for defect in ('missing', 'duplicate', 'optional', 'text-number', 'json-array'):
+            changed = copy.deepcopy(definitions)
+            if defect == 'missing': changed['RequestInput']['variants'].pop(0)
+            elif defect == 'duplicate': changed['RequestInput']['variants'].append(('Text', None))
+            elif defect == 'optional': changed['Json']['required'].remove('value')
+            elif defect == 'text-number': changed['Text']['properties']['text'] = {'type': 'number'}
+            else: changed['Json']['properties']['value'] = {'type': 'array'}
+            with self.subTest(defect=defect), self.assertRaises(ValueError):
+                scalar_input_selectors(changed)
+
+    def test_paired_scalar_fixture_reaches_both_calls_and_requires_public_result_fields(self):
+        from conformance import c_parity
+        import native_fixture
+        cases = {case['id']: case for case in json.loads(parity.DOCUMENT.read_text())['cases']}
+        row = parity.required_cases(parity.inventory(), 'python')['library-call-result']
+        paired = c_parity.document(row, cases, {})
+        self.assertEqual([step['verb'] for step in paired['steps']], ['decide', 'choose'])
+        self.assertEqual([(step['expect']['call_result']['value'],
+                           step['expect']['call_result']['probability']) for step in paired['steps']],
+                         [(True, .99), ('billing', .7)])
+        with tempfile.TemporaryDirectory(prefix='thinkthen-paired-fixture-') as folder:
+            home = Path(folder)
+            (home / 'OWNER').write_text('paired scalar fixture regression\n')
+            for step, source, exchange in zip(paired['steps'], row['input']['case_refs'],
+                                              row['exchanges'], strict=True):
+                with self.subTest(verb=step['verb']):
+                    framed = native_fixture.request(step, parity.ROOT, home, step['settings'])
+                    native = native_fixture.native_request(framed)
+                    self.assertTrue(framed['call_result_contract'])
+                    self.assertTrue(native['call_result_contract'])
+                    self.assertEqual(framed['question']['body'], cases[source]['question'])
+                    self.assertEqual(native['question']['value'], cases[source]['question'])
+                    self.assertEqual(native['input']['items'][0]['original'],
+                                     {'kind': 'text', 'text': exchange['evidence']})
+                    self.assertEqual(exchange['request'].encode(),
+                                     cases[source]['exchanges'][0]['request'].encode())
+                    for missing in ('call_result', 'value', 'probability', 'results', 'facts'):
+                        # Deliberately incomplete driver output must never certify an SDK call.
+                        fields = ('value', 'probability', 'results', 'facts')
+                        packet = {'call_result': dict.fromkeys(fields)}
+                        if missing == 'call_result':
+                            packet.pop(missing)
+                        else:
+                            packet['call_result'].pop(missing)
+                        with self.subTest(missing=missing), self.assertRaises(AssertionError):
+                            c_parity.assertions(row, step, packet, 1)
+
     def test_bindings_keep_every_host_case_and_sample_each_native_group(self):
         contract = parity.inventory()
         rows = {row['id']: row for row in contract['required_cases']}
@@ -44,6 +117,8 @@ class BindingCaseTiers(unittest.TestCase):
                           if identity in row.get('consumers', [identity])}
             if identity == 'cli':
                 applicable -= parity.SDK_ONLY_CLI_CASES
+            elif identity == 'postgresql':
+                applicable.discard('proxy-reservation-refusal')
             expected = applicable if identity in ('cli', 'rust', 'c') else {
                 key for key in applicable if rows[key]['tier'] == 'binding' or key in sample}
             self.assertEqual(set(selected), expected)
@@ -242,6 +317,85 @@ class PublicAssertions(unittest.TestCase):
                                      'missing' if defect == 'missing' else 'fail')
                     self.assertNotEqual(set(row['cells'].values()), {'pass'})
 
+    def test_cpp_full_runner_emits_each_required_case_once(self):
+        import shlex
+        script = (parity.ROOT / 'libraries/cpp/check.sh').read_text()
+        calls = '\n'.join(line for line in script.splitlines() if 'conformance/children/session_cases.py' in line)
+        contract = parity.inventory()
+        cases = parity.required_cases(contract, 'cpp')
+        # Replay the asserted cells from the actual runner, without compiling
+        # native code. A focused follow-up must not repeat a required row.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            entry = root / 'conformance/children/session_cases.py'
+            entry.parent.mkdir(parents=True)
+            entry.write_text(
+                'import json, os\n'
+                f'cases = {list(cases.values())!r}\n'
+                'selected = os.environ.get("THINKTHEN_CPP_CASES", "").split(",")\n'
+                'for row in cases:\n'
+                ' if selected != [""] and row["id"] not in selected: continue\n'
+                ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
+            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
+                                     f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
+                                    env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            seen = parity.cells(result.stdout, ['cpp'], cases, contract)
+            self.assertEqual(len(seen), len(cases))
+            row = parity.summarize('cpp', cases, 0, seen, None, None)
+            self.assertEqual(set(row['cells'].values()), {'pass'})
+
+    def test_jvm_full_and_routine_do_not_repeat_focused_cases(self):
+        script = (parity.ROOT / 'libraries/jvm/check.sh').read_text()
+        script = script[script.index('if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then\npython3'):]
+        fixture = ('python3() { case "$*" in *public_types.py*) '
+                   'case "$*" in *--case*) printf "library-call-result\\nsettings-max-requests-refuses-past-the-limit\\n" ;; '
+                   '*) printf "library-call-result\\nsettings-max-requests-refuses-past-the-limit\\nother-required-case\\n" ;; esac ;; esac; }\n'
+                   'cargo() { :; }\n')
+        for profile in ('routine', 'full'):
+            for portable in ('', '1'):
+                with self.subTest(profile=profile, portable=portable):
+                    result = subprocess.run(['sh', '-c', fixture + script], capture_output=True, text=True,
+                                            env={'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                                 'THINKTHEN_PORTABLE_BATCH': portable})
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    rows = result.stdout.splitlines()
+                    self.assertEqual(rows.count('library-call-result'), 1)
+                    self.assertEqual(rows.count('settings-max-requests-refuses-past-the-limit'), 1)
+                    self.assertEqual(rows.count('other-required-case'), int(profile == 'full' or portable == '1'))
+
+    def test_foundation_keeps_async_and_blocking_assertions_with_one_cell_each(self):
+        script = (parity.ROOT / 'libraries/objective-c/checks/foundation_installed.py').read_text()
+        import textwrap
+        script = textwrap.dedent(script.split('        adapter.chmod(0o700)\n', 1)[1])
+        for profile in ('routine', 'full'):
+            cases = parity.required_cases(parity.inventory(), 'objective-c')
+            if profile == 'routine': cases = {'library-call-result': cases['library-call-result']}
+            calls = []
+            def run(adapter, *, consumer):
+                calls.append(adapter.read_text())
+                for row in cases.values():
+                    print(parity.PREFIX + json.dumps(dict(consumer=consumer, case=row['id'], checks=row.get('checks', ['named', 'runtime']), status='pass')))
+            with self.subTest(profile=profile), tempfile.TemporaryDirectory() as scratch:
+                adapter = Path(scratch) / 'adapter'
+                adapter.write_text('*[]')
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    exec(script, dict(native_cases=run, adapter=adapter, contextlib=contextlib, io=io, os=os))
+                self.assertEqual(calls, ['*[]', '*["blocking"]'])
+                seen = parity.cells(output.getvalue(), ['objective-c'], cases, parity.inventory())
+                self.assertEqual(len(seen), len(cases))
+                self.assertEqual(sum(line.startswith('regression: ') for line in output.getvalue().splitlines()), len(cases))
+                calls.clear()
+                adapter.write_text('*[]')
+                def fail_blocking(adapter, *, consumer):
+                    run(adapter, consumer=consumer)
+                    if len(calls) == 2: raise SystemExit(1)
+                with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(SystemExit) as failed:
+                    exec(script, dict(native_cases=fail_blocking, adapter=adapter, contextlib=contextlib, io=io, os=os))
+                self.assertEqual(failed.exception.code, 1)
+
     def test_failed_case_keeps_independent_pass_and_missing_cell_visible(self):
         seen = parity.cells(self.cell(), ['rust'], self.cases)
         row = parity.summarize('rust', self.cases, 0, seen, None, None)
@@ -422,12 +576,216 @@ class PublicAssertions(unittest.TestCase):
                 self.assertTrue(all(row['adopted_case_count'] == 0 and 'preparation' in row['baseline_error'] for row in matrix))
                 self.assertTrue(all(row['duration_seconds'] == clock[0] for row in matrix))
 
+    def test_sql_case_selectors_refuse_before_host_and_backend_work(self):
+        with tempfile.TemporaryDirectory(prefix='sql-selector-refusal-') as scratch:
+            root = Path(scratch)
+            marker = root / 'executed'
+            backend = root / 'backend'
+            backend.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\nexit 99\n')
+            backend.chmod(0o755)
+            empty = root / 'empty'
+            empty.write_text('# no selected cases\n')
+            env = parity.consumer_environment(root, '12345')
+            env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
+            cases = (
+                ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
+                ('malformed', '01-decide-yes-captured,', [], 'malformed or empty'),
+                ('empty', str(empty), [], 'malformed or empty'),
+                ('nonmatching', '25-defect-fault', [], 'matches no required'),
+                ('conflict', '01-decide-yes-captured', ['01-decide-yes-captured'], 'conflicting SQL'),
+                ('full', '01-decide-yes-captured', [], 'full SQL parity refuses'),
+                ('full-positional', None, ['01-decide-yes-captured'], 'full SQL parity refuses'),
+            )
+            for name, selector, arguments, cause in cases:
+                with self.subTest(name=name):
+                    selected = dict(env)
+                    if selector is not None: selected['THINKTHEN_CONFORMANCE_IDS'] = selector
+                    if name.startswith('full'): selected['THINKTHEN_TEST_PROFILE'] = 'full'
+                    result = subprocess.run([sys.executable,
+                        str(parity.ROOT / 'databases/sqlite/tests/complete/parity.py'),
+                        'postgresql', *arguments], env=selected, capture_output=True, text=True, timeout=5)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn(cause, result.stderr)
+                    self.assertFalse(marker.exists(), 'invalid selection started a backend')
+
+    @unittest.skipUnless(os.name == 'posix', 'PostgreSQL shell signals run on POSIX hosts')
+    def test_postgresql_signal_cleanup_exits_before_later_cases(self):
+        import re
+        import shlex
+        entries = ('databases/postgresql/check.sh',
+                   'databases/sqlite/tests/complete/postgresql_runtime.sh')
+        for entry in entries:
+            source = (parity.ROOT / entry).read_text()
+            lifecycle = re.search(r'^cleanup\(\).*?(?=\n\n|\nPG_CONFIG=)', source, re.M | re.S).group()
+            for name, code in (('HUP', 129), ('INT', 130), ('TERM', 143)):
+                with self.subTest(entry=entry, signal=name), tempfile.TemporaryDirectory() as folder:
+                    root = Path(folder)
+                    (root / '.runtime').mkdir()
+                    script = ('set -eu\n. ' + shlex.quote(str(parity.ROOT / 'sdlc/scripts/scratch.sh'))
+                              + '\nscratch_dir RUN\nDATA=$RUN/data\nmkdir "$DATA"\n'
+                              + 'printf "%s" "$RUN" > owned-run\n'
+                              + 'runtime_remove() { :; }\npg_stop() { :; }\n'
+                              + lifecycle + '\nkill -' + name + ' "$$"\n'
+                              + 'touch later-case\n')
+                    result = subprocess.run(['bash', '-c', script], cwd=root,
+                                            env={'PATH': os.defpath}, capture_output=True, text=True, timeout=5)
+                    self.assertEqual(result.returncode, code, result.stdout + result.stderr)
+                    self.assertFalse((root / 'later-case').exists())
+                    self.assertFalse(Path((root / 'owned-run').read_text()).exists())
+
+    @unittest.skipUnless(os.name == 'posix', 'Homebrew PostgreSQL setup runs on POSIX hosts')
+    def test_postgresql_keg_cleanup_preserves_unowned_files_and_removes_owned_files(self):
+        import re
+        import shlex
+        postgres = parity.ROOT / 'databases/postgresql'
+        cleanup = re.search(r'^cleanup\(\) \{.*?^\}', (postgres / 'check.sh').read_text(), re.M | re.S).group()
+        helper = parity.ROOT / 'databases/sqlite/tests/complete/postgresql_runtime.sh'
+        helper_cleanup = next(line for line in helper.read_text().splitlines() if line.startswith('cleanup()'))
+        for entry, cleanup_function in (('check', cleanup), ('sqlite-host', helper_cleanup)):
+            for major in (16, 17, 18):
+                for occupied in ('so', 'dylib', 'control', 'sql', 'dangling-so', 'dangling-sql', 'owned'):
+                    with self.subTest(entry=entry, major=major, occupied=occupied), tempfile.TemporaryDirectory(prefix='pg-keg-ownership-') as folder:
+                        root = Path(folder)
+                        for name in ('runtime.sha256', 'runtime.url', 'runtime-darwin.env'):
+                            shutil.copyfile(postgres / name, root / name)
+                        for name in ('lib', 'extension', 'source-lib', 'source-extension', 'data', 'home', 'bin'):
+                            (root / name).mkdir()
+                        config = root / 'pg_config'
+                        config.write_text('#!/bin/sh\nprintf "%s\n" ' + shlex.quote(str(root / 'lib')) + '\n')
+                        config.chmod(0o755)
+                        initdb = root / 'bin/initdb'
+                        initdb.write_text('#!/bin/sh\n: >"$DATA/postgresql.conf"\n')
+                        initdb.chmod(0o755)
+                        for name in ('thinkthen.control', 'thinkthen--0.2.0.sql'):
+                            (root / 'source-extension' / name).write_text('owned source')
+                        (root / 'source-lib/thinkthen.so').write_text('owned module')
+                        other = root / 'extension/other.sql'
+                        other.write_text('other extension')
+                        if occupied != 'owned':
+                            name = {'so': 'lib/thinkthen.so', 'dylib': 'lib/thinkthen.dylib',
+                                    'control': 'extension/thinkthen.control', 'sql': 'extension/thinkthen--0.1.0.sql',
+                                    'dangling-so': 'lib/thinkthen.so', 'dangling-sql': 'extension/thinkthen--0.1.0.sql'}[occupied]
+                            sentinel = root / name
+                            if occupied.startswith('dangling'): sentinel.symlink_to(root / 'unowned-target')
+                            else: sentinel.write_text('preexisting extension')
+                        script = root / 'run.sh'
+                        script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
+                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
+                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                               'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
+                               'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
+                               'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
+                        self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
+                        self.assertEqual(other.read_text(), 'other extension')
+                        if occupied == 'owned':
+                            self.assertFalse((root / 'lib/thinkthen.so').exists())
+                            self.assertFalse((root / 'extension/thinkthen.control').exists())
+                            self.assertFalse((root / 'extension/thinkthen--0.2.0.sql').exists())
+                        elif occupied.startswith('dangling'):
+                            self.assertTrue(sentinel.is_symlink())
+                            self.assertFalse((root / 'unowned-target').exists())
+                        else: self.assertEqual(sentinel.read_text(), 'preexisting extension')
+
+    @unittest.skipUnless(os.name == 'posix', 'PostgreSQL child readers run on POSIX hosts')
+    def test_sql_postgresql_child_keeps_alternate_target_and_selected_profile(self):
+        from importlib.util import module_from_spec, spec_from_file_location
+        from unittest.mock import Mock
+        complete = parity.ROOT / 'databases/sqlite/tests/complete'
+        postgres = parity.ROOT / 'databases/postgresql'
+        def load(name, path):
+            spec = spec_from_file_location(name, path)
+            loaded = module_from_spec(spec)
+            spec.loader.exec_module(loaded)
+            return loaded
+        with patch.object(sys, 'path', [str(complete), str(parity.ROOT / 'conformance'), *sys.path]):
+            shared = load('sql_complete_control', complete / 'parity.py')
+            import postgresql_host as host_module
+            with patch.dict(sys.modules, {'parity': shared}):
+                requests = load('sql_request_control', postgres / 'tests/complete_request_cases.py')
+                facts = load('sql_facts_control', complete / 'facts.py')
+        class ReachedReader(Exception):
+            pass
+        row = {'id': '01-decide-yes-captured', 'kind': 'typed-result', 'verb': 'decide'}
+        value = {'arm': 'generic/v1', 'verb': 'decide', 'question': {'decide': 'Fixture?'},
+                 'items': ['Fixture.'], 'expect': {}}
+        with tempfile.TemporaryDirectory(prefix='sql-reader-target-') as folder:
+            for launcher, module in (('shared', shared), ('requests', requests), ('facts', facts)):
+                for profile in ('routine', 'full'):
+                    for target_kind in ('absolute', 'relative', 'unset'):
+                        with self.subTest(launcher=launcher, profile=profile, target=target_kind):
+                            root = Path(folder) / launcher / profile / target_kind
+                            target = root / ('databases/postgresql/target' if target_kind == 'unset' else 'alternate-target')
+                            selected = 'release' if profile == 'full' else 'debug'
+                            marker = root / 'reader-used'
+                            for mode in ('debug', 'release'):
+                                reader = target / mode / 'thinkthen_read_inputs'
+                                reader.parent.mkdir(parents=True)
+                                program = ('import json, os, pathlib, sys\n'
+                                           'assert "FAKE_SERVICE_API_KEY" not in os.environ\n'
+                                           f'pathlib.Path({str(marker)!r}).write_text({mode!r})\n'
+                                           'json.dump(json.load(sys.stdin), sys.stdout)\n')
+                                reader.write_text('#!' + sys.executable + '\n' + program)
+                                reader.chmod(0o755)
+                            (root / 'conformance').mkdir()
+                            for name in ('cases.json', 'named-inputs.json'):
+                                (root / 'conformance' / name).write_text('{"cases":[]}')
+                            def execute(consumer, frame, env, home, backend):
+                                self.assertEqual(consumer, 'postgresql')
+                                probe = 'import json,sys; from native_inputs import query; query(json.load(sys.stdin))'
+                                result = subprocess.run([sys.executable, '-c', probe],
+                                    env=env | {'PYTHONPATH': str(postgres / 'tests')},
+                                    input=json.dumps(frame), cwd=home, capture_output=True, text=True)
+                                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                                self.assertEqual(marker.read_text(), selected)
+                                if launcher != 'shared': raise ReachedReader()
+                                return {}
+                            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                   'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
+                                   'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            if target_kind != 'unset':
+                                env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
+                            if launcher == 'shared':
+                                build_env = {'PATH': os.defpath, 'HOME': str(root / 'home')}
+                                if target_kind != 'unset':
+                                    build_env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target, postgres)
+                                built = subprocess.run(['sh', '-c', ". ./runtime.sh; runtime_target; exec python3 -c 'import os,sys; sys.stdout.write(os.environ[\"CARGO_TARGET_DIR\"])'"],
+                                                       cwd=postgres, env=build_env, text=True, capture_output=True, check=True)
+                                self.assertEqual(built.stdout, str((target if target_kind != 'unset' else postgres / 'target').resolve()))
+                            backend = Mock(port=12345)
+                            backend.read.return_value = '0'
+                            listener = Mock(count=0, server_address=('127.0.0.1', 12345))
+                            with contextlib.ExitStack() as stack:
+                                for target_module in (shared, requests, facts):
+                                    stack.enter_context(patch.object(target_module, 'ROOT', root, create=True))
+                                    stack.enter_context(patch.object(target_module, 'execute', side_effect=execute))
+                                stack.enter_context(patch.object(facts, '__file__', str(root / 'databases/sqlite/tests/complete/facts.py')))
+                                stack.enter_context(patch.object(facts, 'Listener', return_value=listener))
+                                stack.enter_context(patch.object(facts.threading, 'Thread'))
+                                stack.enter_context(patch.object(os, 'environ', env))
+                                stack.enter_context(patch.object(sys, 'argv', ['sql-complete', 'postgresql']))
+                                stack.enter_context(patch.object(shared.inventory, 'required_cases', return_value={row['id']: row}))
+                                stack.enter_context(patch.object(shared, 'document', return_value=value))
+                                stack.enter_context(patch.object(shared, 'prepare'))
+                                stack.enter_context(patch.object(shared, 'assertions'))
+                                stack.enter_context(patch.object(shared, 'Backend', return_value=backend))
+                                stack.enter_context(patch.object(requests, 'Backend', return_value=backend))
+                                stack.enter_context(patch.object(host_module, 'PostgresqlHost'))
+                                stack.enter_context(patch.object(requests, 'PostgresqlHost'))
+                                stack.enter_context(contextlib.redirect_stdout(io.StringIO()))
+                                if launcher == 'shared': self.assertFalse(module.main())
+                                else:
+                                    with self.assertRaises(ReachedReader): module.main()
+
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
+            stage_generated_source(parity.ROOT, root, 'python')
             library = root / 'libraries/python'
-            library.mkdir(parents=True)
+            library.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
@@ -441,7 +799,7 @@ class PublicAssertions(unittest.TestCase):
             (assets / 'tests').mkdir()
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
-            children.mkdir(parents=True)
+            children.mkdir(parents=True, exist_ok=True)
             (children / 'native_fixture.py').write_text(
                 'import os, sys\nfrom pathlib import Path\n'
                 'def run(consumer, command, root, **kwargs):\n'
@@ -563,11 +921,19 @@ class CliApplicability(unittest.TestCase):
         original = copy.deepcopy(self.contract['required_cases'])
         parity.validate_consumer_contracts(self.contract)
         cli = parity.required_cases(self.contract, 'cli')
-        self.assertEqual(len(cli), 244)
-        self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 255)
+        self.assertEqual(len(cli), 243)
+        self.assertEqual(set(parity.required_cases(self.contract, 'rust')),
+                         {row['id'] for row in original
+                          if 'rust' in row.get('consumers', ['rust'])})
         self.assertEqual(set(parity.required_cases(self.contract, 'mcp')),
-                         {row['id'] for row in original if row['tier'] == 'binding'
-                          or row['id'] in parity.CORE_SAMPLE})
+                         {row['id'] for row in original
+                          if 'mcp' in row.get('consumers', ['mcp'])
+                          and (row['tier'] == 'binding' or row['id'] in parity.CORE_SAMPLE)})
+        result_case = 'library-call-result'
+        self.assertIn(result_case, parity.required_cases(self.contract, 'rust'))
+        self.assertIn(result_case, parity.required_cases(self.contract, 'python'))
+        for consumer in ('cli', 'c', 'mcp', 'sqlite', 'rust-polars'):
+            self.assertNotIn(result_case, parity.required_cases(self.contract, consumer))
         self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
         self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
         self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
@@ -623,6 +989,30 @@ class CliApplicability(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parity.validate_consumer_contracts(changed)
 
+    def test_postgresql_reservation_ruling_keeps_all_other_contracts(self):
+        parity.validate_consumer_contracts(self.contract)
+        selected = parity.required_cases(self.contract, 'postgresql')
+        self.assertNotIn('proxy-reservation-refusal', selected)
+        self.assertIn('proxy-reservation-refusal', parity.required_cases(self.contract, 'rust'))
+        self.assertIn('typed-decide', selected)
+        for defect in ('binding', 'case', 'boundary', 'native-case', 'checks'):
+            changed = copy.deepcopy(self.contract)
+            pg = next(row for row in changed['consumers'] if row['id'] == 'postgresql')
+            if defect == 'binding':
+                other = next(row for row in changed['consumers'] if row['id'] == 'duckdb')
+                other['case_rulings'] = pg.pop('case_rulings')
+            elif defect == 'case':
+                pg['case_rulings']['typed-decide'] = pg['case_rulings']['proxy-reservation-refusal']
+            elif defect == 'boundary':
+                pg['case_rulings']['proxy-reservation-refusal']['boundary'] = 'unsupported'
+            elif defect == 'native-case':
+                changed['required_cases'] = [row for row in changed['required_cases']
+                                             if row['id'] != 'proxy-reservation-refusal']
+            else:
+                pg['required_checks'] = ['runtime']
+            with self.subTest(defect=defect), self.assertRaises(ValueError):
+                parity.validate_consumer_contracts(changed)
+
     def test_cells_require_actual_cli_checks_and_refuse_sdk_only_passes(self):
         cases = {case['id']: case for case in self.contract['required_cases']}
         def cell(case_id, checks):
@@ -668,7 +1058,7 @@ class InstalledInputs(unittest.TestCase):
                  'thinkthen-0.2.0-x86_64-linux.gem', 'thinkthen_0.2.0.tar.gz']
         names += [f'thinkthen-{family}-0.2.0-x86_64-unknown-linux-gnu.tar.gz' for family in
                   ['go', 'csharp', 'jvm', 'cpp', 'swift', 'zig', 'php',
-                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16']]
+                   'flutter', 'ada', 'cobol', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18']]
         for name in names:
             (folder / name).touch()
         # The plain diagnostic gem is shipped alongside the actual native gem.
@@ -679,23 +1069,33 @@ class InstalledInputs(unittest.TestCase):
             return parity.installed_artifacts(folder, self.consumers)
 
     def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
-        with tempfile.TemporaryDirectory() as scratch:
-            folder = Path(scratch)
-            self.packages(folder)
-            inputs, command, native = self.select(folder)
-            self.assertEqual(set(inputs), set(self.consumers) - {'objective-c'})
-            self.assertEqual(Path(command).name, self.command)
-            self.assertEqual(Path(native).name, self.native)
-            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
-                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
-                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
-                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
-            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
-                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-            for row in inputs.values():
-                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
-                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
-                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+        for apple_checks in ('', 'required'):
+            with self.subTest(apple_checks=apple_checks), patch.object(
+                    parity.sys, 'platform', 'linux'), patch.object(
+                    parity.os, 'environ', {'THINKTHEN_MACOS_APPLE_CHECKS': apple_checks}), tempfile.TemporaryDirectory() as scratch:
+                folder = Path(scratch)
+                self.packages(folder)
+                if apple_checks == 'required':
+                    (folder / 'thinkthen-swift-0.2.0-x86_64-unknown-linux-gnu.tar.gz').unlink()
+                inputs, command, native = self.select(folder)
+                self.assertEqual(set(inputs), {consumer for consumer in self.consumers
+                                               if not parity.apple_pending(consumer)})
+                self.assertEqual('swift' in inputs, apple_checks != 'required')
+                self.assertEqual(Path(command).name, self.command)
+                self.assertEqual(Path(native).name, self.native)
+                for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                              ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                              ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                    self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+                self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                                 'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+                for major in (16, 17, 18):
+                    self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                     f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+                for row in inputs.values():
+                    self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                    self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
 
     def test_apple_requires_its_objective_c_archive(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -725,6 +1125,35 @@ class InstalledInputs(unittest.TestCase):
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_pending', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
+
+    def test_postgresql_requires_every_case_on_every_server_major(self):
+        contract = parity.inventory() | {'consumers': [self.consumers['postgresql']], 'pending_consumers': []}
+        for missing in (None, '16', '17', '18'):
+            with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
+                majors, preparations, clock = [], [], [0]
+                def command(args, **kwargs):
+                    major = args[-1]
+                    env = kwargs['env']
+                    self.assertEqual(args[2], '900')
+                    if destination := env.get('THINKTHEN_PARITY_PREPARE'):
+                        preparations.append(major)
+                        clock[0] += 610
+                        Path(destination, 'postgresql.tar.gz').write_bytes(b'release package')
+                        return subprocess.CompletedProcess(args, 0)
+                    majors.append(major)
+                    self.assertEqual(Path(env['THINKTHEN_ARTIFACT']).read_bytes(), b'release package')
+                    self.assertNotIn('THINKTHEN_PARITY_PREPARE', env)
+                    for key, case in parity.required_cases(contract, 'postgresql').items():
+                        if major == missing:
+                            continue
+                        kwargs['stdout'].write(parity.PREFIX + json.dumps({
+                            'consumer': 'postgresql', 'case': key, 'status': 'pass',
+                            'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
+                    return subprocess.CompletedProcess(args, 0)
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
+                self.assertEqual(majors, ['16', '17', '18'])
+                self.assertEqual(preparations, majors)
 
     def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
         contract = parity.inventory()
@@ -795,14 +1224,17 @@ class InstalledInputs(unittest.TestCase):
 
 class FullCheckpoint(unittest.TestCase):
     def test_binding_builds_run_only_in_release_and_fail_the_release_on_error(self):
-        source = parity.ROOT / 'sdlc/scripts'
         with tempfile.TemporaryDirectory(prefix="thinkthen-suite-routing-") as folder:
             root = Path(folder)
             scripts = root / "sdlc/scripts"
             scripts.mkdir(parents=True)
-            for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"):
-                shutil.copyfile(source / name, scripts / name)
-            (scripts / "heavy-lock").write_text("")
+            stage_files(parity.ROOT, root, (
+                "libraries/ruby/toolchain.env",
+                *("sdlc/scripts/" + name
+                  for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"))))
+            # Routing probes retain their control variables across the shell boundary.
+            for name in ("heavy-lock", "allow-list"):
+                (scripts / name).write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
             with (scripts / "scratch.sh").open("a") as stream:
                 stream.write("\nusage_guard() { :; }\nconfig_home() { :; }\n")
@@ -817,7 +1249,7 @@ uname) echo Darwin ;;
 sh) case $* in *sdlc/scripts/smoke*) exit "$ROUTING_SMOKE_CODE" ;; esac ;;
 esac
 '''
-            for name in ("cargo", "python3", "sh", "uname"):
+            for name in ("cargo", "python3", "ruby", "sh", "uname"):
                 path = fake / name
                 path.write_text(command)
                 path.chmod(0o755)
@@ -869,10 +1301,12 @@ esac
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True)
-                    for name in ['test-full-cases', 'surfaces', 'verdict.sh', 'full-compiler']:
-                        shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+                    stage_files(parity.ROOT, root, (
+                        'sdlc/scripts/' + name
+                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler')))
                     files = {
-                        'sdlc/scripts/heavy-lock': '',
+                        # Environment filtering is covered by the real nested campaign fixture.
+                        'sdlc/scripts/allow-list': '',
                         'sdlc/scripts/scratch.sh': (
                             'usage_guard() { :; }\n'
                             'config_home() { XDG_CONFIG_HOME=$PWD/config; export XDG_CONFIG_HOME; }\n'

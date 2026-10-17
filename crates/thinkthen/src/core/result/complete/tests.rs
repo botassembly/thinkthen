@@ -1,8 +1,9 @@
+//! Stays: private complete-result serialization must preserve partial failures and exclusive typed identities.
 use super::{Atomic, Observation, Origin, QuestionSource, ResultIdentity};
 use crate::core::probability::Probability;
 use crate::core::{
-    Answer, AnswerId, DecisionResult, Meta, ModelName, ObservationId, Question, QuestionText,
-    RequestMeta, Threshold, Url, json_line,
+    Answer, AnswerId, Meta, ModelName, ObservationId, Question, QuestionText, RequestMeta,
+    Threshold, Url, json_line,
 };
 
 mod aggregate;
@@ -16,23 +17,22 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
         rank_position: None,
         source: None,
         images: None,
-        compatibility: DecisionResult::new(
-            answer.read(Some(threshold)).0,
-            Question::Decide {
-                text: QuestionText::new("refund?").unwrap(),
-                yes: None,
-                no: None,
-            },
-            answer,
-            Some(threshold),
-            Meta::new(
-                "0.2.0",
-                "question".into(),
-                Url::new("http://localhost/decisions").unwrap(),
-                ModelName::new("requested").unwrap(),
-                None,
-                RequestMeta::new(true, 0, (0..sources.len()).map(|_| "key".into()).collect()),
-            ),
+        value: answer.read(Some(threshold)).0,
+        input: None,
+        question: Question::Decide {
+            text: QuestionText::new("refund?").unwrap(),
+            yes: None,
+            no: None,
+        },
+        answer,
+        threshold: Some(threshold),
+        meta: Meta::new(
+            "0.2.0",
+            "question".into(),
+            Url::new("http://localhost/decisions").unwrap(),
+            ModelName::new("requested").unwrap(),
+            None,
+            RequestMeta::new(true, 0, (0..sources.len()).map(|_| "key".into()).collect()),
         ),
         identity: ResultIdentity {
             answer_id: AnswerId::new("a".repeat(64)).unwrap(),
@@ -45,23 +45,18 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
 }
 
 #[test]
-fn complete_rank_serializes_a_positive_integer_while_legacy_keeps_its_value() {
+fn complete_rank_serializes_a_positive_integer() {
     let mut canonical = atomic(Vec::new(), Vec::new());
-    canonical.compatibility.value = crate::core::Value::YesNo(None);
-    canonical.compatibility.threshold = None;
+    canonical.value = crate::core::Value::YesNo(None);
+    canonical.threshold = None;
     canonical.rank_position = std::num::NonZeroUsize::new(7);
     let json = json_line(&canonical).unwrap();
     assert!(json.contains(r#""value":7,"question":"#));
     assert!(json.contains(r#""threshold":null"#));
-    assert!(
-        json_line(&canonical.compatibility)
-            .unwrap()
-            .contains(r#""value":null,"question":"#)
-    );
 }
 
 #[test]
-fn complete_atomic_serialization_keeps_legacy_projection_and_reports_actual_sources() {
+fn complete_atomic_serialization_reports_actual_sources() {
     let canonical = atomic(
         vec![QuestionSource {
             origin: Origin::Replay,
@@ -84,12 +79,6 @@ fn complete_atomic_serialization_keeps_legacy_projection_and_reports_actual_sour
         "b".repeat(64)
     );
     assert_eq!(json_line(&canonical).unwrap(), expected);
-    let compatibility = json_line(&canonical.compatibility).unwrap();
-    assert!(
-        compatibility.starts_with(r#"{"schema":"thinkthen.result/1","value":true,"question":"#)
-    );
-    assert!(!compatibility.contains("observation_id"));
-    assert!(!compatibility.contains("answer_id"));
 }
 
 #[test]
@@ -127,7 +116,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     let canonical = super::Find {
         declarations: Default::default(),
         identity: base.identity,
-        compatibility: find.result(None, find.select(&answer).unwrap(), base.compatibility.meta),
+        compatibility: find.result(None, find.select(&answer).unwrap(), base.meta),
     };
     let document = json_line(&canonical).unwrap();
     assert!(document.starts_with(&format!(
@@ -150,8 +139,8 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         MemberIdentity, Value,
     };
     let row = atomic(Vec::new(), Vec::new());
-    let question = row.compatibility.question;
-    let answer = row.compatibility.answer;
+    let question = row.question;
+    let answer = row.answer;
     let successful = AnnotationMember {
         declarations: Default::default(),
         threshold: Some(Threshold::band(0.2, 0.95).unwrap()),

@@ -1,9 +1,8 @@
 {
   "directory": [
-    "src",
-    "examples",
-    "checks"
+    "."
   ],
   "extension": ".ads",
-  "max": 8653
+  "max": 58,
+  "scope": "handwritten-production"
 }

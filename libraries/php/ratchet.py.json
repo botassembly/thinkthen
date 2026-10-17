@@ -1,5 +1,6 @@
 {
   "directory": "fixtures",
   "extension": ".py",
-  "max": 114
+  "max": 0,
+  "scope": "handwritten-production"
 }

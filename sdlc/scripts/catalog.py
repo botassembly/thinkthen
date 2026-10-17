@@ -15,9 +15,13 @@ import io
 import pathlib
 import re
 import sys
+import subprocess
+import tempfile
 import tarfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+from sources import tracked_files
 PACKAGED = "crates/thinkthen/transforms"
 TABLE = "crates/thinkthen/src/cli/transform.rs"
 ROW = re.compile(r'\(\s*"([a-z]+)",\s*include_bytes!\("\.\./\.\./transforms/([a-z]+)\.jq"\),?\s*\)')
@@ -26,8 +30,9 @@ ROW = re.compile(r'\(\s*"([a-z]+)",\s*include_bytes!\("\.\./\.\./transforms/([a-
 def repository(root):
     """The development sources, one folder per transform."""
     found = {}
-    for path in sorted((root / "transforms").glob("*/*.jq")):
-        if path.stem != path.parent.name:
+    for path in tracked_files(root / "transforms"):
+        if (len(path.relative_to(root / "transforms").parts) != 2
+                or path.suffix != ".jq" or path.stem != path.parent.name):
             continue
         found[path.stem] = path.read_bytes()
     return found
@@ -60,7 +65,8 @@ def archive(crate, expected):
 def tree(root):
     """Compare the shipped copies and the Rust table with the sources."""
     expected = repository(root)
-    packaged = {stem(path.name): path.read_bytes() for path in sorted((root / PACKAGED).iterdir())}
+    packaged = {stem(path.name): path.read_bytes() for path in tracked_files(root / PACKAGED)
+                if path.parent == root / PACKAGED}
     failures = compare(expected, packaged, PACKAGED)
     rows = ROW.findall((root / TABLE).read_text(encoding="utf-8"))
     names = [name for name, _ in rows]
@@ -97,6 +103,21 @@ def planted(expected):
             found = archive(opened, expected)
         if found != said:
             failures.append(f"self-test: expected {said}, found {found}")
+    with tempfile.TemporaryDirectory() as scratch:
+        root = pathlib.Path(scratch)
+        source = root / "transforms/kept/kept.jq"
+        source.parent.mkdir(parents=True)
+        source.write_bytes(b".\n")
+        subprocess.run(["git", "init", "-q", scratch], check=True)
+        subprocess.run(["git", "-C", scratch, "add", "."], check=True)
+        extra = root / "transforms/generated/generated.jq"
+        extra.parent.mkdir()
+        extra.write_bytes(b"untracked\n")
+        if repository(root) != {"kept": b".\n"}:
+            failures.append("self-test: untracked transform output was read")
+        subprocess.run(["git", "-C", scratch, "add", "."], check=True)
+        if repository(root) != {"kept": b".\n", "generated": b"untracked\n"}:
+            failures.append("self-test: staged transform source went unread")
     return failures
 
 

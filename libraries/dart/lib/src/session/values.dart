@@ -1,118 +1,128 @@
-import 'dart:convert';
+part of thinkthen_session;
 
 /// Presence keeps omission separate from explicit null.
 final class Presence<T> {
   final bool isPresent;
   final T? value;
-  const Presence.absent()
-      : isPresent = false,
-        value = null;
+  const Presence.absent() : isPresent = false, value = null;
   const Presence.present(this.value) : isPresent = true;
 }
 
-abstract class NativeObject {
-  final Map<String, Object?> json;
-  NativeObject(Map<String, Object?> value)
-      : json = Map.unmodifiable(
-            value.map((key, value) => MapEntry(key, _freeze(value))));
-  Map<String, Object?> toJson() => json;
+abstract interface class _EncodedValue {
+  Object? _toValue();
+}
+
+abstract class _NativeValue implements _EncodedValue {
+  final Map<String, Object?> _fields;
+  _NativeValue(Map<String, Object?> value)
+    : _fields = Map.unmodifiable(
+        value.map((key, value) => MapEntry(key, _freeze(value))),
+      );
+  Map<String, Object?> _toValue() => _fields;
 }
 
 Object? _freeze(Object? value) {
   if (value is Map)
     return Map<String, Object?>.unmodifiable(
-        value.map((key, value) => MapEntry(key as String, _freeze(value))));
+      value.map((key, value) => MapEntry(key as String, _freeze(value))),
+    );
   if (value is List) return List<Object?>.unmodifiable(value.map(_freeze));
   return value;
 }
 
-Map<String, Object?> readObject(Object? value) => value is NativeObject
-    ? value.json
+Map<String, Object?> _readObject(Object? value) => value is _NativeValue
+    ? value._fields
     : Map<String, Object?>.from(value as Map);
-BigInt readInteger(Object? value) {
+BigInt _readInteger(Object? value) {
   if (value is BigInt) return value;
   if (value is int) return BigInt.from(value);
   throw const FormatException('Expected an integer');
 }
 
 /// Encode BigInt exactly, including integers inside caller-authored JSON.
-String encodeNative(Object? value) {
-  if (value is NativeObject) return encodeNative(value.toJson());
+String _encodeNative(Object? value) {
+  if (value is _EncodedValue) return _encodeNative(value._toValue());
   if (value is BigInt) return value.toString();
-  if (value is List) return '[${value.map(encodeNative).join(',')}]';
+  if (value is List) return '[${value.map(_encodeNative).join(',')}]';
   if (value is Map) {
-    return '{${value.entries.map((e) => '${jsonEncode(e.key)}:${encodeNative(e.value)}').join(',')}}';
+    return '{${value.entries.map((e) => '${jsonEncode(e.key)}:${_encodeNative(e.value)}').join(',')}}';
   }
   if (value != null && value is! String && value is! num && value is! bool) {
-    return encodeNative((value as dynamic).toJson());
+    return _encodeNative((value as dynamic).toJson());
   }
   return jsonEncode(value);
 }
 
-/// Native JSON retains wide i64/u64 values that Dart's JSON reader rounds.
-Object? decodeNative(String source) {
-  var offset = 0;
-  void space() {
-    while (offset < source.length && ' \r\n\t'.contains(source[offset]))
-      offset++;
-  }
+/// One completed call retains its answer, odds, native records and terminal facts.
+final class CallResult<V, R> {
+  final V value;
+  final CallProbability? probability;
+  final List<R> results;
+  final Facts facts;
+  final OwnedCall _call;
+  CallResult._(this.value, this.probability, List<R> results, this._call)
+    : results = List.unmodifiable(results),
+      facts =
+          _call.terminal.facts.value ??
+          (throw StateError('Completed call has no facts'));
+  List<SessionPacket> get packets => _call.packets;
+  SessionPacketTerminal get terminal => _call.terminal;
+}
 
-  String string() {
-    final start = offset++;
-    while (offset < source.length) {
-      final char = source[offset++];
-      if (char == '\\') offset++;
-      if (char == '"')
-        return jsonDecode(source.substring(start, offset)) as String;
-    }
-    throw const FormatException('Unterminated JSON string');
-  }
+sealed class CallProbability {
+  const CallProbability();
+}
 
-  Object? value() {
-    space();
-    if (offset >= source.length)
-      throw const FormatException('Missing JSON value');
-    final char = source[offset];
-    if (char == '"') return string();
-    if (char == '[' || char == '{') {
-      final object = char == '{';
-      final list = <Object?>[];
-      final map = <String, Object?>{};
-      offset++;
-      space();
-      final end = object ? '}' : ']';
-      if (source[offset] != end) {
-        while (true) {
-          space();
-          if (object) {
-            final key = string();
-            space();
-            if (source[offset++] != ':')
-              throw const FormatException('Missing colon');
-            map[key] = value();
-          } else {
-            list.add(value());
-          }
-          space();
-          if (source[offset] != ',') break;
-          offset++;
+final class ScalarProbability extends CallProbability {
+  final double value;
+  const ScalarProbability(this.value);
+}
+
+final class ListProbability extends CallProbability {
+  final List<double?> value;
+  ListProbability(List<double?> values) : value = List.unmodifiable(values);
+}
+
+final class GroupProbability extends CallProbability {
+  final List<List<double?>> value;
+  GroupProbability(List<List<double?>> values)
+    : value = List.unmodifiable(
+        values.map((v) => List<double?>.unmodifiable(v)),
+      );
+}
+
+Object? _atPath(Object? value, List<String> path) {
+  for (final key in path) {
+    if (value is! Map) return null;
+    value = value[key];
+  }
+  return value;
+}
+
+double? _numberProbability(Object? value) => (value as num?)?.toDouble();
+ScalarProbability? _scalarProbability(double? value) =>
+    value == null ? null : ScalarProbability(value);
+
+List<double?> _recognitionProbability(Recognition row) {
+  final value = row.value;
+  if (value is RecognizeModeProposals)
+    return value.proposals
+        .map((proposal) => proposal.probability.toDouble())
+        .toList(growable: false);
+  final entities = (value as RecognizeEntities).entities;
+  final answer = row.answer as RecognitionOddsRecognizeAnswer;
+  return entities
+      .map((entity) {
+        for (final proposal in answer.proposals) {
+          final selected = proposal.selected.value;
+          if (proposal.kept &&
+              selected != null &&
+              selected.start == entity.start &&
+              selected.end == entity.end &&
+              proposal.kind.value == entity.kind)
+            return proposal.spanProbability.toDouble();
         }
-      }
-      if (source[offset++] != end)
-        throw const FormatException('Missing JSON end');
-      return object ? map : list;
-    }
-    final start = offset;
-    while (offset < source.length && !' ,]}\r\n\t'.contains(source[offset]))
-      offset++;
-    final token = source.substring(start, offset);
-    if (RegExp(r'^-?[0-9]+$').hasMatch(token))
-      return int.tryParse(token) ?? BigInt.parse(token);
-    return jsonDecode(token);
-  }
-
-  final result = value();
-  space();
-  if (offset != source.length) throw const FormatException('Trailing JSON');
-  return result;
+        return null;
+      })
+      .toList(growable: false);
 }

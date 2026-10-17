@@ -2,23 +2,23 @@ require "thinkthen"
 
 ThinkThen::Client.open do |client|
   names = [
-    ["Paul McCartney", "singer"],
-    ["Ringo Starr", "singer"],
-    ["Yesterday", "song"],
-    ["Octopus's Garden", "song"]
+    ["Apple", "company"],
+    ["Amazon", "company"],
+    ["iPhone", "product"],
+    ["Kindle", "product"]
   ]
-  who_sings = client.relate(
+  who_makes = client.relate(
     {version: 1, relate: {relations: [
-      {name: "sings", source: "singer", target: "song",
+      {name: "makes", source: "company", target: "product",
        either: false}
     ]}},
     names.map { |name, kind| {name: name, kind: kind} }
   ).value
-  sings = who_sings.map do |edge|
+  makes = who_makes.map do |edge|
     [edge.source.name, edge.target.name]
   end
-  raise unless sings == [
-    ["Paul McCartney", "Yesterday"],
-    ["Ringo Starr", "Octopus's Garden"]
+  raise unless makes == [
+    ["Apple", "iPhone"],
+    ["Amazon", "Kindle"]
   ]
 end

@@ -1,20 +1,20 @@
 import thinkthen as tt
 
 names = [
-    ("Paul McCartney", "singer"),
-    ("Ringo Starr", "singer"),
-    ("Yesterday", "song"),
-    ("Octopus's Garden", "song"),
+    ("Apple", "company"),
+    ("Amazon", "company"),
+    ("iPhone", "product"),
+    ("Kindle", "product"),
 ]
-who_sings = tt.relate(
+who_makes = tt.relate(
     names,
-    relations={"sings": ("singer", "song")},
+    relations={"makes": ("company", "product")},
 ).value
-sings = [
+makes = [
     (edge.source.name, edge.target.name)
-    for edge in who_sings
+    for edge in who_makes
 ]
-assert sings == [
-    ("Paul McCartney", "Yesterday"),
-    ("Ringo Starr", "Octopus's Garden"),
+assert makes == [
+    ("Apple", "iPhone"),
+    ("Amazon", "Kindle"),
 ]

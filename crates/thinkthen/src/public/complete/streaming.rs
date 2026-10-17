@@ -113,37 +113,21 @@ impl Engine {
             call,
             asker,
             records,
-            Box::new(|_, original: &Original<T>| Ok(original.prepared.duplicate())),
+            Box::new(|_, original: &Original<T>| Ok(original.prepared.clone())),
             Box::new(move |stop, at, original, row| {
-                let effective = original
-                    .as_ref()
-                    .map_or(&question, |original| &original.held.question);
-                let keys = row
-                    .as_ref()
-                    .map_or_else(|_| Vec::new(), |row| row.keys.clone());
-                let judged =
-                    crate::public::bulk::judged(stop, effective, engine.backend(), at, row)
-                        .map_err(|error| error.at_record(at))?;
+                if original.is_none() {
+                    crate::public::bulk::judged(stop, &question, engine.backend(), at, row)?;
+                    return Err(Error::defect("a complete pulled row lost its original"));
+                }
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
-                let mut run = if scalar {
-                    super::run(&engine, &held.question, profile.as_ref())
-                } else {
-                    super::batch_run(&engine, &held.question, profile.as_ref(), setting)
-                };
-                run.context_sha256 = held.context_sha256;
-                let events = attempts.then(|| judged.answered.attempts.clone());
-                let mut canonical = super::atomic(
-                    run,
-                    &judged,
-                    super::spec(function, &held.question, judged.value.clone(), at),
-                    keys,
-                    None,
-                    events,
-                )
-                .map_err(|_| super::wrong())?;
-                canonical.source = held.source;
-                canonical.images = held.images;
+                let canonical = super::records::complete_row(
+                    (&engine, profile.as_ref(), setting, scalar, function),
+                    stop,
+                    &held,
+                    at,
+                    row,
+                )?;
                 project(held.original, at, canonical)
             }),
         ))

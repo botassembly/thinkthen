@@ -29,8 +29,12 @@ export const RULES = [
   ['planned', 'a status word'],
   ['plan for 0.1', 'a status word'],
   ['preview', 'a status word; "Plan preview" and "Prune preview" are setting names'],
+  ['development 0.2', 'a release status; state the behavior in the present tense'],
+  ['0.1.2', 'a release status; state the behavior in the present tense'],
+  ['admitted', 'internal review wording; say what works'],
+  ['experimental branch', 'internal build wording; say what works'],
 ].map(([w, why]) => {
-  const body = word(w).replace('.', String.raw`\.`);
+  const body = word(w).replaceAll('.', String.raw`\.`);
   return { word: w, why, re: new RegExp(String.raw`(?<![&\w])${body}(?!\w)`, 'gi') };
 });
 
@@ -39,8 +43,8 @@ export const RULES = [
 const SETTING_NAME = new RegExp(String.raw`\b(?:Plan|Prune)${GAP}$`);
 
 const ALLOWED = [
-  ['/install/settings/', 'preview', 'uncoalesced uninterrupted', 'Settings renders the contract for exact preview bytes, not a release status.'],
-  ['/install/settings/', 'preview', 'estimate of preview input tokens', 'Settings renders the contract for input-token estimates, not a release status.'],
+  ['/start/settings/', 'preview', 'uncoalesced uninterrupted', 'Settings renders the contract for exact preview bytes, not a release status.'],
+  ['/start/settings/', 'preview', 'estimate of preview input tokens', 'Settings renders the contract for input-token estimates, not a release status.'],
 ];
 
 export function prose(html) {

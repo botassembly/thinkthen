@@ -37,6 +37,7 @@ struct Shared {
     sha256: [u8; 32],
     evidence_bytes: usize,
     image_wire: Option<built_in::images::ImageWire>,
+    image_route: built_in::images::ImageRoute,
 }
 
 impl State {
@@ -50,6 +51,7 @@ impl State {
             sha256,
             evidence_bytes,
             image_wire: None,
+            image_route: Default::default(),
         }))
     }
 
@@ -60,6 +62,7 @@ impl State {
             sha256: self.0.sha256,
             evidence_bytes: self.0.evidence_bytes,
             image_wire: self.0.image_wire.clone(),
+            image_route: self.0.image_route,
         }))
     }
     pub(crate) fn api(&self) -> crate::core::adapters::ApiType {
@@ -88,6 +91,7 @@ impl State {
             sha256,
             evidence_bytes,
             image_wire: Some(wire),
+            image_route: route,
         })))
     }
 
@@ -109,7 +113,9 @@ impl State {
             .and_then(|wire| wire.images.as_ref())
         {
             body.pop();
-            body.extend_from_slice(b",\"images\":");
+            body.extend_from_slice(
+                format!(",\"{}\":", self.0.image_route.image_field()).as_bytes(),
+            );
             body.extend_from_slice(images.as_bytes());
             body.push(b'}');
         }
@@ -124,6 +130,10 @@ impl State {
             + wire
                 .and_then(|wire| wire.images.as_ref())
                 .map_or(0, |images| images.len() + 10)
+    }
+
+    pub(crate) fn headers(&self) -> &'static [(&'static str, &'static str)] {
+        self.0.image_route.headers()
     }
 
     pub(crate) fn body_limit(&self) -> Option<usize> {
@@ -320,21 +330,6 @@ pub(crate) fn wire_count(question: &Question) -> usize {
 /// One wire answer as a store keeps it: the answer's JSON as received, or the
 /// cause that failed it.
 pub(crate) type Stored<'a> = Result<&'a str, BackendFailureCause>;
-
-/// One outcome per logical question from its wire answers, in order. A
-/// logical question fails with its first failed wire answer's cause.
-pub(crate) fn read(
-    questions: &[Question],
-    answers: &[Stored<'_>],
-    model: &str,
-) -> Result<Vec<AnswerOutcome>, DecodeError> {
-    read_for(
-        crate::core::adapters::ApiType::Primary,
-        questions,
-        answers,
-        model,
-    )
-}
 
 pub(crate) fn read_for(
     api: crate::core::adapters::ApiType,

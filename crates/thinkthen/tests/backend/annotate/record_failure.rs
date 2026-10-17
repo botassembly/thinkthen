@@ -19,6 +19,36 @@ const THIRD_REQUEST: &str = r#"{"state":"Each question quotes the text it asks a
 const SET_SHA: &str = "0b08fe6760bb1fdbe07f6631e37028a8ae0c1f145ac657705b2512c883cf5604";
 const NO: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1}},"usage":{"input_tokens":6,"output_tokens":2}}"#;
 
+#[cfg(test)]
+fn expected_urgent_result(
+    listener: &Listener,
+    position: u64,
+    input: Value,
+    mut member: Value,
+    body: &str,
+    ordinal: u64,
+) -> Value {
+    let request = keys(listener.url(), body.as_bytes()).remove(0);
+    let sources = json!([{"origin":"live","answered_by":"local-1","batch_size":1}]);
+    let observations = json!([{"observation_id":"0".repeat(64)}]);
+    member["answer_id"] = "0".repeat(64).into();
+    member["question"] = json!({"verb":"decide","text":"Is this urgent?","on":["/body"]});
+    member["threshold"] = 0.5.into();
+    member["request"] = request.clone().into();
+    member["question_sources"] = sources.clone();
+    member["observations"] = observations.clone();
+    json!({"schema":"thinkthen.result/2","answer_id":"0".repeat(64),
+        "position":{"file":null,"first":position,"last":position},"input":input,
+        "value":{"urgent":member["value"]},"answers":{"urgent":member},
+        "meta":{"tool":concat!("thinkthen ",env!("CARGO_PKG_VERSION")),
+            "questions_sha256":SET_SHA,"url":listener.url(),"model":"local-1",
+            "usage":member["usage"],"requests_sent":1,"cached":false,
+            "requests":[request],"origin":"live","answered_by":"local-1",
+            "question_sources":sources,"observations":observations,"failed_questions":0,
+            "attempts":[{"ordinal":ordinal,"request_sha256":crate::support::digest(listener.url(),body.as_bytes()),
+                "wall_ms":0,"outcome":"ok","status":200,"sdk_request_id":"0".repeat(64)}]}})
+}
+
 #[test]
 fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()> {
     let file = set("record-missing-pointer", SET);
@@ -59,8 +89,6 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
     assert_eq!(requests[1].body, THIRD_REQUEST.as_bytes());
-    let first = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
-    let third = keys(listener.url(), THIRD_REQUEST.as_bytes()).remove(0);
     let lines: Vec<&[u8]> = output
         .stdout
         .split(|byte| *byte == b'\n')
@@ -77,30 +105,32 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
     assert_eq!(
         rows.into_iter()
             .map(|row| if row["schema"] == "thinkthen.result/2" {
-                crate::native_results::compatibility::judgment(row)
+                crate::native_results::comparison::judgment(row)
             } else {
                 row
             })
             .collect::<Vec<_>>(),
         vec![
-            json!({"schema":"thinkthen.result/2","position":{"file":null,"first":1,"last":1},"input":{"id":"a","body":"first"},
-            "value":{"urgent":true},"answers":{"urgent":{"value":true,
-                "question":{"verb":"decide","text":"Is this urgent?","on":["/body"]},
-                "answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,
-                "request":first}},"meta":{"tool":concat!("thinkthen ", env!("CARGO_PKG_VERSION")),
-                "questions_sha256":SET_SHA,"url":listener.url(),"model":"local-1",
-                "usage":{"input_tokens":4,"output_tokens":1},"requests_sent":1,
-                "cached":false,"requests":[first],"failed_questions":0}}),
+            expected_urgent_result(
+                &listener,
+                1,
+                json!({"id":"a","body":"first"}),
+                json!({"value":true,"answer":{"kind":"yes_no","probability":0.9},
+                    "usage":{"input_tokens":4,"output_tokens":1}}),
+                FIRST_REQUEST,
+                1
+            ),
             json!({"schema":"thinkthen.record-error/1","at":2,
             "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}),
-            json!({"schema":"thinkthen.result/2","position":{"file":null,"first":3,"last":3},"input":{"id":"c","body":"third"},
-            "value":{"urgent":false},"answers":{"urgent":{"value":false,
-                "question":{"verb":"decide","text":"Is this urgent?","on":["/body"]},
-                "answer":{"kind":"yes_no","probability":0.1},"threshold":0.5,
-                "request":third}},"meta":{"tool":concat!("thinkthen ", env!("CARGO_PKG_VERSION")),
-                "questions_sha256":SET_SHA,"url":listener.url(),"model":"local-1",
-                "usage":{"input_tokens":6,"output_tokens":2},"requests_sent":1,
-                "cached":false,"requests":[third],"failed_questions":0}}),
+            expected_urgent_result(
+                &listener,
+                3,
+                json!({"id":"c","body":"third"}),
+                json!({"value":false,"answer":{"kind":"yes_no","probability":0.1},
+                    "usage":{"input_tokens":6,"output_tokens":2}}),
+                THIRD_REQUEST,
+                2
+            ),
         ]
     );
     Ok(())
@@ -192,20 +222,17 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     crate::harness::exits(&detailed, 0);
     assert!(detailed.stderr.is_empty());
     let row: Value = serde_json::from_slice(&detailed.stdout)?;
-    let request = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
     assert_eq!(
-        crate::native_results::compatibility::judgment(row),
-        json!({"schema":"thinkthen.result/2","position":{"file":null,"first":1,"last":1},
-        "input":{"urgent":"original","body":"first"},"value":{"urgent":true},
-        "answers":{"urgent":{"value":true,
-            "question":{"verb":"decide","text":"Is this urgent?","on":["/body"]},
-            "answer":{"kind":"yes_no","probability":0.9},
-            "threshold":0.5,"request":request}},
-        "meta":{"tool":concat!("thinkthen ", env!("CARGO_PKG_VERSION")),"questions_sha256":SET_SHA,
-            "url":listener.url(),"model":"local-1",
-            "usage":{"input_tokens":4,"output_tokens":1},
-            "requests_sent":1,"cached":false,"requests":[request],
-            "failed_questions":0}})
+        crate::native_results::comparison::judgment(row),
+        expected_urgent_result(
+            &listener,
+            1,
+            json!({"urgent":"original","body":"first"}),
+            json!({"value":true,"answer":{"kind":"yes_no","probability":0.9},
+                "usage":{"input_tokens":4,"output_tokens":1}}),
+            FIRST_REQUEST,
+            1
+        )
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);

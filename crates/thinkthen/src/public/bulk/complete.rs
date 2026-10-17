@@ -5,7 +5,6 @@ use crate::public::engine::{Engine, Evidence, evidence, evidence_error, only};
 use crate::public::error::Error;
 use crate::public::options::CallOptions;
 use crate::public::question::{Kind, Question};
-use crate::public::results::{Call, Found, Ranked};
 type PreparedFind<T> = (Vec<T>, Find, std::sync::Arc<crate::engine::facade::Engine>);
 
 impl Engine {
@@ -15,15 +14,11 @@ impl Engine {
     ///
     /// The first record's [`Error`], and [`Error::Usage`] for another kind of
     /// question or more records than the engine's request limit.
-    #[allow(
-        clippy::type_complexity,
-        reason = "the public return carries ranked rows and facts"
-    )]
     pub fn rank<I>(
         &self,
         question: &Question,
         records: I,
-    ) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
+    ) -> Result<crate::RankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -36,58 +31,28 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::rank`].
-    #[allow(
-        clippy::type_complexity,
-        reason = "the public return carries ranked rows and facts"
-    )]
     pub fn rank_with<I>(
         &self,
         question: &Question,
         records: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
+    ) -> Result<crate::RankCall<I::Item>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
-    {
-        self.try_rank_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Fallible complete-set input for [`Engine::rank_with`].
-    ///
-    /// # Errors
-    /// Returns an input failure before sending, or the call errors of
-    /// [`Engine::rank_with`].
-    pub fn try_rank_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Ranked<T>>>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-        T: Evidence,
     {
         only(question, &[Kind::Rank], "rank")?;
         self.try_rank_records_complete_with(
             question,
             records
                 .into_iter()
-                .map(|row| row.map(crate::public::record_input::plain)),
+                .map(|row| Ok(crate::public::record_input::plain(row))),
             options,
         )?
-        .try_map(|rows| {
-            rows.into_iter()
-                .map(|row| {
-                    let probability = row
-                        .result
-                        .canonical
-                        .answer()
-                        .yes()
-                        .ok_or_else(|| Error::defect("a decide answer lost its probability"))?;
-                    Ok(Ranked::new(row.ordinal, row.original, probability))
-                })
-                .collect()
+        .project(|rows| {
+            let values = rows.iter().map(|row| row.ordinal).collect();
+            let probabilities = rows.iter().map(|row| row.result.probability()).collect();
+            Ok((values, rows, probabilities))
         })
     }
 
@@ -99,10 +64,10 @@ impl Engine {
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
     /// question or a unit count outside its range.
-    pub fn find<I>(&self, question: &Question, units: I) -> Result<Call<Found<I::Item>>, Error>
+    pub fn find<I>(&self, question: &Question, units: I) -> Result<crate::FindCall<I::Item>, Error>
     where
         I: IntoIterator,
-        I::Item: Evidence,
+        I::Item: Evidence + Clone,
     {
         self.find_with(question, units, CallOptions::new())
     }
@@ -117,33 +82,17 @@ impl Engine {
         question: &Question,
         units: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Found<I::Item>>, Error>
+    ) -> Result<crate::FindCall<I::Item>, Error>
     where
         I: IntoIterator,
-        I::Item: Evidence,
+        I::Item: Evidence + Clone,
     {
-        self.try_find_with(question, units.into_iter().map(Ok), options)
-    }
-
-    /// Fallible complete-set input for [`Engine::find_with`].
-    /// Admission stops at the first count, evidence-byte or reader failure.
-    ///
-    /// # Errors
-    /// Returns an input failure before sending, or the call errors of
-    /// [`Engine::find_with`].
-    pub fn try_find_with<I, T>(
-        &self,
-        question: &Question,
-        units: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Found<T>>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-        T: Evidence,
-    {
-        Ok(self
-            .try_find_complete_with(question, units, options)?
-            .map(|result| result.found))
+        self.try_find_complete_with(question, units.into_iter().map(Ok), options)?
+            .project(|result| {
+                let value = result.found.selected().cloned();
+                let probability = result.probability();
+                Ok((value, result, probability))
+            })
     }
 
     pub(in crate::public) fn prepare_find<T>(
@@ -175,17 +124,7 @@ impl Engine {
         &self,
         records: I,
     ) -> Result<std::vec::IntoIter<I::Item>, Error> {
-        self.try_within_limit(records.into_iter().map(Ok))
-    }
-
-    pub(in crate::public) fn try_within_limit<I, T>(
-        &self,
-        records: I,
-    ) -> Result<std::vec::IntoIter<T>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-    {
-        self.try_within_admission(records, &CallOptions::new())
+        self.try_within_admission(records.into_iter().map(Ok), &CallOptions::new())
     }
 }
 

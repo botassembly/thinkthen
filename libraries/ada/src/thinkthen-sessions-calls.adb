@@ -1,82 +1,92 @@
+-- Generated named calls from the canonical request schema; do not edit.
+with Ada.Unchecked_Conversion;
+with System;
+with Thinkthen_Kinds;
+with Thinkthen.Requests.Native;
+with Thinkthen.Inputs.Calls;
+with Thinkthen.Native_Sessions;
+with Thinkthen.Native_Values;
+with Thinkthen.Session_C;
+with Interfaces.C.Strings;
 package body Thinkthen.Sessions.Calls is
-procedure Decide (Owner : in out Session; Request : T_RequestCall_decide) is
+procedure Decide (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_decide, V_0 => Request)));
+Thinkthen.Inputs.Calls.Decide (Owner, Question, Input, Options);
 end Decide;
-procedure Decide (Client : Engine; Owner : in out Session; Request : T_RequestCall_decide) is
+procedure Decide (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_decide, V_0 => Request)));
+Thinkthen.Inputs.Calls.Decide (Client, Owner, Question, Input, Options);
 end Decide;
-procedure Choose (Owner : in out Session; Request : T_RequestCall_choose) is
+procedure Choose (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_choose, V_1 => Request)));
+Thinkthen.Inputs.Calls.Choose (Owner, Question, Input, Options);
 end Choose;
-procedure Choose (Client : Engine; Owner : in out Session; Request : T_RequestCall_choose) is
+procedure Choose (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_choose, V_1 => Request)));
+Thinkthen.Inputs.Calls.Choose (Client, Owner, Question, Input, Options);
 end Choose;
-procedure Tag (Owner : in out Session; Request : T_RequestCall_tag) is
+procedure Tag (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_tag, V_2 => Request)));
+Thinkthen.Inputs.Calls.Tag (Owner, Question, Input, Options);
 end Tag;
-procedure Tag (Client : Engine; Owner : in out Session; Request : T_RequestCall_tag) is
+procedure Tag (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_tag, V_2 => Request)));
+Thinkthen.Inputs.Calls.Tag (Client, Owner, Question, Input, Options);
 end Tag;
-procedure Score (Owner : in out Session; Request : T_RequestCall_score) is
+procedure Score (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_score, V_3 => Request)));
+Thinkthen.Inputs.Calls.Score (Owner, Question, Input, Options);
 end Score;
-procedure Score (Client : Engine; Owner : in out Session; Request : T_RequestCall_score) is
+procedure Score (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_score, V_3 => Request)));
+Thinkthen.Inputs.Calls.Score (Client, Owner, Question, Input, Options);
 end Score;
-procedure Filter (Owner : in out Session; Request : T_RequestCall_filter) is
+procedure Filter (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_filter, V_4 => Request)));
+Thinkthen.Inputs.Calls.Filter (Owner, Question, Input, Options);
 end Filter;
-procedure Filter (Client : Engine; Owner : in out Session; Request : T_RequestCall_filter) is
+procedure Filter (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_filter, V_4 => Request)));
+Thinkthen.Inputs.Calls.Filter (Client, Owner, Question, Input, Options);
 end Filter;
-procedure Rank (Owner : in out Session; Request : T_RequestCall_rank) is
+procedure Rank (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_rank, V_5 => Request)));
+Thinkthen.Inputs.Calls.Rank (Owner, Question, Input, Options);
 end Rank;
-procedure Rank (Client : Engine; Owner : in out Session; Request : T_RequestCall_rank) is
+procedure Rank (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_rank, V_5 => Request)));
+Thinkthen.Inputs.Calls.Rank (Client, Owner, Question, Input, Options);
 end Rank;
-procedure Find (Owner : in out Session; Request : T_RequestCall_find) is
+procedure Find (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_find, V_6 => Request)));
+Thinkthen.Inputs.Calls.Find (Owner, Question, Input, Options);
 end Find;
-procedure Find (Client : Engine; Owner : in out Session; Request : T_RequestCall_find) is
+procedure Find (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_find, V_6 => Request)));
+Thinkthen.Inputs.Calls.Find (Client, Owner, Question, Input, Options);
 end Find;
-procedure Annotate (Owner : in out Session; Request : T_RequestCall_annotate) is
+procedure Annotate (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_annotate, V_7 => Request)));
+Thinkthen.Inputs.Calls.Annotate (Owner, Question, Input, Options);
 end Annotate;
-procedure Annotate (Client : Engine; Owner : in out Session; Request : T_RequestCall_annotate) is
+procedure Annotate (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_annotate, V_7 => Request)));
+Thinkthen.Inputs.Calls.Annotate (Client, Owner, Question, Input, Options);
 end Annotate;
-procedure Recognize (Owner : in out Session; Request : T_RequestCall_recognize) is
+procedure Recognize (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_recognize, V_8 => Request)));
+Thinkthen.Inputs.Calls.Recognize (Owner, Question, Input, Options);
 end Recognize;
-procedure Recognize (Client : Engine; Owner : in out Session; Request : T_RequestCall_recognize) is
+procedure Recognize (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_recognize, V_8 => Request)));
+Thinkthen.Inputs.Calls.Recognize (Client, Owner, Question, Input, Options);
 end Recognize;
-procedure Relate (Owner : in out Session; Request : T_RequestCall_relate) is
+procedure Relate (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_relate, V_9 => Request)));
+Thinkthen.Inputs.Calls.Relate (Owner, Question, Input, Options);
 end Relate;
-procedure Relate (Client : Engine; Owner : in out Session; Request : T_RequestCall_relate) is
+procedure Relate (Client : Engine; Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options) is
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_relate, V_9 => Request)));
+Thinkthen.Inputs.Calls.Relate (Client, Owner, Question, Input, Options);
 end Relate;
 end Thinkthen.Sessions.Calls;

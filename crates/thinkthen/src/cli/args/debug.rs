@@ -59,6 +59,7 @@ impl fmt::Debug for FindCommon {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: secrecy checks inspect private argument Debug output that commands never print.
     use clap::Parser as _;
 
     use super::super::Cli;
@@ -93,6 +94,7 @@ mod tests {
             ],
             vec![
                 "thinkthen",
+                "backends",
                 "check",
                 "--url",
                 "http://localhost/debug-secret-0210",

@@ -8,13 +8,15 @@ mod rank;
 mod rank_set;
 pub(crate) mod recognize;
 pub(in crate::public) mod records;
+mod recovering;
+mod recovering_stream;
 pub(crate) mod relate;
 mod streaming;
 use crate::core::{self, Value};
 use crate::public::question::Question;
 use crate::public::{
     self, Call, CallOptions, CompleteChoice, CompleteDecision, CompleteScore, CompleteTags,
-    DecisionQuestion, DetailQuestion, Engine, Error, InputFunction, QuestionInput,
+    DecisionQuestion, Engine, Error, InputFunction, QuestionInput,
 };
 use crate::result_json::{
     Run,
@@ -55,34 +57,6 @@ impl Engine {
     ) -> Result<Call<CompleteDecision>, Error> {
         self.atomic_complete(InputFunction::Decide, question.question(), input, options)?
             .try_map(decision)
-    }
-
-    /// Complete choice for explicitly typed text or ordered images.
-    ///
-    /// # Errors
-    /// Refuses unsupported images and non-choice questions before sending.
-    pub(crate) fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        input: &QuestionInput,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteChoice>, Error> {
-        self.atomic_complete(InputFunction::Choose, question.question(), input, options)?
-            .try_map(choice)
-    }
-
-    /// Complete score for explicitly typed text or ordered images.
-    ///
-    /// # Errors
-    /// Refuses unsupported images and non-score questions before sending.
-    pub(crate) fn score_input_complete_with(
-        &self,
-        question: &Question,
-        input: &QuestionInput,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteScore>, Error> {
-        self.atomic_complete(InputFunction::Score, question, input, options)?
-            .try_map(score)
     }
 
     pub(in crate::public) fn atomic_complete(

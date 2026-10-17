@@ -6,6 +6,18 @@ Milestone: 0.2
 
 Depends on: 0561, 0565
 
+Reviews: revision dcafe90, accept
+
+Reviews: revision 4d8d1a8, accept
+
+Reviews: revision c6792fe, accept
+
+Reviews: revision ffd077a, reject
+
+Reviews: revision d7df691, accept
+
+Reviews: revision f86124e, accept
+
 ## Outcome
 
 Lint checks every generated file against its generator. Each language carries only the generated declarations it uses. Generated public names read as real names, not schema paths. The C view layout shares one presence struct per value type. These changes land before the candidate, because the names and the `_v1` layouts become public API at 0.2.
@@ -51,3 +63,8 @@ PM amendment, 2026-10-13. Remaining work. One generator developer owns `sdlc/gen
 PM amendment, 2026-10-14. 0581 supersedes item (5): generate no per-function answer accessors. `thinkthen_request_plan_named_value` stays, because PHP, Zig, Dart and C++ call it.
 
 PM decision, 2026-10-14. The public C header has no `arm_1` or `arm_2` names. The Ada generated names in `thinkthen-requests.ads`, with their uses in `thinkthen-inputs.adb` and `thinkthen-requests-native.adb`, and the COBOL generated names in `tt_requests_generated.c` and `tt_requests_generated.h` still carry `arm_` names, such as `T_Authored_questionText_arm_1` and `THINKTHEN_COBOL_CACHEDOCUMENT_ARM_2_KIND`. Rename them now through the generators, not by hand. A banned name in a generated file is a bug in this ticket.
+
+## Progress
+
+- 2026-10-13 started
+- 2026-10-13 next: Merged reviewed released-generator coherence as 73558a3e89f0bd76b5c69d72f7afbcbfc2aad747 with installed Dart and PHP checks passing; remaining language outputs stay with their owners.

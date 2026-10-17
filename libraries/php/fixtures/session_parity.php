@@ -3,6 +3,20 @@ declare(strict_types=1);
 require (getenv('THINKTHEN_PHP_PACKAGE') ?: dirname(__DIR__)).'/autoload.php';
 use ThinkThen\{Client, CallFailure, Cancellation};
 
+/** Test adapter serialization is not a public library operation. */
+function fixtureValue(mixed $value): mixed
+{
+    if ($value instanceof ThinkThen\Results\Node) {
+        $value = (object)(new ReflectionProperty(ThinkThen\Results\Node::class, 'values'))->getValue($value);
+    }
+    if ($value instanceof stdClass) {
+        $result = new stdClass();
+        foreach ($value as $name => $field) $result->$name = fixtureValue($field);
+        return $result;
+    }
+    return is_array($value) ? array_map(fixtureValue(...), $value) : $value;
+}
+
 function consume(stdClass $fixture, Client $client): array
 {
     $verb = $fixture->verb;
@@ -15,7 +29,8 @@ function consume(stdClass $fixture, Client $client): array
     };
     elseif (($fixture->question_form ?? null) === 'file') $question = Client::questionFile('fixture-question.json');
     elseif (isset($fixture->raw)) {
-        $question = Client::questionJson($fixture->raw);
+        file_put_contents('raw-question.json', $fixture->raw);
+        $question = Client::questionFile('raw-question.json');
     }
     $none = $verb === 'find' && ($question->none ?? false);
     if ($verb === 'find' && $question instanceof stdClass) unset($question->none);
@@ -45,6 +60,8 @@ function consume(stdClass $fixture, Client $client): array
         $records = $input;
         $input = (function () use ($records) { yield from $records; })();
     }
+    $callResult = isset($fixture->expect->call_result);
+    if ($callResult && is_array($input) && count($input) === 1) $input = $input[0];
     $options = ['attempts' => true];
     if ($none) $options['none'] = true;
     if ($injection === 'expired_deadline') $options['deadline_ms'] = 0;
@@ -53,7 +70,7 @@ function consume(stdClass $fixture, Client $client): array
     if ($injection === 'cancel_token') $cancel->cancel();
     try {
         if ($fixture->held_cancel ?? false) {
-            $operation = $client->start($verb, $question, $input, $options);
+            $operation = $client->start($verb, $question, $input, new ThinkThen\Inputs\Options(...$options), $cancel);
             $packets = []; $signal = getenv('HOME').'/cancel';
             try {
                 do {
@@ -63,22 +80,27 @@ function consume(stdClass $fixture, Client $client): array
                     $operation->wait();
                 } while ($packet?->kind !== 'terminal');
             } finally { $operation->close(); }
-        } else $packets = $client->$verb($question, $input, $options, $cancel)->packets;
+        } else {
+            $call = $client->$verb($question, $input, new ThinkThen\Inputs\Options(...$options), $cancel);
+            $packets = $call->packets;
+        }
     } catch (CallFailure $error) {
         if (!$error->packets) throw $error;
         $packets = $error->packets;
     }
-    return ['packets' => array_map(fn($p) => $p->toObject(), $packets)];
+    return ['packets' => array_map(fn($p) => fixtureValue($p), $packets),
+        ...($callResult ? ['call_result' => ['value' => fixtureValue($call->value), 'probability' => $call->probability,
+            'results' => fixtureValue($call->results), 'facts' => fixtureValue($call->facts)]] : [])];
 }
 $client = null;
 try {
     $fixture = json_decode(file_get_contents($argv[1]), flags: JSON_THROW_ON_ERROR);
-    $client = new Client(json_decode($argv[3], true, flags: JSON_THROW_ON_ERROR), $argv[2]);
+    $client = new Client(new ThinkThen\Inputs\Settings(...json_decode($argv[3], true, flags: JSON_THROW_ON_ERROR)), $argv[2]);
     $payload = consume($fixture, $client);
 } catch (CallFailure $error) {
     $kind = match (get_class($error)) {
-        ThinkThen\UsageFailure::class => ThinkThen\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Session\THINKTHEN_EDEADLINE,
-        ThinkThen\LocalFailure::class => ThinkThen\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Session\THINKTHEN_EDEFECT,
+        ThinkThen\UsageFailure::class => ThinkThen\Internal\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Internal\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Internal\Session\THINKTHEN_EDEADLINE,
+        ThinkThen\LocalFailure::class => ThinkThen\Internal\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Internal\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Internal\Session\THINKTHEN_EDEFECT,
     };
     $payload = ['admission' => ['code' => $kind, 'message' => $error->getMessage()]];
 } finally { $client?->close(); }

@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"runtime"
 	"sync"
 )
@@ -23,7 +22,7 @@ type Client struct {
 }
 
 func NewClient(settings EngineSettings) (*Client, error) {
-	data, err := json.Marshal(settings)
+	data, err := transportMarshal(settings)
 	if err != nil {
 		return nil, err
 	}
@@ -51,13 +50,17 @@ func (c *Client) Close() {
 	}
 }
 
-type OwnedCall struct {
-	Packets  []OwnedSessionPacket
-	Terminal *OwnedSessionPacketTerminal
+type Call struct {
+	Value       any
+	Probability Probability
+	Results     []Receipt
+	Facts       Facts
+	Packets     []SessionPacket
+	Terminal    *SessionPacketTerminal
 }
 type SessionError struct {
-	Call   OwnedCall
-	Detail OwnedError
+	Call   Call
+	Detail FailureDetail
 }
 
 func (e *SessionError) Error() string { return e.Detail.Message().Value }
@@ -65,7 +68,11 @@ func sessionFailure(code C.int) error {
 	if code == 0 {
 		return nil
 	}
-	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message())}
+	facts := Facts{ownedJSON{raw: json.RawMessage("{}")}}
+	if borrowed := C.thinkthen_session_error_facts_json(); borrowed != nil {
+		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
+	}
+	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message()), Retryable: C.thinkthen_session_error_retryable() != 0, Facts: facts}
 }
 func descriptor(value any) RequestItem {
 	if item, ok := value.(RequestItem); ok {
@@ -76,36 +83,22 @@ func descriptor(value any) RequestItem {
 	}
 	return JSONItem(value)
 }
-func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	var result OwnedCall
+func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input RequestInput, options *RequestOptions) (Call, error) {
+	var result Call
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	var source RequestInput
-	producer, feeding := input.(Producer)
+	source := input
+	feedInput, feeding := input.(FeedInput)
+	producer := feedInput.Producer
+	if feeding && nilProducer(producer) {
+		return result, &Error{Code: int(KindUsage), Kind: KindUsage, Message: "FeedInput requires a non-nil Producer", Facts: Facts{ownedJSON{raw: json.RawMessage("{}")}}}
+	}
 	if feeding {
 		source = RequestInputFeed{Name: "records"}
-	} else if explicit, ok := input.(RequestInput); ok {
-		source = explicit
-	} else if files, ok := input.(RequestSource); ok {
-		source = RequestInputSource{Source: files}
-	} else {
-		values := []any{input}
-		rv := reflect.ValueOf(input)
-		if rv.IsValid() && (rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array) {
-			values = make([]any, rv.Len())
-			for i := range values {
-				values[i] = rv.Index(i).Interface()
-			}
-		}
-		items := make([]RequestItem, len(values))
-		for i, v := range values {
-			items[i] = descriptor(v)
-		}
-		source = RequestInputRecords{Items: items}
 	}
 	if options == nil {
 		options = &RequestOptions{}
@@ -118,7 +111,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		if i == 0 {
 			data = []byte(verb)
 		} else {
-			data, err = json.Marshal(value)
+			data, err = transportMarshal(value)
 		}
 		if err != nil {
 			return result, err
@@ -155,7 +148,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	}
 	var feed *producerReader
 	if feeding {
-		feed = startProducer(readerCtx, producer)
+		feed = startProducer(readerCtx, producer, session)
 	}
 	active := activeSession{cancel: stopReader}
 	if feed != nil {
@@ -163,8 +156,20 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	}
 	c.sessions[session] = active
 	c.mu.Unlock()
+	watchStop := make(chan struct{})
+	watchDone := make(chan struct{})
+	go func() {
+		defer close(watchDone)
+		select {
+		case <-readerCtx.Done():
+			C.thinkthen_session_cancel(session)
+		case <-watchStop:
+		}
+	}()
 	defer func() {
 		stopReader()
+		close(watchStop)
+		<-watchDone
 		if feed != nil {
 			<-feed.done
 		}
@@ -193,9 +198,25 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		runtime.LockOSThread()
 		var status C.uint32_t
 		var packet *C.thinkthen_session_result
-		err = sessionFailure(C.thinkthen_session_try_read(session, &status, &packet))
+		err = sessionFailure(C.thinkthen_session_next_packet(session, C.THINKTHEN_SESSION_WAIT_RESULT_V1, &status, &packet))
 		if err != nil {
 			runtime.UnlockOSThread()
+			c.mu.Lock()
+			closed := c.closed
+			c.mu.Unlock()
+			if closed {
+				return result, ErrClosed
+			}
+			if ctx.Err() != nil {
+				return result, ctx.Err()
+			}
+			if feed != nil {
+				stopReader()
+				<-feed.done
+				if feed.err != nil {
+					return result, feed.err
+				}
+			}
 			return result, err
 		}
 		if status == 0 {
@@ -208,10 +229,19 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			}
 			C.thinkthen_session_result_free(packet)
 			runtime.UnlockOSThread()
+			if ctx.Err() != nil {
+				return result, ctx.Err()
+			}
+			c.mu.Lock()
+			closed := c.closed
+			c.mu.Unlock()
+			if closed {
+				return result, ErrClosed
+			}
 			if err != nil {
 				return result, err
 			}
-			value, decodeErr := ownedDecode[OwnedSessionPacket](raw)
+			value, decodeErr := ownedDecode[SessionPacket](raw)
 			if decodeErr != nil {
 				return result, decodeErr
 			}
@@ -221,10 +251,13 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 				return result, packetKind.Err
 			}
 			if packetKind.Value == "terminal" {
-				terminal, decodeErr := ownedDecode[OwnedSessionPacketTerminal](raw)
+				terminal, decodeErr := ownedDecode[SessionPacketTerminal](raw)
 				result.Terminal = &terminal
 				err = decodeErr
 				if err != nil {
+					return result, err
+				}
+				if err = result.settle(verb, input); err != nil {
 					return result, err
 				}
 				failed := result.Terminal.Failure()
@@ -242,74 +275,9 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			}
 		} else {
 			runtime.UnlockOSThread()
-			if status == 2 {
-				return result, errors.New("native session ended before terminal facts")
-			}
-			if feed != nil {
-				if err = feed.advance(session, stopReader); err != nil {
-					return result, err
-				}
-			}
-			var next <-chan producerValue
-			if feed != nil && !feed.finished && feed.pending == nil {
-				next = feed.values
-			}
-			interest := C.uint32_t(C.THINKTHEN_SESSION_WAIT_RESULT_V1)
-			if feed != nil && feed.pending != nil {
-				interest = C.THINKTHEN_SESSION_WAIT_INPUT_V1
-			}
-			waited := make(chan error, 1)
-			go func() {
-				runtime.LockOSThread()
-				defer runtime.UnlockOSThread()
-				var ready C.uint32_t
-				waited <- sessionFailure(C.thinkthen_session_wait(session, interest, 50, &ready))
-			}()
-			select {
-			case <-ctx.Done():
-				C.thinkthen_session_cancel(session)
-				err = <-waited
-			case value := <-next:
-				feed.pending = &value
-				err = <-waited
-			case err = <-waited:
-			}
-			// Every path joins its native wait before the deferred free.
-			if err != nil {
-				return result, err
-			}
+			return result, errors.New("native session ended before terminal facts")
 		}
 	}
-}
-func (c *Client) Decide(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "decide", question, input, options)
-}
-func (c *Client) Choose(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "choose", question, input, options)
-}
-func (c *Client) Tag(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "tag", question, input, options)
-}
-func (c *Client) Score(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "score", question, input, options)
-}
-func (c *Client) Filter(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "filter", question, input, options)
-}
-func (c *Client) Rank(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "rank", question, input, options)
-}
-func (c *Client) Find(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "find", question, input, options)
-}
-func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "annotate", question, input, options)
-}
-func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "recognize", question, input, options)
-}
-func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "relate", question, input, options)
 }
 
 // UsageStatus owns one native observation and remains valid after Close.
@@ -318,12 +286,8 @@ type UsageStatus struct {
 	advice Presence[string]
 }
 
-func (s UsageStatus) State() UsagePersistenceState              { return s.state }
-func (s UsageStatus) Advice() Presence[string]                  { return s.advice }
-func (c *Client) UsagePersistence() (UsageStatus, error)        { return c.engine.UsagePersistence() }
-func (c *Client) FinishUsageStatus() (UsageStatus, error)       { return c.engine.FinishUsageStatus() }
-func (e *nativeEngine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }
-func (e *nativeEngine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
+func (s UsageStatus) State() UsagePersistenceState { return s.state }
+func (s UsageStatus) Advice() Presence[string]     { return s.advice }
 func (e *nativeEngine) usageStatus(finish bool) (UsageStatus, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()

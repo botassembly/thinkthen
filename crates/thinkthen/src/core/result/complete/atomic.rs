@@ -1,4 +1,4 @@
-//! Complete atomic judgments share the frozen compatibility answer representation.
+//! Complete atomic judgments retain native fields for the current result contract.
 
 use serde::{Serialize, Serializer};
 
@@ -12,27 +12,52 @@ pub(crate) struct Atomic {
     pub(crate) function: crate::core::image::InputFunction,
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
-    pub(crate) compatibility: DecisionResult,
+    pub(crate) value: crate::core::Value,
+    pub(crate) input: Option<crate::core::Record>,
+    pub(crate) question: crate::core::Question,
+    pub(crate) answer: Answer,
+    pub(crate) threshold: Option<crate::core::Threshold>,
+    pub(crate) meta: crate::core::Meta,
     pub(crate) rank_position: Option<std::num::NonZeroUsize>,
     pub(crate) source: Option<super::wire::PhysicalSource>,
     pub(crate) images: Option<Vec<crate::core::image::Image>>,
 }
 
 impl Atomic {
+    /// Temporary result/1 bridge for database callers that still require scalar details.
+    pub(crate) fn scalar_details(&self, input: Option<crate::core::Record>) -> DecisionResult {
+        let row = DecisionResult::new(
+            self.value.clone(),
+            self.question.clone(),
+            self.answer.clone(),
+            self.threshold,
+            self.meta.clone(),
+        );
+        match input {
+            Some(input) => row.with_input(input),
+            None => row,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) const fn cached(&self) -> bool {
+        self.meta.cached
+    }
+
     pub(crate) fn clear_batch_metadata(&mut self) {
-        self.compatibility.meta.batch_setting = None;
-        self.compatibility.meta.batch_warning = None;
+        self.meta.batch_setting = None;
+        self.meta.batch_warning = None;
     }
 
     pub(crate) const fn question(&self) -> &crate::core::Question {
-        &self.compatibility.question
+        &self.question
     }
     pub(crate) const fn threshold(&self) -> Option<crate::core::Threshold> {
-        self.compatibility.threshold
+        self.threshold
     }
 
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
-        self.compatibility.meta.fields()
+        self.meta.fields()
     }
 
     pub(crate) fn ranked(
@@ -40,7 +65,7 @@ impl Atomic {
         record: usize,
         position: std::num::NonZeroUsize,
     ) -> Result<Self, crate::core::RenderError> {
-        self.compatibility.threshold = None;
+        self.threshold = None;
         self.rank_position = Some(position);
         self.identity = crate::core::ResultIdentity::of(
             crate::core::image::InputFunction::Rank,
@@ -48,7 +73,7 @@ impl Atomic {
             self.identity.question_sources().to_vec(),
             self.identity.observations().to_vec(),
             &crate::core::AtomicReading {
-                question: &self.compatibility.question,
+                question: &self.question,
                 threshold: None,
                 rank_position: Some(position),
             },
@@ -58,19 +83,19 @@ impl Atomic {
     }
 
     pub(crate) const fn value(&self) -> &crate::core::Value {
-        &self.compatibility.value
+        &self.value
     }
 
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
-        self.compatibility.meta.reported_usage
+        self.meta.reported_usage
     }
 
     pub(crate) const fn usage(&self) -> Option<Usage> {
-        self.compatibility.meta.usage
+        self.meta.usage
     }
 
     pub(crate) const fn answer(&self) -> &Answer {
-        &self.compatibility.answer
+        &self.answer
     }
 }
 
@@ -117,9 +142,9 @@ impl Atomic {
                 .document(input, question_name, index, members, position)
                 .serialize(serializer);
         }
-        match (self.function, &self.compatibility.value) {
+        match (self.function, &self.value) {
             (InputFunction::Decide, Value::YesNo(value)) => {
-                let meaning = match (&self.compatibility.question, value) {
+                let meaning = match (&self.question, value) {
                     (crate::core::Question::Decide { yes, .. }, Some(true)) => yes.as_ref(),
                     (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
                     _ => None,
@@ -144,13 +169,7 @@ impl Atomic {
                 .document(input, question_name, index, members, *value)
                 .serialize(serializer),
             _ => self
-                .document(
-                    input,
-                    question_name,
-                    index,
-                    members,
-                    &self.compatibility.value,
-                )
+                .document(input, question_name, index, members, &self.value)
                 .serialize(serializer),
         }
     }
@@ -163,7 +182,7 @@ impl Atomic {
         members: Option<Vec<super::wire::RankMemberDocument<'a>>>,
         value: V,
     ) -> super::wire::AtomicDocument<'a, T, V> {
-        let row = &self.compatibility;
+        let row = self;
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
@@ -187,6 +206,6 @@ impl Atomic {
 
 impl Serialize for Atomic {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_with_input(self.compatibility.input.as_ref(), serializer)
+        self.serialize_with_input(self.input.as_ref(), serializer)
     }
 }

@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision f9cefb6, accept
+
 ## Outcome
 
 The PostgreSQL extension ships and passes its installed checks on PostgreSQL 16, 17 and 18.

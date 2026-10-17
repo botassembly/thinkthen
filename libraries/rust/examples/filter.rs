@@ -11,9 +11,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Arrived a day early. Thank you!",
         "The zipper broke the first time I used it.",
     ];
+    let kept = tt.filter(&complaint, reviews)?;
     let mut out = std::io::stdout().lock();
-    for kept in tt.filter(&complaint, reviews) {
-        writeln!(out, "{}", kept?)?;
+    for row in kept.into_value() {
+        writeln!(out, "{row}")?;
     }
     Ok(())
 }

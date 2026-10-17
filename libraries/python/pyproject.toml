@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "thinkthen"
 version = "0.2.0"
 description = "Semantic judgments over text for Python, through the thinkthen engine"
-readme = "README.md"
+readme = "README-PUBLIC.md"
 license = { text = "MIT" }
 authors = [{ name = "Ian Maurer" }]
 requires-python = ">=3.10"

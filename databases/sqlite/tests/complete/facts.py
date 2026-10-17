@@ -30,6 +30,8 @@ def main():
         env=child_env(home=tmp,
                       PATH=os.environ['PATH'],
                       LANG='C.UTF-8',
+                      CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR',str(Path(__file__).resolve().parents[4]/'target')),
+                      THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE','routine'),
                       LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH',''),
                       THINKTHEN_API_KEY='sk-conformance-loopback')
         server=Listener(('127.0.0.1',0),Reply)
@@ -37,6 +39,7 @@ def main():
         base=f'http://127.0.0.1:{server.server_port}/v1'
         host=None
         if consumer=='postgresql':
+            env['CARGO_TARGET_DIR']=str(Path(os.environ.get('CARGO_TARGET_DIR',Path(__file__).resolve().parents[4]/'databases/postgresql/target')).resolve())
             from postgresql_host import PostgresqlHost
             host=PostgresqlHost();host.start({**env,'THINKTHEN_BASE_URL':base})
         try:

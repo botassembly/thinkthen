@@ -13,7 +13,7 @@ SELECT p.records, p.requests FROM
 query T
 SELECT typeof(thinkthen_plan('asks for a refund', '{"7":"Refund me please."}', '{}'));
 ----
-STRUCT(records BIGINT, requests BIGINT, estimated_bytes BIGINT, estimated_input_tokens STRUCT(lower BIGINT, upper BIGINT), upper_bound BOOLEAN, first_body VARCHAR)
+STRUCT(records BIGINT, requests BIGINT, estimated_bytes BIGINT, estimated_input_tokens STRUCT(lower BIGINT, upper BIGINT), upper_bound BOOLEAN, first_body JSON)
 
 statement error
 SELECT thinkthen_plan('asks for a refund', '["not keyed"]');

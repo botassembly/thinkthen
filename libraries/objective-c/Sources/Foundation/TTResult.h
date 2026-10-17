@@ -6,8 +6,7 @@ typedef NS_ENUM(NSUInteger, TTPresenceState) { TTPresenceMissing, TTPresenceNull
 @property(nonatomic, readonly) TTPresenceState state;
 @property(nonatomic, readonly, nullable) ValueType value;
 @end
-/** A host-owned result. Unknown members remain available in fields. */
+/** A host-owned result with typed field accessors. */
 @interface TTResultNode : NSObject
-@property(nonatomic, copy, readonly) NSDictionary<NSString *, id> *rawFields;
 @end
 NS_ASSUME_NONNULL_END

@@ -1,4 +1,5 @@
-use super::{QuestionKey, State, asks, read, shares};
+//! Stays: encoded request limits, cache key framing and usage division need direct byte and arithmetic checks.
+use super::{QuestionKey, State, asks, read_for, shares};
 use crate::core::adapters::built_in;
 use crate::core::question::{Labels, Question};
 use crate::core::reply::{AnswerOutcome, BackendFailure, BackendFailureCause};
@@ -34,10 +35,9 @@ fn quoted(record: &str, question: Question) -> Plan {
     .expect("a quoted plan")
 }
 
-/// Both expected hashes were computed independently: compatibility LF parts and
-/// question-key/2 tagged NUL/u64-BE framing, with both model constituents.
+/// Expected hashes use independent question-key/2 framing with both models.
 #[test]
-fn versioned_keys_frame_both_models_and_legacy_keys_keep_original_lf_bytes() {
+fn versioned_keys_frame_both_models() {
     let plan = quoted("Ringo", decide("Is this a drummer?"));
     let asked = asks(&url(), &plan).expect("asks");
     let [ask] = asked.as_slice() else {
@@ -50,10 +50,6 @@ fn versioned_keys_frame_both_models_and_legacy_keys_keep_original_lf_bytes() {
     assert_eq!(
         ask.key.hex(),
         "d21000051b969fadc4e76c230216012443229ca36fcd7302ee94b3883d73af2f"
-    );
-    assert_eq!(
-        QuestionKey::of(&url(), "\"jev-1.13.0\"", ask.state.json(), &ask.question).hex(),
-        "6950b38cb4dbbf9ccc90be362a126dee1e40c1ff72dd1f81168ccd37a110fa5f"
     );
     assert_eq!(
         crate::core::digest::hex(ask.state.sha256()),
@@ -106,9 +102,16 @@ fn a_tag_answer_joins_its_labels_and_fails_with_its_first_failed_label() {
         .expect("two labels"),
     };
     let noul = r#"{"type":"noul","noul":0.75}"#;
-    let joined = read(std::slice::from_ref(&tag), &[Ok(noul), Ok(noul)], "jev-1").expect("read");
+    let joined = read_for(
+        crate::core::adapters::ApiType::Primary,
+        std::slice::from_ref(&tag),
+        &[Ok(noul), Ok(noul)],
+        "jev-1",
+    )
+    .expect("read");
     assert!(matches!(joined.as_slice(), [AnswerOutcome::Answered(_)]));
-    let failed = read(
+    let failed = read_for(
+        crate::core::adapters::ApiType::Primary,
         &[tag, decide("Is it late?")],
         &[
             Ok(noul),
@@ -130,7 +133,15 @@ fn a_tag_answer_joins_its_labels_and_fails_with_its_first_failed_label() {
 #[test]
 fn a_stored_answer_of_the_wrong_shape_does_not_decode() {
     let wrong = r#"{"type":"choice","probabilities":{"a":1.0}}"#;
-    assert!(read(&[decide("Is it late?")], &[Ok(wrong)], "jev-1").is_err());
+    assert!(
+        read_for(
+            crate::core::adapters::ApiType::Primary,
+            &[decide("Is it late?")],
+            &[Ok(wrong)],
+            "jev-1"
+        )
+        .is_err()
+    );
 }
 
 #[test]

@@ -2,6 +2,10 @@
 
 Shared rules live in [README.md](README.md). That page fixes the nine functions and the eight rules. This page holds what is particular to DuckDB. The C API experiment and ticket 0110 paragraphs below are historical evidence. Ticket 0201's Linux x86_64 candidate uses a pinned C++ host extension and Rust bridge; its wider release target choice remains open.
 
+## Typed details calls
+
+Each function has one details name, `thinkthen_<function>_details`. An ordinary call returns a typed struct. A record list returns a list of those structs, which SQL can expand with `UNNEST`. Every struct contains `ordinal`, `value`, `probability`, `result`, `failure`, `facts` and `observations`. Rank and relate place their call-wide observations only on the row whose `ordinal` is zero; later rows contain empty observation arrays. Use that ordinal to find the observations after reordering rows. Every observation appears once, and native output remains unchanged. Each relate result holds its own edge and retains the original question, input, metadata and answer identity. The shared Request contract owns record admission and recovery. The plain functions return their plain values. The old generic details names, complete names and record-list overloads of plain names are removed.
+
 ## What really good looks like
 
 A user installs one extension, stores a key once, and points a query at a file already on disk. No table is created and no script runs beside the query.
@@ -23,7 +27,7 @@ SELECT id, thinkthen_annotate('triage.json', body) AS triage_json FROM 'inbox.pa
 - `INSTALL thinkthen FROM community` on every platform DuckDB's CI builds and signs. The Linux x86_64 candidate uses the pinned C++ v1.5.5 host API; its extension loads in stock v1.5.5 CLI and Python and refuses stock v1.5.4. The retired C API path required `USE_UNSTABLE_C_API=1` (207). Other release targets still need a C++ package decision.
 - The whole chunk of 2,048 rows crosses into the engine once and runs at the throttle the engine names.
 - Repeated text in one chunk costs one judgment. The shim groups the chunk by the pair of question and text, and writes the one answer into every row holding that pair.
-- A bad question or a bad threshold fails before any paid request. The C++ candidate validates ordinary foldable questions at bind and nonconstant chunks before their first send. `thinkthen_try_details` instead retains recoverable failures as safe row values. The C API bind crash in experiment 207 is the reason for the migration.
+- A bad question or a bad threshold fails before any paid request. The C++ candidate validates ordinary foldable questions at bind and nonconstant chunks before their first send. `thinkthen_<function>_details` retains recoverable failures on their input rows and continues later records. Cancellation, deadlines and defects raise. The C API bind crash in experiment 207 is the reason for the migration.
 - `thinkthen_annotate` returns JSON text under the retained SQL contract. `thinkthen_tag` returns a real `LIST`.
 - A `NULL` text costs nothing. DuckDB skips the call and writes `NULL` unless the function asks for special handling, and this one does not.
 - The key stays in the environment variable. The stable C API registers no secret type and exposes no secret call, and a `SET` would put the key into SQL text anyway (207).

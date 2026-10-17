@@ -135,7 +135,7 @@ impl Engine {
             Box::new(|_, original: &(Held<T>, Input)| {
                 Ok(Input {
                     at: original.1.at,
-                    members: original.1.members.iter().map(Prepared::duplicate).collect(),
+                    members: original.1.members.iter().map(Prepared::clone).collect(),
                 })
             }),
             Box::new(move |stop, at, original, row| {

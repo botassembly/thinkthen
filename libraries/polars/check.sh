@@ -30,6 +30,7 @@ scratch_dir scratch
 export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTHEN_CACHE="$scratch/thinkthen"
 
 # Its own target folder keeps these builds from evicting the other rungs'.
+runtime_target=${CARGO_TARGET_DIR:-$PWD/target}
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
 consumer=libraries/polars/consumer/Cargo.toml
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
@@ -80,7 +81,7 @@ if [ "$profile" != full ]; then
     cargo clippy --locked --offline --manifest-path "$consumer" --all-targets -- -D warnings
 fi
 cargo build --locked --offline --manifest-path "$consumer"
-python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" <<'PYFRAME'
+python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" "$runtime_target" <<'PYFRAME'
 import sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
@@ -88,5 +89,7 @@ from native_fixture import run
 import os
 if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
     os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
+else:
+    os.environ['CARGO_TARGET_DIR'] = sys.argv[3]
 sys.exit(bool(run('rust-polars',[str(Path(sys.argv[2]).resolve())],root)))
 PYFRAME

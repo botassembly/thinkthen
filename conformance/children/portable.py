@@ -42,6 +42,17 @@ def question_keys(url, body):
     one_portable_request([body])
     state, model, questions = fixture_questions()
 
+    return [canonical_question_key(url, model, model, state, question) for question in questions]
+
+
+def cache_question_keys(url, state, requested_model, answered_model, questions):
+    """Return canonical cache/2 keys for authored questions in their input order."""
+    return [canonical_question_key(url, requested_model, answered_model, state, question)
+            for question in questions]
+
+
+def canonical_question_key(url, requested_model, answered_model, state, question):
+    """Reuse the canonical cache/2 framing for one authored text question."""
     # Match the endpoint resolver: lowercase scheme and literal host letters,
     # preserve host escapes and bracketed addresses, and drop trailing slashes.
     scheme, rest = url.strip().rstrip("/").split("://", 1)
@@ -55,13 +66,10 @@ def question_keys(url, body):
 
     def compact(value):
         return json.dumps(value, separators=(",", ":"), ensure_ascii=False)
-    def key(question):
-        parts = ["systemone", url, compact(model), compact(model),
-                 compact(state), compact(question)]
-        framed = b"thinkthen.question-key/2\0"
-        for part in parts:
-            encoded = part.encode("utf-8")
-            framed += len(encoded).to_bytes(8, "big") + encoded
-        return hashlib.sha256(framed).hexdigest()
-
-    return [key(question) for question in questions]
+    parts = ["systemone", url, compact(requested_model), compact(answered_model),
+             compact(state), compact(question)]
+    framed = b"thinkthen.question-key/2\0"
+    for part in parts:
+        encoded = part.encode("utf-8")
+        framed += len(encoded).to_bytes(8, "big") + encoded
+    return hashlib.sha256(framed).hexdigest()

@@ -1,3 +1,4 @@
+//! Stays: pacing, deadlines and cancellation races need direct clock and concurrency checks.
 //! One retry gate and one pacer per posting address. `engine::limits` holds
 //! the one set this process's engines share.
 

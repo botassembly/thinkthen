@@ -12,9 +12,34 @@ Native callers construct typed Request values without a JSON round trip. Direct 
 
 C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface languages use the session and generated host result types, rather than hand-copied native layouts and readers. Generate declarations and presence discriminators from the source of truth; keep no private schema or field list. The generated C header remains the ABI contract.
 
-[0515](../sdlc/tickets/0515-one-public-api-per-language.md) removes dead and unshipped binding code. Each language's migration ticket removes that language's 0.1 JSON-string calls and duplicate APIs after its replacement passes. Frozen 0.1 C symbols remain for C compatibility and are documented as deprecated. Their accepted legacy grammar and behavior remain protected by ADR 0125; this exception does not create a second host-language API.
+[0515](../sdlc/tickets/0515-one-public-api-per-language.md) removes dead and unshipped binding code. Each language's migration ticket removes duplicate APIs after its replacement passes. [The no-compatibility ruling](../sdlc/decisions/2026-10-12-no-compatibility-before-1-0.md) requires removal of old public names and compatibility-only code, tests and documentation. The [generated C header](c/include/thinkthen.h) defines the current C exports.
 
 [0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) designs how each package carries its prebuilt native library for supported platforms. Each migration ticket builds its own package under that design. Installation and the first call require no manual library path. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
+
+## Existing test folders
+
+Keep each library's current test folder. The surface manifest classifies source in that folder and its examples as test code. The size report and handwritten production checks share that classification. Generated files remain generated regardless of their folder.
+
+| Library | Main test folder | Examples folder |
+| --- | --- | --- |
+| Python | `tests` | `examples` |
+| TypeScript | `tests` | `examples` |
+| Ruby | `tests` | `examples` |
+| R | `tests` | `examples` |
+| C | `tests` | `examples` |
+| C++ | `fixtures` | `examples` |
+| C# | `tests` | `examples` |
+| Go | `fixtures` | `examples` |
+| JVM | `tests` | `examples` |
+| Swift | `Tests` | `Examples` |
+| Zig | `Tests` | `examples` |
+| PHP | `fixtures` | `examples` |
+| Dart and Flutter | `checks` | `example` |
+| Ada | `checks` | `examples` |
+| Objective-C | `checks` | `examples` |
+| COBOL | `checks` | `examples` |
+
+Folder names also classify nested example projects. A listed examples folder need not exist when the library has no example yet. Do not rename folders to match another language.
 
 ## Caller acceptance and code ownership
 
@@ -22,13 +47,13 @@ The [native package design](../sdlc/decisions/2026-10-09-native-package-design.m
 
 An ordinary caller installs a package, supplies native host values to a named function, reads a native answer or complete result, handles a typed failure, cancels work where the host supports it, and releases resources through the host's normal idiom. The caller does not build transport JSON, decode result JSON or find a native library by hand. Structured JSON supplied as evidence remains valid data. Internal JSON transport does not determine the public interface.
 
-One public API means one coherent function family. Bare answers, complete details, synchronous calls and host-appropriate async calls may be views of that family. It does not mean one untyped generic call or removing useful typed methods to meet an export count. Each migration declares its recommended calls and the old names it replaces; The migration removes the old names only after replacement parity. Frozen C compatibility remains separate.
+One public API means one coherent function family. Bare answers, complete details, synchronous calls and host-appropriate async calls may be views of that family. It does not mean one untyped generic call or removing useful typed methods to meet an export count. Each migration declares its recommended calls and the old names it replaces; the migration removes the old names only after replacement parity.
 
 Minimize maintained logic across the engine, generator, templates and host glue together. Moving handwritten rules into per-language templates does not remove duplication. Generate declarations and mechanical conversions from Rust; host code owns naming, value conversion, representation checks, scheduling, authority and cleanup. Share transport and ownership within JVM and Dart/Flutter families. A small amount of explicit host code is appropriate when its removal would make ordinary calls, errors or cleanup harder. Record actual handwritten code removed and added, including generator/template cost, in the existing landing record; set no arbitrary line target and add no recurring measurement process.
 
 0513 completes the shared semantic graph, generator mechanics and C# reference. Host migration tickets own their target templates, outputs and installed adoption. 0505 supplies additive complete C session views for C and Zig. Ada (0528) and COBOL (0529) generate their declarations from those views. A generated header over an incomplete old carrier is not complete typed access. Known observations, presence, partial usage and failure facts must survive native serialization before any host round trip can prove them.
 
-The native session wait consumes no packet or descriptor. Result interest ignores available input room; Input interest also observes capacity and intake closure. Both interests wake on cancellation. Settlement interest ignores cancellation so a caller can drain final packets while provider work remains pending. Ready output takes priority over cancellation, and a caller still uses the nonblocking read or push to transfer ownership. The Rust session method and generated C header define the wait contract.
+The native session wait consumes no packet or descriptor. Result interest ignores available input room; Input interest also observes capacity and intake closure. Both interests wake on cancellation. Settlement interest ignores cancellation so a caller can drain final packets while provider work remains pending. An exclusive settlement reader uses SettlementArm before checking its caller cancellation or disposal state, then InterruptibleSettlement to wait. Arming discards earlier cancellation notifications and checks readiness immediately (C requires a zero timeout; Rust ignores its duration); later cancellation persists until the next arm, including cancellation before the blocking call enters. Another reader must not rearm an active wait. Ready output takes priority over cancellation, and a caller still uses the nonblocking read or push to transfer ownership. The Rust session method and generated C header define the wait contract.
 
 A host wait retains its session owner until native return. Cancel signals the native condition and returns without joining provider work; close detaches host ownership and frees only after every active native wait returns. C exports take shared handle borrows and synchronize queue access. Each worker copies any immediate failure on the same operating-system thread that made the failing call. An asynchronous bridge uses a dedicated worker, dispatch queue or helper isolate and retains at most one pending wait per read/producer path; a caller must join direct synchronous waits before closing their owner. A bounded native timeout lets a synchronous host check its interrupts without a sleep or scheduler timer. Manual polling facades keep their reads nonblocking and offer only the minimal wait needed to use their private owner.
 
@@ -184,7 +209,7 @@ C# uses the [0516 pilot](../sdlc/tickets/0516-csharp-thin-first-class-pilot.md):
 
 | Item | Expected form |
 | --- | --- |
-| Calls | One current typed API; deprecated frozen ABI retained. |
+| Calls | One current API with sessions and generated typed packet views. |
 | Inputs | Generated descriptors and owned feeds. |
 | Typed results | Generated fixed result layouts. |
 | Absence | Generated presence tags distinct from null. |
@@ -425,12 +450,14 @@ Use the existing checks below. Their present scope does not establish future gen
 | Pure core, dependency direction and source boundaries | [policy.py](../sdlc/scripts/policy.py), run by [lint](../sdlc/scripts/lint); [Rust standards](../sdlc/planning/rust-standards.md) | No inward edge dependency or copied rule; 0511 adds checks for repeated limits and cross-crate path includes. Review catches semantic validation copies. |
 | Rust schema ownership and presence | [schema tests](../crates/thinkthen/src/schema_tests.rs), [request schema](../specification/request.schema.json), [result corpus](../specification/fixtures/types/) | Generated bytes agree with Rust; missing, null, false, failure, unknown fields and every function survive host conversion. 0513 adds stale-output enforcement for generated host types. |
 | Shared behavior and complete observations | [conformance cases](../conformance/cases.json), [conformance runner](../conformance/parity.py), each package's existing check.sh | Run the shared cases through the real host API. Retain all result observations and failure facts. Plans and invalid-input refusals prove zero sends by loopback request counts. |
-| C ABI and constrained layouts | [header generator](../sdlc/scripts/generate-c-header.py), [export check](../sdlc/scripts/check-c-exports.py), [C door tests](c/tests/door/main.rs) | Generated declarations match the Rust ABI; frozen symbols and behavior remain. Measure layout through the target compiler rather than trusting a copied declaration. |
+| C ABI and constrained layouts | [header generator](../sdlc/scripts/generate-c-header.py), [export check](../sdlc/scripts/check-c-exports.py), [C door tests](c/tests/door/main.rs) | Generated declarations match the Rust ABI and the library exports match the current header. Measure layout through the target compiler rather than trusting a copied declaration. |
 | Async, cancellation and cleanup | Each package's existing check.sh and [shared native consumers](../conformance/consumer/) | Exercise cancellation, blocked-provider cleanup, stopped readers, backpressure and owned buffer lifetimes at the public boundary. 0503 owns session lifetime cases; host migration adds its idiom cases. |
-| Editor support and one API | Each package's compiler/import checks and existing export inventories | A real consumer compiles or imports generated types and uses named calls; deprecated frozen C exports do not authorize duplicate host entry points. Each migration removes its old host calls. Each migration's installed check compares the package's public symbols with its declared recommended API. |
+| Editor support and one API | Each package's compiler/import checks and existing export inventories | A real consumer compiles or imports generated types and uses named calls through one public API. Each migration removes its old host calls. Each migration's installed check compares the package's public symbols with its declared recommended API. |
 | Installed package and native assets | Existing package checks, including [C#](csharp/tests/package_check.py) and [JVM](jvm/tests/package_check.py), and the [release package checks](../sdlc/scripts/README.md) | Install a local artifact in a clean environment and run a real call without a library path override. Migration packaging slices and 0501 share the generated product inventory for builders and installed checks. |
 
 Test children use a cleared, explicit environment with owned cache/state directories, the loopback address and a fake key only when needed. A plan test uses no key. Source-tree checks and installed-artifact checks report separate evidence. Replay changed documentation examples. Run the smallest relevant format, policy and functional checks. The coordinator runs the routine suite once at ticket closure; large-input and full parity runs wait for the release suite. Hosted qualification and publication retain the release hold.
+
+Library checks source the shared compiler admission entry after resolving the repository and clearing credentials: set `heavy_scripts="$repo/sdlc/scripts"`, then source `"$heavy_scripts/heavy-compile"`. The separate default rung entry `heavy-lock` always clears credentials through its allowlist before admission and ignores inherited library mode and script path variables. Library owners clear credentials before sourcing the compiler entry. Call `heavy_compile COMMAND ARGUMENTS...` around each compiler phase, including Cargo, CMake and host compilers. The function preserves the check's existing environment boundary and owned `CARGO_TARGET_DIR`, artifact and coverage settings. The supervisor owns compiler descendants until the phase ends; following runtime and parity checks hold no new permit or admission marker. Nested compiler calls reuse an existing permit. Leave source and cache mutation locks exclusive. Generator and core lanes set `heavy_priority=high`; library lanes use the default priority. The process ownership checks qualify Linux; candidate checks qualify other platforms.
 
 The reviewer applies all ten rows to each language and checks the generated source and actual installed consumer. C# and Dart must reach the session, presence, async and cleanup shapes stated above. The reviewer treats missing observations, lost presence, duplicated rules, borrowed buffers outliving their owner and missing packaged native libraries as caller failures. No private copy of the corpus or hand-kept result field inventory stands in for this evidence.
 

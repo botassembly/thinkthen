@@ -31,6 +31,93 @@ def expect(result, text, success=False):
         raise AssertionError((result.args, result.returncode, result.stdout, result.stderr, text))
 
 
+def draft_notes():
+    with tempfile.TemporaryDirectory(prefix="thinkthen-draft-notes-") as temporary:
+        root = Path(temporary)
+        for name in ("sdlc/scripts/release-workflow", "sdlc/scripts/scratch.sh",
+                     "sdlc/scripts/fetch.sh", "crates/thinkthen/Cargo.toml",
+                     "release-notes/0.2.0.md", "release-notes/0.2.0-known-gaps.md"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, target)
+        binary = root / "bin"
+        binary.mkdir()
+        receipt = root / "calls.jsonl"
+        commit = "1" * 40
+        for name, code in {
+            "git": f"#!/bin/sh\nprintf '%s\\n' '{commit}'\n",
+            "python3": "#!/bin/sh\nexit 0\n",
+            "gh": f"#!{sys.executable}\n" + """import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+body = Path(args[args.index('--notes-file') + 1]).read_text() if '--notes-file' in args else None
+with open(os.environ['GH_TEST_RECEIPT'], 'a') as held:
+    held.write(json.dumps([args, body]) + '\\n')
+if args[:2] == ['release', 'view']:
+    sys.exit(1)
+if args[0] == 'api':
+    print('HTTP/2 404')
+""",
+        }.items():
+            path = binary / name
+            path.write_text(code)
+            path.chmod(0o755)
+        files = root / "files"
+        files.mkdir()
+        (files / "fixture.sha256").write_text("checksum\n")
+        env = {"PATH": str(binary) + ":/usr/bin:/bin", "HOME": str(root),
+               "LC_ALL": "C.UTF-8", "GH_TEST_RECEIPT": str(receipt),
+               "GITHUB_REPOSITORY": "botassembly/thinkthen", "GITHUB_REF": "refs/tags/v0.2.0"}
+        expected = ((root / "release-notes/0.2.0.md").read_text() + "\n" +
+                    (root / "release-notes/0.2.0-known-gaps.md").read_text())
+        for mode in ("release", "rehearse"):
+            receipt.write_text("")
+            result = run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                         "v0.2.0", commit, str(files), env=env)
+            expect(result, "", success=True)
+            calls = [json.loads(line) for line in receipt.read_text().splitlines()]
+            created = [call for call in calls if call[0][:2] == ['release', 'create']]
+            wanted = expected if mode == "release" else f"Rehearsal from {commit}; do not publish\n\n" + expected
+            if len(created) != 1 or created[0][1] != wanted:
+                raise AssertionError(("draft notes", mode, created))
+            if ('--draft' not in created[0][0] or
+                    ('--verify-tag' if mode == 'release' else '--target') not in created[0][0]):
+                raise AssertionError(("draft guards", created))
+        for mode, selected, overrides, diagnostic in (
+            ("unexpected", commit, {}, "draft mode must be release or rehearse"),
+            ("rehearse", "2" * 40, {}, "draft checkout differs from resolve SHA"),
+            ("release", commit, {"GITHUB_REF": "refs/heads/main"}, "release ref differs from name"),
+        ):
+            receipt.write_text("")
+            expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                       "v0.2.0", selected, str(files), env=env | overrides), diagnostic)
+            if receipt.read_text():
+                raise AssertionError(("invalid draft reached GitHub", mode, receipt.read_text()))
+        for document in ("0.2.0.md", "0.2.0-known-gaps.md"):
+            page = root / "release-notes" / document
+            body = page.read_text()
+            page.unlink()
+            for mode in ("release", "rehearse"):
+                receipt.write_text("")
+                expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", mode,
+                           "v0.2.0", commit, str(files), env=env), "missing release document release-notes/" + document)
+                if receipt.read_text():
+                    raise AssertionError("missing notes reached GitHub")
+            page.write_text(body)
+        manifest = root / "crates/thinkthen/Cargo.toml"
+        manifest.write_text(manifest.read_text().replace('version = "0.2.0"', 'version = "9.8.7"'))
+        for document in (".md", "-known-gaps.md"):
+            (root / "release-notes" / ("0.2.0" + document)).rename(
+                root / "release-notes" / ("9.8.7" + document))
+        receipt.write_text("")
+        expect(run("sh", str(root / "sdlc/scripts/release-workflow"), "draft", "rehearse",
+                   "v9.8.7", commit, str(files), env=env), "", success=True)
+        created = [json.loads(line) for line in receipt.read_text().splitlines()
+                   if json.loads(line)[0][:2] == ['release', 'create']]
+        if len(created) != 1 or created[0][1] != f"Rehearsal from {commit}; do not publish\n\n" + expected:
+            raise AssertionError(("draft did not load source version documents", created))
+
+
 def resolve_outputs(commit, version):
     repository = "botassembly/thinkthen"
     candidate = f"rc/{version}-rc.1"
@@ -85,7 +172,17 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 
         for number in (1, 2, 12):
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
+        check("rehearse", "refs/heads/main")
+        check("rehearse", "refs/heads/ticket/0543-final")
         check("release", f"refs/tags/v{version}")
+        for branch in ("main", "ticket/0543-final"):
+            branch_run = good | {"head_branch": branch,
+                                 "path": good["path"] + f"@refs/heads/{branch}"}
+            check("release", f"refs/tags/v{version}", page([branch_run]))
+            check("release", f"refs/tags/v{version}",
+                  page([branch_run | {"head_sha": "0" * 40}]), error="absent")
+            check("rehearse", f"refs/heads/{branch}", error="before-query",
+                  override={"GITHUB_SHA": "0" * 40})
         for branch in (candidate, f"rc/{version}-rc.12"):
             for prefix in ("", f"{repository}/"):
                 for suffix in ("", f"@{branch}", f"@refs/tags/{branch}"):
@@ -95,7 +192,7 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
         check("release", f"refs/tags/v{version}", page([]) + "\n" + page([good]))
         for changes in ({"conclusion": "failure"}, {"conclusion": False}, {"conclusion": None},
                         {"head_sha": "0" * 40}, {"head_branch": "v0.1.2"},
-                        {"head_branch": "main"}, {"head_branch": "release/0.1"},
+                        {"head_branch": "ticket/0543-other"}, {"head_branch": "release/0.1"},
                         {"head_branch": "release/12.34"},
                         {"head_branch": "rc/9.9.9-rc.1"},
                         {"head_branch": f"rc/{version}-rc.0"},
@@ -124,7 +221,7 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
             check("release", f"refs/tags/v{version}", malformed, error="read")
         check("release", f"refs/tags/v{version}", page([good]), exit_code=1, error="read")
         candidate_error = f"rehearse must run from an rc/{version}-rc.N tag with positive N"
-        for ref in ("refs/heads/main", "refs/heads/release/0.1", "refs/heads/feature",
+        for ref in ("refs/heads/ticket/0543-other", "refs/heads/release/0.1", "refs/heads/feature",
                     f"refs/tags/v{version}", "refs/tags/rc/9.9.9-rc.1",
                     f"refs/heads/{candidate}", f"refs/tags/rc/{version}-rc.0",
                     f"refs/tags/rc/{version}-rc.01", f"refs/tags/rc/{version}-rc.-1",
@@ -135,7 +232,9 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 raise AssertionError(("resolve candidate sentence", result.stderr))
         for mode, ref, wanted in (
                 ("release", f"refs/tags/{candidate}", "release must run from a v* tag"),
-                ("release", "refs/heads/release/0.1", "release must run from a v* tag")):
+                ("release", "refs/heads/release/0.1", "release must run from a v* tag"),
+                ("release", "refs/heads/main", "release must run from a v* tag"),
+                ("release", "refs/heads/ticket/0543-final", "release must run from a v* tag")):
             result = check(mode, ref, error="before-query")
             if result.stderr != f"release-workflow: {wanted}, got {ref}\n":
                 raise AssertionError(("resolve ref sentence", result.stderr))
@@ -308,19 +407,27 @@ def main():
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
         # release-pack localizes the static library, so the fixture is a real one-function archive.
         (base / "fixture.c").write_text(
-            'const char *thinkthen_fixture(void) { return "/build/home/.rustup/library/std/src/lib.rs"; }\n')
+            'const char *thinkthen_fixture(void) { return "/build/host/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
         cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
-        expect(run(sys.executable, cpp_guard, str(native)), "PRIVATE_PACKAGE_PASS", success=True)
+        native_members = base / "native-members.txt"
+        native_members.write_text("\n".join(str(native / name) for name in
+                                 ("libthinkthen_c.so", "libthinkthen_c.a")) + "\n")
+        # Later build output is not part of the captured shipping install.
+        (native / "later-output.md").write_bytes(b"/Users/synthetic-private-location")
+        expect(run(sys.executable, cpp_guard, str(native), str(native_members)), "PRIVATE_PACKAGE_PASS", success=True)
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"/build/home/workspace/source.rs",
                               b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-273",
                               b"/build/home/home/private", b"/build/home/Users/private",
                               b"/build/home/auth.json", b"/build/home/tt-canary-273"):
             (private_cpp / "libthinkthen.a").write_bytes((native / "libthinkthen_c.a").read_bytes() + private_bytes)
-            expect(run(sys.executable, cpp_guard, str(private_cpp)), "private pattern in libthinkthen.a")
+            private_members = base / "private-members.txt"
+            private_members.write_text(str(private_cpp / "libthinkthen.a") + "\n")
+            expect(run(sys.executable, cpp_guard, str(private_cpp), str(private_members)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
                    CARGO_TARGET_DIR=str(native.parent),
@@ -371,8 +478,53 @@ def main():
                 tarfile.open(base / "paired" / f"thinkthen-c-{version}-{host}.tar.gz") as c_package:
             for member in ("include/thinkthen.h", "lib/libthinkthen.a"):
                 assert go_package.extractfile(f"./native/{host}/{member}").read() == c_package.extractfile(f"./{member}").read(), "Go bundled native input differs from C package"
+        expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(base / "paired"),
+                   "ada-objective-c-cobol"), "", success=True)
+        # Consumer-required examples must survive source package assembly.
+        cobol_name = f"thinkthen-cobol-{version}-{host}.tar.gz"
+        with tarfile.open(base / "paired" / cobol_name) as packed:
+            assert packed.extractfile("./examples/blocking.cob").read() == (source / "libraries/cobol/examples/blocking.cob").read_bytes()
+        incomplete = base / "missing-cobol-example"
+        shutil.copytree(base / "paired", incomplete)
+        damaged = incomplete / cobol_name
+        replacement = incomplete / "replacement.tar.gz"
+        with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
+            for member in packed:
+                if member.name == "./examples/blocking.cob":
+                    continue
+                payload = packed.extractfile(member) if member.isfile() else None
+                output.addfile(member, payload)
+        replacement.replace(damaged)
+        damaged.with_name(damaged.name + ".sha256").write_text(
+            f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
+        expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(incomplete),
+                   "ada-objective-c-cobol"), "source members differ for " + cobol_name)
+        print("release-archive: complete COBOL source package passes; missing blocking example refuses", flush=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
+        for removed in ("CallProjection.swift", "CallResult.swift", None):
+            altered = base / ("swift-inventory-" + (removed or "unknown"))
+            shutil.copytree(base / "paired", altered)
+            swift_name = f"thinkthen-swift-{version}-{host}.tar.gz"
+            damaged = altered / swift_name
+            replacement = altered / "replacement.tar.gz"
+            with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
+                for member in packed:
+                    if removed and member.name == "./Sources/ThinkThen/" + removed:
+                        continue
+                    payload = packed.extractfile(member) if member.isfile() else None
+                    output.addfile(member, payload)
+                if removed is None:
+                    member = tarfile.TarInfo("./Sources/ThinkThen/Unknown.swift")
+                    member.size = 1
+                    output.addfile(member, io.BytesIO(b"x"))
+            replacement.replace(damaged)
+            damaged.with_name(damaged.name + ".sha256").write_text(
+                f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
+            expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(altered),
+                       "swift-zig"), "source members differ for " + swift_name)
+        print("release-archive: complete Swift source package passes; missing or unknown sources refuse", flush=True)
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
+                              b"/build/home/workspace/source.rs",
                               b"tt-canary-273", b"/build/home/home/private",
                               b"/build/home/Users/private", b"/build/home/tt-canary-273"):
             private_zig = base / "private-zig"
@@ -553,6 +705,7 @@ def main():
         win_zip = windows / f"thinkthen-{version}-x86_64-pc-windows-msvc.zip"
         with zipfile.ZipFile(win_zip, "w") as output:
             output.writestr("thinkthen.exe", binary)
+            output.writestr("README.md", (REPO / "README.md").read_bytes())
         c_zip = C_FIXTURE["create"](windows, version)
         sample = windows / "thinkthen-first-run.tar.gz"
         sample.write_bytes(first_run)
@@ -790,17 +943,23 @@ def main():
                    str(base / "override"), "go", env=env),
                "archive identity cannot override a repository checkout")
 
-        # Capture only the launcher's transport inputs. Assert their identity below.
+        # Cross the fetch pipeline's real cache-lock child environment before importing.
         docker = fake_bin / "docker"
         docker.write_text("#!/bin/sh\n"
+                          "set -eu\n"
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
-                          "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; esac; done\n"
+                          "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
+                          "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
+                          "python3 \"$root/src/databases/duckdb/tools/cache_lock.py\" \"$root/cache.lock\" "
+                          "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
+                          "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
                           "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
                           "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
         docker.chmod(0o755)
         launcher_env = os.environ.copy()
+        launcher_env.pop("PYTHONDONTWRITEBYTECODE", None)
         launcher_env["PATH"] = str(fake_bin) + os.pathsep + launcher_env["PATH"]
         launcher_env["THINKTHEN_RELEASE_EXPECTED_SHA"] = "0" * 40
         expect(run("sh", str(REPO / "sdlc/scripts/release-container"), str(base / "container-work"),
@@ -855,4 +1014,5 @@ def main():
 
 
 if __name__ == "__main__":
+    draft_notes()
     main()

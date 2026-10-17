@@ -49,7 +49,7 @@ struct Cache {
     entries: Option<u64>,
     /// The store file's allocated bytes.
     bytes: Option<u64>,
-    /// Old digest-named entries the store ignores until `cache convert`.
+    /// Old digest-named entries; admitted folders have none.
     old_entries: Option<u64>,
     #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
@@ -170,7 +170,10 @@ fn cache_status(environment: &Environment) -> Result<Cache, Failure> {
         .cache()
         .map(|path| crate::engine::store::counts(path, environment.cache_is_platform_default()))
         .transpose()
-        .map_err(|_| Failure::StatusState)?;
+        .map_err(|error| match error {
+            crate::engine::error::Error::StoreVersion(file) => Failure::StoreVersion(file),
+            _ => Failure::StatusState,
+        })?;
     Ok(Cache {
         enabled,
         enabled_source: if environment.named_cache() {

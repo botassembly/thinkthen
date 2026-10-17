@@ -270,6 +270,7 @@ fn annotate_and_relate_send_shared_context_and_keep_originals() {
     )
     .expect("annotate");
     exits(&annotated, 0);
+    assert_eq!(listener.count(), 1);
     let row: Value = serde_json::from_slice(&annotated.stdout).expect("row");
     assert_eq!(row["input"], json!({"text":"refund","extra":false}));
     assert!(row["meta"]["context_sha256"].is_string());
@@ -345,7 +346,7 @@ fn relate_originals_do_not_hide_bad_object_ids_or_explicit_audit_pointers() {
             json!({"input":input,"value":[],"question":{"verb":"relate"}})
         );
         let output = spawn(
-            &["audit", "-", &key, "--id", pointer],
+            &["runs", "audit", "-", &key, "--id", pointer],
             &[],
             source.as_bytes(),
         )

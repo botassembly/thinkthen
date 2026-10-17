@@ -1,10 +1,8 @@
 //! One record's named `annotate` values, and why a failed member failed.
 
-use std::fmt;
-
 use crate::core::{AnnotatedValue, BackendFailureCause, Value};
 use crate::public::error::ErrorKind;
-use crate::public::results::{Answer, Written, answer, withheld_debug};
+use crate::public::results::{Answer, answer};
 
 /// One named value of an annotated record.
 #[derive(Clone, Debug, PartialEq)]
@@ -55,63 +53,6 @@ impl NamedAnnotation {
     }
 }
 
-/// One record and every value the set gave it, in set order.
-#[derive(Clone, PartialEq)]
-pub struct AnnotatedRecord<T> {
-    input: T,
-    values: Vec<NamedAnnotation>,
-    json: Written,
-}
-
-withheld_debug!(AnnotatedRecord<T> { values });
-
-impl<T> AnnotatedRecord<T> {
-    pub(crate) fn new(input: T, values: Vec<(String, AnnotatedValue)>, json: Written) -> Self {
-        let values = values
-            .into_iter()
-            .map(|(name, value)| NamedAnnotation::of(name, value))
-            .collect();
-        Self {
-            input,
-            values,
-            json,
-        }
-    }
-
-    pub(in crate::public) fn complete(
-        input: T,
-        result: crate::CompleteAnnotated,
-    ) -> Result<Self, crate::Error> {
-        let values = result.canonical.compatibility.value().clone();
-        let json = Written::of(&values)?;
-        Ok(Self::new(input, values.into_values(), json))
-    }
-
-    /// The record as given.
-    #[must_use]
-    pub fn input(&self) -> &T {
-        &self.input
-    }
-
-    /// Each member's value, in set order.
-    #[must_use]
-    pub fn values(&self) -> &[NamedAnnotation] {
-        &self.values
-    }
-
-    /// The record.
-    #[must_use]
-    pub fn into_input(self) -> T {
-        self.input
-    }
-
-    /// The bare `annotate` value the command prints for this one text.
-    #[must_use]
-    pub fn value_json(&self) -> String {
-        self.json.text()
-    }
-}
-
 /// One question the backend failed inside an otherwise answered record.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Failed(FailureCause);
@@ -131,7 +72,8 @@ impl Failed {
 }
 
 /// Why the backend's answer to one question could not be read.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FailureCause {
     /// The reply omitted the answer.
     MissingAnswer,

@@ -4,9 +4,10 @@ use super::{
     asked,
     failure::Failure,
 };
+use crate::RequestFunction;
 use crate::{
-    Request, RequestArguments, RequestBatch, RequestCall, RequestDefinition, RequestFraming,
-    RequestImage, RequestInput, RequestOptions, RequestQuestion, RequestSource,
+    Request, RequestArguments, RequestBatch, RequestDefinition, RequestFraming, RequestImage,
+    RequestInput, RequestOptions, RequestQuestion, RequestSource,
 };
 use std::path::PathBuf;
 
@@ -16,14 +17,17 @@ use std::path::PathBuf;
 )]
 pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>, Failure> {
     let mut atomic = None;
-    let call = match command {
+    let (function, arguments) = match command {
         Command::Decide(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
             let options = options(&common, Some(&a.batching), a.threshold.as_ref());
             let question = selector(&a.question, || {
                 atomic_definition(asked::decide(a, None)?, &mut atomic)
             })?;
-            RequestCall::Decide(arguments(&mut common, question, options)?)
+            (
+                RequestFunction::Decide,
+                arguments(&mut common, question, options)?,
+            )
         }
         Command::Choose(a) => {
             let question = selector(&a.question, || {
@@ -31,27 +35,36 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             })?;
             let mut options = options(&a.common, Some(&a.batching), a.threshold.as_ref());
             options.options_field = a.options_pointer.clone();
-            RequestCall::Choose(arguments(&mut a.common.clone(), question, options)?)
+            (
+                RequestFunction::Choose,
+                arguments(&mut a.common.clone(), question, options)?,
+            )
         }
         Command::Tag(a) => {
             let question = selector(&a.question, || {
                 atomic_definition(asked::tag(a, None)?, &mut atomic)
             })?;
-            RequestCall::Tag(arguments(
-                &mut a.common.clone(),
-                question,
-                options(&a.common, Some(&a.batching), a.threshold.as_ref()),
-            )?)
+            (
+                RequestFunction::Tag,
+                arguments(
+                    &mut a.common.clone(),
+                    question,
+                    options(&a.common, Some(&a.batching), a.threshold.as_ref()),
+                )?,
+            )
         }
         Command::Score(a) => {
             let question = selector(&a.question, || {
                 atomic_definition(asked::score(a, None)?, &mut atomic)
             })?;
-            RequestCall::Score(arguments(
-                &mut a.common.clone(),
-                question,
-                options(&a.common, Some(&a.batching), a.threshold.as_ref()),
-            )?)
+            (
+                RequestFunction::Score,
+                arguments(
+                    &mut a.common.clone(),
+                    question,
+                    options(&a.common, Some(&a.batching), a.threshold.as_ref()),
+                )?,
+            )
         }
         Command::Filter(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
@@ -59,9 +72,11 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 atomic_definition(asked::filter(a, None)?, &mut atomic)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
             options.files_only = a.files_only;
-            RequestCall::Filter(arguments(&mut common, question, options)?)
+            (
+                RequestFunction::Filter,
+                arguments(&mut common, question, options)?,
+            )
         }
         Command::Rank(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
@@ -78,13 +93,15 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 Ok(definition)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
             options.top = a
                 .top
                 .as_ref()
                 .map(|v| v.parse::<usize>().map_err(|_| Failure::TopIsZero))
                 .transpose()?;
-            RequestCall::Rank(arguments(&mut common, question, options)?)
+            (
+                RequestFunction::Rank,
+                arguments(&mut common, question, options)?,
+            )
         }
         Command::Find(a) => {
             let mut common = a.common.as_common();
@@ -98,9 +115,11 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 }
             };
             let mut options = options(&common, None, None);
-            options.details = false;
             options.none = a.none;
-            RequestCall::Find(arguments(&mut common, question, options)?)
+            (
+                RequestFunction::Find,
+                arguments(&mut common, question, options)?,
+            )
         }
         Command::Annotate(a) => {
             let mut common = a.common.clone();
@@ -115,9 +134,11 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             let question = RequestQuestion::File {
                 path: a.questions.clone(),
             };
-            let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
-            RequestCall::Annotate(arguments(&mut common, question, options)?)
+            let options = options(&common, Some(&a.batching), a.threshold.as_ref());
+            (
+                RequestFunction::Annotate,
+                arguments(&mut common, question, options)?,
+            )
         }
         Command::Recognize(a) => {
             let question =
@@ -131,7 +152,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                     }
                 };
             let mut options = options(&a.common, None, None);
-            options.details = false;
             options.mode = a
                 .mode
                 .as_deref()
@@ -158,7 +178,10 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 relation: a.relation_context.clone(),
             })
             .filter(|c| !c.is_empty());
-            RequestCall::Recognize(arguments(&mut a.common.clone(), question, options)?)
+            (
+                RequestFunction::Recognize,
+                arguments(&mut a.common.clone(), question, options)?,
+            )
         }
         Command::Relate(a) => {
             let question = if let [reference] = a.relations.as_slice()
@@ -183,13 +206,15 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 }
             };
             let mut options = options(&a.common, None, None);
-            options.details = false;
             options.field = None;
-            RequestCall::Relate(arguments(&mut a.common.clone(), question, options)?)
+            (
+                RequestFunction::Relate,
+                arguments(&mut a.common.clone(), question, options)?,
+            )
         }
         _ => return Ok(None),
     };
-    Request::new(call)
+    Request::for_function(function, arguments)
         .admit()
         .map(|admitted| Some(admitted.retain_cli_atomic(atomic)))
         .map_err(native)
@@ -248,7 +273,6 @@ fn options(
                 .map_or_else(|_| RequestBatch::Named(value), RequestBatch::Count)
         }),
         max_requests_total: common.max_requests_total,
-        details: common.details,
         ..RequestOptions::default()
     }
 }

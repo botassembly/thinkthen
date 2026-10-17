@@ -6,7 +6,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from session_records import ROOT, module
+from session_records import ROOT, module, definitions
+from templates.csharp import enum_values
 
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env, read_process_line
@@ -23,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-session-parity-') as te
     shutil.copy(HEADER, installed / 'src/thinkthen.h')
     native = work / 'libthinkthen.so.0'; shutil.copy(LIBRARY, native)
     programs = []
-    for verb in shared.shared.FUNCTIONS:
+    for verb in enum_values(definitions['RequestFunction']):
         programs.append(f'''identification division.
 program-id. COBOL_{verb.upper()}.
 data division.
@@ -34,12 +35,34 @@ linkage section.
 01 input-record usage pointer.
 01 session-owner usage pointer.
 procedure division using engine input-record session-owner.
- set address of tt-n-cobol-RequestCall-{verb} to input-record
+ set address of tt-n-cobol-RequestCall to input-record
  call "TT_SESSION_{verb.upper()}" using by value engine
-    by reference tt-n-cobol-RequestCall-{verb} session-owner
+    by reference tt-n-cobol-RequestCall session-owner
     returning return-code
  goback.
 end program COBOL_{verb.upper()}.
+''')
+    for verb in enum_values(definitions['RequestFunction']):
+        programs.append(f'''identification division.
+program-id. COBOL_BLOCK_{verb.upper()}.
+data division.
+working-storage section.
+copy "tt-native-generated.cpy".
+linkage section.
+01 engine usage pointer.
+01 question usage pointer.
+01 input-record usage pointer.
+01 option-record usage pointer.
+01 answer usage pointer.
+01 status-record usage pointer.
+procedure division using engine question input-record option-record answer status-record.
+ set address of tt-n-cobol-Answer{verb.title()}Result to answer
+ set address of tt-n-cobol-AnswerStatus to status-record
+ call "TT_{verb.upper()}" using by value engine question input-record option-record
+    by reference tt-n-cobol-Answer{verb.title()}Result tt-n-cobol-AnswerStatus
+    returning return-code
+ goback.
+end program COBOL_BLOCK_{verb.upper()}.
 ''')
     programs.append('''identification division.
 program-id. COBOL_PUSH.
@@ -78,7 +101,11 @@ end program COBOL_PUSH.
         command = [sys.executable,str(ROOT / 'libraries/cobol/checks/session_consumer.py'),str(given),shared.shared.compact(settings)]
         child = dict(env, TT_SESSION_BRIDGE=str(bridge), TT_SESSION_NATIVE=str(native), TT_SESSION_PACKAGE=str(installed))
         if not step.get('held_cancel'):
-            return subprocess.run(command,cwd=home,env=child,capture_output=True,text=True,timeout=30)
+            before = int(backend.read('count')) if fixture.get('call_result_contract') else None
+            result = subprocess.run(command,cwd=home,env=child,capture_output=True,text=True,timeout=30)
+            if before is not None:
+                assert int(backend.read('count')) - before == 1, 'canonical COBOL call must send once'
+            return result
         process = subprocess.Popen(command,cwd=home,env=child,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         try:
             assert backend.read('wait 1') == 'wait 1'

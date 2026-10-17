@@ -1,0 +1,339 @@
+---
+// One surface's page: install it, make a first call, see all ten functions
+// in that surface, then lists, errors, settings, models and what differs.
+// /languages/<slug>/, /languages/bash/ and the database pages draw it. A
+// page passes extra sections in the slot. A database page sets
+// `functionsAt` to the page that shows all ten functions in SQL, and shows
+// a link there in place of its own samples.
+import { packageGuide, packageExample } from '../data/repo.mjs';
+import Base from '../layouts/Base.astro';
+import Terminal from './Terminal.astro';
+import Code from './Code.astro';
+import { FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE, BACKEND_ROUTES, OPENAI_ANNOUNCED } from '../data/catalog.mjs';
+import { backendsName, captioned, files, firstCall, installSample, sample, moreSamples, hasSamples } from '../data/samples.mjs';
+import { buildLines } from '../data/build-lines.mjs';
+import { backends } from '../lib/backends-table.mjs';
+import postgresGrant from '../../../databases/postgresql/fixtures/grant.sql?raw';
+
+const { surface, route: pageRoute, eyebrow = ['/languages/', 'Languages'], functionsAt = null } = Astro.props;
+const shell = surface.slug === 'shell';
+const full = hasSamples(surface.slug, [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file']);
+const notes = surface.install.some(([, note]) => note);
+const first = shell ? null : firstCall(surface.slug);
+const build = first ? buildLines(surface.slug, first.file) : null;
+const buildText = build && [...build.lines, build.run].map((parts) => parts.join(' \\\n    ')).join('\n');
+const inputs = shell ? [] : files(`install/${surface.slug}`);
+const frames = surface.frames ? installSample(surface.slug, 'data-frames') : null;
+const functional = ['python', 'r'].includes(surface.slug);
+const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((r) => r.name === '3-one') : null;
+const headline = shell
+  ? `A ${surface.name} command that answers questions about text`
+  : `${surface.name} functions that answer questions about text`;
+// The Backends section: how this page's language reaches each built-in
+// backend. A page whose route is python links Python's section.
+const route = surface.backends ?? null;
+const named = route && route !== 'python';
+const title = full && named ? `Jev and models like it from ${surface.name}` : surface.name;
+const description = full && named
+  ? `Call Jev and models like it from ${surface.name} with ThinkThen, and name the backend that answers: TypeSafe, OpenAI Decisions, Ollama or another server.`
+  : surface.blurb.replace(/`/g, '');
+if (!full && !surface.call) throw new Error(`${pageRoute}: a page with no samples needs a call sentence in catalog.mjs`);
+if (description.length > 160) throw new Error(`${pageRoute}: the description runs ${description.length} characters, over 160`);
+const backendSample = ['env', 'builder', 'code'].includes(route) ? installSample(surface.slug, backendsName(surface.slug), true) : null;
+const backendConstructor = {
+  python: 'Engine(backend=)', typescript: 'new Client({backend})', ruby: 'Client.open(backend:)', r: 'tt_engine(backend =)',
+  c: '"backend" in thinkthen_engine_new_with JSON', cpp: 'Client(settings)', 'objective-c': 'initWithSettings:error:',
+  cobol: '"backend" in thinkthen_engine_new_with JSON', ada: 'Configure settings JSON', java: 'Engine(settings)',
+  kotlin: 'KotlinEngine(settings)', scala: 'ScalaEngine(settings)', csharp: 'Engine.Open(InputEngineSettings)',
+  go: 'NewClient(EngineSettings)', swift: 'Client(settings:)', zig: 'generated engine settings',
+  php: 'Client(settings)', dart: 'Engine.open(settings:)',
+}[surface.slug] ?? 'EngineBuilder::backend';
+const backendAddress = 'base_url';
+const backendInputs = backendSample?.folder ? files(`install/${surface.slug}/${backendSample.folder}`) : [];
+const backendBuild = backendSample ? buildLines(surface.slug, backendSample.file) : null;
+const backendBuildText = backendBuild && [...backendBuild.lines, backendBuild.run].map((p) => p.join(' \\\n    ')).join('\n');
+const shellLines = (r) => [
+  `export THINKTHEN_BACKEND=${r.name}`,
+  ...(r.address ? [`export THINKTHEN_BASE_URL=${r.address}`] : [`export ${r.keys[0]}=...`]),
+].join('\n');
+const inputCaption = (name) => /\.csproj$|^Package\.swift$|^build\.zig(\.zon)?$|^pubspec\.yaml$|^Cargo\.toml$/.test(name)
+  ? `${name}, a project file beside the sample`
+  : `${name}, a file the sample reads`;
+// Copy marks code with backticks.
+const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+// All ten functions, then the saved question file, in this surface. Each
+// shows its replayed sample, any file the sample reads, and its bigger
+// sample, as the function pages showed them.
+const fnSamples = shell ? [] : [...CODE_FUNCTIONS, FUNCTIONS.find((f) => f.name === 'question-file')].map((fn) => {
+  const code = sample(fn.name, surface.slug);
+  const more = moreSamples(fn.name, fn.moreSee).find((m) => m.surface === surface.slug) ?? null;
+  const read = [code?.code, more?.code].filter(Boolean).join('\n');
+  return {
+    name: fn.name,
+    title: fn.title || fn.name,
+    code,
+    more,
+    cannot: fn.cannot?.[surface.slug] ?? null,
+    inputs: read ? files(`functions/${fn.name}`).filter((file) => read.includes(file.name)) : [],
+  };
+});
+const anySample = fnSamples.some((f) => f.code || f.more);
+const guide = packageGuide(surface.slug);
+// Every SQL extension passes the name to the engine, which knows each built-in.
+const builtIns = backends().map((b) => b.name);
+---
+<Base title={title} description={description}>
+  <div class="eyebrow"><a href={eyebrow[0]}>{eyebrow[1]}</a></div>
+  <h1>{headline}</h1>
+  <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+
+  {surface.slug === 'python' && <p>Working with data frames? <a href="/languages/pandas/">pandas</a> and <a href="/languages/polars/">Polars</a> have their own pages.</p>}
+  {!shell && full && <p>The <a href={guide}>{surface.name} package guide</a> and its <a href={packageExample(surface.slug)}>consumer example</a> give the full API.</p>}
+
+  {!shell && full && <p>Call Jev from TypeSafe, another SystemOne server, OpenAI Decisions or a local model from {surface.name}. <a href="/models/">Models</a> gives each backend's setup.</p>}
+
+  <p>ThinkThen is free and MIT licensed. Hosted models charge per token; local models run on your own computer. Judgment calls can send your question and text to the selected backend. The default is TypeSafe. The examples were checked with saved answers; live answers and probabilities can differ.</p>
+
+  <p><strong>Supported versions:</strong> {Array.isArray(surface.versions.runtime) ? surface.versions.runtime.join(' and ') : surface.versions.runtime}. {surface.versions.platforms}.</p>
+
+  <h2>Install</h2>
+  <table class="install">
+    <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
+    {surface.install.map(([line, note]) => (
+      <tr><td><code>{line}</code></td>{notes && <td>{parts(note || '').map((x) => x.code ? <code>{x.part}</code> : x.part)}</td>}</tr>
+    ))}
+  </table>
+  {surface.slug === 'r' && (
+    <>
+      <h3>Linux package loading and saved answers</h3>
+      <p>Match the binary's distribution, R series and architecture. R-universe serves its current index; check <code>packageVersion("thinkthen")</code> after installing. The <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/r/README.md#install-on-linux">Linux R guide</a> gives the source archive and checkout commands, prerequisites and index conventions.</p>
+      <p><code>library(thinkthen)</code> loads the package's <code>libs/thinkthen.so</code> and registered native routines. Its Rust engine is linked in; no separate C library or <code>LD_LIBRARY_PATH</code> setting is needed. Use an installed jsonlite 2.0.0 or later. If loading fails, check <code>.libPaths()</code>, <code>find.package("thinkthen")</code> and binary compatibility.</p>
+      <p>Download the sample once, then start a fresh R session in the directory containing <code>thinkthen-first-run</code>. Replay needs no key and sends no model requests, even on a miss.</p>
+      <Code code={'curl -fsSL https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz | tar -xz'} lang="bash" />
+      <Code code={'library(thinkthen)\nroot <- "thinkthen-first-run"\ntt_engine(replay = file.path(root, "recording"), cache = FALSE)\nquestion <- "Does this report say what the person did before the problem appeared?"\ntext <- readChar(file.path(root, "report.txt"),\n                 file.info(file.path(root, "report.txt"))$size)\ncall <- tt_decide(question, text)\nstopifnot(identical(call$value, TRUE), call$facts$requests_sent == 0)\ncall$value\n# [1] TRUE'} lang="r" />
+      <p>The download needs network access; replay does not. Select replay before asking because R keeps one engine per session. <a href="https://docs.r-universe.dev/install/binaries.html">R-universe's binary documentation</a> explains the supported Linux host requirements.</p>
+    </>
+  )}
+  <p>For hosted live calls, set <code>{KEY_VARIABLE}</code> in the environment before starting {surface.name}. <a href="/models/#the-key">Models</a> explains each backend's key.</p>
+  {surface.windows && (
+    <>
+      <h3 id="windows">Windows</h3>
+      {surface.windows.map((text) => <p>{parts(text).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>)}
+    </>
+  )}
+  {surface.uninstall && (
+    <>
+      <h3>Uninstall</h3>
+      <p>{parts(surface.uninstall.text).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <Code code={surface.uninstall.code} lang="bash" label="Copy the uninstall command" />
+    </>
+  )}
+
+  {surface.slug === 'postgresql' && (
+    <>
+      <h3>Let an application role call ThinkThen</h3>
+      <p>A server administrator copies the release files into PostgreSQL's library and extension directories before running <code>CREATE EXTENSION thinkthen</code>. These directories usually require administrator access. Choose the archive whose name matches your server major.</p>
+      <p>The extension revokes public execution rights. After installation, an administrator runs this grant with the existing application role in place of <code>the_app_role</code>. It grants only the functions owned by ThinkThen. That role can then make paid requests using the server's configured backend.</p>
+      <Code code={postgresGrant.trimEnd()} lang="sql" label="Copy the extension-only application grant" />
+      <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/postgresql/README.md#authority-who-may-do-what">PostgreSQL README</a> explains execution rights and the separate permissions for named files.</p>
+    </>
+  )}
+  {surface.slug === 'duckdb' && (
+    <>
+      <h3 id="use-the-release-from-dbt-v1">Use the release with DuckDB</h3>
+      <p>Download the archive for your platform from the <a href="https://github.com/botassembly/thinkthen/releases">release downloads</a>. Use its matching DuckDB source host. The <a href={guide}>DuckDB package guide</a> links each host and archive member. Copy that member to <code>./thinkthen.duckdb_extension</code> before running the sample below.</p>
+      <p>Use the direct DuckDB installation above and the SQL samples below.</p>
+      <p>The earlier dbt v1 setup used a DuckDB version outside this release's supported list. A dbt setup for the current archive has not been verified.</p>
+    </>
+  )}
+
+  {!full && (
+    <>
+      <h2 id="call">A call</h2>
+      <p>{parts(surface.call).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <p>The <a href={guide}>{surface.name} package guide</a> gives the full API, and its <a href={packageExample(surface.slug)}>consumer example</a> shows a complete program.</p>
+    </>
+  )}
+  {full && (
+  <>
+  <h2>A first call</h2>
+  {first ? (
+    <>
+      {inputs.map((file) => <Code code={file.text} file={file.name} caption={inputCaption(file.name)} />)}
+      <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
+      {build && <Code code={buildText} lang="bash" caption={`${build.lines.length ? 'Build and run' : 'Run'} it beside ${build.beside ?? `the unpacked archives, thinkthen-c/ and ${build.archive}/`}`} label={`Copy the ${surface.name} ${build.lines.length ? "build" : "run"} lines`} />}
+      {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+    </>
+  ) : shell ? (
+    <Terminal run={decideOne} caption={decideOne.see} />
+  ) : (
+    <p>The <a href={guide}>{surface.name} package guide</a> shows a first call. It supports all ten functions through one API.</p>
+  )}
+  <p>Not sure comes back as {parts(surface.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}. Branch on it and send those cases to a person.</p>
+
+  {surface.slug === 'sqlite' && (
+    <>
+      <h2 id="trusted-loading">Use reviewed views and ingestion triggers</h2>
+      <p>On a fresh connection, load once with the explicit trusted entry point. A native host names <code>sqlite3_thinkthen_trusted_init</code> in <code>sqlite3_load_extension</code>. Switch modes with a fresh connection.</p>
+      <Code code={'.load ./thinkthen sqlite3_thinkthen_trusted_init\nPRAGMA trusted_schema=ON;'} lang="sql" label="Copy the trusted initial load" />
+      <p>This choice permits schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while <code>trusted_schema</code> is ON. Review every schema you open or attach. Keep downloaded or unreviewed databases on separate default-loaded connections. There is no per-view or per-file trust isolation.</p>
+      <p>Judgment scalars, plans and judgment tables can run in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments remain non-deterministic and non-innocuous, so SQLite's generated-column and index restrictions still apply.</p>
+      <p>Loading changes neither <code>trusted_schema</code> nor an existing host authorizer. With <code>trusted_schema=OFF</code>, judgments from main and attached schema objects refuse before reading question files or sending requests. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL. TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with <code>trusted_schema=OFF</code>. These calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. Existing file permissions, budgets and cancellation still apply. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/sqlite/README.md#use-reviewed-views-and-ingestion-triggers">SQLite README</a> gives an ingestion-trigger recipe.</p>
+      <h2 id="recognition-kinds">Pass recognition kinds</h2>
+      <p>Pass one kind as <code>'person'</code>, or comma-separated names as <code>'person,organisation'</code>. Descriptions take a recognize JSON object such as <code>{`'{"kinds":{"person":"A human name."}}'`}</code>, a full versioned recognize spec, or an <code>@file</code> containing that spec. A bare JSON array string such as <code>{`'["person"]'`}</code> names one literal kind, <code>{`["person"]`}</code>. Use <code>'person'</code> to request the person kind.</p>
+      <Code code={"SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');"} lang="sql" label="Copy the SQLite recognition call" />
+    </>
+  )}
+
+  {!shell && functionsAt && (
+    <>
+      <h2 id="functions">All ten functions in {surface.name}</h2>
+      <p>The <a href={functionsAt}>Databases page</a> shows all ten functions in SQL, with what {surface.name} printed for each.</p>
+      {fnSamples.some((f) => f.more) && <h2 id="bigger-examples">Bigger examples</h2>}
+      {fnSamples.filter((f) => f.more).map((f) => (
+        <>
+          <h3 id={`more-${f.name}`}><a href={`/functions/${f.name}/`}><code>{f.title}</code></a></h3>
+          {f.inputs.filter((file) => f.more.code.includes(file.name)).map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the query reads`} />)}
+          <Code code={f.more.code} file={f.more.file} caption={f.more.see} label={`Copy the bigger ${surface.name} ${f.name} query`} />
+          {f.more.output && <Code code={f.more.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+        </>
+      ))}
+    </>
+  )}
+  {!shell && !functionsAt && (
+    <>
+      <h2 id="functions">All ten functions in {surface.name}</h2>
+      {anySample
+        ? <p>Each sample below was checked with a saved answer. The code uses your selected backend unless you configure replay. Each heading links the function's page, which explains it in Bash.</p>
+        : <p>The <a href={guide}>{surface.name} package guide</a> shows a named call for each function. Each function's page explains it in Bash.</p>}
+      {anySample ? fnSamples.map((f) => (
+        <>
+          <h3 id={`fn-${f.name}`}><a href={`/functions/${f.name}/`}><code>{f.title}</code></a></h3>
+          {f.inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the sample reads`} />)}
+          {f.code && <Code code={f.code.code} file={f.code.file} label={`Copy the ${surface.name} ${f.name} sample`} />}
+          {f.code && surface.fragment && <p class="note">{parts(surface.fragment).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>}
+          {f.code?.output && <Code code={f.code.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+          {!f.code && f.cannot && <p>{f.cannot}</p>}
+          {!f.code && !f.cannot && <p>Use the named <code>{f.name}</code> call in the <a href={guide}>{surface.name} package guide</a>.</p>}
+          {f.more && <Code code={f.more.code} file={f.more.file} caption={f.more.see} label={`Copy the bigger ${surface.name} ${f.name} sample`} />}
+          {f.more?.output && <Code code={f.more.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+        </>
+      )) : (
+        <ul>{fnSamples.map((f) => <li><a href={`/functions/${f.name}/`}><code>{f.title}</code></a>: use the named <code>{f.name}</code> call.</li>)}</ul>
+      )}
+    </>
+  )}
+
+  {(functional || frames) && <h2 id="lists">Lists, data frames and streams</h2>}
+  {functional && <p>To apply one question to a list or a stream, read <a href="/start/pay-once/">Pay once</a>.</p>}
+
+  {frames && (
+    <>
+      <p>{parts(surface.frames).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <Code code={frames.code} file={frames.file} label={`Copy the ${surface.name} data frame sample`} />
+      {frames.output && <Code code={frames.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+    </>
+  )}
+
+  {!shell && surface.slug !== 'c' && !functionsAt && (
+    <>
+      <h2 id="result">Read the result</h2>
+      <p>Each named function produces one completed result. Read <code>value</code> for the plain answer, <code>probability</code> for its probability, <code>results</code> for the full records and <code>facts</code> for the call's counts. The examples show the field names in {surface.name}.</p>
+      <p>One input gives one value. A list gives values in input order. Filter returns the selected inputs. Rank returns original indexes. Find returns the selected input or null. When the answer is not sure, its probability is null. A selected input or an authored answer can itself be JSON null and still have a probability.</p>
+      <p>The completed result retains full records. A stream or packet session has its own reading, cancellation and cleanup methods. The package guide explains how to collect its full records and wait for final facts.</p>
+      {surface.slug === 'cpp' && <p>C++ starts a call immediately. Read its completed result with <code>result()</code>; <code>collect()</code> returns packets.</p>}
+      <p>Decide and filter report the yes probability. Choose and find report the picked item's probability. Rank and relate align probabilities with the returned items. Recognize reports the selected span or boundary proposal's probability; entity strength is a separate field. Score, tag and annotate leave probability null; their full records retain the distributions.</p>
+    </>
+  )}
+
+  <h2>Run facts</h2>
+  <p>{parts(surface.facts).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+  {['duckdb', 'postgresql', 'sqlite'].includes(surface.slug) && (
+    <>
+      <p>Plain SQL functions return the value. Use <code>thinkthen_&lt;function&gt;_details</code> with the same arguments or a record list to read typed rows. DuckDB returns structs, PostgreSQL returns composites and SQLite returns table rows. SQLite takes a record list as a JSON array.</p>
+      <p>Rank, find and relate judge the whole record list as one set. Rank returns a row per record with its rank and probability. Find returns the picked record. Relate returns a row per edge. A recoverable failed set call returns one failure row. Cancellation, deadline and defects still raise errors. Call once per set when you have several groups.</p>
+      <p>Each relate row's full <code>result</code> holds only that edge in its <code>value</code>. It retains the question, original input, metadata and answer ID. Rank and relate put call-wide <code>observations</code> on the row whose ordinal or index is zero. Later rows carry empty observation arrays. Find that row by its ordinal or index after sorting. Repeated <code>facts</code> describe the same call.</p>
+      <p>SQL plans estimate input tokens before cache hits, retries and refusal splits. Output tokens, total price and future duration are unknown. Usage reports cumulative process totals, which cannot isolate concurrent calls. Packed request usage can repeat across result rows; do not sum those repeated values.</p>
+      <p>Measure statement wall time in the client; it includes database and client work. Apply a known tariff to complete provider-reported usage outside SQL using decimal arithmetic, and label the price as an estimate. Missing rates or incomplete attempt usage mean unknown cost. The provider's invoice determines actual charges.</p>
+    </>
+  )}
+
+  {surface.errors && (
+    <>
+      <h2>Errors</h2>
+      <p>{parts(surface.errors).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+    </>
+  )}
+
+  {surface.settings && (
+    <>
+      <h2 id="settings">Settings, caching and replay</h2>
+      <p>{parts(surface.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/start/settings/">Settings</a> page lists every setting. <a href="/start/replay/">Replay in tests</a> shows how a test replays saved answers.</p>
+    </>
+  )}
+
+  {route === 'python' && (
+    <>
+      <h2 id="backends">Backends</h2>
+      <p>{surface.name} runs on the Python engine, so it reaches each backend the same way. The <a href="/languages/python/#backends">Python page</a> shows Jev, Liquid d1 and Ollama.</p>
+    </>
+  )}
+  {named && (
+    <>
+      <h2 id="backends">Jev, Liquid d1 and Ollama from {surface.name}</h2>
+      {route === 'cli' && (
+        <>
+          <p><code>--backend NAME</code> names the backend for one run. <code>THINKTHEN_BACKEND</code> names it for every run in the shell. Each backend page shows its runs.</p>
+          <ul>{BACKEND_ROUTES.map((r) => <li><a href={r.route}>{r.title}</a>: <code>--backend {r.name}</code></li>)}</ul>
+        </>
+      )}
+      {route === 'sql' && (
+        <>
+          <p>SQL names a built-in or configured backend. The selected backend supplies its address, model and key variable. SQL accepts no address or key.</p>
+          <Code code={{ duckdb: "SET thinkthen_backend = 'typesafe';", postgresql: "SET thinkthen.backend = 'typesafe';", sqlite: `SELECT thinkthen_configure('{"backend":"typesafe"}');` }[surface.slug]} lang="sql" />
+          {surface.slug === 'sqlite' ? <p>Configure before the first engine build or plan. SQLite keeps one engine for the whole process.</p> : <p>RESET restores captured environment selection. PostgreSQL requires an administrator to change the backend; DuckDB selects it for the calling session.</p>}
+          <p>SQL takes any name in the configuration file, or a built-in name: {builtIns.map((name, i) => <>{i > 0 && (i === builtIns.length - 1 ? ' or ' : ', ')}<code>{name}</code></>)}.</p>
+        </>
+      )}
+      {route !== 'cli' && route !== 'sql' && (
+        <>
+          {route === 'env'
+            ? <p>{surface.name} reads its backend from the environment. Set <code>THINKTHEN_BACKEND</code> to the name below. Set the backend's key variable in the shell, and the same sample asks that backend.</p>
+            : <p><code>{backendConstructor}</code> names the backend in code, and it outranks the environment. The caller selects a backend before asking. Each constructor accepts the names below.</p>}
+          <table class="backend-routes">
+            <tr><th>Backend</th><th>Name</th><th>Key variable</th></tr>
+            {BACKEND_ROUTES.map((r) => (
+              <tr><td><a href={r.route}>{r.title}</a></td><td><code>{r.name}</code></td><td>{r.keys.map((k, i) => <>{i > 0 && ', then '}<code>{k}</code></>)}{r.address && '. A local address needs no key.'}</td></tr>
+            ))}
+          </table>
+          {route === 'env' && BACKEND_ROUTES.map((r) => (
+            <Code code={shellLines(r)} lang="bash" caption={r.address ? `Ask ${r.title}. This block names a second port, 11535, as the site's runs do. On the default port, leave THINKTHEN_BASE_URL out.` : `Ask ${r.title}.`} label={`Copy the ${r.title} settings`} />
+          ))}
+          {backendInputs.length > 0 && <p>The {surface.name} project file names its sample, so this sample has its own.</p>}
+          {backendInputs.map((file) => <Code code={file.text} file={file.name} caption={inputCaption(file.name)} />)}
+          {backendSample && <Code code={backendSample.code} file={backendSample.file} caption={['builder', 'code'].includes(route) && surface.slug !== 'r' ? `To use Ollama on a second port, supply ${backendAddress}. On the default port, leave it out.` : null} label={`Copy the ${surface.name} backends sample`} />}
+          {!backendSample && <p>Use <code>{backendConstructor}</code> with native engine settings in the <a href={packageGuide(surface.slug)}>{surface.name} package guide</a>. Rust owns backend selection and captured key variables.</p>}
+          {backendBuild && <Code code={backendBuildText} lang="bash" caption={`${backendBuild.lines.length ? 'Build and run' : 'Run'} it beside ${backendBuild.beside ?? `the unpacked archives, thinkthen-c/ and ${backendBuild.archive}/`}`} label={`Copy the ${surface.name} backends ${backendBuild.lines.length ? 'build' : 'run'} lines`} />}
+          {backendSample?.output && <Code code={backendSample.output} lang="output" caption={`What ${surface.name} printed on each backend`} copy={false} />}
+          {route === 'builder' && <p><code>EngineBuilder::from_env</code> also reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>.</p>}
+          {route === 'code' && surface.slug === 'r' && <p>R keeps one engine per session. Choose its backend with the full <code>backend</code> keyword before asking. Changing the settings requires a new session.</p>}
+          {route === 'code' && <p>An omitted backend reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>. Each named backend reads its own key variable. These constructors accept no key.</p>}
+        </>
+      )}
+      <p>The configuration file's <code>backend</code> names a default backend for every run. The <a href="/start/configuration/#configuration-file">Configuration</a> page shows the file.</p>
+      <h3>OpenAI Decisions API from {surface.name}</h3>
+      <p set:html={OPENAI_ANNOUNCED} />
+    </>
+  )}
+
+  <h2>What is different in {surface.name}</h2>
+  <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>
+
+  </>
+  )}
+
+  <slot />
+
+  <h2 id="function-pages">The functions in Bash</h2>
+  <p>Each function's page explains it with Bash examples: {CODE_FUNCTIONS.map((fn, i) => <>{i > 0 && ', '}<a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></>)}.</p>
+</Base>

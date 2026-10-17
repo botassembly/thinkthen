@@ -32,8 +32,10 @@ def pages(text):
 
 def eligible(run, sha, repository, version):
     branch = run.get("head_branch")
+    rehearsal_branch = branch in ("main", "ticket/0543-final")
     if (not isinstance(branch, str)
-            or re.fullmatch(rf"rc/{re.escape(version)}-rc\.[1-9][0-9]*", branch) is None
+            or (not rehearsal_branch
+                and re.fullmatch(rf"rc/{re.escape(version)}-rc\.[1-9][0-9]*", branch) is None)
             or run.get("head_sha") != sha or run.get("event") != "workflow_dispatch"
             or run.get("status") != "completed" or run.get("conclusion") != "success"):
         return False
@@ -41,7 +43,8 @@ def eligible(run, sha, repository, version):
     if not isinstance(path, str):
         return False
     parts = path.split("@")
-    if len(parts) > 2 or (len(parts) == 2 and parts[1] not in (branch, f"refs/tags/{branch}")):
+    ref = f"refs/heads/{branch}" if rehearsal_branch else f"refs/tags/{branch}"
+    if len(parts) > 2 or (len(parts) == 2 and parts[1] not in (branch, ref)):
         return False
     return parts[0] in (WORKFLOW_PATH, f"{repository}/{WORKFLOW_PATH}")
 

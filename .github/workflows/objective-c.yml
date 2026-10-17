@@ -1,0 +1,58 @@
+name: Check Objective-C Foundation
+on:
+  workflow_dispatch:
+    inputs:
+      website_examples:
+        description: Replay the ten Objective-C website examples
+        type: boolean
+        default: false
+permissions: {}
+jobs:
+  foundation:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "15.0"
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/native-source/target
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: ${{ github.sha }}
+          path: native-source
+          persist-credentials: false
+      - name: Build matching native test dependency
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          cargo build --locked --manifest-path native-source/libraries/c/Cargo.toml -j 2
+          cargo build --locked --manifest-path native-source/conformance/backend/Cargo.toml -j 2
+      - name: Assemble private installed test package
+        run: |
+          mkdir -p target/foundation-package target/native-headers
+          cp -R libraries/objective-c/. target/foundation-package/
+          cp libraries/objective-c/README-PUBLIC.md target/foundation-package/README.md
+          cp native-source/libraries/c/include/thinkthen.h target/native-headers/
+          printf 'module CThinkThen { header "thinkthen.h" export * }\n' > target/native-headers/module.modulemap
+          xcrun xcodebuild -create-xcframework -library native-source/target/debug/libthinkthen_c.a -headers target/native-headers -output target/foundation-package/CThinkThen.xcframework
+      - name: Check generation and installed Foundation behavior
+        env:
+          THINKTHEN_APPLE_PACKAGE: ${{ github.workspace }}/target/foundation-package
+          CARGO_TARGET_DIR: ${{ github.workspace }}/native-source/target
+        run: |
+          python3 sdlc/generators/results/generate.py --target objc --check
+          sh libraries/objective-c/check.sh
+      - name: Replay Objective-C website examples
+        if: ${{ inputs.website_examples && !cancelled() }}
+        env:
+          SITE_NATIVE_PACKAGE: ${{ github.workspace }}/target/website-c-package
+        run: |
+          mkdir -p target/website-c-package/include target/website-c-package/lib
+          cp native-source/libraries/c/include/thinkthen.h target/website-c-package/include/
+          cp native-source/target/debug/libthinkthen_c.dylib target/website-c-package/lib/libthinkthen.dylib
+          ln -s libthinkthen.dylib target/website-c-package/lib/libthinkthen.0.dylib
+          node site/scripts/smoke-bindings.mjs objective-c

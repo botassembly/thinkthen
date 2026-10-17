@@ -8,9 +8,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile, trackedFiles } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -38,13 +39,51 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-bindings-'));
 const home = path.join(tmp, 'home');
 fs.mkdirSync(home);
 
-// The C door, built once and laid out as an install would.
+// The C door, laid out as an install would. A build takes minutes, so the
+// runner keeps one per checkout under ~/.cache/thinkthen-site/c-door/, named
+// by a digest of every tracked file the native build reads, the Rust
+// compiler and the build flags. Any change to them builds a fresh door and
+// drops that checkout's old one; an unchanged tree reuses its door.
 let door = null;
+const DOOR_INPUTS = ['crates', 'libraries/c', 'specification', 'Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml', 'sdlc/scripts/installed.sh', 'sdlc/scripts/scratch.sh'];
+function doorDigest() {
+  const hash = createHash('sha256');
+  for (const full of trackedFiles(repo)) {
+    const file = path.relative(repo, full).split(path.sep).join('/');
+    if (!DOOR_INPUTS.some((input) => file === input || file.startsWith(`${input}/`))) continue;
+    if (fs.existsSync(full)) hash.update(`${file}\0`).update(fs.readFileSync(full)).update('\0');
+  }
+  hash.update(run('rustc', ['-vV'], { cwd: repo }).stdout);
+  for (const name of ['RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CFLAGS']) hash.update(`${name}=${process.env[name] ?? ''}\0`);
+  return hash.digest('hex').slice(0, 32);
+}
 function cDoor() {
   if (door) return door;
-  const out = path.join(tmp, 'c-door');
-  const done = run('sh', ['-c', '. sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
-  if (done.status !== 0) throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
+  if (process.env.SITE_NATIVE_PACKAGE) {
+    const installed = path.resolve(process.env.SITE_NATIVE_PACKAGE);
+    const library = process.platform === 'darwin' ? 'libthinkthen.dylib' : 'libthinkthen.so';
+    for (const file of ['include/thinkthen.h', `lib/${library}`]) {
+      if (!fs.existsSync(path.join(installed, file))) throw new Error(`the installed C package lacks ${file}`);
+    }
+    door = installed;
+    return door;
+  }
+  const checkout = createHash('sha256').update(repo).digest('hex').slice(0, 12);
+  const root = path.join(os.homedir(), '.cache/thinkthen-site/c-door', checkout);
+  const out = path.join(root, doorDigest());
+  if (!fs.existsSync(out)) {
+    fs.mkdirSync(root, { recursive: true });
+    const partial = fs.mkdtempSync(path.join(root, 'partial-'));
+    const done = compile('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, partial], { cwd: repo });
+    if (done.status !== 0) {
+      fs.rmSync(partial, { recursive: true, force: true });
+      throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
+    }
+    const pc = path.join(partial, 'lib/pkgconfig/thinkthen.pc');
+    fs.writeFileSync(pc, fs.readFileSync(pc, 'utf8').replace(/^prefix=.*$/m, `prefix=${out}`));
+    try { fs.renameSync(partial, out); } catch { fs.rmSync(partial, { recursive: true, force: true }); }
+    for (const old of fs.readdirSync(root)) if (path.join(root, old) !== out && !old.startsWith('partial-')) fs.rmSync(path.join(root, old), { recursive: true, force: true });
+  }
   door = out;
   return door;
 }
@@ -55,7 +94,8 @@ function jvmJars() {
   if (jars) return jars;
   const out = path.join(tmp, 'jvm');
   fs.mkdirSync(out);
-  const done = run('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, THINKTHEN_JVM_OUT: out } });
+  const native = path.join(cDoor(), 'lib', 'libthinkthen.so');
+  const done = compile('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, ...JVM_HOMES(), THINKTHEN_JVM_OUT: out, THINKTHEN_JVM_NATIVE: native } });
   if (done.status !== 0) throw new Error(`the JVM build failed\n${done.stdout}${done.stderr}`);
   jars = path.join(out, 'jars');
   return jars;
@@ -72,10 +112,13 @@ const DOTNET_ENV = {
 let feed = null;
 function csharpFeed() {
   if (feed) return feed;
-  const source = path.join(tmp, 'csharp-source');
+  const root = path.join(tmp, 'csharp-source');
+  const source = path.join(root, 'libraries/csharp');
   fs.cpSync(path.join(repo, 'libraries/csharp'), source, { recursive: true, filter: (f) => !/\/(bin|obj|target)$/.test(f) });
+  fs.cpSync(path.join(repo, 'sdlc/generators/results/csharp'), path.join(root, 'sdlc/generators/results/csharp'), { recursive: true });
   const out = path.join(tmp, 'csharp-feed');
-  const done = run('dotnet', ['pack', 'ThinkThen.csproj', '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
+  const native = [`-p:ThinkThenNativeAsset=${path.join(cDoor(), 'lib/libthinkthen.so')}`, '-p:ThinkThenNativeRid=linux-x64', '-p:ThinkThenNativeName=libthinkthen.so'];
+  const done = compile('dotnet', ['pack', 'ThinkThen.csproj', ...native, '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
   if (done.status !== 0) throw new Error(`dotnet pack failed\n${done.stdout}${done.stderr}`);
   feed = out;
   return feed;
@@ -87,11 +130,51 @@ const ARCHIVE = {
   java: (dir) => fs.cpSync(jvmJars(), path.join(dir, 'thinkthen-jvm'), { recursive: true }),
   csharp: (dir) => fs.cpSync(csharpFeed(), path.join(dir, 'thinkthen-csharp'), { recursive: true }),
 };
+// The Go archive is the module with its static native library.
+ARCHIVE.go = (dir) => {
+  const done = run('python3', [path.join(repo, 'libraries/go/fixtures/package_owned.py'), path.join(repo, 'libraries/go'), cDoor(), path.join(dir, 'thinkthen-go')]);
+  if (done.status !== 0) throw new Error(`the Go module did not stage\n${done.stdout}${done.stderr}`);
+};
+// The PHP archive is the package source with native/libthinkthen.so.
+ARCHIVE.php = (dir) => {
+  const pkg = path.join(dir, 'thinkthen-php');
+  for (const name of ['autoload.php', 'composer.json', 'LICENSE', 'README.md', 'src']) fs.cpSync(path.join(repo, 'libraries/php', name), path.join(pkg, name), { recursive: true });
+  fs.mkdirSync(path.join(pkg, 'native'));
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.so'), path.join(pkg, 'native/libthinkthen.so'));
+};
+// The Dart archive is the package source. Its build hook takes the native
+// library from native-assets/ by checksum, offline, as the package guide
+// describes for a development build.
+ARCHIVE.dart = (dir) => {
+  const source = path.join(repo, 'libraries/dart');
+  const pkg = path.join(dir, 'thinkthen-dart');
+  for (const name of ['pubspec.yaml', 'README.md', 'LICENSE', 'CHANGELOG.md', 'native-assets.json', 'lib', 'hook']) fs.cpSync(path.join(source, name), path.join(pkg, name), { recursive: true });
+  const library = fs.readFileSync(path.join(cDoor(), 'lib/libthinkthen.so'));
+  const digest = createHash('sha256').update(library).digest('hex');
+  const manifest = JSON.parse(fs.readFileSync(path.join(pkg, 'native-assets.json'), 'utf8'));
+  if (manifest.distribution !== 'development-only') throw new Error('the Dart package names a release asset');
+  manifest.assets.linux_x64.sha256 = digest;
+  fs.writeFileSync(path.join(pkg, 'native-assets.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.mkdirSync(path.join(dir, 'native-assets', digest), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'native-assets', digest, manifest.assets.linux_x64.file), library);
+};
 // The Swift archive carries the C header in its system library folder.
+// Its Linux bundle carries the native library as a SwiftPM resource.
 ARCHIVE.swift = (dir) => {
   sourceArchive('swift')(dir);
   fs.mkdirSync(path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include'), { recursive: true });
   fs.copyFileSync(path.join(cDoor(), 'include', 'thinkthen.h'), path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include/thinkthen.h'));
+  const native = path.join(dir, 'thinkthen-swift/Sources/ThinkThen/Native/x86_64-unknown-linux-gnu');
+  fs.mkdirSync(native, { recursive: true });
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.so'), path.join(native, 'libthinkthen.so'));
+};
+// The Zig archive carries the header and static library under native/.
+ARCHIVE.zig = (dir) => {
+  sourceArchive('zig')(dir);
+  const native = path.join(dir, 'thinkthen-zig/native/x86_64-unknown-linux-gnu');
+  fs.mkdirSync(path.join(native, 'lib'), { recursive: true });
+  fs.cpSync(path.join(cDoor(), 'include'), path.join(native, 'include'), { recursive: true });
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.a'), path.join(native, 'lib/libthinkthen.a'));
 };
 // C needs only the C archive. A Rust project takes the crate from this
 // working tree through a Cargo patch, with the locked versions.
@@ -193,11 +276,16 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
         if (slug === 'rust') rustRequirement(dir);
         const lines = buildLines(slug, name, true);
+        if (!lines) throw new Error(`src/data/build-lines.mjs has no lines for ${slug}`);
         for (const line of lines.lines) {
-          const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          const done = (/^(cc|c\+\+|cmake --build|clang|gnatmake|cobc|go build|swift build|zig build|javac|kotlinc|scalac|dotnet build)(?:\s|$)/.test(line.join(' ')) ? compile : run)('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
         }
-        dirs.set(rel, { dir, run: lines.run.join(' ') });
+        if (slug === 'rust') {
+          const built = compile('cargo', ['build', '--quiet', '--offline', '--bins'], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          if (built.status !== 0) throw new Error(`${rel} did not build\n${built.stdout}${built.stderr}`);
+        }
+        dirs.set(rel, { dir, run: slug === 'rust' ? path.join(runEnv.CARGO_TARGET_DIR, 'debug', name.replace(/\.[^.]+$/, '')) : lines.run.join(' ') });
         return dirs.get(rel);
       };
       return {
@@ -210,7 +298,40 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
   };
 }
 
-const javaVersion = () => firstLine('java', ['-version']);
+// The JDK, Kotlin and Scala homes: THINKTHEN_JDK_HOME, THINKTHEN_KOTLIN_HOME
+// and THINKTHEN_SCALA_HOME when set, as libraries/jvm/build.sh reads them,
+// or else the compilers on PATH. The JVM samples build and run on them.
+const toolHome = (variable, tool) => {
+  if (process.env[variable]) return path.resolve(process.env[variable]);
+  const found = run('sh', ['-c', `command -v ${tool}`]).stdout.trim();
+  return found ? path.dirname(path.dirname(fs.realpathSync(found))) : null;
+};
+const JVM_HOMES = () => Object.fromEntries([
+  ['THINKTHEN_JDK_HOME', 'javac'], ['THINKTHEN_KOTLIN_HOME', 'kotlinc'], ['THINKTHEN_SCALA_HOME', 'scalac'],
+].map(([variable, tool]) => [variable, toolHome(variable, tool)]).filter(([, home]) => home));
+const JVM_ENV = () => {
+  const homes = JVM_HOMES();
+  const jdk = homes.THINKTHEN_JDK_HOME;
+  const bins = [jdk, homes.THINKTHEN_KOTLIN_HOME, homes.THINKTHEN_SCALA_HOME].filter(Boolean).map((h) => path.join(h, 'bin'));
+  return {
+    PATH: [...bins, process.env.PATH].join(':'),
+    ...(jdk ? { JAVA_HOME: jdk } : {}),
+    ...(homes.THINKTHEN_KOTLIN_HOME ? { KOTLIN_HOME: homes.THINKTHEN_KOTLIN_HOME } : {}),
+    ...(homes.THINKTHEN_SCALA_HOME ? { SCALA_HOME: homes.THINKTHEN_SCALA_HOME } : {}),
+  };
+};
+const javaVersion = () => (run('java', ['-version'], { env: { ...process.env, ...JVM_ENV() } }).stderr || '').split('\n')[0].trim();
+// The JVM library needs the JDK release that libraries/jvm/pom.xml names, or later.
+const JDK_FLOOR = () => Number(fs.readFileSync(path.join(repo, 'libraries/jvm/pom.xml'), 'utf8').match(/<thinkthen\.session\.jdk>(\d+)</)[1]);
+const stableJdk = () => {
+  const shown = javaVersion().match(/version "(\d+)/);
+  return shown && Number(shown[1]) >= JDK_FLOOR() ? null : `JDK ${JDK_FLOOR()} or later; set THINKTHEN_JDK_HOME`;
+};
+// kotlinc and scalac print their version as the last line.
+const toolVersion = (tool) => {
+  const done = run(tool, ['-version'], { env: { ...process.env, ...JVM_ENV() } });
+  return `${done.stdout}${done.stderr}`.trim().split('\n').pop();
+};
 // json-c from ~/.local, where the toolchain step builds it with CMake.
 const LOCAL = path.join(os.homedir(), '.local');
 const JSON_C = { PKG_CONFIG_PATH: [path.join(LOCAL, 'lib/pkgconfig'), process.env.PKG_CONFIG_PATH].filter(Boolean).join(':') };
@@ -224,7 +345,7 @@ const CARGO_ENV = {
 // A Rust build that writes only under target/<name>, as the R build does.
 function cargoBuild(dir, name, env = {}) {
   const target = path.join(repo, 'target', name);
-  const done = run('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, dir), env: { ...process.env, ...env, CARGO_TARGET_DIR: target } });
+  const done = compile('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, dir), env: { ...process.env, ...env, CARGO_TARGET_DIR: target } });
   if (done.status !== 0) throw new Error(`cargo build failed in ${dir}\n${done.stdout}${done.stderr}`);
   return path.join(target, 'release');
 }
@@ -240,8 +361,7 @@ const RUBY_PREFIX = () => {
 // Dart from the pinned Flutter, as libraries/dart/check.sh finds it. Its
 // SDK folder runs no Flutter update check.
 const DART_SDK = path.join(os.homedir(), '.local/opt/flutter/bin/cache/dart-sdk/bin');
-const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}` };
-const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-c', 'command -v scalac']).stdout.trim())));
+const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}`, PUB_CACHE: process.env.PUB_CACHE ?? path.join(os.homedir(), '.pub-cache') };
 
 // Each binding: how to build it once, how to run one sample, and what it
 // builds on. A build returns null when a tool is missing.
@@ -287,6 +407,7 @@ const BINDINGS = {
       const pkg = path.join(staged, 'libraries', 'ruby');
       const lib = path.join(pkg, 'lib');
       fs.mkdirSync(path.join(lib, 'thinkthen'), { recursive: true });
+      for (const directory of ['lib', 'sig']) fs.cpSync(path.join(repo, 'libraries/ruby', directory), path.join(pkg, directory), { recursive: true });
       fs.copyFileSync(path.join(release, 'libthinkthen_ruby.so'), path.join(lib, 'thinkthen', 'thinkthen.so'));
       fs.copyFileSync(path.join(repo, 'libraries/ruby/thinkthen.gemspec'), path.join(pkg, 'thinkthen.gemspec'));
       const crate = path.join(staged, 'crates', 'thinkthen');
@@ -305,7 +426,7 @@ const BINDINGS = {
       };
     },
   },
-  c: withBuild({ slug: 'c', tools: ['cc', 'pkg-config'], needs: jsonC, versions: () => [firstLine('cc', ['--version']), `json-c ${run('pkg-config', ['--modversion', 'json-c'], { env: { ...process.env, ...JSON_C } }).stdout.trim()}`], buildEnv: JSON_C, env: { LD_LIBRARY_PATH: path.join(LOCAL, 'lib') } }),
+  c: withBuild({ slug: 'c', tools: ['cc'], versions: () => [firstLine('cc', ['--version'])] }),
   rust: withBuild({ slug: 'rust', tools: [], versions: () => [firstLine('cargo', ['--version'])], env: { ...CARGO_ENV, RUSTUP_TOOLCHAIN: RUST_CHANNEL(), CARGO_TARGET_DIR: path.join(repo, 'target', 'site-rust') } }),
   python: {
     build() {
@@ -315,7 +436,7 @@ const BINDINGS = {
       for (const tool of ['uv', 'maturin', 'cargo']) if (!has(tool)) return { missing: tool };
       const out = path.join(tmp, 'python');
       const step = (cmd, args, opts) => {
-        const done = run(cmd, args, opts);
+        const done = (cmd === 'maturin' ? compile : run)(cmd, args, opts);
         if (done.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed\n${done.stdout}${done.stderr}`);
       };
       step('maturin', ['build', '--quiet', '--locked', '--offline', '-o', path.join(out, 'wheel')], { cwd: path.join(repo, 'libraries/python'), env: { ...process.env, PYO3_PYTHON: python } });
@@ -344,7 +465,7 @@ const BINDINGS = {
       const libs = [lib, path.join(os.homedir(), '.cache/thinkthen-toolchains/r-library'), ...user].filter((l) => l && fs.existsSync(l)).join(':');
       const ready = run('Rscript', ['-e', 'if (!requireNamespace("dplyr", quietly = TRUE)) quit(status = 1)'], { env: { ...process.env, R_LIBS: libs } });
       if (ready.status !== 0) return { missing: 'R package dplyr' };
-      const done = run('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
+      const done = compile('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
       if (done.status !== 0) throw new Error(`R CMD INSTALL failed\n${done.stdout}${done.stderr}`);
       const dplyr = run('Rscript', ['-e', 'cat(format(packageVersion("dplyr")))'], { env: { ...process.env, R_LIBS: libs } }).stdout.trim();
       return {
@@ -355,12 +476,16 @@ const BINDINGS = {
     },
   },
   cpp: withBuild({ slug: 'cpp', tools: ['c++'], versions: () => [firstLine('c++', ['--version'])] }),
-  'objective-c': withBuild({ slug: 'objective-c', tools: ['gcc'], versions: () => [firstLine('gcc', ['--version'])] }),
+  // The 0.2 Objective-C library runs only on Apple Foundation. Elsewhere
+  // its samples report not run.
+  'objective-c': process.platform === 'darwin'
+    ? withBuild({ slug: 'objective-c', tools: ['clang'], versions: () => [firstLine('clang', ['--version'])] })
+    : { build: () => ({ missing: 'Apple Foundation: the Objective-C library runs only on macOS' }) },
   cobol: withBuild({ slug: 'cobol', tools: ['cobc'], versions: () => [firstLine('cobc', ['--version'])] }),
   ada: withBuild({ slug: 'ada', tools: ['gnatmake'], versions: () => [firstLine('gnatmake', ['--version'])] }),
-  java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
-  kotlin: withBuild({ slug: 'kotlin', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
-  scala: withBuild({ slug: 'scala', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
+  java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion()], env: JVM_ENV }),
+  kotlin: withBuild({ slug: 'kotlin', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion(), toolVersion('kotlinc')], env: JVM_ENV }),
+  scala: withBuild({ slug: 'scala', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion(), toolVersion('scalac')], env: JVM_ENV }),
   go: withBuild({ slug: 'go', tools: ['go', 'pkg-config'], versions: () => [firstLine('go', ['version'])], buildEnv: {
     GOCACHE: path.join(tmp, 'go-cache'), GOMODCACHE: path.join(tmp, 'go-mod'), GOPROXY: 'off', GOTOOLCHAIN: 'local', GOFLAGS: '-mod=mod -buildvcs=false', CGO_ENABLED: '1',
   } }),

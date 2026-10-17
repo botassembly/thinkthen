@@ -106,6 +106,7 @@ impl Mismatch {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: injected output failures prove profile notices report once and preserve command failure behavior.
     use std::io::{self, Write};
 
     use super::Mismatch;

@@ -14,13 +14,16 @@ try {
  const selector=document.question;
  const question=selector.kind==='file'?tt.Client.questionFile(selector.path):selector.kind==='name'?tt.Client.questionName(selector.name):selector.kind==='reference'?tt.Client.questionReference(selector.reference):selector.value;
  const source=document.input;
- const input=source.kind==='source'?tt.Client.files(source.source.paths,source.source.reading,source.source.media,source.source.framing):source.items.map(item=>tt.Client.item(item.original?.kind==='text'?item.original.text:item.original?.value,Object.fromEntries(Object.entries({...item,images:(item.images??[]).map(image=>image.kind==='bytes'?{...image,bytes:Uint8Array.from(Buffer.from(image.bytes,'base64'))}:image)}).filter(([key])=>key!=='original'))));
+ let input=source.kind==='source'?tt.Client.files(source.source.paths,source.source.reading,source.source.media,source.source.framing):source.items.map(item=>tt.Client.item(item.original?.kind==='text'?item.original.text:item.original?.value,Object.fromEntries(Object.entries({...item,images:(item.images??[]).map(image=>image.kind==='bytes'?{...image,bytes:Uint8Array.from(Buffer.from(image.bytes,'base64'))}:image)}).filter(([key])=>key!=='original'))));
+ if(document.call_result_contract && Array.isArray(input))input=input[0];
  const controller=new AbortController();
  if(document.cancel)controller.abort();
  if(document.held_cancel)setTimeout(()=>controller.abort(),150);
  if(document.batch_probe){console.log('ready');line();}
- const done=await client.start(document.verb,question,document.incremental && Array.isArray(input)?input.values():input,{...document.options,signal:controller.signal}).result();
- console.log(JSON.stringify({native:true,results:done.results,facts:done.facts}));
+ const controls={...document.options,signal:controller.signal};
+ const done=document.call_result_contract?await client[document.verb](question,input,controls):await client.start(document.verb,question,document.incremental && Array.isArray(input)?input.values():input,controls).result();
+ if(document.verb==='find' && done.results[0]?.index==null && done.probability!==null)throw Error('unresolved find probability');
+ console.log(JSON.stringify({native:true,results:done.results,facts:done.facts,...(document.call_result_contract?{call_result:{value:done.value,probability:done.probability,results:done.results,facts:done.facts}}:{})}));
 } catch(error) {
  if(!(error instanceof tt.ClientError))throw error;
  console.log(JSON.stringify({native:true,error:error.complete?.error??{kind:error.kind,message:error.message,retryable:error.retryable},facts:error.facts,completed:error.results?.length?{native:true,results:error.results,facts:error.facts}:undefined}));

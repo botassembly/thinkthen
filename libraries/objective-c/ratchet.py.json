@@ -4,5 +4,6 @@
     "checks"
   ],
   "extension": ".py",
-  "max": 89
+  "max": 0,
+  "scope": "handwritten-production"
 }

@@ -5,15 +5,25 @@
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$here/toolchain.env"
+if [ -z "${THINKTHEN_RUBY_MINOR:-}" ]; then
+  for minor in $RUBY_MINORS; do
+    THINKTHEN_RUBY_MINOR=$minor sh "$0"
+  done
+  exit 0
+fi
 . "$here/../../sdlc/scripts/scratch.sh"
 . "$here/../../sdlc/scripts/fetch.sh"
-tools=$HOME/.cache/thinkthen-toolchains
+tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
 archives=$tools/ruby/archives
 host=$(uname -s)
 case $host in Linux) prefix=$tools/ruby/$RUBY_VERSION ;; Darwin) prefix=$tools/ruby/$RUBY_VERSION-$(uname -m)-darwin ;; *) echo "setup-ruby: no route for $host" >&2; exit 77 ;; esac
 if [ -e "$prefix/thinkthen-toolchain.stamp" ]; then
-	echo "setup-ruby: refused: $prefix is already complete" >&2
-	exit 1
+	stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
+	[ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] || {
+		echo "setup-ruby: refused: $prefix has a different stamp" >&2; exit 1;
+	}
+	echo "setup-ruby: already built $prefix"
+	exit 0
 fi
 mkdir -p "$archives"
 fetch() {
@@ -25,7 +35,7 @@ fetch "$RUBY_URL" "ruby-$RUBY_VERSION.tar.xz"
 fetch "$YAML_URL" yaml-0.2.5.tar.gz
 if [ "$host" = Darwin ]; then
 	command -v shasum >/dev/null || { echo 'setup-ruby: shasum is missing' >&2; exit 77; }
-	openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
+	openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES" 2>/dev/null || true)}
 	[ -x "$openssl/bin/openssl" ] || { echo "setup-ruby: OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing" >&2; exit 77; }
 	case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) echo 'setup-ruby: OpenSSL host version differs from toolchain.env' >&2; exit 77 ;; esac
 	DYLD_LIBRARY_PATH=$openssl/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
@@ -55,7 +65,9 @@ scratch_dir source "$tools/ruby/source.XXXX"
 tar -xJf "$archives/ruby-$RUBY_VERSION.tar.xz" -C "$source"
 tar -xzf "$archives/yaml-0.2.5.tar.gz" -C "$source"
 scratch_dir stage "$tools/ruby/stage.XXXX"
-configure="--prefix=$prefix --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$source/yaml-0.2.5 --without-fiddle"
+# Ruby 4 moves a load-relative prefix into DESTDIR unless it is explicit.
+# Keep the configured prefix so make's temporary staging root works on both.
+configure="--prefix=$prefix --with-destdir=/ --enable-shared --enable-load-relative --disable-install-doc --with-libyaml-source-dir=$source/yaml-0.2.5 --without-fiddle"
 if [ -n "${openssl:-}" ]; then
 	configure="$configure --with-openssl-dir=$openssl"
 	[ "$host" != Linux ] || configure="$configure --with-openssl-lib=$openssl/lib64"

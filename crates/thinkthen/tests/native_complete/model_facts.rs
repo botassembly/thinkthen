@@ -40,7 +40,7 @@ fn engine_for(
         "cache" => {
             let engine = builder().cache_at(place).unwrap().build().unwrap();
             let bare = engine.decide(question, "One.").unwrap();
-            assert_eq!(*bare.value(), Answer::Yes);
+            assert_eq!(*bare.value(), Some(true));
             assert_eq!(bare.facts().model(), Some("fixed"));
             engine
         }
@@ -48,7 +48,7 @@ fn engine_for(
             let engine = builder().record(place).unwrap().build().unwrap();
             for (input, model) in [("One.", "fixed"), ("Two.", "other"), ("Three.", "fixed")] {
                 let bare = engine.decide(question, input).unwrap();
-                assert_eq!(*bare.value(), Answer::Yes);
+                assert_eq!(*bare.value(), Some(true));
                 assert_eq!(bare.facts().model(), Some(model));
             }
             builder().replay(place).unwrap().build().unwrap()
@@ -135,7 +135,7 @@ fn check_started_failure(cached: bool) {
     if cached {
         assert_eq!(
             *engine.decide(&question, "One.").unwrap().value(),
-            Answer::Yes
+            Some(true)
         );
     }
     let error = crate::api::whole(

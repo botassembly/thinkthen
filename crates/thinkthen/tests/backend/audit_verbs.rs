@@ -1,4 +1,4 @@
-//! `thinkthen audit` grades every verb it reads, from hand fixtures and from
+//! `thinkthen runs audit` grades every verb it reads, from hand fixtures and from
 //! real saved output.
 #![cfg(feature = "cli")]
 #![allow(

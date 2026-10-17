@@ -228,6 +228,7 @@ pub(crate) struct ProfileLimit {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: endpoint parsing and credential-host isolation need exhaustive closed-grammar and secrecy tables.
     use super::{BackendProfile, LimitKind, ProfileError};
     use crate::core::json::JsonError;
 

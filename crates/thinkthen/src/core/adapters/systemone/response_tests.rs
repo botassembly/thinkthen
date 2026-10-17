@@ -1,3 +1,4 @@
+//! Stays: provider response parsing must preserve valid partial answers and withhold rejected payload values.
 use super::{decode, decode_observed};
 use crate::core::adapters::systemone::DecodeError;
 use crate::core::adapters::systemone::tests::{

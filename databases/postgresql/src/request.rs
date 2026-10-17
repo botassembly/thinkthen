@@ -44,14 +44,12 @@ pub(crate) fn run(
     items: Vec<RequestItem>,
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
-    let input = RequestInput::Records { items };
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
-        input,
+        input: RequestInput::Records { items },
         options: RequestOptions::default(),
     };
-    let request = Request::for_function(function, args);
-    let request = request.admit()?;
+    let request = Request::for_function(function, args).admit()?;
     match engine.execute_request(
         &request,
         RequestEnvironment {
@@ -73,29 +71,42 @@ pub(crate) fn details(
     question: &thinkthen::LoadedQuestion,
     items: Vec<RequestItem>,
     options: CallOptions<'_>,
-    records: bool,
-) -> Result<Vec<thinkthen::Details>, Error> {
+) -> Result<Vec<JudgmentRow>, Error> {
     let function = RequestFunction::for_definition(&question.clone().into());
     let call = run(engine, function, question.clone().into(), items, options)?;
     macro_rules! project {
-        ($rows:expr) => {
+        ($rows:expr, $value:expr) => {
             $rows
                 .into_iter()
                 .map(|row| {
-                    if records {
-                        row.compatibility_details()
-                    } else {
-                        row.result().compatibility_details()
-                    }
+                    let result = row.result();
+                    Ok(JudgmentRow {
+                        value: $value(result),
+                        probabilities: result.probabilities(),
+                    })
                 })
                 .collect()
         };
     }
     match call.into_value() {
-        RequestValue::Decisions(rows) => project!(rows),
-        RequestValue::Choices(rows) => project!(rows),
-        RequestValue::Tags(rows) => project!(rows),
-        RequestValue::Scores(rows) => project!(rows),
+        RequestValue::Decisions(rows) => project!(rows, |r: &thinkthen::CompleteDecision| {
+            thinkthen::Judgment::Decision(r.value())
+        }),
+        RequestValue::Choices(rows) => project!(rows, |r: &thinkthen::CompleteChoice| {
+            thinkthen::Judgment::Choice(r.value().map(str::to_owned))
+        }),
+        RequestValue::Tags(rows) => project!(rows, |r: &thinkthen::CompleteTags| {
+            thinkthen::Judgment::Tags(r.value().to_vec())
+        }),
+        RequestValue::Scores(rows) => project!(rows, |r: &thinkthen::CompleteScore| {
+            thinkthen::Judgment::Score(r.value())
+        }),
         _ => Err(wrong_result()),
     }
+}
+
+/// SQL-owned ordinary judgment columns and their existing scalar document.
+pub(crate) struct JudgmentRow {
+    pub(crate) value: thinkthen::Judgment,
+    pub(crate) probabilities: thinkthen::Probabilities,
 }

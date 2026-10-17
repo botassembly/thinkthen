@@ -11,5 +11,4 @@ inbox = [
     "Please send the signed quote by 5 pm today",
 ]
 by_urgency = tt.rank(question, inbox).value
-order = [one["index"] for one in by_urgency]
-assert order == [1, 3, 2, 0]
+assert by_urgency == [1, 3, 2, 0]

@@ -1,4 +1,4 @@
-//! `thinkthen audit` matches the prototype's golden files and its hand-checked values.
+//! `thinkthen runs audit` matches the prototype's golden files and its hand-checked values.
 #![cfg(feature = "cli")]
 #![allow(
     clippy::expect_used,
@@ -134,7 +134,7 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .spawn()
         .expect("decide runs");
     let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["audit", "-", "replay/key.jsonl"])
+        .args(["runs", "audit", "-", "replay/key.jsonl"])
         .clear_environment()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))
@@ -142,7 +142,7 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .stderr(Stdio::piped())
         .spawn()
         .expect("audit runs");
-    let output = wait::finish(audit, "thinkthen audit").expect("audit finishes");
+    let output = wait::finish(audit, "thinkthen runs audit").expect("audit finishes");
     let decided = wait::finish(decide, "thinkthen decide").expect("decide finishes");
     assert_eq!(decided.status.code(), Some(0));
     stderr_is(&output, "");

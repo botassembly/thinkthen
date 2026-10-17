@@ -8,6 +8,52 @@ Depends on: 0574
 Depends on: 0581
 Depends on: 0582
 
+Reviews: revision 6d46fa0, reject
+
+Reviews: revision 149aa23, reject
+
+Reviews: revision 65a4d09, reject
+
+Reviews: revision e9274bd, reject
+
+Reviews: revision e9f6785, reject
+
+Reviews: revision cd0ce97, accept
+
+Reviews: revision 79f6574, reject
+
+Reviews: revision a7e9612, accept
+
+Reviews: revision 0f48d9c, accept
+Reviews: revision 2d335ef, accept
+Reviews: revision 94ac2e5, accept
+Reviews: revision bd3952c, accept
+Reviews: revision 3504fe7, accept
+Reviews: revision da5724b, accept
+Reviews: revision 661fd00, accept
+
+Reviews: revision 198f1ed, accept
+
+Reviews: revision 8d42622, accept
+Reviews: revision 63ea29c, accept
+Reviews: revision bb85d53, accept
+
+Reviews: revision c551f75, accept
+Reviews: revision df9981c, accept
+
+Reviews: revision 5974c75, accept
+Reviews: revision 054013a, accept
+Reviews: revision 9939efe, accept
+Reviews: revision f6ce54a, accept
+
+Reviews: revision 8ac420e, accept
+
+Reviews: revision 81ebcc8, accept
+
+Reviews: revision 3d93e2d, accept
+
+Reviews: revision ea33174, accept
+
 ## Outcome
 
 Each package registry page that ships with 0.2 shows a short README for a stranger with the shared opening, one replayed example in that language, the cost and the install line, and `sdlc/scripts/registry-readmes.py` fails the release on any page that names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version, or whose example does not run.

@@ -9,7 +9,7 @@ import pathlib
 import sys
 import tempfile
 
-from helper import Backend, child, environment, expect, main
+from helper import Backend, child, environment, expect, main, question_directory
 
 REFUSED = "thinkthen local: the question file '{}' did not read: it must be a regular file at most 1048576 bytes (retryable: no)"
 QUESTION = json.dumps({"decide": "Is it red?"})
@@ -59,7 +59,7 @@ db = connect()
 results = []
 for path in {paths!r}:
     for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
-        value = json.loads(db.execute('SELECT thinkthen_'+verb+'_complete(?,?)', ('@'+path, '{{"records":[]}}')).fetchone()[0])
+        value = complete(db, verb, '@'+path, '{{"records":[]}}')
         results.append([value['native']['error']['kind'], 'facts' in value['native'], value['observations']])
 say(results=results)
 """, environment(backend), 5)
@@ -82,7 +82,7 @@ def test_complete_references_keep_native_roles_names_and_link_behavior() -> None
         (folder/'link.json').symlink_to(folder/'choose.json')
         backend = Backend()
         env = environment(backend)
-        named = pathlib.Path(env['XDG_CONFIG_HOME'])/'thinkthen/questions'
+        named = question_directory(env)
         named.mkdir(parents=True)
         (named/'saved.json').symlink_to(folder/'choose.json')
         (named/'good.json').write_text(json.dumps(sources['choose']))
@@ -94,7 +94,7 @@ def test_complete_references_keep_native_roles_names_and_link_behavior() -> None
 db = connect()
 results=[]
 for verb, reference in {cases!r}:
-    value=json.loads(db.execute('SELECT thinkthen_'+verb+'_complete(?,?)',(reference,'{{"records":[]}}')).fetchone()[0])
+    value=complete(db, verb, reference, '{{"records":[]}}')
     results.append(value['native'].get('error',{{}}).get('kind','ok'))
 say(results=results)
 """, env, 5)

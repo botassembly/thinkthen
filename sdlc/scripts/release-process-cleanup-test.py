@@ -28,6 +28,9 @@ BOUNDED = load('release-bounded')
 C = load('release-windows-c')
 MSVC = load('release-msvc')
 SMOKE = load('release-windows-c-smoke')
+INSTALLER = load('windows-installer-test')
+WINDOWS = load('release-windows-smoke')
+SDK = load('release-windows-sdk-smoke')
 FIXTURE = runpy.run_path(str(SCRIPTS / 'release-windows-c-fixture.py'))
 
 
@@ -66,7 +69,7 @@ def portable(root):
                                       'FAKE_SERVICE_API_KEY': 'fake-only', 'THINKTHEN_BACKEND': 'planted'}):
         assert C.run([sys.executable, '-c',
             'import os; print(",".join(sorted(set(os.environ) & {"CL","_CL_","LINK","FAKE_SERVICE_API_KEY","THINKTHEN_BACKEND"})))']) == '\n'
-    for caller in (C, MSVC):
+    for caller in (C, MSVC, INSTALLER, WINDOWS, SDK):
         args = [sys.executable, '-c',
             'import os; os.write(1,b"a"*524288); os.write(2,b"b"*524288)']
         result = caller.CAPTURE(args, env=environment, timeout=10)
@@ -79,8 +82,15 @@ def portable(root):
             'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())'],
             env=environment, timeout=10, input=b'\x00\xff\r\n')
         assert result.stdout == b'\x00\xff\r\n' and not result.stderr and result.returncode == 0
-        invoke = (lambda command: C.run(command)) if caller is C else (lambda command: MSVC.run(command, environment))
-        refused(lambda: invoke([sys.executable, '-c', 'import sys; sys.exit(23)']), 'exit 23')
+        if caller in (C, MSVC):
+            invoke = (lambda command: C.run(command)) if caller is C else (lambda command: MSVC.run(command, environment))
+            refused(lambda: invoke([sys.executable, '-c', 'import sys; sys.exit(23)']), 'exit 23')
+    result = SDK.run([sys.executable, '-c', 'from pathlib import Path; print(Path.cwd())'], root, environment)
+    assert Path(result).resolve() == root.resolve(), 'SDK_CHILD_WRONG_DIRECTORY'
+    result = WINDOWS.run([sys.executable, '-c',
+        'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read()); sys.exit(23)'],
+        environment, text='first\nsecond\r\n', code=23, output='first\nsecond')
+    assert result.stdout == 'first\nsecond\r\n', 'SMOKE_STDIN_BYTES_CHANGED'
 
     if os.name != 'posix':
         print('POSIX owned-session execution skipped; native Windows lifecycle proof remains separate')
@@ -97,20 +107,22 @@ def portable(root):
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     try:
         assert alive(unrelated.pid), 'LIVE_OWNED_CHILD_REPORTED_GONE'
-        for caller in (C, MSVC, SMOKE):
-            pids = root / ('c-pids' if caller is C else 'msvc-pids' if caller is MSVC else 'consumer-pids')
-            # Exercise each real release wrapper with a short deadline.
+        for caller in (C, MSVC, SMOKE, INSTALLER, WINDOWS, SDK):
+            pids = root / (caller.__name__ + '-pids')
+            # Exercise each real release wrapper, shortening only its declared deadline.
             def short(args, **options):
-                assert options['timeout'] == (120 if caller is C else 60)
+                expected = {C: 120, MSVC: 60, SMOKE: 60, INSTALLER: 30, WINDOWS: 180, SDK: 600}
+                assert options['timeout'] == expected[caller]
                 if caller is not SMOKE:
                     assert options['env'] == environment
-                    assert options.get('text', False) is (caller is MSVC)
+                    assert options.get('text', False) is (caller in (MSVC, SDK))
+                    if caller is SDK:
+                        assert options['cwd'] == root
                 else:
                     assert len(args) == 1 and Path(args[0]) == consumers[0] and Path(args[0]).name == 'consumer.exe'
-                    # This POSIX stand-in is Python. Bypass macOS shebang startup
-                    # delays before its first statement; keep the cleanup deadline.
+                    # Invoke the POSIX stand-in directly through its interpreter on macOS.
                     args = [sys.executable, *args]
-                    assert 'text' not in options and options['input'].startswith(b'decide 3\n')
+                    assert 'text' not in options and 'input' not in options
                     assert not any(name in options['env'] for name in ('INCLUDE', 'LIB', 'LIBPATH', 'CL', '_CL_', 'LINK'))
                 return BOUNDED.capture(args, **(options | {'timeout': 1}))
             started = time.monotonic()
@@ -130,6 +142,23 @@ def portable(root):
                         with mock.patch.object(SMOKE.C, 'CAPTURE', short):
                             refused(lambda: SMOKE.consume(archive), Path(sys.executable).name + ' timed out after 1 seconds')
                     assert archive.read_bytes() == original and consumers and not consumers[0].parent.exists()
+                elif caller is INSTALLER:
+                    diagnostic = io.StringIO()
+                    with contextlib.redirect_stdout(diagnostic), mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: INSTALLER.run_fixture([sys.executable, str(tool), str(pids)],
+                            environment, timeout=30, label='cleanup regression'),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
+                    assert 'starting cleanup regression (deadline 30s)' in diagnostic.getvalue()
+                    assert 'cleanup regression failed in ' in diagnostic.getvalue(), 'FIXTURE_FAILURE_PHASE_MISSING'
+                    assert 'timed out after 1 seconds' in diagnostic.getvalue()
+                elif caller is WINDOWS:
+                    with mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: WINDOWS.run([sys.executable, str(tool), str(pids)], environment),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
+                elif caller is SDK:
+                    with mock.patch.object(caller, 'CAPTURE', short):
+                        refused(lambda: SDK.run([sys.executable, str(tool), str(pids)], root, environment),
+                            Path(sys.executable).name + ' timed out after 1 seconds')
                 else:
                     with mock.patch.object(caller, 'CAPTURE', short):
                         invoke = (lambda: C.run([sys.executable, str(tool), str(pids)])) if caller is C else (
@@ -175,6 +204,105 @@ def portable(root):
     finally:
         unrelated.kill()
         unrelated.wait(timeout=5)
+
+
+def sdk_project_locations(root):
+    """Exercise consumer orchestration with tool doubles that enforce project locations."""
+    import json
+    import urllib.request
+    from install_check import Check
+    from install_check_channels import nuget
+
+    version = '0.2.0'
+    registry = root / 'registry'
+    (registry / 'maven').mkdir(parents=True)
+    (registry / 'maven/thinkthen-jvm-0.2.0.pom').write_text(
+        '<project><version>0.2.0</version><properties><thinkthen.session.jdk>22</thinkthen.session.jdk>'
+        '<thinkthen.kotlin.coroutines.version>1.10.2</thinkthen.kotlin.coroutines.version></properties></project>')
+    built = []
+    sdk_run = SDK.run
+    compilers = []
+
+    def tool(command, project, env):
+        args = list(map(str, command))
+        if args[0].endswith(('.bat', '.cmd')):
+            def capture(packed, **kwargs):
+                # cmd's batch parameter parser splits unquoted semicolons, even
+                # though Python's executable argument quoting leaves them bare.
+                assert isinstance(packed, str), 'SDK_BATCH_CLASSPATH_SPLIT'
+                assert packed == 'cmd.exe /d /s /c "' + ' '.join('"' + arg + '"' for arg in args) + '"', packed
+                cp = args[args.index('-classpath') + 1]
+                assert len(cp.split(';')) == 3 and all(Path(jar).is_file() for jar in cp.split(';')), cp
+                assert kwargs == dict(cwd=project, env=env, text=True, timeout=600)
+                compilers.append(Path(args[0]).name)
+                return subprocess.CompletedProcess(packed, 0, '', '')
+            with mock.patch.object(SDK, 'CAPTURE', side_effect=capture):
+                return sdk_run(command, project, env)
+        if args[0] == 'dotnet':
+            if args[1] == 'new':
+                # dotnet new defaults to a subdirectory when --name differs from cwd.
+                output = args[args.index('--output') + 1] if '--output' in args else 'InstallCheck'
+                destination = project / output
+                destination.mkdir(exist_ok=True)
+                (destination / 'InstallCheck.csproj').write_text('<Project/>')
+            elif args[1] in ('add', 'build'):
+                assert (project / 'InstallCheck.csproj').is_file(), 'SDK_PROJECT_OUTSIDE_WORKING_DIRECTORY'
+                if args[1] == 'add':
+                    # NuGet combines these Windows tool roots while loading machine settings.
+                    probe = SDK.CAPTURE([sys.executable, '-u', '-c',
+                        'import os; from pathlib import Path; '
+                        'print(Path(os.environ["PROGRAMFILES(X86)"]) / "NuGet"); '
+                        'print(Path(os.environ["PROGRAMFILES"]) / "NuGet")'],
+                        cwd=project, env=env, timeout=10, text=True)
+                    assert probe.returncode == 0, probe.stderr
+                    assert probe.stdout.splitlines() == [str(Path(os.environ[name]) / 'NuGet')
+                        for name in ('PROGRAMFILES(X86)', 'PROGRAMFILES')], repr(probe.stdout)
+                    (project / 'obj').mkdir()
+                    (project / 'obj/project.assets.json').write_text(json.dumps(
+                        {'libraries': {'Botassembly.ThinkThen/' + version: {}}}))
+                else:
+                    assert (project / 'Program.cs').read_text() in (SDK.live_source('csharp'), SDK.SOURCES['csharp'])
+                    binary = project / 'bin/Debug/net8.0/InstallCheck.dll'
+                    binary.parent.mkdir(parents=True)
+                    binary.touch()
+                    built.append(binary)
+            else:
+                assert Path(args[1]) in built and Path(args[1]).is_file(), 'SDK_EXECUTES_UNBUILT_PROJECT'
+        elif 'install' in args:
+            metadata = project / 'node_modules/thinkthen/package.json'
+            metadata.parent.mkdir(parents=True)
+            metadata.write_text(json.dumps({'version': version}))
+        elif 'dependency:copy-dependencies' in args:
+            assert (project / 'pom.xml').is_file()
+            (project / 'dependencies').mkdir()
+            for name in ('thinkthen.jar', 'kotlin-stdlib.jar', 'kotlinx-coroutines.jar'):
+                (project / 'dependencies' / name).touch()
+        if args[-1].endswith('sample'):
+            language = Path(args[-1]).parent.name
+            if language == 'jvm':
+                language = {'InstallCheck': 'java', 'InstallKotlinKt': 'kotlin', 'InstallScala': 'scala'}[args[-2]]
+            elif language == 'node':
+                assert Path(args[1]).is_file()
+            body = {'model': 'jev-1.13.0', 'questions': {'q1': {'type': 'noul',
+                'instructions': f'The text is "consumer-{language}". Is it?'}},
+                'state': 'Each question quotes the text it asks about.'}
+            with urllib.request.urlopen(urllib.request.Request(env['THINKTHEN_BASE_URL'],
+                    data=json.dumps(body).encode(), headers={'Content-Type': 'application/json'})) as response:
+                assert response.status == 200
+            return '{"value":true,"requests_sent":1}'
+        return ''
+
+    work = root / 'sdk'; work.mkdir()
+    with mock.patch.object(SDK, 'run', side_effect=tool), mock.patch.object(SDK, 'sdk', return_value=root), \
+            mock.patch.object(SDK.os, 'pathsep', ';'):
+        SDK.consume(root / 'npm', registry, work)
+    assert compilers == ['kotlinc.bat', 'scalac.bat'], compilers
+    (root / 'channel').mkdir()
+    check = Check(root / 'channel', 'nuget', version)
+    check.run = lambda *args: tool(args, check.project, check.env)
+    check.response = lambda *args: {'value': Path(args[1]) in built, 'requests_sent': 0}
+    installed, reply, _ = nuget(check)
+    assert installed == version and reply == {'value': True, 'requests_sent': 0}
 
 
 def windows_source_oracles():
@@ -268,6 +396,9 @@ def windows_source_oracles():
 def main():
     with tempfile.TemporaryDirectory(prefix='thinkthen-release-timeout-') as temporary:
         portable(Path(temporary))
+        with mock.patch.dict(os.environ, {'PROGRAMFILES': str(Path(temporary) / 'programs'),
+                                           'PROGRAMFILES(X86)': str(Path(temporary) / 'programs-x86')}):
+            sdk_project_locations(Path(temporary))
     windows_source_oracles()
     posix = 'POSIX inherited-output/owned cleanup passed' if os.name == 'posix' else 'POSIX cleanup execution skipped'
     print(f'Release process lifecycle: byte/success/nonzero/filled-output passed; {posix}; Windows source oracles passed, native Windows full proof pending')

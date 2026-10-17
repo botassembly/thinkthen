@@ -333,6 +333,7 @@ impl<R: Read> Iterator for Rows<R> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: encoded table headers and record limits need exact byte-boundary parser checks.
     use std::cell::Cell;
     use std::io::Cursor;
     use std::io::{self, Read};

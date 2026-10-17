@@ -8,7 +8,27 @@
 #include "check.c"
 static const char feed[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
 static const char direct[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"text\",\"text\":\"Evidence.\"}}}";
+static thinkthen_complete_utf8_v1 counted(const char *text) {
+    thinkthen_complete_utf8_v1 view = {text, strlen(text)};
+    return view;
+}
 static thinkthen_session *open_session(thinkthen_engine *engine, const char *json) {
+    if (getenv("SESSION_TYPED")) {
+        char words[] = "Does it pass?", evidence[] = "Evidence.", name[] = "records";
+        thinkthen_request_text_v1 wording = {counted(words)}, content = {counted(evidence)}, feed_name = {counted(name)};
+        thinkthen_request_question_selector_text_v1 question = {.m_text=&wording};
+        thinkthen_request_question_selector_v1 selector = {THINKTHEN_REQUEST_QUESTION_SELECTOR_TEXT_V1, {.text=&question}};
+        thinkthen_request_input_text_v1 text = {.m_text=&content};
+        thinkthen_request_input_feed_v1 producer = {.m_name=&feed_name};
+        thinkthen_request_input_v1 input = {0};
+        if (json == feed) { input.kind=THINKTHEN_REQUEST_INPUT_FEED_V1; input.data.feed=&producer; }
+        else { input.kind=THINKTHEN_REQUEST_INPUT_TEXT_V1; input.data.text=&text; }
+        thinkthen_request_arguments_v1 arguments = {.m_input=&input,.m_question=&selector};
+        thinkthen_session *owner = NULL;
+        check(thinkthen_session_new_typed_with_surface(engine, counted("decide"), &arguments, counted("c"), &owner) == THINKTHEN_OK, "typed constructor owns every carrier");
+        memset(words, 0xff, sizeof words); memset(evidence, 0xff, sizeof evidence); memset(name, 0xff, sizeof name);
+        return owner;
+    }
     size_t len = strlen(json);
     char *buffer = malloc(len);
     if (!buffer) exit(1);
@@ -21,6 +41,26 @@ static thinkthen_session *open_session(thinkthen_engine *engine, const char *jso
     memset(buffer, 0xff, len);
     free(buffer);
     return session;
+}
+static int push_owned(thinkthen_session *session, char *json, uint32_t *status) {
+    if (!getenv("SESSION_TYPED")) return thinkthen_session_try_push(session, json, strlen(json), status);
+    char bytes[] = "Evidence.", file[] = "owned.txt";
+    thinkthen_request_text_v1 text = {counted(bytes)}, filename = {counted(file)};
+    thinkthen_request_unsigned_v1 line = {1};
+    thinkthen_request_original_text_v1 original_text = {.m_text=&text};
+    thinkthen_request_original_v1 original = {THINKTHEN_REQUEST_ORIGINAL_TEXT_V1, {.text=&original_text}};
+    thinkthen_request_item_v1 item = {.m_original=&original};
+    thinkthen_request_session_source_location_v1 location = {.m_file=&filename,.m_first_line=&line,.m_last_line=&line};
+    thinkthen_request_session_descriptor_v1 descriptor = {.m_item=&item,.m_location=&location};
+    int code = thinkthen_session_try_push_typed(session, &descriptor, status);
+    memset(bytes, 0xff, sizeof bytes); memset(file, 0xff, sizeof file);
+    return code;
+}
+static int finish_owned(thinkthen_session *session, int failed_input) {
+    if (!getenv("SESSION_TYPED")) return thinkthen_session_finish(session, failed_input ? "{\"kind\":\"io\"}" : NULL, failed_input ? 13 : 0);
+    thinkthen_request_reader_failure_io_v1 io = {0};
+    thinkthen_request_reader_failure_v1 failure = {THINKTHEN_REQUEST_READER_FAILURE_IO_V1, {.io=&io}};
+    return thinkthen_session_finish_typed(session, failed_input ? &failure : NULL);
 }
 static int same_text(thinkthen_complete_utf8_v1 text, const char *expected) {
     size_t len = strlen(expected);
@@ -35,7 +75,8 @@ static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
         if (!terminal) return;
         if (terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) {
             const thinkthen_complete_error_v1 *error = terminal->failure.value->error;
-            check(error->kind->kind == THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1, "retained typed reader failure");
+            uint32_t expected = getenv("SESSION_NEXT") ? THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1 : THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1;
+            check(error->kind->kind == expected, "retained typed native failure");
             check(error->message.data && error->message.len, "retained typed safe message");
         } else {
             check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "success has absent failure");
@@ -44,10 +85,14 @@ static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
         }
     } else if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
         const thinkthen_complete_atomic_decide_value_v1 *row = view->data.decide_row->value;
-        check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "typed physical source present");
-        check(same_text(row->source.value->file, "owned.txt"), "retained nested filename");
-        check(row->source.value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->first_line.value == 1, "retained first line");
-        check(row->source.value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->last_line.value == 1, "retained last line");
+        if (getenv("SESSION_NEXT")) check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "inline row has no invented physical source");
+        else {
+            check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "typed physical source present");
+            if (!row->source.value) return;
+            check(same_text(row->source.value->file, "owned.txt"), "retained nested filename");
+            check(row->source.value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->first_line.value == 1, "retained first line");
+            check(row->source.value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->last_line.value == 1, "retained last line");
+        }
         check(row->meta->observations.len && row->meta->question_sources.len, "typed nested observations and origins");
         if (getenv("SESSION_PARTIAL")) {
             check(row->meta->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "partial usage present");
@@ -113,18 +158,15 @@ static thinkthen_session_result *drain(thinkthen_session *session) {
     for (;;) {
         uint32_t status = 99;
         thinkthen_session_result *out = (thinkthen_session_result *)(uintptr_t)7;
-        check(thinkthen_session_try_read(session, &status, &out) == THINKTHEN_OK, "read succeeds");
+        check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &status, &out) == THINKTHEN_OK, "blocking read succeeds");
         if (status == THINKTHEN_SESSION_RESULT_V1) {
             check(out != NULL, "result transfers an owner");
             packet_json(out);
             if (kept) thinkthen_session_result_free(out);
             else kept = out;
         } else {
-            check(out == NULL, "pending and end clear result output");
-            if (status == THINKTHEN_SESSION_END_V1) return kept;
-            check(status == THINKTHEN_SESSION_PENDING_V1, "pending status");
-            uint32_t ready;
-            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "native wait succeeds");
+            check(status == THINKTHEN_SESSION_END_V1 && out == NULL, "end clears result output");
+            return kept;
         }
     }
 }
@@ -136,10 +178,7 @@ static THREAD_RESULT separate_error(void *unused) {
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "other thread fixed diagnostic");
     return THREAD_DONE;
 }
-static thinkthen_complete_utf8_v1 counted(const char *text) {
-    thinkthen_complete_utf8_v1 view = {text, strlen(text)};
-    return view;
-}
+
 static int named_sessions(thinkthen_engine *engine) {
     struct thinkthen_named_request_v1 request = {
         counted("decide"), counted("{\"kind\":\"text\",\"text\":\"Does it pass?\"}"),
@@ -218,14 +257,21 @@ struct native_waiter {
     uint32_t ready;
     int code;
     int preserved;
+    thinkthen_session_result *packet;
 };
 static THREAD_RESULT wait_native(void *argument) {
     struct native_waiter *waiter = argument;
     uint32_t sentinel = 99;
     waiter->preserved = thinkthen_session_wait(waiter->session, 99, 0, &sentinel) == THINKTHEN_EUSAGE && sentinel == 99;
     const char *before = thinkthen_session_error_message();
-    waiter->code = thinkthen_session_wait(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, 5000, &waiter->ready);
-    waiter->preserved = waiter->preserved && before == thinkthen_session_error_message();
+    if (getenv("SESSION_NEXT")) {
+        waiter->packet = (thinkthen_session_result *)(uintptr_t)7;
+        waiter->code = thinkthen_session_next_packet(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, &waiter->ready, &waiter->packet);
+        waiter->preserved = waiter->preserved && waiter->ready == 99 && waiter->packet == (thinkthen_session_result *)(uintptr_t)7;
+    } else {
+        waiter->code = thinkthen_session_wait(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, 5000, &waiter->ready);
+        waiter->preserved = waiter->preserved && before == thinkthen_session_error_message();
+    }
     return THREAD_DONE;
 }
 int main(void) {
@@ -245,13 +291,33 @@ int main(void) {
             thinkthen_session_result_free(packet);
             if (status != THINKTHEN_SESSION_RESULT_V1) break;
         }
-        struct native_waiter waiter = {session, 99, 99, 0};
+        struct native_waiter waiter = {session, 99, 99, 0, NULL};
         THREAD_TYPE thread;
         if (fixture_start(&thread, wait_native, &waiter) != 0) return 1;
         thinkthen_session_cancel(session);
         puts("cancelled"); fflush(stdout);
         check(fixture_join(thread) == 0, "join native waiter before freeing handle");
-        check(waiter.code == THINKTHEN_OK && waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1, "cancel wakes held native wait");
+        if (getenv("SESSION_NEXT")) {
+            check(waiter.code == THINKTHEN_ECANCELLED, "cancel wakes blocked packet read");
+            puts("woken"); fflush(stdout);
+            (void)getchar();
+            thinkthen_session_result *packet = (thinkthen_session_result *)(uintptr_t)7;
+            uint32_t state = 99, ready = 99;
+            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 5000, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_RESULT_V1, "hold an unread post-cancel packet");
+            uint32_t invalid[] = {THINKTHEN_SESSION_WAIT_INPUT_V1, THINKTHEN_SESSION_WAIT_SETTLEMENT_ARM_V1, THINKTHEN_SESSION_WAIT_INTERRUPTIBLE_SETTLEMENT_V1, 99};
+            for (size_t i = 0; i < sizeof invalid / sizeof invalid[0]; ++i) {
+                check(thinkthen_session_next_packet(session, invalid[i], &state, &packet) == THINKTHEN_EUSAGE, "packet read refuses invalid interest");
+                check(state == 99 && packet == (thinkthen_session_result *)(uintptr_t)7, "invalid interest preserves both outputs and queued packet");
+            }
+            thinkthen_session_cancel(session);
+            check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_RESULT_V1, &state, &packet) == THINKTHEN_OK && state == THINKTHEN_SESSION_RESULT_V1 && packet, "queued packet wins over cancellation");
+            packet_json(packet); thinkthen_session_result_free(packet);
+            do {
+                check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &state, &packet) == THINKTHEN_OK, "drain after prompt cancel");
+                if (packet) { packet_json(packet); thinkthen_session_result_free(packet); }
+            } while (state == THINKTHEN_SESSION_RESULT_V1);
+            check(state == THINKTHEN_SESSION_END_V1, "cancel settles and drains terminal");
+        } else check(waiter.code == THINKTHEN_OK && waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1, "cancel wakes held native wait");
         check(waiter.preserved, "wait keeps its own calling-thread diagnostics");
         thinkthen_session_free(session);
         puts("freed"); fflush(stdout);
@@ -302,7 +368,8 @@ int main(void) {
         check(usage_state.kind == 99 && usage_advice.data == (const char *)(uintptr_t)7 && usage_advice.len == 99, "usage failure preserves both outputs");
         const char *diagnostic = thinkthen_session_error_message();
         check(operations[i](engine, &usage_state, &usage_advice) == THINKTHEN_OK, "live usage observation succeeds");
-        check(usage_state.kind == (getenv("SESSION_USAGE_DISABLED") ? THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 : THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1) && usage_advice.data == NULL && usage_advice.len == 0, "successful state has no advice");
+        uint32_t expected = getenv("SESSION_USAGE_DISABLED") ? THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 : THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1;
+        check(usage_state.kind == expected && usage_advice.data == NULL && usage_advice.len == 0, "successful state has no advice");
         check(diagnostic == thinkthen_session_error_message(), "usage success preserves diagnostic");
         usage_state.kind = 99; usage_advice.data = (const char *)(uintptr_t)7; usage_advice.len = 99;
     }
@@ -325,7 +392,7 @@ int main(void) {
     uint32_t ready_sentinel = 99;
     check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, &ready_sentinel) == THINKTHEN_EUSAGE && ready_sentinel == 99, "wait refusal preserves output");
     check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, NULL) == THINKTHEN_EUSAGE, "wait requires output");
-    const char invalid[] = {(char)0xff};
+    const unsigned char invalid[] = {0xff};
     thinkthen_session *sentinel = (thinkthen_session *)(uintptr_t)7;
     const char *bad_surfaces[] = {"", "Go", " go", "php\n", "secret-surface"};
     for (size_t i = 0; i < sizeof bad_surfaces / sizeof bad_surfaces[0]; ++i) {
@@ -333,11 +400,11 @@ int main(void) {
         check(sentinel == (thinkthen_session *)(uintptr_t)7, "surface refusal preserves output");
         check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "surface diagnostic withholds spelling");
     }
-    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "surface UTF-8 refuses");
+    check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), (const char *)invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "surface UTF-8 refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), "go", SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "surface extent refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 1, &sentinel) == THINKTHEN_EUSAGE, "surface NULL extent refuses");
     check(thinkthen_session_new_with_surface(engine, direct, strlen(direct), NULL, 0, &sentinel) == THINKTHEN_EUSAGE, "surface token required");
-    check(thinkthen_session_new(engine, invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
+    check(thinkthen_session_new(engine, (const char *)invalid, sizeof invalid, &sentinel) == THINKTHEN_EUSAGE, "UTF-8 refusal");
     check(thinkthen_session_new(engine, feed, SIZE_MAX, &sentinel) == THINKTHEN_EUSAGE, "extent refusal");
     check(thinkthen_session_new(NULL, feed, strlen(feed), &sentinel) == THINKTHEN_EUSAGE, "NULL engine refusal");
     check(thinkthen_session_new(engine, feed, strlen(feed), NULL) == THINKTHEN_EUSAGE, "required constructor output");
@@ -370,15 +437,20 @@ int main(void) {
         check(thinkthen_session_try_push(session, bad_descriptors[i], strlen(bad_descriptors[i]), &status) == THINKTHEN_EUSAGE, "bad descriptor refuses");
         check(status == 99, "bad descriptor preserves status");
     }
-    check(thinkthen_session_try_push(session, invalid, sizeof invalid, &status) == THINKTHEN_EUSAGE, "descriptor UTF-8 refuses");
+    check(thinkthen_session_try_push(session, (const char *)invalid, sizeof invalid, &status) == THINKTHEN_EUSAGE, "descriptor UTF-8 refuses");
     check(thinkthen_session_try_push(session, "{}", 2, NULL) == THINKTHEN_EUSAGE, "push requires status");
     const char *bad_failures[] = {"", "{}", "{\"kind\":\"io\",\"kind\":\"utf8\"}", "{\"kind\":\"io\",\"unknown\":0}", "{\"kind\":\"io\",\"location\":null}", "{\"kind\":\"io\",\"location\":{\"file\":\"x\",\"file\":\"y\"}}"};
     for (size_t i = 0; i < sizeof bad_failures / sizeof bad_failures[0]; ++i)
         check(thinkthen_session_finish(session, bad_failures[i], strlen(bad_failures[i])) == THINKTHEN_EUSAGE, "bad reader failure refuses");
-    check(thinkthen_session_finish(session, invalid, sizeof invalid) == THINKTHEN_EUSAGE, "reader failure UTF-8 refuses");
-    check(thinkthen_session_finish(session, "{\"kind\":\"io\"}", 13) == THINKTHEN_OK, "valid owned reader failure");
+    check(thinkthen_session_finish(session, (const char *)invalid, sizeof invalid) == THINKTHEN_EUSAGE, "reader failure UTF-8 refuses");
+    check(finish_owned(session, 1) == THINKTHEN_OK, "valid owned reader failure");
     check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_EUSAGE, "changed finish refuses");
     check(thinkthen_session_try_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed intake avoids descriptor decoding");
+    check(thinkthen_session_try_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed typed intake avoids descriptor conversion");
+    check(thinkthen_session_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids JSON decoding");
+    check(thinkthen_session_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids typed conversion");
+    check(thinkthen_session_push(session, "malformed", 9, NULL) == THINKTHEN_EUSAGE, "blocking JSON push requires status before admission");
+    check(thinkthen_session_push_typed(session, NULL, NULL) == THINKTHEN_EUSAGE, "blocking typed push requires status before conversion");
     thinkthen_engine_free(engine);
     const char *untouched = (const char *)(uintptr_t)7;
     size_t untouched_len = 99;
@@ -396,9 +468,9 @@ int main(void) {
     session = open_session(engine, feed);
     if (!session) return 1;
     char descriptor[] = "{\"item\":{\"original\":{\"kind\":\"text\",\"text\":\"Evidence.\"}},\"location\":{\"file\":\"owned.txt\",\"first_line\":1,\"last_line\":1}}";
-    check(thinkthen_session_try_push(session, descriptor, strlen(descriptor), &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_ACCEPTED_V1, "accepted descriptor owns bytes");
+    check(push_owned(session, descriptor, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_ACCEPTED_V1, "accepted descriptor owns bytes");
     memset(descriptor, 0xff, sizeof descriptor);
-    check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_OK, "EOF finishes input");
+    check(finish_owned(session, 0) == THINKTHEN_OK, "EOF finishes input");
     thinkthen_engine_free(engine);
     result = drain(session);
     check(result != NULL, "owned execution settles");

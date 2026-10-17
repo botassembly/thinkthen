@@ -1,4 +1,4 @@
-//! The lazy batch behind `filter`, `decide_many`, and `annotate`. Its
+//! The lazy batch behind independent Request rows and annotation calls. Its
 //! source is a pulled pipeline call in `pull`, or one error.
 
 use std::fmt;
@@ -73,12 +73,14 @@ impl<'a, T: 'a> Batch<'a, T> {
     }
 
     /// A batch that yields one error, then nothing.
+    #[cfg(any(test, feature = "polars"))]
     pub(crate) fn failed(error: Error) -> Self {
         Self {
             source: Box::new(Some(error)),
         }
     }
 
+    #[cfg(any(test, feature = "polars"))]
     pub(crate) fn of(result: Result<Self, Error>) -> Self {
         result.unwrap_or_else(Self::failed)
     }
@@ -111,10 +113,7 @@ pub(crate) enum Outcome<T> {
 impl<T: serde::Serialize> serde::Serialize for Outcome<T> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Self::Complete(call) => call
-                .complete()
-                .ok_or_else(|| serde::ser::Error::custom("a completed batch has no identity"))?
-                .serialize(serializer),
+            Self::Complete(call) => call.serialize(serializer),
             Self::Failed { completed, error } if completed.is_empty() => {
                 error.complete().serialize(serializer)
             }

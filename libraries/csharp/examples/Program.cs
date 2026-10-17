@@ -1,6 +1,8 @@
 using System;
 using ThinkThen;
+using ThinkThen.Inputs;
 using var engine = Engine.Open();
-var result = engine.Decide("Is it?", "example");
-Answer answer = result.Value;
-Console.WriteLine($"{answer.Outcome}: {answer.Probability}");
+var isRelevant = await engine.DecideAsync(
+    new RequestQuestionText { Text = "Is it?" },
+    new RequestInputText { Text = "example" });
+Console.WriteLine(isRelevant.Value.ValueKind == System.Text.Json.JsonValueKind.Null ? "not sure" : isRelevant.Value.GetBoolean().ToString());

@@ -12,8 +12,10 @@ def source_path(root, value):
     path = Path(value)
     if path.is_relative_to('/build/source'):
         path = root / path.relative_to('/build/source')
-    elif path.is_relative_to('/build/home'):
-        path = Path.home() / path.relative_to('/build/home')
+    elif path.is_relative_to('/build/host'):
+        path = Path.home() / path.relative_to('/build/host')
+    elif path.is_relative_to('/build/users'):
+        path = Path.home() / path.relative_to('/build/users')
     if not path.is_absolute():
         path = root / path
     try:
@@ -54,7 +56,7 @@ def lines(root, lcov):
     return result
 
 
-def report(root, run, revision, production, collections, elapsed, *, missing=(), missing_reasons=None, continuous=False):
+def report(root, run, revision, production, collections, elapsed, *, missing=(), missing_reasons=None, continuous=False, platform_slice=None):
     mapped = lines(root, production)
     denominator = {}
     for path, counts in mapped.items():
@@ -71,25 +73,31 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     zero_key = 'unobserved'
     unit_key = 'observed_unit_only'
     file_totals = {}
+    line_sets = {}
     for path, numbers in sorted(denominator.items()):
-        reached = {name: {number for number in numbers if files.get(path, {}).get(number, 0) > 0}
-                   for name, files in hits.items()}
+        retained = line_sets[path] = {
+            'mapped_nonblank': sorted(numbers),
+            **{name: sorted(number for number in numbers if files.get(path, {}).get(number, 0) > 0)
+               for name, files in hits.items()}}
+        reached = {name: set(retained[name]) for name in collections}
         outside = set().union(*(value for name, value in reached.items()
                                     if name not in UNIT_COLLECTIONS))
         units = set().union(*(value for name, value in reached.items() if name in UNIT_COLLECTIONS))
-        file_totals[path] = {'mapped_nonblank': len(numbers),
-                            **{name: len(value) for name, value in reached.items()},
-                            unit_key: len(units - outside),
-                            zero_key: len(numbers - outside - units)}
+        file_totals[path] = {key: len(value) for key, value in retained.items()}
+        file_totals[path].update({unit_key: len(units - outside),
+                                 zero_key: len(set(retained['mapped_nonblank']) - outside - units)})
     totals = {key: sum(values[key] for values in file_totals.values())
               for key in ('mapped_nonblank', *collections, unit_key, zero_key)}
     partial = not any(name.startswith('installed-') for name in collections) or bool(missing)
     scope = 'partial coverage; installed surfaces unmeasured' if partial else 'native and installed library coverage'
-    payload = {'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
+    if platform_slice:
+        scope = platform_slice + ' platform collection; require both platform reports before acceptance'
+    payload = {'platform_collection': platform_slice, 'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
                'unmeasured_reasons': dict(missing_reasons or {}),
                'denominator': 'nonblank lines mapped by all retained production native objects',
                'profile_mode': 'continuous' if continuous else 'normal-exit',
-               'totals': totals, 'files': file_totals, 'missing_child_profiles': limitations}
+               'totals': totals, 'files': file_totals, 'line_sets': line_sets,
+               'missing_child_profiles': limitations}
     (run / 'totals.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     rows = [f'# Coverage at {revision}', '', f'Elapsed: {elapsed:.1f} seconds.', '',
             scope + '.', '',
@@ -104,7 +112,7 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     for name, observations in limitations.items():
         rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
     rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining root source units; `c-source-unit` runs only the C workspace library source-unit harness. Unit-only comparisons use the union of these source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
-             'The JSON measurement contains the per-file counts and missing-profile observations. Build output is temporary and is not durable evidence.', '']
+             'Raw per-file counts, denominator and reached line-number sets, and missing-profile observations stay in the owned build output at `totals.json`. Only this Markdown summary is saved under `sdlc/records/coverage`.', '']
     for label, key in [('Most lines observed only in source-unit profiles', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:
         rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: |']
@@ -131,9 +139,29 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
         rows += ['Unmeasured collections: ' + ', '.join(missing) + '.', '']
         for name, reason in (missing_reasons or {}).items():
             rows += [f'{name}: {reason}', '']
-    suffix = 'native' if not any(name.startswith('installed-') for name in collections) else 'installed'
+    suffix = platform_slice or ('native' if not any(name.startswith('installed-') for name in collections) else 'installed')
     summary = root / 'sdlc/records/coverage' / f'{datetime.date.today()}-{revision[:9]}-{suffix}.md'
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text('\n'.join(rows))
-    summary.with_suffix('.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     print(summary)
+
+
+def join_platforms(linux_path, apple_path, revision, expected):
+    """Accept only complete measurements from both hosts on this commit."""
+    apple_names = {'installed-swift', 'installed-objective-c'}
+    linux_names = expected - {'installed-objective-c'}
+    joined = {}
+    for path, platform_name, names in ((linux_path, 'linux', linux_names), (apple_path, 'apple', apple_names)):
+        payload = json.loads(path.read_text())
+        if payload.get('source') != revision or payload.get('platform_collection') != platform_name:
+            raise RuntimeError('coverage join needs matching source and platform collection')
+        totals = payload.get('totals', {})
+        measured = set(totals) - {'mapped_nonblank', 'observed_unit_only', 'unobserved'}
+        if payload.get('unmeasured_collections') or measured != names:
+            raise RuntimeError('coverage join needs every required collection measured')
+        if not isinstance(totals.get('mapped_nonblank'), int) or totals['mapped_nonblank'] <= 0:
+            raise RuntimeError('coverage join needs a production denominator')
+        if any(type(totals[name]) is not int or not 0 < totals[name] <= totals['mapped_nonblank'] for name in names):
+            raise RuntimeError('coverage join needs positive measured counts')
+        joined[platform_name] = totals
+    print(json.dumps({'source': revision, 'collections': joined}, indent=2, sort_keys=True))

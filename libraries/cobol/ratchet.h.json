@@ -1,8 +1,8 @@
 {
   "directory": [
-    "src",
-    "checks"
+    "."
   ],
   "extension": ".h",
-  "max": 1573
+  "max": 12,
+  "scope": "handwritten-production"
 }

@@ -8,6 +8,7 @@ import os
 import json
 import shutil
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tarfile
@@ -25,13 +26,14 @@ SPEC.loader.exec_module(COMMAND)
 INSTALLER_SPEC = importlib.util.spec_from_file_location("windows_installer", REPO / "sdlc/scripts/windows-installer-test.py")
 INSTALLER = importlib.util.module_from_spec(INSTALLER_SPEC)
 INSTALLER_SPEC.loader.exec_module(INSTALLER)
+CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 QUESTION = "Does this report say what the person did before the problem appeared?"
 
 
 def run(args, env, *, text=None, code=0, output=None, timeout=180):
     # A Windows text-mode stdin converts LF to CRLF and changes replay identity.
     payload = text.encode("utf-8") if isinstance(text, str) else text
-    raw = subprocess.run(args, env=env, input=payload, capture_output=True, timeout=timeout)
+    raw = CAPTURE(args, env=env, input=payload, timeout=timeout)
     result = subprocess.CompletedProcess(raw.args, raw.returncode, raw.stdout.decode("utf-8"), raw.stderr.decode("utf-8"))
     if result.returncode != code or (output is not None and result.stdout.strip() != output):
         raise RuntimeError(f"{args[0]} exited {result.returncode}: {result.stdout}{result.stderr}")

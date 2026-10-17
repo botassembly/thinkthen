@@ -22,12 +22,14 @@ def main():
     consumer=sys.argv[1]
     assert consumer in ('php','dart','flutter')
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
-    routine = consumer == 'php' and os.environ.get('THINKTHEN_TEST_PROFILE', 'full') == 'routine'
+    routine = os.environ.get('THINKTHEN_TEST_PROFILE', 'full') == 'routine'
     if routine:
         selected = {'01-decide-yes-captured', '06-choose-billing', '09-tag-two', '11-score-middle',
                     '13-filter-records', '15-rank-records', '17-annotate-mixed', '18-find-second',
                     'typed-recognize', 'typed-relate', 'files-decide', 'images-decide',
                     'settings-replay-answers-from-the-folder-alone'}
+        if consumer in ('dart', 'flutter'):
+            selected = {'settings-max-requests-refuses-past-the-limit'}
         rows = [row for row in rows if row['id'] in selected]
         assert {row['id'] for row in rows} == selected
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
@@ -132,7 +134,7 @@ def main():
                             if value.get('image_variants'):
                                 from c_images import assert_images
                                 assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
-                            expected = file_question_expectation(step) if consumer in ('dart', 'flutter') else step
+                            expected = file_question_expectation(step) if consumer in ('php', 'dart', 'flutter') else step
                             assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                             if row['kind'] in ('images','image-location'):
                                 before=int(backend.read('count'))

@@ -1,3 +1,4 @@
+//! Stays: global width selection, permit refunds and cancellation races need direct concurrency checks.
 //! Process width proofs: selection, the attempt gate, and its transitions.
 //! The command setup and combined-path proofs live beside the command.
 
@@ -253,6 +254,7 @@ fn post(
 ) -> Result<HttpAnswer, Error> {
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url,
         body: b"{}",
         key: &key,
@@ -336,6 +338,7 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
         let posting = scope.spawn(|| {
             let key = Key::of("sk-test-value");
             let exchange = Exchange {
+                headers: &[],
                 url: &url,
                 body: b"{}",
                 key: &key,

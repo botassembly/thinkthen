@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision c4368db10000f4ecd73f634035345c300b93cfec, accept
+
 ## Outcome
 
 `decide`, `choose` and `score` send JPEG and PNG images to the named `typesafe` backend on `jev-1.13.0` and `jev-1.14.0`, and refuse an image outside TypeSafe's published limits with zero sends.
@@ -50,6 +52,10 @@ Milestone: 0.2
 Box answers and long context go to a later ticket if a user asks for them. Animated PNG detection waits for a user report; the server refuses it today.
 
 ## Progress
+
+- 2026-10-15 next: The image implementation is accepted at c4368db100 with all focused offline checks passing; run the four authorized live calls under the ticket cap before the rc.15 freeze.
+
+- 2026-10-15 next: All four authorized pinned-model image calls passed in one job with four sends, zero retries and 2,503 reported tokens under the 100,000-token reservation; qualify their unchanged reviewed code on rc.15.
 
 - 2026-10-17 started
 - 2026-10-17 next: Integrated on the 0.2 release branch ticket/0543-final; lands with 0543 once the frozen candidate qualifies, so it runs no separate lane.

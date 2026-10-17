@@ -1,3 +1,4 @@
+//! Stays: spent deadlines must stop direct and record paths before any send.
 //! A spent deadline on every command request path sends nothing.
 //!
 //! The command exposes no deadline, so these tests give the in-process

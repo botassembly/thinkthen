@@ -4,5 +4,6 @@
     "checks"
   ],
   "extension": ".m",
-  "max": 1780
+  "max": 358,
+  "scope": "handwritten-production"
 }

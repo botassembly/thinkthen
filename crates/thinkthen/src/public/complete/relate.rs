@@ -10,36 +10,19 @@ use std::sync::Arc;
 mod records;
 
 impl Engine {
-    /// Relate one whole set, retaining rejected and failed logical members.
-    /// # Errors
-    /// Invalid entities refuse before sending; all-failed calls and transport stops return final facts.
-    pub fn relate_complete_with<I>(
-        &self,
-        ask: &Relate,
-        entities: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRelated>, Error>
-    where
-        I: IntoIterator<Item = Entity>,
-    {
-        self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
-            engine.relate_admitted_complete(ask, entities, options, (false, false), &[])
-        })
-    }
-
     pub(crate) fn relate_strict_with<I: IntoIterator<Item = Entity>>(
         &self,
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Edge>>, Error> {
+    ) -> Result<crate::RelationCall, Error> {
         self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
-            if entities.is_empty() {
-                return empty_relations(engine, options);
-            }
-            Ok(engine
+            engine
                 .relate_admitted_complete(ask, entities, options, (false, true), &[])?
-                .map(|result| result.value))
+                .project(|result| {
+                    let probability = result.probability();
+                    Ok((result.value.clone(), vec![result], probability))
+                })
         })
     }
 
@@ -185,15 +168,3 @@ fn admitted(
 mod preview;
 pub(crate) use preview::Preview as RelationPreview;
 pub(in crate::public) use preview::prepare as preview_relations;
-
-fn empty_relations(engine: &Engine, options: CallOptions<'_>) -> Result<Call<Vec<Edge>>, Error> {
-    let stop = Stop::begin(options)?.with_prices(engine.prices);
-    stop.run_call(0, |_| {
-        let edges = Vec::new();
-        stop.observe(crate::RecordObservation::Row {
-            index: 0,
-            value: crate::ObservedRow::Relations(&edges),
-        });
-        Ok(edges)
-    })
-}

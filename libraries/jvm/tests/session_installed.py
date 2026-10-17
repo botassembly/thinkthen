@@ -20,6 +20,15 @@ sys.path.insert(0, str(ROOT / 'libraries/jvm/tests'))
 from toolchains import JDK_FLOOR
 
 
+def assert_arrivals(actual, expected):
+    ordered = list(actual)
+    for start, value in enumerate(expected):
+        if value == 'result-first':
+            assert collections.Counter(ordered[start:start + 2]) == collections.Counter(expected[start:start + 2]), actual
+            ordered[start:start + 2] = expected[start:start + 2]
+    assert ordered == expected, actual
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--jars',type=Path,required=True)
@@ -54,19 +63,28 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
     source = ROOT / 'libraries/jvm/tests/SessionConsumer.java'
     shutil.copyfile(source,work / source.name)
     shutil.copyfile(ROOT / "libraries/jvm/tests/JsonTest.java", work / "JsonTest.java")
+    shutil.copyfile(ROOT / "libraries/jvm/tests/PublicResultsCases.java", work / "PublicResultsCases.java")
+    for helper in ("SessionCases.java", "CaseBatch.java", "FixtureJson.java", "AuthoredOrderCases.java", "ResultValuesCases.java"):
+        shutil.copyfile(ROOT / "libraries/jvm/tests" / helper, work / helper)
+    examples = jars / 'examples'
+    if not examples.is_dir(): examples = jars.parent / 'examples'
+    assert examples.is_dir(), 'installed JVM package must ship its example sources'
+    for sample in examples.iterdir(): shutil.copyfile(sample, work / sample.name)
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
     if 'java' in languages:
-        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
+        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java"),str(work / "PublicResultsCases.java"),str(work / "SampleInputs.java"),str(work / "JavaExamples.java"),str(work / "SessionCases.java"),str(work / "CaseBatch.java"),str(work / "FixtureJson.java"),str(work / "AuthoredOrderCases.java"),str(work / "ResultValuesCases.java")],check=True,env=env)
+    if 'java' not in languages:
+        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / 'SampleInputs.java'),str(work / 'AuthoredOrderCases.java')],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):
         shutil.copyfile(ROOT / 'libraries/jvm/tests' / filename,work / filename)
-    kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
+    kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar',work / 'app')))
     if 'kotlin' in languages:
-        subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
+        subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),str(work / 'KotlinExamples.kt'),'-d',str(work / 'app')],check=True,env=env)
     if 'scala' in languages:
-        subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
+        subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-scala.jar') + os.pathsep + str(work / 'app'),'-d',str(work / 'app'),str(work / 'SessionScala.scala'),str(work / 'ScalaExamples.scala')],check=True,env=env)
     from backend import Backend
     server = Backend(work / 'barrier', arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
     env = child_env(home='/work/home',LANG='C.UTF-8',LC_ALL='C.UTF-8',THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',THINKTHEN_API_KEY='tt-canary-290')
@@ -80,12 +98,10 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
                                      '--bind', str(profiles), str(observation)]
         env['LLVM_PROFILE_FILE'] = '/work/coverage/' + Path(os.environ.get('LLVM_PROFILE_FILE', '%m.profraw')).name
     try:
+        sample_arrivals = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{"id":"u001","evidence":"session-find"},{"id":"u002","evidence":"session-find-two"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]}]
         expected = []
         expected_agents = []
         if 'java' in languages:
-            parser_result = subprocess.run(command[:-1] + ["JsonTest"], env=env, capture_output=True, timeout=5)
-            assert parser_result.returncode == 0 and b"JSON_READER_PASS" in parser_result.stdout, (parser_result.stdout, parser_result.stderr)
-            print("Installed JSON interchange regressions PASS")
             result = subprocess.run(command,env=env,capture_output=True,timeout=50)
             (logs / 'java-consumer.log').write_bytes(result.stdout + result.stderr)
             print(result.stdout.decode(),end='')
@@ -93,8 +109,10 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
                 print(result.stderr.decode(),file=sys.stderr)
                 raise AssertionError(f'installed JVM exit {result.returncode}')
             assert b'INSTALLED_JVM_SESSION_PASS' in result.stdout
-            expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent']
-            assert server.arrivals == expected,server.arrivals
+            expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent','multiple-first','multiple-second']
+            expected += sample_arrivals
+            expected += ['result-authored-0','result-authored-1','result-authored-2','result-authored-3',None,'result-first','no','result-choose-unsure','result-first','no','[{"id":"u001","evidence":"null"},{"id":"u002","evidence":"other"}]']
+            assert_arrivals(server.arrivals, expected)
             expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
             assert server.attempts == server.connections == len(expected),server.arrivals
             assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
@@ -115,8 +133,9 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
             expected += ['hold-jvm-' + language,'session-' + language + '-independent']
             if language == 'scala': expected += ['session-scala-nested']
             expected += ['status-401']
+            expected += sample_arrivals
             expected_agents += [f'thinkthen/{version} ({language})'] * (len(expected) - previous)
-            assert server.arrivals == expected,server.arrivals
+            assert_arrivals(server.arrivals, expected)
             print(actual.stdout.decode(),end='')
         assert server.attempts == server.connections == len(expected),server.arrivals
         assert server.user_agents == expected_agents,server.user_agents

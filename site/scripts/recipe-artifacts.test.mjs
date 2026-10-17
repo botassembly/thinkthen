@@ -10,11 +10,7 @@ assert.throws(()=>cleanup(process.cwd()),/refuses unowned/);
 let cases=0;
 try{
  fs.mkdirSync(path.join(root,'site/examples/recipes'),{recursive:true});
- for(const r of RECIPE_PAGES.filter(r=>!r.draft)) fs.cpSync(new URL('../'+r.example.replace(/^site\//,''),import.meta.url),path.join(root,r.example),{recursive:true});
- for(const r of RECIPE_PAGES){
-  fs.mkdirSync(path.dirname(path.join(root,r.issue)),{recursive:true});
-  fs.copyFileSync(new URL('../../'+r.issue,import.meta.url),path.join(root,r.issue));
- }
+ for(const r of RECIPE_PAGES) fs.cpSync(new URL('../'+r.example.replace(/^site\//,''),import.meta.url),path.join(root,r.example),{recursive:true});
  const {sourceProblems}=await import('./check-recipes.mjs');
  const check=()=>sourceProblems(RECIPE_PAGES,root);
  assert.deepEqual(check(),[]);cases++;
@@ -24,15 +20,10 @@ try{
   assert.ok(check().includes(`recipe missing-artifact: rules-propose-model-confirms: ${file}`));cases++;
   fs.writeFileSync(p,saved);assert.deepEqual(check(),[]);cases++;
  }
- for(const [slug,file] of [['verify-a-claim','files/recording/thinkthen.jsonl'],['ask-your-cache-with-duckdb','files/queries.sql']]) {
+ for(const [slug,file] of [['verify-a-claim','files/recording/thinkthen.jsonl']]) {
   const p=path.join(root,'site/examples/recipes',slug,file),saved=fs.readFileSync(p);fs.unlinkSync(p);
   assert.ok(check().includes(`recipe missing-artifact: ${slug}: ${file}`));cases++;
   fs.writeFileSync(p,saved);assert.deepEqual(check(),[]);cases++;
  }
- const issue=path.join(root,RECIPE_PAGES[3].issue),saved=fs.readFileSync(issue);
- fs.unlinkSync(issue);assert.ok(check().includes('recipe scope: navigate-many-documents: missing issue'));cases++;
- fs.writeFileSync(issue,saved);
- const clone=structuredClone(RECIPE_PAGES);clone.push({...clone[2],slug:'qualify'});
- assert.ok(sourceProblems(clone,root).includes('recipe disposition: verify/qualify must remain shared'));cases++;
- console.log(`recipe metadata/artifact controls: ${cases} passed, required issues and missing runnable files`);
+ console.log(`recipe metadata/artifact controls: ${cases} passed, missing runnable files`);
 }finally{cleanup(root);}

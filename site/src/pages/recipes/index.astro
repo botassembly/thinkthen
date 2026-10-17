@@ -1,0 +1,34 @@
+---
+// Goal: let a reader find the finished job they have, grouped by who does
+// it, each listed with what it gains them.
+import Base from '../../layouts/Base.astro';
+import { RECIPE_PAGES, HOWTO_GROUPS, HOWTOS, SHELL_JOBS } from '../../data/catalog.mjs';
+import { hasDecimal } from '../../data/recipes.mjs';
+
+// A recipe with no known group would drop off this page without a sound.
+const stray = HOWTOS.filter((h) => !HOWTO_GROUPS.includes(h.group));
+if (stray.length) throw new Error(`recipes: no group for ${stray.map((h) => h.slug).join(', ')}`);
+const item = (job) => ({ slug: job.slug, title: job.title, gain: job.gain });
+const sections = [
+  { name: 'Start with these', pages: HOWTOS.filter((h) => h.featured).sort((a, b) => a.featured - b.featured).map(item) },
+  ...HOWTO_GROUPS.map((name) => ({ name, pages: HOWTOS.filter((h) => h.group === name && !h.featured).map(item) })),
+  { name: 'Shell jobs', pages: SHELL_JOBS.map(item) },
+  { name: 'Pipelines', pages: RECIPE_PAGES.map(item) },
+].filter((s) => s.pages.length > 0);
+// The index holds no digit. A number belongs on the page that proves it.
+for (const s of sections) for (const p of s.pages) {
+  if (hasDecimal(p.gain)) throw new Error(`recipes: the gain of ${p.slug} holds a digit`);
+}
+const id = (name) => name.toLowerCase().replace(/[^a-z]+/g, '-');
+---
+<Base title="Recipes" description="Finished jobs done with ThinkThen, grouped by who does them, each shown with real runs." reading>
+  <h1>Recipes</h1>
+  <p class="lede">Each recipe does one real job in a few lines of Bash and shows what came out.</p>
+  {sections.map((s) => (
+    <Fragment>
+      <h2 id={id(s.name)}>{s.name}</h2>
+      <ul>{s.pages.map((p) => <li><a href={`/recipes/${p.slug}/`}>{p.title}</a>: {p.gain}</li>)}</ul>
+    </Fragment>
+  ))}
+  <p>The <a href="/languages/bash/#techniques">Bash techniques</a> teach the shell forms these recipes use.</p>
+</Base>

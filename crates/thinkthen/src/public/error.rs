@@ -284,6 +284,20 @@ impl Error {
         Self::of(ErrorKind::Local, message)
     }
 
+    pub(in crate::public) fn normalize_recovery_budget(self) -> Self {
+        match self {
+            Self::Backend(mut detail)
+                if detail.send_budget_denial.is_some()
+                    || detail.estimated_input_denial.is_some() =>
+            {
+                detail.retryable = false;
+                detail.stopped = detail.stopped.recovery_budget();
+                Self::Usage(detail)
+            }
+            other => other,
+        }
+    }
+
     pub(crate) fn defect(message: &str) -> Self {
         Self::of(ErrorKind::Defect, format!("defect: {message}"))
     }
@@ -341,6 +355,7 @@ impl From<EngineError> for Error {
 /// because its sentences name command-line options.
 fn message(error: &EngineError) -> String {
     let fixed = match error {
+        EngineError::Provider { cause, diagnostic } => return diagnostic.sentence(message(cause)),
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(302) => {
             return "the backend answered with status 302: the redirect was not followed"
@@ -370,6 +385,9 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::StoreHotJournal => {
             "the replay folder holds an unfinished write; open it once with write access"
+        }
+        EngineError::StoreVersion(file) => {
+            return format!("{file} uses an old store format; delete it");
         }
         EngineError::Entry(..) | EngineError::CacheEntry => {
             "the cache or recording folder holds a malformed entry"

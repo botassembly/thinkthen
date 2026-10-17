@@ -99,16 +99,7 @@ seeded from available offline dependencies; do not write a shared cache while
 holding its read lock.
 The caller's `CARGO_BUILD_JOBS` limit is retained and defaults to one.
 
-Installed callers may copy test code and read the shared fixtures from the
-checkout. Product imports, headers, libraries and commands resolve to the
-selected archives. The existing C executor accepts `consumer`, `header`,
-`library` and `compile_consumer` keywords. Its compiler callback receives the
-scratch directory, compiler environment, public include directory, library
-file and generated C source, and returns its actual executable. Optional
-`adapter_header` and `initialize` inputs compose wrapper declarations and
-runtime startup in that same caller. They do not copy or rewrite the shared
-Python executor. Rust's shared fixture compiler accepts the installed
-consumer manifest and retains the lane's existing Python target directory.
+Installed callers may copy test code and read the shared fixtures from the checkout. Product imports, headers, libraries and commands resolve to the selected archives. The C executor accepts explicit `header` and `library` paths and runs the existing installed session driver. Artifact mode requires both paths and never rebuilds the native library. The driver compares typed packet views with canonical native packets and retains shared request counts, facts and cancellation assertions. `THINKTHEN_TEST_PROFILE=full` selects the complete inventory; `THINKTHEN_C_CASES` selects named cases. Missing or failed required cells still fail the matrix. Rust's shared fixture compiler accepts the installed consumer manifest and retains the lane's existing Python target directory.
 
 Each required declaration has `id`, one of the ten `verb` values, `kind`,
 `input`, `expect` and `preconditions`. References resolve to existing fixtures;

@@ -7,19 +7,23 @@ use super::{
     Recognize, Recognized, Relate,
 };
 
-use crate::public::{Details, InputReaderOptions, QuestionInput};
+use crate::public::{InputReaderOptions, QuestionInput};
 use std::path::PathBuf;
+
+type FrameCall<T> = Call<T, crate::RequestValue, Series>;
 
 mod column;
 mod complete;
 mod eager;
+mod expressions;
 mod inputs;
 mod lazy;
 mod options;
 mod request;
+mod result;
+mod schema;
 mod typed;
 mod typed_batches;
-mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
@@ -80,7 +84,7 @@ pub trait PolarsEngine {
     /// Build a lazy score expression over a text column.
     ///
     /// # Errors
-    /// Refuses a non-score question or probability before collection.
+    /// Refuses a non-score question or invalid controls before collection.
     fn score_expr(
         &self,
         question: &Question,
@@ -91,7 +95,7 @@ pub trait PolarsEngine {
     /// Build a lazy tag expression over a text column.
     ///
     /// # Errors
-    /// Refuses a non-tag question or probability before collection.
+    /// Refuses a non-tag question or invalid controls before collection.
     fn tag_expr(
         &self,
         question: &Question,
@@ -99,9 +103,64 @@ pub trait PolarsEngine {
         options: PolarsExprOptions,
     ) -> Result<Expr, Error>;
 
+    /// Keep passing rows as typed value/probability structs.
+    /// # Errors
+    /// Refuses a non-decide question or invalid controls before collection.
+    fn filter_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Rank one whole logical collection and retain original row positions.
+    /// # Errors
+    /// Refuses a non-rank question or invalid controls before collection.
+    fn rank_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Find one original unit from a whole logical collection.
+    /// # Errors
+    /// Refuses a non-find question or invalid controls before collection.
+    fn find_expr(
+        &self,
+        question: &Question,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Annotate each present text with typed named values and null probability.
+    /// # Errors
+    /// Refuses invalid call controls before collection.
+    fn annotate_expr(
+        &self,
+        questions: &QuestionSet,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Recognize present text with typed per-item probability lists.
+    /// # Errors
+    /// Refuses invalid call controls before collection.
+    fn recognize_expr(
+        &self,
+        question: &Recognize,
+        input: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+    /// Relate one whole logical collection of paired name/kind fields.
+    /// # Errors
+    /// Refuses invalid controls or partially null entities before sending.
+    fn relate_expr(
+        &self,
+        question: &Relate,
+        names: Expr,
+        kinds: Expr,
+        options: PolarsExprOptions,
+    ) -> Result<Expr, Error>;
+
     /// Judge a column with per-call threshold and meaning overrides. The
-    /// returned frame has `value` and, when requested, `probability` columns.
-    /// Score and tag refuse a probability request before any send.
+    /// returned frame always has typed `value` and nullable `probability` columns.
     ///
     /// # Errors
     /// Returns the same call error as the matching Series interface.
@@ -110,7 +169,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Preview the same packed request bodies a column call would prepare.
     /// No key, cache or network is read.
@@ -123,19 +182,6 @@ pub trait PolarsEngine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<PlanEstimate, Error>;
-
-    /// Judge a decide or choose column once and return `value` beside its
-    /// nullable `probability` column. Score and tag have no selected-answer
-    /// probability and are refused before a send.
-    ///
-    /// # Errors
-    /// As [`PolarsEngine::decide_series`], or [`Error::Usage`] for score/tag.
-    fn probability_frame(
-        &self,
-        question: &Question,
-        texts: &Series,
-        options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
 
     /// Decide every text of the column: a `Boolean` series under the
     /// column's name, with a null where a band left the answer not sure.
@@ -151,7 +197,7 @@ pub trait PolarsEngine {
         question: &Q,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Pick one option for every text: a `String` series with a null where
     /// nothing fits.
@@ -165,7 +211,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Place every text on the levels: a `Float64` series of positions from
     /// 0 to one less than the number of levels.
@@ -178,7 +224,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Test every label on every text: a `List(String)` series.
     ///
@@ -190,7 +236,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Ask every question of the text column `on`: the caller's frame with
     /// one typed column per question, followed by nullable `failed` markers.
@@ -206,7 +252,7 @@ pub trait PolarsEngine {
         frame: &DataFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
     /// Judge ordered explicit text/images, retaining null rows and selected
     /// probabilities. Ordinary strings and bytes do not imply images.
     /// # Errors
@@ -216,17 +262,7 @@ pub trait PolarsEngine {
         question: &Question,
         inputs: &[Option<QuestionInput>],
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
-
-    /// Complete typed native probabilities for every explicit present input.
-    /// # Errors
-    /// Returns the same validation and call errors as input_column.
-    fn input_details_column(
-        &self,
-        question: &Question,
-        inputs: &[Option<QuestionInput>],
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Details>>>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Materialize selected files through the single native reader. Text lines
     /// stay physical; whole-file images have null text line coordinates.
@@ -238,7 +274,7 @@ pub trait PolarsEngine {
         paths: &[PathBuf],
         reading: InputReaderOptions,
         options: PolarsCallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Keep matching present cells, preserving their input name and order.
     /// Null inputs ask no question and are omitted.
@@ -249,7 +285,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Series>, Error>;
+    ) -> Result<Call<Series, crate::RequestValue, Series>, Error>;
 
     /// Rank the complete present collection. Output has original zero-based
     /// `index`, `record` and `probability`; ties keep duplicate input order.
@@ -260,7 +296,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Compare every present candidate in one native find call. Output keeps
     /// every candidate's `index`, `unit`, `probability` and real-unit `selected` flag.
@@ -272,7 +308,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error>;
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error>;
 
     /// Recognize each present text, retaining complete spans and relations;
     /// null cells remain None. All calls share one fixed deadline.
@@ -283,7 +319,7 @@ pub trait PolarsEngine {
         ask: &Recognize,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Option<Recognized>>>, Error>;
+    ) -> Result<FrameCall<Vec<Option<Recognized>>>, Error>;
 
     /// Relate the complete entity collection from text name/kind columns.
     /// Paired null cells are omitted; a partly null entity is refused.
@@ -296,7 +332,7 @@ pub trait PolarsEngine {
         name: &str,
         kind: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Edge>>, Error>;
+    ) -> Result<Call<Vec<Edge>, crate::RequestValue, Series>, Error>;
 
     /// Materialize a lazy frame's whole logical collection before ranking.
     /// # Errors
@@ -307,7 +343,7 @@ pub trait PolarsEngine {
         frame: LazyFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
         let frame = frame
             .collect()
             .map_err(|_| Error::usage("the lazy frame could not be collected"))?;
@@ -326,7 +362,7 @@ pub trait PolarsEngine {
         frame: LazyFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<DataFrame>, Error> {
+    ) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
         let frame = frame
             .collect()
             .map_err(|_| Error::usage("the lazy frame could not be collected"))?;

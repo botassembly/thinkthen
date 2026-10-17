@@ -14,6 +14,8 @@
 # Release archives contain declared files, without macOS AppleDouble metadata.
 export COPYFILE_DISABLE=1
 set -eu
+# Release helpers import modules from source that must stay unchanged.
+export PYTHONDONTWRITEBYTECODE=1
 apple_wrappers=
 [ "${1:-}" != --apple-wrappers ] || { apple_wrappers=1; shift; }
 reuse=
@@ -107,6 +109,8 @@ esac
 # Remap all three origins before packaging a library's panic/debug locations.
 cargo_home=${CARGO_HOME:-$HOME/.cargo}
 source_remap=$REPO cargo_remap=$cargo_home home_remap=$HOME
+home_destination=/build/host
+case $HOME in /Users/*) home_destination=/build/users ;; esac
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	# Rust on Windows reports native paths; Git Bash paths cannot match them.
 	source_remap=$(cygpath -m "$REPO") cargo_remap=$(cygpath -m "$cargo_home") home_remap=$(cygpath -m "$HOME")
@@ -115,19 +119,53 @@ if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		export CARGO_TARGET_DIR
 	fi
 fi
+# Cargo splits RUSTFLAGS on whitespace. Its encoded form preserves native paths
+# with spaces; MSYS must also leave the drive colons and remap destinations alone.
+# https://doc.rust-lang.org/cargo/reference/environment-variables.html
+# https://www.msys2.org/docs/filesystem-paths/
+RUSTFLAGS=${RUSTFLAGS:-}
+if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	rust_separator=$(printf '\037')
+	if [ "${CARGO_ENCODED_RUSTFLAGS+x}" != x ]; then
+		CARGO_ENCODED_RUSTFLAGS=$(
+			set -f
+			separator=
+			for flag in $RUSTFLAGS; do
+				printf '%s%s' "$separator" "$flag"
+				separator=$rust_separator
+			done
+		)
+	fi
+	MSYS2_ENV_CONV_EXCL="${MSYS2_ENV_CONV_EXCL:+$MSYS2_ENV_CONV_EXCL;}CARGO_ENCODED_RUSTFLAGS="
+	export CARGO_ENCODED_RUSTFLAGS MSYS2_ENV_CONV_EXCL
+fi
+rust_remap() {
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+		CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:+$CARGO_ENCODED_RUSTFLAGS$rust_separator}--remap-path-prefix=$1=$2"
+	else
+		RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$1=$2"
+	fi
+}
 if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=/build/home"
+	rust_remap /home /build/host
+	rust_remap /Users /build/users
+	rust_remap "$source_remap" /build/source
+	rust_remap "$cargo_remap" /build/cargo
+	rust_remap "$home_remap" "$home_destination"
 if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
-	CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
+	compiler_remaps="-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users -ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=$home_destination"
+	CFLAGS="${CFLAGS:+$CFLAGS }$compiler_remaps"
+	CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }$compiler_remaps"
 else
 	# MSVC does not accept the Unix compiler's file-prefix-map flags.
 	CFLAGS=${CFLAGS:-}
 fi
 elif [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo"
+	rust_remap "$source_remap" /build/source
+	rust_remap "$cargo_remap" /build/cargo
 	CFLAGS=
 fi
-export RUSTFLAGS CFLAGS
+export RUSTFLAGS CFLAGS CXXFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage
 
@@ -148,12 +186,15 @@ PYTHON
 }
 # pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
 pack() {
-	tar -czf "$OUT/$1" -C "$2" .
+	# Ship package files without macOS AppleDouble metadata members.
+	COPYFILE_DISABLE=1 tar -czf "$OUT/$1" -C "$2" .
+	python3 sdlc/scripts/registry-readmes.py auto "$OUT/$1"
 	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
 }
 # keep FILE: copy a file a tool already packed into OUT, with its checksum.
 keep() {
 	[ -f "$1" ] || { echo "release-pack: $1 is missing; build it first" >&2; exit 1; }
+	python3 sdlc/scripts/registry-readmes.py auto "$1"
 	cp -- "$1" "$OUT/"
 	(cd -- "$OUT" && sha256 "${1##*/}" >"${1##*/}.sha256")
 }
@@ -185,6 +226,7 @@ part_command() {
 	fi
 	folder=$(fresh command)
 	cp -- "$binary" "$folder/thinkthen$suffix"
+	cp README.md "$folder/README.md"
 	if [ -n "$suffix" ]; then
 		name=thinkthen-$V-$command_target.zip
 		python3 sdlc/scripts/release-windows-command.py pack "$folder/thinkthen.exe" "$OUT/$name"
@@ -234,6 +276,7 @@ part_c() {
 		Libs.private: $private
 		Cflags: -I\${includedir}
 	EOF
+	cp libraries/c/README-PUBLIC.md "$folder/README.md"
 	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
 	c_built=1
 }
@@ -260,6 +303,7 @@ cpp)
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
 		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
+	cp -R libraries/cpp/examples "$folder/examples"
 		;;
 csharp)
 		mkdir -p "$folder/feed"
@@ -285,6 +329,7 @@ jvm)
 		tar -xzf "$OUT/$c_name" -C "$jvm_out/native"
 		THINKTHEN_JVM_OUT=$jvm_out/product THINKTHEN_JVM_NATIVE="$jvm_out/native/lib/libthinkthen.$dl" THINKTHEN_JVM_TARGET="$TARGET" sh libraries/jvm/build.sh
 		THINKTHEN_JVM_OUT=$jvm_out/product python3 libraries/jvm/tests/package_check.py --session
+		cp -R "$jvm_out/product/examples" "$folder/examples"
 		for file in $(python3 sdlc/scripts/package-inventory.py jvm --target "$TARGET" --field files); do
 			case $file in *.jar|product-inventory.json) cp "$jvm_out/product/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
 		done
@@ -316,8 +361,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
-			libraries/zig/src/request_generated.zig libraries/zig/src/plan_generated.zig "$folder/src/"
+		cp libraries/zig/src/*.zig "$folder/src/"
 		mkdir -p "$folder/native/$TARGET"
 		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
 		;;
@@ -335,7 +379,7 @@ dart)
 		mkdir -p "$folder"
 		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
 			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock libraries/dart/native-assets.json "$folder/"
-		cp -R libraries/dart/lib libraries/dart/hook "$folder/"
+		cp -R libraries/dart/lib libraries/dart/hook libraries/dart/example "$folder/"
 		;;
 flutter)
 		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
@@ -384,9 +428,14 @@ cobol)
 		cp libraries/cobol/copybooks/tt-native-generated.cpy "$folder/copybooks/"
 		cp libraries/cobol/src/tt_session.h libraries/cobol/src/tt_session.c \
 			libraries/cobol/src/tt_requests_generated.h libraries/cobol/src/tt_requests_generated.c "$folder/src/"
-		cp libraries/cobol/examples/session.cob "$folder/examples/"
+		cp libraries/cobol/examples/*.cob "$folder/examples/"
 		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include ./lib
 		;;
+	esac
+	case $1 in
+	go) ;;
+	flutter) cp libraries/dart/flutter/README-PUBLIC.md "$folder/flutter/README.md" ;;
+	*) cp "libraries/$1/README-PUBLIC.md" "$folder/README.md" ;;
 	esac
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.
 	twins=$(cd -- "$folder" && find . | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sort | uniq -d)
@@ -396,6 +445,7 @@ cobol)
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
+			if [ "$relative" = README.md ] && [ "$1" != go ]; then member=libraries/$1/README-PUBLIC.md; fi
 			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
 				native_input=$(mktemp "$stage/swift-native.XXXXXX")
 				tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$native_input" || {
@@ -446,7 +496,8 @@ DART_ASSET
 	fi
 	if [ "$1" = php ]; then
 		# Composer's Phar extractor refuses a root directory member named '.'.
-		(cd -- "$folder" && tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
+		(cd -- "$folder" && COPYFILE_DISABLE=1 tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
+		python3 sdlc/scripts/registry-readmes.py "$1" "$OUT/thinkthen-$1-$V-$TARGET.tar.gz"
 		(cd -- "$OUT" && sha256 "thinkthen-$1-$V-$TARGET.tar.gz" >"thinkthen-$1-$V-$TARGET.tar.gz.sha256")
 	else
 		pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
@@ -468,6 +519,7 @@ part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
 	folder=$(fresh sqlite)
 	cp -- "$(built databases/sqlite)/release/libthinkthen0.$dl" "$folder/"
+	cp databases/sqlite/README-PUBLIC.md "$folder/README.md"
 	pack "thinkthen-sqlite-$V-$TARGET.tar.gz" "$folder"
 }
 
@@ -492,10 +544,10 @@ part_duckdb() {
 	input_select "$version" "$TARGET"
 	THINKTHEN_DUCKDB_VERSION=$version
 	THINKTHEN_DUCKDB_CPP_SOURCE=$TOOLS/source
-	THINKTHEN_DUCKDB_CPP_STATIC_DIR=$TOOLS/static-libs
+	THINKTHEN_DUCKDB_CPP_STATIC_DIR=
 	if [ "$version" = "$override_version" ]; then
 		THINKTHEN_DUCKDB_CPP_SOURCE=${override_source:-$TOOLS/source}
-		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-$TOOLS/static-libs}
+		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-}
 	fi
 	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
 	if [ -z "$reuse" ]; then
@@ -520,22 +572,33 @@ part_duckdb() {
 			exit 1
 		}
 	fi
-	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
-	mkdir -p "$folder/$version/$platform"
-	cp "$extension" "$folder/$version/$platform/"
-	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit" --static "$THINKTHEN_DUCKDB_CPP_STATIC_DIR" --manifest "$INPUTS_HERE/../cpp/$manifest"
-	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE" "$INPUTS_HERE/../cpp/$manifest"
+	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$duckdb_metadata_version" "$V"
+	mkdir -p "$folder/$duckdb_metadata_version/$platform"
+	cp "$extension" "$folder/$duckdb_metadata_version/$platform/"
+	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit"
+	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE"
 	done
 	python3 databases/duckdb/cpp/package_notices.py "$folder" "$V" "$@"
 	python3 databases/duckdb/cpp/verify_repository.py "$folder" "$TARGET" "$V"
+	cp databases/duckdb/README-PUBLIC.md "$folder/README.md"
 	find "$folder" -type f -exec chmod 644 {} +
 	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
 }
 
 part_postgresql() {
-	folder=$(fresh postgresql)
-	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
-	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
+    majors='16 17 18'
+    if [ -n "$reuse" ] && [ "${THINKTHEN_TEST_PROFILE:-}" = routine ]; then majors='16 18'; fi
+    for major in $majors; do
+        folder=$(fresh postgresql$major)
+        if [ -n "${PG_CONFIG:-}" ]; then
+            config=$(printf '%s' "$PG_CONFIG" | sed "s|pgsql-[0-9]*/|pgsql-$major/|; s|postgresql@[0-9]*|postgresql@$major|")
+            PG_CONFIG=$config sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
+        else
+            sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
+        fi
+        cp databases/postgresql/README-PUBLIC.md "$folder/README.md"
+        pack "thinkthen-postgresql$major-$V-$TARGET.tar.gz" "$folder"
+    done
 }
 
 part_python() {
@@ -649,11 +712,12 @@ fi
 # Ticket 0366: in build mode without a caller's CARGO_TARGET_DIR, each part builds in its own scratch
 # folder, which goes once the part is packed. A run then holds one part's build at a time.
 # The build folder's remap comes after release-pack's others, so it wins over them. A build script's
-# own HOME remap comes later still, so a TMPDIR under HOME shows as /build/home/... with the scratch
+# own HOME remap comes later still, so a TMPDIR under HOME shows as /build/host/... with the scratch
 # name. release-container sets TMPDIR to its run folder, outside HOME.
 own_build=
 [ -n "$reuse" ] || [ -n "${CARGO_TARGET_DIR:-}" ] || own_build=1
 duckdb_build=${THINKTHEN_DUCKDB_CPP_BUILD:-} rust_flags=$RUSTFLAGS c_flags=$CFLAGS cxx_flags=${CXXFLAGS:-}
+encoded_rust_flags=${CARGO_ENCODED_RUSTFLAGS:-}
 for part in "$@"; do
 	if [ -n "$own_build" ]; then
 		scratch_dir part_build
@@ -663,7 +727,9 @@ for part in "$@"; do
 			build_remap=$(cygpath -m "$part_build")
 			CARGO_TARGET_DIR=$build_remap
 		fi
-		RUSTFLAGS="$rust_flags --remap-path-prefix=$build_remap=/build/target"
+		RUSTFLAGS=$rust_flags
+		[ "$TARGET" != x86_64-pc-windows-msvc ] || CARGO_ENCODED_RUSTFLAGS=$encoded_rust_flags
+		rust_remap "$build_remap" /build/target
 		CFLAGS=$c_flags
 		[ "$TARGET" = x86_64-pc-windows-msvc ] || CFLAGS="$c_flags -ffile-prefix-map=$part_build=/build/target"
 		CXXFLAGS="${cxx_flags:+$cxx_flags }-ffile-prefix-map=$part_build=/build/target"

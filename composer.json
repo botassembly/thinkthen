@@ -1,6 +1,6 @@
 {
   "name": "botassembly/thinkthen",
-  "description": "ThinkThen PHP binding for the separately installed C library",
+  "description": "ThinkThen answers typed questions about text: decisions, labels, scores and selected records.",
   "type": "library",
   "license": "MIT",
   "homepage": "https://thinkthen.dev",
@@ -9,6 +9,8 @@
     "ext-ffi": "*"
   },
   "autoload": {
-    "files": ["libraries/php/autoload.php"]
+    "files": [
+      "libraries/php/autoload.php"
+    ]
   }
 }

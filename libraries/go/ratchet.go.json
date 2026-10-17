@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".go",
-  "max": 4847
+  "max": 750,
+  "scope": "handwritten-production"
 }

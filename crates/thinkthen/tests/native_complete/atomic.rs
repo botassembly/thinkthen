@@ -59,13 +59,6 @@ fn complete_decision_identity_is_independent_of_retrieval_call_and_default_equiv
         serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
         json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}})
     );
-    let legacy = engine
-        .details(&question, "Refund me.")
-        .unwrap()
-        .value()
-        .to_json();
-    assert!(legacy.contains("thinkthen.result/1"));
-    assert!(!legacy.contains("answer_id"));
     assert!(!format!("{result:?} {live:?}").contains("complete-private"));
     drop(replay);
     drop(engine);
@@ -186,7 +179,7 @@ fn typed_score_document(engine: &Engine, score: &Question, choice: &Question, li
     schema::call(&graded, "completeScore");
     assert_eq!(result.value(), 0.75);
     assert_eq!(result.confidence(), None);
-    let document = serde_json::to_value(graded.complete().unwrap()).unwrap();
+    let document = serde_json::to_value(&graded).unwrap();
     assert_eq!(
         document["value"][0]["question"]["levels"],
         json!(["low", "high"])

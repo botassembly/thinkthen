@@ -17,7 +17,7 @@ type Presence[T any] struct {
 type ownedJSON struct{ raw json.RawMessage }
 
 func (v *ownedJSON) UnmarshalJSON(data []byte) error { v.raw = append(v.raw[:0], data...); return nil }
-func (v ownedJSON) MarshalJSON() ([]byte, error)     { return append([]byte(nil), v.raw...), nil }
+func (v ownedJSON) marshalJSON() ([]byte, error)     { return append([]byte(nil), v.raw...), nil }
 func ownedDecode[T any](data []byte) (T, error) {
 	var value T
 	kind := reflect.TypeOf((*T)(nil)).Elem().Kind()
@@ -45,7 +45,7 @@ func ownedMember[T any](data []byte, key string) Presence[T] {
 	return Presence[T]{Present: true, Value: value, Err: err}
 }
 
-var errOwnedAlternative = errors.New("native result is a different alternative")
+var errAlternative = errors.New("native result is a different alternative")
 
 func ownedHas(data []byte, key string) bool {
 	var fields map[string]json.RawMessage
@@ -62,7 +62,7 @@ func ownedLiteral(data []byte, key, value string) bool {
 
 // Boolean reads an authored decision only when its value is actually Boolean.
 func (v ownedJSON) Boolean() (bool, error)  { return ownedDecode[bool](v.raw) }
-func (v ownedJSON) JSONValue() (any, error) { return ownedDecode[any](v.raw) }
+func (v ownedJSON) jsonValue() (any, error) { return ownedDecode[any](v.raw) }
 
 func (v ownedJSON) String() string   { return "<ThinkThen owned result>" }
 func (v ownedJSON) GoString() string { return v.String() }

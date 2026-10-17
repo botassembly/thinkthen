@@ -1,52 +1,39 @@
 # ThinkThen for Go
 
-The development Go 1.22 module provides one `Client` with ten named calls. Its Linux amd64 package carries the matching static native library. Consumers need Go and a C compiler. Rust owns admission, judgments, cache, replay, scheduling and transport. Other native targets and registry installation await distribution qualification.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
-The released 0.1.2 module keeps its released API. The examples here describe the development 0.2 package.
+```sh
+go get github.com/botassembly/thinkthen/libraries/go@v0.2.0
+```
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. Judgment calls can send your question and text to the selected backend; the default is TypeSafe.
 
 ```go
-client, err := thinkthen.NewClient(thinkthen.EngineSettings{})
-if err != nil { return err }
-defer client.Close()
-call, err := client.Decide(ctx, thinkthen.TextQuestion("Is this urgent?"), []string{"first", "second"}, nil)
-if err != nil { return err }
-facts := call.Terminal.Facts()
-if facts.Present && !facts.Null && facts.Err == nil {
-    // Read facts.Value through its generated accessors.
+package main
+import ("context"; "fmt"; "log"; tt "github.com/botassembly/thinkthen/libraries/go")
+func main() {
+    client, err := tt.NewClient(tt.EngineSettings{}); if err != nil { log.Fatal(err) }
+    defer client.Close()
+    teams := tt.AuthoredOptionsObject{{Key: "billing", Value: tt.AuthoredDescriptionString("Invoices, fees, and refunds.")},
+        {Key: "shipping", Value: tt.AuthoredDescriptionString("Parcels and delivery.")},
+        {Key: "account", Value: tt.AuthoredDescriptionString("Logins and passwords.")}}
+    teamQuestion := tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{
+        Choose: tt.AuthoredQuestionTextString("Which team owns this?"), Options: tt.Ptr[tt.AuthoredOptions](teams)})
+    for i, text := range []string{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."} {
+        refund, err := client.Decide(context.Background(), tt.TextQuestion("Does the customer ask for a refund?"), tt.TextInput(text), nil)
+        if err != nil { log.Fatal(err) }
+        value, probability := refund.Value.(bool), float64(refund.Probability.(tt.ProbabilityScalar))
+        if value != []bool{true, false, true}[i] || probability != []float64{0.99, 0.01, 0.54}[i] { log.Fatal("unexpected refund answer") }
+        fmt.Printf("%t %.2f\n", value, probability)
+    }
+    for i, text := range []string{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."} {
+        team, err := client.Choose(context.Background(), teamQuestion, tt.TextInput(text), nil)
+        if err != nil { log.Fatal(err) }
+        value, probability := team.Value.(string), float64(team.Probability.(tt.ProbabilityScalar))
+        if value != []string{"billing", "shipping", "account"}[i] || probability != []float64{1, 1, 1}[i] { log.Fatal("unexpected team answer") }
+        fmt.Printf("%s %.2f\n", value, probability)
+    }
 }
 ```
 
-`Decide`, `Choose`, `Tag`, `Score`, `Filter`, `Rank`, `Find`, `Annotate`, `Recognize` and `Relate` take a `context.Context`, a generated `RequestQuestion`, Go evidence and optional generated `RequestOptions`. `TextQuestion` treats all wording literally. `DefinedQuestion` accepts a generated authored definition or question set. `RequestQuestionFile`, `RequestQuestionName` and `RequestQuestionReference` explicitly select native saved questions. Generated declarations follow [the Rust-owned request schema](../../specification/request.schema.json).
-
-Use generated `AuthoredChoose`, `AuthoredTag` and `AuthoredScore` values for ordered options, labels and levels. Authored values retain their permitted text, object, array and null alternatives. For example, `AuthoredDescriptionObject` keeps a structured choice description and `AuthoredCriterionNull{}` keeps an authored null decision. `Ptr` preserves an optional false, zero, empty collection or explicit null. Nil pointers mean omitted; interface alternatives carry their declared Go type. Native Rust validates every value and its applicability.
-
-Strings are literal originals. Slices and arrays retain input order, duplicates and original JSON values. `TextItem` and `JSONItem` create a generated `RequestItem` for separate per-record context, options, recognition settings and attachments. Passing a generated `RequestInput` selects an explicit source form. Passing `RequestSource` selects native files and folders, with generated framing, media and physical-unit controls. `BytesImage` retains ordered image bytes and declared media; `RequestImageFile` selects a user-named attachment. Rust validates and admits images.
-
-A `Producer` supplies `Next(context.Context) (any, error)` and returns `io.EOF` to finish. It may return originals or generated items. `Next` must return promptly when its context is cancelled. The client calls it serially, retains one pending descriptor, requests another only after native acceptance, and drains output while native intake reports full. Cancellation and `Close` cancel and join the host reader. Go cannot interrupt a callback that ignores its context.
-
-`OwnedCall` contains generated packets and an optional terminal. Read each generated `Presence[T]` through `Present`, `Null`, `Err` and `Value`. A false answer remains present and false. Unknown output fields and original number spellings survive JSON round trips. All results, observations and facts remain Go-owned after `Close`.
-
-`SessionError` retains the failed call and its generated native error, including final facts. Constructor and session-admission errors return typed `Error` values. Explicit cancellation returns `context.Canceled`; an expired context returns `context.DeadlineExceeded`. Cancellation retains the completed packet prefix and leaves `Terminal` nil while final settlement is pending. `Close` stops active sessions promptly and refuses further calls.
-
-`UsagePersistence` and `FinishUsageStatus` return immutable `UsageStatus` values. Generated states and copied optional advice remain available after close. Failed persistence leaves earlier answers and facts intact. Only native usage-lock acquisition has a deadline; filesystem work can take longer.
-
-`Client.Plan(Request)` previews a generated canonical request and returns a generated `OwnedPlan`. Rust owns question and input admission and returns typed refusals for unsupported requests. Preview reads no key or cache and sends nothing. The request serializer supplies its schema version. Plans retain explicit empty-input null bodies and remain readable after close.
-
-## Upgrade from the old Go API
-
-| Old call | Current call |
-| --- | --- |
-| `New`, `NewWith` | `NewClient(EngineSettings)` |
-| `Engine.Decide`, `DecideMany`, `*Complete`, `*Batch` | The corresponding `Client` named call with originals, slices or a `Producer` |
-| `Engine.Plan` | `Client.Plan(Request)` |
-| `Engine.Call` | The corresponding `Client` named call with generated question and input values |
-| `Engine.Files`, `SourceFiles`, `FileRecords` | A named call with `RequestSource` |
-| `Item`, `ReadField`, handwritten native views | `RequestItem` and generated packet/result accessors |
-
-The old `Engine`, generic JSON call and handwritten compatibility readers have been removed. Native 0.1 C symbols remain a separate frozen contract.
-
-## Build and check
-
-From a matching source checkout, run `sh libraries/go/check.sh`. It builds the native library offline, stages a separate module with that library, compiles external consumers without library-path overrides, and runs routine shared type cases, typed failures, presence, files, cancellation, bounded intake and usage persistence against counted loopback backends. It also checks formatting, generated source and the package source ceilings. The [decide example](examples/decide/main.go) and [replay smoke](examples/smoke/main.go) use the same public API.
-
-A local staged artifact can be made with `python3 libraries/go/fixtures/package_owned.py libraries/go NATIVE_PREFIX OUTPUT`, where the matching prefix contains `include/thinkthen.h` and `lib/libthinkthen.a`. Point a consumer's Go module replacement at `OUTPUT`; no Rust compiler, pkg-config or native library path is needed to build that consumer. Final release assembly, full parity and additional platforms belong to the release suite.
+The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/go/) for results, failures, record inputs and offline replay.
+[Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

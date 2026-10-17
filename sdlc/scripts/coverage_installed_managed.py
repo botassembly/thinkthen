@@ -5,6 +5,7 @@ import platform
 import plistlib
 import shutil
 import sys
+import subprocess
 import tarfile
 import zipfile
 
@@ -44,19 +45,21 @@ def apple_collection(language, context, env, stage, retained, folder):
         if not shutil.which(tool, path=env.get('PATH')):
             raise missing(f'installed {language} needs {tool}')
     key = 'THINKTHEN_' + language.upper().replace('-', '_') + '_ARTIFACT'
-    artifact = Path(os.environ.get(key, ''))
+    artifact = Path(context.get('apple_artifacts', {}).get(language, os.environ.get(key, '')))
     if not artifact.is_file():
         raise missing(f'installed {language} needs {key}: matching instrumented Apple package')
     package = stage / ('apple-' + language)
     package.mkdir()
     with tarfile.open(artifact) as archive:
         archive.extractall(package, filter='data')
-    for source in package.rglob('*'):
-        relative = source.relative_to(package)
-        if source.is_file() and (relative.parts[0] == 'Sources' or relative == Path('Package.swift')):
-            original = root / 'libraries' / language / relative
-            if not original.is_file() or source.read_bytes() != original.read_bytes():
-                raise RuntimeError('Apple package source differs from the measured checkout')
+    source = root / 'libraries' / language
+    expected_members = apple_inputs(root, language)
+    actual_members = {item.relative_to(package) for item in package.rglob('*')
+                      if item.is_file() and item.relative_to(package).parts[0] != 'CThinkThen.xcframework'}
+    if actual_members != set(expected_members) or any(
+            (package / member).read_bytes() != (source / ("README-PUBLIC.md" if member == Path("README.md") else member)).read_bytes()
+            for member in expected_members):
+        raise RuntimeError('Apple package source differs from the measured checkout')
     framework = package / 'CThinkThen.xcframework'
     if not (framework / 'Info.plist').is_file():
         raise RuntimeError('instrumented Apple package is missing its XCFramework')
@@ -89,6 +92,54 @@ def apple_collection(language, context, env, stage, retained, folder):
     installed = retained / 'installed' if language == 'swift' else retained / '.build/debug'
     for binary in binaries:
         shutil.copy2(installed / binary, retained / binary)
+
+
+def apple_inputs(root, language):
+    """Use the checkout's tracked library inputs for staging and comparison."""
+    source = root / 'libraries' / language
+    names = subprocess.check_output(['git', 'ls-files', '-z', '--', str(source)], cwd=root)
+    members = [Path(os.fsdecode(name)).relative_to(Path('libraries') / language)
+               for name in names.split(b'\0') if name]
+    if not members:
+        raise RuntimeError('Apple package has no tracked library inputs')
+    return members
+
+
+def prepare_apple(context):
+    """Assemble measured host packages from this run's instrumented archive."""
+    root, run, env = context['root'], context['run'], context['env']
+    stage = run / 'stage-managed'
+    stage.mkdir()
+    headers = stage / 'headers'
+    headers.mkdir()
+    shutil.copy2(root / 'libraries/c/include/thinkthen.h', headers)
+    (headers / 'module.modulemap').write_text('module CThinkThen { header "thinkthen.h" export * }\n')
+    framework = stage / 'CThinkThen.xcframework'
+    context['command'](['xcrun', 'xcodebuild', '-create-xcframework', '-library',
+                        str(context['c_target'] / 'debug/libthinkthen_c.a'), '-headers', str(headers),
+                        '-output', str(framework)], root, env, run / 'apple-framework.log')
+    context['apple_artifacts'] = {}
+    collections = []
+    for language in ('swift', 'objective-c'):
+        package = stage / (language + '-package')
+        package.mkdir()
+        source = root / 'libraries' / language
+        for member in apple_inputs(root, language):
+            target = package / member
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source / member, target)
+        shutil.copy2(source / "README-PUBLIC.md", package / "README.md")
+        shutil.copytree(framework, package / framework.name)
+        artifact = stage / (language + '.tar.gz')
+        archive(package, artifact, [item.name for item in package.iterdir()])
+        context['apple_artifacts'][language] = str(artifact)
+        name = 'installed-' + language
+        retained = run / name / 'installed'
+        binaries = ('Owned', 'Parity') if language == 'swift' else ('Consumer', 'Cases')
+        def runner(folder, language=language, retained=retained):
+            apple_collection(language, context, env, stage, retained, folder)
+        collections.append(dict(name=name, objects=[retained / binary for binary in binaries], runner=runner))
+    return collections
 
 
 def prepare(context):
@@ -155,13 +206,14 @@ def prepare(context):
                 sys.path.insert(0, str(root / 'libraries/dart/checks'))
                 from native_assets import configure, package_members
                 dart = stage / ('dart-package-' + language)
-                for member in package_members(root / 'libraries/dart'):
+                members = package_members(root / 'libraries/dart')
+                for member in members:
                     target = dart / member
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(root / 'libraries/dart' / member, target)
                 configure(dart, context['c_shared'], [])
                 dart_archive = stage / ('thinkthen-dart-' + language + '.tar.gz')
-                archive(dart, dart_archive, package_members(dart))
+                archive(dart, dart_archive, members)
                 settings.update(THINKTHEN_ARTIFACT=str(dart_archive),
                                 THINKTHEN_C_ARTIFACT=str(c_archive),
                                 THINKTHEN_INSTALLED_CONSUMER=language)

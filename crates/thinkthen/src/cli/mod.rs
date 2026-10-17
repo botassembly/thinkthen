@@ -72,14 +72,10 @@ pub fn entry() -> ExitCode {
             stderr.lock(),
         );
     }
-    if let Some(Command::Audit(arguments) | Command::Runs(args::RunsCommand::Audit(arguments))) =
-        &cli.command
-    {
+    if let Some(Command::Runs(args::RunsCommand::Audit(arguments))) = &cli.command {
         return report_offline(audit::run(arguments, stdout.lock()), stderr.lock());
     }
-    if let Some(Command::Diff(arguments) | Command::Runs(args::RunsCommand::Diff(arguments))) =
-        &cli.command
-    {
+    if let Some(Command::Runs(args::RunsCommand::Diff(arguments))) = &cli.command {
         return report_offline(diff::run(arguments, stdout.lock()), stderr.lock());
     }
     let admitted = match request_admission(&cli, wants_facts, started, accepted, stderr.lock()) {
@@ -350,14 +346,12 @@ fn run(
             args::CacheCommand::Convert(arguments) => cache::convert(arguments),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
-        Some(
-            Command::Check(arguments) | Command::Backends(args::BackendCommand::Check(arguments)),
-        ) => check::run(arguments, environment, writer),
-        Some(Command::Transform(_) | Command::Runs(_) | Command::Audit(_) | Command::Diff(_)) => {
-            Err(Failure::Defect(
-                "the catalog, audit, and diff return before setup",
-            ))
+        Some(Command::Backends(args::BackendCommand::Check(arguments))) => {
+            check::run(arguments, environment, writer)
         }
+        Some(Command::Transform(_) | Command::Runs(_)) => Err(Failure::Defect(
+            "the catalog, audit, and diff return before setup",
+        )),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }
@@ -421,12 +415,9 @@ fn in_default_cache(command: &Command, environment: &Environment) -> bool {
         Command::Cache(_)
         | Command::Status(_)
         | Command::Mcp(_)
-        | Command::Check(_)
         | Command::Backends(_)
         | Command::Transform(_)
-        | Command::Runs(_)
-        | Command::Audit(_)
-        | Command::Diff(_) => false,
+        | Command::Runs(_) => false,
     }
 }
 

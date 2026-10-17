@@ -1,3 +1,4 @@
+//! Stays: process-wide width selection and cancellation races require direct scheduling checks.
 //! The facade's width registration and a cancelled batch, under the real
 //! process width in a child copy of the test binary.
 

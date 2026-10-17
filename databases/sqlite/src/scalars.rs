@@ -7,7 +7,7 @@ use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
+    Answer, CallOptions, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
@@ -51,38 +51,18 @@ fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failu
     )))
 }
 
-/// The shared many-record details path for a contextual singleton.
-fn contextual(
-    engine: &Engine,
-    held: &LoadedQuestion,
-    evidence: String,
-    options: CallOptions<'_>,
-) -> Result<Details, Failure> {
-    crate::request::details(
-        engine,
-        held,
-        vec![crate::request::text(evidence)],
-        options,
-        true,
-    )?
-    .into_iter()
-    .next()
-    .ok_or_else(|| Failure::defect("details returned no record"))
-}
-
 /// One ordinary detail read; all question kinds keep the same engine path.
 fn scalar_details(
     engine: &Engine,
     held: &LoadedQuestion,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Details, Failure> {
+) -> Result<crate::request::JudgmentRow, Failure> {
     crate::request::details(
         engine,
         held,
         vec![crate::request::text(evidence.to_owned())],
         options,
-        false,
     )?
     .into_iter()
     .next()
@@ -93,7 +73,7 @@ fn scalar_details(
 fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Failure> {
     if matches!(held, LoadedQuestion::Banded(_)) {
         return Err(Failure::usage(format!(
-            "{name} does not take a banded question; use thinkthen_decide or thinkthen_details"
+            "{name} does not take a banded question; use thinkthen_decide or thinkthen_decide_details"
         )));
     }
     if held.kind() == kind {
@@ -114,7 +94,7 @@ fn plain_decide(
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Answer, Failure> {
-    match scalar_details(engine, held, evidence, options)?.value() {
+    match &scalar_details(engine, held, evidence, options)?.value {
         Judgment::Decision(answer) => Ok(*answer),
         _ => Err(Failure::defect("a decide answer held no decision")),
     }
@@ -128,7 +108,8 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
         let answer =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match &scalar_details(engine, &held, &evidence, options.context(&shared))?.value
+                    {
                         Judgment::Decision(answer) => Ok(*answer),
                         _ => Err(Failure::defect("a decide answer held no decision")),
                     }
@@ -161,17 +142,12 @@ fn judged(
     only(&held, name, kind)?;
     let details =
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-            if let Some(shared) = shared {
-                Ok(
-                    contextual(engine, &held, evidence, options.context(&shared))?
-                        .value()
-                        .clone(),
-                )
+            let options = if let Some(shared) = &shared {
+                options.context(shared)
             } else {
-                Ok(scalar_details(engine, &held, &evidence, options)?
-                    .value()
-                    .clone())
-            }
+                options
+            };
+            Ok(scalar_details(engine, &held, &evidence, options)?.value)
         })?;
     Ok(Some(details))
 }
@@ -207,12 +183,13 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
         let position =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match &scalar_details(engine, &held, &evidence, options.context(&shared))?.value
+                    {
                         Judgment::Score(value) => Ok(*value),
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
                 } else {
-                    match scalar_details(engine, &held, &evidence, options)?.value() {
+                    match &scalar_details(engine, &held, &evidence, options)?.value {
                         Judgment::Score(value) => Ok(*value),
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
@@ -220,61 +197,6 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
             })?;
         Ok(Some(position))
     })?)
-}
-
-fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_details", || {
-        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
-            return Ok(None);
-        };
-        let details =
-            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                if let Some(shared) = shared {
-                    Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
-                    )
-                } else {
-                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-                }
-            })?;
-        Ok(Some(details))
-    })?)
-}
-
-fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    if matches!(context.get_raw(0), ValueRef::Null) || matches!(context.get_raw(1), ValueRef::Null)
-    {
-        return Ok(None);
-    }
-    let result = guard("thinkthen_try_details", || {
-        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
-            return Ok(None);
-        };
-        let details =
-            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                if let Some(shared) = shared {
-                    Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
-                    )
-                } else {
-                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-                }
-            })?;
-        let details: serde_json::Value =
-            serde_json::from_str(&details).map_err(|_| Failure::defect("a result is not JSON"))?;
-        Ok(Some(
-            serde_json::json!({"status":"answered","details":details}).to_string(),
-        ))
-    });
-    match result {
-        Ok(value) => Ok(value),
-        Err(failure) => match failure.value() {
-            Some(value) => Ok(Some(value.to_string())),
-            None => Err(failure.into()),
-        },
-    }
 }
 
 fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
@@ -376,8 +298,6 @@ fn register_removed(connection: &Catalog<'_>, volatile: FunctionFlags) -> rusqli
         "thinkthen_choose",
         "thinkthen_score",
         "thinkthen_tag",
-        "thinkthen_details",
-        "thinkthen_try_details",
         "thinkthen_annotate",
         "thinkthen_find",
     ] {
@@ -479,20 +399,6 @@ fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusq
             annotate,
         )?;
         connection.create_scalar_function(
-            "thinkthen_details",
-            arity,
-            judgment,
-            "Return a complete judgment envelope as JSON.",
-            details,
-        )?;
-        connection.create_scalar_function(
-            "thinkthen_try_details",
-            arity,
-            judgment,
-            "Return a judgment envelope or a recoverable failure envelope as JSON.",
-            try_details,
-        )?;
-        connection.create_scalar_function(
             "thinkthen_find",
             arity,
             judgment,
@@ -505,7 +411,6 @@ fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusq
 
 /// Register judgments under the initial connection policy, without harmless flags.
 pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite::Result<()> {
-    crate::complete::register(connection)?;
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     let judgment = match mode {
         Registration::DirectOnly => volatile,

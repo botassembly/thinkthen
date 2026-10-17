@@ -1,5 +1,6 @@
 """Pinned public host runtimes, installed only into a check's owned scratch."""
 import hashlib
+import os
 from pathlib import Path
 import sys
 import zipfile
@@ -21,11 +22,19 @@ def pinned(check, url, name, digest, algorithm='sha256'):
 def unzip(archive, destination):
     destination.mkdir()
     with zipfile.ZipFile(archive) as packed:
-        for entry in packed.infolist():
+        entries = packed.infolist()
+        for entry in entries:
             name = Path(entry.filename)
-            if name.is_absolute() or '..' in name.parts or (entry.external_attr >> 16) & 0o170000 == 0o120000:
+            kind = (entry.external_attr >> 16) & 0o170000
+            if (name.is_absolute() or '..' in name.parts
+                    or kind not in (0, 0o040000 if entry.is_dir() else 0o100000)):
                 raise Failure('host tool archive contains an unsafe entry')
         packed.extractall(destination)
+        # ZipFile drops Unix modes. Restore safe bits after validating every path.
+        for entry in sorted(entries, key=lambda item: len(Path(item.filename).parts), reverse=True):
+            mode = (entry.external_attr >> 16) & 0o777
+            if os.name != 'nt' and entry.create_system == 3 and entry.external_attr >> 16:
+                (destination / entry.filename).chmod(mode)
     return destination
 
 
@@ -33,14 +42,31 @@ def prepend(check, directory):
     check.env['PATH'] = f'{directory}:{check.env["PATH"]}'
 
 
-def postgres_tools(check, destination):
+def postgres_tools(check, destination, major=16):
     destination.mkdir()
-    for name, digest in PGDG:
-        archive = pinned(check, 'https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-16/' + name, name, digest)
+    pins = Path(__file__).resolve().parents[2] / 'databases/postgresql'
+    if major == 16:
+        packages = [(name, digest, 'https://apt.postgresql.org/pub/repos/apt/pool/main/p/postgresql-16/' + name)
+                    for name, digest in PGDG]
+    else:
+        urls = {url.rsplit('/', 1)[1]: url for url in (pins / 'runtime.url').read_text().splitlines()}
+        packages = []
+        for line in (pins / 'runtime.sha256').read_text().splitlines():
+            digest, name = line.split()
+            if name.endswith('_amd64.deb') and (name.startswith((f'postgresql-{major}_', f'postgresql-client-{major}_', 'libpq5_'))
+                                               or major == 18 and name.startswith('liburing2_')):
+                packages.append((name, digest, urls[name]))
+        if not packages:
+            raise Failure(f'no pinned PostgreSQL {major} runtime')
+    for name, digest, url in packages:
+        archive = pinned(check, url, name, digest)
         check.run('dpkg-deb', '-x', archive, destination)
-    binary = destination / 'usr/lib/postgresql/16/bin'
-    if not check.run(binary / 'postgres', '--version').startswith('postgres (PostgreSQL) 16.15 '):
-        raise Failure('PostgreSQL host differs from pinned 16.15')
+    binary = destination / f'usr/lib/postgresql/{major}/bin'
+    if major != 16:
+        check.env['LD_LIBRARY_PATH'] = str(destination / 'usr/lib/x86_64-linux-gnu')
+    expected = next(name.split('_')[1].split('-')[0] for name, _, _ in packages if name.startswith(f'postgresql-{major}_'))
+    if not check.run(binary / 'postgres', '--version').startswith(f'postgres (PostgreSQL) {expected} '):
+        raise Failure(f'PostgreSQL host differs from pinned {expected}')
     prepend(check, binary)
 
 
@@ -69,14 +95,22 @@ def prepare(check):
     elif check.channel == 'duckdb':
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
         from inputs import selected, versions
+        from source_hosts import prepare as prepare_source
         identity = selected(versions()[0], 'x86_64-unknown-linux-gnu')
-        archive = pinned(check, f"https://github.com/duckdb/duckdb/releases/download/{identity['version']}/{identity['cli_asset']}",
-                         'duckdb.zip', identity['cli_zip_sha256'])
-        folder = unzip(archive, check.root / 'duckdb-tools')
-        binary = folder / 'duckdb'
-        if hashlib.sha256(binary.read_bytes()).hexdigest() != identity['cli_sha256']:
-            raise Failure('DuckDB host binary differs from its pin')
-        binary.chmod(0o755)
-        prepend(check, folder)
-        if not check.run('duckdb', '--version').startswith(identity['version'] + ' '):
-            raise Failure(f"DuckDB host differs from pinned {identity['version']}")
+        # The approved source host requires Git, CMake, Ninja and a C/C++ compiler.
+        source, build = check.root / 'duckdb-source', check.root / 'duckdb-host'
+        prepare_source(source, identity['source_commit'], 'https://github.com/duckdb/duckdb.git', True,
+                       identity['version'])
+        admission = (sys.executable, Path(__file__).with_name('build-admission.py'), '--')
+        check.run(*admission, 'cmake', '-S', source, '-B', build, '-G', 'Ninja',
+                  '-DCMAKE_BUILD_TYPE=Release', '-DGIT_COMMIT_HASH=' + identity['source_commit'][:10],
+                  '-DBUILD_UNITTESTS=OFF', '-DBUILD_EXTENSIONS=core_functions;json',
+                  '-DDISABLE_BUILTIN_EXTENSIONS=OFF', '-DENABLE_EXTENSION_AUTOLOADING=OFF',
+                  '-DENABLE_EXTENSION_AUTOINSTALL=OFF')
+        check.run(*admission, 'cmake', '--build', build, '--target', 'shell', '--parallel', '2')
+        prepend(check, build)
+        reported = check.run('duckdb', '-noheader', '-list', '-init', '/dev/null', '-c',
+                             'SELECT library_version,source_id FROM pragma_version()').split('|')
+        if (len(reported) != 2 or reported[0] != identity['version']
+                or reported[1] not in (identity['source_commit'][:8], identity['source_commit'][:10])):
+            raise Failure(f"DuckDB host differs from pinned source {identity['source_commit']}")

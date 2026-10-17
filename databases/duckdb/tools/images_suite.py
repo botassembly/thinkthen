@@ -37,12 +37,13 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
                      f"SET thinkthen_record = {literal(folder + '/record')}", *[
             f"SELECT thinkthen_{verb}_images({literal(question)}, {LIST}, 'Compare originals.')"
             for verb, question in ASK.items()],
-            f"SELECT d, typeof(d), json_type(d) FROM (SELECT thinkthen_details_images({literal(ASK['choose'])}, {LIST}, 'Compare originals.') AS d)"], backend.base,
+            f"SELECT d.value, d.result.answer.probabilities, typeof(d) FROM (SELECT thinkthen_choose_details({literal(ASK['choose'])}, [{{'text':'Compare originals.','images':{LIST}}}])[1] AS d)"], backend.base,
             extra={'THINKTHEN_CACHE': folder + '/cache', 'LIQUIDAI_API_KEY':'fake-sql-image-key', 'THINKTHEN_BACKEND':'liquid'})
         expect([rows(result) for result in first[-4:-1]], [[[True]], [['red']], [[0.8]]], 'three image scalar values')
-        expect(rows(first[-1])[0][1:], ['JSON','OBJECT'], 'native image details JSON operations')
-        detail = json.loads(rows(first[-1])[0][0])
-        expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, 'native complete probabilities')
+        answer, probabilities, datatype = rows(first[-1])[0]
+        expect(datatype.startswith('STRUCT('), True, 'native image details STRUCT')
+        expect(answer, 'red', 'plain native choice')
+        expect({item['name']:item['value'] for item in probabilities}, {'red': 0.8, 'blue': 0.2}, 'native complete probabilities')
         expect(backend.bodies, [expected_body(verb) for verb in (*ASK, 'choose')], 'independent native image request bodies')
         replay = run([*stored(folder), "SET thinkthen_model = 'd1'",
                       "SET thinkthen_cache = 'off'", "SET thinkthen_max_requests_total = 0",
@@ -53,51 +54,70 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
         expect(backend.count(), 4, 'strict replay sends nothing')
 
 
+def image_call(question, records, settings='NULL'):
+    listed = records.startswith('[') or 'STRUCT' in records
+    call = f'thinkthen_decide_details(question := {question}, input := {records}, settings := {settings})'
+    return '(SELECT detail.* FROM (SELECT UNNEST(' + (call if listed else '[' + call + ']') + ') AS detail) WHERE detail IS NOT NULL)'
+
+
+def image_receipt(result):
+    actual = rows(result)
+    expect(len(actual), 1, 'one image record or typed failure row')
+    ordinal,value,result,facts,failure,observations = actual[0]
+    return {'ordinal':ordinal,'value':value,'result':result,'facts':facts,
+            'failure':failure,'observations':observations}
+
+
 @case
 def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
     with ImageBackend() as backend, tempfile.TemporaryDirectory() as folder:
         extra = {'THINKTHEN_BACKEND':'liquid', 'LIQUIDAI_API_KEY':'fake-sql-image-key'}
-        call = f"SELECT d, typeof(d), d->>'$.native.value[0].value' FROM (SELECT thinkthen_decide_complete('Is red visible?', {LIST}) AS d)"
+        question=literal('Is red visible?')
+        records="[{'images':"+LIST+"}]"
+        def query(question, records, settings='NULL'):
+            return 'SELECT ordinal,value,result,facts,failure,observations FROM '+image_call(question,records,settings)
+        call=query(question,records)
         got = run([*stored(folder, True), "SET thinkthen_model='d1'",
                    f"SET thinkthen_record={literal(folder + '/record')}", call], backend.base, extra=extra)
-        expect(rows(got[-1])[0][1:], ['JSON','true'], 'native image complete JSON operations')
-        value = json.loads(rows(got[-1])[0][0])
-        expect(value['ordinals'], [0], 'one native image record')
-        expect(value['native']['value'][0]['value'], True, 'complete native decision')
-        expect(value['native']['facts']['requests_sent'], 1, 'one complete request')
+        value = image_receipt(got[-1])
+        expect(value['ordinal'], 0, 'one native image record')
+        expect(value['value'], True, 'plain native decision')
+        expect(json.loads(value['result']['value']), True, 'authored JSON decision leaf')
+        expect(value['facts']['requests_sent'], 1, 'one complete request')
+        expect(value['failure'],None,'successful image has no failure')
         expect(backend.bodies, [expected_body('decide', text='')], 'authored image order and duplicates')
         got = run([*stored(folder), "SET thinkthen_model='d1'", "SET thinkthen_cache='off'",
                    "SET thinkthen_max_requests_total=0", f"SET thinkthen_replay={literal(folder + '/record')}", call],
                   backend.base, keyless=True, extra={'THINKTHEN_BACKEND':'liquid'})
-        replay = json.loads(rows(got[-1])[0][0])
-        expect([(r['value'],r['answer_id'],r['input']) for r in replay['native']['value']],
-               [(r['value'],r['answer_id'],r['input']) for r in value['native']['value']], 'strict replay identity')
-        expect(replay['native']['facts']['requests_sent'], 0, 'strict replay sends nothing')
-        bad = "[{media:'image/png',data:'private-image-evidence'::BLOB,file:NULL}]"
+        replay = image_receipt(got[-1])
+        expect([(replay['result'][key]) for key in ('value','answer_id','input')],
+               [(value['result'][key]) for key in ('value','answer_id','input')], 'strict replay identity')
+        expect(replay['facts']['requests_sent'], 0, 'strict replay sends nothing')
+        bad = "[{'images':[{media:'image/png',data:'private-image-evidence'::BLOB,file:NULL}]}]"
+        empty = "[{'images':[]::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[]}]"
         missing, trace = folder + "/unread-question.json", Path(folder) / "null.trace"
         wrap = ['strace','-f','-e','trace=openat,newfstatat,statx,access,readlink','-o',str(trace)] if sys.platform == 'linux' else None
-        nulls = [f"SELECT thinkthen_decide_complete(NULL, {partner}, 'bad') IS NULL" for partner in
-                 (bad, "'{bad}'", "[]::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[]")]
-        nulls += [f"SELECT thinkthen_decide_complete({literal('@' + missing)}, {partner}, 'bad') IS NULL"
-                  for partner in ("NULL::VARCHAR", "NULL::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[]")]
+        nulls = ["SELECT count(*) FROM "+image_call('NULL',partner,literal('bad')) for partner in
+                 (bad, "'{bad}'", empty)]
+        nulls += ["SELECT count(*) FROM "+image_call(literal('@'+missing),partner,literal('bad'))
+                  for partner in ("NULL::VARCHAR", "NULL::STRUCT(images STRUCT(media VARCHAR,data BLOB,file VARCHAR)[])[]")]
         got = run(["SET thinkthen_refresh_cache=2", *nulls,
-                   "SELECT thinkthen_decide_complete('Is red visible?', '{bad}')"], backend.base, extra=extra)
-        expect([rows(r) for r in got[1:-1]], [[[True]]] * len(nulls), 'required NULL precedes malformed session settings')
-        expect('thinkthen_refresh_cache is 0 or 1' in got[-1].get('error', ''), True, 'live rows still validate session settings')
+                   query(question,"[{'unknown':'private-image-evidence'}]")], backend.base, extra=extra)
+        expect([rows(r) for r in got[1:-1]], [[[0]]] * len(nulls), 'required NULL precedes malformed session settings')
+        expect('thinkthen_refresh_cache is 0 or 1' in json.dumps(image_receipt(got[-1])['failure']), True, 'live rows still validate session settings')
         probe = folder + '/null-record/.probe'
         got = run([f"SET thinkthen_record={literal(folder + '/null-record')}", *nulls], backend.base, extra=extra, wrap=wrap)
-        expect([rows(r) for r in got[1:]], [[[True]]] * len(nulls), 'required NULL skips recording settings')
+        expect([rows(r) for r in got[1:]], [[[0]]] * len(nulls), 'required NULL skips recording settings')
         if wrap:
             expect(sum(f'"{probe}"' in line for line in trace.read_text().splitlines()), 0, 'NULL rows never probe recording folder')
-        got = run([f"SELECT thinkthen_decide_complete(NULL, {bad}, 'bad') IS NULL",
-                   f"SELECT thinkthen_decide_complete({literal('@' + missing)}, NULL, 'bad') IS NULL",
-                   f"SELECT thinkthen_decide_complete('Is red visible?', {bad})",
-                   "SELECT thinkthen_decide_complete('Is red visible?', []::STRUCT(media VARCHAR,data BLOB,file VARCHAR)[])",
-                   "SELECT thinkthen_decide_complete('Is red visible?', '{bad}')"], backend.base, extra=extra, wrap=wrap)
-        expect([rows(r) for r in got[:2]], [[[True]],[[True]]], 'required NULL skips malformed partners')
+        got = run(["SELECT count(*) FROM "+image_call('NULL',bad,literal('bad')),
+                   "SELECT count(*) FROM "+image_call(literal('@'+missing),'NULL',literal('bad')),
+                   query(question,bad), query(question,empty), query(question,"[{'unknown':'private-image-evidence'}]")],
+                   backend.base, extra=extra, wrap=wrap)
+        expect([rows(r) for r in got[:2]], [[[0]],[[0]]], 'required NULL skips malformed partners')
         for result in got[2:]:
-            envelope = json.loads(rows(result)[0][0])
-            expect(envelope['native']['error']['kind'], 'usage', 'malformed native or text input refuses')
+            envelope = image_receipt(result)
+            expect(envelope['failure']['kind'], 'usage', 'malformed native or text input refuses')
             expect('private-image-evidence' in json.dumps(envelope), False, 'admission withholds pixels')
         if wrap:
             calls = trace.read_text().splitlines()
@@ -106,9 +126,11 @@ def complete_images_keep_native_blobs_facts_replay_and_local_refusals():
         expect(backend.count(), 1, 'replay and local refusals send nothing')
         backend.status, backend.reply = 503, b'{"error":"private-backend-body"}'
         failed = run([*stored(folder), "SET thinkthen_model='d1'", "SET thinkthen_max_retries=0", call], backend.base, extra=extra)
-        envelope = json.loads(rows(failed[-1])[0][0])
-        expect(envelope['native']['error']['kind'], 'backend', 'backend failure preserves complete kind')
-        expect('private-backend-body' in json.dumps(envelope), False, 'failure withholds response')
+        envelope = image_receipt(failed[-1])
+        expect(envelope['failure']['kind'], 'backend', 'backend failure preserves complete kind')
+        expect(envelope['failure']['retryable'], True, 'retryable backend status')
+        expect(envelope['facts']['requests_sent'], 1, 'one failed request owns actual facts')
+        expect('fake-sql-image-key' in json.dumps(envelope), False, 'failure withholds actual provider key')
         expect(backend.count(), 2, 'one failed attempt after the successful request')
 
 
@@ -129,12 +151,16 @@ def image_null_bad_media_limits_implicit_values_and_file_permissions_never_send(
                    "SELECT thinkthen_decide_images('Is red visible?', [NULL])",
                    f"SELECT thinkthen_decide_images('Is red visible?', [{','.join([value]*9)}])",
                    "SELECT thinkthen_decide_images('Is red visible?', [{media:'image/png',data:'private-image-evidence'::BLOB,file:NULL}])",
-                   f"SELECT thinkthen_details_images('{{\"tag\":\"Which?\",\"labels\":[\"red\"]}}', {good})",
+                   f"SELECT thinkthen_tag_details('{{\"tag\":\"Which?\",\"labels\":[\"red\"]}}', [{{'images':{good}}}])",
                    f"SELECT thinkthen_decide_images('Is red visible?', from_hex('{red}'))"]
         got = run([*statements, *invalid, f"SELECT (thinkthen_image_file({literal(str(FIXTURE/'red.png'))})).file",
                    'SET enable_external_access = false', f"SELECT thinkthen_image_file({literal(str(FIXTURE/'red.png'))})"], backend.base)
         expect([rows(result) for result in got[:5]], [[[True]]] * 5, 'NULL operands')
-        for result in got[5:5+len(invalid)]:
+        for index,result in enumerate(got[5:5+len(invalid)]):
+            if index == 8:
+                expect(rows(result)[0][0][0]['failure']['kind'], 'usage', 'unsupported image verb is a typed failure')
+                expect('private-image-evidence' in json.dumps(result), False, 'typed failure withholds pixels')
+                continue
             expect('error' in result, True, 'invalid input refuses')
             # DuckDB's binder can show SQL source, so payload secrecy checks
             # target native diagnostics, whose first sentence withholds pixels.

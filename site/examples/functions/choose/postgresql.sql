@@ -6,5 +6,5 @@ SELECT thinkthen_choose(
         "account": "Logins and passwords."
       }}',
     'My parcel went to the wrong address.',
-    NULL
+    NULL::text[]
 ) AS team;

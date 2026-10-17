@@ -20,6 +20,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'generators/results'))
+from sources import tracked_files
+
 LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeScript",
              ".ts": "TypeScript", ".rb": "Ruby", ".R": "R"}
 COMMENT = {"Rust": "//", "TypeScript": "//", "Python": "#", "Ruby": "#", "R": "#"}
@@ -34,6 +37,7 @@ EXCLUDED = {
     "site/": "the site build is not a test",
     "libraries/r/thinkthen/tools/": "the R package's install-time tools are not tests",
     "databases/duckdb/community/build_rust.py": "the community compiler wrapper is a build tool, not a test",
+    "databases/duckdb/community/python_host.py": "the community interpreter selector is a build tool, not a test",
     "databases/duckdb/community/prepare.py": "the community toolchain preparation is a build tool, not a test",
 }
 EXEMPT = {
@@ -113,8 +117,9 @@ PASSES = {
     "Ruby": lambda call: re.search(r"unsetenv_others:\s*true", call),
     "R": lambda call: "clean_env(" in call,
 }
+# os.execve requires an explicit environment; os.execv inherits the parent.
 OUTRIGHT = {
-    "Python": re.compile(r"\bos\.(?:system|popen|exec\w*|spawn\w*)\s*\("),
+    "Python": re.compile(r"\bos\.(?:system|popen|exec(?!ve\b)\w*|spawn\w*)\s*\("),
     "Ruby": re.compile(r"`[^`\n]*`|%x[({\[]"),
 }
 WHOLE = {
@@ -260,11 +265,8 @@ def said(path, number, rule):
 
 
 def tracked(root):
-    listed = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True,
-                            env={"PATH": "/usr/bin:/bin"}, check=False)
-    if listed.returncode == 0:
-        return [name for name in listed.stdout.decode().split("\0") if name]
-    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+    root = root.resolve()
+    return [path.relative_to(root).as_posix() for path in tracked_files(root)]
 
 
 def check(root, tables):
@@ -337,6 +339,9 @@ CASES = [
     ("a.py", 'subprocess.run(["x"], env=None)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
     ("a.py", 'subprocess.run(["x"],\n               env=child_env())\n', []),
     ("a.py", 'os.system("ls")\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("a.py", 'os.execve(binary, argv, child_env(home=folder))\n', []),
+    ("a.py", 'os.execv(binary, argv)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("tests/a.py", 'os.execve(binary, argv, os.environ)\n', [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "env = dict(os.environ)\n", [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "names = os.environ.items()\n", [f"children: tests/a.py:1: {READS}"]),
     ("tests/a.py", "for name in os.environ:\n    pass\n", [f"children: tests/a.py:1: {READS}"]),
@@ -381,6 +386,10 @@ def self_test():
             root = pathlib.Path(tmp)
             (root / relative).parent.mkdir(parents=True, exist_ok=True)
             (root / relative).write_text(text, encoding="utf-8")
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            if check(root, {}):
+                raise AssertionError('children read an untracked source fixture')
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
             actual = check(root, {})
         if actual != expected:
             bad += 1
@@ -388,6 +397,8 @@ def self_test():
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         (root / "held.py").write_text('x = 1\nsubprocess.run(["x"])\nsubprocess.run(["y"])\n', encoding="utf-8")
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
         actual = check(root, {"excluded": {"gone/": "a fixture"},
                               "pending": {("held.py", "inherits", 'subprocess.run(["x"])', 1): "a fixture",
                                           ("held.py", "inherits", 'subprocess.run(["z"])', 1): "a fixture"}})

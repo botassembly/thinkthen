@@ -1,3 +1,4 @@
+//! Stays: statistical arithmetic and byte-preserving splices need direct deterministic vectors and boundary checks.
 #![allow(clippy::expect_used, reason = "a failed row stops the table")]
 
 use super::{remove, splice};

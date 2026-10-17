@@ -1,3 +1,4 @@
+//! Stays: saved question parsing and resolution need direct closed-grammar, conflict and secrecy checks.
 //! The precedence rule, over a file, over a command line, and over both.
 
 use proptest::prelude::Strategy;
@@ -27,6 +28,7 @@ fn typed_labels(values: &[&str]) -> Option<Described> {
     )
 }
 
+// Retained: no outside case checks all four resolved defaults with saved selection and model together.
 #[test]
 fn a_file_of_each_verb_holds_the_settings_it_names() {
     let decide = file(
@@ -76,21 +78,7 @@ fn a_file_of_each_verb_holds_the_settings_it_names() {
     assert_eq!(resolved.threshold(), None);
 }
 
-#[test]
-fn a_score_map_carries_descriptions_beside_the_names_results_use() {
-    let held = file(r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#);
-    let resolved =
-        resolve(Verb::Score, None, Some(&held), &Typed::default()).expect("a resolved placement");
-    let Some(Question::Score { levels, .. }) = resolved.question() else {
-        panic!("a score question");
-    };
-    assert_eq!(
-        levels.names().collect::<Vec<_>>(),
-        [&"low".to_owned(), &"high".to_owned()]
-    );
-    assert!(levels.fully_described());
-}
-
+// Retained: the outside replacement case does not check retention of structured question text.
 #[test]
 fn a_typed_list_replaces_the_files_described_list_and_the_text_stays() {
     let held = file(r#"{"choose":{"ask":"Which?"},"options":{"a":{"what":"A"},"b":null}}"#);
@@ -114,24 +102,7 @@ fn a_typed_list_replaces_the_files_described_list_and_the_text_stays() {
     );
 }
 
-#[test]
-fn a_command_that_does_not_match_the_file_is_refused_by_name() {
-    let held = file(r#"{"choose":"Which team?","options":["a","b"]}"#);
-    assert_eq!(
-        resolve(Verb::Decide, None, Some(&held), &Typed::default()),
-        Err(Refused::VerbMismatch {
-            asked: Verb::Decide,
-            held: Verb::Choose,
-        })
-    );
-    assert_eq!(
-        resolve(Verb::Decide, None, Some(&held), &Typed::default())
-            .expect_err("a refusal")
-            .to_string(),
-        "the command is `decide` and the question file holds a `choose` question"
-    );
-}
-
+// Retained: no outside case checks this complete mixed provenance map and omitted false reading.
 #[test]
 fn the_command_line_beats_the_file_and_the_file_beats_the_default() {
     let held = file(
@@ -170,29 +141,7 @@ fn the_command_line_beats_the_file_and_the_file_beats_the_default() {
     );
 }
 
-#[test]
-fn a_typed_list_replaces_the_files_whole_list_and_never_merges_with_it() {
-    let held = file(
-        r#"{"choose":"Which team?","options":{"billing":"Money.","shipping":"Parcels.","other":null}}"#,
-    );
-    let typed = Typed {
-        labels: typed_labels(&["urgent", "later"]),
-        ..Typed::default()
-    };
-    let resolved = resolve(Verb::Choose, None, Some(&held), &typed).expect("a resolved pick");
-    assert_eq!(
-        json_line(resolved.question().expect("a question")).expect("a question is writable"),
-        r#"{"verb":"choose","text":"Which team?","options":["urgent","later"]}"#
-    );
-    assert_eq!(
-        json_line(resolved.sources()).expect("sources are writable"),
-        concat!(
-            r#"{"question":"file","options":"command line","threshold":"default","#,
-            r#""on":"default","model":"default"}"#,
-        )
-    );
-}
-
+// Retained: the CLI omits this internal provenance map when no file exists.
 #[test]
 fn a_question_with_no_file_reads_every_setting_from_the_command_line() {
     let typed = Typed {
@@ -213,6 +162,7 @@ fn a_question_with_no_file_reads_every_setting_from_the_command_line() {
     );
 }
 
+// Retained diagnostic edge: the public error cannot expose the typed origin discriminator.
 #[test]
 fn a_band_on_a_pick_is_refused_from_either_source() {
     let held = file(r#"{"choose":"Which team?","options":["a","b"],"threshold":"0.1:0.9"}"#);
@@ -235,6 +185,7 @@ fn a_band_on_a_pick_is_refused_from_either_source() {
     assert_eq!(refusal.origin(), Source::CommandLine);
 }
 
+// Retained diagnostic edge: no outside case checks both typed list origins together.
 #[test]
 fn a_list_the_verb_does_not_take_names_the_source_it_came_from() {
     let held = file(r#"{"choose":"Which team?","options":["only"]}"#);
@@ -266,6 +217,7 @@ fn a_list_the_verb_does_not_take_names_the_source_it_came_from() {
     assert_eq!(refusal.origin(), Source::CommandLine);
 }
 
+// Retained secrecy edge: assert the exact sanitized newline-bearing label refusal.
 #[test]
 fn a_label_holding_a_control_character_is_refused_from_a_file_too() {
     let held = file(r#"{"choose":"Which team?","options":["other","bug\nrm -rf /"]}"#);
@@ -284,6 +236,7 @@ fn a_label_holding_a_control_character_is_refused_from_a_file_too() {
     assert!(!said.contains('\n'), "{said:?}");
 }
 
+// Retained: no outside case checks the complete provenance map for deferred per-record options.
 #[test]
 fn options_that_each_record_carries_settle_every_other_setting_once() {
     let held = file(r#"{"choose":"Which code fits?","options":["a","b"],"threshold":0.8}"#);
@@ -304,6 +257,7 @@ fn options_that_each_record_carries_settle_every_other_setting_once() {
     );
 }
 
+// Retained: no outside case checks this complete saved score provenance map.
 #[test]
 fn a_file_may_be_read_with_no_command_line_at_all() {
     let held = file(r#"{"score":"How much?","levels":["None.","Some.","Blocked."]}"#);
@@ -319,6 +273,7 @@ fn a_file_may_be_read_with_no_command_line_at_all() {
     );
 }
 
+// Retained: no outside case compares the resolved explicit threshold across both sources.
 #[test]
 fn a_typed_question_and_the_same_question_in_a_file_ask_one_thing() {
     let held = file(r#"{"decide":"Does this ask for a refund?","threshold":0.8}"#);
@@ -368,6 +323,7 @@ fn saying() -> impl Strategy<Value = String> {
 }
 
 proptest! {
+    /// Retained parser property: arbitrary escaping and Unicode have no exhaustive outside replacement.
     /// The two homes are one question, whatever the texts hold.
     ///
     /// The file is written by the same JSON writer the tool prints with, so a

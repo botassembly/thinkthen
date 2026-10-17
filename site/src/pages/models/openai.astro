@@ -1,0 +1,26 @@
+---
+// Goal: show how to send text questions to the OpenAI Decisions API with the named openai backend.
+import SidePage from '../../layouts/SidePage.astro';
+import Code from '../../components/Code.astro';
+import { BACKEND_PAGES } from '../../data/catalog.mjs';
+import { backend } from '../../lib/backends-table.mjs';
+import FromYourLanguage from '../../components/FromYourLanguage.astro';
+const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
+const route = backend('openai');
+---
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Send text questions to the OpenAI Decisions API with the named openai backend.' }} name="Models">
+  <h1>OpenAI Decisions API</h1>
+  <p class="lede">The named <code>{route.name}</code> backend sends text questions to the OpenAI Decisions API. All ten functions run on it with text.</p>
+  <h2>Setup</h2>
+  <p>Set <code>{route.keys[0]}</code> in your environment. Then pass <code>--backend {route.name}</code>, or set <code>THINKTHEN_BACKEND={route.name}</code>. ThinkThen posts to <code>{route.base}/{route.path}</code> and asks <code>{route.model}</code> by default. A model you pass stays your own choice.</p>
+  <Code code={"thinkthen decide 'Does the customer ask for a refund?' --backend openai < message.txt"} lang="bash" />
+  <p>The Rust builder picks the same backend with <code>Engine::builder().backend("openai")?</code>. A bare builder reads no environment. Supply its <code>api_key</code>, or start from <code>Engine::from_env()</code>. Every binding and SQL extension names it the same way.</p>
+  <p>A yes or no answer carries its probability, and a pick carries a probability for every option. A refusal stays a failure. Instructions and descriptions travel as compact JSON text. Confidence comes back apart from your threshold.</p>
+  <h2>Another address</h2>
+  <p><code>--backend openai --url BASE</code> keeps the OpenAI request shape at another address. A hostname, or a path named <code>decisions</code>, never selects it alone. Retries keep the same address and key. The key stays out of request bodies, results and recordings.</p>
+  <p>Record and replay work as on every backend. Each question reuses its own saved answer even when it moves inside a request. A recording keeps request and response bodies, never headers. OpenAI answers and other backends' answers stay apart in one cache.</p>
+  <h2>Limits</h2>
+  <p>This backend takes text only, and it refuses an image before it looks up or sends anything. Batching can move some probabilities. OpenAI's <a href="https://developers.openai.com/api/docs/guides/decisions">Decisions guide</a> and <a href="https://developers.openai.com/api/reference/resources/decisions/methods/create">create reference</a> describe the API and its pricing. ThinkThen counts no usage or cost for a reply that reports no usage.</p>
+  <FromYourLanguage />
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/models/system-one/">Any compatible server</a></p>
+</SidePage>

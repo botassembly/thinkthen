@@ -51,7 +51,7 @@ def main():
             shutil.copyfile(REPO / relative, destination)
         env['RUSTFLAGS'] = (f'--remap-path-prefix={REPO.as_posix()}=/build/source '
                             f'--remap-path-prefix={env["CARGO_HOME"]}=/build/cargo '
-                            f'--remap-path-prefix={Path.home().as_posix()}=/build/home')
+                            f'--remap-path-prefix={Path.home().as_posix()}=/build/host')
 
         def run(*command, cwd=HERE, extra=None):
             with chdir(cwd):

@@ -23,6 +23,8 @@ path = "./src/bin/pgrx_embed.rs"
 [features]
 default = ["pg16"]
 pg16 = ["pgrx/pg16"]
+pg17 = ["pgrx/pg17"]
+pg18 = ["pgrx/pg18"]
 # R1-10: a test build adds `thinkthen_panic_probe()`. The shipped build lacks it.
 panic-probe = []
 
@@ -31,6 +33,7 @@ thinkthen-host = { path = "../../crates/thinkthen-host" }
 thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 libc = "0.2"
 pgrx = "=0.17.0"
+serde = "1"
 serde_json = { version = "1", features = ["raw_value"] }
 
 [profile.release]

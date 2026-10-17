@@ -24,7 +24,7 @@ if args.routine:
     import parity
     required_ids = parity.required_cases(parity.inventory(), "swift")
     selected.update(line for line in (ROOT / "conformance/routine-ids.txt").read_text().splitlines() if line in required_ids)
-    selected.update(("complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
+    selected.update(("library-call-result", "complete-decide", "complete-find", "complete-annotate", "files-annotate", "images-decide", "image-file-decide", "settings-cache-off-sends-again", "settings-replay-answers-from-the-folder-alone", "declared-object-context", "context-null", "recognize-record-contexts"))
 native = Path(shutil.which("swift")).resolve().parents[2] / "usr/lib/swift/linux" if sys.platform != "darwin" else None
 def native_parity(consumer, command):
     # Shared recipes/assertions are read-only; execution uses each actual named consumer.
@@ -108,6 +108,11 @@ def native_parity(consumer, command):
                             return project_session(json.loads(output.stdout), step)
                         before = int(backend.read("count"))
                         got = invoke(settings)
+                        if row["id"] == "settings-max-requests-refuses-past-the-limit":
+                            assert [entry["index"] for entry in got["completed"]] == [0, 1], got
+                            assert [entry["input"] for entry in got["completed"]] == step["items"][:2], got
+                            assert got["requests_sent"] == got["records"] == 2, got
+                            assert got["stopped_at"] == 3, got
                         if value.get("identity_steps"):
                             identities.append(got)
                         if step.get("stored_answers") == 0:

@@ -148,7 +148,7 @@ fn primitive_text_functions_keep_distributions_usage_and_secrecy() {
 }
 #[test]
 fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
-    use thinkthen::{Entity, Kind, Recognize, Relate, RelationRule};
+    use thinkthen::{Kind, Recognize, Relate, RelationRule};
     let listener = Listener::answering(response).unwrap();
     let engine = builder(&listener).no_cache().build().unwrap();
     let decide = Question::decide("Good?").unwrap().cut();
@@ -204,16 +204,22 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
         .unwrap()
         .build()
         .unwrap();
-    engine
-        .relate_complete_with(
-            &relate,
-            [
-                Entity::new("Ada", "person").unwrap(),
-                Entity::new("Grace", "person").unwrap(),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
+    crate::api::relation(
+        &engine,
+        &relate,
+        [
+            r#"{"name":"Ada","kind":"person"}"#,
+            r#"{"name":"Grace","kind":"person"}"#,
+        ]
+        .map(|json| {
+            Ok(reading
+                .compose(thinkthen::RawRecord::json(json).unwrap())
+                .unwrap())
+        }),
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_routes(&listener);
 }
 #[cfg(test)]
@@ -369,7 +375,7 @@ fn same_endpoint_and_model_keep_adapter_answers_separate_and_wrong_replay_sends_
         .unwrap();
     assert_eq!(
         *first.decide(&question, "Input.").unwrap().value(),
-        Answer::Yes
+        Some(true)
     );
     let other = builder(&listener)
         .backend("perplexity")
@@ -380,11 +386,11 @@ fn same_endpoint_and_model_keep_adapter_answers_separate_and_wrong_replay_sends_
         .unwrap();
     assert_eq!(
         *other.decide(&question, "Input.").unwrap().value(),
-        Answer::No
+        Some(false)
     );
     assert_eq!(
         *first.decide(&question, "Input.").unwrap().value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(listener.count(), 2);
     let db = rusqlite::Connection::open(place.join("thinkthen.sqlite")).unwrap();

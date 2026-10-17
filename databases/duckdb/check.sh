@@ -12,7 +12,6 @@ case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHE
 LIMIT=$HERE/../../sdlc/scripts/time-limit
 INPUTS_HERE=$HERE/tools
 . "$INPUTS_HERE/inputs.sh"
-. "$INPUTS_HERE/prepare_inputs.sh"
 DUCKDB_VERSIONS=$(input_versions)
 DEFAULT_VERSION=${DUCKDB_VERSIONS%% *}
 host_target=$(input_target)
@@ -21,17 +20,24 @@ host_target=$(input_target)
 }
 select_host() {
 	input_select "$1" "$host_target"
-	CLI=$TOOLS/duckdb
+	CLI=$HERE/build/community/$DUCKDB_VERSION/build/release/duckdb
 	[ "$DUCKDB_VERSION" != "$DEFAULT_VERSION" ] || CLI=${THINKTHEN_DUCKDB_CLI:-$CLI}
 	PY=$TOOLS/venv/bin/python
-	if [ ! -x "$CLI" ] || [ ! -x "$PY" ] || [ ! -f "$TOOLS/platform.txt" ]; then
+	if [ ! -x "$CLI" ] || [ ! -x "$PY" ]; then
 		echo "not run: the DuckDB $DUCKDB_VERSION toolchain is missing; run databases/duckdb/tools/setup.sh --fetch"
 		exit 77
 	fi
-	[ "$(cat "$TOOLS/platform.txt")" = "$platform" ] || { echo "check: the stock DuckDB platform differs from $platform" >&2; exit 1; }
-	input_verify "$cli_hash" "$CLI"
-	observed=$("$PY" -c 'import duckdb; print("v" + duckdb.__version__)')
-	[ "$observed" = "$DUCKDB_VERSION" ] || { echo 'check: the Python DuckDB version differs from its pin' >&2; exit 1; }
+	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchall()[0][1])')
+	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the Python DuckDB source differs from its pin' >&2; exit 1; }
+	observed=$("$CLI" -noheader -list -c 'SELECT source_id FROM pragma_version();')
+	case $observed in
+	"$(printf '%.8s' "$duckdb_source_commit")"|"$(printf '%.10s' "$duckdb_source_commit")") ;;
+	*) echo 'check: the CLI DuckDB source differs from its pin' >&2; exit 1 ;;
+	esac
+	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA platform").fetchall()[0][0])')
+	[ "$observed" = "$platform" ] || { echo 'check: the Python DuckDB platform differs from its target' >&2; exit 1; }
+	observed=$("$CLI" -noheader -list -c 'SELECT platform FROM pragma_platform();')
+	[ "$observed" = "$platform" ] || { echo 'check: the CLI DuckDB platform differs from its target' >&2; exit 1; }
 	THINKTHEN_DUCKDB_VERSION=$DUCKDB_VERSION
 	THINKTHEN_DUCKDB_EXTENSION=$HERE/build/artifacts/cpp/$DUCKDB_VERSION/$host_target/thinkthen.duckdb_extension
 	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_EXTENSION
@@ -46,6 +52,8 @@ PORT=${1:?check.sh takes the loopback port}
 REPO=$(cd -- ../.. && pwd)
 . "$REPO/sdlc/scripts/scratch.sh"
 . "$REPO/sdlc/scripts/installed.sh"
+heavy_scripts=$REPO/sdlc/scripts
+. "$heavy_scripts/heavy-compile"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend"
@@ -60,7 +68,16 @@ if [ "$profile" = smoke ]; then
 	smoke_guard
 	# The replay smoke (ticket 0335): the loadable extension copied to a scratch folder, as the
 	# archive lays it out, and loaded from there by its path.
-	sh cpp/build.sh
+	if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+		release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+		python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
+		installed_unpack
+		python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
+		THINKTHEN_DUCKDB_EXTENSION=$scratch/$duckdb_metadata_version/$platform/thinkthen.duckdb_extension
+		export THINKTHEN_DUCKDB_EXTENSION
+	else
+		sh cpp/build.sh
+	fi
 	scratch_dir installed
 	cp "$THINKTHEN_DUCKDB_EXTENSION" "$installed/"
 	cd "$installed"
@@ -73,6 +90,8 @@ db.execute(f"LOAD \x27{sys.argv[1]}\x27")
 print("smoke:", {True: "true", False: "false", None: "null"}[value])' "$installed/thinkthen.duckdb_extension"
 	exit
 fi
+python3 tools/receipt_types.py --check
+python3 tools/request_helpers.py --check
 stock_cli() {
 	echo "== the stock CLI loads the extension"
 	scratch_dir home && scratch_dir cache && scratch_dir config
@@ -87,17 +106,20 @@ stock_cli() {
 verify_selected_package() {
 	for other in $DUCKDB_VERSIONS; do
 		[ "$other" != "$DUCKDB_VERSION" ] || continue
-		other_tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$other
+		other_tools=$HERE/build/community/$other/build/release
 		if [ "${1:-}" = installed ]; then
-			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$scratch/$other/$platform/thinkthen.duckdb_extension"
+			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$scratch/$(python3 tools/inputs.py select "$other" "$host_target" | cut -d " " -f 7)/$platform/thinkthen.duckdb_extension"
 		else
 			"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --version "$DUCKDB_VERSION" --target "$host_target" --matching-host "$CLI" --different-host "$other_tools/duckdb" --different-version "$other" --repository-extension "$HERE/build/artifacts/cpp/$other/$host_target/thinkthen.duckdb_extension"
 		fi
 	done
 }
+native_records() {
+	(cd tools && "$PY" -c 'from harness import run; from native_records import check; check(run)')
+}
 older_suites() {
     for verb in decide choose tag score filter rank find annotate recognize relate; do
-        sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py duckdb "complete-$verb" >"$home/complete-$verb.log"
+        [ "$profile" = routine ] || sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py duckdb "complete-$verb" >"$home/complete-$verb.log"
     done
 	sh "$LIMIT" 900 "$PY" tools/images_suite.py
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
@@ -105,36 +127,37 @@ older_suites() {
 	sh "$LIMIT" 900 "$PY" tools/rank_suite.py
 	sh "$LIMIT" 900 "$PY" tools/rank_sets_suite.py
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send portable_find_settings_and_removed_slots held_find_and_spent_statement_budget
-	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_and_probability_forms_refuse_without_transport rank_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys try_details_keeps_recoverable_settings_failures_beside_an_answer recognize_named_settings_and_old_deadline_boundary
+	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_and_probability_forms_refuse_without_transport rank_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys recognize_named_settings_and_old_deadline_boundary
 }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
 	. "$REPO/sdlc/scripts/installed.sh"
-	unset THINKTHEN_CONFORMANCE_IDS
 	release=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 	python3 cpp/verify_repository.py "$THINKTHEN_ARTIFACT" "$host_target" "$release"
 	installed_unpack
 	python3 cpp/verify_repository.py "$scratch" "$host_target" "$release"
+	python3 tools/source_checks.py
 	for version in $DUCKDB_VERSIONS; do
 		select_host "$version"
-		export THINKTHEN_DUCKDB_EXTENSION="$scratch/$version/$platform/thinkthen.duckdb_extension"
+		export THINKTHEN_DUCKDB_EXTENSION="$scratch/$duckdb_metadata_version/$platform/thinkthen.duckdb_extension"
 		own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"
 		stock_cli
 		verify_selected_package installed
+		native_records
 		[ "$profile" = full ] || [ "$version" = "$DEFAULT_VERSION" ] || older_suites
 	done
 	select_host "$DEFAULT_VERSION"
-	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$DEFAULT_VERSION/$platform/thinkthen.duckdb_extension"
+	export THINKTHEN_DUCKDB_EXTENSION="$scratch/$duckdb_metadata_version/$platform/thinkthen.duckdb_extension"
 	"$PY" cpp/verify_complete_tables.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
-	sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+	[ "$profile" = routine ] || sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
 	sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 	[ "$profile" = full ] || sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/plan_suite.py p1_native_struct_is_keyless_and_sends_nothing plan_refusals_and_named_binding_never_send positive_process_total_denies_the_next_actual_send
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send portable_find_settings_and_removed_slots held_find_and_spent_statement_budget
-	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_and_probability_forms_refuse_without_transport rank_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys try_details_keeps_recoverable_settings_failures_beside_an_answer recognize_named_settings_and_old_deadline_boundary
-	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared b13c_try_details_blank_context_keeps_good_siblings b13c_try_details_whole_request_failure b13c_context_and_batch_one_wire_identity portable_vector_first_seen_context b13c_packed_total_admits_one_attempt b13c_try_details_total_one_preserves_answered_rows b13c_try_details_total_zero_sends_nothing b13c_try_details_split_denials b13c_try_details_denied_retry_keeps_later_answer portable_batch_identity
+	sh "$LIMIT" 900 "$PY" tools/portable_suite.py named_decide_binds_by_name_and_settings_refuse_before_send listed_settings_and_members_are_distinct_overloads keyed_decide_preserves_key_body_and_one_send keyed_verbs_keep_members_order_and_refuse_duplicate_keys six_song_vector_and_keyed_forms_share_one_packed_body removed_warm_and_probability_forms_refuse_without_transport rank_and_details_share_one_portable_request annotate_accepts_call_settings_and_refuses_question_only_keys recognize_named_settings_and_old_deadline_boundary
+	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_context_and_batch_one_wire_identity portable_vector_first_seen_context b13c_packed_total_admits_one_attempt portable_batch_identity
 	[ "$profile" = full ] || sh "$LIMIT" 900 "$PY" tools/rank_suite.py
 	[ "$profile" = full ] || sh "$LIMIT" 900 "$PY" tools/rank_sets_suite.py
 	sh "$LIMIT" 900 "$PY" tools/settings_suite.py portable_decide_zero_budget the_process_request_total_holds_across_calls environment_token_cap_refuses_before_any_send
@@ -145,8 +168,8 @@ fi
 if [ "$profile" != full ]; then
 echo "== build, lint, and unit tests"
 cargo fmt --all --manifest-path bridge/Cargo.toml -- --check
-cargo clippy --locked --offline --manifest-path bridge/Cargo.toml --all-targets --all-features -- -D warnings
-cargo test --locked --offline --manifest-path bridge/Cargo.toml --lib
+heavy_compile cargo clippy --locked --offline --manifest-path bridge/Cargo.toml --all-targets --all-features -- -D warnings
+heavy_compile cargo test --locked --offline --manifest-path bridge/Cargo.toml --lib
 fi
 for version in $DUCKDB_VERSIONS; do
 	THINKTHEN_DUCKDB_VERSION=$version sh cpp/build.sh
@@ -182,7 +205,7 @@ if [ "$profile" = stress ]; then
 fi
 
 echo "== complete native calls"
-sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
+[ "$profile" = routine ] || sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py duckdb
 sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py duckdb
 if [ "$profile" = full ]; then
     own_panic_hook "$THINKTHEN_DUCKDB_EXTENSION"

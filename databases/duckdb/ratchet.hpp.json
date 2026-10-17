@@ -1,0 +1,8 @@
+{
+  "directory": [
+    "cpp/src"
+  ],
+  "extension": ".hpp",
+  "max": 914,
+  "scope": "handwritten-production"
+}

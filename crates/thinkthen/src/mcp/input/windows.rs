@@ -116,6 +116,12 @@ impl PipeInput {
     }
 }
 impl PipeOutput {
+    fn completed(&self, result: io::Result<usize>) -> io::Result<usize> {
+        match result {
+            Err(_) if self.watch.stop.is_cancelled() => Err(io::ErrorKind::BrokenPipe.into()),
+            result => result,
+        }
+    }
     pub(in crate::mcp) fn new(file: File, stop: CancelToken) -> io::Result<Self> {
         ffi::pipe(&file)?;
         Ok(Self {
@@ -155,11 +161,7 @@ impl Write for PipeOutput {
                 .ok_or_else(|| io::Error::other("invalid output buffer"))?,
         );
         drop(operation);
-        if self.watch.stop.is_cancelled() {
-            Err(io::ErrorKind::BrokenPipe.into())
-        } else {
-            result
-        }
+        self.completed(result)
     }
     fn flush(&mut self) -> io::Result<()> {
         // Unbuffered File writes already reached the pipe. FlushFileBuffers

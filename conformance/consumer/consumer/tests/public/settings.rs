@@ -3,7 +3,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use super::child::ChildEnvironment as _;
-use thinkthen::{Answer, Engine, Entity, ErrorKind, Judgment, Question, Relate};
+use thinkthen::{Answer, Engine, Entity, ErrorKind, Question, Relate};
 
 fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, id: &str) {
     let entities = case["entities"]
@@ -143,7 +143,7 @@ fn old_recording_child() {
             .decide(&question, report)
             .expect("saved")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     let error = engine.decide(&question, vague).expect_err("local miss");
     assert_eq!(
@@ -168,7 +168,7 @@ fn old_recording_child() {
         ),
         (0, 1)
     );
-    assert_eq!(served.into_value(), Answer::Yes);
+    assert_eq!(served.into_value(), Some(true));
 }
 
 #[test]
@@ -246,11 +246,11 @@ fn the_builder_follows_the_command_folder_rules() {
         .expect("pair");
     assert_eq!(
         paired.decide(&ask, "one").expect("send").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(
         paired.decide(&ask, "one").expect("replay").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!((backend.count(), paired.usage().cache_answers()), (1, 0));
     let recorder = Engine::builder()
@@ -267,7 +267,7 @@ fn the_builder_follows_the_command_folder_rules() {
             .decide(&ask, "one")
             .expect("send again")
             .into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(backend.count(), 2);
     let reader = Engine::builder()
@@ -280,7 +280,7 @@ fn the_builder_follows_the_command_folder_rules() {
         .expect("reader");
     assert_eq!(
         reader.decide(&ask, "one").expect("saved").into_value(),
-        Answer::Yes
+        Some(true)
     );
     assert_eq!(backend.count(), 2);
     let wrong = Engine::builder()
@@ -299,13 +299,35 @@ fn the_builder_follows_the_command_folder_rules() {
 }
 
 #[test]
+fn every_shared_setting_reaches_the_public_engine() {
+    let folder = std::env::temp_dir().join(format!("consumer-settings-{}", std::process::id()));
+    std::fs::create_dir(&folder).expect("fresh home");
+    let output = crate::run::output(
+        Command::new(std::env::current_exe().expect("test binary"))
+            .args(["--exact", "--ignored", "settings::shared_settings_child"])
+            .clear_environment()
+            .isolated_home(&folder),
+    )
+    .expect("child");
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{said}");
+    assert!(said.contains("1 passed"), "the settings matrix ran: {said}");
+    assert!(
+        super::child::Folder::Usage.under(&folder).is_dir(),
+        "environment settings write usage only in their owned home"
+    );
+    std::fs::remove_dir_all(folder).expect("clean home");
+}
+
+#[test]
+#[ignore = "the parent runs the settings matrix in an isolated home"]
 #[expect(
     clippy::excessive_nesting,
     clippy::cognitive_complexity,
     clippy::too_many_lines,
     reason = "one shared corpus row maps settings, runs the engine, and checks its wire effect"
 )]
-fn every_shared_setting_reaches_the_public_engine() {
+fn shared_settings_child() {
     use conformance_backend::Backend;
     use serde_json::Value;
     let corpus: Value =
@@ -330,78 +352,72 @@ fn every_shared_setting_reaches_the_public_engine() {
             .expect("question")
             .cut();
         for step in case["steps"].as_array().expect("steps") {
-            let mut builder = Engine::builder()
+            let mut settings = super::values::swap(
+                &step["settings"],
+                &std::collections::BTreeMap::from([
+                    ("$PROFILE".to_owned(), serde_json::json!(profile)),
+                    ("$FOLDER".to_owned(), serde_json::json!(folder)),
+                ]),
+            );
+            settings
+                .as_object_mut()
+                .expect("settings")
+                .entry("cache")
+                .or_insert(Value::Bool(false));
+            let engine = thinkthen::EngineBuilder::from_settings_json(&settings.to_string())
+                .expect("shared settings")
                 .base_url(&base)
                 .expect("base")
                 .api_key("sk-consumer-loopback")
                 .expect("key")
-                .no_cache();
-            for (name, value) in step["settings"].as_object().expect("settings") {
-                builder = match name.as_str() {
-                    "timeout" => builder
-                        .timeout(Duration::from_secs(value.as_u64().expect("seconds")))
-                        .expect("timeout"),
-                    "max_retries" => builder.max_retries(value.as_u64().expect("retries") as u32),
-                    "profile" => builder.profile(&profile).expect("profile"),
-                    "model" => builder
-                        .model(value.as_str().expect("model"))
-                        .expect("model"),
-                    "record" => builder.record(&folder).expect("record"),
-                    "replay" => builder.replay(&folder).expect("replay"),
-                    "cache" if value == &Value::Bool(false) => builder.no_cache(),
-                    "cache" => builder.cache_at(&folder).expect("cache"),
-                    "max_requests" => builder
-                        .max_requests(Some(value.as_u64().expect("limit") as usize))
-                        .expect("limit"),
-                    "max_request_bytes" => builder
-                        .max_request_bytes(value.as_u64().expect("bytes") as usize)
-                        .expect("bytes"),
-                    _ => panic!("unknown shared setting {name}"),
-                };
-            }
-            let engine = builder.build().expect("engine");
+                .build()
+                .expect("engine");
             if step["verb"] == "relate" {
                 related(&engine, case, step, id);
             } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
-                let answers: Vec<_> = engine
-                    .decide_many_with(
-                        &question,
-                        records.iter().map(|v| v.as_str().expect("text")),
-                        thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
-                            std::num::NonZeroUsize::MIN,
-                        )),
-                    )
-                    .collect();
-                assert_eq!(answers.len(), records.len(), "{id}");
-                for answer in &answers[..2] {
+                let answers: Vec<_> = crate::api::pull_decisions(
+                    &engine,
+                    &question,
+                    crate::api::plain_records(records.iter().map(|v| v.as_str().expect("text"))),
+                    thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
+                        std::num::NonZeroUsize::MIN,
+                    )),
+                )
+                .collect();
+                let limit = step["settings"]["max_requests"].as_u64().expect("limit") as usize;
+                assert!(records.len() > limit, "{id}: input reaches the refusal");
+                assert_eq!(answers.len(), limit + 1, "{id}: one terminal refusal");
+                for (ordinal, answer) in answers[..limit].iter().enumerate() {
+                    let answer = answer.as_ref().expect("sent row");
+                    assert_eq!(answer.result().value(), Answer::Yes, "{id}");
+                    assert_eq!(answer.ordinal(), ordinal, "{id}");
                     assert_eq!(
-                        *answer.as_ref().expect("sent row").value(),
-                        Answer::Yes,
+                        *answer.original(),
+                        records[ordinal].as_str().expect("text"),
                         "{id}"
                     );
                 }
+                let error = answers[limit].as_ref().expect_err("limit");
+                assert_eq!(error.kind().name(), step["error"], "{id}");
+                assert_eq!(error.stopped().at(), Some(limit + 1), "{id}");
                 assert_eq!(
-                    answers[2].as_ref().expect_err("limit").kind().name(),
-                    step["error"],
+                    error.facts().expect("final facts").requests_sent(),
+                    limit as u64,
                     "{id}"
                 );
             } else {
                 let text = step["text"].as_str().expect("text");
                 if let Some(model) = step["model"].as_str() {
-                    let details = engine.details(&question, text).expect("details");
-                    assert_eq!(details.value().model(), model, "{id}");
-                    assert_eq!(
-                        details.value().value(),
-                        &Judgment::Decision(Answer::Yes),
-                        "{id}"
-                    );
+                    let details = engine.decide(&question, text).expect("answer");
+                    assert_eq!(details.results()[0].meta().model(), model, "{id}");
+                    assert_eq!(details.value(), &Some(true), "{id}");
                 } else {
                     let result = engine.decide(&question, text);
                     if let Some(kind) = step["error"].as_str() {
                         assert_eq!(result.expect_err(id).kind().name(), kind, "{id}");
                     } else {
-                        assert_eq!(result.expect(id).into_value(), Answer::Yes, "{id}");
+                        assert_eq!(result.expect(id).into_value(), Some(true), "{id}");
                     }
                 }
             }

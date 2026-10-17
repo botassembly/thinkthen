@@ -83,7 +83,7 @@ python3 sdlc/scripts/recognize-keys
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
 # Ticket 0459: the target C compiler measures every public carrier and signature.
-python3 sdlc/scripts/generate-c-header.py --check
+python3 sdlc/generators/results/generate.py --all --check
 python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
 # Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
 # names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
@@ -94,7 +94,7 @@ cat >"$planted/environment" <<'SH'
 . sdlc/scripts/allow-list
 exec awk 'BEGIN { for (n in ENVIRON) if (n !~ /^(AWK(LIB)?PATH|SHLVL)$/) print n }'
 SH
-seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
+seen=$(env -i GITHUB_ACTIONS=true RUNNER_ENVIRONMENT=github-hosted PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
     TMPDIR=/nonexistent/TMPDIR XDG_CONFIG_HOME=/nonexistent/XDG_CONFIG_HOME XDG_RUNTIME_DIR=/nonexistent/XDG_RUNTIME_DIR XDG_CACHE_HOME=/nonexistent/XDG_CACHE_HOME XDG_STATE_HOME=/nonexistent/XDG_STATE_HOME \
     CARGO_BUILD_JOBS=2 CARGO_HOME=/nonexistent/CARGO_HOME RUSTUP_HOME=/nonexistent/RUSTUP_HOME RUSTUP_TOOLCHAIN=/nonexistent/RUSTUP_TOOLCHAIN \
     RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER PUB_CACHE=/nonexistent/PUB_CACHE UV_CACHE_DIR=/nonexistent/UV_CACHE_DIR UV_PYTHON_INSTALL_DIR=/nonexistent/UV_PYTHON_INSTALL_DIR npm_config_cache=/nonexistent/npm-cache \
@@ -103,7 +103,7 @@ seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=
     SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT=/nonexistent/THINKTHEN_PUBLISH_ROOT FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
     CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
     sh "$planted/environment" | LC_ALL=C sort | tr '\n' ' ')
-allowed="CARGO_BUILD_JOBS CARGO_HOME HOME LANG LC_ALL PATH PUB_CACHE PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
+allowed="CARGO_BUILD_JOBS CARGO_HOME GITHUB_ACTIONS HOME LANG LC_ALL PATH PUB_CACHE PWD RUNNER_ENVIRONMENT RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
 allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_MACOS_APPLE_CHECKS THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT THINKTHEN_SESSION_JDK_HOME THINKTHEN_TOOLCHAINS TMPDIR UV_CACHE_DIR UV_PYTHON_INSTALL_DIR XDG_CACHE_HOME XDG_CONFIG_HOME XDG_RUNTIME_DIR XDG_STATE_HOME npm_config_cache "
 listed=$(sed -n 's/^[[:space:]]*\([A-Za-z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
     LC_ALL=C sort | tr '\n' ' ')
@@ -157,6 +157,7 @@ if [ "$code" -ne 8 ] || ! grep -q source-not-allowed "$plant/deny"; then
     exit 1
 fi
 cargo fmt --all -- --check
+cargo fmt --all --manifest-path crates/thinkthen-host/Cargo.toml -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
 # Ticket 0086: the built public API equals the frozen declarations, and the

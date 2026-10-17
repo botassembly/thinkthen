@@ -57,7 +57,7 @@ def descriptor(v,home):
             original=item['original'].get('value',item['original'].get('text'))
             item['original']={'kind':'json','value':{'item':original,'context':item.pop('context')}}
         options.update(field=['/item'],context_field='/context')
-    return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False)}
+    return {'verb':v['verb'],'question':question,'input':input,'options':options,'cancel':injection=='cancel_token','held_cancel':v.get('held_cancel',False),'call_result_contract':'call_result' in v['expect']}
 
 def native_cases(binary, *, consumer=CONSUMER, invoke=None):
     CONSUMER = consumer
@@ -69,7 +69,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
         rows=[row for row in rows if row['id'] in selected]
     elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') != 'full':
         selected = set((ROOT/'conformance/routine-ids.txt').read_text().splitlines())
-        selected.update(('complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
+        selected.update(('library-call-result','complete-decide','images-decide','image-file-decide','images-choose','images-score','cache-hit-cannot-bypass-declaration','settings-replay-answers-from-the-folder-alone','settings-cache-off-sends-again','recognize-context-cache-replay'))
         rows = [row for row in rows if row['id'] in selected]
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
@@ -118,6 +118,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if value.get('image_variants'):
                             backend.close();backend=shared.Backend(backend_path,child)
                             child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s'%(backend.port,step['arm']);child['PERPLEXITY_API_KEY']='sk-conformance-loopback';shared.prepare(home,step)
+                        push_all = CONSUMER in ('c','cpp','cobol','ada','zig','java','swift','csharp','dart') and row['id']=='settings-max-requests-refuses-past-the-limit'
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{}),'base_url':child['THINKTHEN_BASE_URL']}
                         replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
                         settings={k:replacements.get(v,v) if isinstance(v,str) else v for k,v in settings.items()}
@@ -164,6 +165,9 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             expected={**step,'expect':{**step['expect'],'error':'local'}}
                         if not scalar_boundary:
                             shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if push_all:
+                            assert [r['index'] for r in got['completed']]==[0,1],got
+                            assert [r['input'] for r in got['completed']]==step['items'][:2],got
                         if row['id']=='native-filter-first-excluded':
                             assert [r['index'] for r in got['rows']]==[1,2] and [r['value'] for r in got['rows']]==[True,True],got
                             assert int(backend.read('count'))==3,got

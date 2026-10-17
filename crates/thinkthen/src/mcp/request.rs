@@ -1,5 +1,6 @@
 //! Established MCP carrier aliases enter the single native Request contract.
 use super::{admission::Invocation, inputs::Descriptor};
+use crate::RequestFunction;
 use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
 use crate::{
     AdmittedRequest, Error, Request, RequestArguments, RequestCall, RequestFeed, RequestInput,
@@ -41,16 +42,18 @@ impl Invocation {
             options: a.options.native.clone(),
         };
         let call = match self.tool {
-            super::tools::Tool::Decide => RequestCall::Decide(arguments),
-            super::tools::Tool::Choose => RequestCall::Choose(arguments),
-            super::tools::Tool::Tag => RequestCall::Tag(arguments),
-            super::tools::Tool::Score => RequestCall::Score(arguments),
-            super::tools::Tool::Filter => RequestCall::Filter(arguments),
-            super::tools::Tool::Rank => RequestCall::Rank(arguments),
-            super::tools::Tool::Find => RequestCall::Find(arguments),
-            super::tools::Tool::Annotate => RequestCall::Annotate(arguments),
-            super::tools::Tool::Recognize => RequestCall::Recognize(arguments),
-            super::tools::Tool::Relate => RequestCall::Relate(arguments),
+            super::tools::Tool::Decide => RequestCall::new(RequestFunction::Decide, arguments),
+            super::tools::Tool::Choose => RequestCall::new(RequestFunction::Choose, arguments),
+            super::tools::Tool::Tag => RequestCall::new(RequestFunction::Tag, arguments),
+            super::tools::Tool::Score => RequestCall::new(RequestFunction::Score, arguments),
+            super::tools::Tool::Filter => RequestCall::new(RequestFunction::Filter, arguments),
+            super::tools::Tool::Rank => RequestCall::new(RequestFunction::Rank, arguments),
+            super::tools::Tool::Find => RequestCall::new(RequestFunction::Find, arguments),
+            super::tools::Tool::Annotate => RequestCall::new(RequestFunction::Annotate, arguments),
+            super::tools::Tool::Recognize => {
+                RequestCall::new(RequestFunction::Recognize, arguments)
+            }
+            super::tools::Tool::Relate => RequestCall::new(RequestFunction::Relate, arguments),
         };
         let admitted = Request {
             schema: crate::RequestVersion::V1,
@@ -114,9 +117,7 @@ impl Invocation {
             && a.records.is_none()
             && !matches!(
                 self.tool,
-                crate::RequestFunction::Find
-                    | crate::RequestFunction::Rank
-                    | crate::RequestFunction::Relate
+                RequestFunction::Find | RequestFunction::Rank | RequestFunction::Relate
             )
         {
             RequestInput::Text {

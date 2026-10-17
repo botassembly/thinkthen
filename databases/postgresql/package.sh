@@ -1,5 +1,5 @@
 #!/bin/sh
-# package.sh [--reuse] FOLDER (ticket 0128): stage the PostgreSQL 16 release files in FOLDER:
+# package.sh [--reuse] MAJOR FOLDER (ticket 0128): stage the selected PostgreSQL release files in FOLDER:
 # lib/ holds the loadable module and extension/ holds the control file and the SQL. A user
 # copies them into `pg_config --pkglibdir` and `pg_config --sharedir`/extension.
 # Without --reuse it packages the shipped build through the locked pgrx wrapper against
@@ -9,28 +9,31 @@
 set -eu
 reuse=
 [ "${1:-}" != --reuse ] || { reuse=1; shift; }
-[ $# -eq 1 ] || { echo 'usage: package.sh [--reuse] FOLDER' >&2; exit 2; }
+[ $# -eq 2 ] || { echo 'usage: package.sh [--reuse] MAJOR FOLDER' >&2; exit 2; }
+PG_MAJOR=$1
+case $PG_MAJOR in 16|17|18) ;; *) echo "package.sh: unsupported PostgreSQL major $PG_MAJOR" >&2; exit 2 ;; esac
+shift
 mkdir -p -- "$1"
 out=$(CDPATH='' cd -- "$1" && pwd)
 cd -- "$(dirname -- "$0")"
 # check.sh reads the same pg_config and target folder.
+. ./runtime.sh
+runtime_target
 if [ "$(uname -s)" = Darwin ]; then
-	PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@16)/bin/pg_config}
+	PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@$PG_MAJOR)/bin/pg_config}
 	clang=$(xcrun --find clang)
 	LIBCLANG_PATH=${LIBCLANG_PATH:-${clang%/bin/clang}/lib}
 	export LIBCLANG_PATH
-else
-	PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
 fi
-EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
+EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg$PG_MAJOR
 if [ -n "$reuse" ]; then
 	tree=$EXT-shipped
 else
 	# The builder's home stays out of the module, as in check.sh.
 	package_flags=${RUSTFLAGS:-}
 	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || package_flags="${package_flags:+$package_flags }--remap-path-prefix=$HOME=/build"
-	RUSTFLAGS="$package_flags" \
-		./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
+	RUSTFLAGS="$package_flags" PGRX_PG_CONFIG_PATH="$PG_CONFIG" \
+		./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR" >/dev/null
 	tree=$EXT
 fi
 [ -d "$tree" ] || { echo "package.sh: no packaged tree at $tree; run check.sh or package.sh without --reuse" >&2; exit 1; }

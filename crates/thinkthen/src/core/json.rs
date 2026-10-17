@@ -265,6 +265,7 @@ impl<'de> Deserialize<'de> for Json {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: duplicate members, numeric finiteness and nesting depth need direct recursive parser boundaries.
     use super::{Json, JsonError};
     use crate::core::render::json_line;
 

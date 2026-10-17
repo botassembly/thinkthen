@@ -19,13 +19,23 @@ fn prepare<T: InputEvidence>(
     fallback: Option<&str>,
     at: usize,
 ) -> Result<Original<T>, Error> {
+    let (held, prepared) = prepare_parts(question, record, fallback, at)?;
+    Ok(Original { held, prepared })
+}
+
+type PreparedRecord<T> = (Held<T>, Prepared);
+pub(super) fn prepare_parts<T: InputEvidence>(
+    question: &RecordChooseQuestion,
+    record: RecordInput<T>,
+    fallback: Option<&str>,
+    at: usize,
+) -> Result<PreparedRecord<T>, Error> {
     let candidates = record
         .options
         .as_ref()
         .ok_or_else(|| Error::usage("record choose requires candidates on every original"))?;
     let effective = question.with_options(candidates)?;
-    let (held, prepared) = prepare_record(InputFunction::Choose, &effective, record, fallback, at)?;
-    Ok(Original { held, prepared })
+    prepare_record(InputFunction::Choose, &effective, record, fallback, at)
 }
 
 impl Engine {
@@ -104,7 +114,7 @@ impl Engine {
             call,
             asker,
             records,
-            Box::new(|_, original: &Original<T>| Ok(original.prepared.duplicate())),
+            Box::new(|_, original: &Original<T>| Ok(original.prepared.clone())),
             Box::new(move |stop, at, original, row| {
                 let held = match original {
                     Some(original) => original.held,

@@ -1,0 +1,5 @@
+{
+  "state": "30-day refunds.",
+  "true": "The writer asks for money back.",
+  "false": "The writer asks for something else."
+}

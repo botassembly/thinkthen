@@ -128,7 +128,7 @@ registry() {
 		fi
 	done
 	for surface in $(feature "$1"); do
-		if [ ! -f "$surface/check.sh" ] || [ -n "$(git ls-files -co --exclude-standard -- "$surface" | grep -v -e '/check\.sh$' -e '/README\.md$' -e '^libraries/polars/consumer/Cargo\.toml$' -e '^libraries/polars/consumer/Cargo\.lock$' -e '^libraries/polars/consumer/src/main\.rs$')" ]; then
+		if ! python3 sdlc/scripts/feature-inventory.py "$surface"; then
 			printf 'surfaces: %s is a feature and holds unexpected files\n' "$surface" >&2
 			status=1
 		fi
@@ -147,6 +147,7 @@ registry() {
 
 if [ "$registry_only" -eq 1 ]; then
 	registry sdlc/surfaces.txt
+	python3 sdlc/scripts/feature-inventory-test.py
 	planted=$(mktemp)
 	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid" "$planted.term"' EXIT
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
@@ -298,8 +299,23 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	fi
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
-	sh "$surface/check.sh" "$port" 3>&-
-	code=$?
+    if [ "$surface" = databases/postgresql ]; then
+        majors='16 18'
+        [ "$mode" != release ] || majors='16 17 18'
+        code=0
+        for major in $majors; do
+            major_code=0
+            sh "$surface/check.sh" "$major" 3>&- || major_code=$?
+            case $major_code in
+            0) ;;
+            77) [ "$code" -ne 0 ] || code=77 ;;
+            *) code=1 ;;
+            esac
+        done
+    else
+        sh "$surface/check.sh" "$port" 3>&-
+        code=$?
+    fi
 	set -e
 	[ "$code" -ne 77 ] || skipped="$skipped $surface"
 	verdict "$mode" "$surface" "$code" || failed=1
@@ -337,6 +353,7 @@ host=$(rustc -vV | sed -n 's/^host: //p')
 parts=
 [ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada cobol'
 case $host in *-apple-darwin) [ -z "$publish_tag" ] || parts="$parts objective-c" ;; esac
+[ "$mode" != release ] || export THINKTHEN_TEST_PROFILE=full
 { sh sdlc/scripts/release-pack --reuse "$host" "$packed" $parts &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"

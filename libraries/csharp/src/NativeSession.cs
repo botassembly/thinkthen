@@ -5,8 +5,6 @@ internal static class NativeSession
     private const string Library = "thinkthen";
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_request_plan_json(EngineHandle engine, byte[] request, nuint length, out IntPtr output, out nuint outputLength);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new_with_surface(EngineHandle engine, byte[] request, nuint length, byte[] surface, nuint surfaceLength, out IntPtr session);
-    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_push(SessionHandle session, byte[] descriptor, nuint length, out uint status);
-    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_read(SessionHandle session, out uint status, out IntPtr packet);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_finish(SessionHandle session, byte[]? failure, nuint length);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_cancel(SessionHandle session);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_free(IntPtr session);
@@ -15,5 +13,6 @@ internal static class NativeSession
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_session_error_message();
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_error_retryable();
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_session_error_facts_json();
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_try_read(SessionHandle session, out uint status, out IntPtr packet);
     internal static void Check(int code) { if (code != 0) throw new Failure(code, thinkthen_session_error_retryable() != 0, Marshal.PtrToStringUTF8(thinkthen_session_error_message()) ?? "Native session failure.", Marshal.PtrToStringUTF8(thinkthen_session_error_facts_json())); }
 }

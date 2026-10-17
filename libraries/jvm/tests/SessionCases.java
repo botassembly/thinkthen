@@ -8,18 +8,22 @@ import thinkthen.Results.*;
 
 /** Shared fixtures enter named typed calls; generated getters read native-owned packets. */
 public final class SessionCases {
+    public static Object tree(Object value) { return Values.json(value); }
+    public static Inputs.EngineSettings settings(Object value) { return Inputs.EngineSettings.fromJson(value); }
+    public static Object parse(String value) { return FixtureJson.parse(value); }
+    public static String write(Object value) { return Json.write(value); }
     static Map<String,Object> map(Object value) { return value instanceof Map<?,?> ? Values.object(value) : Map.of(); }
     static List<?> list(Object value) { return value instanceof List<?> values ? values : List.of(); }
     static boolean yes(Map<String,Object> data,String key) { return Boolean.TRUE.equals(data.get(key)); }
     static String text(Map<String,Object> data,String key) { return data.get(key) instanceof String value ? value : ""; }
     public static Map<String,Object> frame(String[] args) throws Exception {
-        if(args.length > 1) return Json.parseObject(args[1]);
+        if(args.length > 1) return FixtureJson.parseObject(args[1]);
         var bytes = new java.io.ByteArrayOutputStream(); int next;
         while((next=System.in.read())!=-1 && next!='\n') bytes.write(next);
-        return Json.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
+        return FixtureJson.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
     }
     public static Engine engine(Map<String,Object> data, Engine.Surface surface) {
-        return new Engine(EngineSettings.fromJson(Json.parse(text(data,"engine_settings"))),surface);
+        return new Engine(EngineSettings.fromJson(FixtureJson.parse(text(data,"engine_settings"))),surface);
     }
     public static RequestQuestion question(Map<String,Object> data) throws Exception {
         String reference=text(data,"reference");
@@ -37,7 +41,7 @@ public final class SessionCases {
                 }
                 var given=new LinkedHashMap<>(map(data.get("question")));
                 if(text(data,"verb").equals("find")) given.remove("none");
-                yield new RequestQuestionDefinition().value(RequestDefinition.fromJson(given));
+                yield new RequestQuestionDefinition().value(Inputs.readRequestDefinition(given));
             }
         };
     }
@@ -46,6 +50,10 @@ public final class SessionCases {
         result.put(text && value instanceof String ? "text" : "value",value); return result;
     }
     public static RequestInput input(Map<String,Object> data) throws Exception {
+        if(yes(data,"call_result_contract")) {
+            Object original=list(data.get("items")).getFirst();
+            return original instanceof String text ? new RequestInputText().text(text) : new RequestInputJson().value(original);
+        }
         var paths=list(data.get("paths"));
         if(!paths.isEmpty() && !yes(data,"owned_jsonl")) {
             int unit=((Number)data.get("source_unit")).intValue();
@@ -81,14 +89,64 @@ public final class SessionCases {
         if(text(map(data.get("operation")),"injection").equals("expired_deadline")) options.deadlineMs(0);
         return options;
     }
-    public static CompletableFuture<Engine.OwnedCall> named(Engine engine,String function,RequestQuestion question,RequestInput input,RequestOptions options) {
-        return switch(function) {
-            case "decide" -> engine.decide(question,input,options); case "choose" -> engine.choose(question,input,options);
-            case "tag" -> engine.tag(question,input,options); case "score" -> engine.score(question,input,options);
-            case "filter" -> engine.filter(question,input,options); case "rank" -> engine.rank(question,input,options);
-            case "find" -> engine.find(question,input,options); case "annotate" -> engine.annotate(question,input,options);
-            case "recognize" -> engine.recognize(question,input,options); case "relate" -> engine.relate(question,input,options);
+    public static CompletableFuture<? extends Engine.OwnedCall> named(Engine engine,String function,RequestQuestion question,RequestInput input,RequestOptions options) {
+        return switch(input) {
+            case RequestInputEntities selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
             default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputFeed selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputJson selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputRecords selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputSource selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputText selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
+            case RequestInputUnits selected -> switch(function) {
+            case "decide" -> engine.decide(question,selected,options); case "choose" -> engine.choose(question,selected,options);
+            case "tag" -> engine.tag(question,selected,options); case "score" -> engine.score(question,selected,options);
+            case "filter" -> engine.filter(question,selected,options); case "rank" -> engine.rank(question,selected,options);
+            case "find" -> engine.find(question,selected,options); case "annotate" -> engine.annotate(question,selected,options);
+            case "recognize" -> engine.recognize(question,selected,options); case "relate" -> engine.relate(question,selected,options);
+            default -> throw new IllegalArgumentException("unknown fixture function");
+        };
         };
     }
     public static Object optional(Presence<?> value) { return value.state()==Presence.State.VALUE ? value.value() : null; }
@@ -98,14 +156,14 @@ public final class SessionCases {
         catch(NoSuchMethodException missing) { return null; }
         catch(ReflectiveOperationException failure) { throw new IllegalStateException(failure); }
     }
-    static Object scalar(Object value) { return value instanceof Values.Value typed ? typed.json() : value; }
+    static Object scalar(Object value) { return Values.json(value); }
     static void location(Map<String,Object> row,Object source) { for(String field:List.of("file","firstLine","lastLine")) { Object value=property(source,field); if(value!=null) row.put(field.equals("firstLine")?"first_line":field.equals("lastLine")?"last_line":field,value); } }
     static Map<String,Object> author(Object question) { var result=new LinkedHashMap<String,Object>(); Object name=property(question,"name"),version=property(question,"wordingVersion"); if(name!=null)result.put("name",name);if(version!=null)result.put("wording_version",version);return result; }
     static Object entity(Entity entity) { return Map.of("text",entity.text(),"start",entity.start(),"end",entity.end(),"length",entity.length(),"kind",entity.kind(),"strength",entity.strength()); }
     static Object endpoint(Object value) { return Map.of("name",property(value,"name"),"kind",property(value,"kind")); }
     static Object edge(Object value,boolean recognized) {var result=new LinkedHashMap<String,Object>();result.put("relation",property(value,"relation"));result.put("source",recognized?entity((Entity)property(value,"source")):endpoint(property(value,"source")));result.put("target",recognized?entity((Entity)property(value,"target")):endpoint(property(value,"target")));result.put("probability",property(value,"probability"));if(Boolean.TRUE.equals(property(value,"either")))result.put("either",true);return result;}
     static Object recognized(Recognize value) {var result=new LinkedHashMap<String,Object>();result.put("entities",((List<?>)property(value,"entities")).stream().map(v->entity((Entity)v)).toList());Object relations=property(value,"relations");if(relations!=null)result.put("relations",((List<?>)relations).stream().map(v->edge(v,true)).toList());return result;}
-    static Object annotated(AnnotatedField value) { return value.json(); }
+    static Object annotated(AnnotatedField value) { return Values.json(value); }
     static List<SessionObservationQuestion> questions(Engine.OwnedCall call) {return call.packets().stream().filter(p->p instanceof SessionPacketObservation).map(p->((SessionPacketObservation)p).value()).filter(v->v instanceof SessionObservationQuestion).map(v->(SessionObservationQuestion)v).toList();}
     static Map<String,Object> row(Object value,Object reading,Engine.OwnedCall call) {
         Meta meta=(Meta)property(value,"meta"); var row=new LinkedHashMap<String,Object>();
@@ -151,6 +209,8 @@ public final class SessionCases {
         var output=new LinkedHashMap<String,Object>();output.put("code",0);output.put("schema","thinkthen.result/2");output.put("observations",call.packets().stream().filter(p->p instanceof SessionPacketObservation).count());output.put("rows",rows);
         if(optional(call.terminal().facts()) instanceof Facts facts){output.put("call_id",facts.callId());output.put("requests_sent",facts.requestsSent());output.put("cache_answers",facts.cacheAnswers());output.put("records",facts.records());if(optional(facts.inputTokens())!=null)output.put("input_tokens",facts.inputTokens().value());if(optional(facts.outputTokens())!=null)output.put("output_tokens",facts.outputTokens().value());}
         if(optional(call.terminal().failure()) instanceof CallError error){output.put("code",code(error.error().kind().value()));output.put("message",error.error().message());if(optional(error.error().stopped().at())!=null)output.put("stopped_at",error.error().stopped().at().value());}
+        if(yes(data,"call_result_contract") && call instanceof CallResult<?,?,?> result)
+            output.put("call_result",Map.of("value",Values.json(result.value()),"probability",result.probability(),"results",result.results().stream().map(Values::json).toList(),"facts",Values.json(result.facts())));
         if(yes(data,"incremental"))output.put("completed",rows);
         return Values.object(Values.freeze(output));
     }
@@ -159,7 +219,7 @@ public final class SessionCases {
         int push(RequestSessionDescriptor descriptor); void finish(RequestReaderFailure failure); void cancel(); void waitReady(boolean input); OwnedSession.Read read(); void close();
     }
     public static Request request(Map<String,Object> data,RequestQuestion question,RequestInput input,RequestOptions options) {
-        var call=new LinkedHashMap<String,Object>();call.put("function",data.get("verb"));call.put("question",question.json());call.put("input",input.json());call.put("options",options.json());
+        var call=new LinkedHashMap<String,Object>();call.put("function",data.get("verb"));call.put("question",Values.json(question));call.put("input",Values.json(input));call.put("options",options.json());
         return Request.fromJson(Map.of("schema",RequestVersion.VALUE,"call",call));
     }
     public static boolean manual(Map<String,Object> data) { return yes(data,"incremental") || yes(data,"held_cancel") || text(map(data.get("operation")),"injection").equals("cancel_token"); }
@@ -172,18 +232,18 @@ public final class SessionCases {
             if(yes(data,"incremental")){
                 if(yes(data,"owned_jsonl")){
                     String path=(String)list(data.get("paths")).getFirst();long line=0;
-                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(Json.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor,packets))break;}}
-                }else for(Object record:list(Values.object(input.json()).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record)),packets))break;
+                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(FixtureJson.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor))break;}}
+                }else for(Object record:list(Values.object(Values.json(input)).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record))))break;
             }
             feed.finish(null);
             while(true){var read=feed.read();if(read.packet()!=null){packets.add(read.packet());if(read.packet() instanceof SessionPacketTerminal done)terminal=done;}if(read.ended())break;if(read.packet()==null)feed.waitReady(false);}
             return new Engine.OwnedCall(packets,packets.stream().filter(p->p instanceof SessionPacketTerminal).map(p->(SessionPacketTerminal)p).reduce((a,b)->b).orElseThrow());
         }finally{feed.close();if(signal!=null){signal.interrupt();signal.join(1000);if(signal.isAlive())throw new IllegalStateException("fixture cancellation signal did not finish");}}
     }
-    static boolean push(Feed feed,RequestSessionDescriptor descriptor,List<SessionPacket> packets) throws Exception {
-        while(true){int status=feed.push(descriptor);if(status==0)return true;if(status==2)return false;var read=feed.read();if(read.packet()!=null)packets.add(read.packet());if(read.ended())return false;if(read.packet()==null)feed.waitReady(true);}
+    static boolean push(Feed feed,RequestSessionDescriptor descriptor) throws Exception {
+        while(true){int status=feed.push(descriptor);if(status==0)return true;if(status==2)return false;feed.waitReady(true);}
     }
-    static Feed feed(OwnedSession session){return new Feed(){public int push(RequestSessionDescriptor d){return session.tryPush(d);}public void finish(RequestReaderFailure f){session.finish(f);}public void cancel(){session.cancel();}public void waitReady(boolean input){session.waitReady(input).join();}public OwnedSession.Read read(){return session.tryRead();}public void close(){session.close();}};}
+    static Feed feed(OwnedSession session){return new Feed(){public int push(RequestSessionDescriptor d){return session.push(d).orTimeout(10,TimeUnit.SECONDS).join();}public void finish(RequestReaderFailure f){session.finish(f);}public void cancel(){session.cancel();}public void waitReady(boolean input){session.waitReady(input).join();}public OwnedSession.Read read(){return session.tryRead();}public void close(){session.close();}};}
     public static SessionPacket packet(Object value){return SessionPacket.read(value);}
     public static Engine.OwnedCall javaCall(List<?> packets,Object terminal){return new Engine.OwnedCall(packets.stream().map(Results.SessionPacket::read).toList(),new SessionPacketTerminal(terminal));}
     public static String failure(int code,String message){return Json.write(Map.of("code",code,"message",message));}

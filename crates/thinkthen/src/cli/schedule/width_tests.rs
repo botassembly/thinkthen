@@ -1,3 +1,4 @@
+//! Stays: process-wide width selection and cancellation races require direct scheduling checks.
 //! The command's width setup and the one cap every live path shares.
 //!
 //! Width state belongs to the process, so each proof runs in a child copy of
@@ -358,6 +359,7 @@ fn shared_cap_child() {
 fn send_once(client: &Client, url: &str, finished: &AtomicUsize) {
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
+        headers: &[],
         url,
         body: br#"{"model":"local-1","questions":{"q1":{"type":"noul"}}}"#,
         key: &key,
