@@ -87,9 +87,9 @@ def execute(consumer,frame,env,home,backend):
         if running.poll() is None:running.kill();running.wait()
         if consumer=='postgresql':
             try:phases=trace.read_text()
-            except OSError:phases='phase markers unavailable\n'
+            except (OSError,UnicodeError):phases='phase markers unavailable\n'
             try:print(f'postgresql child phases\n{phases}',file=sys.stderr,flush=True)
-            except OSError:pass
+            except (OSError,ValueError):pass
 
 def main():
     consumer=sys.argv[1]
