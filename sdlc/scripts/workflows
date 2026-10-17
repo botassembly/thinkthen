@@ -612,6 +612,7 @@ rustc) case $1 in
   --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
   esac ;;
 mktemp) exec /usr/bin/mktemp -d "$FAKE_ROOT/tmp.XXXXXXXX" ;;
+sha256sum) echo 'unexpected sha256sum call' >&2; exit 94 ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
 rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
 maturin) echo 'maturin 1.15.0' ;;
