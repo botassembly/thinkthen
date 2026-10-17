@@ -464,6 +464,56 @@ def flutter_locked_setup_case():
         override.unlink()
 
 
+
+def preflight_cases():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    steps = gate['jobs']['linux-release']['steps']
+    assert gate['jobs']['linux-coverage']['steps'] == steps
+    preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
+    qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
+    assert preflight < qualification
+    assert steps[qualification]['if'] == '${{ !inputs.preflight_only }}'
+    assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
+               if 'actions/upload-artifact@' in step.get('uses', ''))
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    for job, name in (('build', 'Check every prepared build input'),
+                      ('smoke', 'Check every prepared installed smoke input'),
+                      ('apple-coverage', 'Check every prepared Apple coverage input')):
+        step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
+        assert 'hosted-preflight.py' in step['run'] and 'if' not in step
+    with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
+        root = Path(temporary)
+        scripts = root / 'sdlc/scripts'
+        scripts.mkdir(parents=True)
+        helper = scripts / 'hosted-preflight.py'
+        helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
+        (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
+        tools = root / 'bin'
+        tools.mkdir()
+        probe = tools / 'fixture'
+        probe.write_text(f'#!{sys.executable}\n' +
+                         'from pathlib import Path\nimport sys\n' +
+                         'name = Path(sys.argv[0]).name\n' +
+                         'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
+                         'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
+        probe.chmod(0o755)
+        required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'cl.exe', 'lib.exe', 'link.exe')
+        for tool in required:
+            (tools / tool).symlink_to(probe)
+        # Compiler fixtures stand at the process boundary; no digest check is bypassed.
+        command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
+        env = {'PATH': str(tools), 'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
+        ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert ready.returncode == 0 and ready.stderr == '', ready.stderr
+        assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        for tool in ('node', 'cl.exe', 'lib.exe'):
+            (tools / tool).unlink()
+        missing = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert missing.returncode == 1, missing
+        for tool in ('node', 'cl.exe', 'lib.exe'):
+            assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
+        assert 'all prepared inputs are ready' not in missing.stdout
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -531,4 +581,5 @@ linux_nested_tools_case()
 linux_coverage_destination_case()
 flutter_locked_setup_case()
 parameter_cases()
+preflight_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')

@@ -1,0 +1,342 @@
+#!/usr/bin/env python3
+"""Check prepared hosted inputs without acquiring tools or building outputs."""
+import argparse
+import hashlib
+import tempfile
+import os
+from pathlib import Path
+import re
+import runpy
+import shlex
+import shutil
+import subprocess
+import sys
+import tomllib
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class Preflight:
+    def __init__(self):
+        self.missing = []
+
+    def check(self, label, operation):
+        try:
+            operation()
+        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, AssertionError) as error:
+            self.missing.append(f'{label}: {error}')
+
+    def file(self, path, executable=False):
+        path = Path(path)
+        def verify():
+            if not path.is_file() or (executable and not os.access(path, os.X_OK)):
+                raise ValueError('missing' if not executable else 'missing executable')
+        self.check(str(path), verify)
+
+    def command(self, args, expected=None, cwd=ROOT):
+        def verify():
+            result = subprocess.run(list(map(str, args)), cwd=cwd, capture_output=True,
+                                    text=True, timeout=60, check=False)
+            if result.returncode:
+                raise ValueError(f'exit {result.returncode}')
+            if expected and not re.search(expected, result.stdout + result.stderr):
+                raise ValueError('version or prepared input differs from pin')
+        self.check(shlex.join(list(map(str, args))), verify)
+
+    def tools(self, names):
+        for name in names:
+            self.check(name, lambda name=name: require(shutil.which(name), 'missing from PATH'))
+
+    def hashes(self, manifest, folder):
+        for line in manifest.read_text().splitlines():
+            if not line or line.startswith('#'):
+                continue
+            digest, name = line.split()
+            path = folder / name.lstrip('*')
+            self.check(str(path), lambda path=path, digest=digest: require(
+                hashlib.sha256(path.read_bytes()).hexdigest() == digest, 'SHA256 differs from pin'))
+
+    def finish(self):
+        for message in self.missing:
+            print('hosted-preflight: ' + message, file=sys.stderr)
+        if not self.missing:
+            print('hosted-preflight: all prepared inputs are ready')
+        return int(bool(self.missing))
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def shell_values(script, names, env=None):
+    command = '. "$1"\n' + '\n'.join('printf "%s\\n" "$' + name + '"' for name in names)
+    output = subprocess.check_output(['sh', '-ec', command, 'preflight', str(script)],
+                                     cwd=ROOT, env=env, text=True)
+    return output.splitlines()
+
+
+def rust(check, coverage=False):
+    pin = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']
+    check.tools(('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar'))
+    check.command(['rustc', '--version'], '^rustc ' + re.escape(pin['channel']) + r'\b')
+    for component in pin['components']:
+        check.command(['rustup', 'component', 'list', '--installed'], '^' + component + '-', ROOT)
+    if coverage:
+        def llvm():
+            sysroot = subprocess.check_output(['rustc', '--print', 'sysroot'], text=True).strip()
+            host = subprocess.check_output(['rustc', '-vV'], text=True).split('host: ')[1].splitlines()[0]
+            for name in ('llvm-cov', 'llvm-profdata'):
+                check.file(Path(sysroot) / 'lib/rustlib' / host / 'bin' / name, True)
+        check.check('Rust coverage tools', llvm)
+
+
+def cargo_cache(check, manifests):
+    for manifest in manifests:
+        check.command(['cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
+                       '--manifest-path', manifest])
+
+
+def managed(check):
+    tools = runpy.run_path(str(ROOT / 'sdlc/scripts/release-language-tools.py'))
+    check.check('stable selected JVM', tools['check_jdk'])
+    check.command([os.environ.get('THINKTHEN_DOTNET', 'dotnet'), '--version'], r'^8\.0\.131\s*$')
+    for key, binary, runtime, version in (
+            ('THINKTHEN_KOTLIN_HOME', 'kotlinc', 'kotlin-stdlib.jar', r'kotlinc-jvm 2\.4\.20\b'),
+            ('THINKTHEN_SCALA_HOME', 'scalac', 'scala.jar', r'Scala compiler version 3\.9\.0\b')):
+        home = Path(os.environ.get(key, '/nonexistent'))
+        check.file(home / 'lib' / runtime)
+        check.command([home / 'bin' / binary, '-version'], version)
+
+
+def native_inputs(check, target, cache, built_hosts=True, source_only=False):
+    ruby = ROOT / 'libraries/ruby/toolchain.env'
+    minors = shell_values(ruby, ['RUBY_MINORS'])[0].split()
+    for minor in minors:
+        env = dict(os.environ, THINKTHEN_RUBY_MINOR=minor)
+        version, digest, yaml, yaml512 = shell_values(ruby, ['RUBY_VERSION', 'RUBY_SHA256', 'YAML_SHA256', 'YAML_SHA512'], env)
+        suffix = '-' + os.uname().machine + '-darwin' if 'apple' in target else ''
+        prefix = cache / 'ruby' / (version + suffix)
+        check.check('Ruby ' + version + ' stamp', lambda prefix=prefix, digest=digest, yaml=yaml, yaml512=yaml512:
+                    require((prefix / 'thinkthen-toolchain.stamp').read_text().splitlines()[:3] ==
+                            ['ruby ' + digest, 'yaml ' + yaml, 'yaml512 ' + yaml512], 'stamp differs from toolchain.env'))
+        check.command([prefix / 'bin/ruby', '-rpsych', '-rzlib', '-ropenssl', '-rminitest', '-e', 'puts RUBY_VERSION'], '^' + re.escape(version) + r'\s*$')
+    if not source_only:
+        check.hashes(ROOT / 'databases/sqlite/amalgamation.sha256', cache / 'sqlite-amalgamation-3500000')
+        if 'apple' in target:
+            check.hashes(ROOT / 'databases/sqlite/amalgamation-3490000.sha256', cache / 'sqlite-amalgamation-3490000')
+        else:
+            arch = 'arm64' if target.startswith('aarch64') else 'amd64'
+            for line in (ROOT / 'databases/postgresql/runtime.sha256').read_text().splitlines():
+                if line and not line.startswith('#') and line.split()[1].endswith('_' + arch + '.deb'):
+                    digest, name = line.split()
+                    path = cache / 'postgresql' / name
+                    check.check(str(path), lambda path=path, digest=digest: require(
+                        hashlib.sha256(path.read_bytes()).hexdigest() == digest, 'SHA256 differs from pin'))
+    sys.path.insert(0, str(ROOT / 'databases/duckdb/tools'))
+    from inputs import selected, versions
+    from source_hosts import prepare
+    for version in versions():
+        identity = selected(version, target)
+        folder = cache / 'duckdb/community' / version
+        for kind in ('source', 'tools'):
+            check.check(f'DuckDB {version} {kind}', lambda kind=kind, folder=folder, identity=identity:
+                        prepare(folder / kind, identity[kind + '_commit'], '', False))
+        if not built_hosts:
+            continue
+        check.command([folder / 'venv/bin/python', '-c',
+                       'import duckdb; print(duckdb.sql("PRAGMA version").fetchone()[1])'], identity['source_commit'][:10])
+        cli = ROOT / 'databases/duckdb/build/community' / version / 'build/release/duckdb'
+        check.command([cli, '-init', '/dev/null', '-noheader', '-list', '-c',
+                       'SELECT source_id FROM pragma_version()'], identity['source_commit'][:8])
+
+
+def installed(check, target, cache):
+    check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
+    check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
+    native_inputs(check, target, cache)
+    generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
+    # Read formatter pins from their existing bootstrap rather than keep a second authority.
+    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
+    for binary, expression, path in (
+            ('ruff', r"'ruff==([^']+)'", generators / 'bin/ruff'),
+            ('prettier', r"'prettier@([^']+)'", generators / 'node_modules/.bin/prettier')):
+        version = re.search(expression, bootstrap)[1]
+        check.command([path, '--version'], re.escape(version))
+        check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
+                    require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
+    check.command([generators / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
+    offline_caches(check, str(generators / 'python/bin/python'))
+    if target == 'x86_64-unknown-linux-gnu':
+        node = cache / 'node-v22.22.3-linux-x64'
+        check.hashes(ROOT / 'libraries/typescript/node.sha256', cache / 'archives')
+        check.command([node / 'bin/node', '--version'], r'^v22\.22\.3\s*$')
+        managed(check)
+        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'php8.3', 'Rscript'))
+        consumer_tools(check)
+        check.hashes(ROOT / 'libraries/r/tools/pins.sha256', cache / 'archives')
+        check.command(['Rscript', '-e', 'library(jsonlite)'])
+    if 'apple' in target:
+        check.tools(('swift', 'xcrun', 'lipo', 'brew'))
+        check.command([os.environ.get('THINKTHEN_PYTHON', 'python3'), '-c',
+                       'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)'])
+
+
+
+def consumer_tools(check):
+    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
+    for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
+        block = re.split(r'\n[a-z][a-z-]*\)\n', bootstrap.split('\n' + operation + ')\n', 1)[1])[0]
+        for words in re.findall(r'for tool in ([^;]+); do', block):
+            check.tools(shlex.split(words))
+    for tool, args, expression in (
+            ('go', ['version'], r'go version go([0-9.]+) linux/amd64'),
+            ('zig', ['version'], r'Zig ([0-9.]+) archive'),
+            ('swift', ['--version'], r'Swift version ([0-9.]+) \(swift-'),
+            ('php8.3', ['-v'], r'PHP ([0-9.]+) executable')):
+        version = re.search(expression, bootstrap)[1]
+        check.command([tool, *args], re.escape(version))
+    check.command(['php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', '-r',
+                   'exit(class_exists("FFI") ? 0 : 1);'])
+    dart = os.environ.get('TT_DART', 'dart')
+    check.command([dart, '--version'], r'Dart SDK version: 3\.13\.4 \(stable\)')
+    pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
+    check.file(pub_cache / 'hosted/pub.dev/ffi-2.2.0/pubspec.yaml')
+    digest = re.search(r'= ([0-9a-f]{64}) \] \|\|\n\t\tfail 'cached ffi', bootstrap)[1]
+    check.check('Dart ffi cache hash', lambda: require(
+        (pub_cache / 'hosted-hashes/pub.dev/ffi-2.2.0.sha256').read_text().strip() == digest,
+        'cached ffi differs from bootstrap pin'))
+
+
+def offline_caches(check, python):
+    # Exercise the same offline installers in owned scratch, never in the checkout.
+    # A listed cache entry alone does not prove the frozen consumer can install it.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-') as folder:
+        work = Path(folder)
+        for name in ('package.json', 'package-lock.json'):
+            shutil.copyfile(ROOT / 'libraries/typescript' / name, work / name)
+        check.command(['npm', 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
+                       '--prefix', work])
+        check.command(['uv', 'pip', 'install', '--offline', '--require-hashes', '--python', python,
+                       '--target', work / 'python', '-r', ROOT / 'libraries/python/requirements-dev.txt'])
+
+
+def downloaded_inputs(check, target):
+    version = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
+    windows = target.endswith('windows-msvc')
+    extension = '.zip' if windows else '.tar.gz'
+    command_target = target.replace('-gnu', '-musl')
+    expected = [f'thinkthen-c-{version}-{target}{extension}',
+                f'thinkthen-{version}-{command_target}{extension}', 'thinkthen-first-run.tar.gz']
+    if not windows:
+        expected += [f'thinkthen-{family}-{version}-{target}.tar.gz' for family in
+                     ('sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18')]
+    for name in expected:
+        check.file(ROOT / 'platform' / name)
+        check.file(ROOT / 'platform' / (name + '.sha256'))
+    directories = ['platform', 'crate-dist'] + ([] if windows else ['npm-dist'])
+    if target == 'x86_64-unknown-linux-gnu':
+        directories += ['r-dist', 'provenance']
+    for directory in directories:
+        folder = ROOT / directory
+        check.check(directory, lambda folder=folder: require(
+            folder.is_dir() and any(folder.iterdir()), 'prepared download is empty or missing'))
+        for manifest in folder.glob('*.sha256'):
+            check.hashes(manifest, folder)
+    check.file(ROOT / 'crate-dist' / f'thinkthen-{version}.crate')
+    if not windows:
+        check.file(ROOT / 'npm-dist' / f'thinkthen-{version}.tgz')
+
+def qualify(check, stage, target):
+    coverage = stage in ('coverage', 'apple-coverage')
+    rust(check, coverage)
+    cache = Path(os.environ.get('THINKTHEN_TOOLCHAINS', Path.home() / '.cache/thinkthen-toolchains'))
+    if stage == 'apple-coverage':
+        check.tools(('cc', 'swift', 'xcrun', 'lipo'))
+        check.command([sys.executable, '-c', 'from jsonschema import Draft202012Validator'])
+        cargo_cache(check, ['Cargo.toml', 'libraries/c/Cargo.toml'])
+        return
+    if stage == 'smoke':
+        downloaded_inputs(check, target)
+    windows = target.endswith('windows-msvc')
+    manifests = ['Cargo.toml', 'libraries/c/Cargo.toml', 'libraries/python/Cargo.toml', 'libraries/typescript/Cargo.toml']
+    if not windows:
+        manifests += ['databases/sqlite/Cargo.toml', 'databases/duckdb/Cargo.toml',
+                      'crates/thinkthen-host/Cargo.toml', 'databases/duckdb/bridge/Cargo.toml',
+                      'databases/postgresql/Cargo.toml', 'libraries/ruby/Cargo.toml', 'libraries/polars/consumer/Cargo.toml']
+    cargo_cache(check, manifests)
+    if stage == 'container':
+        check.tools(('cc', 'c++', 'make', 'cmake', 'ninja', 'cargo-pgrx', 'rpm2archive'))
+        check.command(['maturin', '--version'], r'^maturin 1\.15\.0\s*$')
+        native_inputs(check, target, cache, built_hosts=False, source_only=True)
+        check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so')
+        check.file(Path(os.environ.get('THINKTHEN_RUBY_OPENSSL', '/nonexistent')) / 'include/openssl/ssl.h')
+        for major in (16, 17, 18):
+            check.file(Path('/work/home/pg/usr') / ('pgsql-' + str(major)) / 'bin/pg_config', True)
+        return
+    check.command([sys.executable, '-c', 'from jsonschema import Draft202012Validator; import maturin'])
+    if windows:
+        check.tools(('cl.exe', 'lib.exe', 'link.exe'))
+        return
+    check.tools(('cc', 'nm', 'jq'))
+    if stage == 'build' and 'linux' in target:
+        check.tools(('docker',))
+        check.command(['docker', 'info'])
+        if target == 'x86_64-unknown-linux-gnu':
+            managed(check)
+        return
+    if stage == 'build':
+        check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config'))
+        native_inputs(check, target, cache, built_hosts=False)
+        return
+    installed(check, target, cache)
+    if stage in ('core', 'functional', 'coverage'):
+        check.tools(('mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
+        pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', (ROOT / 'sdlc/scripts/install').read_text(), re.M))
+        check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')
+        check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['PUBLIC_API_VERSION']) + r'\s*$')
+        check.command(['rustc', '+' + pins['PUBLIC_API_TOOLCHAIN'], '--version'], re.escape(pins['PUBLIC_API_RUSTC_DATE']))
+        work = Path(os.environ.get('RELEASE_WORK', '/nonexistent'))
+        check.command([work / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
+        check.file(work / 'typescript/node_modules/.bin/tsc', True)
+        for key in ('TT_DART', 'TT_FLUTTER'):
+            check.file(os.environ.get(key, '/nonexistent'), True)
+        check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so.1')
+        flutter = Path.home() / '.local/opt/flutter'
+        workflow = (ROOT / '.github/workflows/gate.yml').read_text()
+        source = re.search(r'test "\$\(git -C "\$HOME/.local/opt/flutter" rev-parse HEAD\)" = ([0-9a-f]{40})', workflow)[1]
+        check.command(['git', '-C', flutter, 'rev-parse', 'HEAD'], '^' + source + r'\s*$')
+        for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/linux-sdk', 'packages/flutter_tools/.dart_tool/package_config.json'):
+            path = flutter / asset
+            check.check(str(path), lambda path=path: require(path.exists(), 'prepared Flutter asset missing'))
+        import yaml
+        pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
+        for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
+            check.file(ROOT / project / '.dart_tool/package_config.json')
+            lock = yaml.safe_load((ROOT / project / 'pubspec.lock').read_text())['packages']
+            for name, package in lock.items():
+                if package['source'] != 'hosted':
+                    continue
+                folder = name + '-' + package['version']
+                check.file(pub_cache / 'hosted/pub.dev' / folder / 'pubspec.yaml')
+                digest = package['description']['sha256']
+                stamp = pub_cache / 'hosted-hashes/pub.dev' / (folder + '.sha256')
+                check.check(str(stamp), lambda stamp=stamp, digest=digest: require(
+                    stamp.read_text().strip() == digest, 'pub cache hash differs from frozen lock'))
+        if coverage:
+            check.file(Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-apple-coverage/totals.json')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('stage', choices=('core', 'functional', 'coverage', 'build', 'smoke', 'apple-coverage', 'container'))
+    parser.add_argument('target')
+    args = parser.parse_args()
+    check = Preflight()
+    check.check('prepared host inputs', lambda: qualify(check, args.stage, args.target))
+    return check.finish()
+
+
+if __name__ == '__main__':
+    sys.dont_write_bytecode = True
+    sys.exit(main())

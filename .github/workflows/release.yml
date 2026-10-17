@@ -93,6 +93,9 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
         run: python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
+      - name: Check every prepared build input
+        env: {TARGET: "${{ matrix.target }}"}
+        run: python3 sdlc/scripts/hosted-preflight.py build "$TARGET"
       - name: Build and pack the target
         env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}", PYO3_PYTHON: "${{ steps.python-floor.outputs.python-path }}"}
         run: |
@@ -225,6 +228,8 @@ jobs:
           cargo fetch --locked
           cargo fetch --locked --manifest-path libraries/c/Cargo.toml
           python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+      - name: Check every prepared Apple coverage input
+        run: python3 sdlc/scripts/hosted-preflight.py apple-coverage aarch64-apple-darwin
       - name: Measure installed Swift and Objective-C on the candidate
         run: sdlc/scripts/coverage --release --platform apple --output "$RUNNER_TEMP/apple-coverage"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -446,6 +451,9 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         with: {name: r-package, path: r-dist}
+      - name: Check every prepared installed smoke input
+        env: {TARGET: "${{ matrix.target }}"}
+        run: python3 sdlc/scripts/hosted-preflight.py smoke "$TARGET"
       - name: Require the selected Go/C++ family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
