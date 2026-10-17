@@ -426,7 +426,7 @@ resolve)
 	case $mode in
 	rehearse)
 		case $ref in
-		refs/heads/ticket/0543-final) ;;
+		refs/heads/main) ;;
 		*)
 			candidate_number=
 			case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
