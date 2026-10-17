@@ -90,6 +90,9 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
 	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
+	# Installed surface usage checks read totals with this same shipped command.
+	THINKTHEN_COMMAND=$prefix/thinkthen
+	export THINKTHEN_COMMAND
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.

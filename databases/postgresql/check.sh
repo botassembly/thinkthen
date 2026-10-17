@@ -46,7 +46,7 @@ LIMIT=$REPO/sdlc/scripts/time-limit
 # The extension version names its SQL files (ticket 0128).
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
-COMMAND=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
+COMMAND=${THINKTHEN_COMMAND:-${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen}
 # The client reader test binary uses this workspace's pgrx dependency. Give its
 # build the same pinned headers used for source packages without requiring a
 # cargo-pgrx home in the installed-archive smoke.
