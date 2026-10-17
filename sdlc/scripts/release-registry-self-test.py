@@ -350,6 +350,8 @@ def apple_package_cases():
                         'commit', '-qm', 'Capture wrapper inputs'], cwd=root, check=True)
         commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
         tools = root / 'target/tools'; tools.mkdir(parents=True)
+        # Shell helpers need the same supported Python as this test, not the host's system Python.
+        (tools / 'python3').symlink_to(sys.executable)
         for name, body in {'uname': 'echo Darwin', 'rustc': 'echo "host: aarch64-apple-darwin"',
                            'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
             tool = tools / name

@@ -74,6 +74,10 @@ class NativeInstallation(unittest.TestCase):
     def test_copies_only_the_effective_cargo_artifact(self):
         cargo = subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()
         rustc = subprocess.check_output(['rustup', 'which', 'rustc'], text=True).strip()
+        darwin = subprocess.check_output(['uname', '-s'], text=True).strip() == 'Darwin'
+        extension = 'dylib' if darwin else 'so'
+        library = f'libthinkthen.{extension}'
+        soname = 'libthinkthen.0.dylib' if darwin else 'libthinkthen.so.0'
         script = Path(__file__).resolve().with_name('installed.sh')
         for shell in ('sh', 'bash'):
             for setting in ('unset', 'relative', 'absolute', 'spaces', 'configured'):
@@ -98,7 +102,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "%s" "$CFLAGS" > "$NATIVE_C_FLAGS_LOG"\n'
                             'printf "%s" "$CXXFLAGS" > "$NATIVE_CXX_FLAGS_LOG"\n'
                             'mkdir -p "$CARGO_TARGET_DIR/debug"\n'
-                            '[ ! -f "$NATIVE_SHARED" ] || cp "$NATIVE_SHARED" "$CARGO_TARGET_DIR/debug/libthinkthen_c.so"\n'
+                            '[ ! -f "$NATIVE_SHARED" ] || cp "$NATIVE_SHARED" "$CARGO_TARGET_DIR/debug/$NATIVE_LIBRARY"\n'
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
                             'exit 0; fi\nexec "$NATIVE_CARGO" "$@"\n')
                         (tools / 'cargo').chmod(0o755)
@@ -120,15 +124,17 @@ class NativeInstallation(unittest.TestCase):
                             (caller / '.cargo').mkdir()
                             (caller / '.cargo/config.toml').write_text('[build]\ntarget-dir = "../configured output"\n')
                             target = caller / '../configured output'
-                        artifact = target / 'debug/libthinkthen_c.so'
+                        artifact_name = f'libthinkthen_c.{extension}'
+                        artifact = target / 'debug' / artifact_name
                         env.update(NATIVE_SHARED=str(artifact), NATIVE_BUILD_LOG=str(root / 'build.log'),
+                                   NATIVE_LIBRARY=artifact_name,
                                    NATIVE_FLAGS_LOG=str(root / 'flags.log'), NATIVE_C_FLAGS_LOG=str(root / 'c-flags.log'),
                                    NATIVE_CXX_FLAGS_LOG=str(root / 'cxx-flags.log'))
                         artifact.parent.mkdir(parents=True)
                         if not missing:
                             artifact.write_bytes(b'selected native library')
                         if target != native / 'target':
-                            stale = native / 'target/debug/libthinkthen_c.so'
+                            stale = native / 'target/debug' / artifact_name
                             stale.parent.mkdir(parents=True)
                             stale.write_bytes(b'stale library must not be copied')
                         out = root / 'install space'
@@ -150,13 +156,13 @@ class NativeInstallation(unittest.TestCase):
                                              ' -ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users')
                         if missing:
                             self.assertEqual(done.returncode, 1)
-                            self.assertEqual(done.stderr, f'native_install: missing native artifact: {owned}/debug/libthinkthen_c.so\n')
+                            self.assertEqual(done.stderr, f'native_install: missing native artifact: {owned}/debug/{artifact_name}\n')
                             self.assertFalse(out.exists())
                         else:
                             self.assertEqual((done.returncode, done.stderr), (0, ''))
-                            self.assertEqual((out / 'lib/libthinkthen.so').read_bytes(), artifact.read_bytes())
+                            self.assertEqual((out / 'lib' / library).read_bytes(), artifact.read_bytes())
                             self.assertEqual((out / 'lib/libthinkthen.a').read_bytes(), b'fixture static')
-                            self.assertEqual((out / 'lib/libthinkthen.so.0').readlink(), Path('libthinkthen.so'))
+                            self.assertEqual((out / 'lib' / soname).readlink(), Path(library))
                             self.assertEqual((out / 'include/thinkthen.h').read_text(), 'fixture header')
                             self.assertIn(f'prefix={out}\n', (out / 'lib/pkgconfig/thinkthen.pc').read_text())
 
