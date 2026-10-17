@@ -385,8 +385,9 @@ jobs:
           # Match the installed consumer's local override without changing shipped manifests.
           overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
           test ! -e "$overrides"
+          test ! -L "$overrides"
+          (set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
           trap 'rm -f "$overrides"' EXIT
-          printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides"
           for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
             (cd "$project" && "$flutter" pub get --enforce-lockfile)
           done

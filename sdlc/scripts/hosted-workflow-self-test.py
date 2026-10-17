@@ -304,6 +304,14 @@ def flutter_locked_setup_case():
         assert result.returncode != 0
         assert override.read_text() == 'owned by another caller\n'
         override.unlink()
+        caller_target = root / 'caller-owned.yaml'
+        override.symlink_to(caller_target)
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode != 0, 'Acquisition accepted a caller-owned dangling override'
+        assert override.is_symlink(), 'Acquisition removed a caller-owned override'
+        assert not caller_target.exists(), 'Acquisition wrote through a caller-owned override'
+        override.unlink()
 
 
 def parameter_cases():
