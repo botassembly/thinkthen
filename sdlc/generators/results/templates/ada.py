@@ -213,10 +213,13 @@ def header(root, env):
                        env=env, check=True, capture_output=True)
         source = (work / 'thinkthen_h.ads').read_text()
     source = re.sub(r'--[^\n]*', '', source)
-    source = re.sub(r'^with (?:stddef_h|\w+_stdint_\w+_h);\n', '', source, flags=re.M)
+    source = re.sub(r'^with (?:stddef_h|\w+_stdint_\w+_h|(?:sys_)?utypes_uu?int(?:8|16|32|64)_t_h);\n', '', source, flags=re.M)
     source = source.replace('stddef_h.size_t', 'Interfaces.C.size_t')
     source = re.sub(r'\w+_stdint_uintn_h\.uint(\d+)_t', r'Interfaces.Unsigned_\1', source)
     source = re.sub(r'\w+_stdint_intn_h\.int(\d+)_t', r'Interfaces.Integer_\1', source)
+    # Darwin names each fixed-width typedef after its own system header.
+    source = re.sub(r'(?:sys_)?utypes_u(u?int)(8|16|32|64)_t_h\.\1\2_t',
+                    lambda match: f"Interfaces.{'Unsigned' if match[1] == 'uint' else 'Integer'}_{match[2]}", source)
     source = source.replace('thinkthen_h', 'Thinkthen.Session_C').replace('package Thinkthen.Session_C is', 'private package Thinkthen.Session_C is')
     source = source.replace('end Thinkthen.Session_C;', """type Engine_Access is access all thinkthen_engine;
 function Engine_Pointer is new Ada.Unchecked_Conversion (System.Address, Engine_Access);
