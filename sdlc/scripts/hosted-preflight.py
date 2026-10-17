@@ -230,6 +230,16 @@ def consumer_tools(check):
     check.check('Dart ffi cache hash', lambda: require(
         (pub_cache / 'hosted-hashes/pub.dev/ffi-2.2.0.sha256').read_text().strip() == digest,
         'cached ffi differs from bootstrap pin'))
+    dart_cache(check, dart)
+
+
+def dart_cache(check, dart):
+    # Use pub itself to verify the full locked native-assets closure offline.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-dart-preflight-') as folder:
+        work = Path(folder)
+        for name in ('pubspec.yaml', 'pubspec.lock'):
+            shutil.copyfile(ROOT / 'libraries/dart' / name, work / name)
+        check.command([dart, 'pub', 'get', '--offline', '--enforce-lockfile'], cwd=work)
 
 
 def offline_caches(check, python):

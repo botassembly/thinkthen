@@ -116,6 +116,12 @@ install_dart() {
 		fail 'cached ffi 2.2.0 differs from official digest'
 	[ "$(find "$pub_cache/hosted/pub.dev" -maxdepth 1 -name 'ffi-*' -type d | wc -l | tr -d ' ')" = 1 ] ||
 		fail 'isolated pub cache has another ffi version'
+	# Resolve the complete native-assets dependency closure before offline consumers.
+	# An owned manifest copy keeps generated package state out of the source tree.
+	scratch_dir dart_dependencies
+	cp libraries/dart/pubspec.yaml libraries/dart/pubspec.lock "$dart_dependencies/"
+	(cd "$dart_dependencies" && PUB_CACHE=$pub_cache "$dart_bin" pub get --enforce-lockfile) ||
+		fail 'pinned Dart dependency cache fill failed'
 }
 case ${1:-} in
 disk)
