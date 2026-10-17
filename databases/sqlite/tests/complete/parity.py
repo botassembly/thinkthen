@@ -54,6 +54,10 @@ def framing(step):
     return {'verb':step['verb'],'question':question,'inputs':inputs,'controls':controls,'held_cancel':step.get('held_cancel',False)}
 
 def execute(consumer,frame,env,home,backend):
+    trace=home/'.postgresql-phases'
+    if consumer=='postgresql':
+        try:trace.unlink(missing_ok=True)
+        except OSError:pass
     if consumer=='sqlite':
         library=os.environ.get('THINKTHEN_SQLITE_EXTENSION',str(ROOT/'databases/sqlite/target/debug/libthinkthen0.so'))
         command=[sys.executable,str(ROOT/'databases/sqlite/tests/complete/sqlite_child.py'),library]
@@ -81,6 +85,11 @@ def execute(consumer,frame,env,home,backend):
         return project(json.loads(stdout),frame['verb'])
     finally:
         if running.poll() is None:running.kill();running.wait()
+        if consumer=='postgresql':
+            try:phases=trace.read_text()
+            except (OSError,UnicodeError):phases='phase markers unavailable\n'
+            try:print(f'postgresql child phases\n{phases}',file=sys.stderr,flush=True)
+            except (OSError,ValueError):pass
 
 def main():
     consumer=sys.argv[1]
