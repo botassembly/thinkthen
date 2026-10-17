@@ -1262,7 +1262,8 @@ def self_test():
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
                       "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
-                      *(["r-index", "r-host", "r-dependencies"] if target == "x86_64-unknown-linux-gnu" else []),
+                      *(["libraries/typescript/setup-toolchain.sh ", "r-index", "r-host", "r-dependencies"]
+                        if target == "x86_64-unknown-linux-gnu" else []),
                       "npm-seed", *seed, "path $ROOT/pinned"]
         else:
             # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
