@@ -153,14 +153,27 @@ func checkProbability(result tt.Call) {
 }
 
 type EmbeddedOriginal struct {
+	IgnoredOriginal
 	Label string `json:"label"`
+}
+type IgnoredOriginal struct {
+	Label any `json:"label"`
 }
 type StructuredOriginal struct {
 	EmbeddedOriginal
 	Count   int            `json:"count,string"`
 	Empty   []string       `json:"empty,omitempty"`
 	Members map[string]int `json:"members,omitempty"`
+	Ignored any            `json:"-"`
 }
+
+type CustomOriginal struct{ Value any }
+
+func (CustomOriginal) MarshalJSON() ([]byte, error) { return []byte(`{"custom":true}`), nil }
+
+type CustomTextOriginal struct{ Value any }
+
+func (CustomTextOriginal) MarshalText() ([]byte, error) { return []byte("custom text"), nil }
 
 func authoredEncoding(client *tt.Client, cyclic bool) {
 	if cyclic {
@@ -168,18 +181,26 @@ func authoredEncoding(client *tt.Client, cyclic bool) {
 		value["self"] = value
 		var pointer any
 		pointer = &pointer
-		for _, value := range []any{value, pointer} {
+		list := []any{nil}
+		list[0] = list
+		for _, value := range []any{value, pointer, list, []any{pointer}, map[string]any{"pointer": pointer}, struct{ Value any }{pointer}} {
 			_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
 			require(err != nil, "cyclic authored value accepted")
+			for _, criterion := range []tt.AuthoredCriterion{tt.AuthoredCriterionArray{value}, tt.AuthoredCriterionObject{"value": value}} {
+				_, err = client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr(criterion)}), tt.TextInput("text"), nil)
+				require(err != nil, "cyclic authored criterion accepted")
+			}
 		}
 		fmt.Println("cyclic-authored-refusal-pass")
 		return
 	}
-	for _, value := range []any{[]byte{65}, StructuredOriginal{EmbeddedOriginal: EmbeddedOriginal{Label: "kept"}, Count: 7, Empty: []string{}, Members: map[string]int{}}, map[string]any{"bytes": []byte{65}}} {
+	var hidden any
+	hidden = &hidden
+	for _, value := range []any{[]byte{65}, StructuredOriginal{EmbeddedOriginal: EmbeddedOriginal{IgnoredOriginal: IgnoredOriginal{Label: hidden}, Label: "kept"}, Count: 7, Empty: []string{}, Members: map[string]int{}, Ignored: hidden}, map[string]any{"bytes": []byte{65}}, &CustomOriginal{hidden}, &CustomTextOriginal{hidden}} {
 		_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
 		require(err == nil, "authored encoding call failed")
 	}
-	fmt.Println("authored-encoding-pass requests=3")
+	fmt.Println("authored-encoding-pass requests=5")
 }
 func main() {
 	for _, value := range []any{tt.TextInput("text"), tt.Request{}, tt.SessionPacket{}, tt.OrderedMap[string]{}, tt.Facts{}} {
