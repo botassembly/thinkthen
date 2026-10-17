@@ -349,7 +349,9 @@ jobs:
           # Match the verified development formatter and the official npm 3.x release.
           uv pip install --python "$RELEASE_WORK/python/bin/python" 'ruff==0.13.2'
           npm install --no-audit --no-fund --no-package-lock --prefix "$RELEASE_WORK/generators" 'prettier@3.9.10'
-          printf '%s\n' "$RELEASE_WORK/python/bin" "$RELEASE_WORK/generators/node_modules/.bin" >> "$GITHUB_PATH"
+          mkdir -p "$RELEASE_WORK/generators/bin"
+          ln -s "$RELEASE_WORK/python/bin/ruff" "$RELEASE_WORK/generators/bin/ruff"
+          printf '%s\n' "$RELEASE_WORK/generators/bin" "$RELEASE_WORK/generators/node_modules/.bin" >> "$GITHUB_PATH"
           . libraries/ruby/toolchain.env
           printf 'RUBY=%s\nRBCONFIG=%s\n' \
             "$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION/bin/ruby" \

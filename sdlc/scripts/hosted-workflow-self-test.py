@@ -196,8 +196,10 @@ def linux_nested_tools_case():
         line for line in installed.splitlines() if "ruff==" in line)
     assert '--prefix "$RELEASE_WORK/generators" ' in next(
         line for line in installed.splitlines() if "prettier@" in line)
-    formatters = next(line for line in installed.splitlines()
-                      if '"$RELEASE_WORK/generators/node_modules/.bin" >> "$GITHUB_PATH"' in line)
+    formatters = '\n'.join(line for line in installed.splitlines()
+                           if line.startswith(('mkdir -p \"$RELEASE_WORK/generators/bin\"',
+                                               'ln -s \"$RELEASE_WORK/python/bin/ruff\"',
+                                               'printf ')) and '$RELEASE_WORK/generators/' in line)
     with tempfile.TemporaryDirectory(prefix='thinkthen-nested-tools-') as temporary:
         root = Path(temporary).resolve()
         path_file = root / 'github-path'
@@ -225,7 +227,7 @@ def linux_nested_tools_case():
         command = '. sdlc/scripts/allow-list\n'
         command += '\n'.join(f'[ -z "${{{variable}+present}}" ]; [ "$(command -v {binary})" = "{env[variable]}/bin/{binary}" ]'
                              for variable, binary in tools.items())
-        for relative, binary in (('python/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
+        for relative, binary in (('generators/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
             command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
         subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
 
