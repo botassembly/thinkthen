@@ -1,5 +1,5 @@
 """Actual PostgreSQL native typed calls projected to the canonical fixture contract."""
-import json,subprocess,sys,threading
+import json,subprocess,sys,threading,time
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance/children'))
 from children import child_env, read_process_line
@@ -7,6 +7,10 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'postgresql/tests'))
 from native_inputs import query as native_query, AdmissionError
 from typed_results import native
 payload=json.loads(sys.stdin.readline())
+def phase(name):
+    # Disposable diagnostics stay in this invocation's owned home, outside its protocol.
+    with Path('.postgresql-phases').open('a') as trace:trace.write(f'{time.monotonic():.3f} {name}\n')
+phase('reader-start')
 def lit(value):return "'"+str(value).replace("'","''")+"'"
 command=['psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h',sys.argv[1],'-U','postgres','-d','postgres']
 settings=[]
@@ -17,13 +21,16 @@ for key,value in payload['engine_settings'].items():
     settings.append('SET thinkthen.'+key+'='+lit(value)+';')
 try:
     query=native_query(payload)
+    phase('reader-return')
 except AdmissionError as error:
     print(json.dumps({'native':{'error':error.error}}),flush=True)
     raise SystemExit(0)
 script='\n'.join(settings)+'\nSELECT pg_backend_pid();\nSELECT to_jsonb(r) FROM '+query+' r;\n'
 running=subprocess.Popen(command,env=child_env(keep=('HOME','LANG','LC_ALL')),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+phase('psql-start')
 running.stdin.write(script);running.stdin.close();running.stdin=None
 pid=read_process_line(running.stdout).strip()
+phase('backend-pid-read')
 if payload.get('held_cancel'):
     def cancel():
         sys.stdin.readline()
@@ -32,10 +39,14 @@ if payload.get('held_cancel'):
         print('cancel-fired',flush=True)
     threading.Thread(target=cancel,daemon=True).start()
 stdout,stderr=running.communicate(timeout=120)
+phase('psql-return')
 if running.returncode:
     print(json.dumps({'host_error':stderr,'host_cancelled':'57014:' in stderr and 'thinkthen deadline:' not in stderr}),flush=True)
 else:
     rows=[json.loads(line) for line in stdout.splitlines()]
+    phase('native-decode-start')
     carrier=native(rows,payload['verb'])
+    phase('native-decode-return')
     carrier['details_rows']=rows
     print(json.dumps(carrier,ensure_ascii=False,separators=(',',':')),flush=True)
+    phase('serialization-return')
