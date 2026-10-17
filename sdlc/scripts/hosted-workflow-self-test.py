@@ -233,9 +233,32 @@ def flutter_locked_setup_case():
         assert not (root / 'libraries/dart/flutter/pubspec.lock').exists()
         resolver = root / 'resolver'
         resolver.write_text(f'#!{sys.executable}\n' +
-                            'from pathlib import Path\nimport sys\n' +
+                            'from pathlib import Path\nimport sys\nimport yaml\n' +
                             'assert sys.argv[1:] == ["pub", "get", "--enforce-lockfile"]\n' +
                             'assert Path("pubspec.lock").is_file(), "Cannot enforce a missing pubspec.lock"\n' +
+                            # This fixture checks local source identity, not Pub's solver or SDK behavior.
+                            'if Path("pubspec.yaml").is_file():\n' +
+                            '    lock = yaml.safe_load(Path("pubspec.lock").read_text())["packages"]\n' +
+                            '    override = Path("pubspec_overrides.yaml")\n' +
+                            '    overrides = yaml.safe_load(override.read_text()).get("dependency_overrides", {}) if override.exists() else {}\n' +
+                            '    pending, seen = [Path.cwd()], set()\n' +
+                            '    while pending:\n' +
+                            '        project = pending.pop().resolve()\n' +
+                            '        if project in seen: continue\n' +
+                            '        seen.add(project)\n' +
+                            '        manifest = yaml.safe_load((project / "pubspec.yaml").read_text())\n' +
+                            '        deps = dict(manifest.get("dependencies", {}))\n' +
+                            '        if project == Path.cwd(): deps.update(manifest.get("dev_dependencies", {}))\n' +
+                            '        for name, declared in deps.items():\n' +
+                            '            spec = overrides.get(name, declared)\n' +
+                            '            source = next((kind for kind in ("path", "sdk", "git") if isinstance(spec, dict) and kind in spec), "hosted")\n' +
+                            '            assert lock[name]["source"] == source, "Dependency source conflict: " + name\n' +
+                            '            if source == "path":\n' +
+                            '                base = Path.cwd() if name in overrides else project\n' +
+                            '                target = (base / spec["path"]).resolve()\n' +
+                            '                assert target == (Path.cwd() / lock[name]["description"]["path"]).resolve(), "Locked path conflict: " + name\n' +
+                            '                assert yaml.safe_load((target / "pubspec.yaml").read_text())["name"] == name\n' +
+                            '                pending.append(target)\n' +
                             'with open(sys.argv[0] + ".calls", "a") as calls:\n' +
                             '    calls.write(str(Path.cwd()) + "\\n")\n')
         resolver.chmod(0o755)
@@ -249,6 +272,22 @@ def flutter_locked_setup_case():
         expected = [str(tools), str(root / 'libraries/dart'), str(example)]
         assert calls == expected, (calls, expected)
         assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        override = example / 'pubspec_overrides.yaml'
+        assert not override.exists()
+        for broken in (command.replace('dependency_overrides:', 'ignored_overrides:'),
+                       command.replace('path: ../..', 'path: ..')):
+            result = subprocess.run(['/bin/sh', '-ec', broken], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode != 0, result.stdout
+            assert 'conflict: thinkthen_dart' in result.stderr, result.stderr
+            assert not override.exists(), 'Failed acquisition retained its owned override'
+            assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+        override.write_text('owned by another caller\n')
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode != 0
+        assert override.read_text() == 'owned by another caller\n'
+        override.unlink()
 
 
 def parameter_cases():
