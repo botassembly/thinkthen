@@ -184,7 +184,8 @@ PYTHON
 }
 # pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
 pack() {
-	tar -czf "$OUT/$1" -C "$2" .
+	# Ship package files without macOS AppleDouble metadata members.
+	COPYFILE_DISABLE=1 tar -czf "$OUT/$1" -C "$2" .
 	python3 sdlc/scripts/registry-readmes.py auto "$OUT/$1"
 	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
 }
@@ -493,7 +494,7 @@ DART_ASSET
 	fi
 	if [ "$1" = php ]; then
 		# Composer's Phar extractor refuses a root directory member named '.'.
-		(cd -- "$folder" && tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
+		(cd -- "$folder" && COPYFILE_DISABLE=1 tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
 		python3 sdlc/scripts/registry-readmes.py "$1" "$OUT/thinkthen-$1-$V-$TARGET.tar.gz"
 		(cd -- "$OUT" && sha256 "thinkthen-$1-$V-$TARGET.tar.gz" >"thinkthen-$1-$V-$TARGET.tar.gz.sha256")
 	else
