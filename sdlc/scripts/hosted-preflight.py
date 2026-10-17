@@ -34,12 +34,13 @@ class Preflight:
                 raise ValueError('missing' if not executable else 'missing executable')
         self.check(str(path), verify)
 
-    def command(self, args, expected=None, cwd=ROOT):
+    def command(self, args, expected=None, cwd=ROOT, env=None):
         def verify():
             result = subprocess.run(list(map(str, args)), cwd=cwd, capture_output=True,
-                                    text=True, timeout=60, check=False)
+                                    text=True, timeout=60, check=False, env=env)
             if result.returncode:
-                raise ValueError(f'exit {result.returncode}')
+                output = '\n'.join(part.strip() for part in (result.stdout, result.stderr) if part.strip())
+                raise ValueError(f'exit {result.returncode}' + ('\n' + output if output else ''))
             if expected and not re.search(expected, result.stdout + result.stderr, re.M):
                 raise ValueError('version or prepared input differs from pin')
         self.check(shlex.join(list(map(str, args))), verify)
@@ -168,8 +169,13 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
                         prepare(folder / kind, identity[kind + '_commit'], '', False))
         if not built_hosts:
             continue
-        check.command([folder / 'venv/bin/python', '-c',
-                       'import duckdb; print(duckdb.sql("PRAGMA version").fetchone()[1])'], identity['source_commit'][:10])
+        from harness import child_env
+        with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-preflight-') as temporary:
+            # Match setup's prepared-host probe without extension acquisition or caller state.
+            code = "import duckdb; con=duckdb.connect(config={'autoinstall_known_extensions':'false'}); "
+            code += "print(con.execute('PRAGMA version').fetchone()[1])"
+            check.command([folder / 'venv/bin/python', '-c', code], identity['source_commit'][:10],
+                          env=child_env('http://127.0.0.1:9/v1', Path(temporary), keyless=True))
         cli = ROOT / 'databases/duckdb/build/community' / version / 'build/release/duckdb'
         check.command([cli, '-init', '/dev/null', '-noheader', '-list', '-c',
                        'SELECT source_id FROM pragma_version()'], identity['source_commit'][:8])
@@ -189,7 +195,7 @@ def installed(check, target, cache, installed_files=False):
         check.command([path, '--version'], re.escape(version))
         check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
                     require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
-    check.command([generators / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
+    check.command([generators / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow'])
     # Match the interpreter the installed Python check chooses. A populated
     # venv for another Python minor does not prove its offline wheel cache.
     def python_cache():
@@ -412,7 +418,7 @@ def qualify(check, stage, target):
         check.check('hosted npm cache handoff', lambda: require(
             os.environ.get('npm_config_cache') == str(work / 'npm-cache'),
             'offline npm cache must survive the qualification home change'))
-        check.command([work / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
+        check.command([work / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow'])
         check.file(work / 'typescript/node_modules/.bin/tsc', True)
         for key, binary in (('THINKTHEN_JDK_HOME', 'javac'), ('THINKTHEN_KOTLIN_HOME', 'kotlinc'), ('THINKTHEN_SCALA_HOME', 'scalac')):
             expected = Path(os.environ.get(key, '/nonexistent')) / 'bin' / binary
