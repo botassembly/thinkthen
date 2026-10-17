@@ -136,27 +136,6 @@ def duckdb_internal_call(folder, doc):
             and windows.get('jobs', {}).get('duckdb-community') == expected)
 
 
-def apple_coverage_rules(name, jobs):
-    job = jobs.get('apple-coverage', {})
-    steps = job.get('steps') or []
-    required = [
-        lambda step: (step.get('uses') or '').startswith('actions/checkout@') and (step.get('with') or {}).get('ref') == RESOLVED,
-        lambda step: step.get('run') == 'sdlc/scripts/coverage --release --platform apple --output "$RUNNER_TEMP/apple-coverage"',
-        lambda step: (step.get('uses') or '').startswith('actions/upload-artifact@') and
-        (step.get('with') or {}).get('name') == 'apple-coverage-${{ needs.resolve.outputs.sha }}' and
-        (step.get('with') or {}).get('path') == '${{ runner.temp }}/apple-coverage/totals.json' and
-        (step.get('with') or {}).get('if-no-files-found') == 'error',
-    ]
-    route = [next((i for i, step in enumerate(steps) if predicate(step) and
-                   step.get('if') is None and step.get('continue-on-error') is None), None) for predicate in required]
-    if (job.get('runs-on') != 'macos-15' or job.get('strategy') is not None or
-            job.get('if') != "inputs.mode == 'rehearse'" or job.get('continue-on-error') is not None or
-            job.get('permissions') != {'contents': 'read'} or job.get('environment') is not None or
-            any(i is None for i in route) or route != sorted(set(route))):
-        return [f'{name}: Apple coverage must measure the resolved candidate on standard macos-15 and retain both required collections']
-    return []
-
-
 def every(name, doc, text, folder=None):
     out = []
     out += runpy.run_path(str(REPO / 'sdlc/scripts/hosted-workflow.py'))['rules'](name, doc)
@@ -221,11 +200,11 @@ def release(name, doc):
     out += windows_release_rules(name, jobs)
     out += runpy.run_path(str(REPO / 'sdlc/scripts/release-windows-c-workflow.py'))['rules'](name, jobs)
     out += publish_dispatch(name, doc)
-    required = {"resolve", "build", "apple-packages", "apple-coverage", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "windows-sdks", "draft",
+    required = {"resolve", "build", "apple-packages", "wheels", "npm-pack", "gems", "crate", "registries", "smoke", "windows-sdks", "draft",
                 "crates", "pypi", "npm", "rubygems", "tap", "nuget", "maven", "pub", "publish"}
     if set(jobs) != required:
         out.append(f"{name}: release job graph differs from the accepted jobs")
-    dependencies = {"apple-coverage": {"resolve"}, "apple-packages": {"resolve", "build"}, "build": {"resolve"}, "wheels": {"resolve", "build"},
+    dependencies = {"apple-packages": {"resolve", "build"}, "build": {"resolve"}, "wheels": {"resolve", "build"},
                     "npm-pack": {"resolve", "build"}, "gems": {"resolve", "build"},
                     "crate": {"resolve"}, "smoke": {"resolve", "build", "apple-packages", "wheels", "npm-pack", "gems", "crate"},
                     "registries": {"resolve", "build"}, "windows-sdks": {"resolve", "npm-pack", "registries"},
@@ -239,7 +218,6 @@ def release(name, doc):
             value = [value]
         if set(value) != need:
             out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
-    out += apple_coverage_rules(name, jobs)
     crate = jobs.get("crate", {})
     crate_steps = crate.get("steps") or []
     def crate_step(predicate):
@@ -885,12 +863,6 @@ jobs:
       - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", VERSION: "${{ needs.resolve.outputs.version }}"}
         run: gh workflow run install-check.yml --ref "$NAME" -f version="$VERSION"
 """
-
-
-_apple_coverage_fixture = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())['jobs']['apple-coverage']
-_apple_coverage_fixture = yaml.safe_dump({'apple-coverage': _apple_coverage_fixture}, sort_keys=False)
-_apple_coverage_fixture = ''.join('  ' + line + '\n' for line in _apple_coverage_fixture.splitlines())
-RELEASE = RELEASE.replace('  apple-packages:', _apple_coverage_fixture + '  apple-packages:', 1)
 
 
 def duckdb_hook_self_test():
