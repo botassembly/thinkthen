@@ -622,11 +622,12 @@ def parameter_cases():
             assert 'selected-swift' not in result.stdout
 
 
+preflight_cases()
+print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
 workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_coverage_destination_case()
 flutter_locked_setup_case()
 parameter_cases()
-preflight_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')

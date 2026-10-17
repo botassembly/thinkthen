@@ -2,6 +2,7 @@
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
 import os
+import platform
 import re
 import shutil
 import io
@@ -19,6 +20,7 @@ COMMIT = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(
 # The managed gate reads the version from the crate, so the fixture does too (ticket 0376).
 VERSION = re.search(r'(?m)^version = "([^"]+)"$', (Path(__file__).resolve().parents[2] / "crates/thinkthen/Cargo.toml").read_text())[1]
 TARGET = "x86_64-unknown-linux-gnu"
+LINUX_X86_64 = sys.platform == "linux" and platform.machine() == "x86_64"
 
 
 def sha(data):
@@ -87,21 +89,16 @@ def run(base, mode, expected, message=None):
 
 
 def gate(base, expected):
+    if not LINUX_X86_64:
+        print("managed gate fixture: skip Linux x86-64 host and GNU find checks; Linux CI runs them")
+        return
     provenance = base / "provenance"
     provenance.mkdir(exist_ok=True)
     for name in ("source.tar", "source.json", "c.json", "managed.json"):
         shutil.copyfile(base / name, provenance / name)
-    # This archive contract describes the Linux package on every test host.
-    # Only the host observation is synthetic; the real gate checks the archives.
-    tools = base / "host-tools"
-    tools.mkdir(exist_ok=True)
-    rustc = tools / "rustc"
-    rustc.write_text('#!/bin/sh\nprintf "host: %s\\n" "' + TARGET + '"\n')
-    rustc.chmod(0o755)
-    env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"])
     result = subprocess.run(["sh", str(HELPER.with_name("release-workflow")), "managed-gate",
                              str(base / "out"), TARGET, COMMIT, str(provenance)],
-                            env=env, capture_output=True, text=True)
+                            capture_output=True, text=True)
     assert result.returncode == expected, (result.returncode, result.stdout, result.stderr)
 
 
@@ -181,6 +178,9 @@ def mutate_outer(base, family, change):
 
 
 def before_extraction(base):
+    if not LINUX_X86_64:
+        print("managed extraction fixture: skip Linux container and managed-build host checks; Linux CI runs them")
+        return
     observer = base / "observer"
     observer.mkdir()
     marker = base / "tool-calls"
