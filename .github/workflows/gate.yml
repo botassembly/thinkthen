@@ -331,6 +331,7 @@ jobs:
           python3 -m pip install "PyYAML==$(pin PYYAML_VERSION)"
           pipx install "mustmatch==$MUSTMATCH_VERSION"
           command -v mustmatch
+          mkdir -p "$HOME/.local/bin"
           . sdlc/scripts/fetch.sh
           fetch_url "$HOME/.local/bin/jq" "https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64"
           printf '%s  %s\n' "$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict

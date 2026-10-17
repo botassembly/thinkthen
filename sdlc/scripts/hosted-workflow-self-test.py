@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Plant hosted candidate routing and parameter failures at the actual entry points."""
 from copy import deepcopy
+import hashlib
 import os
 import io
 import tarfile
@@ -153,6 +154,27 @@ def workflow_cases():
         assert result.returncode == wanted, value
 
 
+def linux_tool_destination_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                if step.get('name') == 'Install existing pinned Linux host and consumer tools')
+    block = step.split('command -v mustmatch\n', 1)[1].split('chmod +x "$HOME/.local/bin/jq"', 1)[0]
+    url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
+        root = Path(temporary)
+        payload = root / 'jq-fixture'
+        payload.write_bytes(b'pinned jq fixture\n')
+        home = root / 'home'
+        env = {'PATH': os.environ['PATH'], 'HOME': str(home),
+               'JQ_SHA256': hashlib.sha256(payload.read_bytes()).hexdigest()}
+        assert not (home / '.local/bin').exists()
+        # Keep missing-parent failures deterministic without waiting for retry pauses.
+        command = 'sleep() { :; }\n' + block.replace(url, payload.as_uri())
+        result = subprocess.run(['/bin/sh', '-ec', command],
+                                cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+        assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
+
 
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
@@ -216,5 +238,6 @@ def parameter_cases():
 
 
 workflow_cases()
+linux_tool_destination_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
