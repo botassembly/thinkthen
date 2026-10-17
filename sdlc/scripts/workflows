@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Workflows run reviewed code; the Linux gate also starts on push (0589).
+"""Workflows run reviewed code by hand for public releases after local testing.
 
 Only release.yml publish dispatches another workflow, install-check.yml.
 
-Ian ruled that the Linux gate runs on every push; releases publish only through a
-run he starts and approves. PyYAML's safe loader reads each workflow, and each
+Ian ruled that GitHub Actions run only for public releases after local testing;
+releases publish only through a run he starts and approves. PyYAML's safe loader reads each workflow, and each
 broken rule prints one line. The rules sit beside the code that checks them, and
 ticket 0128's "The workflow check" table lists them.
 
@@ -1200,7 +1200,7 @@ def main(argv):
                                   capture_output=True, text=True)
         if language.returncode:
             out.append(f"language tool fixture failed: {language.stdout}{language.stderr}")
-    print("\n".join(out) if out else "workflows: pinned code, Linux gate on push, other workflows by hand", file=sys.stderr if out else sys.stdout)
+    print("\n".join(out) if out else "workflows: pinned code, workflows run by hand", file=sys.stderr if out else sys.stdout)
     return 1 if out else 0
 
 

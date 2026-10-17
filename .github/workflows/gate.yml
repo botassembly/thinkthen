@@ -1,5 +1,5 @@
-# The Linux gate runs on each push under the 2026-10-16 build placement ruling.
-# Publishing workflows remain manually dispatched and approved.
+# The Linux gate runs by hand for releases after local testing passes.
+# GitHub Actions run only for public releases under the 2026-10-17 ruling.
 #
 # No step here holds a secret, reads a key, or sets a THINKTHEN_ variable. A
 # live call to the paid backend never happens here. A live run is a job done by
@@ -13,7 +13,6 @@
 name: gate
 
 on:
-  push:
   workflow_dispatch:
 
 permissions:
