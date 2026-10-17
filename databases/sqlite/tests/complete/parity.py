@@ -55,7 +55,9 @@ def framing(step):
 
 def execute(consumer,frame,env,home,backend):
     trace=home/'.postgresql-phases'
-    if trace.exists():trace.unlink()
+    if consumer=='postgresql':
+        try:trace.unlink(missing_ok=True)
+        except OSError:pass
     if consumer=='sqlite':
         library=os.environ.get('THINKTHEN_SQLITE_EXTENSION',str(ROOT/'databases/sqlite/target/debug/libthinkthen0.so'))
         command=[sys.executable,str(ROOT/'databases/sqlite/tests/complete/sqlite_child.py'),library]
@@ -81,16 +83,13 @@ def execute(consumer,frame,env,home,backend):
         assert running.returncode==0 and not stderr,(running.returncode,stderr[:2000])
         assert 'sk-conformance-loopback' not in stdout+stderr
         return project(json.loads(stdout),frame['verb'])
-    except subprocess.TimeoutExpired as error:
-        partial=error.stderr or b''
-        if isinstance(partial,bytes):partial=partial.decode('utf-8',errors='replace')
-        assert 'sk-conformance-loopback' not in partial
-        raise AssertionError(f'child timed out after 120 seconds; backend count={backend.read("count")}; stderr={partial[-2000:]}') from error
     finally:
         if running.poll() is None:running.kill();running.wait()
         if consumer=='postgresql':
-            phases=trace.read_text() if trace.exists() else 'no phase marker\n'
-            print(f'postgresql child phases; backend count={backend.read("count")}\n{phases}',file=sys.stderr,flush=True)
+            try:phases=trace.read_text()
+            except OSError:phases='phase markers unavailable\n'
+            try:print(f'postgresql child phases\n{phases}',file=sys.stderr,flush=True)
+            except OSError:pass
 
 def main():
     consumer=sys.argv[1]

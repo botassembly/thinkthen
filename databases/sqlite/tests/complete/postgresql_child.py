@@ -9,8 +9,10 @@ from typed_results import native
 payload=json.loads(sys.stdin.readline())
 def phase(name):
     # Disposable diagnostics stay in this invocation's owned home, outside its protocol.
-    with Path('.postgresql-phases').open('a') as trace:trace.write(f'{time.monotonic():.3f} {name}\n')
-phase('reader-start')
+    try:
+        with Path('.postgresql-phases').open('a') as trace:trace.write(f'{time.monotonic():.3f} {name}\n')
+    except OSError:pass
+phase('child-start')
 def lit(value):return "'"+str(value).replace("'","''")+"'"
 command=['psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h',sys.argv[1],'-U','postgres','-d','postgres']
 settings=[]
@@ -20,9 +22,11 @@ for key,value in payload['engine_settings'].items():
     if key=='refresh_cache':value='on' if value else 'off'
     settings.append('SET thinkthen.'+key+'='+lit(value)+';')
 try:
+    phase('native-query-start')
     query=native_query(payload)
-    phase('reader-return')
+    phase('native-query-return')
 except AdmissionError as error:
+    phase('native-query-refused')
     print(json.dumps({'native':{'error':error.error}}),flush=True)
     raise SystemExit(0)
 script='\n'.join(settings)+'\nSELECT pg_backend_pid();\nSELECT to_jsonb(r) FROM '+query+' r;\n'
