@@ -189,17 +189,24 @@ def linux_nested_tools_case():
                     if step.get('name') == 'Select existing Go, Swift, Zig, PHP, Dart and native language tools')
     handoff = next(line for line in selected.splitlines()
                    if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
-    assert 'python3 databases/duckdb/tools/source_hosts.py' in selected
-    installed = next(step['run'] for step in steps
-                     if step.get('name') == 'Install existing pinned Linux host and consumer tools')
-    assert 'uv pip install --python "$RELEASE_WORK/python/bin/python" ' in next(
+    workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
+    host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
+    installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
+    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
+    assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
         line for line in installed.splitlines() if "ruff==" in line)
-    assert '--prefix "$RELEASE_WORK/generators" ' in next(
+    assert '--prefix "$generator_tools" ' in next(
         line for line in installed.splitlines() if "prettier@" in line)
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    smoke = release['jobs']['smoke']
+    setup = next(step for step in smoke['steps'] if 'host-setup' in step.get('run', ''))
+    assert 'if' not in setup and setup['env']['RELEASE_SMOKE'] == '1'
+    assert 'host-setup "$TARGET"' in next(step['run'] for step in steps
+        if step.get('name') == 'Install existing pinned Linux host and consumer tools')
     formatters = '\n'.join(line for line in installed.splitlines()
-                           if line.startswith(('mkdir -p \"$RELEASE_WORK/generators/bin\"',
-                                               'ln -s \"$RELEASE_WORK/python/bin/ruff\"',
-                                               'printf ')) and '$RELEASE_WORK/generators/' in line)
+                           if line.strip().startswith(('mkdir -p "$generator_tools/bin"',
+                                                       'ln -s "$generator_tools/python/bin/ruff"',
+                                                       'printf ')) and '$generator_tools/' in line)
     with tempfile.TemporaryDirectory(prefix='thinkthen-nested-tools-') as temporary:
         root = Path(temporary).resolve()
         path_file = root / 'github-path'
@@ -214,8 +221,8 @@ def linux_nested_tools_case():
             executable.write_text('#!/bin/sh\nexit 0\n')
             executable.chmod(0o755)
             env[variable] = str(home)
-        env['RELEASE_WORK'] = str(root / 'work')
-        for relative, binary in (('python/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
+        env['generator_tools'] = str(root / 'work')
+        for relative, binary in (('python/bin', 'ruff'), ('node_modules/.bin', 'prettier')):
             folder = root / 'work' / relative
             folder.mkdir(parents=True)
             executable = folder / binary
@@ -227,7 +234,7 @@ def linux_nested_tools_case():
         command = '. sdlc/scripts/allow-list\n'
         command += '\n'.join(f'[ -z "${{{variable}+present}}" ]; [ "$(command -v {binary})" = "{env[variable]}/bin/{binary}" ]'
                              for variable, binary in tools.items())
-        for relative, binary in (('generators/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
+        for relative, binary in (('bin', 'ruff'), ('node_modules/.bin', 'prettier')):
             command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
         subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
 
