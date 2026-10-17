@@ -53,11 +53,11 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
             result=subprocess.run([str(home/'consumer-bin'),'encoding'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
             assert result.returncode==0,(result.stdout,result.stderr)
             states=[unquoted_single(request)['state'] for request in server.requests]
-            assert states==['QQ==',{'label':'kept','count':'7'},{'bytes':'QQ=='}],states
+            assert states==['QQ==',{'label':'kept','count':'7'},{'bytes':'QQ=='},{'custom':True},'custom text'],states
             before=server.attempts
             result=subprocess.run([str(home/'consumer-bin'),'cyclic'],env=run_env,cwd=consumer,text=True,capture_output=True,timeout=10)
             assert result.returncode==0 and result.stdout.strip()=='cyclic-authored-refusal-pass',(result.stdout,result.stderr)
-            assert server.attempts==before==3,server.attempts
+            assert server.attempts==before==5,server.attempts
             print('GO_ENCODING_INSTALLED_PASS standard authored bytes embedded tags empty collections cyclic refusal zero-send')
             sys.exit(0)
         if example_only:

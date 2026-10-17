@@ -42,9 +42,20 @@ try:
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)
-    schema = subprocess.run([binary.parent / "schema_projection"], env=env, capture_output=True, text=True, timeout=20)
-    assert schema.returncode == 0, (schema.returncode, schema.stdout, schema.stderr)
-    print(schema.stdout.strip())
+    schema_home = scratch / 'schema-projection'
+    schema_home.mkdir()
+    schema_server = Backend(schema_home, key='tt-canary-301')
+    try:
+        schema_env = child_env(home=schema_home,
+                              THINKTHEN_BASE_URL=f'http://127.0.0.1:{schema_server.server_port}/generic/v1',
+                              THINKTHEN_API_KEY='tt-canary-301')
+        schema = subprocess.run([binary.parent / "schema_projection"], env=schema_env, capture_output=True, text=True, timeout=20)
+        assert schema.returncode == 0, (schema.returncode, schema.stdout, schema.stderr)
+        assert len(schema_server.requests) == 4, schema_server.requests
+        assert not server.requests, server.requests
+        print(schema.stdout.strip())
+    finally:
+        schema_server.close()
     before = len(server.requests)
     preview = subprocess.run([binary, 'plan', scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
     assert preview.returncode == 0, (preview.stdout, preview.stderr)

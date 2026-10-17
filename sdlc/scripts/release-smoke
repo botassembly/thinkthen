@@ -14,6 +14,7 @@ set -eu
 . "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
 # ADR 0113: the smoked installs write a scratch usage folder, never the real one.
+builder_home=$HOME
 usage_home
 source_packages= command_only=
 case ${1:-} in --source-packages) source_packages=1; shift ;; --command) command_only=1; shift ;; esac
@@ -43,9 +44,9 @@ scan() {
 	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
 	*) tar -xzf "$1" -C "$into" ;;
 	esac
-	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | while IFS= read -r file; do
+	found=$(grep -rlaF -e "$builder_home" -e thinkthen_panic_probe "$into" | while IFS= read -r file; do
 		grep -qaF thinkthen_panic_probe "$file" ||
-			[ "$(grep -aoF "$HOME" "$file" | wc -l)" != "$(grep -aoF "$HOME/work/duckdb/duckdb/" "$file" | wc -l)" ] ||
+			[ "$(grep -aoF "$builder_home" "$file" | wc -l)" != "$(grep -aoF "$builder_home/work/duckdb/duckdb/" "$file" | wc -l)" ] ||
 			continue
 		printf '%s\n' "$file"
 	done | sed "s|^$into/||" | tr '\n' ' ')
@@ -90,6 +91,9 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
 	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
+	# Installed surface usage checks read totals with this same shipped command.
+	THINKTHEN_COMMAND=$prefix/thinkthen
+	export THINKTHEN_COMMAND
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.

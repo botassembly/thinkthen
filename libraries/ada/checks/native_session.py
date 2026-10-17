@@ -7,19 +7,19 @@ import subprocess
 import sys
 import tempfile
 import tarfile
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
+ROOT = Path(__file__).resolve().parents[3]
+supplied = os.environ.get('THINKTHEN_ARTIFACT')
+artifact = Path(supplied).resolve(strict=True) if supplied else None
+sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
-from session_values import ROOT, cases, construct, definitions
+from session_values import cases, construct, definitions
 
 PACKAGE = ROOT / 'libraries/ada'
 subprocess.run([sys.executable, str(ROOT / 'sdlc/generators/results/generate.py'), '--target', 'ada', '--check'], env=child_env(), check=True)
 with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     work = Path(temporary)
     installed = work / 'installed package'
-    supplied = os.environ.get('THINKTHEN_ARTIFACT')
-    if supplied:
-        artifact = Path(supplied).resolve(strict=True)
-    else:
+    if artifact is None:
         shutil.copytree(PACKAGE / 'src', installed / 'src')
         shutil.copy2(PACKAGE / 'thinkthen.gpr', installed / 'thinkthen.gpr')
         (installed / 'native/include').mkdir(parents=True)

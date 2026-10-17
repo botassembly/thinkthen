@@ -405,9 +405,17 @@ PYWIN
 		. libraries/python/host.sh
 		python=$(python_host)
 		[ -n "$python" ] || fail 'the installed Python smoke needs a stable Python 3.12 or later'
-		scratch_dir seed
-		uv venv --quiet --python "$python" "$seed/venv"
-		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt
+		generator_tools=${RUNNER_TEMP:?}/thinkthen-generators
+		uv venv --quiet --python "$python" "$generator_tools/python"
+		uv pip install --quiet --require-hashes --python "$generator_tools/python/bin/python" -r libraries/python/requirements-dev.txt
+		# Match the verified development formatters that produced the checked-in sources.
+		uv pip install --python "$generator_tools/python/bin/python" 'ruff==0.13.2'
+		npm install --no-audit --no-fund --no-package-lock --prefix "$generator_tools" 'prettier@3.6.2'
+		mkdir -p "$generator_tools/bin"
+		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
+		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
+		# setup.sh fetched the pinned inputs; installed checks require their built CLIs too.
+		python3 databases/duckdb/tools/source_hosts.py
 	fi
 	;;
 resolve)

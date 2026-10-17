@@ -109,13 +109,15 @@ if [ "$mode" = swift-zig ]; then
 				sed -n 's|^libraries/swift/Sources/ThinkThen/\([^/]*\.swift\)$|./Sources/ThinkThen/\1|p' "$work/swift-source"
 			} | LC_ALL=C sort >"$work/expected-members" ;;
 		"$second")
+			git ls-tree -r --name-only HEAD -- libraries/zig/src >"$work/zig-source" || fail 'cannot list committed Zig source'
+			{
 			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
-				./examples/decide.zig ./src/ ./src/thinkthen.zig ./src/session.zig ./src/authored.zig \
-				./src/request_generated.zig ./src/plan_generated.zig \
+				./examples/decide.zig ./src/ \
 				./native/ "./native/$target/" "./native/$target/include/" "./native/$target/include/thinkthen.h" \
 				"./native/$target/lib/" "./native/$target/lib/libthinkthen.a" \
-				./THINKTHEN-PACKAGE-INPUTS \
-				| LC_ALL=C sort >"$work/expected-members" ;;
+				./THINKTHEN-PACKAGE-INPUTS
+				sed -n 's|^libraries/zig/src/\([^/]*\.zig\)$|./src/\1|p' "$work/zig-source"
+			} | LC_ALL=C sort >"$work/expected-members" ;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	done
@@ -135,7 +137,7 @@ source_members() {
 check_dart_archive() {
 	name=$1
 	tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
-	source_members libraries/dart/ libraries/dart/lib libraries/dart/hook >"$work/dart-source"
+	source_members libraries/dart/ libraries/dart/lib libraries/dart/hook libraries/dart/example >"$work/dart-source"
 	{
 		printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
 			./pubspec.lock ./native-assets.json ./THINKTHEN-PACKAGE-INPUTS

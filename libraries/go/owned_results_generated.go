@@ -2759,7 +2759,7 @@ type RequestOriginalJson struct {
 func (v RequestOriginalJson) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
 	object["kind"] = json.RawMessage("\"json\"")
-	raw, err := json.Marshal(v.Value)
+	raw, err := authoredMarshal(v.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -2788,7 +2788,7 @@ type OptionSchema struct {
 func (v OptionSchema) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
 	if v.Description != nil {
-		raw, err := json.Marshal(*v.Description)
+		raw, err := authoredMarshal(*v.Description)
 		if err != nil {
 			return nil, err
 		}
@@ -2855,7 +2855,7 @@ func (ContextSchemaObject) isContextSchema() {}
 
 type ContextSchemaObject map[string]any
 
-func (v ContextSchemaObject) marshalJSON() ([]byte, error) { return json.Marshal(map[string]any(v)) }
+func (v ContextSchemaObject) marshalJSON() ([]byte, error) { return authoredMarshal(map[string]any(v)) }
 
 type ContextSchemaString string
 type RequestInputUnits struct {
@@ -2897,7 +2897,7 @@ func (v RequestInputJson) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
-	raw, err := json.Marshal(v.Value)
+	raw, err := authoredMarshal(v.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -3006,7 +3006,7 @@ func (v RequestDefinitionAnnotateDefinition) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
 	object["version"] = json.RawMessage("1")
 	if v.Batch != nil {
-		raw, err := json.Marshal(*v.Batch)
+		raw, err := authoredMarshal(*v.Batch)
 		if err != nil {
 			return nil, err
 		}
@@ -3098,12 +3098,12 @@ func (AuthoredQuestionTextArray) isAuthoredQuestionText()  {}
 
 type AuthoredQuestionTextArray []any
 
-func (v AuthoredQuestionTextArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+func (v AuthoredQuestionTextArray) marshalJSON() ([]byte, error) { return authoredMarshal([]any(v)) }
 
 type AuthoredQuestionTextObject map[string]any
 
 func (v AuthoredQuestionTextObject) marshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any(v))
+	return authoredMarshal(map[string]any(v))
 }
 
 type AuthoredQuestionTextString string
@@ -3143,12 +3143,12 @@ func (AuthoredCriterionNull) marshalJSON() ([]byte, error) { return []byte("null
 
 type AuthoredCriterionArray []any
 
-func (v AuthoredCriterionArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+func (v AuthoredCriterionArray) marshalJSON() ([]byte, error) { return authoredMarshal([]any(v)) }
 
 type AuthoredCriterionObject map[string]any
 
 func (v AuthoredCriterionObject) marshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any(v))
+	return authoredMarshal(map[string]any(v))
 }
 
 type AuthoredCriterionString string
@@ -3333,12 +3333,12 @@ func (AuthoredDescriptionNull) marshalJSON() ([]byte, error) { return []byte("nu
 
 type AuthoredDescriptionArray []any
 
-func (v AuthoredDescriptionArray) marshalJSON() ([]byte, error) { return json.Marshal([]any(v)) }
+func (v AuthoredDescriptionArray) marshalJSON() ([]byte, error) { return authoredMarshal([]any(v)) }
 
 type AuthoredDescriptionObject map[string]any
 
 func (v AuthoredDescriptionObject) marshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]any(v))
+	return authoredMarshal(map[string]any(v))
 }
 
 type AuthoredDescriptionString string
@@ -4354,7 +4354,7 @@ func (v EngineSettings) marshalJSON() ([]byte, error) {
 		}
 	}
 	if v.Proxy != nil {
-		raw, err := json.Marshal(*v.Proxy)
+		raw, err := authoredMarshal(*v.Proxy)
 		if err != nil {
 			return nil, err
 		}

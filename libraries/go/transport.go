@@ -14,7 +14,7 @@ func transportMarshal(value any) ([]byte, error) {
 		}
 		return encoder.marshalJSON()
 	}
-	return json.Marshal(value)
+	return authoredMarshal(value)
 }
 
 // Only this private wrapper implements the platform's JSON encoding interface.

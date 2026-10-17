@@ -296,7 +296,7 @@ jobs:
           if git show-ref --verify --quiet "refs/tags/$TAG"; then
             test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$SHA"
           fi
-          work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-linux-release")
+          work=$(sdlc/scripts/release-workflow linux-work /tmp/thinkthen-linux-release)
           mkdir -p "$work/$STAGE/evidence" "$work/$STAGE/home" "$work/$STAGE/target"
           ln -s "$work/$STAGE/target" target
           printf 'GATE_OUTPUT=%s\n' "$work/$STAGE/evidence" >> "$GITHUB_ENV"
@@ -362,6 +362,8 @@ jobs:
           sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RELEASE_WORK/dart"
           sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
           sdlc/scripts/release-workflow managed-tools "$TARGET"
+          # Nested gates discard SDK environment overrides and discover the same tools through PATH.
+          printf '%s\n' "$THINKTHEN_JDK_HOME/bin" "$THINKTHEN_KOTLIN_HOME/bin" "$THINKTHEN_SCALA_HOME/bin" >> "$GITHUB_PATH"
       - name: Acquire Flutter from its pinned official source commit
         run: |
           set -eu

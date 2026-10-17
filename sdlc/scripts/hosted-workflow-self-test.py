@@ -4,11 +4,13 @@ from copy import deepcopy
 import hashlib
 import os
 import io
+import runpy
 import tarfile
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 import yaml
 
@@ -177,6 +179,127 @@ def linux_tool_destination_case():
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
         assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
+
+
+def linux_nested_tools_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    steps = gate['jobs']['linux-release']['steps']
+    assert gate['jobs']['linux-coverage']['steps'] == steps
+    selected = next(step['run'] for step in steps
+                    if step.get('name') == 'Select existing Go, Swift, Zig, PHP, Dart and native language tools')
+    handoff = next(line for line in selected.splitlines()
+                   if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
+    workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
+    host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
+    installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
+    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
+    assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
+        line for line in installed.splitlines() if "ruff==" in line)
+    assert '--prefix "$generator_tools" ' in next(
+        line for line in installed.splitlines() if "prettier@" in line)
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    smoke = release['jobs']['smoke']
+    setup = next(step for step in smoke['steps'] if 'host-setup' in step.get('run', ''))
+    assert 'if' not in setup and setup['env']['RELEASE_SMOKE'] == '1'
+    assert 'host-setup "$TARGET"' in next(step['run'] for step in steps
+        if step.get('name') == 'Install existing pinned Linux host and consumer tools')
+    formatters = '\n'.join(line for line in installed.splitlines()
+                           if line.strip().startswith(('mkdir -p "$generator_tools/bin"',
+                                                       'ln -s "$generator_tools/python/bin/ruff"',
+                                                       'printf ')) and '$generator_tools/' in line)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-nested-tools-') as temporary:
+        root = Path(temporary).resolve()
+        path_file = root / 'github-path'
+        path_file.touch()
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root), 'GITHUB_PATH': str(path_file)}
+        tools = {'THINKTHEN_JDK_HOME': 'javac', 'THINKTHEN_KOTLIN_HOME': 'kotlinc',
+                 'THINKTHEN_SCALA_HOME': 'scalac'}
+        for variable, binary in tools.items():
+            home = root / variable
+            (home / 'bin').mkdir(parents=True)
+            executable = home / 'bin' / binary
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+            env[variable] = str(home)
+        env['generator_tools'] = str(root / 'work')
+        for relative, binary in (('python/bin', 'ruff'), ('node_modules/.bin', 'prettier')):
+            folder = root / 'work' / relative
+            folder.mkdir(parents=True)
+            executable = folder / binary
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+        subprocess.run(['/bin/sh', '-ec', handoff + '\n' + formatters], env=env, check=True, timeout=5)
+        env['PATH'] = os.pathsep.join(path_file.read_text().splitlines() + [env['PATH']])
+        # Use the real nested gate boundary: homes are removed, PATH must still select each SDK.
+        command = '. sdlc/scripts/allow-list\n'
+        command += '\n'.join(f'[ -z "${{{variable}+present}}" ]; [ "$(command -v {binary})" = "{env[variable]}/bin/{binary}" ]'
+                             for variable, binary in tools.items())
+        for relative, binary in (('bin', 'ruff'), ('node_modules/.bin', 'prettier')):
+            command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
+        subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
+
+
+def linux_coverage_destination_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    job = gate['jobs']['linux-coverage']
+    assert job['steps'] == gate['jobs']['linux-release']['steps']
+    setup = next(step['run'] for step in job['steps']
+                 if step.get('name') == 'Require the frozen dispatch commit and candidate')
+    selection = next(line.strip() for line in setup.splitlines() if line.strip().startswith('work=$('))
+    command = selection + '\nprintf "%s" "$work/$STAGE/coverage"\n'
+    driver = runpy.run_path(str(REPO / 'sdlc/scripts/coverage'))
+
+    class AcceptedOutput(Exception):
+        pass
+
+    # Use Linux absolute paths even when macOS redirects /home through its own filesystem.
+    # Stop at directory creation: exercise the privacy rule without scanning or building a tree.
+    def accepts(output):
+        path = Path(output)
+        resolved = path if path == Path('/home') or Path('/home') in path.parents else path.resolve()
+        with patch.dict(driver['main'].__globals__, tools=lambda: {}, installed_helpers=lambda: []), \
+                patch.object(sys, 'platform', 'linux'), \
+                patch.object(sys, 'argv', ['coverage', '--release', '--platform', 'linux', '--output', output]), \
+                patch.object(subprocess, 'check_output', side_effect=['0' * 40, b'']), \
+                patch.object(Path, 'resolve', return_value=resolved), \
+                patch.object(Path, 'mkdir', side_effect=AcceptedOutput) as create:
+            try:
+                driver['main']()
+            except AcceptedOutput:
+                create.assert_called_once_with(parents=True, exist_ok=False)
+                return True
+            except RuntimeError as error:
+                assert str(error) == 'installed coverage output must be outside /home to preserve package privacy'
+                create.assert_not_called()
+                return False
+        raise AssertionError('coverage did not reach its output boundary')
+
+    assert not accepts('/home/runner/work/_temp/thinkthen-linux-release/coverage/coverage')
+    assert not accepts('/home')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-coverage-') as temporary:
+        root = Path(temporary)
+        for roomy in (False, True):
+            for name, body in (
+                    ('df', 'case "$2" in /mnt) free=' + ('900' if roomy else '50') +
+                     ' ;; *) free=100 ;; esac\nprintf "Filesystem Blocks Used Available Capacity Mounted\\nx 1 1 %s 1%% %s\\n" "$free" "$2"'),
+                    ('sudo', 'exit 0')):
+                tool = root / name
+                tool.write_text('#!/bin/sh\n' + body + '\n')
+                tool.chmod(0o755)
+            env = {'PATH': f'{root}:{os.defpath}', 'STAGE': 'coverage',
+                   'RUNNER_TEMP': '/home/runner/work/_temp'}
+            result = subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode == 0, result.stderr
+            expected = '/mnt/thinkthen-container' if roomy else '/tmp/thinkthen-linux-release'
+            assert result.stdout == expected + '/coverage/coverage', result.stdout
+            assert accepts(result.stdout), result.stdout
+            if not roomy:
+                old = command.replace('/tmp/thinkthen-linux-release', '"$RUNNER_TEMP/thinkthen-linux-release"')
+                result = subprocess.run(['/bin/sh', '-ec', old], cwd=REPO, env=env,
+                                        capture_output=True, text=True, timeout=5)
+                assert result.returncode == 0, result.stderr
+                assert not accepts(result.stdout), result.stdout
 
 
 def flutter_locked_setup_case():
@@ -404,6 +527,8 @@ def parameter_cases():
 
 workflow_cases()
 linux_tool_destination_case()
+linux_nested_tools_case()
+linux_coverage_destination_case()
 flutter_locked_setup_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')

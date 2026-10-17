@@ -245,6 +245,26 @@ Reviews: revision af5a55c, accept
 
 Reviews: revision 2a5d917, accept
 
+Reviews: revision 6e323e0, accept
+Reviews: revision 5cfcc87, accept
+
+Reviews: revision 34371d0, accept
+Reviews: revision 6dc2d80, accept
+Reviews: revision e48c936, accept
+
+Reviews: revision 98322d5, accept
+Reviews: revision a20c350, accept
+
+Reviews: revision 1d7af6b, accept
+Reviews: revision 80365fb, accept
+
+Reviews: revision 8f766f9, accept
+Reviews: revision 17e8366, accept
+Reviews: revision bc71b90, accept
+Reviews: revision aa055ac, accept
+Reviews: revision c7b220a, accept
+Reviews: revision a216bc5, accept
+
 ## Outcome
 
 One reviewed commit on `ticket/0543-final`, tagged `rc/0.2.0-rc.13` or a later candidate number, passes the local release suite, the coverage comparison and the nonpublishing hosted runs on Linux, macOS and Windows, and publishes nothing.

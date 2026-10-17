@@ -1,5 +1,4 @@
 """Installed consumers refuse missing products while checkout implementations exist."""
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -7,6 +6,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / 'conformance/children'))
+from children import child_env
 
 
 class InstalledProducts(unittest.TestCase):
@@ -17,13 +18,17 @@ class InstalledProducts(unittest.TestCase):
             ('zig/Tests/complete_parity.py', []),
             ('objective-c/checks/foundation_installed.py', []),
             ('../conformance/children/complete_parity.py', ['php']),
+            ('../conformance/children/complete_parity.py', ['dart']),
+            ('../conformance/children/complete_parity.py', ['flutter']),
         )
         with tempfile.TemporaryDirectory(prefix='thinkthen-missing-products-') as folder:
             missing = str(Path(folder) / 'absent-package')
-            env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': folder,
-                   'THINKTHEN_ARTIFACT': missing, 'THINKTHEN_PARITY_PACKAGE': missing}
+            tools = Path(folder) / 'empty-bin'
+            tools.mkdir()
+            env = child_env(home=folder, PATH=str(tools),
+                            THINKTHEN_ARTIFACT=missing, THINKTHEN_PARITY_PACKAGE=missing)
             for caller, arguments in callers:
-                with self.subTest(caller=caller):
+                with self.subTest(caller=caller, arguments=arguments):
                     result = subprocess.run([sys.executable, str(ROOT / 'libraries' / caller), *arguments],
                                             cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)
                     self.assertNotEqual(result.returncode, 0)
@@ -31,6 +36,7 @@ class InstalledProducts(unittest.TestCase):
                         self.assertEqual(result.returncode, 77)
                         self.assertIn('Foundation installed consumer requires macOS', result.stderr)
                     else:
+                        self.assertIn('FileNotFoundError', result.stderr)
                         self.assertIn(missing, result.stderr)
                     self.assertNotIn('parity: ', result.stdout)
 

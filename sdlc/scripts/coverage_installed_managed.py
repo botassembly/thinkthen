@@ -206,13 +206,14 @@ def prepare(context):
                 sys.path.insert(0, str(root / 'libraries/dart/checks'))
                 from native_assets import configure, package_members
                 dart = stage / ('dart-package-' + language)
-                for member in package_members(root / 'libraries/dart'):
+                members = package_members(root / 'libraries/dart')
+                for member in members:
                     target = dart / member
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(root / 'libraries/dart' / member, target)
                 configure(dart, context['c_shared'], [])
                 dart_archive = stage / ('thinkthen-dart-' + language + '.tar.gz')
-                archive(dart, dart_archive, package_members(dart))
+                archive(dart, dart_archive, members)
                 settings.update(THINKTHEN_ARTIFACT=str(dart_archive),
                                 THINKTHEN_C_ARTIFACT=str(c_archive),
                                 THINKTHEN_INSTALLED_CONSUMER=language)
