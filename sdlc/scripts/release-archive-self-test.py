@@ -121,6 +121,9 @@ if args[0] == 'api':
 def resolve_outputs(commit, version):
     repository = "botassembly/thinkthen"
     candidate = f"rc/{version}-rc.1"
+    candidate_branch = f"release/0.2.0-candidate-{commit[:9]}"
+    invalid_candidate_branches = tuple("release/0.2.0-candidate-" + suffix for suffix in (
+        "", "a" * 8, "a" * 41, "A" * 9, "g" * 9, "a" * 9 + "/fix", "a" * 9 + "\n"))
     good = {"head_sha": commit, "head_branch": candidate, "event": "workflow_dispatch",
             "status": "completed", "conclusion": "success", "path": ".github/workflows/release.yml"}
     page = lambda runs: json.dumps({"total_count": len(runs), "workflow_runs": runs})
@@ -174,8 +177,9 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
         check("rehearse", "refs/heads/main")
         check("rehearse", "refs/heads/ticket/0543-final")
+        check("rehearse", f"refs/heads/{candidate_branch}")
         check("release", f"refs/tags/v{version}")
-        for branch in ("main", "ticket/0543-final"):
+        for branch in ("main", "ticket/0543-final", candidate_branch):
             branch_run = good | {"head_branch": branch,
                                  "path": good["path"] + f"@refs/heads/{branch}"}
             check("release", f"refs/tags/v{version}", page([branch_run]))
@@ -210,6 +214,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                         {"path": good['path'] + "@release/0.1"},
                         {"path": good['path'] + "@main@main"}):
             check("release", f"refs/tags/v{version}", page([good | changes]), error="absent")
+        for branch in invalid_candidate_branches:
+            check("release", f"refs/tags/v{version}", page([good | {"head_branch": branch}]), error="absent")
         for missing in good:
             check("release", f"refs/tags/v{version}",
                   page([{key: value for key, value in good.items() if key != missing}]), error="absent")
@@ -226,7 +232,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                     f"refs/heads/{candidate}", f"refs/tags/rc/{version}-rc.0",
                     f"refs/tags/rc/{version}-rc.01", f"refs/tags/rc/{version}-rc.-1",
                     f"refs/tags/rc/{version}-rc.", f"refs/tags/rc/{version}-rc.one",
-                    f"refs/tags/rc/{version}-rc.1/fix", f"refs/tags/rc/{version}-rc.1\n"):
+                    f"refs/tags/rc/{version}-rc.1/fix", f"refs/tags/rc/{version}-rc.1\n") + tuple(
+                        f"refs/heads/{branch}" for branch in invalid_candidate_branches):
             result = check("rehearse", ref, error="before-query")
             if result.stderr != f"release-workflow: {candidate_error}, got {ref}\n":
                 raise AssertionError(("resolve candidate sentence", result.stderr))
@@ -234,7 +241,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 ("release", f"refs/tags/{candidate}", "release must run from a v* tag"),
                 ("release", "refs/heads/release/0.1", "release must run from a v* tag"),
                 ("release", "refs/heads/main", "release must run from a v* tag"),
-                ("release", "refs/heads/ticket/0543-final", "release must run from a v* tag")):
+                ("release", "refs/heads/ticket/0543-final", "release must run from a v* tag"),
+                ("release", f"refs/heads/{candidate_branch}", "release must run from a v* tag")):
             result = check(mode, ref, error="before-query")
             if result.stderr != f"release-workflow: {wanted}, got {ref}\n":
                 raise AssertionError(("resolve ref sentence", result.stderr))

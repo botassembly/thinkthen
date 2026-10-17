@@ -435,6 +435,12 @@ resolve)
 	rehearse)
 		case $ref in
 		refs/heads/main | refs/heads/ticket/0543-final) ;;
+		refs/heads/release/0.2.0-candidate-*)
+			candidate_sha=${ref#refs/heads/release/0.2.0-candidate-}
+			case $candidate_sha in *[!0-9a-f]*) candidate_sha= ;; esac
+			[ "${#candidate_sha}" -ge 9 ] && [ "${#candidate_sha}" -le 40 ] ||
+				fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref"
+			;;
 		*)
 			candidate_number=
 			case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac

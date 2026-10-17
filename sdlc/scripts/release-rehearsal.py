@@ -32,7 +32,9 @@ def pages(text):
 
 def eligible(run, sha, repository, version):
     branch = run.get("head_branch")
-    rehearsal_branch = branch in ("main", "ticket/0543-final")
+    rehearsal_branch = branch in ("main", "ticket/0543-final") or (
+        isinstance(branch, str)
+        and re.fullmatch(r"release/0\.2\.0-candidate-[0-9a-f]{9,40}", branch) is not None)
     if (not isinstance(branch, str)
             or (not rehearsal_branch
                 and re.fullmatch(rf"rc/{re.escape(version)}-rc\.[1-9][0-9]*", branch) is None)
