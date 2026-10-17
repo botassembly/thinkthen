@@ -2,6 +2,7 @@
 """Check prepared hosted inputs without acquiring tools or building outputs."""
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -23,7 +24,7 @@ class Preflight:
     def check(self, label, operation):
         try:
             operation()
-        except (OSError, ValueError, RuntimeError, subprocess.SubprocessError, AssertionError) as error:
+        except (OSError, ValueError, RuntimeError, ImportError, subprocess.SubprocessError, AssertionError) as error:
             self.missing.append(f'{label}: {error}')
 
     def file(self, path, executable=False):
@@ -48,16 +49,25 @@ class Preflight:
             self.check(name, lambda name=name: require(shutil.which(name), 'missing from PATH'))
 
     def hashes(self, manifest, folder):
-        for line in manifest.read_text().splitlines():
+        try:
+            lines = manifest.read_text().splitlines()
+        except OSError as error:
+            self.missing.append(f'{manifest}: {error}')
+            return
+        for line in lines:
             if not line or line.startswith('#'):
                 continue
-            digest, name = line.split()
+            fields = line.split()
+            if len(fields) != 2 or re.fullmatch(r'[0-9a-f]{64}', fields[0]) is None:
+                self.missing.append(f'{manifest}: malformed SHA256 entry')
+                continue
+            digest, name = fields
             path = folder / name.lstrip('*')
             self.check(str(path), lambda path=path, digest=digest: require(
                 hashlib.sha256(path.read_bytes()).hexdigest() == digest, 'SHA256 differs from pin'))
 
     def finish(self):
-        for message in self.missing:
+        for message in dict.fromkeys(self.missing):
             print('hosted-preflight: ' + message, file=sys.stderr)
         if not self.missing:
             print('hosted-preflight: all prepared inputs are ready')
@@ -79,6 +89,8 @@ def shell_values(script, names, env=None):
 def rust(check, coverage=False):
     pin = tomllib.loads((ROOT / 'rust-toolchain.toml').read_text())['toolchain']
     check.tools(('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar'))
+    node_pin = (ROOT / 'libraries/typescript/node.sha256').read_text().split()[1].split('-')[1]
+    check.command(['node', '--version'], '^' + re.escape(node_pin) + r'\s*$')
     check.command(['rustc', '--version'], '^rustc ' + re.escape(pin['channel']) + r'\b')
     for component in pin['components']:
         check.command(['rustup', 'component', 'list', '--installed'], '^' + component + '-', ROOT)
@@ -100,13 +112,13 @@ def cargo_cache(check, manifests):
 def managed(check):
     tools = runpy.run_path(str(ROOT / 'sdlc/scripts/release-language-tools.py'))
     check.check('stable selected JVM', tools['check_jdk'])
-    check.command([os.environ.get('THINKTHEN_DOTNET', 'dotnet'), '--version'], r'^8\.0\.131\s*$')
-    for key, binary, runtime, version in (
-            ('THINKTHEN_KOTLIN_HOME', 'kotlinc', 'kotlin-stdlib.jar', r'kotlinc-jvm 2\.4\.20\b'),
-            ('THINKTHEN_SCALA_HOME', 'scalac', 'scala.jar', r'Scala compiler version 3\.9\.0\b')):
-        home = Path(os.environ.get(key, '/nonexistent'))
-        check.file(home / 'lib' / runtime)
-        check.command([home / 'bin' / binary, '-version'], version)
+    jdk = Path(os.environ.get('THINKTHEN_JDK_HOME', '/nonexistent'))
+    for binary in ('java', 'javac', 'jar'):
+        check.file(jdk / 'bin' / binary, True)
+    env = tools['managed_env'](jdk)
+    for name in ('dotnet', 'kotlin', 'scala'):
+        check.check('selected ' + name + ' SDK', lambda name=name:
+                    tools['sdk_path'](name, Path('/nonexistent'), False, env=env))
 
 
 def native_inputs(check, target, cache, built_hosts=True, source_only=False):
@@ -124,6 +136,9 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False):
     if not source_only:
         check.hashes(ROOT / 'databases/sqlite/amalgamation.sha256', cache / 'sqlite-amalgamation-3500000')
         if 'apple' in target:
+            for major in (16, 17, 18):
+                check.command(['sh', '-ec', f'PG_MAJOR={major}; . ./runtime.sh; runtime_ready'],
+                              cwd=ROOT / 'databases/postgresql')
             check.hashes(ROOT / 'databases/sqlite/amalgamation-3490000.sha256', cache / 'sqlite-amalgamation-3490000')
         else:
             arch = 'arm64' if target.startswith('aarch64') else 'amd64'
@@ -172,10 +187,12 @@ def installed(check, target, cache):
         check.hashes(ROOT / 'libraries/typescript/node.sha256', cache / 'archives')
         check.command([node / 'bin/node', '--version'], r'^v22\.22\.3\s*$')
         managed(check)
+        check.file('/usr/bin/bwrap', True)
         check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'php8.3', 'Rscript'))
         consumer_tools(check)
         check.hashes(ROOT / 'libraries/r/tools/pins.sha256', cache / 'archives')
-        check.command(['Rscript', '-e', 'library(jsonlite)'])
+        code = re.search(r"Rscript --vanilla -e '([^']+)'", (ROOT / 'libraries/r/check.sh').read_text())[1]
+        check.command(['Rscript', '--vanilla', '-e', '.libPaths(c(' + json.dumps(str(cache / 'r-library')) + ', .libPaths())); ' + code])
     if 'apple' in target:
         check.tools(('swift', 'xcrun', 'lipo', 'brew'))
         check.command([os.environ.get('THINKTHEN_PYTHON', 'python3'), '-c',
@@ -184,6 +201,13 @@ def installed(check, target, cache):
 
 def consumer_tools(check):
     bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
+    tools = runpy.run_path(str(ROOT / 'sdlc/scripts/release-language-tools.py'))
+    for name, version in tools['PACKAGES'].items():
+        check.check('Ubuntu package ' + name, lambda name=name, version=version:
+                    require(tools['package_version'](name) == version, 'installed package differs from pin'))
+    for binary, package in tools['OWNERS'].items():
+        found = shutil.which(binary) or '/nonexistent'
+        check.command(['dpkg-query', '-S', found], '^' + re.escape(package) + ':')
     for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
         block = re.split(r'\n[a-z][a-z-]*\)\n', bootstrap.split('\n' + operation + ')\n', 1)[1])[0]
         for words in re.findall(r'for tool in ([^;]+); do', block):
@@ -198,7 +222,8 @@ def consumer_tools(check):
     check.command(['php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', '-r',
                    'exit(class_exists("FFI") ? 0 : 1);'])
     dart = os.environ.get('TT_DART', 'dart')
-    check.command([dart, '--version'], r'Dart SDK version: 3\.13\.4 \(stable\)')
+    dart_version = re.search(r'dart-archive/channels/stable/release/([0-9.]+)/', bootstrap)[1]
+    check.command([dart, '--version'], 'Dart SDK version: ' + re.escape(dart_version) + r' \(stable\)')
     pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
     check.file(pub_cache / 'hosted/pub.dev/ffi-2.2.0/pubspec.yaml')
     digest = re.search(r"= ([0-9a-f]{64}) \] \|\|\n\t\tfail 'cached ffi", bootstrap)[1]
@@ -217,7 +242,7 @@ def offline_caches(check, python):
         check.command(['npm', 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund',
                        '--prefix', work])
         check.command(['uv', 'pip', 'install', '--offline', '--require-hashes', '--python', python,
-                       '--target', work / 'python', '-r', ROOT / 'libraries/python/requirements-dev.txt'])
+                       '--only-binary', ':all:', '--target', work / 'python', '-r', ROOT / 'libraries/python/requirements-dev.txt'])
 
 
 def downloaded_inputs(check, target):
@@ -275,6 +300,9 @@ def qualify(check, stage, target):
             check.file(Path('/work/home/pg/usr') / ('pgsql-' + str(major)) / 'bin/pg_config', True)
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
+    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
+    maturin = re.search(r"'maturin==([^']+)'", bootstrap)[1]
+    check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
         return
@@ -291,14 +319,29 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache)
     if stage in ('core', 'functional', 'coverage'):
-        check.tools(('mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
+        check.tools(('ld', 'objcopy', 'ar', 'mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
         pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', (ROOT / 'sdlc/scripts/install').read_text(), re.M))
         check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')
         check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['PUBLIC_API_VERSION']) + r'\s*$')
         check.command(['rustc', '+' + pins['PUBLIC_API_TOOLCHAIN'], '--version'], re.escape(pins['PUBLIC_API_RUSTC_DATE']))
+        check.command(['python3', '-c', 'import yaml; print(yaml.__version__)'], '^' + re.escape(pins['PYYAML_VERSION']) + r'\s*$')
+        advisory = Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))) / 'advisory-dbs'
+        databases = list(advisory.glob('*/.git'))
+        check.check('cargo-deny advisory cache', lambda: require(databases, 'fetched advisory database missing'))
+        for database in databases:
+            check.command(['git', '-C', database.parent, 'rev-parse', '--verify', 'HEAD'])
+        generator = runpy.run_path(str(ROOT / 'sdlc/scripts/generate-c-header.py'))
+        check.check('pinned cbindgen', generator['check_tool'])
+        workflow = (ROOT / '.github/workflows/gate.yml').read_text()
+        fetched = re.search(r'for manifest in ([^;]+); do', workflow)[1].replace(chr(92) + chr(10), '')
+        cargo_cache(check, shlex.split(fetched))
         work = Path(os.environ.get('RELEASE_WORK', '/nonexistent'))
         check.command([work / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
         check.file(work / 'typescript/node_modules/.bin/tsc', True)
+        for key, binary in (('THINKTHEN_JDK_HOME', 'javac'), ('THINKTHEN_KOTLIN_HOME', 'kotlinc'), ('THINKTHEN_SCALA_HOME', 'scalac')):
+            expected = Path(os.environ.get(key, '/nonexistent')) / 'bin' / binary
+            check.check(binary + ' nested PATH', lambda binary=binary, expected=expected:
+                        require(Path(shutil.which(binary) or '/nonexistent').resolve() == expected.resolve(), 'selected JVM tool missing from nested PATH'))
         for key in ('TT_DART', 'TT_FLUTTER'):
             check.file(os.environ.get(key, '/nonexistent'), True)
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so.1')
@@ -306,7 +349,7 @@ def qualify(check, stage, target):
         workflow = (ROOT / '.github/workflows/gate.yml').read_text()
         source = re.search(r'test "\$\(git -C "\$HOME/.local/opt/flutter" rev-parse HEAD\)" = ([0-9a-f]{40})', workflow)[1]
         check.command(['git', '-C', flutter, 'rev-parse', 'HEAD'], '^' + source + r'\s*$')
-        for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/linux-sdk', 'packages/flutter_tools/.dart_tool/package_config.json'):
+        for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/artifacts/engine/linux-x64', 'packages/flutter_tools/.dart_tool/package_config.json'):
             path = flutter / asset
             check.check(str(path), lambda path=path: require(path.exists(), 'prepared Flutter asset missing'))
         import yaml
@@ -332,6 +375,7 @@ def main():
     parser.add_argument('stage', choices=('core', 'functional', 'coverage', 'build', 'smoke', 'apple-coverage', 'container'))
     parser.add_argument('target')
     args = parser.parse_args()
+    os.environ.update(RUSTUP_AUTO_INSTALL='0', CARGO_NET_OFFLINE='true', HOMEBREW_NO_AUTO_UPDATE='1')
     check = Preflight()
     check.check('prepared host inputs', lambda: qualify(check, args.stage, args.target))
     return check.finish()

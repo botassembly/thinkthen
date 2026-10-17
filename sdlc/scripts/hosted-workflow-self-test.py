@@ -472,6 +472,7 @@ def preflight_cases():
     preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
     qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
     assert preflight < qualification
+    assert 'if' not in steps[preflight] and 'continue-on-error' not in steps[preflight]
     assert steps[qualification]['if'] == '${{ !inputs.preflight_only }}'
     assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
                if 'actions/upload-artifact@' in step.get('uses', ''))
@@ -480,7 +481,7 @@ def preflight_cases():
                       ('smoke', 'Check every prepared installed smoke input'),
                       ('apple-coverage', 'Check every prepared Apple coverage input')):
         step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
-        assert 'hosted-preflight.py' in step['run'] and 'if' not in step
+        assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
         scripts = root / 'sdlc/scripts'
@@ -488,6 +489,9 @@ def preflight_cases():
         helper = scripts / 'hosted-preflight.py'
         helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
         (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
+        (root / 'libraries/typescript').mkdir(parents=True)
+        (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
+        (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
         tools = root / 'bin'
         tools.mkdir()
         probe = tools / 'fixture'
@@ -495,9 +499,11 @@ def preflight_cases():
                          'from pathlib import Path\nimport sys\n' +
                          'name = Path(sys.argv[0]).name\n' +
                          'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
+                         'if name == "node": print("v22.22.3")\n' +
+                         'if name == "maturin": print("maturin 1.15.0")\n' +
                          'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
         probe.chmod(0o755)
-        required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'cl.exe', 'lib.exe', 'link.exe')
+        required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
         for tool in required:
             (tools / tool).symlink_to(probe)
         # Compiler fixtures stand at the process boundary; no digest check is bypassed.
@@ -506,6 +512,30 @@ def preflight_cases():
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        # Exercise real checksum bytes through the installed-smoke entry point.
+        (root / 'crates/thinkthen').mkdir(parents=True)
+        manifest = REPO / 'crates/thinkthen/Cargo.toml'
+        (root / 'crates/thinkthen/Cargo.toml').write_bytes(manifest.read_bytes())
+        import tomllib
+        version = tomllib.loads(manifest.read_text())['package']['version']
+        platform = root / 'platform'
+        platform.mkdir()
+        names = [f'thinkthen-c-{version}-x86_64-pc-windows-msvc.zip',
+                 f'thinkthen-{version}-x86_64-pc-windows-msvc.zip', 'thinkthen-first-run.tar.gz']
+        for name in names:
+            archive = platform / name
+            archive.write_bytes(('fixture payload ' + name).encode())
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            (platform / (name + '.sha256')).write_text(digest + '  ' + name + '\n')
+        (root / 'crate-dist').mkdir()
+        (root / 'crate-dist' / f'thinkthen-{version}.crate').write_bytes(b'fixture crate')
+        smoke = [sys.executable, str(helper), 'smoke', 'x86_64-pc-windows-msvc']
+        ready = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert ready.returncode == 0 and ready.stderr == '', ready.stderr
+        for name in names[:2]:
+            (platform / name).write_bytes(b'corrupted archive')
+        corrupt = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert corrupt.returncode == 1 and corrupt.stderr.count('SHA256 differs from pin') == 2, corrupt.stderr
         for tool in ('node', 'cl.exe', 'lib.exe'):
             (tools / tool).unlink()
         missing = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
