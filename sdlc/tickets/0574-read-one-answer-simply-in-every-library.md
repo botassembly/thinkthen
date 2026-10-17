@@ -1,6 +1,8 @@
 # 0574: Let every library read one answer simply and safely
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

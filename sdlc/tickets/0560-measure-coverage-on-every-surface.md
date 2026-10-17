@@ -1,6 +1,8 @@
 # 0560: Measure outside-in coverage on every surface
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 

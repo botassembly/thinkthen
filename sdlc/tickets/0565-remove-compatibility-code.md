@@ -1,6 +1,8 @@
 # 0565: Remove compatibility code before 0.2
 
-Status: OPEN.
+Status: COMPLETE.
+
+Landed: 2667437bd
 
 Milestone: 0.2
 
