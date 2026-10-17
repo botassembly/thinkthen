@@ -358,8 +358,7 @@ zig)
 		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
 			libraries/zig/build.zig.zon "$folder/"
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/thinkthen.zig libraries/zig/src/session.zig libraries/zig/src/authored.zig \
-			libraries/zig/src/request_generated.zig libraries/zig/src/plan_generated.zig "$folder/src/"
+		cp libraries/zig/src/*.zig "$folder/src/"
 		mkdir -p "$folder/native/$TARGET"
 		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
 		;;
@@ -377,7 +376,7 @@ dart)
 		mkdir -p "$folder"
 		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
 			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock libraries/dart/native-assets.json "$folder/"
-		cp -R libraries/dart/lib libraries/dart/hook "$folder/"
+		cp -R libraries/dart/lib libraries/dart/hook libraries/dart/example "$folder/"
 		;;
 flutter)
 		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
