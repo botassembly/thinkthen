@@ -106,7 +106,8 @@ def main():
             archive = source
         else:
             staged = scratch / 'source' / name
-            for member in package_members(source):
+            members = package_members(source)
+            for member in members:
                 target = staged / member
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(source / member, target)
@@ -114,7 +115,7 @@ def main():
                 configure(staged, native, [])
             archive = scratch / f'thinkthen-{name}.tar.gz'
             with tarfile.open(archive, 'w:gz') as output:
-                for member in sorted(package_members(staged)):
+                for member in sorted(members):
                     output.add(staged / member, arcname=member)
         # The shipping Flutter archive already owns its flutter/ package root.
         target = packages if supplied and name == 'flutter' else packages / name
