@@ -37,7 +37,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     cp "$here/tests/Smoke.csproj" "$here/tests/source/Smoke.cs" "$smoke/app/"
     python3 "$here/tests/package_check.py" "$smoke/native/include/thinkthen.h" "$smoke/feed/Botassembly.ThinkThen.$version.nupkg"
     "$dotnet" build "$smoke/app/Smoke.csproj" -c Release -o "$smoke/app/out" -p:RestoreSources="$smoke/feed" -v quiet >&2
-    "$smoke/app/out/Smoke"
+    "$dotnet" "$smoke/app/out/Smoke.dll"
     exit
 fi
 [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
