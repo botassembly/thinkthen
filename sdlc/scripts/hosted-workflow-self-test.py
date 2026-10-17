@@ -6,6 +6,7 @@ import os
 import io
 import json
 import runpy
+import shutil
 import tarfile
 from pathlib import Path
 import subprocess
@@ -301,6 +302,61 @@ def linux_coverage_destination_case():
                                         capture_output=True, text=True, timeout=5)
                 assert result.returncode == 0, result.stderr
                 assert not accepts(result.stdout), result.stdout
+
+
+def dart_cache_setup_case():
+    bootstrap = (REPO / 'sdlc/scripts/release-workflow').read_text()
+    preparation = bootstrap.split('\tpub_cache=$1/pub-cache\n', 1)[1].split('\n}\ncase ', 1)[0]
+    with tempfile.TemporaryDirectory(prefix='thinkthen-dart-cache-') as temporary:
+        root = Path(temporary)
+        dart = root / 'dart'
+        dart.write_text(f'#!{sys.executable}\n' +
+                        'from pathlib import Path\nimport os, sys, yaml\n' +
+                        'cache = Path(os.environ["PUB_CACHE"])\n' +
+                        'args = sys.argv[1:]\n' +
+                        'if args == ["pub", "cache", "add", "ffi", "--version", "2.2.0"]:\n' +
+                        '    packages = {"ffi": yaml.safe_load(Path(os.environ["SOURCE_LOCK"]).read_text())["packages"]["ffi"]}\n' +
+                        'else:\n' +
+                        '    assert args in (["pub", "get", "--enforce-lockfile"], ["pub", "get", "--offline", "--enforce-lockfile"])\n' +
+                        '    assert Path.cwd() != Path(os.environ["SOURCE_LOCK"]).parent\n' +
+                        '    assert Path("pubspec.lock").read_bytes() == Path(os.environ["SOURCE_LOCK"]).read_bytes()\n' +
+                        '    assert Path("pubspec.yaml").is_file()\n' +
+                        '    packages = yaml.safe_load(Path("pubspec.lock").read_text())["packages"]\n' +
+                        'for name, package in packages.items():\n' +
+                        '    folder = name + "-" + package["version"]\n' +
+                        '    manifest = cache / "hosted/pub.dev" / folder / "pubspec.yaml"\n' +
+                        '    stamp = cache / "hosted-hashes/pub.dev" / (folder + ".sha256")\n' +
+                        '    if "--offline" in args:\n' +
+                        '        assert manifest.is_file(), "missing " + name\n' +
+                        '        assert stamp.read_text().strip() == package["description"]["sha256"]\n' +
+                        '    else:\n' +
+                        '        manifest.parent.mkdir(parents=True, exist_ok=True)\n' +
+                        '        manifest.write_text(name)\n' +
+                        '        stamp.parent.mkdir(parents=True, exist_ok=True)\n' +
+                        '        stamp.write_text(package["description"]["sha256"])\n')
+        dart.chmod(0o755)
+        cache = root / 'pub-cache'
+        env = {**os.environ, 'PUB_CACHE': str(cache),
+               'SOURCE_LOCK': str(REPO / 'libraries/dart/pubspec.lock')}
+        command = '. "$1/sdlc/scripts/scratch.sh"\nfail() { exit 1; }\n'
+        command += 'dart_bin=$2\npub_cache=$3\n' + preparation
+        # A cache containing only ffi reproduces the old release preparation.
+        subprocess.run([str(dart), 'pub', 'cache', 'add', 'ffi', '--version', '2.2.0'], env=env, check=True)
+        module = runpy.run_path(str(REPO / 'sdlc/scripts/hosted-preflight.py'))
+        with patch.dict(os.environ, env):
+            check = module['Preflight']()
+            module['dart_cache'](check, str(dart))
+            assert check.missing, 'ffi-only cache passed native-assets preflight'
+            result = subprocess.run(['/bin/sh', '-ec', command, 'prepare', str(REPO), str(dart), str(cache)],
+                                    cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
+            assert result.returncode == 0, result.stderr
+            check = module['Preflight']()
+            module['dart_cache'](check, str(dart))
+            assert not check.missing, check.missing
+            shutil.rmtree(cache / 'hosted/pub.dev/hooks-2.0.2')
+            check = module['Preflight']()
+            module['dart_cache'](check, str(dart))
+            assert check.missing, 'missing hooks passed native-assets preflight'
 
 
 def flutter_locked_setup_case():
@@ -643,6 +699,7 @@ workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_coverage_destination_case()
+dart_cache_setup_case()
 flutter_locked_setup_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
