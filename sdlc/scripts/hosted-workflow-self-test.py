@@ -530,6 +530,10 @@ def preflight_cases():
             check.check('prepared host inputs', lambda: module['qualify'](check, 'coverage', 'x86_64-unknown-linux-gnu'))
         assert any('yaml' in message for message in check.missing), check.missing
         assert any('same-SHA Apple coverage input' in message for message in check.missing), check.missing
+        check = module['Preflight']()
+        module['dart_locks'](check)
+        for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
+            assert any(message.startswith(project + ' frozen Dart inputs:') for message in check.missing), check.missing
         report = root / 'thinkthen-apple-coverage/totals.json'
         for local_only, source, wanted in ((True, None, 0), (False, None, 1),
                                            (False, 'a' * 40, 0), (False, 'b' * 40, 1)):

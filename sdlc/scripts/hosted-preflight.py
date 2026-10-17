@@ -285,6 +285,26 @@ def apple_input(check, local_only):
                 'Apple coverage input must match the candidate SHA and Apple platform')
     check.check('same-SHA Apple coverage input', identity)
 
+
+def dart_locks(check):
+    pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
+    for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
+        check.file(ROOT / project / '.dart_tool/package_config.json')
+        def locked_packages(project=project):
+            import yaml
+            lock = yaml.safe_load((ROOT / project / 'pubspec.lock').read_text())['packages']
+            for name, package in lock.items():
+                if package['source'] != 'hosted':
+                    continue
+                folder = name + '-' + package['version']
+                check.file(pub_cache / 'hosted/pub.dev' / folder / 'pubspec.yaml')
+                digest = package['description']['sha256']
+                stamp = pub_cache / 'hosted-hashes/pub.dev' / (folder + '.sha256')
+                check.check(str(stamp), lambda stamp=stamp, digest=digest: require(
+                    stamp.read_text().strip() == digest, 'pub cache hash differs from frozen lock'))
+        check.check(project + ' frozen Dart inputs', locked_packages)
+
+
 def qualify(check, stage, target):
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
@@ -365,20 +385,7 @@ def qualify(check, stage, target):
         for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/artifacts/engine/linux-x64', 'packages/flutter_tools/.dart_tool/package_config.json'):
             path = flutter / asset
             check.check(str(path), lambda path=path: require(path.exists(), 'prepared Flutter asset missing'))
-        import yaml
-        pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
-        for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
-            check.file(ROOT / project / '.dart_tool/package_config.json')
-            lock = yaml.safe_load((ROOT / project / 'pubspec.lock').read_text())['packages']
-            for name, package in lock.items():
-                if package['source'] != 'hosted':
-                    continue
-                folder = name + '-' + package['version']
-                check.file(pub_cache / 'hosted/pub.dev' / folder / 'pubspec.yaml')
-                digest = package['description']['sha256']
-                stamp = pub_cache / 'hosted-hashes/pub.dev' / (folder + '.sha256')
-                check.check(str(stamp), lambda stamp=stamp, digest=digest: require(
-                    stamp.read_text().strip() == digest, 'pub cache hash differs from frozen lock'))
+        check.check('frozen Dart inputs', lambda: dart_locks(check))
         if coverage:
             apple_input(check, os.environ.get('PREFLIGHT_ONLY') == 'true')
 
