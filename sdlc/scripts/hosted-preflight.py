@@ -2,7 +2,6 @@
 """Check prepared hosted inputs without acquiring tools or building outputs."""
 import argparse
 import hashlib
-import tempfile
 import os
 from pathlib import Path
 import re
@@ -11,6 +10,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,7 +39,7 @@ class Preflight:
                                     text=True, timeout=60, check=False)
             if result.returncode:
                 raise ValueError(f'exit {result.returncode}')
-            if expected and not re.search(expected, result.stdout + result.stderr):
+            if expected and not re.search(expected, result.stdout + result.stderr, re.M):
                 raise ValueError('version or prepared input differs from pin')
         self.check(shlex.join(list(map(str, args))), verify)
 
@@ -154,7 +154,7 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False):
 def installed(check, target, cache):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
     check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
-    native_inputs(check, target, cache)
+    check.check('native prepared inputs', lambda: native_inputs(check, target, cache))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
     # Read formatter pins from their existing bootstrap rather than keep a second authority.
     bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
@@ -182,7 +182,6 @@ def installed(check, target, cache):
                        'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)'])
 
 
-
 def consumer_tools(check):
     bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
     for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
@@ -202,7 +201,7 @@ def consumer_tools(check):
     check.command([dart, '--version'], r'Dart SDK version: 3\.13\.4 \(stable\)')
     pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
     check.file(pub_cache / 'hosted/pub.dev/ffi-2.2.0/pubspec.yaml')
-    digest = re.search(r'= ([0-9a-f]{64}) \] \|\|\n\t\tfail 'cached ffi', bootstrap)[1]
+    digest = re.search(r"= ([0-9a-f]{64}) \] \|\|\n\t\tfail 'cached ffi", bootstrap)[1]
     check.check('Dart ffi cache hash', lambda: require(
         (pub_cache / 'hosted-hashes/pub.dev/ffi-2.2.0.sha256').read_text().strip() == digest,
         'cached ffi differs from bootstrap pin'))
@@ -247,6 +246,7 @@ def downloaded_inputs(check, target):
     if not windows:
         check.file(ROOT / 'npm-dist' / f'thinkthen-{version}.tgz')
 
+
 def qualify(check, stage, target):
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
@@ -274,7 +274,7 @@ def qualify(check, stage, target):
         for major in (16, 17, 18):
             check.file(Path('/work/home/pg/usr') / ('pgsql-' + str(major)) / 'bin/pg_config', True)
         return
-    check.command([sys.executable, '-c', 'from jsonschema import Draft202012Validator; import maturin'])
+    check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
         return
@@ -286,7 +286,7 @@ def qualify(check, stage, target):
             managed(check)
         return
     if stage == 'build':
-        check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config'))
+        check.tools(('cc', 'c++', 'make', 'pkg-config'))
         native_inputs(check, target, cache, built_hosts=False)
         return
     installed(check, target, cache)
