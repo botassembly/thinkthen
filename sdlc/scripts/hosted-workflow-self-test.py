@@ -190,6 +190,14 @@ def linux_nested_tools_case():
     handoff = next(line for line in selected.splitlines()
                    if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
     assert 'python3 databases/duckdb/tools/source_hosts.py' in selected
+    installed = next(step['run'] for step in steps
+                     if step.get('name') == 'Install existing pinned Linux host and consumer tools')
+    assert 'uv pip install --python "$RELEASE_WORK/python/bin/python" ' in next(
+        line for line in installed.splitlines() if "ruff==" in line)
+    assert '--prefix "$RELEASE_WORK/generators" ' in next(
+        line for line in installed.splitlines() if "prettier@" in line)
+    formatters = next(line for line in installed.splitlines()
+                      if '"$RELEASE_WORK/generators/node_modules/.bin" >> "$GITHUB_PATH"' in line)
     with tempfile.TemporaryDirectory(prefix='thinkthen-nested-tools-') as temporary:
         root = Path(temporary).resolve()
         path_file = root / 'github-path'
@@ -204,12 +212,21 @@ def linux_nested_tools_case():
             executable.write_text('#!/bin/sh\nexit 0\n')
             executable.chmod(0o755)
             env[variable] = str(home)
-        subprocess.run(['/bin/sh', '-ec', handoff], env=env, check=True, timeout=5)
+        env['RELEASE_WORK'] = str(root / 'work')
+        for relative, binary in (('python/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
+            folder = root / 'work' / relative
+            folder.mkdir(parents=True)
+            executable = folder / binary
+            executable.write_text('#!/bin/sh\nexit 0\n')
+            executable.chmod(0o755)
+        subprocess.run(['/bin/sh', '-ec', handoff + '\n' + formatters], env=env, check=True, timeout=5)
         env['PATH'] = os.pathsep.join(path_file.read_text().splitlines() + [env['PATH']])
         # Use the real nested gate boundary: homes are removed, PATH must still select each SDK.
         command = '. sdlc/scripts/allow-list\n'
         command += '\n'.join(f'[ -z "${{{variable}+present}}" ]; [ "$(command -v {binary})" = "{env[variable]}/bin/{binary}" ]'
                              for variable, binary in tools.items())
+        for relative, binary in (('python/bin', 'ruff'), ('generators/node_modules/.bin', 'prettier')):
+            command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
         subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
 
 
