@@ -32,7 +32,7 @@ else
 	# The builder's home stays out of the module, as in check.sh.
 	package_flags=${RUSTFLAGS:-}
 	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || package_flags="${package_flags:+$package_flags }--remap-path-prefix=$HOME=/build"
-	RUSTFLAGS="$package_flags" \
+	RUSTFLAGS="$package_flags" PGRX_PG_CONFIG_PATH="$PG_CONFIG" \
 		./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --no-default-features --features "pg$PG_MAJOR" >/dev/null
 	tree=$EXT
 fi

@@ -623,7 +623,8 @@ python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-instal
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
 python3.14) exit 1 ;;
 sudo) case "$*" in
-  'apt-get update') echo r-index >> "$FAKE_LOG" ;;
+  'apt-get update') echo pg-index >> "$FAKE_LOG" ;;
+  'apt-get install -y postgresql-server-dev-16') echo pg-host >> "$FAKE_LOG" ;;
   'apt-get install -y r-base-dev') touch "$FAKE_ROOT/r-ready"; echo r-host >> "$FAKE_LOG" ;;
   *) echo "unexpected sudo call: $*" >&2; exit 94 ;; esac ;;
 bash) if [ "$1" = libraries/r/tools/setup.sh ]; then
@@ -1264,10 +1265,10 @@ def self_test():
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', handoff,
                       *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
-            wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
+            wanted = ["py313-ready", "uv-install", "uv-check", "pg-index", "pg-host", "libraries/ruby/setup-ruby.sh ",
                       "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
-                      *(["libraries/typescript/setup-toolchain.sh ", "r-index", "r-host", "r-dependencies"]
+                      *(["libraries/typescript/setup-toolchain.sh ", "r-host", "r-dependencies"]
                         if target == "x86_64-unknown-linux-gnu" else []),
                       "npm-seed", *seed, handoff]
         else:

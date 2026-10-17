@@ -390,6 +390,9 @@ PYWIN
 		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
 		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			# The pinned server packages need the host's client, headers and runtime libraries.
+			sudo apt-get update
+			sudo apt-get install -y postgresql-server-dev-16
 			sh libraries/ruby/setup-ruby.sh
 			sh databases/duckdb/tools/setup.sh --fetch
 			sh databases/sqlite/setup.sh
@@ -397,7 +400,6 @@ PYWIN
 			if [ "$2" = x86_64-unknown-linux-gnu ]; then
 				# Installed coverage and full TypeScript checks use the pinned cache, not PATH's Node.
 				sh libraries/typescript/setup-toolchain.sh
-				sudo apt-get update
 				sudo apt-get install -y r-base-dev
 				bash libraries/r/tools/setup.sh
 			fi
