@@ -239,6 +239,68 @@ def linux_nested_tools_case():
         for relative, binary in (('bin', 'ruff'), ('node_modules/.bin', 'prettier')):
             command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
         subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
+        # Setup and qualification use different homes; offline npm must read
+        # the cache setup actually populated through the real child boundary.
+        setup = next(step['run'] for step in steps
+                     if step.get('name') == 'Require the frozen dispatch commit and candidate')
+        cache_handoff = next(line for line in setup.splitlines() if "printf 'npm_config_cache=" in line)
+        env_file = root / 'github-env'
+        subprocess.run(['/bin/sh', '-ec', cache_handoff], env={**env, 'work': str(root),
+            'STAGE': 'core', 'GITHUB_ENV': str(env_file)}, check=True, timeout=5)
+        env.update(line.split('=', 1) for line in env_file.read_text().splitlines())
+        qualification = next(step['run'] for step in steps if step.get('name') ==
+                             'Run the selected existing gates and retain their actual exits')
+        selection = qualification[qualification.index("env = child_env("):qualification.index("for key in ('THINKTHEN_DOTNET'")].rstrip() + '\n'
+        expected_cache = str(root / 'core/npm-cache')
+        script = ('from pathlib import Path\nfrom conformance.children.children import child_env\n'
+                  f'work = Path({str(root)!r})\n' + selection +
+                  f'assert env["npm_config_cache"] == {expected_cache!r}\n'
+                  'import subprocess\nsubprocess.run(["sh", "-ec", '
+                  '". sdlc/scripts/allow-list; test -d \\\"$npm_config_cache\\\""], '
+                  'env=env, check=True)\n')
+        Path(expected_cache).mkdir(parents=True)
+        subprocess.run([sys.executable, '-c', script], cwd=REPO, env=env, check=True, timeout=5)
+
+
+def postgresql_package_case():
+    # The package entry point must select its pinned headers without ~/.pgrx.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-package-') as temporary:
+        root = Path(temporary)
+        database = root / 'databases/postgresql'
+        database.mkdir(parents=True)
+        for name in ('package.sh', 'runtime.sh', 'runtime.sha256', 'runtime.url',
+                     'pgrx-package-locked.sh', 'Cargo.lock', 'thinkthen.control'):
+            shutil.copyfile(REPO / 'databases/postgresql' / name, database / name)
+        tools = root / 'bin'
+        tools.mkdir()
+        pg_config = tools / 'pg_config'
+        pg_config.write_text('#!/bin/sh\ncase $1 in --pkglibdir) echo /lib ;; --sharedir) echo /share ;; esac\n')
+        pg_config.chmod(0o755)
+        cargo = tools / 'cargo'
+        cargo.write_text('''#!/bin/sh
+set -eu
+[ "$1" != metadata ] || exit 0
+[ "$1 $2" = 'pgrx package' ]
+[ "$PGRX_PG_CONFIG_PATH" = "$4" ]
+[ ! -e "$HOME/.pgrx" ]
+tree=target/release/thinkthen-pg16
+mkdir -p "$tree/lib" "$tree/share/extension"
+touch "$tree/lib/thinkthen.so"
+cp thinkthen.control "$tree/share/extension/"
+version=$(sed -n "s/^default_version = '\\(.*\\)'$/\\1/p" thinkthen.control)
+touch "$tree/share/extension/thinkthen--$version.sql"
+''')
+        cargo.chmod(0o755)
+        uname = tools / 'uname'
+        uname.write_text('#!/bin/sh\ncase $1 in -s) echo Linux ;; *) echo x86_64 ;; esac\n')
+        uname.chmod(0o755)
+        (database / 'pgrx-package-locked.sh').chmod(0o755)
+        env = {'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'HOME': str(root / 'empty-home'),
+               'PG_CONFIG': str(pg_config), 'TMPDIR': str(root)}
+        result = subprocess.run(['/bin/sh', str(database / 'package.sh'), '16', str(root / 'out')],
+                                env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, result.stderr
+        assert (root / 'out/lib/thinkthen.so').is_file()
 
 
 def linux_coverage_destination_case():
@@ -698,6 +760,7 @@ print('hosted preflight: ready, aggregate missing, checksum corruption and Apple
 workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
+postgresql_package_case()
 linux_coverage_destination_case()
 dart_cache_setup_case()
 flutter_locked_setup_case()

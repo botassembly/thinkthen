@@ -17,7 +17,9 @@ DENY_VERSION=0.19.4
 # own tests under rung 2, jq runs the metric transforms the eval how-tos teach,
 # and script gives one test a pseudo-terminal so the line a person at a terminal
 # reads is proved on a real terminal rather than assumed.
-for tool in cargo python3 node mustmatch jq script; do
+# The all-language generation check also formats source and measures the C ABI.
+# gcc must be GNU GCC with -fdump-ada-spec, rather than Apple's clang alias.
+for tool in cargo rustc rustup rustfmt cargo-nextest python3 node git mustmatch jq script cc clang gcc gofmt swift zig dart ruff prettier; do
 	if ! command -v "$tool" >/dev/null 2>&1; then
 		printf 'install: %s is not on PATH, and a later rung needs it\n' "$tool" >&2
 		exit 1

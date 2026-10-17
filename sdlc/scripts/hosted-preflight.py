@@ -132,13 +132,17 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False):
         check.check('Ruby ' + version + ' stamp', lambda prefix=prefix, digest=digest, yaml=yaml, yaml512=yaml512:
                     require((prefix / 'thinkthen-toolchain.stamp').read_text().splitlines()[:3] ==
                             ['ruby ' + digest, 'yaml ' + yaml, 'yaml512 ' + yaml512], 'stamp differs from toolchain.env'))
-        check.command([prefix / 'bin/ruby', '-rpsych', '-rzlib', '-ropenssl', '-rminitest', '-e', 'puts RUBY_VERSION'], '^' + re.escape(version) + r'\s*$')
+        check.command([prefix / 'bin/ruby', '-rpsych', '-rzlib', '-ropenssl', '-rminitest', '-rrbs', '-e', 'puts RUBY_VERSION'], '^' + re.escape(version) + r'\s*$')
+        rbs = shell_values(ruby, ['RUBY_RBS_VERSION'], env)[0]
+        check.command([prefix / 'bin/rbs', '_' + rbs + '_', '--version'], re.escape(rbs))
     if not source_only:
         check.hashes(ROOT / 'databases/sqlite/amalgamation.sha256', cache / 'sqlite-amalgamation-3500000')
+        # runtime_ready verifies executable hosts, their headers and libclang, not
+        # only the downloaded packages. It never fetches or starts a server.
+        for major in (16, 17, 18):
+            check.command(['sh', '-ec', f'PG_MAJOR={major}; . ../../sdlc/scripts/scratch.sh; . ./runtime.sh; runtime_ready'],
+                          cwd=ROOT / 'databases/postgresql')
         if 'apple' in target:
-            for major in (16, 17, 18):
-                check.command(['sh', '-ec', f'PG_MAJOR={major}; . ./runtime.sh; runtime_ready'],
-                              cwd=ROOT / 'databases/postgresql')
             check.hashes(ROOT / 'databases/sqlite/amalgamation-3490000.sha256', cache / 'sqlite-amalgamation-3490000')
         else:
             arch = 'arm64' if target.startswith('aarch64') else 'amd64'
@@ -181,14 +185,22 @@ def installed(check, target, cache):
         check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
                     require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
     check.command([generators / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
-    offline_caches(check, str(generators / 'python/bin/python'))
+    # Match the interpreter the installed Python check chooses. A populated
+    # venv for another Python minor does not prove its offline wheel cache.
+    def python_cache():
+        python = subprocess.check_output(
+            ['sh', '-ec', '. libraries/python/host.sh; python_host'], cwd=ROOT, text=True).strip()
+        require(python, 'no supported installed Python host')
+        offline_caches(check, python)
+    check.check('installed offline caches', python_cache)
+    check.command(['bash', '-c', 'test "${BASH_VERSINFO[0]}" -ge 5'])
     if target == 'x86_64-unknown-linux-gnu':
         node = cache / 'node-v22.22.3-linux-x64'
         check.hashes(ROOT / 'libraries/typescript/node.sha256', cache / 'archives')
         check.command([node / 'bin/node', '--version'], r'^v22\.22\.3\s*$')
         managed(check)
         check.file('/usr/bin/bwrap', True)
-        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'php8.3', 'Rscript'))
+        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'gofmt', 'composer', 'php8.3', 'R', 'Rscript', 'psql', 'dpkg-deb'))
         consumer_tools(check)
         check.hashes(ROOT / 'libraries/r/tools/pins.sha256', cache / 'archives')
         code = re.search(r"Rscript --vanilla -e '([^']+)'", (ROOT / 'libraries/r/check.sh').read_text())[1]
@@ -340,7 +352,11 @@ def qualify(check, stage, target):
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so')
         check.file(Path(os.environ.get('THINKTHEN_RUBY_OPENSSL', '/nonexistent')) / 'include/openssl/ssl.h')
         for major in (16, 17, 18):
-            check.file(Path('/work/home/pg/usr') / ('pgsql-' + str(major)) / 'bin/pg_config', True)
+            postgres = Path('/work/home/pg/usr') / ('pgsql-' + str(major))
+            for binary in ('pg_config', 'postgres', 'initdb', 'pg_ctl', 'psql'):
+                check.file(postgres / 'bin' / binary, True)
+            check.file(postgres / 'include/server/postgres.h')
+        check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
     bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
@@ -362,8 +378,16 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache)
     if stage in ('core', 'functional', 'coverage'):
+        install = (ROOT / 'sdlc/scripts/install').read_text()
+        check.tools(shlex.split(re.search(r'for tool in ([^;]+); do', install)[1]))
         check.tools(('ld', 'objcopy', 'ar', 'mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
-        pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', (ROOT / 'sdlc/scripts/install').read_text(), re.M))
+        pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', install, re.M))
+        check.command(['python3', '-c', 'import sys; assert sys.version_info >= (3, 12)'])
+        check.command(['jq', '--version'], '^' + re.escape(pins['JQ_VERSION']) + r'\s*$')
+        check.command(['gcc', '--version'], r'\b(?:gcc|GCC)\b')
+        check.command(['swift', 'format', '--help'])
+        check.tools(('prlimit',))
+        check.check('nonroot Linux routine host', lambda: require(os.getuid() != 0, 'RLIMIT_NPROC needs a nonroot user'))
         check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')
         check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['PUBLIC_API_VERSION']) + r'\s*$')
         check.command(['rustc', '+' + pins['PUBLIC_API_TOOLCHAIN'], '--version'], re.escape(pins['PUBLIC_API_RUSTC_DATE']))
@@ -379,6 +403,9 @@ def qualify(check, stage, target):
         fetched = re.search(r'for manifest in ([^;]+); do', workflow)[1].replace(chr(92) + chr(10), '')
         cargo_cache(check, shlex.split(fetched))
         work = Path(os.environ.get('RELEASE_WORK', '/nonexistent'))
+        check.check('hosted npm cache handoff', lambda: require(
+            os.environ.get('npm_config_cache') == str(work / 'npm-cache'),
+            'offline npm cache must survive the qualification home change'))
         check.command([work / 'python/bin/python', '-c', 'import numpy, pandas, pyarrow, jsonschema'])
         check.file(work / 'typescript/node_modules/.bin/tsc', True)
         for key, binary in (('THINKTHEN_JDK_HOME', 'javac'), ('THINKTHEN_KOTLIN_HOME', 'kotlinc'), ('THINKTHEN_SCALA_HOME', 'scalac')):

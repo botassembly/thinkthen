@@ -310,6 +310,7 @@ jobs:
           printf 'GATE_OUTPUT=%s\n' "$work/$STAGE/evidence" >> "$GITHUB_ENV"
           printf 'RELEASE_WORK=%s\n' "$work/$STAGE" >> "$GITHUB_ENV"
           printf 'UV_CACHE_DIR=%s\nUV_PYTHON_INSTALL_DIR=%s\n' "$work/$STAGE/uv-cache" "$work/$STAGE/uv-python" >> "$GITHUB_ENV"
+          printf 'npm_config_cache=%s\n' "$work/$STAGE/npm-cache" >> "$GITHUB_ENV"
           printf '%s\n' "$HOME/.local/bin" "$GITHUB_WORKSPACE/target/debug" >> "$GITHUB_PATH"
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
         with: {python-version: '3.13'}
@@ -437,7 +438,7 @@ jobs:
               signal.signal(signum, admission.interrupted)
           env = child_env(('LANG', 'LC_ALL', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'CARGO_HOME', 'RUSTUP_HOME',
                            'LIBCLANG_PATH', 'PUB_CACHE', 'RUBY', 'RBCONFIG', 'R_LIBS_USER', 'JAVA_HOME',
-                           'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR'), home=work / 'home')
+                           'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache'), home=work / 'home')
           for key in ('THINKTHEN_DOTNET', 'THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME',
                       'TT_DART', 'TT_FLUTTER', 'THINKTHEN_PHP_BIN'):
               env[key] = os.environ[key]
