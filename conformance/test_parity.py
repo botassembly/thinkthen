@@ -1069,26 +1069,33 @@ class InstalledInputs(unittest.TestCase):
             return parity.installed_artifacts(folder, self.consumers)
 
     def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
-        with tempfile.TemporaryDirectory() as scratch:
-            folder = Path(scratch)
-            self.packages(folder)
-            inputs, command, native = self.select(folder)
-            self.assertEqual(set(inputs), set(self.consumers) - {'objective-c'})
-            self.assertEqual(Path(command).name, self.command)
-            self.assertEqual(Path(native).name, self.native)
-            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
-                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
-                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
-                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
-            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
-                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-            for major in (16, 17, 18):
-                self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
-                                 f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-            for row in inputs.values():
-                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
-                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
-                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+        for apple_checks in ('', 'required'):
+            with self.subTest(apple_checks=apple_checks), patch.object(
+                    parity.sys, 'platform', 'linux'), patch.object(
+                    parity.os, 'environ', {'THINKTHEN_MACOS_APPLE_CHECKS': apple_checks}), tempfile.TemporaryDirectory() as scratch:
+                folder = Path(scratch)
+                self.packages(folder)
+                if apple_checks == 'required':
+                    (folder / 'thinkthen-swift-0.2.0-x86_64-unknown-linux-gnu.tar.gz').unlink()
+                inputs, command, native = self.select(folder)
+                self.assertEqual(set(inputs), {consumer for consumer in self.consumers
+                                               if not parity.apple_pending(consumer)})
+                self.assertEqual('swift' in inputs, apple_checks != 'required')
+                self.assertEqual(Path(command).name, self.command)
+                self.assertEqual(Path(native).name, self.native)
+                for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                              ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                              ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                    self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+                self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                                 'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+                for major in (16, 17, 18):
+                    self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                     f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+                for row in inputs.values():
+                    self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                    self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
 
     def test_apple_requires_its_objective_c_archive(self):
         with tempfile.TemporaryDirectory() as scratch:

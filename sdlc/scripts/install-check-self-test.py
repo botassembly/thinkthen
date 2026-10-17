@@ -309,6 +309,7 @@ class RefusalTable(unittest.TestCase):
                 source.assert_called_once_with(check.root / 'duckdb-source', identity['source_commit'],
                                                'https://github.com/duckdb/duckdb.git', True, identity['version'])
                 configure, build, report = check.commands
+                self.assertIn('-DGIT_COMMIT_HASH=' + identity['source_commit'][:10], configure)
                 self.assertIn('-DBUILD_EXTENSIONS=core_functions;json', configure)
                 self.assertIn('-DDISABLE_BUILTIN_EXTENSIONS=OFF', configure)
                 self.assertIn('-DENABLE_EXTENSION_AUTOINSTALL=OFF', configure)

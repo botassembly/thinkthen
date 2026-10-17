@@ -220,9 +220,24 @@ def sdk_project_locations(root):
         '<project><version>0.2.0</version><properties><thinkthen.session.jdk>22</thinkthen.session.jdk>'
         '<thinkthen.kotlin.coroutines.version>1.10.2</thinkthen.kotlin.coroutines.version></properties></project>')
     built = []
+    sdk_run = SDK.run
+    compilers = []
 
     def tool(command, project, env):
         args = list(map(str, command))
+        if args[0].endswith(('.bat', '.cmd')):
+            def capture(packed, **kwargs):
+                # cmd's batch parameter parser splits unquoted semicolons, even
+                # though Python's executable argument quoting leaves them bare.
+                assert isinstance(packed, str), 'SDK_BATCH_CLASSPATH_SPLIT'
+                assert packed == 'cmd.exe /d /s /c "' + ' '.join('"' + arg + '"' for arg in args) + '"', packed
+                cp = args[args.index('-classpath') + 1]
+                assert len(cp.split(';')) == 3 and all(Path(jar).is_file() for jar in cp.split(';')), cp
+                assert kwargs == dict(cwd=project, env=env, text=True, timeout=600)
+                compilers.append(Path(args[0]).name)
+                return subprocess.CompletedProcess(packed, 0, '', '')
+            with mock.patch.object(SDK, 'CAPTURE', side_effect=capture):
+                return sdk_run(command, project, env)
         if args[0] == 'dotnet':
             if args[1] == 'new':
                 # dotnet new defaults to a subdirectory when --name differs from cwd.
@@ -260,7 +275,8 @@ def sdk_project_locations(root):
         elif 'dependency:copy-dependencies' in args:
             assert (project / 'pom.xml').is_file()
             (project / 'dependencies').mkdir()
-            (project / 'dependencies/thinkthen.jar').touch()
+            for name in ('thinkthen.jar', 'kotlin-stdlib.jar', 'kotlinx-coroutines.jar'):
+                (project / 'dependencies' / name).touch()
         if args[-1].endswith('sample'):
             language = Path(args[-1]).parent.name
             if language == 'jvm':
@@ -277,8 +293,10 @@ def sdk_project_locations(root):
         return ''
 
     work = root / 'sdk'; work.mkdir()
-    with mock.patch.object(SDK, 'run', side_effect=tool), mock.patch.object(SDK, 'sdk', return_value=root):
+    with mock.patch.object(SDK, 'run', side_effect=tool), mock.patch.object(SDK, 'sdk', return_value=root), \
+            mock.patch.object(SDK.os, 'pathsep', ';'):
         SDK.consume(root / 'npm', registry, work)
+    assert compilers == ['kotlinc.bat', 'scalac.bat'], compilers
     (root / 'channel').mkdir()
     check = Check(root / 'channel', 'nuget', version)
     check.run = lambda *args: tool(args, check.project, check.env)
