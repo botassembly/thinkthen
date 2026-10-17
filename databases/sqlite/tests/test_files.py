@@ -9,7 +9,7 @@ import pathlib
 import sys
 import tempfile
 
-from helper import Backend, child, environment, expect, main
+from helper import Backend, child, environment, expect, main, question_directory
 
 REFUSED = "thinkthen local: the question file '{}' did not read: it must be a regular file at most 1048576 bytes (retryable: no)"
 QUESTION = json.dumps({"decide": "Is it red?"})
@@ -82,7 +82,7 @@ def test_complete_references_keep_native_roles_names_and_link_behavior() -> None
         (folder/'link.json').symlink_to(folder/'choose.json')
         backend = Backend()
         env = environment(backend)
-        named = pathlib.Path(env['XDG_CONFIG_HOME'])/'thinkthen/questions'
+        named = question_directory(env)
         named.mkdir(parents=True)
         (named/'saved.json').symlink_to(folder/'choose.json')
         (named/'good.json').write_text(json.dumps(sources['choose']))
