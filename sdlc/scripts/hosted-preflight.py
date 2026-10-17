@@ -272,6 +272,19 @@ def downloaded_inputs(check, target):
         check.file(ROOT / 'npm-dist' / f'thinkthen-{version}.tgz')
 
 
+
+def apple_input(check, local_only):
+    # The rehearsal creates this report after bootstrap-only qualification.
+    # Normal coverage still downloads the exact candidate report before preflight.
+    if local_only:
+        return
+    path = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-apple-coverage/totals.json'
+    def identity():
+        payload = json.loads(path.read_text())
+        require(payload.get('source') == os.environ.get('SHA') and payload.get('platform_collection') == 'apple',
+                'Apple coverage input must match the candidate SHA and Apple platform')
+    check.check('same-SHA Apple coverage input', identity)
+
 def qualify(check, stage, target):
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
@@ -367,7 +380,7 @@ def qualify(check, stage, target):
                 check.check(str(stamp), lambda stamp=stamp, digest=digest: require(
                     stamp.read_text().strip() == digest, 'pub cache hash differs from frozen lock'))
         if coverage:
-            check.file(Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-apple-coverage/totals.json')
+            apple_input(check, os.environ.get('PREFLIGHT_ONLY') == 'true')
 
 
 def main():

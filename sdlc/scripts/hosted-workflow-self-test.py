@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import os
 import io
+import json
 import runpy
 import tarfile
 from pathlib import Path
@@ -471,6 +472,9 @@ def preflight_cases():
     assert gate['jobs']['linux-coverage']['steps'] == steps
     preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
     qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
+    download = next(step for step in steps if step.get('name') == 'Download the same-SHA Apple coverage report')
+    assert download['if'] == "matrix.stage == 'coverage' && !inputs.preflight_only"
+    assert steps[preflight]['env'] == {'PREFLIGHT_ONLY': '${{ inputs.preflight_only }}'}
     assert preflight < qualification
     assert 'if' not in steps[preflight] and 'continue-on-error' not in steps[preflight]
     assert steps[qualification]['if'] == '${{ !inputs.preflight_only }}'
@@ -512,6 +516,19 @@ def preflight_cases():
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        # Rehearsal output is future input during bootstrap-only proof.
+        # The normal coverage path must refuse absent and different-SHA reports.
+        module = runpy.run_path(str(helper))
+        report = root / 'thinkthen-apple-coverage/totals.json'
+        for local_only, source, wanted in ((True, None, 0), (False, None, 1),
+                                           (False, 'a' * 40, 0), (False, 'b' * 40, 1)):
+            if source:
+                report.parent.mkdir(exist_ok=True)
+                report.write_text(json.dumps({'source': source, 'platform_collection': 'apple'}))
+            check = module['Preflight']()
+            with patch.dict(os.environ, {'RUNNER_TEMP': str(root), 'SHA': 'a' * 40}):
+                module['apple_input'](check, local_only)
+            assert int(bool(check.missing)) == wanted, (local_only, source, check.missing)
         # Exercise real checksum bytes through the installed-smoke entry point.
         (root / 'crates/thinkthen').mkdir(parents=True)
         manifest = REPO / 'crates/thinkthen/Cargo.toml'
