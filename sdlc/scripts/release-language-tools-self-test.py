@@ -302,6 +302,11 @@ def acquisition_cli(root):
                        "Path(os.environ['OBSERVE_INSTALLED']).touch()\n"
                        "if '-s' in sys.argv: print(os.environ['OBSERVE_PLAN'])\n")
     process.chmod(0o755)
+    process = process_dir / "dpkg-query"
+    process.write_text(f"#!{sys.executable}\nimport os, sys\n"
+                       "assert sys.argv[1:] == ['-W', '-f=${Provides}', 'libncurses-dev']\n"
+                       "print(os.environ['OBSERVE_PROVIDER'])\n")
+    process.chmod(0o755)
     process = process_dir / "sudo"
     process.write_text("#!/bin/sh\nexec \"$@\"\n")
     process.chmod(0o755)
@@ -326,6 +331,7 @@ def acquisition_cli(root):
     env = os.environ.copy()
     env.update(PATH=str(process_dir) + os.pathsep + env["PATH"], OBSERVE_LOG=str(log),
                OBSERVE_INSTALLED=str(root / "installed"),
+               OBSERVE_PROVIDER=f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev",
                OBSERVE_METADATA="\n\n".join(
                    f"Package: {name}\nVersion: {version}\nArchitecture: amd64\n"
                    "Filename: pool/main/o/openjdk.deb\nSHA256: " + "a" * 64

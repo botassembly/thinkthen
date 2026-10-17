@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import os
 import io
+import json
 import runpy
 import tarfile
 from pathlib import Path
@@ -464,6 +465,117 @@ def flutter_locked_setup_case():
         override.unlink()
 
 
+
+def preflight_cases():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    steps = gate['jobs']['linux-release']['steps']
+    assert gate['jobs']['linux-coverage']['steps'] == steps
+    preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
+    qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
+    download = next(step for step in steps if step.get('name') == 'Download the same-SHA Apple coverage report')
+    assert download['if'] == "matrix.stage == 'coverage' && !inputs.preflight_only"
+    assert steps[preflight]['env'] == {'PREFLIGHT_ONLY': '${{ inputs.preflight_only }}'}
+    assert preflight < qualification
+    assert 'if' not in steps[preflight] and 'continue-on-error' not in steps[preflight]
+    assert steps[qualification]['if'] == '${{ !inputs.preflight_only }}'
+    assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
+               if 'actions/upload-artifact@' in step.get('uses', ''))
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    for job, name in (('build', 'Check every prepared build input'),
+                      ('smoke', 'Check every prepared installed smoke input'),
+                      ('apple-coverage', 'Check every prepared Apple coverage input')):
+        step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
+        assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
+    with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
+        root = Path(temporary)
+        scripts = root / 'sdlc/scripts'
+        scripts.mkdir(parents=True)
+        helper = scripts / 'hosted-preflight.py'
+        helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
+        (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
+        (root / 'libraries/typescript').mkdir(parents=True)
+        (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
+        (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
+        tools = root / 'bin'
+        tools.mkdir()
+        probe = tools / 'fixture'
+        probe.write_text(f'#!{sys.executable}\n' +
+                         'from pathlib import Path\nimport sys\n' +
+                         'name = Path(sys.argv[0]).name\n' +
+                         'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
+                         'if name == "node": print("v22.22.3")\n' +
+                         'if name == "maturin": print("maturin 1.15.0")\n' +
+                         'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
+        probe.chmod(0o755)
+        required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
+        for tool in required:
+            (tools / tool).symlink_to(probe)
+        # Compiler fixtures stand at the process boundary; no digest check is bypassed.
+        command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
+        env = {'PATH': str(tools), 'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
+        ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert ready.returncode == 0 and ready.stderr == '', ready.stderr
+        assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
+        # Rehearsal output is future input during bootstrap-only proof.
+        # The normal coverage path must refuse absent and different-SHA reports.
+        module = runpy.run_path(str(helper))
+        # Missing lock-reading support must not hide an independent coverage input.
+        globals_ = module['qualify'].__globals__
+        check = module['Preflight']()
+        with patch.dict(globals_, ROOT=REPO, rust=lambda *args: None,
+                        cargo_cache=lambda *args: None, installed=lambda *args: None), \
+                patch.object(check, 'command'), patch.object(check, 'tools'), \
+                patch.dict(sys.modules, {'yaml': None}), \
+                patch.dict(os.environ, {'RUNNER_TEMP': str(root), 'PREFLIGHT_ONLY': 'false'}):
+            check.check('prepared host inputs', lambda: module['qualify'](check, 'coverage', 'x86_64-unknown-linux-gnu'))
+        assert any('yaml' in message for message in check.missing), check.missing
+        assert any('same-SHA Apple coverage input' in message for message in check.missing), check.missing
+        check = module['Preflight']()
+        module['dart_locks'](check)
+        for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
+            assert any(message.startswith(project + ' frozen Dart inputs:') for message in check.missing), check.missing
+        report = root / 'thinkthen-apple-coverage/totals.json'
+        for local_only, source, wanted in ((True, None, 0), (False, None, 1),
+                                           (False, 'a' * 40, 0), (False, 'b' * 40, 1)):
+            if source:
+                report.parent.mkdir(exist_ok=True)
+                report.write_text(json.dumps({'source': source, 'platform_collection': 'apple'}))
+            check = module['Preflight']()
+            with patch.dict(os.environ, {'RUNNER_TEMP': str(root), 'SHA': 'a' * 40}):
+                module['apple_input'](check, local_only)
+            assert int(bool(check.missing)) == wanted, (local_only, source, check.missing)
+        # Exercise real checksum bytes through the installed-smoke entry point.
+        (root / 'crates/thinkthen').mkdir(parents=True)
+        manifest = REPO / 'crates/thinkthen/Cargo.toml'
+        (root / 'crates/thinkthen/Cargo.toml').write_bytes(manifest.read_bytes())
+        import tomllib
+        version = tomllib.loads(manifest.read_text())['package']['version']
+        platform = root / 'platform'
+        platform.mkdir()
+        names = [f'thinkthen-c-{version}-x86_64-pc-windows-msvc.zip',
+                 f'thinkthen-{version}-x86_64-pc-windows-msvc.zip', 'thinkthen-first-run.tar.gz']
+        for name in names:
+            archive = platform / name
+            archive.write_bytes(('fixture payload ' + name).encode())
+            digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+            (platform / (name + '.sha256')).write_text(digest + '  ' + name + '\n')
+        (root / 'crate-dist').mkdir()
+        (root / 'crate-dist' / f'thinkthen-{version}.crate').write_bytes(b'fixture crate')
+        smoke = [sys.executable, str(helper), 'smoke', 'x86_64-pc-windows-msvc']
+        ready = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert ready.returncode == 0 and ready.stderr == '', ready.stderr
+        for name in names[:2]:
+            (platform / name).write_bytes(b'corrupted archive')
+        corrupt = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert corrupt.returncode == 1 and corrupt.stderr.count('SHA256 differs from pin') == 2, corrupt.stderr
+        for tool in ('node', 'cl.exe', 'lib.exe'):
+            (tools / tool).unlink()
+        missing = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert missing.returncode == 1, missing
+        for tool in ('node', 'cl.exe', 'lib.exe'):
+            assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
+        assert 'all prepared inputs are ready' not in missing.stdout
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -525,6 +637,8 @@ def parameter_cases():
             assert 'selected-swift' not in result.stdout
 
 
+preflight_cases()
+print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
 workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()

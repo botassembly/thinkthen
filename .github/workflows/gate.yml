@@ -33,6 +33,11 @@ on:
         description: Candidate tag for linux-release receipts
         type: string
         required: false
+      preflight_only:
+        description: Check prepared Linux inputs and stop before qualification
+        type: boolean
+        required: false
+        default: false
       apple_run:
         description: Same-commit rehearsal run containing apple coverage
         type: string
@@ -402,14 +407,18 @@ jobs:
       - name: Report hosted disk before the selected stage
         run: sdlc/scripts/release-workflow disk "$STAGE start" "$RELEASE_WORK" "$HOME/.cargo" "$HOME/.rustup" "$HOME/.cache/thinkthen-toolchains" target
       - name: Download the same-SHA Apple coverage report
-        if: matrix.stage == 'coverage'
+        if: matrix.stage == 'coverage' && !inputs.preflight_only
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: apple-coverage-${{ inputs.candidate_sha }}
           path: ${{ runner.temp }}/thinkthen-apple-coverage
           run-id: ${{ inputs.apple_run }}
           github-token: ${{ github.token }}
+      - name: Check every prepared hosted input
+        env: {PREFLIGHT_ONLY: '${{ inputs.preflight_only }}'}
+        run: python3 sdlc/scripts/hosted-preflight.py "$STAGE" "$TARGET"
       - name: Run the selected existing gates and retain their actual exits
+        if: ${{ !inputs.preflight_only }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -664,7 +673,7 @@ jobs:
               raise SystemExit(1)
           PY
       - name: Preserve actual gate evidence including failed command receipts
-        if: always()
+        if: always() && !inputs.preflight_only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: linux-release-${{ matrix.stage }}-${{ inputs.candidate_sha }}
@@ -672,7 +681,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Report final hosted disk use
-        if: always()
+        if: always() && !inputs.preflight_only
         run: sdlc/scripts/release-workflow disk "$STAGE finish" "$RELEASE_WORK" "$HOME/.cargo" "$HOME/.rustup" "$HOME/.cache/thinkthen-toolchains" target
 
   linux-coverage:
