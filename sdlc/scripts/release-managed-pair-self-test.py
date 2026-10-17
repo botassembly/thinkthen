@@ -91,9 +91,17 @@ def gate(base, expected):
     provenance.mkdir(exist_ok=True)
     for name in ("source.tar", "source.json", "c.json", "managed.json"):
         shutil.copyfile(base / name, provenance / name)
+    # This archive contract describes the Linux package on every test host.
+    # Only the host observation is synthetic; the real gate checks the archives.
+    tools = base / "host-tools"
+    tools.mkdir(exist_ok=True)
+    rustc = tools / "rustc"
+    rustc.write_text('#!/bin/sh\nprintf "host: %s\\n" "' + TARGET + '"\n')
+    rustc.chmod(0o755)
+    env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"])
     result = subprocess.run(["sh", str(HELPER.with_name("release-workflow")), "managed-gate",
                              str(base / "out"), TARGET, COMMIT, str(provenance)],
-                            capture_output=True, text=True)
+                            env=env, capture_output=True, text=True)
     assert result.returncode == expected, (result.returncode, result.stdout, result.stderr)
 
 
