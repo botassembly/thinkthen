@@ -46,7 +46,10 @@ target_include_directories(thinkthen_loadable_extension PRIVATE
   "${THINKTHEN_ROOT}/databases/duckdb/cpp/src")
 add_dependencies(thinkthen_loadable_extension thinkthen_community_rust)
 if(APPLE)
+  # The linker records archive-member paths in N_OSO debug symbols after the
+  # compiler's path remaps. Keep those paths relative to this extension build.
   target_link_options(thinkthen_loadable_extension PRIVATE
+    "LINKER:-oso_prefix,${CMAKE_CURRENT_BINARY_DIR}/"
     "LINKER:-load_hidden,${THINKTHEN_RUST_STATICLIB}")
 else()
   target_link_libraries(thinkthen_loadable_extension "${THINKTHEN_RUST_STATICLIB}")
