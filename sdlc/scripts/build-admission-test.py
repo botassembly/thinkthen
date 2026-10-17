@@ -383,20 +383,21 @@ class Admission(unittest.TestCase):
                 self.assert_resources_available()
 
     def test_hosted_context_survives_rung_environment_isolation(self):
-        self.load.write_text(str((os.cpu_count() or 1) + 1))
         scripts = self.entry_scripts()
         rung = scripts / 'rung'
         rung.write_text('set -eu\n. "$(dirname -- "$0")/heavy-lock"\n'
                         'test "$GITHUB_ACTIONS" = true\n'
                         'test "$RUNNER_ENVIRONMENT" = github-hosted\n'
-                        'test "${PRIVATE_SERVICE_KEY+x}" != x\n')
+                        'test "${PRIVATE_SERVICE_KEY+x}" != x\n'
+                        'test "${THINKTHEN_HEAVY_LOCK+x}" != x\n')
         env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock),
                'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                'PRIVATE_SERVICE_KEY': 'fake-rung-boundary'}
         child = subprocess.Popen(['/bin/sh', str(rung)], env=env, start_new_session=True)
         self.children.append(child)
         self.assertEqual(self.wait_entry(child), 0)
-        self.assert_resources_available()
+        self.assertFalse(self.lock.exists())
+        self.assertFalse(Path(str(self.lock) + '.priority').exists())
 
     def test_exit_timeout_and_termination_reap_children_and_release_permits(self):
         for mode in ('exit', 'timeout', 'terminate', 'interrupt', 'hangup'):
@@ -521,7 +522,7 @@ exit 23
         self.assertEqual(self.wait_entry(child), 23)
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
         self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
-        # The existing standalone shell entry still passes through admission.
+        # The standalone sanitization entry also returns successfully.
         self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'heavy-lock')], env=env, timeout=3).returncode, 0)
         rung = scripts / 'rung'
         rung.write_text('''set -eu
@@ -569,7 +570,8 @@ assert 'THINKTHEN_API_KEY' not in os.environ
 assert 'PRIVATE_SERVICE_KEY' not in os.environ
 assert 'heavy_library' not in os.environ
 assert 'heavy_scripts' not in os.environ
-assert os.environ['THINKTHEN_HEAVY_LOCK_HELD'] == os.environ['THINKTHEN_HEAVY_LOCK']
+assert 'THINKTHEN_HEAVY_LOCK' not in os.environ
+assert 'THINKTHEN_HEAVY_LOCK_HELD' not in os.environ
 p = pathlib.Path(sys.argv[1])
 p.with_suffix('.started').touch()
 while not p.exists(): time.sleep(.01)
@@ -578,19 +580,18 @@ RUNG
         env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock),
                'THINKTHEN_API_KEY': 'fake-rung-boundary', 'PRIVATE_SERVICE_KEY': 'fake-private-boundary',
                'heavy_library': '1', 'heavy_scripts': str(hostile)}
-        for index in range(5):
-            name = 'rung-' + str(index)
-            child = subprocess.Popen(['/bin/sh', str(rung), str(self.root / name)], env=env)
-            self.children.append(child)
-            if index < 4:
+        # PM owns ordinary rung admission. A held compiler barrier must not
+        # block any rung or make it consume one of the retained release permits.
+        with self.lock.open('a+b') as checkpoint:
+            fcntl.flock(checkpoint, fcntl.LOCK_EX)
+            for index in range(5):
+                name = 'rung-' + str(index)
+                child = subprocess.Popen(['/bin/sh', str(rung), str(self.root / name)], env=env)
+                self.children.append(child)
                 self.wait_for(lambda: self.started(name) or child.poll() is not None)
                 self.assertTrue(self.started(name))
-        time.sleep(.1)
-        self.assertFalse(self.started('rung-4'))
-        self.assertFalse(invoked.exists())
-        self.release('rung-0')
-        self.wait_for(lambda: self.started('rung-4'))
-        for index in range(1, 5):
+        self.assertFalse(Path(str(self.lock) + '.priority').exists())
+        for index in range(5):
             self.release('rung-' + str(index))
         for child in self.children:
             self.assertEqual(child.wait(timeout=2), 0)
