@@ -179,6 +179,52 @@ def linux_tool_destination_case():
         assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
 
 
+def flutter_locked_setup_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                if step.get('name') == 'Acquire Flutter from its pinned official source commit')
+    command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
+    with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
+        root = Path(temporary).resolve()
+        sdk = root / 'home/.local/opt/flutter'
+        tools = sdk / 'packages/flutter_tools'
+        tools.mkdir(parents=True)
+        (tools / 'pubspec.lock').write_text('SDK lock fixture\n')
+        for source in (REPO / 'libraries/dart').rglob('pubspec.*'):
+            if source.name not in ('pubspec.yaml', 'pubspec.lock'):
+                continue
+            target = root / source.relative_to(REPO)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(source.read_bytes())
+        example = root / 'libraries/dart/flutter/example'
+        manifest = yaml.safe_load((example / 'pubspec.yaml').read_text())
+        lock = yaml.safe_load((example / 'pubspec.lock').read_text())
+        for package in ('thinkthen_dart', 'thinkthen_flutter'):
+            path = manifest['dependencies'][package]['path']
+            assert lock['packages'][package]['source'] == 'path'
+            assert lock['packages'][package]['description']['path'] == path
+            assert (example / path / 'pubspec.yaml').is_file()
+        assert not (root / 'libraries/dart/flutter/pubspec.lock').exists()
+        resolver = root / 'resolver'
+        resolver.write_text(f'#!{sys.executable}\n' +
+                            'from pathlib import Path\nimport sys\n' +
+                            'assert sys.argv[1:] == ["pub", "get", "--enforce-lockfile"]\n' +
+                            'assert Path("pubspec.lock").is_file(), "Cannot enforce a missing pubspec.lock"\n' +
+                            'with open(sys.argv[0] + ".calls", "a") as calls:\n' +
+                            '    calls.write(str(Path.cwd()) + "\\n")\n')
+        resolver.chmod(0o755)
+        before = {path: path.read_bytes() for path in root.rglob('pubspec.*')}
+        env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home'),
+               'dart': str(resolver), 'flutter': str(resolver)}
+        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+        calls = Path(str(resolver) + '.calls').read_text().splitlines()
+        expected = [str(tools), str(root / 'libraries/dart'), str(example)]
+        assert calls == expected, (calls, expected)
+        assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
+
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -242,5 +288,6 @@ def parameter_cases():
 
 workflow_cases()
 linux_tool_destination_case()
+flutter_locked_setup_case()
 parameter_cases()
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
