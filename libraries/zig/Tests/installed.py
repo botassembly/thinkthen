@@ -15,11 +15,11 @@ with tempfile.TemporaryDirectory(prefix='package-', dir=ROOT / 'libraries/zig/ta
     package.mkdir()
     with tarfile.open(archive) as source: source.extractall(package, filter='data')
     subprocess.run([sys.executable, str(ROOT / 'libraries/zig/Tests/installed-session.py'), str(archive)],
-                   env=child_env(home=scratch, THINKTHEN_ZIG=os.environ.get('THINKTHEN_ZIG', 'zig'),
+                   env=child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=scratch, THINKTHEN_ZIG=os.environ.get('THINKTHEN_ZIG', 'zig'),
                                  THINKTHEN_COVERAGE_STAGE=os.environ.get('THINKTHEN_COVERAGE_STAGE', ''),
                                  CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))), check=True)
     subprocess.run([sys.executable, str(ROOT / 'libraries/zig/Tests/complete_parity.py')],
-                   env=child_env(home=scratch, THINKTHEN_ZIG=os.environ.get('THINKTHEN_ZIG', 'zig'),
+                   env=child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=scratch, THINKTHEN_ZIG=os.environ.get('THINKTHEN_ZIG', 'zig'),
                                  THINKTHEN_COVERAGE_STAGE=os.environ.get('THINKTHEN_COVERAGE_STAGE', ''),
                                  CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target')),
                                  THINKTHEN_TEST_PROFILE=os.environ.get('THINKTHEN_TEST_PROFILE', 'routine'),

@@ -37,7 +37,7 @@ def main():
             'require': {'botassembly/thinkthen': '0.2.0'}}))
         (work / 'barrier').mkdir()
         (work / 'home').mkdir()
-        install_env = child_env(home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
+        install_env = child_env(keep=('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT'), home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
             COMPOSER_DISABLE_NETWORK='1', COMPOSER_HOME=str(work / 'composer-home'))
         composer = [str(args.composer.resolve())]
         if args.composer.suffix == '.phar':

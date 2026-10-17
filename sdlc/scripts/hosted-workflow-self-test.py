@@ -249,16 +249,30 @@ def linux_nested_tools_case():
         subprocess.run(['/bin/sh', '-ec', cache_handoff], env={**env, 'work': str(root),
             'STAGE': 'core', 'GITHUB_ENV': str(env_file)}, check=True, timeout=5)
         env.update(line.split('=', 1) for line in env_file.read_text().splitlines())
+        env.update(GITHUB_ACTIONS='true', RUNNER_ENVIRONMENT='github-hosted',
+                   GITHUB_TOKEN='fake-hosted-filter', PRIVATE_SERVICE_KEY='fake-hosted-filter')
         qualification = next(step['run'] for step in steps if step.get('name') ==
                              'Run the selected existing gates and retain their actual exits')
         selection = qualification[qualification.index("env = child_env("):qualification.index("for key in ('THINKTHEN_DOTNET'")].rstrip() + '\n'
         expected_cache = str(root / 'core/npm-cache')
-        script = ('from pathlib import Path\nfrom conformance.children.children import child_env\n'
+        hosted = ('assert env["GITHUB_ACTIONS"] == "true"\n'
+                  'assert env["RUNNER_ENVIRONMENT"] == "github-hosted"\n'
+                  'assert "GITHUB_TOKEN" not in env and "PRIVATE_SERVICE_KEY" not in env\n')
+        probe = ('import os,sys\n'
+                 f'sys.path.insert(0, {str(REPO / "databases/duckdb/tools")!r})\n'
+                 'from source_hosts import tool_environment\n'
+                 'env = os.environ\n' + hosted +
+                 'os.environ.update(GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter")\n'
+                 'env = tool_environment()\n' + hosted)
+        script = ('import subprocess,sys\nfrom pathlib import Path\nfrom conformance.children.children import child_env\n'
                   f'work = Path({str(root)!r})\n' + selection +
-                  f'assert env["npm_config_cache"] == {expected_cache!r}\n'
-                  'import subprocess\nsubprocess.run(["sh", "-ec", '
+                  hosted + f'assert env["npm_config_cache"] == {expected_cache!r}\n'
+                  'subprocess.run(["sh", "-ec", '
                   '". sdlc/scripts/allow-list; test -d \\\"$npm_config_cache\\\""], '
-                  'env=env, check=True)\n')
+                  'env=env, check=True)\n'
+                  f'subprocess.run([sys.executable, {str(REPO / "databases/duckdb/tools/cache_lock.py")!r}, '
+                  f'{str(root / "cache.lock")!r}, sys.executable, "-c", {probe!r}], '
+                  'env=dict(env, GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter"), check=True)\n')
         Path(expected_cache).mkdir(parents=True)
         subprocess.run([sys.executable, '-c', script], cwd=REPO, env=env, check=True, timeout=5)
 

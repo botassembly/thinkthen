@@ -311,7 +311,7 @@ def tool_environment():
 
 def consumer_environment(scratch, port):
     # Preserve tool locations before replacing HOME; never copy user config.
-    names = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'XDG_RUNTIME_DIR',
+    names = ('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT', 'PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'XDG_RUNTIME_DIR',
              'RUSTFLAGS', 'CFLAGS', 'CXXFLAGS', 'THINKTHEN_FULL_COMPILER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_TEST_OPT_LEVEL',
              'CARGO_PROFILE_DEV_DEBUG', 'CARGO_PROFILE_TEST_DEBUG',
              'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF', 'THINKTHEN_SESSION_JDK_HOME',
