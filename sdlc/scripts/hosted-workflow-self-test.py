@@ -158,7 +158,9 @@ def linux_tool_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
                 if step.get('name') == 'Install existing pinned Linux host and consumer tools')
-    block = step.split('command -v mustmatch\n', 1)[1].split('chmod +x "$HOME/.local/bin/jq"', 1)[0]
+    block, checksum = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)
+    assert '. sdlc/scripts/fetch.sh\n' in block and 'fetch_url "$HOME/.local/bin/jq" ' in block
+    assert '"$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict' in checksum.splitlines()[0]
     url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
         root = Path(temporary)
@@ -174,6 +176,7 @@ def linux_tool_destination_case():
                                 cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
+        assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
 
 
 def parameter_cases():
