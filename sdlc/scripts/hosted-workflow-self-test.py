@@ -662,6 +662,9 @@ def preflight_cases():
         scripts.mkdir(parents=True)
         helper = scripts / 'hosted-preflight.py'
         helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
+        children = root / 'conformance/children'
+        children.mkdir(parents=True)
+        (children / 'children.py').write_bytes((REPO / 'conformance/children/children.py').read_bytes())
         (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
         (root / 'libraries/typescript').mkdir(parents=True)
         (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
@@ -689,13 +692,31 @@ def preflight_cases():
         # A failed prepared command must retain the error needed to repair its input.
         maturin = tools / 'maturin'
         maturin.unlink()
-        maturin.write_text(f'#!{sys.executable}\nimport sys\n'
+        maturin.write_text(f'#!{sys.executable}\nimport os, sys\n'
                           'print("prepared command output")\n'
                           'print("prepared command error", file=sys.stderr)\n'
+                          'if os.environ.get("PREFLIGHT_NOISY"):\n'
+                          '    for name in ("THINKTHEN_API_KEY", "GITHUB_TOKEN", "PRIVATE_SERVICE_KEY", "db_password", "AUTHORIZATION"):\n'
+                          '        print(os.environ[name])\n'
+                          '        print(os.environ[name], file=sys.stderr)\n'
+                          '    print("o" * 20000)\n'
+                          '    print("e" * 20000, file=sys.stderr)\n'
+                          '    print("prepared command output end")\n'
+                          '    print("ModuleNotFoundError: No module named prepared_fixture", file=sys.stderr)\n'
                           'sys.exit(9)\n')
         maturin.chmod(0o755)
         failed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert failed.returncode == 1 and 'exit 9\nprepared command output\nprepared command error' in failed.stderr, failed.stderr
+        secrets = {name: 'fake-preflight-private-' + str(index) for index, name in enumerate(
+            ('THINKTHEN_API_KEY', 'GITHUB_TOKEN', 'PRIVATE_SERVICE_KEY', 'db_password', 'AUTHORIZATION'))}
+        failed = subprocess.run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1', **secrets),
+                                capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 1 and failed.stdout == '', failed
+        assert len(failed.stderr) < 10000, 'failed child output was not bounded'
+        assert all(value not in failed.stderr for value in secrets.values()), 'failed child output exposed an environment secret'
+        for marker in ('prepared command output', 'prepared command error', 'prepared command output end',
+                       'ModuleNotFoundError: No module named prepared_fixture', '[truncated]'):
+            assert marker in failed.stderr, (marker, failed.stderr)
         maturin.unlink()
         maturin.symlink_to(probe)
         # Rehearsal output is future input during bootstrap-only proof.
