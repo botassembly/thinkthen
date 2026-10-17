@@ -185,7 +185,7 @@ def flutter_locked_setup_case():
                 if step.get('name') == 'Acquire Flutter from its pinned official source commit')
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
     with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         sdk = root / 'home/.local/opt/flutter'
         tools = sdk / 'packages/flutter_tools'
         tools.mkdir(parents=True)
@@ -219,8 +219,9 @@ def flutter_locked_setup_case():
         result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
                                 capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
-        assert Path(str(resolver) + '.calls').read_text().splitlines() == [
-            str(tools), str(root / 'libraries/dart'), str(example)]
+        calls = Path(str(resolver) + '.calls').read_text().splitlines()
+        expected = [str(tools), str(root / 'libraries/dart'), str(example)]
+        assert calls == expected, (calls, expected)
         assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
 
 
