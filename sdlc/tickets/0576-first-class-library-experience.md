@@ -210,3 +210,4 @@ The 0581 result shape, the 0582 details routes outside SQLite and the 0580 Polar
 - 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.
 - 2026-10-14 next: Merged the accepted B+ PostgreSQL typed family at d6145fa84 with obsolete exports removed, unchanged accepted source, 225 retained parity passes and focused rebuilt native checks passing; continue remaining libraries and the candidate ceiling reconciliation.
 - 2026-10-14 next: Merged the freshly accepted Objective-C library at 038586e17 with unchanged reviewed source, passing source gates and retained exact-revision Mac installed checks; finish remaining library reviews and shared candidate proof.
+- 2026-10-17 next: Integrated on the 0.2 release branch ticket/0543-final; lands with 0543 once the frozen candidate qualifies, so it runs no separate lane.
