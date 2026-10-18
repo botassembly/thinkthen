@@ -7,11 +7,13 @@ import io
 import json
 import runpy
 import shutil
+import signal
 import tarfile
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -255,6 +257,64 @@ def linux_nested_tools_case():
                   'env=dict(env, GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter"), check=True)\n')
         Path(expected_cache).mkdir(parents=True)
         subprocess.run([sys.executable, '-c', script], cwd=REPO, env=env, check=True, timeout=5)
+
+
+def linux_failed_phase_evidence_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    command = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                   if step.get('name') == 'Run the selected existing gates and retain their actual exits')
+    # Exercise the actual driver, replacing expensive gate commands with a child
+    # that writes the same evidence boundary and exits with a real process status.
+    driver = command[command.index('result = ('):].rsplit('\nPY', 1)[0]
+    read_text = Path.read_text
+    def pressure_text(path, *args, **kwargs):
+        return 'some avg10=0.00\n' if str(path) == '/proc/pressure/io' else read_text(path, *args, **kwargs)
+    for code, evidence in ((0, True), (1, True), (23, True), (23, False)):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-linux-phase-') as temporary:
+            root = Path(temporary)
+            out = root / 'out'; out.mkdir()
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                            '-c', 'user.email=fixture@example.invalid', 'commit',
+                            '--allow-empty', '-qm', 'Initialize fixture'], check=True)
+            sha = subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True).strip()
+            invoked = []
+            def child(command, env, deadline):
+                invoked.append(command)
+                if command[:2] != ['sh', 'sdlc/scripts/test-full-cases']:
+                    return subprocess.run([sys.executable, '-c', 'raise SystemExit(0)'], env=env).returncode
+                script = ('from pathlib import Path\n'
+                          "p=Path('target/parity'); p.mkdir(parents=True)\n"
+                          "(p/'consumer.log').write_text('child diagnostic\\n')\n"
+                          "(p/'matrix.json').write_text('[{\"exit\": %d}]\\n')\n" % code) if evidence else ''
+                return subprocess.run([sys.executable, '-c', script + f'raise SystemExit({code})'], env=env).returncode
+            namespace = dict(root=root, out=out, sha=sha, tag='rc/fixture', stage='functional',
+                             env={}, admission=SimpleNamespace(run_owned=child, child_pids=lambda: []),
+                             Path=Path, os=os, subprocess=subprocess, signal=signal, time=time,
+                             shutil=shutil, json=json, hashlib=hashlib)
+            previous = Path.cwd()
+            try:
+                os.chdir(root)
+                with patch.object(Path, 'read_text', new=pressure_text):
+                    try:
+                        exec(compile(driver, 'gate.yml', 'exec'), namespace)
+                    except RuntimeError as error:
+                        assert code != 0 and str(error) == f'fullcases failed: {code}', error
+                    else:
+                        assert code == 0
+            finally:
+                os.chdir(previous)
+            result = json.loads((out / 'result.json').read_text())
+            assert result['state'] == ('failed' if code else 'completed'), result
+            assert result['phases']['fullcases']['command_exit'] == code
+            assert result['phases']['fullcases']['exit'] == code
+            assert set(result['phases']) == ({'cli-fresh', 'fullcases'} if code else
+                                             {'cli-fresh', 'fullcases', 'package', 'stress'})
+            assert len(invoked) == (2 if code else 4)
+            assert (out / 'fullcases-parity').exists() == evidence
+            if evidence:
+                assert (out / 'fullcases-parity/consumer.log').read_text() == 'child diagnostic\n'
+                assert json.loads((out / 'fullcases-parity/matrix.json').read_text()) == [{'exit': code}]
 
 
 def postgresql_package_case():
@@ -823,6 +883,7 @@ print('hosted preflight: ready, aggregate missing, checksum corruption and Apple
 workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
+linux_failed_phase_evidence_case()
 postgresql_package_case()
 linux_coverage_destination_case()
 dart_cache_setup_case()
