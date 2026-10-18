@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--smoke-binaries', type=Path)
     args = parser.parse_args()
     helper = [sys.executable, 'sdlc/scripts/check_verdict.py']
-    required = run([*helper, 'verdict', 'required check', '77'])
+    required = run(['sh', '-c', 'REPO=$PWD; . sdlc/scripts/verdict.sh; verdict "required check" 77'])
     assert required.returncode == 1 and 'FAIL required check (not run)' in required.stdout, required
     env = dict(os.environ, THINKTHEN_TEST_PROFILE='unknown')
     unknown = run(['sh', 'libraries/go/check.sh'], env)
@@ -41,6 +41,9 @@ def main():
                 source = shutil.which(name)
                 assert source, name
                 (path / name).symlink_to(source)
+            # Inject loss after resolution: a fresh resolver may legitimately
+            # restore a pinned tool. Run the actual smoke and binding checks
+            # with the resolved-group marker and remove only their tool paths.
             env = dict(os.environ, PATH=str(path), THINKTHEN_RESOLVED_TOOLS='python')
             smoke = run(['sh', 'sdlc/scripts/smoke', '--one', str(args.smoke_binaries.resolve()),
                          'libraries/python'], env)

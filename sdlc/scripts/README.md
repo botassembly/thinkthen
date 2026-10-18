@@ -55,7 +55,7 @@ After checking the approved monetary cap, remaining spending authority and the p
 
 `sdlc/scripts/live --status` takes the shared lock, validates the durable initialization marker and every ledger row, and prints the limit, charge, and remainder. Extensions increase the limit; charges increase the charged total. Each total must stay within the signed-64-bit maximum, and each charge must fit the admission available at that row. A missing ledger after initialization, a partial row, an unterminated row, or an unknown row disables live work. Older helpers reject extension rows as unknown and disable live work safely; use an updated helper in every checkout that shares the authority. If appending or syncing reports failure, the charge or extension may still exist. Run `--status` or inspect the ledger under the lock before any retry. A partial row disables further operations; do not retry blindly or repair the ledger by hand.
 
-A full candidate fails when any required consumer exits 77, stays platform-pending, skips an assertion or executes no assertions. On Linux only, the coordinator may set `THINKTHEN_MACOS_APPLE_CHECKS=required` when the same revision passes both Objective-C and Swift checks on macOS. The Linux report keeps those two rows pending and executes every other consumer. This setting survives the campaign environment allow-list; it grants no exception to another binding. Routine smoke keeps its existing toolchain exclusions. Run routine `test` and `lint` on the combined revision before the release campaign; `test-full-cases` does not run those gates.
+A full candidate fails when any required consumer does not run, skips an assertion or executes no assertions. Only platform exclusions declared in `sdlc/tools.json` may skip a consumer. The shared verdict prints the allowing manifest entry. Run routine `test` and `lint` on the combined revision before the release campaign; `test-full-cases` does not run those gates.
 
 ## One-time migration from version one
 
@@ -78,7 +78,7 @@ The ceiling in `sdlc/ratchet.json` equals the measured Rust total. A raise recor
 
 On an approved Windows runner, run `python sdlc/scripts/windows-installer-test.py --binary PACKED-COMMAND --version VERSION`. The default requires both Windows PowerShell 5.1 and PowerShell 7. The binary must come from the freshly verified Windows release ZIP. The native fixture checks private file access, sharing refusal, actual partial destination states, retained snapshots, interrupted-state refusal and full loopback installations under both hosts. Hand-started workflow dispatch and public publication remain coordinator decisions.
 
-`surfaces --stress` selects the existing stress branches in Polars, TypeScript, R, SQLite, DuckDB and PostgreSQL before launch. Every selected check must run and pass; exit 77 fails. Other registered bindings are reported as having no stress selection, without a pass claim. Stress does not pack release artifacts. Full functional parity still requires every consumer, subject only to the explicit Apple delegation above.
+`surfaces --stress` selects the existing stress branches in Polars, TypeScript, R, SQLite, DuckDB and PostgreSQL before launch. Every selected check must run and pass; exit 77 fails. Other registered bindings are reported as having no stress selection, without a pass claim. Stress does not pack release artifacts. Full functional parity requires every consumer supported by the manifest on the current host.
 
 ## Release-only coverage
 

@@ -16,6 +16,9 @@ set -eu
 . "$(dirname -- "$0")/allow-list"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# Smokes build installed consumers for the full functional checkpoint. Reapply
+# its compiler settings after sanitizing both the parent and --one children.
+. sdlc/scripts/full-compiler
 . sdlc/scripts/scratch.sh
 . sdlc/scripts/verdict.sh
 case_id=01-decide-yes-captured
