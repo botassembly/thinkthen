@@ -62,10 +62,15 @@ class Cases(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn('unknown THINKTHEN_TEST_PROFILE', result.stderr)
         for profile in ('routine', 'full', 'stress', 'smoke'):
-            result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
-                                 'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
-            self.assertEqual(result.returncode, 77, result.stderr)
-            self.assertIn('toolchain is missing', result.stdout)
+            with self.subTest(profile=profile):
+                result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                     'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
+                diagnostic = result.stdout + result.stderr
+                self.assertEqual(result.returncode, 1, diagnostic)
+                self.assertEqual(result.stdout, 'not run: the DuckDB v1.5.6 toolchain is missing; '
+                                 'run databases/duckdb/tools/setup.sh --fetch\n')
+                self.assertNotIn(self.env['THINKTHEN_API_KEY'], diagnostic)
+                self.assertNotIn('selected.tar.gz', diagnostic)
         self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
         result = run([sys.executable, str(HERE / 'source_hosts.py')],
                      {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
