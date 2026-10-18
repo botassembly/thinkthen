@@ -85,7 +85,8 @@ def environment(root):
                MISE_USE_TOML='0', MISE_YES='1', MISE_CARGO_BINSTALL='0',
                MISE_JOBS='2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
                RUSTUP_HOME=str(root / 'rustup'),
-               PIP_CONFIG_FILE='/dev/null', PIP_CACHE_DIR=str(root / 'pip-cache'), PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
+               PIP_CONFIG_FILE='/dev/null', PIP_CACHE_DIR=str(root / 'pip-cache'),
+               SCCACHE_DIR=str(root / 'sccache'), PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
                UV_PYTHON_INSTALL_DIR=str(root / 'python'))
     return env
 

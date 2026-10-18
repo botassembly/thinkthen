@@ -65,6 +65,27 @@
         "common"
       ]
     },
+    "sccache": {
+      "commands": [
+        "sccache"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ],
+      "provider": "aqua:mozilla/sccache",
+      "version": "0.10.0",
+      "probe": {
+        "argv": [
+          "sccache",
+          "--version"
+        ],
+        "contains": "sccache {version}"
+      }
+    },
     "rust": {
       "commands": [
         "cargo",
