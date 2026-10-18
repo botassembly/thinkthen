@@ -163,12 +163,9 @@ impl CompleteAnnotationMember<'_> {
     /// The typed failed-member cause, absent for a successful member.
     #[must_use]
     pub fn failure(&self) -> Option<FailureCause> {
-        self.canonical
-            .reading
-            .failed()
-            .map(|(_, failure, _)| {
-                crate::public::annotated::cause(core::FailedValue::new(failure).cause())
-            })
+        self.canonical.reading.failed().map(|(_, failure, _)| {
+            crate::public::annotated::cause(core::FailedValue::new(failure).cause())
+        })
     }
 
     /// The saved question key associated with this logical member.

@@ -44,7 +44,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
 
-[ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md) fixes the coordinated result/2 and cache/2 target. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions. The [result contract](result.md) distinguishes complete results from compatibility examples and records host adoption limits. The target preserves bare/scalar compatibility, never claims a cache hit or answered model without observations, and reserves proxy types without activating them. It depends on 0449's one-route boundary under ADR 0119; 0443/0444/0445/0450 and the typed carrier tickets own adoption.
+[ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md) fixes the coordinated result/2 and cache/2 target. The generated [result schema](result.schema.json) contains only result/2 detailed definitions. The [result contract](result.md) describes the complete results and current host views. The target preserves bare values, never claims a cache hit or answered model without observations, and reserves proxy types without activating them. It depends on 0449's one-route boundary under ADR 0119; 0443/0444/0445/0450 and the typed carrier tickets own adoption.
 
 ## Status words
 

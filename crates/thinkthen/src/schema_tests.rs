@@ -13,10 +13,7 @@ use serde_json::{Map, Value, json};
 
 use crate::cli::annotate::error_row::Row;
 use crate::cli::relate::result::Details;
-use crate::core::{
-    NamedValues, RecordValue, RelationEdge,
-    RelationEntity, Value as Bare,
-};
+use crate::core::{NamedValues, RecordValue, RelationEdge, RelationEntity, Value as Bare};
 use crate::engine::facade::Recognized;
 use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson};
 
@@ -110,10 +107,7 @@ fn generated(reference: &str) -> String {
             "relate",
             json!({"type": "object", "required": ["edges"], "properties": {"edges": edges}}),
         ),
-        (
-            "detailed",
-            any_of(&["completeDetailed"]),
-        ),
+        ("detailed", any_of(&["completeDetailed"])),
     ];
     register(&mut generator);
     complete::register(&mut generator);

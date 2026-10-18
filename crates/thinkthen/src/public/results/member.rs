@@ -49,7 +49,6 @@ impl fmt::Debug for Details {
     }
 }
 
-
 #[cfg(test)]
 impl Details {
     pub(in crate::public) fn of_complete<T: Serialize>(

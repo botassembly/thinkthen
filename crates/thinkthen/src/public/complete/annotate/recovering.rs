@@ -39,7 +39,7 @@ impl Engine {
             rejected,
             |ordinal, held, row| {
                 let outcome =
-                    complete_row(&engine, &questions.0, &stop, &held, (ordinal, false), row).map(
+                    complete_row(&engine, &questions.0, &stop, &held, ordinal, row).map(
                         |result| {
                             RequestValue::Annotations(vec![CompleteRecord {
                                 original: held.original,
@@ -138,7 +138,7 @@ impl Engine {
                     &questions.0,
                     stop,
                     &original.held,
-                    (at, false),
+                    at,
                     row,
                 )
                 .map(|result| {

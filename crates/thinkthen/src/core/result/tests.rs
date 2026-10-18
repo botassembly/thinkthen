@@ -34,4 +34,3 @@ fn meta_names_the_tool_and_drops_the_usage_a_backend_never_reported() {
         )
     );
 }
-
