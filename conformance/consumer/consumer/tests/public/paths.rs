@@ -83,6 +83,7 @@ fn environment_engine_child() {
     token.cancel();
     // Twice, so the second round comes from each path's own cache.
     let mut previous_observations = None;
+    let mut previous_answer_ids = None;
     for _ in 0..2 {
         assert_eq!(
             explicit
@@ -107,23 +108,15 @@ fn environment_engine_child() {
             .expect("the environment details");
         let other = &other.results()[0];
         assert_eq!(comparable_score(one), comparable_score(other));
-        assert_ne!(
-            one.answer_id(),
-            other.answer_id(),
-            "separate live observations derive separate answer identities"
-        );
+        let answer_ids = (one.answer_id().to_owned(), other.answer_id().to_owned());
+        compare_observations(previous_answer_ids.as_ref(), &answer_ids);
+        previous_answer_ids = Some(answer_ids);
         assert_eq!(one.value(), other.value());
         assert_eq!(one.probabilities(), other.probabilities());
         assert_eq!(one.reported_usage(), other.reported_usage());
         let observations = (
-            (
-                one.answer_id().to_owned(),
-                one.identity().observations().to_vec(),
-            ),
-            (
-                other.answer_id().to_owned(),
-                other.identity().observations().to_vec(),
-            ),
+            one.identity().observations().to_vec(),
+            other.identity().observations().to_vec(),
         );
         compare_observations(previous_observations.as_ref(), &observations);
         previous_observations = Some(observations);
@@ -416,14 +409,11 @@ fn compare_observations<T: PartialEq + std::fmt::Debug>(
     current: &(T, T),
 ) {
     if let Some(previous) = previous {
-        assert_eq!(
-            current, previous,
-            "each cache retains its own observation and answer identity"
-        );
+        assert_eq!(current, previous, "each cache retains its own identity");
     } else {
         assert_ne!(
             current.0, current.1,
-            "separate live answers have separate observations"
+            "separate live answers have separate identities"
         );
     }
 }
