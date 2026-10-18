@@ -124,6 +124,7 @@ fi
 # https://doc.rust-lang.org/cargo/reference/environment-variables.html
 # https://www.msys2.org/docs/filesystem-paths/
 RUSTFLAGS=${RUSTFLAGS:-}
+CFLAGS=${CFLAGS:-}
 if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 	rust_separator=$(printf '\037')
 	if [ "${CARGO_ENCODED_RUSTFLAGS+x}" != x ]; then
@@ -168,6 +169,16 @@ fi
 export RUSTFLAGS CFLAGS CXXFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage
+expected_archive=
+trap '
+	pack_status=$?
+	if [ -n "$expected_archive" ] && [ ! -f "$expected_archive" ]; then
+		echo "release-pack: missing archive $expected_archive" >&2
+		[ "$pack_status" -ne 0 ] || pack_status=1
+	fi
+	scratch_clean
+	exit "$pack_status"
+' EXIT
 
 # The build folder of the crate in $1, by the one rule every check reads.
 built() { echo "${CARGO_TARGET_DIR:-$REPO/$1/target}"; }
@@ -187,12 +198,14 @@ PYTHON
 # pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
 pack() {
 	# Ship package files without macOS AppleDouble metadata members.
-	COPYFILE_DISABLE=1 tar -czf "$OUT/$1" -C "$2" .
+	expected_archive=$OUT/$1
+	COPYFILE_DISABLE=1 tar -czf "$expected_archive" -C "$2" .
 	python3 sdlc/scripts/registry-readmes.py auto "$OUT/$1"
 	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
 }
 # keep FILE: copy a file a tool already packed into OUT, with its checksum.
 keep() {
+	expected_archive=$OUT/${1##*/}
 	[ -f "$1" ] || { echo "release-pack: $1 is missing; build it first" >&2; exit 1; }
 	python3 sdlc/scripts/registry-readmes.py auto "$1"
 	cp -- "$1" "$OUT/"
@@ -238,6 +251,9 @@ part_command() {
 
 # The header, both libraries under the soname layout build.rs sets, and a relocatable .pc.
 part_c() {
+	extension=tar.gz
+	[ "$TARGET" != x86_64-pc-windows-msvc ] || extension=zip
+	expected_archive=$OUT/thinkthen-c-$V-$TARGET.$extension
 	profile=debug
 	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
 	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
@@ -245,7 +261,7 @@ part_c() {
 	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
 	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		from=$(built libraries/c)/$profile
-		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$OUT/thinkthen-c-$V-$TARGET.zip"
+		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$expected_archive"
 		c_built=1
 		return
 	fi
@@ -277,7 +293,7 @@ part_c() {
 		Cflags: -I\${includedir}
 	EOF
 	cp libraries/c/README-PUBLIC.md "$folder/README.md"
-	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
+	pack "${expected_archive##*/}" "$folder"
 	c_built=1
 }
 
