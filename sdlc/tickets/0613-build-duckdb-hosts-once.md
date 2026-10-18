@@ -15,7 +15,7 @@ Phase: 1
 ### Proof
 
 - `sdlc/scripts/lint` passes on the M5 through pm job with the cache step and its policy exception gone.
-- The workflow tickets 0613, 0620 and 0622 land together. One dispatched nonpublishing rehearsal at the next checkpoint (0691) proves them: its logs show no DuckDB compile in any smoke job, and every DuckDB smoke passes using the uploaded host.
+- 0613 lands on its own after the M5 gate. One dispatched nonpublishing rehearsal at the next checkpoint (0691), after 0620 and 0622 land, proves the workflow tickets together: its logs show no DuckDB compile in any smoke job, and every DuckDB smoke passes using the uploaded host.
 
 ## Evidence
 
@@ -24,3 +24,7 @@ Release smoke jobs on the Intel macOS runner ran into the six-hour cap while han
 ## Progress
 
 - 2026-10-18 started
+
+## Amendment, 2026-10-18
+
+0613 lands alone after the M5 gate; 0622 starts after it and batches with 0620. The hosted transfer proof moves to the 0691 checkpoint rehearsal.

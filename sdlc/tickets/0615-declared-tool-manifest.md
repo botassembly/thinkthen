@@ -31,3 +31,7 @@ The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select 
 ## Progress
 
 - 2026-10-18 started
+
+## Amendment, 2026-10-18
+
+All-language lint needs GNU gcc for the Ada spec dump, which macOS lacks, so lint runs in the 0619 container and native macOS `test` proves 0615. 0617, 0618 and 0619 may build on the accepted 0615 head before it lands; the four land as one gate batch.
