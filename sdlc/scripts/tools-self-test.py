@@ -4,6 +4,7 @@ import json
 import os
 import platform
 import shutil
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -46,6 +47,44 @@ class ToolResolution(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn('jq', result.stderr)
         self.assertNotIn('command-started', result.stdout)
+
+    @unittest.skipUnless(platform.system() == 'Darwin', 'macOS provisions npm providers')
+    def test_npm_provider_can_start_its_owned_installer_child(self):
+        owned = ROOT / '.tools'
+        owned.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='resolver-npm-', dir=owned) as folder:
+            root = Path(folder)
+            resolved = root / 'resolved'
+            binary = resolved / 'bin'
+            binary.mkdir(parents=True)
+            for name in ('python3', 'fixture-prettier'):
+                executable = binary / name
+                executable.write_text('#!/bin/sh\nexit 0\n')
+                executable.chmod(0o755)
+            installer = resolved / 'bootstrap/mise/bin/mise'
+            installer.parent.mkdir(parents=True)
+            path = json.dumps({'PATH': str(binary) + ':/usr/bin:/bin'})
+            installer.write_text('#!/bin/sh\nset -eu\ncase "$1" in\n'
+                                 'install) mise fixture-child ;;\n'
+                                 'fixture-child) printf installed > "$HOME/installer-child" ;;\n'
+                                 'env) printf "%s\\n" ' + shlex.quote(path) + ' ;;\nesac\n')
+            installer.chmod(0o755)
+            manifest = {'libraries': {}, 'databases': {}, 'python_packages': {},
+                        'tools': {'rust': {'commands': [], 'version': 'unused',
+                                           'groups': ['common'], 'platforms': ['darwin']},
+                                  'prettier': {'commands': ['fixture-prettier'], 'version': 'fixture',
+                                               'provider': 'npm:prettier', 'groups': ['test'],
+                                               'platforms': ['darwin']}}}
+            source = root / 'tools.json'
+            source.write_text(json.dumps(manifest))
+            result = subprocess.run([sys.executable, str(SCRIPT), '--manifest', str(source),
+                                     '--root', str(resolved), 'test', '--',
+                                     '/bin/sh', '-c', 'echo command-started'],
+                                    env={'HOME': str(root), 'PATH': '/usr/bin:/bin'},
+                                    text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((root / 'installer-child').read_text(), 'installed')
+            self.assertEqual(result.stdout, 'command-started\n')
 
     def check(self, commands, succeeds, inherited=False, requirement=None, diagnostic=None):
         owned = ROOT / '.tools'
