@@ -14,6 +14,7 @@ import tarfile
 import subprocess
 import unittest
 from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import child_env
 
 import coverage_installed_managed
