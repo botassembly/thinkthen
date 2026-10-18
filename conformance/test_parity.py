@@ -829,7 +829,7 @@ class PublicAssertions(unittest.TestCase):
             stage_checkout(parity.ROOT, root)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
-            (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
+            (scripts / 'scratch.sh').write_text((scripts / 'scratch.sh').read_text() + '\nusage_home() { :; }\n')
             library = root / 'libraries/rust'
             library.mkdir(parents=True, exist_ok=True)
             tools = root / 'bin'
