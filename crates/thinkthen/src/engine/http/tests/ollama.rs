@@ -77,9 +77,7 @@ fn an_ollama_shaped_address_suggests_the_named_backend_without_changing_the_requ
     assert_eq!(code, 4);
     assert_eq!(
         sentence,
-        concat!(
-            "the backend answered with status 400: the backend refused the request; this address looks like Ollama; try --backend ollama"
-        )
+        "the backend answered with status 400: the backend refused the request; this address looks like Ollama; try --backend ollama"
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
