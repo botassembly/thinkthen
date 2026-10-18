@@ -490,7 +490,7 @@ class PublicAssertions(unittest.TestCase):
         import time
         ids = ['rust', 'rust-polars', 'one', 'two', 'three']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', name]}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', name]}
             for name in ids], 'required_cases': list(self.cases.values())}
         active, peak = 0, 0
         lock = threading.Lock()
@@ -520,7 +520,7 @@ class PublicAssertions(unittest.TestCase):
         import time
         names = ['python', 'pandas', 'python-polars', 'java', 'kotlin', 'scala']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
             for name in names], 'required_cases': list(self.cases.values())}
         prepared, homes = {}, {}
         def command(args, **kwargs):
@@ -556,7 +556,7 @@ class PublicAssertions(unittest.TestCase):
     def test_failed_or_exhausted_family_setup_fails_every_member_without_runtime(self):
         names = ['python', 'pandas', 'python-polars']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', 'family']}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'family']}
             for name in names], 'required_cases': list(self.cases.values())}
         for failure in (77, 0):
             clock = [0]
@@ -859,7 +859,7 @@ class PublicAssertions(unittest.TestCase):
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': 'rust', 'owner': '0431', 'baseline': ['sh', 'stub.sh']}],
+            {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'stub.sh']}],
                     'required_cases': list(self.cases.values())}
         for output, code in [(self.cell(), 0), (self.cell(), 77), ('', 127),
                              (self.cell(case='unknown'), 0),
@@ -885,7 +885,7 @@ class PublicAssertions(unittest.TestCase):
                 scripts = root / 'sdlc/scripts'
                 scripts.mkdir(parents=True, exist_ok=True)
                 contract = {'functions': ['decide'], 'consumers': [
-                    {'id': 'rust', 'owner': '0431', 'baseline': baseline}],
+                    {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
                 with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {}):
                     self.assertEqual(parity.run('12345'), 1)
@@ -1059,37 +1059,32 @@ class InstalledInputs(unittest.TestCase):
         (folder / 'thinkthen-0.2.0.gem').touch()
 
     def select(self, folder):
-        with patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
+        with patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
             return parity.installed_artifacts(folder, self.consumers)
 
     def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
-        for apple_checks in ('', 'required'):
-            with self.subTest(apple_checks=apple_checks), patch.object(
-                    parity.sys, 'platform', 'linux'), patch.object(
-                    parity.os, 'environ', {'THINKTHEN_MACOS_APPLE_CHECKS': apple_checks}), tempfile.TemporaryDirectory() as scratch:
-                folder = Path(scratch)
-                self.packages(folder)
-                if apple_checks == 'required':
-                    (folder / 'thinkthen-swift-0.2.0-x86_64-unknown-linux-gnu.tar.gz').unlink()
-                inputs, command, native = self.select(folder)
-                self.assertEqual(set(inputs), {consumer for consumer in self.consumers
-                                               if not parity.apple_pending(consumer)})
-                self.assertEqual('swift' in inputs, apple_checks != 'required')
-                self.assertEqual(Path(command).name, self.command)
-                self.assertEqual(Path(native).name, self.native)
-                for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
-                              ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
-                              ('dart', 'flutter'), ('rust', 'rust-polars')]:
-                    self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
-                self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
-                                 'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-                for major in (16, 17, 18):
-                    self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
-                                     f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-                for row in inputs.values():
-                    self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
-                    self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
-                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+        with patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch)
+            self.packages(folder)
+            inputs, command, native = self.select(folder)
+            self.assertEqual(set(inputs), {consumer for consumer in self.consumers
+                                           if not parity.unsupported(self.consumers[consumer]['surface'])})
+            self.assertIn('swift', inputs)
+            self.assertEqual(Path(command).name, self.command)
+            self.assertEqual(Path(native).name, self.native)
+            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for major in (16, 17, 18):
+                self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                 f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for row in inputs.values():
+                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
 
     def test_apple_requires_its_objective_c_archive(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -1097,15 +1092,16 @@ class InstalledInputs(unittest.TestCase):
             for name in [self.command, self.native, self.dart]:
                 (folder / name.replace('x86_64-unknown-linux-musl', 'aarch64-apple-darwin')
                  .replace('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin')).touch()
-            with patch.object(parity.sys, 'platform', 'darwin'), patch.object(
+            with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(
                     parity.subprocess, 'check_output', return_value='host: aarch64-apple-darwin\n'):
-                consumers = {'objective-c': self.consumers['objective-c']}
+                consumers = {key: self.consumers[key] for key in ('objective-c', 'go')}
                 with self.assertRaisesRegex(ValueError, 'thinkthen-objective-c'):
                     parity.installed_artifacts(folder, consumers)
                 archive = folder / 'thinkthen-objective-c-0.2.0-aarch64-apple-darwin.tar.gz'
                 archive.touch()
                 inputs, _, _ = parity.installed_artifacts(folder, consumers)
                 self.assertEqual(inputs['objective-c']['THINKTHEN_ARTIFACT'], str(archive))
+                self.assertNotIn('go', inputs)
 
     def test_apple_execution_requires_every_foundation_cell(self):
         contract = parity.inventory()
@@ -1114,10 +1110,10 @@ class InstalledInputs(unittest.TestCase):
             def command(args, **kwargs):
                 self.assertIn('libraries/objective-c/check.sh', args)
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
-            self.assertNotIn('platform_pending', row)
+            self.assertNotIn('platform_unsupported', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
 
     def test_postgresql_requires_every_case_on_every_server_major(self):
@@ -1149,7 +1145,7 @@ class InstalledInputs(unittest.TestCase):
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
 
-    def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
+    def test_linux_excludes_unsupported_platforms_without_hiding_required_failures(self):
         contract = parity.inventory()
         contract = contract | {'consumers': [self.consumers[key] for key in ('objective-c', 'c', 'python')],
                                'pending_consumers': []}
@@ -1169,8 +1165,8 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                    self.assertEqual(parity.run('12345'), 1)
+                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):
                     row = next(row for row in matrix if row['consumer'] == consumer)
@@ -1180,10 +1176,10 @@ class InstalledInputs(unittest.TestCase):
                                                    else 'pass' for key in required})
                 apple = next(row for row in matrix if row['consumer'] == 'objective-c')
                 self.assertEqual(set(apple['cells']), set(parity.required_cases(contract, 'objective-c')))
-                self.assertEqual(set(apple['cells'].values()), {'platform-pending'})
+                self.assertEqual(set(apple['cells'].values()), {'platform-unsupported'})
                 self.assertIsNone(apple['named_typed_functions'])
                 table = (Path(scratch) / 'target/parity/matrix.md').read_text()
-                self.assertIn('Apple qualification pending', table)
+                self.assertIn('unsupported on this host', table)
                 self.assertIn('no local pass', table)
 
     def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):

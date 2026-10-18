@@ -1,6 +1,4 @@
 """Regressions for candidate exclusions and retained npm release inputs."""
-import contextlib
-import io
 import json
 import os
 import platform
@@ -11,7 +9,6 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from conformance import parity
 from conformance.children.children import child_env
@@ -19,39 +16,60 @@ from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class CandidatePlatforms(unittest.TestCase):
-    def test_candidate_requires_execution_and_explicit_apple_delegation(self):
-        inventory = parity.inventory()
-        consumers = {row['id']: row for row in parity.all_consumers(inventory)}
-        for members, delegation, exit_code, expected in [
-                (('objective-c', 'c'), '', 0, 1),
-                (('objective-c', 'swift', 'c'), 'required', 0, 0),
-                (('objective-c', 'swift'), 'required', 0, 1),
-                (('objective-c', 'c'), 'required', 77, 1),
-                (('objective-c', 'c'), 'required', 0, 1)]:
-            contract = inventory | {'consumers': [consumers[key] for key in members],
-                                    'pending_consumers': []}
-            missing = members == ('objective-c', 'c') and delegation and exit_code == 0
-            with self.subTest(members=members, delegation=delegation, code=exit_code), tempfile.TemporaryDirectory() as folder:
-                root = Path(folder)
-                def command(args, **kwargs):
-                    self.assertNotIn('libraries/objective-c/check.sh', args)
-                    consumer = 'swift' if 'libraries/swift/check.sh' in args else 'c'
-                    for index, case in enumerate(parity.required_cases(contract, consumer).values()):
-                        if missing and index == 0:
-                            continue
-                        kwargs['stdout'].write(parity.PREFIX + json.dumps({
-                            'consumer': consumer, 'case': case['id'], 'status': 'pass',
-                            'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
-                    return subprocess.CompletedProcess(args, exit_code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(os, 'environ', {'PATH': os.defpath, 'THINKTHEN_MACOS_APPLE_CHECKS': delegation}):
-                    self.assertEqual(parity.run('12345'), expected)
-                matrix = json.loads((root / 'target/parity/matrix.json').read_text())
-                self.assertTrue(any(row.get('platform_pending') for row in matrix))
-                if delegation:
-                    swift = next((row for row in matrix if row['consumer'] == 'swift'), None)
-                    if swift:
-                        self.assertTrue(swift.get('platform_pending'))
-                        self.assertEqual(swift['adopted_case_count'], 0)
+    def test_parity_uses_manifest_exclusions_and_fails_required_gaps(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-parity-platforms-') as folder:
+            root = Path(folder)
+            stage_checkout(parity.ROOT, root)
+            document = json.loads((root / 'conformance/cases.json').read_text())
+            contract = document['parity']
+            host = platform.system().lower() + '-' + {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            for entry in manifest['libraries'].values():
+                entry['check_platforms'] = [host]
+            for name in manifest['databases']:
+                manifest['databases'][name] = [host]
+            for name in ('go', 'jvm'):
+                manifest['libraries'][name]['check_platforms'] = ['unsupported-fixture-host']
+            (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
+            fixture = root / 'fixtures'
+            fixture.mkdir(exist_ok=True)
+            for row in parity.all_consumers(contract):
+                consumer = row['id']
+                observations = [parity.PREFIX + json.dumps({
+                    'consumer': consumer, 'case': case['id'], 'status': 'pass',
+                    'checks': case.get('checks', ['named', 'runtime'])})
+                    for case in parity.required_cases(contract, consumer).values()]
+                # Thin consumer fixtures retain the real parity command and its
+                # inventory, runner, cell parser and manifest policy.
+                body = ('from pathlib import Path\nimport sys\n'
+                        + f'Path("fixtures/{consumer}.called").touch()\n'
+                        + f'lines = {observations!r}\n'
+                        + f'if Path("fixtures/{consumer}.missing").exists(): lines = lines[1:]\n'
+                        + 'print("\\n".join(lines))\n'
+                        + f'sys.exit(77 if Path("fixtures/{consumer}.fail").exists() else 0)\n')
+                runner = fixture / (consumer + '.py')
+                runner.write_text(body)
+                row['baseline'] = [sys.executable, str(fixture / 'java.py' if row['surface'] == 'libraries/jvm' else runner)]
+                if consumer == 'c':
+                    (root / 'conformance/c_parity.py').write_text(body)
+            (root / 'conformance/cases.json').write_text(json.dumps(document))
+            env = child_env(home=root / 'home')
+            for failure in ('', 'c.fail', 'c.missing'):
+                with self.subTest(failure=failure):
+                    if failure:
+                        (fixture / failure).touch()
+                    result = subprocess.run([sys.executable, 'conformance/parity.py', '12345'],
+                                            cwd=root, env=env, capture_output=True, text=True, timeout=90)
+                    self.assertEqual(result.returncode, int(bool(failure)), result.stdout + result.stderr)
+                    self.assertIn('sdlc/tools.json libraries.go =', result.stdout)
+                    self.assertFalse((fixture / 'go.called').exists())
+                    self.assertFalse((fixture / 'java.called').exists())
+                    self.assertTrue((fixture / 'swift.called').exists())
+                    matrix = json.loads((root / 'target/parity/matrix.json').read_text())
+                    go = next(row for row in matrix if row['consumer'] == 'go')
+                    self.assertEqual(set(go['cells'].values()), {'platform-unsupported'})
+                    if failure:
+                        (fixture / failure).unlink()
 
 
 class CandidateSmokes(unittest.TestCase):
