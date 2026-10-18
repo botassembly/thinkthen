@@ -141,7 +141,8 @@ def check_nupkg(data, version, source, target, native):
         require(members[name] == source[source_member("csharp", name)], f"nupkg {name} differs from source")
     for name, value in members.items():
         check_bytes(name, name.encode() + value)
-    require(not any(b'thinkthen_panic_probe' in value for value in members.values()), "diagnostic nupkg member")
+    require(not any(b'thinkthen_panic_probe' in name.encode() or b'thinkthen_panic_probe' in value
+                    for name, value in members.items()), "diagnostic nupkg member")
 
 
 def check_jar(data, kind, inventory):

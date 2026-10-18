@@ -71,7 +71,7 @@ def public_files(root):
     result = []
     for path in tracked_files(root):
         relative = path.relative_to(root)
-        public = relative.name in {'README.md', 'README-PUBLIC.md', 'LICENSE', 'Cargo.toml', 'package.json',
+        public = relative.as_posix() in {'README.md', 'README-PUBLIC.md', 'LICENSE', 'Cargo.toml', 'package.json',
                                    'pyproject.toml', 'source-package.json'} or relative.parts[0] in {'examples', 'Examples'}
         if name is not None:
             public |= classification(path.relative_to(repo).as_posix(), name, manifest, generated) in {'handwritten', 'generated'}
