@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision fb2824e, accept
+
 ## Outcome
 
 - All 54 tracked `ratchet*.json` files are deleted, `sdlc/ratchet.json` included.
