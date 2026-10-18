@@ -63,10 +63,22 @@
         "as",
         "ranlib",
         "mkfifo",
-        "sleep"
+        "sleep",
+        "shasum"
       ],
       "platforms": [
         "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ]
+    },
+    "linux-system": {
+      "commands": [
+        "sha256sum"
+      ],
+      "platforms": [
         "linux"
       ],
       "groups": [
