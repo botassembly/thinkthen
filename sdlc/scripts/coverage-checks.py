@@ -486,7 +486,7 @@ class CollectionClassification(unittest.TestCase):
             harness = root / 'c-harness'
             harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
                                "assert os.environ['CARGO_PKG_NAME'] == 'thinkthen-c'\n"
-                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR']).resolve()\n"
                                "assert sys.argv[1:] == ['--test-threads=2']\n")
             harness.chmod(0o700)
             package = {'name': 'thinkthen-c', 'manifest_path': str(package_dir / 'Cargo.toml')}

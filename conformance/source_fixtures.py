@@ -14,9 +14,19 @@ def stage_checkout(source, root):
         archive.stdout.close()
         if archive.wait() != 0:
             raise RuntimeError('cannot archive tracked fixture checkout')
+    subprocess.run(['git', 'init', '-q', str(root)], check=True)
+    subprocess.run(['git', '-C', str(root), 'add', '--force', '--all'], check=True)
 
 
 def fixture_tool_groups(source):
     """Let controlled tool stubs serve every declared library and rung."""
     manifest = json.loads((source / 'sdlc/tools.json').read_text())
     return ','.join(dict.fromkeys(('test', 'surfaces', *manifest['libraries'], *manifest['databases'])))
+
+
+def stub_other_surfaces(root, selected):
+    """Keep the real registry while isolating unrelated consumer processes."""
+    for line in (root / 'sdlc/surfaces.txt').read_text().splitlines():
+        fields = line.split()
+        if len(fields) > 1 and fields[1] in ('landed', 'feature') and fields[0] not in selected:
+            (root / fields[0] / 'check.sh').write_text('exit 0\n')

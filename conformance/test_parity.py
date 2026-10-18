@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -438,7 +438,7 @@ class PublicAssertions(unittest.TestCase):
             'HOME': '/ambient/home', 'THINKTHEN_BASE_URL': 'https://example.invalid',
             'THINKTHEN_API_KEY': 'ambient-secret', 'THINKTHEN_CONFORMANCE_IDS': '/selector',
             'THINKTHEN_TEST_PROFILE': 'routine', 'OTHER_API_KEY': 'unrelated-secret',
-            'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
+            'THINKTHEN_TOOLCHAINS': str((Path(scratch) / 'tools').resolve()), 'CARGO_BUILD_JOBS': '1',
             'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
             'UV_CACHE_DIR': str(Path(scratch) / 'uv-cache'),
             'npm_config_cache': str(Path(scratch) / 'npm-cache'),
@@ -447,7 +447,7 @@ class PublicAssertions(unittest.TestCase):
             'CARGO_PROFILE_TEST_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_DEBUG': '0',
             'RUSTFLAGS': '--remap-path-prefix=/checkout=/build/thinkthen',
         }):
-            (Path(scratch) / 'tools').mkdir()
+            ((Path(scratch) / 'tools').resolve()).mkdir()
             env = parity.consumer_environment(scratch, '12345')
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
@@ -466,7 +466,7 @@ class PublicAssertions(unittest.TestCase):
             self.assertEqual(env['npm_config_cache'], str(Path(scratch) / 'npm-cache'))
             self.assertEqual(env['UV_PYTHON_INSTALL_DIR'], str(Path(scratch) / 'uv-python'))
             self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
-                             Path(scratch) / 'tools')
+                             (Path(scratch) / 'tools').resolve())
             self.assertFalse((Path(env['HOME']) / '.config').exists())
 
     def test_default_tool_locations_survive_the_isolated_home(self):
@@ -661,10 +661,10 @@ class PublicAssertions(unittest.TestCase):
                             else: sentinel.write_text('preexisting extension')
                         script = root / 'run.sh'
                         script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
-                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + '\nPG_HOST=Darwin\nPG_CONFIG=$FIXTURE_PG_CONFIG\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
                             + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
                         env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
-                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                               'FIXTURE_PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
@@ -1083,7 +1083,7 @@ class InstalledInputs(unittest.TestCase):
                 for row in inputs.values():
                     self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
                     self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
-                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder.resolve()))
 
     def test_apple_requires_its_objective_c_archive(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -1099,7 +1099,7 @@ class InstalledInputs(unittest.TestCase):
                 archive = folder / 'thinkthen-objective-c-0.2.0-aarch64-apple-darwin.tar.gz'
                 archive.touch()
                 inputs, _, _ = parity.installed_artifacts(folder, consumers)
-                self.assertEqual(inputs['objective-c']['THINKTHEN_ARTIFACT'], str(archive))
+                self.assertEqual(inputs['objective-c']['THINKTHEN_ARTIFACT'], str(archive.resolve()))
 
     def test_apple_execution_requires_every_foundation_cell(self):
         contract = parity.inventory()
@@ -1301,13 +1301,12 @@ esac
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
                         'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
                         'sdlc/scripts/smoke': 'printf "binding-smoke\\n" >> calls\n',
-                        'sdlc/surfaces.txt': 'libraries/c landed\n',
                         'libraries/c/Cargo.toml': '',
                         'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
                         'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
                         'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
-                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/git': '#!/bin/sh\ncase "$1" in rev-parse) printf "source-hash\\n" ;; status) : ;; *) exec ' + shlex.quote(shutil.which('git')) + ' "$@" ;; esac\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
                         'site/package.json': '{}\n',
                         'bin/npm': (
@@ -1340,6 +1339,7 @@ esac
                         target = root / path
                         target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_text(text)
+                    (root / 'bin/python3').symlink_to(sys.executable)
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
