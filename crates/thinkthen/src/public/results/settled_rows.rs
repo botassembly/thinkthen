@@ -166,7 +166,9 @@ pub(crate) fn score_answer(result: &crate::CompleteScore) -> Settled<f64, Option
         resolved(),
     )
 }
-pub(crate) fn filter_answer(selected: impl Iterator<Item = (SettledOriginal, Option<f64>)>) -> Settled<Vec<SettledOriginal>, Vec<Option<f64>>> {
+pub(crate) fn filter_answer(
+    selected: impl Iterator<Item = (SettledOriginal, Option<f64>)>,
+) -> Settled<Vec<SettledOriginal>, Vec<Option<f64>>> {
     let (values, probabilities) = selected.unzip();
     Settled::one(values, probabilities, None, None, resolved())
 }
@@ -185,10 +187,17 @@ impl SettledAnswer {
             RequestValue::Scores(rows) => Self::Score(Settled::rows(
                 rows.iter().map(|row| score_answer(row.result())),
             )),
-            RequestValue::Filtered(rows) => Self::Filter(filter_answer(rows.iter().filter(|row| row.result().value()).map(|row| (SettledOriginal(Box::new(row.original().clone())), row.result().probability())))),
-            RequestValue::Annotations(rows) => {
-                Self::Annotate(Settled::rows(rows.iter().map(|row| annotation(row.result()))))
-            }
+            RequestValue::Filtered(rows) => Self::Filter(filter_answer(
+                rows.iter().filter(|row| row.result().value()).map(|row| {
+                    (
+                        SettledOriginal(Box::new(row.original().clone())),
+                        row.result().probability(),
+                    )
+                }),
+            )),
+            RequestValue::Annotations(rows) => Self::Annotate(Settled::rows(
+                rows.iter().map(|row| annotation(row.result())),
+            )),
             _ => return None,
         })
     }

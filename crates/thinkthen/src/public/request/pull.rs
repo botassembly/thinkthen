@@ -196,7 +196,13 @@ pub(in crate::public) fn project<'a, I, T, R: 'a>(
     question: crate::Question,
     records: I,
     controls: CallOptions<'a>,
-    project: impl Fn(T, usize, crate::core::CompleteAtomic, crate::QuestionInput) -> Result<Option<R>, Error> + 'a,
+    project: impl Fn(
+        T,
+        usize,
+        crate::core::CompleteAtomic,
+        crate::QuestionInput,
+    ) -> Result<Option<R>, Error>
+    + 'a,
 ) -> Result<Batch<'a, R>, Error>
 where
     I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
