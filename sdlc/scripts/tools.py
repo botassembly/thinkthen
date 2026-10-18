@@ -136,6 +136,15 @@ def resolve(manifest, groups, root, check=False):
     env['RUSTUP_TOOLCHAIN'] = manifest['tools']['rust']['version']
     paths = [str(root / tool['linux_directory']) for tool in requirements.values()
              if host == 'linux' and 'linux_directory' in tool] + [str(root / 'bin'), str(root / 'bootstrap/mise/bin')]
+    if host == 'linux' and 'python' in requirements:
+        python = root / 'bin' / requirements['python']['commands'][0]
+        if python.is_file():
+            provider = python.resolve()
+            if root not in provider.parents:
+                raise RuntimeError('Python provider is outside the job tool folder')
+            # venv records the launcher directory as its base prefix. Export the
+            # actual provider bin so its children can locate the standard library.
+            paths.insert(0, str(provider.parent))
     env['PATH'] = os.pathsep.join(paths + [SYSTEM_PATH])
     failures = []
     installer = None

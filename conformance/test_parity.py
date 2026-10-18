@@ -772,6 +772,7 @@ class PublicAssertions(unittest.TestCase):
                                     with self.assertRaises(ReachedReader): module.main()
 
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
+        import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             stage_checkout(parity.ROOT, root)
@@ -781,9 +782,7 @@ class PublicAssertions(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            # A prepared launcher may be a symlink outside the interpreter prefix.
-            subprocess.run([str(Path(sys.executable).resolve()), '-m', 'venv', '--without-pip',
-                            str(assets / 'venv')], env=child_env(home=root / 'venv-home'), check=True)
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
             site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
