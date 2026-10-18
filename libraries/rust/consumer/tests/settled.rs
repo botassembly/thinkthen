@@ -272,7 +272,7 @@ fn rank_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<
 }
 
 #[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
-fn find_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+fn find_expected(case: &Case, _collection: bool, expected: &mut Value) -> Result<(), String> {
     let success = &case.rest["expect"]["success"];
     let detail = &success["answers"][0]["details"]["answer"];
     let index = &success["operation"]["selected"];
