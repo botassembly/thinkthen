@@ -130,121 +130,13 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
         .ok_or("missing expectations")?;
     let first = answers.first().ok_or("missing first expectation")?;
     let bare = first["bare"].clone();
-    let detail = &first["details"]["answer"];
     let mut expected = json!({"function":case.verb,"value":bare,"probability":null,"pick":null,"index":null,"resolution":"resolved"});
     match case.verb.as_str() {
-        "decide" | "choose" | "tag" | "score" => {
-            if matches!(case.verb.as_str(), "decide" | "choose") {
-                if bare.is_null() {
-                    expected["resolution"] = json!("unresolved");
-                } else if case.verb == "decide" {
-                    expected["probability"] = detail["probability"].clone();
-                } else {
-                    expected["probability"] = detail["probabilities"]
-                        [detail["pick"].as_str().ok_or("missing pick")?]
-                    .clone();
-                }
-            }
-            if case.verb == "choose" {
-                expected["pick"] = detail["pick"].clone();
-            }
-            if case.verb == "score" {
-                expected["pick"] = detail["level"].clone();
-            }
-            for key in ["value", "probability", "pick", "index", "resolution"] {
-                expected[key] = shaped(expected[key].clone(), collection);
-            }
-        }
-        "annotate" => {
-            let mut values = serde_json::Map::new();
-            let mut resolutions = serde_json::Map::new();
-            for answer in answers {
-                let name = answer["name"].as_str().ok_or("missing member name")?;
-                let bare = &answer["bare"];
-                resolutions.insert(
-                    name.to_owned(),
-                    json!(if bare.get("failed").is_some() {
-                        "failed"
-                    } else if bare.is_null() {
-                        "unresolved"
-                    } else {
-                        "resolved"
-                    }),
-                );
-                if bare.get("failed").is_none() {
-                    values.insert(name.to_owned(), bare.clone());
-                }
-            }
-            expected["value"] = Value::Object(values);
-            expected["resolution"] = Value::Object(resolutions);
-            for key in ["value", "probability", "pick", "index", "resolution"] {
-                expected[key] = shaped(expected[key].clone(), collection);
-            }
-        }
-        "filter" => {
-            let indexes = success["operation"]["indexes"]
-                .as_array()
-                .ok_or("missing selected inputs")?;
-            let indexes = indexes
-                .iter()
-                .filter(|index| collection || index.as_u64() == Some(0))
-                .map(|index| {
-                    index
-                        .as_u64()
-                        .and_then(|at| usize::try_from(at).ok())
-                        .ok_or("invalid index")
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            expected["value"] = json!(
-                indexes
-                    .iter()
-                    .map(|index| case.rest["exchanges"][*index]["evidence"].clone())
-                    .collect::<Vec<_>>()
-            );
-            expected["probability"] = json!(
-                indexes
-                    .iter()
-                    .map(|index| answers[*index]["details"]["answer"]["probability"].clone())
-                    .collect::<Vec<_>>()
-            );
-        }
-        "rank" => {
-            let rows = success["operation"]["ranking"]
-                .as_array()
-                .ok_or("missing ranking")?;
-            expected["value"] = json!(
-                rows.iter()
-                    .map(|row| row["index"].clone())
-                    .collect::<Vec<_>>()
-            );
-            expected["probability"] = json!(
-                rows.iter()
-                    .map(|row| row["probability"].clone())
-                    .collect::<Vec<_>>()
-            );
-            if !collection {
-                expected["value"] = json!([0]);
-                expected["probability"] = json!([first["details"]["answer"]["probability"]]);
-            }
-        }
-        "find" => {
-            let index = &success["operation"]["selected"];
-            expected["pick"] = detail["pick"].clone();
-            expected["index"] = index.clone();
-            expected["value"] = match index.as_u64().and_then(|at| usize::try_from(at).ok()) {
-                Some(index) => serde_json::from_str::<Value>(
-                    case.question.as_ref().ok_or("missing find question")?.get(),
-                )
-                .map_err(failure)?["units"][index]
-                    .clone(),
-                None => Value::Null,
-            };
-            if !index.is_null() {
-                expected["probability"] = detail["probabilities"]
-                    [detail["pick"].as_str().ok_or("missing find pick")?]
-                .clone();
-            }
-        }
+        "decide" | "choose" | "tag" | "score" => scalar_expected(case, collection, &mut expected)?,
+        "annotate" => annotation_expected(case, collection, &mut expected)?,
+        "filter" => filter_expected(case, collection, &mut expected)?,
+        "rank" => rank_expected(case, collection, &mut expected)?,
+        "find" => find_expected(case, collection, &mut expected)?,
         "recognize" => {
             // specification/recognize.md retains the unrounded valid-path posterior, before kind strength.
             expected["probability"] = json!([0.9976489290347367]);
@@ -264,6 +156,142 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
         other => return Err(format!("unexpected function {other}")),
     }
     Ok(expected)
+}
+
+#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+fn scalar_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+    let bare = expected["value"].clone();
+    let detail = &case.rest["expect"]["success"]["answers"][0]["details"]["answer"];
+    if matches!(case.verb.as_str(), "decide" | "choose") {
+        if bare.is_null() {
+            expected["resolution"] = json!("unresolved");
+        } else if case.verb == "decide" {
+            expected["probability"] = detail["probability"].clone();
+        } else {
+            expected["probability"] = detail["probabilities"]
+                [detail["pick"].as_str().ok_or("missing pick")?]
+            .clone();
+        }
+    }
+    if case.verb == "choose" {
+        expected["pick"] = detail["pick"].clone();
+    }
+    if case.verb == "score" {
+        expected["pick"] = detail["level"].clone();
+    }
+    for key in ["value", "probability", "pick", "index", "resolution"] {
+        expected[key] = shaped(expected[key].clone(), collection);
+    }
+    Ok(())
+}
+
+#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+fn annotation_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+    let answers = case.rest["expect"]["success"]["answers"].as_array().ok_or("missing annotations")?;
+    let mut values = serde_json::Map::new();
+    let mut resolutions = serde_json::Map::new();
+    for answer in answers {
+        let name = answer["name"].as_str().ok_or("missing member name")?;
+        let bare = &answer["bare"];
+        resolutions.insert(
+            name.to_owned(),
+            json!(if bare.get("failed").is_some() {
+                "failed"
+            } else if bare.is_null() {
+                "unresolved"
+            } else {
+                "resolved"
+            }),
+        );
+        if bare.get("failed").is_none() {
+            values.insert(name.to_owned(), bare.clone());
+        }
+    }
+    expected["value"] = Value::Object(values);
+    expected["resolution"] = Value::Object(resolutions);
+    for key in ["value", "probability", "pick", "index", "resolution"] {
+        expected[key] = shaped(expected[key].clone(), collection);
+    }
+    Ok(())
+}
+
+#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+fn filter_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+    let success = &case.rest["expect"]["success"];
+    let answers = success["answers"].as_array().ok_or("missing filter answers")?;
+    let indexes = success["operation"]["indexes"]
+        .as_array()
+        .ok_or("missing selected inputs")?;
+    let indexes = indexes
+        .iter()
+        .filter(|index| collection || index.as_u64() == Some(0))
+        .map(|index| {
+            index
+                .as_u64()
+                .and_then(|at| usize::try_from(at).ok())
+                .ok_or("invalid index")
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    expected["value"] = json!(
+        indexes
+            .iter()
+            .map(|index| case.rest["exchanges"][*index]["evidence"].clone())
+            .collect::<Vec<_>>()
+    );
+    expected["probability"] = json!(
+        indexes
+            .iter()
+            .map(|index| answers[*index]["details"]["answer"]["probability"].clone())
+            .collect::<Vec<_>>()
+    );
+    Ok(())
+}
+
+#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+fn rank_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+    let success = &case.rest["expect"]["success"];
+    let first = &success["answers"][0];
+    let rows = success["operation"]["ranking"]
+        .as_array()
+        .ok_or("missing ranking")?;
+    expected["value"] = json!(
+        rows.iter()
+            .map(|row| row["index"].clone())
+            .collect::<Vec<_>>()
+    );
+    expected["probability"] = json!(
+        rows.iter()
+            .map(|row| row["probability"].clone())
+            .collect::<Vec<_>>()
+    );
+    if !collection {
+        expected["value"] = json!([0]);
+        expected["probability"] = json!([first["details"]["answer"]["probability"]]);
+    }
+    Ok(())
+}
+
+#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+fn find_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
+    let success = &case.rest["expect"]["success"];
+    let detail = &success["answers"][0]["details"]["answer"];
+    let index = &success["operation"]["selected"];
+    expected["pick"] = detail["pick"].clone();
+    expected["index"] = index.clone();
+    expected["value"] = match index.as_u64().and_then(|at| usize::try_from(at).ok()) {
+        Some(index) => serde_json::from_str::<Value>(
+            case.question.as_ref().ok_or("missing find question")?.get(),
+        )
+        .map_err(failure)?["units"][index]
+            .clone(),
+        None => Value::Null,
+    };
+    if !index.is_null() {
+        expected["probability"] = detail["probabilities"]
+            [detail["pick"].as_str().ok_or("missing find pick")?]
+        .clone();
+    }
+    Ok(())
 }
 
 #[test]
