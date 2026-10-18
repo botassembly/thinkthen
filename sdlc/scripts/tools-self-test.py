@@ -165,7 +165,7 @@ class LinuxSourceIdentity(unittest.TestCase):
             command = [sys.executable, str(root / 'sdlc/scripts/linux-check'), 'test']
             first = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
-            source = next(root.glob('.linux-*/src'))
+            source = next(root.glob('.linux-*/src')).resolve()
             run = next(json.loads(line) for line in calls.read_text().splitlines()
                        if json.loads(line)[0] == 'run')
             fixture_mounts = [run[index + 1] for index, value in enumerate(run)
