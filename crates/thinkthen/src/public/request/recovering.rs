@@ -1,6 +1,7 @@
 //! Explicit native recovery leaves ordinary results and packet serialization intact.
 use super::{
-    AdmittedRequest, RequestEnvironment, RequestFunction, RequestOutcome, RequestRecoveredRow,
+    AdmittedRequest, RequestEnvironment, RequestFunction, RequestInput, RequestOutcome,
+    RequestRecoveredRow,
 };
 use crate::{Call, Engine, Error};
 
@@ -128,5 +129,100 @@ fn aggregate_failure(error: Error) -> Result<Call<Vec<RequestRecoveredRow>>, Err
             facts,
         )),
         None => Err(error),
+    }
+}
+
+impl Engine {
+    /// Deliver recovering rows incrementally through the canonical request scheduler.
+    /// # Errors
+    /// Producer, reader and admission failures terminate; native stops join workers.
+    pub fn execute_request_recovering_sink<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        mut environment: RequestEnvironment<'a>,
+        sink: &dyn Fn(RequestRecoveredRow),
+    ) -> Result<Call<()>, Error> {
+        let function = request.request.call.function();
+        let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
+            || !matches!(
+                request.request.call.arguments().input,
+                RequestInput::Source { .. } | RequestInput::Feed { .. }
+            );
+        if eager
+            || matches!(
+                function,
+                RequestFunction::Rank | RequestFunction::Find | RequestFunction::Relate
+            )
+        {
+            let call = self.execute_request_recovering(request, environment)?;
+            return Ok(call.map(|rows| rows.into_iter().for_each(sink)));
+        }
+        super::execution::feed_projection(request, environment.feed.as_ref())?;
+        environment.controls.recovery_rows = true;
+        super::execution::execute(
+            self,
+            request,
+            environment.controls,
+            environment
+                .feed
+                .as_ref()
+                .is_some_and(|feed| feed.image_inputs),
+            |prepared| {
+                request.records(
+                    &prepared.reading,
+                    environment,
+                    prepared.controls,
+                    prepared.image_refusal.clone(),
+                )
+            },
+            |prepared, records| {
+                let dynamic = match &prepared.definition {
+                    super::RequestDefinition::DynamicChoose(question) => Some(question.clone()),
+                    _ => None,
+                };
+                let batch = match (function, dynamic) {
+                    (RequestFunction::Choose, Some(question)) => {
+                        prepared.engine.recover_dynamic_choose_stream(
+                            question,
+                            records,
+                            prepared.controls,
+                            prepared.context,
+                        )?
+                    }
+                    (RequestFunction::Annotate, _) => prepared.engine.recover_annotations_stream(
+                        prepared.definition.annotation()?,
+                        records,
+                        prepared.controls,
+                        prepared.context,
+                    )?,
+                    (RequestFunction::Recognize, _) => {
+                        let ask = prepared.definition.recognition()?;
+                        let controls = match &prepared.context {
+                            Some(context) => prepared.controls.context(context),
+                            None => prepared.controls,
+                        };
+                        return prepared
+                            .engine
+                            .recover_recognition_stream(&ask, records, controls, sink);
+                    }
+                    _ => prepared.engine.recover_atomic_stream(
+                        function.input_function(),
+                        prepared.definition.atomic()?,
+                        records,
+                        prepared.controls,
+                        prepared.context,
+                    )?,
+                };
+                let mut batch = batch;
+                for row in batch.by_ref() {
+                    sink(row?);
+                }
+                let facts = batch
+                    .facts()
+                    .cloned()
+                    .ok_or_else(|| Error::defect("a recovered stream has no final facts"))?;
+                Ok(Call::new((), facts))
+            },
+        )
     }
 }

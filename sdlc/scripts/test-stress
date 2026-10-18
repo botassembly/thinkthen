@@ -11,6 +11,7 @@ case ${1:-} in
     echo 'engine width: 50 repeated first-width races'
     echo 'Polars: 200-record throttle equality'
     echo 'MCP: bounded paired native/installed stdio atomic, record and whole-set timing'
+    echo 'sessions: installed Rust ordinary/recovering and installed C repeated intake/cancel/settlement'
     echo 'ports: THINKTHEN_TEST_PROFILE=stress via surfaces --stress'
     exit 0 ;;
 --check|--run) mode=$1 ;;
