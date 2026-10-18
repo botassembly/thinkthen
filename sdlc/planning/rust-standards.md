@@ -1,6 +1,6 @@
 # Rust standards for thinkthen
 
-Written 2026-09-18 from a survey of the ten Rust repositories in Ian's workspace and from his Rust ideal state. Ian writes no Rust and cannot review it. Gates judge the code. Every rule below names the tool that enforces it. A rule with no tool is listed under "Not yet enforced" and counts as a gap.
+Written 2026-09-18 from a survey of the ten Rust repositories in Ian's workspace and from his Rust ideal state. Ian writes no Rust and cannot review it. Gates enforce mechanical rules. Code review judges source size under the [0.2.1 ruling](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Other rules below name their enforcing tools; unenforced rules appear under "Not yet enforced".
 
 ## What the survey found
 
@@ -35,8 +35,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 
 ## Size
 
-- Hand-written Rust and binding source/test files warn at 500–999 nonblank lines and fail at 1,000. Explain a warning in the change’s commit; it does not require a mechanical split. Generated source, vendored dependencies and build output remain excluded. Enforced by: `policy.py`, called by `lint`.
-- `sdlc/ratchet.json` holds one ceiling over everything under `crates`, test files included. The ceiling equals the measured total. Adding code means editing the number. The commit that raises it says what grew and why it earns the lines, and where the author looked for duplication to delete first. Enforced by: `sdlc/scripts/ratchet.mjs`, called by `lint`.
+- Code review judges source size. Keep behavior local and remove duplicated logic; set no line ceilings.
 - A repository with nothing to lint fails. Enforced by: `lint` fails when it finds no Rust source.
 
 ## Errors and types
@@ -78,7 +77,7 @@ Run package gates and their children with a minimal explicit environment, using 
 | Rung | Script | What it runs |
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | Verifies the pinned toolchain and the tools the other rungs need |
-| 1 | `sdlc/scripts/lint` | Policy and bounded source-package/workflow routing checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
+| 1 | `sdlc/scripts/lint` | Policy and bounded source-package/workflow routing checks, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
 | 2 | `sdlc/scripts/test` | Selected routine functional cases, parser and secrecy regressions, consumer checks and supporting script checks |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 | 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |

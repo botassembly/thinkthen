@@ -245,8 +245,6 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        let mut options = options;
-        options.legacy_annotation = true;
         crate::public::request::pull::annotation(
             self,
             questions.clone(),
@@ -269,7 +267,7 @@ impl Engine {
                 .map(|row| {
                     row.result
                         .canonical
-                        .compatibility
+                        .reading
                         .value()
                         .clone()
                         .into_values()

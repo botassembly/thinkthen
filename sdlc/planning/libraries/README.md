@@ -64,7 +64,7 @@ These numbers are proposals until a bench measures them. A bench runs against a 
 - An import or a `require` takes under 20 ms.
 - The command reaches its first request byte in under 10 ms from a cold start.
 - Each library has no runtime dependency in its host language.
-- Each shim has a line ceiling in `sdlc/ratchet.json`, as the source has today. The experiments measured the honest floors: about 400 code lines for Python (330 was the floor without Arrow), 700–800 for the Rust user layer across all eight verbs set per module, 173 for the C runner, about 240 for the SQLite surface, 299 for PostgreSQL, and about 400 for DuckDB's provable functions.
+- Code review judges each shim’s size; set no line ceilings. The experiments measured these implementation sizes: about 400 code lines for Python (330 was the floor without Arrow), 700–800 for the Rust user layer across all eight verbs set per module, 173 for the C runner, about 240 for the SQLite surface, 299 for PostgreSQL, and about 400 for DuckDB's provable functions.
 
 ## One set of tests
 

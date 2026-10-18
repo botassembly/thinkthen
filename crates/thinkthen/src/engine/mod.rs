@@ -25,10 +25,6 @@ pub(crate) struct Deadline {
 
 impl Deadline {
     /// Start a budget now, or `None` when no clock instant can hold it.
-    #[allow(
-        dead_code,
-        reason = "the command passes no deadline; tickets 0084 through 0086 expose it"
-    )]
     pub(crate) fn after(budget: Duration) -> Option<Self> {
         let at = Instant::now().checked_add(budget)?;
         Some(Self { budget, at })
@@ -116,6 +112,7 @@ impl<'a> Cancel<'a> {
             ..self.clone()
         }
     }
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
         Self {
             invocation: invocation::Context::new(surface),
@@ -127,6 +124,7 @@ impl<'a> Cancel<'a> {
         self.invocation.get()
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
         self.invocation.call_id()
     }
@@ -185,6 +183,7 @@ impl<'a> Cancel<'a> {
         self.fired.store(true, Ordering::Release);
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn reset(&self) {
         self.fired.store(false, Ordering::Release);
     }
@@ -198,10 +197,6 @@ impl<'a> Cancel<'a> {
     }
 
     /// Share this stop flag with one call that ends at `deadline`.
-    #[allow(
-        dead_code,
-        reason = "the command passes no deadline; tickets 0084 through 0086 expose it"
-    )]
     #[cfg(feature = "cli")]
     pub(crate) const fn deadline(&self) -> Option<Deadline> {
         self.deadline
@@ -223,10 +218,6 @@ impl<'a> Cancel<'a> {
     }
 
     /// Share this stop flag with one call whose host check runs on this thread.
-    #[allow(
-        dead_code,
-        reason = "the command passes no check; ticket 0086 exposes it"
-    )]
     pub(crate) fn with_check<'b>(&self, check: &'b (dyn Fn() -> bool + Sync)) -> Cancel<'b>
     where
         'a: 'b,

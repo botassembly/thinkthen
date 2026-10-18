@@ -11342,7 +11342,7 @@
         "expect": {
           "fixture_ref": "01-decide-yes-captured",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11363,7 +11363,7 @@
         "expect": {
           "fixture_ref": "02-decide-no",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11384,7 +11384,7 @@
         "expect": {
           "fixture_ref": "03-decide-band-unsure",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11405,7 +11405,7 @@
         "expect": {
           "fixture_ref": "described-choice",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11426,7 +11426,7 @@
         "expect": {
           "fixture_ref": "09-tag-two",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11447,7 +11447,7 @@
         "expect": {
           "fixture_ref": "10-tag-none",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11468,7 +11468,7 @@
         "expect": {
           "fixture_ref": "11-score-middle",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11489,7 +11489,7 @@
         "expect": {
           "fixture_ref": "13-filter-records",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11510,7 +11510,7 @@
         "expect": {
           "fixture_ref": "18-find-second",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11531,7 +11531,7 @@
         "expect": {
           "fixture_ref": "19-find-none",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11552,7 +11552,7 @@
         "expect": {
           "fixture_ref": "17-annotate-partial",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11573,7 +11573,7 @@
         "expect": {
           "fixture_ref": "41-offsets-past-an-accent-and-an-emoji",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11594,7 +11594,7 @@
         "expect": {
           "fixture_ref": "51-same-kind-alerts",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -11615,7 +11615,7 @@
         "expect": {
           "fixture_ref": "02-decide-details",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -16954,7 +16954,7 @@
         "expect": {
           "fixture_ref": "find-without-probability",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -16974,7 +16974,7 @@
         "expect": {
           "fixture_ref": "usage",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -16994,7 +16994,7 @@
         "expect": {
           "fixture_ref": "two-verbs",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17014,7 +17014,7 @@
         "expect": {
           "fixture_ref": "details-number",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17034,7 +17034,7 @@
         "expect": {
           "fixture_ref": "rank-question-number",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17054,7 +17054,7 @@
         "expect": {
           "fixture_ref": "rank-none-envelope",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17074,7 +17074,7 @@
         "expect": {
           "fixture_ref": "relate-string-record",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17094,7 +17094,7 @@
         "expect": {
           "fixture_ref": "filter-object-record",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17114,7 +17114,7 @@
         "expect": {
           "fixture_ref": "score-label-is-not-value",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17134,7 +17134,7 @@
         "expect": {
           "fixture_ref": "failure-null-is-not-marker",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17154,7 +17154,7 @@
         "expect": {
           "fixture_ref": "relate-array-is-not-door-value",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17174,7 +17174,7 @@
         "expect": {
           "fixture_ref": "recognize-missing-end",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17194,7 +17194,7 @@
         "expect": {
           "fixture_ref": "record-row-null",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17214,7 +17214,7 @@
         "expect": {
           "fixture_ref": "detailed-kind-mismatch",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17234,7 +17234,7 @@
         "expect": {
           "fixture_ref": "find-details",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17254,7 +17254,7 @@
         "expect": {
           "fixture_ref": "annotate-details",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17274,7 +17274,7 @@
         "expect": {
           "fixture_ref": "annotate-details-empty-success",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17294,7 +17294,7 @@
         "expect": {
           "fixture_ref": "annotate-success-missing-answer",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17314,7 +17314,7 @@
         "expect": {
           "fixture_ref": "annotate-failed-entry",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17334,7 +17334,7 @@
         "expect": {
           "fixture_ref": "annotate-failed-entry-with-value",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17354,7 +17354,7 @@
         "expect": {
           "fixture_ref": "annotate-find-not-a-member",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17374,7 +17374,7 @@
         "expect": {
           "fixture_ref": "relate-details",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17394,7 +17394,7 @@
         "expect": {
           "fixture_ref": "c-call-success",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17414,7 +17414,7 @@
         "expect": {
           "fixture_ref": "c-call-success-missing-facts",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17434,7 +17434,7 @@
         "expect": {
           "fixture_ref": "c-detailed-record",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17454,7 +17454,7 @@
         "expect": {
           "fixture_ref": "c-detailed-record-missing-input",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17474,7 +17474,7 @@
         "expect": {
           "fixture_ref": "c-record-call-options",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17494,7 +17494,7 @@
         "expect": {
           "fixture_ref": "c-call-unknown-option",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17514,7 +17514,7 @@
         "expect": {
           "fixture_ref": "c-call-on-scalar",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17534,7 +17534,7 @@
         "expect": {
           "fixture_ref": "c-empty-call-on-scalar",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17554,7 +17554,7 @@
         "expect": {
           "fixture_ref": "c-empty-call-on-find",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17574,7 +17574,7 @@
         "expect": {
           "fixture_ref": "c-empty-call-on-recognize",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17594,7 +17594,7 @@
         "expect": {
           "fixture_ref": "c-empty-call-on-relate",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17614,7 +17614,7 @@
         "expect": {
           "fixture_ref": "c-annotate-context-refused",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17634,7 +17634,7 @@
         "expect": {
           "fixture_ref": "call-error",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17654,7 +17654,7 @@
         "expect": {
           "fixture_ref": "record-missing-pointer",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17674,7 +17674,7 @@
         "expect": {
           "fixture_ref": "record-error-cannot-be-an-answer",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17694,7 +17694,7 @@
         "expect": {
           "fixture_ref": "plan-p1",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [
@@ -17714,7 +17714,7 @@
         "expect": {
           "fixture_ref": "plan-tokens-are-a-band",
           "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
+          "schema_version": "landed result/2"
         },
         "preconditions": [],
         "checks": [

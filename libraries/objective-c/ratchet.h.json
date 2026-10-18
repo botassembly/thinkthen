@@ -1,9 +1,0 @@
-{
-  "directory": [
-    "Sources",
-    "checks"
-  ],
-  "extension": ".h",
-  "max": 89,
-  "scope": "handwritten-production"
-}

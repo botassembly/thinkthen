@@ -65,7 +65,7 @@ pub(super) use plans::prepare;
 
 const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 
-/// Run one real public function. The check asserts compatibility, not a guess
+/// Run one real public function. The check checks the backend contract, not a guess
 /// about which day, name, relation, or decision a model ought to return.
 pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Result<(), Error> {
     let decide = decision()?;

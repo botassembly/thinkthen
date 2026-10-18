@@ -1,10 +1,12 @@
 # 0628: Merge the two session types into one bounded queue
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
+
+Reviews: revision 1680ce6, accept
 
 ## Outcome
 

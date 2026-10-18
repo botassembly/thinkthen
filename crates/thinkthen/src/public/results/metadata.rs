@@ -38,7 +38,7 @@ impl ResultMetadata<'_> {
     pub const fn url(&self) -> &str {
         self.fields.url
     }
-    /// Historical compatibility model, distinct from actual answered_by.
+    /// Requested or reported model, distinct from actual answered_by.
     #[must_use]
     pub const fn model(&self) -> &str {
         self.fields.model
