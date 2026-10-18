@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0615
 
+Reviews: revision 52f852a, accept
+
 ## Outcome
 
 - The existing `manylinux_2_28` base from `release-container`, one image per architecture referenced by digest, holds every Linux tool in the manifest. Building and testing share this one environment. The separate image list in `release-container` is deleted in favor of the one image reference.
