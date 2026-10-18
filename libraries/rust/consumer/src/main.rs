@@ -85,7 +85,8 @@ fn run(f: Fixture) -> Result<String, Error> {
                 "{{\"error\":{},\"facts\":{},\"completed\":{prefix},\"resolution\":{}}}",
                 fixture::failure(&error)?,
                 facts_json,
-                serde_json::to_string(error.complete().resolution()).map_err(|_| fixture::usage("invalid resolution"))?
+                serde_json::to_string(error.complete().resolution())
+                    .map_err(|_| fixture::usage("invalid resolution"))?
             ))
         }
     }

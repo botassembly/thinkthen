@@ -65,7 +65,9 @@ impl Error {
 impl CompleteError<'_> {
     /// A failed invocation supplies no answer, even when a completed prefix exists.
     #[must_use]
-    pub const fn resolution(&self) -> &super::AnswerResolution { &self.resolution }
+    pub const fn resolution(&self) -> &super::AnswerResolution {
+        &self.resolution
+    }
     /// The safe native failure fields.
     #[must_use]
     pub const fn error(&self) -> &ErrorSnapshot<'_> {

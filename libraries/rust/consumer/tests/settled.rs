@@ -286,7 +286,7 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
         let engine = engine(&backend, id)?;
         for collection in [false, true] {
             let request = request(case, collection)?;
-            let expected = expected(case, collection)?;
+            let expected: Value = serde_json::from_str(&expected(case, collection)?.to_string()).map_err(failure)?;
             let admitted = request.clone().admit().map_err(failure)?;
             let call = match engine
                 .execute_request(&admitted, RequestEnvironment::default())
@@ -295,7 +295,7 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                 RequestOutcome::Complete(call) => call,
                 RequestOutcome::Failed { error, .. } => return Err(format!("{id}: {error}")),
             };
-            let answer = serde_json::to_value(call.answer()).map_err(failure)?;
+            let answer: Value = serde_json::from_str(&serde_json::to_string(call.answer()).map_err(failure)?).map_err(failure)?;
             assert_eq!(answer, expected, "{id}, collection={collection}");
             let packet = terminal(&engine, request)?;
             assert_eq!(packet["resolution"], "resolved", "{id}");

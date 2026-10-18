@@ -261,23 +261,26 @@ impl<T, R, P> Call<T, R, P> {
         self,
         project: impl FnOnce(T) -> Result<(U, S, Q), Error>,
     ) -> Result<Call<U, S, Q>, Error>
-    where S: super::settled_carriers::SettledCarrier,
+    where
+        S: super::settled_carriers::SettledCarrier,
     {
         match project(self.value) {
             Ok((value, results, probability)) => {
                 let answer = match self.answer {
                     Some(answer) => answer,
-                    None => results.settled_answer().map_err(|error| error.with_facts(self.facts.clone()))?,
+                    None => results
+                        .settled_answer()
+                        .map_err(|error| error.with_facts(self.facts.clone()))?,
                 };
                 Ok(Call {
-                value,
-                answer: Some(answer),
-                results,
-                probability,
-                facts: self.facts,
-                projected: true,
-            })
-            },
+                    value,
+                    answer: Some(answer),
+                    results,
+                    probability,
+                    facts: self.facts,
+                    projected: true,
+                })
+            }
             Err(error) => Err(error.with_facts(self.facts)),
         }
     }
