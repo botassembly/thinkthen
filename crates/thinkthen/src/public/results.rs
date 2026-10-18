@@ -257,11 +257,10 @@ pub struct Details {
     confidence: Option<f64>,
     url: String,
     json: Written,
-    scalar_json: Option<Written>,
 }
 
 impl Details {
-    /// The `thinkthen.result/1` line that `--details` prints for this one text.
+    /// The `thinkthen.result/2` line that `--details` prints for this one text.
     #[must_use]
     pub fn to_json(&self) -> String {
         self.json.text()

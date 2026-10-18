@@ -38,8 +38,8 @@ pub(crate) struct CompleteMeta<'a> {
     answered_by: Option<&'a str>,
 }
 impl<'a> CompleteMeta<'a> {
-    pub(crate) fn of(compatibility: &'a Meta, identity: &'a ResultIdentity) -> Self {
-        Self::from_fields(compatibility.fields(), identity)
+    pub(crate) fn of(reading: &'a Meta, identity: &'a ResultIdentity) -> Self {
+        Self::from_fields(reading.fields(), identity)
     }
     pub(crate) fn from_fields(
         fields: crate::core::MetadataFields<'a>,

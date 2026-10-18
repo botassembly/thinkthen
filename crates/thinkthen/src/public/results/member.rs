@@ -45,19 +45,10 @@ impl fmt::Debug for Details {
             .field("confidence", &self.confidence)
             .field("url", &"<withheld>")
             .field("json", &self.json)
-            .field("scalar_json", &self.scalar_json)
             .finish()
     }
 }
 
-impl Details {
-    /// The same detailed result as a scalar SQL value, without a record input.
-    #[doc(hidden)]
-    #[must_use]
-    pub fn to_scalar_json(&self) -> String {
-        self.scalar_json.as_ref().unwrap_or(&self.json).text()
-    }
-}
 
 #[cfg(test)]
 impl Details {
@@ -66,7 +57,7 @@ impl Details {
         original: Option<&T>,
     ) -> Result<Self, Error> {
         let fields = canonical.metadata();
-        let scalar = Written::of(&canonical.scalar_details(None))?;
+        let scalar = Written::of(canonical)?;
         let json = match original {
             Some(original) => {
                 // Match native member materialization without reapplying reader byte limits.
@@ -74,7 +65,11 @@ impl Details {
                     .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
                 let record =
                     core::Record::from_json(core::Json::parse(&source).map_err(Error::refused)?);
-                Written::of(&canonical.scalar_details(Some(record)))?
+                {
+                    let mut row = canonical.clone();
+                    row.input = Some(record);
+                    Written::of(&row)?
+                }
             }
             None => scalar.clone(),
         };
@@ -95,7 +90,6 @@ impl Details {
             confidence: canonical.answer().confidence().map(|p| p.as_f64()),
             url: fields.url.to_owned(),
             json,
-            scalar_json: original.map(|_| scalar),
         })
     }
 }

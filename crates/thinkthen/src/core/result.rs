@@ -29,9 +29,6 @@ pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;
 pub(crate) use record_value::RecordValue;
 
-/// The schema string a version one result carries.
-pub(crate) const SCHEMA: &str = "thinkthen.result/1";
-
 /// What the backend reported it spent on the judgment.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "tokenUsage"))]
@@ -314,11 +311,8 @@ impl AnnotateMeta {
 }
 
 /// The detailed result from applying a question set to one record.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "annotateDetails"))]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AnnotateResult {
-    schema: &'static str,
     input: Record,
     value: NamedValues,
     answers: NamedAnswers,
@@ -340,7 +334,6 @@ impl AnnotateResult {
         meta: AnnotateMeta,
     ) -> Self {
         Self {
-            schema: SCHEMA,
             input,
             value: NamedValues(values),
             answers: NamedAnswers(answers),
@@ -392,57 +385,6 @@ impl Serialize for NamedAnswers {
             map.serialize_entry(name, answer)?;
         }
         map.end()
-    }
-}
-
-/// One judgment, in the shape `specification/result.md` prints.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "decisionDetails"))]
-pub(crate) struct DecisionResult {
-    schema: &'static str,
-    value: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    input: Option<Record>,
-    question: Question,
-    answer: Answer,
-    threshold: Option<Threshold>,
-    meta: Meta,
-}
-
-impl DecisionResult {
-    /// Gather one judgment into the document the tool prints.
-    ///
-    /// `value` is the bare value the command would have printed, so a reader of
-    /// the object and a reader of the bare line learn the same thing.
-    /// `threshold` is `None` on a verb that takes no rule, and it prints `null`.
-    #[must_use]
-    pub(crate) const fn new(
-        value: Value,
-        question: Question,
-        answer: Answer,
-        threshold: Option<Threshold>,
-        meta: Meta,
-    ) -> Self {
-        Self {
-            schema: SCHEMA,
-            value,
-            input: None,
-            question,
-            answer,
-            threshold,
-            meta,
-        }
-    }
-
-    /// Carry the whole record this row answered, as a record row does.
-    ///
-    /// `input` holds the record as it arrived, including the parts no pointer
-    /// sent. A single document is not a record stream, so it carries none.
-    #[must_use]
-    pub(crate) fn with_input(mut self, record: Record) -> Self {
-        self.input = Some(record);
-        self
     }
 }
 

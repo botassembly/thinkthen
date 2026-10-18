@@ -81,17 +81,7 @@ fn dynamic_details_keep_original_input_and_one_request() {
             "ADR 0111 drops meta.batch"
         );
         assert_eq!(json["meta"]["batch_setting"], 2, "ticket 0349");
-        let scalar: serde_json::Value =
-            serde_json::from_str(&row.value().to_scalar_json()).expect("scalar detail JSON");
-        assert!(
-            scalar.get("input").is_none(),
-            "scalar detail has no record input"
-        );
-        assert!(scalar["meta"].get("batch").is_none());
-        assert_eq!(
-            json["meta"]["requests_sent"],
-            if position == 0 { 1 } else { 0 }
-        );
+
     }
     assert_eq!(
         batch
