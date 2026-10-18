@@ -20,6 +20,9 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     php8.3-cli php8.3-common composer postgresql-16 postgresql-server-dev-16 \
     sqlite3 libsqlite3-dev musl-tools libgtk-3-dev xvfb xauth util-linux perl \
     libcurl4-openssl-dev libxml2-dev && rm -rf /var/lib/apt/lists/*
+# Keep the existing system-package layer cached when adding Swift prerequisites.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gnupg libedit2 libpython3.12t64 libcurl4t64 libz3-4 tzdata && rm -rf /var/lib/apt/lists/*
 COPY sdlc/tools.json /tmp/tools.json
 COPY sdlc/linux/install.py /tmp/install.py
 COPY databases/duckdb/tools/version.env /tmp/duckdb-version.env

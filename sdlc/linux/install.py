@@ -5,11 +5,13 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import shlex
 import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 
 manifest = json.loads(Path(sys.argv[1]).read_text())
@@ -43,6 +45,47 @@ env = dict(os.environ, PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DA
 subprocess.run([str(mise), 'install', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env, check=True)
 resolved = json.loads(subprocess.check_output([str(mise), 'env', '--json', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env))
 env['PATH'] = resolved['PATH']
+
+
+def swift_sdk(tool, env):
+    # Swift spells the minor release's zero patch explicitly in archive names.
+    version = tool['version'] + ('.0' if tool['version'].count('.') == 1 else '')
+    suffix = '-aarch64' if arch == 'arm64' else ''
+    name = 'swift-' + version + '-RELEASE-ubuntu24.04' + suffix
+    url = ('https://download.swift.org/swift-' + version + '-release/ubuntu2404' + suffix +
+           '/swift-' + version + '-RELEASE/' + name + '.tar.gz')
+    keys = manifest['linux']['swift_signing_keys']
+    destination = root / 'swift'
+    destination.mkdir()
+    with tempfile.TemporaryDirectory(prefix='thinkthen-swift-') as temporary:
+        temporary = Path(temporary)
+        for target, source in (('sdk.tar.gz', url), ('sdk.sig', url + '.sig'), ('keys.asc', keys['url'])):
+            with urllib.request.urlopen(source, timeout=60) as response, (temporary / target).open('wb') as output:
+                shutil.copyfileobj(response, output)
+        if hashlib.sha256((temporary / 'keys.asc').read_bytes()).hexdigest() != keys['sha256']:
+            raise SystemExit('Swift signing keys differ from tools.json')
+        keyring = temporary / 'keyring'
+        keyring.mkdir(mode=0o700)
+        gpg = ['gpg', '--batch', '--homedir', str(keyring)]
+        subprocess.run([*gpg, '--import', str(temporary / 'keys.asc')], env=env, check=True)
+        subprocess.run([*gpg, '--verify', str(temporary / 'sdk.sig'), str(temporary / 'sdk.tar.gz')],
+                       env=env, check=True)
+        with tarfile.open(temporary / 'sdk.tar.gz') as packed:
+            packed.extractall(destination, filter='data')
+    binary = destination / name / 'usr/bin'
+    target = ('aarch64' if arch == 'arm64' else 'x86_64') + '-unknown-linux-gnu'
+    for command in tool['commands']:
+        shown = subprocess.check_output([str(binary / command), '--version'], env=env, text=True)
+        found = re.search(r'\bSwift version (\d+\.\d+(?:\.\d+)?)\b', shown)
+        actual = found[1] if found else ''
+        if actual.count('.') == 1:
+            actual += '.0'
+        if actual != version or 'Target: ' + target not in shown:
+            raise SystemExit('Swift binary differs from the manifest release or architecture')
+        print(shown, flush=True)
+    return {'PATH': str(binary) + ':' + env['PATH']}
+
+
 for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] != 'rust'):
     if 'linux' not in tool['platforms']:
         continue
@@ -64,13 +107,15 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     if provider.startswith('cargo:'):
         binaries = root / 'cargo-tools'
         acquired = subprocess.run(['cargo-binstall', '--no-confirm', '--strategies', 'crate-meta-data',
-                                   '--root', str(binaries), '--version', tool['version'], provider[6:]], env=env)
+                                   '--root', str(binaries), '--version', '=' + tool['version'], provider[6:]], env=env)
         if acquired.returncode:
             # Existing helper acquisition; the compiler itself comes from the
             # pinned official Rust binary distribution installed above.
             subprocess.run(['cargo', 'install', '--locked', '--root', str(binaries),
-                            '--version', tool['version'], provider[6:]], env=env, check=True)
+                            '--version', '=' + tool['version'], provider[6:]], env=env, check=True)
         selected = {'PATH': str(binaries / 'bin') + ':' + env['PATH']}
+    elif name == 'swift':
+        selected = swift_sdk(tool, env)
     else:
         acquired = subprocess.run([str(mise), 'install', identity], env=env)
         if acquired.returncode and name == 'flutter':
