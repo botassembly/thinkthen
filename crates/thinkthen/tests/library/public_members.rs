@@ -83,7 +83,7 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         Some(("old".to_owned(), "new".to_owned()))
     );
     let row: serde_json::Value =
-        serde_json::from_str(&details.results()[0].to_scalar_json().expect("scalar JSON"))
+        serde_json::from_str(&details.results()[0].to_json().expect("scalar JSON"))
             .expect("result JSON");
     assert_eq!(row["meta"]["question_sha256"], case["question_sha256"]);
     assert_eq!(row["meta"]["profile_warning"], case["warning"]);

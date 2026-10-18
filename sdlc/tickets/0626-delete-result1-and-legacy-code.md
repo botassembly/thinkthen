@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 184b415, accept
+
 ## Outcome
 
 - Result/2 is the only result shape. The result/1 definitions are gone from the generated schemas (`specification/result.schema.json`, `complete.schema.json`), from the serializers and from both spec pages.
