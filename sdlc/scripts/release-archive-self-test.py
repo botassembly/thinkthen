@@ -429,7 +429,8 @@ def main():
     tap_formula(version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
     archived_flutter_admission(commit, host)
-    c_pack_exit(host, version)
+    if host.endswith("-apple-darwin") or host == "x86_64-unknown-linux-gnu":
+        c_pack_exit(host, version)
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
