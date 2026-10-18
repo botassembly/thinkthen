@@ -212,7 +212,7 @@ list.sort((a, b) => (b.url === '/') - (a.url === '/'));
 const llms = [
   '# ThinkThen',
   '',
-  "> ThinkThen: code that knows what you mean. ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It works whether the model runs on your own servers, at TypeSafe or at another provider. ThinkThen makes these models simple to call from any language or database.",
+  "> ThinkThen: code that knows what you mean. ThinkThen is ten functions on top of Jev, TypeSafe's System One model, or any model like it. System One models return probabilities. Your code decides what to do with them. It works whether the model runs on your own servers, at TypeSafe or at another provider. ThinkThen makes these models simple to call from any language or database.",
   '',
   'Every page on this site has a Markdown twin at the same address with .md added. https://thinkthen.dev/llms-full.txt holds every twin in one file.',
   '',

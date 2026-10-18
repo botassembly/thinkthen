@@ -1,5 +1,5 @@
 //! Exact image decision-route admission and wire fields (0448).
-//! Sources: Liquid decision-models and Perplexity decisions/quickstart,
+//! Sources: Liquid System One models and Perplexity decisions/quickstart,
 //! checked 2026-10-06. Unknown local runtime/projector budgets fail closed.
 
 use crate::core::backend_profile::{BackendProfile, LimitKind, ProfileLimit, ProfileName};
