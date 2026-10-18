@@ -461,6 +461,9 @@ duckdb-host-unpack)
 	for version in $(python3 databases/duckdb/tools/inputs.py versions); do
 		tar -xzf "$2/duckdb-hosts-$version-$3-$4.tar.gz"
 		chmod +x "databases/duckdb/build/community/$version/build/release/duckdb"
+		# Installed package checks validate the pinned sources through this host-local link.
+		tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/community/$version/tools
+		ln -sfn "$tools" "databases/duckdb/build/community/$version/extension-ci-tools"
 	done
 	;;
 resolve)
