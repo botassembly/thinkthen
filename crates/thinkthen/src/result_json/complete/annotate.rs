@@ -103,7 +103,7 @@ pub(crate) fn annotation(
     Ok(core::CompleteAnnotation {
         source: None,
         identity,
-        reading: core::AnnotateResult::new(input, annotation.values, annotation.details, meta),
+        reading: core::AnnotateResult::new(input, annotation.values, meta),
         members,
         context_sha256,
         attempts: attempts.then(|| events.into_values().collect()),

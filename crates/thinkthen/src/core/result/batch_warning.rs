@@ -27,8 +27,7 @@ impl From<Setting> for BatchSetting {
 }
 
 impl BatchSetting {
-    /// The settings named by result metadata: `meta.batch_setting`, or an
-    /// older saved row's `meta.batch.setting`. A line naming neither adds
+    /// The settings named by result metadata: `meta.batch_setting`. A line naming none adds
     /// none, so an empty set means the setting is unknown. An invalid setting
     /// gives back its line and the member that named it.
     pub(crate) fn in_results(
@@ -39,12 +38,10 @@ impl BatchSetting {
             let Some(meta) = row.member("meta") else {
                 continue;
             };
-            let (named, member) = match (meta.member("batch_setting"), meta.member("batch")) {
-                (Some(setting), _) => (Some(setting), "meta.batch_setting"),
-                (None, Some(batch)) => (batch.member("setting"), "meta.batch.setting"),
-                (None, None) => continue,
+            let Some(named) = meta.member("batch_setting") else {
+                continue;
             };
-            let setting = named.and_then(Setting::of_json).ok_or((*line, member))?;
+            let setting = Setting::of_json(named).ok_or((*line, "meta.batch_setting"))?;
             settings.insert(setting.into());
         }
         Ok(settings)

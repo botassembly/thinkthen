@@ -1,6 +1,5 @@
 //! The JSON document one judgment prints.
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
 use crate::core::answer::{Answer, Value};
@@ -315,7 +314,6 @@ impl AnnotateMeta {
 pub(crate) struct AnnotateResult {
     input: Record,
     value: NamedValues,
-    answers: NamedAnswers,
     meta: AnnotateMeta,
 }
 
@@ -330,13 +328,11 @@ impl AnnotateResult {
     pub(crate) const fn new(
         input: Record,
         values: Vec<(String, AnnotatedValue)>,
-        answers: Vec<(String, AnnotatedEntry)>,
         meta: AnnotateMeta,
     ) -> Self {
         Self {
             input,
             value: NamedValues(values),
-            answers: NamedAnswers(answers),
             meta,
         }
     }
@@ -366,25 +362,6 @@ impl NamedValues {
 impl Serialize for NamedValues {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.collect_map(self.0.iter().map(|(name, value)| (name, value)))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
-struct NamedAnswers(
-    #[cfg_attr(
-        test,
-        schemars(with = "std::collections::BTreeMap<String, AnnotatedEntry>")
-    )]
-    Vec<(String, AnnotatedEntry)>,
-);
-impl Serialize for NamedAnswers {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(self.0.len()))?;
-        for (name, answer) in &self.0 {
-            map.serialize_entry(name, answer)?;
-        }
-        map.end()
     }
 }
 

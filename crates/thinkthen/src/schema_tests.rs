@@ -12,7 +12,6 @@ use schemars::transform::RecursiveTransform;
 use serde_json::{Map, Value, json};
 
 use crate::cli::annotate::error_row::Row;
-use crate::cli::relate::result::Details;
 use crate::core::{NamedValues, RecordValue, RelationEdge, RelationEntity, Value as Bare};
 use crate::engine::facade::Recognized;
 use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson};
@@ -137,7 +136,6 @@ fn register(generator: &mut schemars::SchemaGenerator) {
     // Each result type below is a named definition.
     let _registered = [
         generator.subschema_for::<Recognized>(),
-        generator.subschema_for::<Details<'_>>(),
         generator.subschema_for::<RecordValue<Bare>>(),
         generator.subschema_for::<Row<'_>>(),
         generator.subschema_for::<Counters>(),

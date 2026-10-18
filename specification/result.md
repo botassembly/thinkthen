@@ -290,7 +290,6 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 | `requests` | The stored-answer question keys behind this result, in answer order. These are request digests in the existing public vocabulary, not a list of transport sends. Packing and retries do not make their count equal to `requests_sent`. See the [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) and [question-store contract](recording.md#the-question-store). |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
-| `batch` | No longer written. Rows saved before ADR 0111 may hold it, with the run's `setting` beside the batch's `records`, `position`, `closed`, `usage` and `requests_sent`. `audit` and `diff` still read its `setting` when a row has no `batch_setting` |
 | `batch_setting` | The run's resolved batch setting: a whole number of at least 1, or `"max"`. A structured JSON question runs one record a request and names 1. Present on each detailed record row of `decide`, `filter`, `rank`, `choose`, `tag` and `score`, from the command and from every library call over records. Absent on one document. `audit` and `diff` read it, by ADR 0085 |
 | `batch_warning` | The file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise. A file with a threshold and no batch key was tuned at 1, without changing the run's setting |
 | `context_sha256` | The SHA-256 of the exact `--context` file bytes. Absent without a context |
@@ -312,13 +311,13 @@ The default record row for `decide`, `choose`, `tag`, and `score` keeps the pars
 Under `--details`, the full result object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the default view would have taken. `filter --details` still prints only kept records.
 
 
-The preceding row is a `decide --details` example. An ordinary yes/no ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
+An ordinary yes/no ranked detailed row keeps the same complete shape, with its positive integer rank under `value` and a null `threshold`.
 
 
-A set-ranked row carries the selecting member name, keeping that member's probability and receipt:
+A set-ranked row carries the selecting member name and its probability and receipt.
 
 
-A graded rank row instead keeps the numeric score under `value`, a `score` question and answer, and a null threshold.
+A graded rank row retains its score question and answer and a null threshold; `value` is its positive integer rank.
 
 
 ## `annotate`
