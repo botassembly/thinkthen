@@ -10,7 +10,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Perplexity Decisions through ThinkThen: address, model, key variable and check.' }} name="Models">
   <h1>Perplexity Decisions</h1>
-  <p class="lede">Perplexity serves its own decision model. Select it with <code>--backend {b.name}</code>.</p>
+  <p class="lede">Perplexity serves its own System One model. Select it with <code>--backend {b.name}</code>.</p>
   <BackendFacts name={b.name} />
   <p>Put your provider key in <code>{b.keys[0]}</code>. ThinkThen reads this variable when you select the backend.</p>
   <h2>Check the connection</h2>

@@ -1,6 +1,6 @@
 # ThinkThen for MCP clients
 
-Give an agent the ten ThinkThen functions as tools over local stdio. The server uses the same engine, settings and answer cache as the command line. Use Jev, TypeSafe's decision model, OpenAI or a local model through the command's [backend settings](https://thinkthen.dev/models/). Your agent gets typed answers, saved-answer reuse and offline replay without implementing provider calls itself.
+Give an agent the ten ThinkThen functions as tools over local stdio. The server uses the same engine, settings and answer cache as the command line. Use Jev, TypeSafe's System One model, OpenAI or a local model through the command's [backend settings](https://thinkthen.dev/models/). Your agent gets typed answers, saved-answer reuse and offline replay without implementing provider calls itself.
 
 ## Launch the server
 
