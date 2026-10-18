@@ -83,7 +83,17 @@ class CheckpointCommand(unittest.TestCase):
             def invoke(revision, log):
                 return subprocess.run(['/bin/sh', str(scripts / 'test-full-cases'),
                     '--checkpoint', revision, str(log)], cwd=root, env=env,
-                    capture_output=True, text=True, check=False)
+                    capture_output=True, text=True, check=False, timeout=5)
+            fifo = root / 'existing.fifo'
+            os.mkfifo(fifo)
+            dangling = root / 'dangling.log'
+            dangling.symlink_to(root / 'missing.log')
+            for unsafe in ('relative.log', os.devnull, fifo, dangling):
+                with self.subTest(log=str(unsafe)):
+                    refused = invoke(sha, unsafe)
+                    self.assertEqual(refused.returncode, 2, refused.stderr)
+                    self.assertIn('checkpoint needs a new absolute log path', refused.stderr)
+            self.assertFalse((root / 'missing.log').exists())
             log = root / 'pass.log'
             result = invoke(sha, log)
             self.assertEqual(result.returncode, 0, result.stderr)

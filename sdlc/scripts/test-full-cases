@@ -5,6 +5,13 @@ case ${1:-} in
 --checkpoint)
     [ "$#" -eq 3 ] || { echo 'usage: test-full-cases --checkpoint MAIN_SHA LOG' >&2; exit 2; }
     checkpoint_sha=$2 checkpoint_log=$3
+    case $checkpoint_log in
+    /*) ;;
+    *) echo 'test-full-cases: checkpoint needs a new absolute log path' >&2; exit 2 ;;
+    esac
+    [ ! -e "$checkpoint_log" ] && [ ! -L "$checkpoint_log" ] || {
+        echo 'test-full-cases: checkpoint needs a new absolute log path' >&2; exit 2;
+    }
     REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
     cd -- "$REPO"
     # pm job checks out the named revision and fetches origin before running this command.
