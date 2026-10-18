@@ -284,11 +284,8 @@ def postgresql_package_case():
     # The package entry point must select its pinned headers without ~/.pgrx.
     with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-package-') as temporary:
         root = Path(temporary)
+        stage_checkout(REPO, root)
         database = root / 'databases/postgresql'
-        database.mkdir(parents=True)
-        for name in ('package.sh', 'runtime.sh', 'runtime.sha256', 'runtime.url',
-                     'pgrx-package-locked.sh', 'Cargo.lock', 'thinkthen.control'):
-            shutil.copyfile(REPO / 'databases/postgresql' / name, database / name)
         tools = root / 'bin'
         tools.mkdir()
         pg_config = tools / 'pg_config'
@@ -321,18 +318,9 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         assert (root / 'out/lib/thinkthen.so').is_file()
         # Installed smoke must pass the existing archive to the runtime check,
         # which otherwise requires source-packaging tools on the host.
-        scripts = root / 'sdlc/scripts'
-        scripts.mkdir(parents=True)
-        for name in ('scratch.sh', 'release-workflow'):
-            shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
         for relative, body in (('libraries/ruby/toolchain.env', 'RUBY_MINORS=\n'),
-                               ('libraries/python/host.sh', 'python_host() { command -v python3; }\n'),
-                               ('libraries/typescript/node.sha256', ''),
-                               ('databases/sqlite/amalgamation.sha256', ''),
-                               ('crates/thinkthen/Cargo.toml', '[package]\nversion = "0.2.0"\n')):
-            path = root / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(body)
+                               ('libraries/python/host.sh', 'python_host() { command -v python3; }\n')):
+            (root / relative).write_text(body)
         (root / 'platform').mkdir()
         for major in (16, 17, 18):
             (root / 'platform' / f'thinkthen-postgresql{major}-0.2.0-aarch64-unknown-linux-gnu.tar.gz').touch()
@@ -644,12 +632,7 @@ def duckdb_host_transfer_case():
     from inputs import versions
     with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-transfer-') as temporary:
         root = Path(temporary)
-        for relative in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh',
-                         'sdlc/scripts/fetch.sh', 'crates/thinkthen/Cargo.toml',
-                         'databases/duckdb/tools/inputs.py', 'databases/duckdb/tools/version.env'):
-            path = root / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / relative, path)
+        stage_checkout(REPO, root)
         tools = root / 'bin'
         tools.mkdir()
         (tools / 'python3').symlink_to(sys.executable)
@@ -736,9 +719,14 @@ def preflight_cases():
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
-        # A failed prepared command must retain the error needed to repair its input.
+        # A successful command with an unapproved version must still refuse.
         maturin = tools / 'maturin'
         maturin.unlink()
+        maturin.write_text(f'#!{sys.executable}\nprint("maturin wrong-version")\n')
+        maturin.chmod(0o755)
+        mismatch = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        assert mismatch.returncode == 1 and 'version or prepared input differs from pin' in mismatch.stderr, mismatch
+        # A failed prepared command must retain the error needed to repair its input.
         maturin.write_text(f'#!{sys.executable}\nimport os, sys\n'
                           'print("prepared command output")\n'
                           'print("prepared command error", file=sys.stderr)\n'
