@@ -46,6 +46,9 @@ int main(int argc, char **argv) {
         thinkthen_session_cancel(session);
         check(fixture_join(thread) == 0);
         check(waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1);
+        uint32_t ready;
+        check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 0, &ready) == THINKTHEN_OK);
+        check(ready == THINKTHEN_SESSION_READY_TIMEOUT_V1);
         puts("cancelled"); fflush(stdout);
         (void)getchar();
     } else if (cancel) {
@@ -67,7 +70,8 @@ int main(int argc, char **argv) {
         if (strstr(json, "\"kind\":\"terminal\"")) {
             terminals++;
             if (held || cancel) check(strstr(json, "\"kind\":\"cancelled\"") != NULL);
-            else check(strstr(json, "\"requests_sent\":24") != NULL);
+            if (held) check(strstr(json, "\"requests_sent\":1") != NULL);
+            if (!held && !cancel) check(strstr(json, "\"requests_sent\":24") != NULL);
         }
         thinkthen_session_result_free(packet);
     }

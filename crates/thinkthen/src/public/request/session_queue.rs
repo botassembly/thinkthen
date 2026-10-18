@@ -30,11 +30,19 @@ struct State {
 
 /// Execution mode chooses packet contents; synchronization remains shared.
 #[derive(Debug)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "both execution modes move the existing owned packets without another allocation"
+)]
 pub(super) enum Packet {
     Ordinary(RequestSessionResult),
     Recovering(super::RequestRecoveringResult),
 }
 #[derive(Debug)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "queue reads transfer the owned packet directly into its public typed view"
+)]
 pub(super) enum Read {
     Packet(Packet),
     Terminal(RequestSessionTerminal),

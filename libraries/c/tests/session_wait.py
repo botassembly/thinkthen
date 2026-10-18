@@ -22,15 +22,16 @@ def run(native, scratch, *, rounds=1):
     for _ in range(rounds):
         for case in ('push', 'try', 'cancel', 'held'):
             arrived = threading.Event()
-            class ObservedBackend(Backend):
-                def finish_request(self, request, address):
+            class Arrivals(list):
+                def append(self, value):
+                    super().append(value)
                     arrived.set()
-                    super().finish_request(request, address)
             barrier = scratch / 'barrier-wait'
             barrier.mkdir(exist_ok=True)
             release = barrier / 'release-hold-session'
             release.unlink(missing_ok=True)
-            backend = ObservedBackend(barrier if case == 'held' else None, key='sk-session-fixture')
+            backend = Backend(barrier if case == 'held' else None, key='sk-session-fixture')
+            backend.arrivals = Arrivals()
             try:
                 selected = {**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.server_port}/generic/v1',
                             'THINKTHEN_API_KEY': 'sk-session-fixture'}
@@ -40,7 +41,7 @@ def run(native, scratch, *, rounds=1):
                 try:
                     if case == 'held':
                         assert read_process_line(process.stdout) == 'submitted\n'
-                        assert arrived.wait(5), 'provider never received a connection'
+                        assert arrived.wait(5), 'provider never received the request'
                         process.stdin.write('c'); process.stdin.flush()
                         assert read_process_line(process.stdout) == 'cancelled\n'
                         release.touch()
