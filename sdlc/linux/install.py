@@ -43,7 +43,6 @@ env = dict(os.environ, PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DA
 subprocess.run([str(mise), 'install', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env, check=True)
 resolved = json.loads(subprocess.check_output([str(mise), 'env', '--json', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env))
 env['PATH'] = resolved['PATH']
-env['BINSTALL_DISABLE_STRATEGIES'] = 'compile'
 for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] != 'rust'):
     if 'linux' not in tool['platforms']:
         continue
@@ -64,7 +63,7 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     identity = provider + '@' + tool['version']
     if provider.startswith('cargo:'):
         binaries = root / 'cargo-tools'
-        acquired = subprocess.run(['cargo-binstall', '--no-confirm', '--disable-strategies', 'compile',
+        acquired = subprocess.run(['cargo-binstall', '--no-confirm', '--strategies', 'crate-meta-data',
                                    '--root', str(binaries), '--version', tool['version'], provider[6:]], env=env)
         if acquired.returncode:
             # Existing helper acquisition; the compiler itself comes from the
