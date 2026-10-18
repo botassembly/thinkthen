@@ -48,6 +48,25 @@ def bootstrap(manifest, root, env):
     return binary
 
 
+def ruby_source(manifest, root):
+    pin = manifest['sources']['libyaml']
+    source = root / 'sources' / pin['directory']
+    if not source.is_dir():
+        source.parent.mkdir(parents=True, exist_ok=True)
+        archive = source.parent / 'libyaml.tar.gz'
+        with urllib.request.urlopen(pin['url'], timeout=60) as response, archive.open('wb') as output:
+            shutil.copyfileobj(response, output)
+        if hashlib.sha256(archive.read_bytes()).hexdigest() != pin['sha256']:
+            raise RuntimeError('libyaml checksum differs from tools.json')
+        with tarfile.open(archive) as packed:
+            for member in packed.getmembers():
+                if Path(member.name).is_absolute() or '..' in Path(member.name).parts or member.issym() or member.islnk():
+                    raise RuntimeError('unsafe libyaml archive')
+            packed.extractall(source.parent)
+        archive.unlink()
+    return source
+
+
 def environment(root):
     # No login shell, inherited PATH or user package-manager configuration.
     env = {name: os.environ[name] for name in (
@@ -57,7 +76,9 @@ def environment(root):
                MISE_GLOBAL_CONFIG_FILE=str(root / 'config/config.toml'),
                MISE_SYSTEM_CONFIG_FILE=str(root / 'config/system.toml'),
                MISE_USE_TOML='0', MISE_YES='1', MISE_CARGO_BINSTALL='0',
-               RUSTUP_HOME=str(root / 'rustup'), UV_CACHE_DIR=str(root / 'uv-cache'),
+               MISE_JOBS='2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
+               RUSTUP_HOME=str(root / 'rustup'), RUSTUP_TOOLCHAIN='1.95.0',
+               PIP_CONFIG_FILE='/dev/null', PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
                UV_PYTHON_INSTALL_DIR=str(root / 'python'))
     return env
 
@@ -66,20 +87,41 @@ def resolve(manifest, groups, root, check=False):
     host = platform.system().lower()
     requirements = selected(manifest, groups, host)
     env = environment(root)
+    env['CARGO_HOME'] = str(root / 'cargo')
+    env['CARGO_BUILD_JOBS'] = '2'
+    env['RUSTUP_TOOLCHAIN'] = manifest['tools']['rust']['version']
     paths = [str(root / 'bin')]
     failures = []
     installer = None
     for name, tool in requirements.items():
         if host != 'darwin' or 'provider' not in tool or tool['provider'] == 'python-package':
             continue
+        if tool['provider'] == 'rustup':
+            try:
+                if not check:
+                    run(['rustup', 'toolchain', 'install', tool['version'], '--profile', 'minimal'], env)
+            except (OSError, subprocess.CalledProcessError) as error:
+                failures.append(name + ': ' + str(error))
+            continue
         identity = tool['provider'] + '@' + tool['version']
         try:
             if not check:
                 installer = installer or bootstrap(manifest, root, env)
+                if tool['provider'] == 'ruby':
+                    env['RUBY_CONFIGURE_OPTS'] = '--with-libyaml-source-dir=' + str(ruby_source(manifest, root))
                 run([installer, 'install', identity], env)
             installer = installer or root / 'bootstrap/mise/bin/mise'
-            folder = subprocess.check_output([str(installer), 'where', identity], env=env, text=True).strip()
-            paths.append(str(Path(folder) / 'bin'))
+            resolved = json.loads(subprocess.check_output(
+                [str(installer), 'env', '--json', identity], env=env, text=True))
+            for folder in resolved.get('PATH', '').split(os.pathsep):
+                if folder in SYSTEM_PATH.split(os.pathsep):
+                    continue
+                path = Path(folder).resolve()
+                if root not in path.parents:
+                    raise RuntimeError('installer selected a path outside the job tool folder')
+                if str(path) not in paths:
+                    paths.append(str(path))
+            env.update({key: value for key, value in resolved.items() if key != 'PATH'})
             env['PATH'] = os.pathsep.join(paths + [SYSTEM_PATH])
         except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
             failures.append(name + ': ' + str(error))
@@ -95,9 +137,20 @@ def resolve(manifest, groups, root, check=False):
             failures.append('Python tools: ' + str(error))
     missing = [command for tool in requirements.values() for command in tool['commands']
                if shutil.which(command, path=env['PATH']) is None]
+    for name, tool in requirements.items():
+        probe = tool.get('probe')
+        if probe and probe['argv'][0] not in missing:
+            try:
+                result = subprocess.check_output(probe['argv'], env=env, text=True, stderr=subprocess.STDOUT)
+                if probe['contains'].format(version=tool['version']) not in result:
+                    failures.append(name + ': version differs from tools.json')
+            except (OSError, subprocess.CalledProcessError) as error:
+                failures.append(name + ': ' + str(error))
     if missing or failures:
         raise RuntimeError('missing tools: ' + ', '.join(sorted(set(missing)))
                            + ('; installation failures: ' + '; '.join(failures) if failures else ''))
+    env['CARGO_HOME'] = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
+    env['THINKTHEN_RESOLVED_TOOLS'] = ','.join(groups)
     return env
 
 
@@ -112,10 +165,15 @@ def main():
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text())
     groups = args.groups.split(',')
+    known = {'install', 'lint', 'test', 'spec', 'surfaces', *manifest['libraries'], *manifest['databases']}
+    known.update(group for tool in manifest['tools'].values() for group in tool['groups'])
+    if set(groups) - known:
+        parser.error('unknown tool groups: ' + ', '.join(sorted(set(groups) - known)))
     if args.list:
         print(json.dumps(selected(manifest, groups, platform.system().lower()), indent=2))
         return 0
-    root = (args.root or ROOT / '.tools').resolve()
+    default = ROOT / '.tools' if platform.system() == 'Darwin' else Path(manifest['linux_prefix'])
+    root = (args.root or default).resolve()
     if platform.system() == 'Darwin' and ROOT not in root.parents:
         parser.error('macOS tools must live under this job checkout')
     try:

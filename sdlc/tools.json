@@ -69,7 +69,14 @@
         "common"
       ],
       "provider": "rust",
-      "version": "1.95.0"
+      "version": "1.95.0",
+      "probe": {
+        "argv": [
+          "rustc",
+          "--version"
+        ],
+        "contains": "rustc {version}"
+      }
     },
     "python": {
       "commands": [
@@ -84,7 +91,14 @@
         "common"
       ],
       "provider": "python",
-      "version": "3.13.7"
+      "version": "3.13.7",
+      "probe": {
+        "argv": [
+          "python3",
+          "--version"
+        ],
+        "contains": "Python {version}"
+      }
     },
     "ruby": {
       "commands": [
@@ -102,7 +116,14 @@
         "ruby"
       ],
       "provider": "ruby",
-      "version": "4.0.7"
+      "version": "4.0.7",
+      "probe": {
+        "argv": [
+          "ruby",
+          "--version"
+        ],
+        "contains": "ruby {version}"
+      }
     },
     "nextest": {
       "commands": [
@@ -116,8 +137,15 @@
         "test",
         "install"
       ],
-      "provider": "aqua:nextest-rs/nextest",
-      "version": "0.9.114"
+      "provider": "cargo:cargo-nextest",
+      "version": "0.9.114",
+      "probe": {
+        "argv": [
+          "cargo-nextest",
+          "--version"
+        ],
+        "contains": "cargo-nextest {version}"
+      }
     },
     "jq": {
       "commands": [
@@ -133,7 +161,14 @@
         "install"
       ],
       "provider": "aqua:jqlang/jq",
-      "version": "1.7.1"
+      "version": "1.7.1",
+      "probe": {
+        "argv": [
+          "jq",
+          "--version"
+        ],
+        "contains": "jq-{version}"
+      }
     },
     "node": {
       "commands": [
@@ -151,7 +186,14 @@
         "surfaces"
       ],
       "provider": "node",
-      "version": "22.22.3"
+      "version": "22.22.3",
+      "probe": {
+        "argv": [
+          "node",
+          "--version"
+        ],
+        "contains": "v{version}"
+      }
     },
     "deny": {
       "commands": [
@@ -168,7 +210,14 @@
         "ruby"
       ],
       "provider": "cargo:cargo-deny",
-      "version": "0.19.4"
+      "version": "0.19.4",
+      "probe": {
+        "argv": [
+          "cargo-deny",
+          "--version"
+        ],
+        "contains": "cargo-deny {version}"
+      }
     },
     "public-api": {
       "commands": [
@@ -183,7 +232,14 @@
         "install"
       ],
       "provider": "cargo:cargo-public-api",
-      "version": "0.52.0"
+      "version": "0.52.0",
+      "probe": {
+        "argv": [
+          "cargo-public-api",
+          "--version"
+        ],
+        "contains": "cargo-public-api {version}"
+      }
     },
     "cbindgen": {
       "commands": [
@@ -198,7 +254,14 @@
         "install"
       ],
       "provider": "cargo:cbindgen",
-      "version": "0.29.4"
+      "version": "0.29.4",
+      "probe": {
+        "argv": [
+          "cbindgen",
+          "--version"
+        ],
+        "contains": "cbindgen {version}"
+      }
     },
     "mustmatch": {
       "commands": [
@@ -229,7 +292,14 @@
         "install"
       ],
       "provider": "python-package",
-      "version": "0.13.0"
+      "version": "0.13.0",
+      "probe": {
+        "argv": [
+          "ruff",
+          "--version"
+        ],
+        "contains": "ruff {version}"
+      }
     },
     "prettier": {
       "commands": [
@@ -244,7 +314,14 @@
         "install"
       ],
       "provider": "npm:prettier",
-      "version": "3.6.2"
+      "version": "3.6.2",
+      "probe": {
+        "argv": [
+          "prettier",
+          "--version"
+        ],
+        "contains": "{version}"
+      }
     },
     "go": {
       "commands": [
@@ -261,7 +338,14 @@
         "go"
       ],
       "provider": "go",
-      "version": "1.27.1"
+      "version": "1.27.1",
+      "probe": {
+        "argv": [
+          "go",
+          "version"
+        ],
+        "contains": "go{version}"
+      }
     },
     "zig": {
       "commands": [
@@ -277,7 +361,14 @@
         "zig"
       ],
       "provider": "zig",
-      "version": "0.15.2"
+      "version": "0.15.2",
+      "probe": {
+        "argv": [
+          "zig",
+          "version"
+        ],
+        "contains": "{version}"
+      }
     },
     "dart": {
       "commands": [
@@ -293,7 +384,14 @@
         "dart"
       ],
       "provider": "dart",
-      "version": "3.13.4"
+      "version": "3.13.4",
+      "probe": {
+        "argv": [
+          "dart",
+          "--version"
+        ],
+        "contains": "{version}"
+      }
     },
     "swift": {
       "commands": [
@@ -320,7 +418,9 @@
       "groups": [
         "lint",
         "install"
-      ]
+      ],
+      "provider": "asdf:virtualstaticvoid/asdf-gcc",
+      "version": "15.2.0"
     },
     "cmake": {
       "commands": [
@@ -557,6 +657,41 @@
       "groups": [
         "test"
       ]
+    },
+    "rust-nightly": {
+      "commands": [],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "rustup",
+      "version": "nightly-2026-08-24"
+    },
+    "ruby34": {
+      "commands": [
+        "ruby",
+        "gem"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby34"
+      ],
+      "provider": "ruby",
+      "version": "3.4.11",
+      "probe": {
+        "argv": [
+          "ruby",
+          "--version"
+        ],
+        "contains": "ruby {version}"
+      }
     }
   },
   "python_packages": {
@@ -675,5 +810,13 @@
       "linux-arm64",
       "linux-x86_64"
     ]
+  },
+  "linux_prefix": "/opt/thinkthen-tools",
+  "sources": {
+    "libyaml": {
+      "url": "https://pyyaml.org/download/libyaml/yaml-0.2.5.tar.gz",
+      "sha256": "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4",
+      "directory": "yaml-0.2.5"
+    }
   }
 }
