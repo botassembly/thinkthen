@@ -56,5 +56,5 @@
       "state": "settled"
     }
   ],
-  "ticketsGate": "sh -c 'exec \"${SHELL:?login shell is unset}\" -lc \"sdlc/scripts/lint && sdlc/scripts/test\"'"
+  "ticketsGate": "sdlc/scripts/gate"
 }

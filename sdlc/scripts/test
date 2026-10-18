@@ -43,11 +43,6 @@ unset THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_PROFILE
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
-# Isolated source-check children retain PATH, while they discard RUBY and HOME.
-. libraries/ruby/toolchain.env
-ruby=$(ruby_source_host)
-PATH=${ruby%/*}:$PATH
-export PATH
 # ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard

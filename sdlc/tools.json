@@ -1,0 +1,679 @@
+{
+  "schema": 1,
+  "bootstrap": {
+    "version": "2025.10.0",
+    "sha256": {
+      "arm64": "dca4edac473d8950973bc90d47e2a579c8ed05b5c1e5ca4acd20f4870480d711",
+      "x64": "0fa699789de2729602e5ef47e63470b69db7d76488e82dad5bd7c68779c0bb63"
+    }
+  },
+  "tools": {
+    "system": {
+      "commands": [
+        "sh",
+        "bash",
+        "awk",
+        "sed",
+        "grep",
+        "sort",
+        "cut",
+        "tr",
+        "head",
+        "tail",
+        "cat",
+        "cp",
+        "mv",
+        "mkdir",
+        "chmod",
+        "rm",
+        "ln",
+        "find",
+        "xargs",
+        "tar",
+        "gzip",
+        "git",
+        "uname",
+        "id",
+        "mktemp",
+        "dirname",
+        "basename",
+        "pwd",
+        "env",
+        "script",
+        "cc",
+        "clang",
+        "make",
+        "curl"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ]
+    },
+    "rust": {
+      "commands": [
+        "cargo",
+        "rustc",
+        "rustup",
+        "rustfmt",
+        "cargo-clippy"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ],
+      "provider": "rust",
+      "version": "1.95.0"
+    },
+    "python": {
+      "commands": [
+        "python3",
+        "python"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "common"
+      ],
+      "provider": "python",
+      "version": "3.13.7"
+    },
+    "ruby": {
+      "commands": [
+        "ruby",
+        "gem"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "lint",
+        "install",
+        "ruby"
+      ],
+      "provider": "ruby",
+      "version": "4.0.7"
+    },
+    "nextest": {
+      "commands": [
+        "cargo-nextest"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "install"
+      ],
+      "provider": "aqua:nextest-rs/nextest",
+      "version": "0.9.114"
+    },
+    "jq": {
+      "commands": [
+        "jq"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "spec",
+        "install"
+      ],
+      "provider": "aqua:jqlang/jq",
+      "version": "1.7.1"
+    },
+    "node": {
+      "commands": [
+        "node",
+        "npm"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "typescript",
+        "surfaces"
+      ],
+      "provider": "node",
+      "version": "22.22.3"
+    },
+    "deny": {
+      "commands": [
+        "cargo-deny"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "typescript",
+        "ruby"
+      ],
+      "provider": "cargo:cargo-deny",
+      "version": "0.19.4"
+    },
+    "public-api": {
+      "commands": [
+        "cargo-public-api"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "cargo:cargo-public-api",
+      "version": "0.52.0"
+    },
+    "cbindgen": {
+      "commands": [
+        "cbindgen"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "cargo:cbindgen",
+      "version": "0.29.4"
+    },
+    "mustmatch": {
+      "commands": [
+        "mustmatch"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "spec",
+        "install"
+      ],
+      "provider": "python-package",
+      "version": "0.1.0"
+    },
+    "ruff": {
+      "commands": [
+        "ruff"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "python-package",
+      "version": "0.13.0"
+    },
+    "prettier": {
+      "commands": [
+        "prettier"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ],
+      "provider": "npm:prettier",
+      "version": "3.6.2"
+    },
+    "go": {
+      "commands": [
+        "go",
+        "gofmt"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "go"
+      ],
+      "provider": "go",
+      "version": "1.27.1"
+    },
+    "zig": {
+      "commands": [
+        "zig"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "zig"
+      ],
+      "provider": "zig",
+      "version": "0.15.2"
+    },
+    "dart": {
+      "commands": [
+        "dart"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "dart"
+      ],
+      "provider": "dart",
+      "version": "3.13.4"
+    },
+    "swift": {
+      "commands": [
+        "swift",
+        "swiftc"
+      ],
+      "platforms": [
+        "darwin"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "swift"
+      ]
+    },
+    "gcc": {
+      "commands": [
+        "gcc"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install"
+      ]
+    },
+    "cmake": {
+      "commands": [
+        "cmake"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "cpp",
+        "duckdb"
+      ],
+      "provider": "cmake",
+      "version": "4.1.1"
+    },
+    "ninja": {
+      "commands": [
+        "ninja"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "duckdb"
+      ],
+      "provider": "ninja",
+      "version": "1.13.1"
+    },
+    "uv": {
+      "commands": [
+        "uv"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "python",
+        "polars",
+        "common"
+      ],
+      "provider": "uv",
+      "version": "0.8.22"
+    },
+    "maturin": {
+      "commands": [
+        "maturin"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "python",
+        "polars"
+      ],
+      "provider": "python-package",
+      "version": "1.9.4"
+    },
+    "dotnet": {
+      "commands": [
+        "dotnet"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "csharp"
+      ],
+      "provider": "dotnet",
+      "version": "8.0.131"
+    },
+    "jdk": {
+      "commands": [
+        "java",
+        "javac",
+        "jar"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "jvm"
+      ],
+      "provider": "java",
+      "version": "temurin-25.0.4+1"
+    },
+    "kotlin": {
+      "commands": [
+        "kotlinc"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "jvm"
+      ],
+      "provider": "kotlin",
+      "version": "2.4.20"
+    },
+    "scala": {
+      "commands": [
+        "scala",
+        "scalac"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "jvm"
+      ],
+      "provider": "scala",
+      "version": "3.9.0"
+    },
+    "bubblewrap": {
+      "commands": [
+        "bwrap"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "jvm"
+      ]
+    },
+    "gnat": {
+      "commands": [
+        "gnatmake",
+        "gprbuild"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "ada"
+      ]
+    },
+    "cobol": {
+      "commands": [
+        "cobc"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "cobol"
+      ]
+    },
+    "r": {
+      "commands": [
+        "R",
+        "Rscript"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "r"
+      ]
+    },
+    "php": {
+      "commands": [
+        "php",
+        "composer"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "php"
+      ]
+    },
+    "postgresql": {
+      "commands": [
+        "pg_config",
+        "initdb",
+        "postgres",
+        "pg_ctl",
+        "psql"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "postgresql"
+      ]
+    },
+    "sqlite": {
+      "commands": [
+        "sqlite3"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "sqlite"
+      ]
+    },
+    "duckdb": {
+      "commands": [
+        "duckdb"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "duckdb"
+      ]
+    },
+    "flutter": {
+      "commands": [
+        "flutter"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "dart"
+      ]
+    },
+    "process-limit": {
+      "commands": [
+        "prlimit"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "test"
+      ]
+    }
+  },
+  "python_packages": {
+    "PyYAML": "6.0.1",
+    "jsonschema": "4.23.0"
+  },
+  "libraries": {
+    "swift": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "polars": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "php": [
+      "linux-x86_64"
+    ],
+    "zig": [
+      "linux-x86_64"
+    ],
+    "dart": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "go": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "typescript": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "c": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "r": [
+      "linux-x86_64"
+    ],
+    "csharp": [
+      "linux-x86_64"
+    ],
+    "ruby": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "objective-c": [
+      "darwin-arm64",
+      "darwin-x86_64"
+    ],
+    "cobol": [
+      "linux-x86_64"
+    ],
+    "python": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "cpp": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "mcp": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "ada": [
+      "linux-x86_64"
+    ],
+    "jvm": [
+      "linux-x86_64"
+    ],
+    "rust": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ]
+  },
+  "databases": {
+    "sqlite": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "postgresql": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ],
+    "duckdb": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ]
+  }
+}
