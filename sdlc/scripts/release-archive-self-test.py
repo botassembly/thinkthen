@@ -19,6 +19,8 @@ import zipfile
 
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
@@ -34,12 +36,7 @@ def expect(result, text, success=False):
 def draft_notes():
     with tempfile.TemporaryDirectory(prefix="thinkthen-draft-notes-") as temporary:
         root = Path(temporary)
-        for name in ("sdlc/scripts/release-workflow", "sdlc/scripts/scratch.sh",
-                     "sdlc/scripts/fetch.sh", "crates/thinkthen/Cargo.toml",
-                     "release-notes/0.2.0.md", "release-notes/0.2.0-known-gaps.md"):
-            target = root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, target)
+        stage_checkout(REPO, root)
         binary = root / "bin"
         binary.mkdir()
         receipt = root / "calls.jsonl"
@@ -407,9 +404,6 @@ def main():
         subprocess.run(["tar", "-xf", str(archive), "-C", str(source)], check=True)
         if (source / ".git").exists():
             raise AssertionError("Git archive unexpectedly contains .git")
-        # Exercise the working candidate before it is committed; archived product files still
-        # come from HEAD and are compared by release-pack to the original tar below.
-        shutil.copy2(REPO / "sdlc/scripts/release-pack", source / "sdlc/scripts/release-pack")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "legacy"), "first-run", cwd=source), "", success=True)
         if not (base / "legacy/thinkthen-first-run.tar.gz").is_file():

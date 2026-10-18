@@ -494,17 +494,8 @@ def flutter_locked_setup_case():
         tools = sdk / 'packages/flutter_tools'
         tools.mkdir(parents=True)
         (tools / 'pubspec.lock').write_text('SDK lock fixture\n')
-        for source in (REPO / 'libraries/dart').rglob('pubspec.*'):
-            if source.name not in ('pubspec.yaml', 'pubspec.lock'):
-                continue
-            target = root / source.relative_to(REPO)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(source.read_bytes())
+        stage_checkout(REPO, root)
         example = root / 'libraries/dart/flutter/example'
-        for source in (REPO / 'libraries/dart/flutter/example').rglob('generated_*'):
-            target = root / source.relative_to(REPO)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(source.read_bytes())
         manifest = yaml.safe_load((example / 'pubspec.yaml').read_text())
         lock = yaml.safe_load((example / 'pubspec.lock').read_text())
         for package in ('thinkthen_dart', 'thinkthen_flutter'):
