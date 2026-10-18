@@ -149,8 +149,8 @@ pub(crate) use crate::core::result::complete::{
 pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, BatchSetting, BatchWarning, Meta, NamedValues, ProfileWarning,
-    ReportedSum, RequestMeta, Usage, share,
+    AnnotatedValue, BatchSetting, BatchWarning, Meta, NamedValues, ProfileWarning, ReportedSum,
+    RequestMeta, Usage, share,
 };
 pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};
 pub(crate) use crate::core::text::{
