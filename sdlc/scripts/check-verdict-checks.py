@@ -48,6 +48,12 @@ def main():
             assert smoke.returncode != 0, smoke
             assert 'smoke: FAIL libraries/python' in smoke.stdout, smoke
             assert 'libraries/python: not run: no uv' in smoke.stdout, smoke
+        if sys.platform == 'darwin':
+            go_smoke = run(['sh', 'sdlc/scripts/smoke', '--one', str(args.smoke_binaries.resolve()),
+                            'libraries/go'])
+            print(go_smoke.stdout + go_smoke.stderr, end='')
+            assert go_smoke.returncode == 0, go_smoke
+            assert 'smoke: unsupported libraries/go' in go_smoke.stdout, go_smoke
     print('check verdict: required not-run fails; declared unsupported platform passes')
 
 
