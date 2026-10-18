@@ -505,7 +505,6 @@ enum Selected<'a> {
 }
 
 impl Selected<'_> {
-    #[cfg(any(feature = "cli", test))]
     fn evidence(self) -> Result<Evidence, RecordError> {
         match self {
             Self::Text(text) => Ok(Evidence::new(text)?),
