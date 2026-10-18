@@ -33,6 +33,7 @@ The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select 
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The independent native-test and library-tool extraction is fresh-accepted at bfcfac412 after nine resolver checks and the repaired preparation fixtures; native lint keeps the PM-approved old setup until 0619, and landing now waits only for the shared main repair and its own rebased main gate, with no container dependency.
 
 ## Amendment, 2026-10-18
 
