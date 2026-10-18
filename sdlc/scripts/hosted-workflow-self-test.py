@@ -363,6 +363,9 @@ def linux_source_staging_case():
         (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators', target_is_directory=True)
         flutter = root / 'libraries/dart/flutter'
         (flutter / 'linked_readme.md').symlink_to('README.md')
+        (root / 'libraries/dart/lib/linked_dart.dart').symlink_to('thinkthen_dart.dart')
+        (root / 'libraries/dart/checks/session_consumer/bin/linked_main.dart').symlink_to('main.dart')
+        (root / 'libraries/python/thinkthen/linked_init.py').symlink_to('__init__.py')
         subprocess.run(['git', 'init', '-q', str(root)], check=True)
         subprocess.run(['git', '-C', str(root), 'add', '-f', 'libraries', 'specification'], check=True)
         loop = flutter / 'example/linux/flutter/ephemeral/.plugin_symlinks/thinkthen_flutter'
@@ -386,6 +389,7 @@ def linux_source_staging_case():
             if name == 'dart-stage':
                 subprocess.run([sys.executable, *args[1:]], cwd=root,
                                env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'), check=True)
+                assert (root / 'libraries/dart/target/core-wave/bin/linked_main.dart').is_symlink()
         import importlib.util
         namespace = dict(root=root, native=native, run=run, env=dict(TT_DART='dart', TT_FLUTTER='flutter',
                          RUBY='ruby', PYTHON_HOST=sys.executable), Path=Path, shutil=shutil,
@@ -397,11 +401,20 @@ def linux_source_staging_case():
         finally:
             os.chdir(previous)
         staged = root / 'libraries/dart/target/core-wave-flutter'
-        for item in subprocess.check_output(['git', '-C', str(flutter), 'ls-files', '-z'], text=True).split('\0'):
-            if item:
-                assert (staged / item).is_file(), item
-                if Path(item).name != 'pubspec.yaml':
-                    assert (staged / item).read_bytes() == (flutter / item).read_bytes(), item
+        for source, destination in (
+                (flutter, staged),
+                (root / 'libraries/dart/checks/session_consumer/bin', root / 'libraries/dart/target/core-wave/bin'),
+                (root / 'libraries/python/thinkthen', root / 'libraries/python/target/core-wave/thinkthen')):
+            for item in subprocess.check_output(['git', '-C', str(source), 'ls-files', '-z'], text=True).split('\0'):
+                if item:
+                    original, copied = source / item, destination / item
+                    assert copied.is_symlink() == original.is_symlink(), item
+                    if original.is_symlink():
+                        assert os.readlink(copied) == os.readlink(original), item
+                    elif Path(item).name != 'pubspec.yaml':
+                        assert copied.read_bytes() == original.read_bytes(), item
+        package_link = root / 'libraries/dart/target/core-wave/lib/linked_dart.dart'
+        assert package_link.is_symlink() and os.readlink(package_link) == 'thinkthen_dart.dart'
         assert not (staged / 'example/linux/flutter/ephemeral').exists()
         for relative in ('libraries/dart/target/core-wave/bin', 'libraries/python/target/core-wave/thinkthen'):
             assert not (root / relative / 'generated-loop').exists()

@@ -517,10 +517,10 @@ jobs:
                       'pkg.mkdir(parents=True)\n'
                       "spec=importlib.util.spec_from_file_location('assets',source/'checks/native_assets.py');assets=importlib.util.module_from_spec(spec);spec.loader.exec_module(assets)\n"
                       'for member in assets.package_members(source):\n'
-                      ' target=pkg/member;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/member,target)\n'
+                      ' target=pkg/member;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/member,target,follow_symlinks=False)\n'
                       "assets.configure(pkg,root/'target/debug/libthinkthen_c.so',[pkg])\n"
                       "for item in assets.tracked_files(source/'checks/session_consumer/bin'):\n"
-                      " target=pkg/'bin'/item.relative_to(source/'checks/session_consumer/bin');target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(item,target)\n"
+                      " target=pkg/'bin'/item.relative_to(source/'checks/session_consumer/bin');target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)\n"
                       "shutil.copyfile(source/'example/main.dart',pkg/'bin/shipped_example.dart')\n"
                       "print('fresh Dart stage contains current documented example and exact-source native asset')\n"
                       '\n'
@@ -536,7 +536,7 @@ jobs:
                   if flutter.exists():shutil.rmtree(flutter)
                   source=root/'libraries/dart/flutter'
                   for item in assets.tracked_files(source):
-                   target=flutter/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(item,target)
+                   target=flutter/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
                   assets.configure(pkg,native,[flutter,flutter/'example'])
                   run('flutter-dependencies',[env['TT_FLUTTER'],'pub','get','--offline'],cwd=flutter/'example')
                   run('flutter-linux',[env['TT_FLUTTER'],'build','linux','--no-pub'],cwd=flutter/'example')
@@ -549,10 +549,10 @@ jobs:
                   # Copy the complete existing build consumer, including both local imports.
                   pkg=root/'libraries/dart/target/core-wave';source=root/'libraries/dart/checks/session_consumer/bin'
                   for item in assets.tracked_files(source):
-                   target=pkg/'bin'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(item,target)
+                   target=pkg/'bin'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
                   python=root/'libraries/python/target/core-wave';source=root/'libraries/python/thinkthen'
                   for item in assets.tracked_files(source):
-                   target=python/'thinkthen'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(item,target)
+                   target=python/'thinkthen'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
                   shutil.copyfile(root/'target/debug/lib_thinkthen.so',python/'thinkthen/_thinkthen.so')
                   run('python-pandas-polars-import',[env['PYTHON_HOST'],'-c',"import sys; sys.path.insert(0,'libraries/python/target/core-wave'); import thinkthen, thinkthen.pandas, thinkthen.polars; print('Python, pandas and Polars import passed')"])
                   r=root/'libraries/r/target'; r.mkdir(exist_ok=True); shutil.copyfile(root/'libraries/r/thinkthen/src/entrypoint.c',r/'entrypoint.c')
