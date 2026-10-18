@@ -13,9 +13,14 @@ impl EngineBuilder {
     /// Returns [`Error::Usage`] without changing this builder when either price
     /// is malformed or exceeds USD 1,000,000 per million tokens.
     pub fn prices_usd_per_million(mut self, input: &str, output: &str) -> Result<Self, Error> {
-        self.prices = Some(Prices::parse(input, output).ok_or_else(|| {
-            Error::usage("prices are two decimal strings from 0 through 1000000 with at most six fractional digits")
-        })?);
+        self.prices = Some(parse(input, output)?);
+        self.setting_prices = (None, None);
         Ok(self)
     }
+}
+
+pub(super) fn parse(input: &str, output: &str) -> Result<Prices, Error> {
+    Prices::parse(input, output).ok_or_else(|| {
+        Error::usage("prices are two decimal strings from 0 through 1000000 with at most six fractional digits")
+    })
 }

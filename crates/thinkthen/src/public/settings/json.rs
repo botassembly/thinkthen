@@ -27,7 +27,7 @@ engine_fields! {
     backend: String => "backend", "String";
     base_url: String => "base_url", "String";
     model: String => "model", "String";
-    throttle: u8 => "throttle", "u8";
+    throttle: i128 => "throttle", "u8";
     max_requests: Option<usize> => "max_requests", "Option<usize>";
     max_requests_total: Option<u64> => "max_requests_total", "Option<u64>";
     max_estimated_input_tokens_total: Option<u64> => "max_estimated_input_tokens_total", "Option<u64>";
@@ -139,8 +139,10 @@ impl Document {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
             builder.check_proxy()?;
         }
+        if let Some(batch) = &self.0.batch { batch.native()?; }
         for (name, value) in &self.1 {
-            builder = builder.apply_setting(name, value.get(), captured)?;
+            builder = if captured { builder.setting(name, value.get())? }
+                else { builder.apply_setting(name, value.get(), false)? };
         }
         builder.check_setting_prices()
     }
@@ -156,11 +158,11 @@ impl Document {
         }
         builder.check_proxy()?;
         if let Some(value) = &values.usd_per_million_input {
-            builder = builder.prices_usd_per_million(value, "0")?;
+            super::prices::parse(value, "0")?;
             builder.setting_prices.0 = Some(value.clone());
         }
         if let Some(value) = &values.usd_per_million_output {
-            builder = builder.prices_usd_per_million("0", value)?;
+            super::prices::parse("0", value)?;
             builder.setting_prices.1 = Some(value.clone());
         }
         // Configured backend names belong to the captured configuration. All
@@ -215,7 +217,7 @@ impl Document {
             builder = builder.replay(value)?;
         }
         if let Some(value) = values.throttle {
-            builder = builder.throttle(value)?;
+            builder = builder.throttle(u8::try_from(value).unwrap_or_default())?;
         }
         if let Some(value) = values.timeout {
             builder = builder.timeout(Duration::from_secs(value))?;
@@ -223,32 +225,26 @@ impl Document {
         if let (Some(input), Some(output)) = (&builder.setting_prices.0, &builder.setting_prices.1)
         {
             let (input, output) = (input.clone(), output.clone());
-            builder = builder.prices_usd_per_million(&input, &output)?;
+            builder.prices = Some(super::prices::parse(&input, &output)?);
         }
         Ok(builder)
     }
 }
 impl EngineBuilder {
     pub(super) fn apply_setting(self, name: &str, raw: &str, captured: bool) -> Result<Self, Error> {
+        let value: &serde_json::value::RawValue = serde_json::from_str(raw).map_err(|_| {
+            Error::usage(format!("settings {} has an invalid value", crate::core::safe_key(name)))
+        })?;
         let name =
             serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
         Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(self, captured)
     }
 
-    pub(super) fn check_setting_prices(mut self) -> Result<Self, Error> {
+    pub(super) fn check_setting_prices(self) -> Result<Self, Error> {
         match (&self.setting_prices.0, &self.setting_prices.1) {
-            (Some(input), Some(output)) => {
-                let (input, output) = (input.clone(), output.clone());
-                self = self.prices_usd_per_million(&input, &output)?;
-            }
-            (None, None) => {}
-            _ => {
-                return Err(Error::usage(
-                    "settings prices require both input and output fields",
-                ));
-            }
+            (Some(_), Some(_)) | (None, None) => Ok(self),
+            _ => Err(Error::usage("settings prices require both input and output fields")),
         }
-        Ok(self)
     }
 
     /// Admit engine settings before capturing the environment and configuration.

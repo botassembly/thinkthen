@@ -78,7 +78,7 @@ def run(native, scratch, *, header=None, library=None):
                             env=env, capture_output=True, text=True, check=True)
     assert not output.stderr, output.stderr
     admission = json.loads(output.stdout)['admission']
-    assert admission['code'] == 2, admission
+    assert admission['code'] == 1, admission
     assert f"thinkthen usage: {admission['message']} (retryable: no)" == expected['throttle'], admission
     shared_cases.native_cases(binary, consumer='c', invoke=invoke)
 

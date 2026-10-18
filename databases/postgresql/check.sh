@@ -1329,7 +1329,7 @@ batch_setting_and_replay_context_validate_before_send() {
     fresh generic
     for setting in 0 +1 -1 1.5 MAX no; do
         has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb)")" \
-            'thinkthen.batch is max or a whole number of 1 or more'
+            "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["batch"])' "$REPO/conformance/settings-errors.json")"
     done
     same "$(bcount)" 0
     fresh generic

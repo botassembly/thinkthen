@@ -57,7 +57,6 @@ SessionSettings Settings(ClientContext &context) {
         bool literal = setting.type != LogicalTypeId::VARCHAR;
         if (name == "batch") {
             settings.batch = text;
-            literal = text != "max";
         }
         if (name == "model") { settings.model = text; }
         if (name == "max_requests_total") { settings.total = value.GetValue<int64_t>(); }

@@ -98,9 +98,7 @@ pub(crate) fn read_result() -> Result<Call, Error> {
                 {
                     return Err(super::usage("a SQL folder must be absolute"));
                 }
-                if key == "batch" && value != "max" {
-                    value
-                } else if key == "cache" && value == "off" {
+                if key == "cache" && value == "off" {
                     "false".to_owned()
                 } else {
                     serde_json::Value::String(value).to_string()

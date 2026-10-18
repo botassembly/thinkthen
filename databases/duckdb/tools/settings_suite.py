@@ -34,14 +34,14 @@ case(shared_settings_corpus)
 
 @case
 def session_batch_keeps_digit_grammar_and_exact_refusal():
-    error = "thinkthen usage: batch takes max or a whole number of at least 1 (retryable: no)"
+    error = EXPECTED["batch"]
     with Backend() as backend:
         for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
             got = run([f"SET thinkthen_batch = '{value}'", ASK,
                        "SELECT thinkthen_decide_details('Is it a refund?', 'refund now')"], backend.base())
             expect(said(got[1]), error, "ordinary session batch refusal")
             failure = rows(got[2])[0][0]["failure"]
-            expect((failure["kind"],failure["message"]), ("usage","batch takes max or a whole number of at least 1"), "typed session batch refusal")
+            expect((failure["kind"],failure["message"]), ("usage", EXPECTED["batch"].removeprefix("thinkthen usage: ").removesuffix(" (retryable: no)")), "typed session batch refusal")
         expect(backend.count(), 0, 'invalid session batches send nothing')
     for value, count in (('max', 1), ('1', 2), ('01', 2)):
         with Backend() as backend:
