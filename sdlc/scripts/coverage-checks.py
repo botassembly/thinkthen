@@ -14,6 +14,7 @@ import tarfile
 import subprocess
 import unittest
 from unittest.mock import patch
+from conformance.children.children import child_env
 
 import coverage_installed_managed
 import coverage_installed_c_hosts
@@ -211,7 +212,14 @@ class ManagedToolAvailability(unittest.TestCase):
                 # XCFramework assembly requires macOS; package validation below is real.
                 framework = Path(args[args.index('-output') + 1])
                 framework.mkdir()
-                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+                identifier = 'macos-arm64'
+                library = framework / identifier
+                (library / 'Headers').mkdir(parents=True)
+                shutil.copyfile(native, library / 'libthinkthen.a')
+                metadata = {'XCFrameworkFormatVersion': '1.0', 'AvailableLibraries': [
+                    dict(SupportedPlatform='macos', SupportedArchitectures=['arm64'],
+                         LibraryIdentifier=identifier, LibraryPath='libthinkthen.a', HeadersPath='Headers')]}
+                (framework / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             context = dict(root=checkout, run=run, env={}, command=command,
                            missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)
@@ -487,7 +495,7 @@ class CollectionClassification(unittest.TestCase):
             production = {**artifact, 'profile': {'test': False}}
             artifacts = DRIVER['test_artifacts']('\n'.join(map(json.dumps, (artifact, production))), package)
             self.assertEqual(len(artifacts), 1)
-            DRIVER['collect_tests'](root, {}, artifacts, 'c-source-unit')
+            DRIVER['collect_tests'](root, child_env(home=root / 'home'), artifacts, 'c-source-unit')
             self.assertTrue((root / 'c-source-unit/thinkthen_c.log').is_file())
 
     def test_c_source_units_add_unit_hits_without_test_only_denominator(self):
