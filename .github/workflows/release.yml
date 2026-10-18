@@ -77,6 +77,12 @@ jobs:
       - name: Select x64 MSVC
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        id: duckdb-hosts
+        if: matrix.target == 'x86_64-apple-darwin'
+        with:
+          path: databases/duckdb/build/community/*/build/release
+          key: duckdb-hosts-${{ needs.resolve.outputs.sha }}-${{ matrix.target }}-${{ github.run_id }}
       - name: Install and check the pinned host tools
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
@@ -367,7 +373,13 @@ jobs:
         with: {python-version: '3.12'}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: {node-version: '22.22.3'}
-      - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25
+        id: duckdb-hosts
+        if: matrix.target == 'x86_64-apple-darwin'
+        with:
+          path: databases/duckdb/build/community/*/build/release
+          key: duckdb-hosts-${{ needs.resolve.outputs.sha }}-${{ matrix.target }}-${{ github.run_id }}
+      - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1', THINKTHEN_DUCKDB_HOST_CACHE_HIT: "${{ steps.duckdb-hosts.outputs.cache-hit }}"}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
       - name: Read the JVM runtime floor
         id: jvm-contract
