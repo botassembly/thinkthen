@@ -24,6 +24,11 @@ class ToolResolution(unittest.TestCase):
     def test_starts_the_command_after_system_tools_resolve(self):
         self.check(['sh'], True)
 
+    def test_reports_a_missing_dated_rust_toolchain_before_starting_work(self):
+        pin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['rust-nightly']
+        self.check([], False, requirement={**pin, 'version': 'nightly-1900-01-01',
+                                         'groups': ['test']}, diagnostic='selected')
+
     @unittest.skipUnless(platform.system() == 'Darwin' and
                          'test' in os.environ.get('THINKTHEN_RESOLVED_TOOLS', '').split(','),
                          'requires the prepared native macOS test environment')
@@ -42,7 +47,7 @@ class ToolResolution(unittest.TestCase):
         self.assertIn('jq', result.stderr)
         self.assertNotIn('command-started', result.stdout)
 
-    def check(self, commands, succeeds, inherited=False):
+    def check(self, commands, succeeds, inherited=False, requirement=None, diagnostic=None):
         owned = ROOT / '.tools'
         owned.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='resolver-test-', dir=owned) as folder:
@@ -57,8 +62,8 @@ class ToolResolution(unittest.TestCase):
                 'tools': {
                     'rust': {'commands': [], 'version': 'unused', 'groups': ['common'],
                              'platforms': ['darwin', 'linux']},
-                    'selected': {'commands': commands, 'groups': ['test'],
-                                 'platforms': ['darwin', 'linux']},
+                    'selected': requirement or {'commands': commands, 'groups': ['test'],
+                                                'platforms': ['darwin', 'linux']},
                 },
             }
             source = root / 'tools.json'
@@ -74,6 +79,8 @@ class ToolResolution(unittest.TestCase):
                 self.assertIn('missing tools:', result.stderr)
                 for command in commands:
                     self.assertIn(command, result.stderr)
+                if diagnostic:
+                    self.assertIn(diagnostic, result.stderr)
 
 
 if __name__ == '__main__':
