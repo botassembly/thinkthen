@@ -207,14 +207,7 @@ def linux_source_staging_case():
     driver = textwrap.dedent(driver)
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-source-') as temporary:
         root = Path(temporary).resolve()
-        archived = subprocess.check_output(['git', 'archive', 'HEAD', 'libraries/dart',
-                                            'libraries/python/thinkthen', 'specification/fixtures/images/red.png',
-                                            'specification/request.schema.json',
-                                            'crates/thinkthen/src/public/results/complete.schema.json'], cwd=REPO)
-        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
-            source.extractall(root, filter='data')
-        (root / 'sdlc').mkdir()
-        (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators', target_is_directory=True)
+        stage_checkout(REPO, root)
         flutter = root / 'libraries/dart/flutter'
         (flutter / 'linked_readme.md').symlink_to('README.md')
         (root / 'libraries/dart/lib/linked_dart.dart').symlink_to('thinkthen_dart.dart')

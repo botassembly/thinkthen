@@ -134,10 +134,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	INPUTS_HERE=/work/src/databases/duckdb/tools
 	THINKTHEN_TOOLCHAINS=/work/cache/toolchains/$TARGET
 	export THINKTHEN_TOOLCHAINS
-	python3 -m pip install --disable-pip-version-check -r "$INPUTS_HERE/requirements.txt"
-	for tool in make cmake ninja cc c++; do
-		command -v "$tool" >/dev/null || { echo "release-container: missing DuckDB build tool: $tool" >&2; exit 1; }
-	done
+	. "$INPUTS_HERE/build-tools.sh"
 	sh "$INPUTS_HERE/setup.sh" --fetch
 	# The image carries OpenSSL 1.1.1k runtime libraries but no headers. Its
 	# matching AlmaLinux development RPM supplies the build-only headers and

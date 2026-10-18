@@ -1,5 +1,7 @@
 """Run shell fixtures against the complete tracked checkout."""
 import json
+import runpy
+import shutil
 import subprocess
 import tarfile
 
@@ -35,3 +37,16 @@ def stub_other_surfaces(root, selected):
             continue
         if len(fields) > 1 and fields[1] in ('landed', 'feature') and fields[0] not in selected:
             (root / fields[0] / 'check.sh').write_text('if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then printf "smoke: true\\n"; fi\nexit 0\n')
+
+
+def fixture_tools(source, root, groups=(), exclude=()):
+    """Expose declared real commands, with explicit losses at child boundaries."""
+    resolver = runpy.run_path(str(source / 'sdlc/scripts/tools.py'))
+    root.mkdir(parents=True, exist_ok=True)
+    for command in resolver['commands'](groups):
+        if command in exclude:
+            continue
+        executable = shutil.which(command)
+        if executable is None:
+            raise RuntimeError('fixture requires resolved command: ' + command)
+        (root / command).symlink_to(executable)

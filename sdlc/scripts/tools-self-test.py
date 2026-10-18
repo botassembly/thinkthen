@@ -13,6 +13,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'sdlc/scripts/tools.py'
+sys.path.insert(0, str(ROOT))
+from conformance.source_fixtures import stage_checkout
 
 
 class ToolResolution(unittest.TestCase):
@@ -138,13 +140,7 @@ class LinuxSourceIdentity(unittest.TestCase):
     def test_reused_clone_discards_source_edits_and_keeps_build_output(self):
         with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
             root = Path(folder)
-            for relative in ('rust-toolchain.toml', 'sdlc/scripts/linux-check', 'sdlc/tools.json',
-                             'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
-                             'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
-                             'conformance/children/children.py'):
-                destination = root / relative
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(ROOT / relative, destination)
+            stage_checkout(ROOT, root)
             (root / '.gitignore').write_text('.linux-*/\ntarget/\n')
             (root / 'source.txt').write_text('committed\n')
             git = ['git', '-C', str(root)]

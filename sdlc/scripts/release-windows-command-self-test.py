@@ -18,6 +18,8 @@ from unittest import mock
 
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 TARGET = "x86_64-pc-windows-msvc"
 SCRIPT = REPO / "sdlc/scripts/release-windows-command.py"
@@ -301,17 +303,10 @@ def main():
         expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "missing or linked")
         # Run the real shell packer against a synthetic Windows host and build output.
         source = base / "source"
+        stage_checkout(REPO, source)
         scripts = source / "sdlc/scripts"
-        scripts.mkdir(parents=True)
-        for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py",
-                     "release-bounded.py", "release-owned-job.py", "registry-readmes.py"):
-            shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
-        for relative in ('README.md', 'specification/request.schema.json', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md', 'libraries/typescript/package.json'):
-            path = source / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / relative, path)
         crate = source / "crates/thinkthen"
-        crate.mkdir(parents=True)
+        crate.mkdir(parents=True, exist_ok=True)
         (crate / "Cargo.toml").write_text(f'[package]\nversion = "{VERSION}"\n')
         tools = base / "tools"
         tools.mkdir()

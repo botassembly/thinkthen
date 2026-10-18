@@ -9,6 +9,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from conformance.source_fixtures import fixture_tools, fixture_tool_groups
 
 
 def run(args, env=None):
@@ -36,15 +38,11 @@ def main():
     if args.smoke_binaries:
         with tempfile.TemporaryDirectory(prefix='thinkthen-hidden-tools-') as temporary:
             path = Path(temporary)
-            for name in ('awk', 'sh', 'dirname', 'python3', 'jq', 'mktemp', 'mkdir', 'mkfifo',
-                         'head', 'tail', 'sed', 'uname', 'ln', 'rm', 'sleep'):
-                source = shutil.which(name)
-                assert source, name
-                (path / name).symlink_to(source)
+            fixture_tools(ROOT, path, ('python',), exclude=('uv',))
             # Inject loss after resolution: a fresh resolver may legitimately
             # restore a pinned tool. Run the actual smoke and binding checks
             # with the resolved-group marker and remove only their tool paths.
-            env = dict(os.environ, PATH=str(path), THINKTHEN_RESOLVED_TOOLS='python')
+            env = dict(os.environ, PATH=str(path), THINKTHEN_RESOLVED_TOOLS=fixture_tool_groups(ROOT))
             smoke = run(['sh', 'sdlc/scripts/smoke', '--one', str(args.smoke_binaries.resolve()),
                          'libraries/python'], env)
             print(smoke.stdout + smoke.stderr, end='')

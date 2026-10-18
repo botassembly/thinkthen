@@ -11,6 +11,7 @@ import tempfile
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout, fixture_tools
 
 
 def community():
@@ -19,14 +20,12 @@ def community():
         root = Path(temporary)
         source_root = root / 'source'
         community = source_root / 'databases/duckdb/community'
-        community.mkdir(parents=True)
-        for source in (REPO / 'databases/duckdb/community').glob('*.py'):
-            shutil.copyfile(source, community / source.name)
-        shutil.copyfile(REPO / 'rust-toolchain.toml', source_root / 'rust-toolchain.toml')
+        stage_checkout(REPO, source_root)
         archive_path = root / 'source.tar'
         with tarfile.open(archive_path, 'w') as archive:
-            for path in sorted(source_root.rglob('*')):
-                archive.add(path, arcname=str(path.relative_to(source_root)), recursive=False)
+            for name in subprocess.check_output(['git', '-C', str(source_root), 'ls-files', '-z'], text=True).split('\0'):
+                if name:
+                    archive.add(source_root / name, arcname=name, recursive=False)
         tools = root / 'tools'
         tools.mkdir()
         # Replace compilers at the process boundary; use the real helpers and manifest.
@@ -118,9 +117,7 @@ def container_build_tools():
     with tempfile.TemporaryDirectory(prefix='thinkthen-container-tools-') as temporary:
         root = Path(temporary)
         tools = root / 'bin'
-        tools.mkdir()
-        for name in ('cmake', 'make', 'cc', 'c++', 'as', 'ld', 'ar', 'ranlib'):
-            (tools / name).symlink_to(shutil.which(name))
+        fixture_tools(REPO, tools, ('duckdb',), exclude=('ninja', 'python3'))
         requirements = REPO / 'databases/duckdb/tools/requirements.txt'
         install = tools / 'python3'
         install.write_text(f'''#!{sys.executable}
@@ -132,10 +129,8 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
         source = root / 'source'
         source.mkdir()
         (source / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.18)\nproject(probe LANGUAGES C CXX)\n')
-        container = (REPO / 'sdlc/scripts/release-container').read_text()
-        bootstrap = container.split('\tINPUTS_HERE=', 1)[1].split('\tpython3 "$INPUTS_HERE/source_hosts.py" --fetch', 1)[0]
-        bootstrap = 'INPUTS_HERE=' + bootstrap.replace('/work/src/databases/duckdb/tools', str(requirements.parent))
-        env = child_env(home=root / 'home') | {'PATH': str(tools), 'TARGET': 'aarch64-unknown-linux-gnu'}
+        bootstrap = '. "$INPUTS_HERE/build-tools.sh"'
+        env = child_env(home=root / 'home') | {'PATH': str(tools), 'INPUTS_HERE': str(requirements.parent)}
         command = bootstrap + '\ncmake -G Ninja -S "' + str(source) + '" -B "' + str(root / 'build') + '"\n'
         result = subprocess.run(['/bin/sh', '-eu', '-c', command], env=env,
                                 capture_output=True, text=True, timeout=30)
@@ -152,6 +147,10 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
             assert refused.returncode == 1, refused.stderr
             assert f'missing DuckDB build tool: {missing}' in refused.stderr, refused.stderr
             (tools / missing).symlink_to(shutil.which(missing))
+        install.write_text('#!/bin/sh\nexit 49\n')
+        failed = subprocess.run(['/bin/sh', '-eu', '-c', bootstrap], env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert failed.returncode == 49, failed
         print('release container: pinned bootstrap provides Ninja, configures C and C++, and refuses missing build tools')
 
 

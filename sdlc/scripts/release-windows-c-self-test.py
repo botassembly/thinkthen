@@ -17,6 +17,8 @@ import zipfile
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
 FIXTURE = runpy.run_path(str(Path(__file__).with_name('release-windows-c-fixture.py')))
 C = FIXTURE['C']
 VERSION = next(line.split('"')[1] for line in (REPO / 'crates/thinkthen/Cargo.toml').read_text().splitlines()
@@ -140,22 +142,12 @@ def archives(root):
 
 def pack_routing(root):
     source = root / 'source'
-    scripts = source / 'sdlc/scripts'
-    scripts.mkdir(parents=True)
-    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py', 'package-inventory.py', 'registry-readmes.py', 'release-windows-c-fixture.py'):
-        shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
-    for relative in ('README.md', 'specification/request.schema.json', 'libraries/c/README-PUBLIC.md', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md'):
-        path = source / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(REPO / relative, path)
+    stage_checkout(REPO, source)
+    scripts = source / "sdlc/scripts"
     for manifest in ('crates/thinkthen/Cargo.toml', 'libraries/c/Cargo.toml'):
         path = source / manifest
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f'[package]\nversion = "{VERSION}"\n')
-    include = source / 'libraries/c/include'
-    include.mkdir()
-    shutil.copyfile(C.HEADER, include / 'thinkthen.h')
-    shutil.copytree(REPO / 'demos/27-test-with-no-network', source / 'demos/27-test-with-no-network')
     python = source / 'libraries/python'
     python.mkdir(exist_ok=True)
     builder = ('import runpy; from pathlib import Path; '
@@ -166,11 +158,6 @@ def pack_routing(root):
         + sys.executable + " -c '" + builder + "'\n")
     typescript = source / 'libraries/typescript'
     typescript.mkdir(exist_ok=True)
-    for name in ('build-addon.sh', 'package.json'):
-        shutil.copyfile(REPO / 'libraries/typescript' / name, typescript / name)
-    workflow = source / '.github/workflows'
-    workflow.mkdir(parents=True)
-    shutil.copyfile(REPO / '.github/workflows/release.yml', workflow / 'release.yml')
     tools = root / 'tools'
     tools.mkdir()
     saved_dll = root / 'saved.dll'

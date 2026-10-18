@@ -32,17 +32,6 @@ from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
-TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
-        "libraries/csharp/ThinkThen.csproj", "libraries/csharp/Botassembly.ThinkThen.nuspec",
-        "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/session/thinkthen/Engine.java",
-        "libraries/jvm/session/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
-        "libraries/jvm/session/scala/ScalaEngine.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
-        "libraries/dart/lib/thinkthen_dart.dart")
-
-
-TREE += ('sdlc/scripts/registry-readmes.py', 'specification/request.schema.json', 'README.md', 'libraries/go/README.md',
-         'libraries/csharp/README-PUBLIC.md', 'libraries/jvm/README-PUBLIC.md', 'libraries/dart/README-PUBLIC.md')
-
 
 def version():
     return next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -91,12 +80,7 @@ def jar(name):
 
 
 def tree(root, plant):
-    for path in TREE:
-        (root / path).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(REPO / path, root / path)
-    shutil.copytree(REPO / "libraries/jvm/examples", root / "libraries/jvm/examples")
-    (root / "sdlc/scripts").mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(REPO / "sdlc/scripts/release-registry.py", root / "sdlc/scripts/release-registry.py")
+    stage_checkout(REPO, root)
     v = version()
     platform = root / "platform"
     platform.mkdir()
@@ -131,7 +115,7 @@ def tree(root, plant):
         (platform / name).write_text("0" * 64 + (platform / name).read_text()[64:])
     git = ["git", "-c", "user.name=t", "-c", "user.email=t@invalid", "-c", "commit.gpgsign=false"]
     subprocess.run(["git", "init", "-q", str(root)], check=True)
-    subprocess.run([*git, "-C", str(root), "add", "-A", "--", *TREE, "libraries/jvm/examples", "sdlc"], check=True)
+    subprocess.run([*git, "-C", str(root), "add", "-u"], check=True)
     subprocess.run([*git, "-C", str(root), "commit", "-qm", "fixture"], check=True)
     return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
@@ -290,9 +274,7 @@ def jvm_contract_cases():
     """Read scalar fields and propagate inventory failures through the workflow steps."""
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
-        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, root / name)
+        stage_checkout(REPO, root)
         env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))

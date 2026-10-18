@@ -59,7 +59,11 @@
         "tee",
         "touch",
         "readlink",
-        "install"
+        "install",
+        "as",
+        "ranlib",
+        "mkfifo",
+        "sleep"
       ],
       "platforms": [
         "darwin",
