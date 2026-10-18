@@ -62,7 +62,9 @@ if args[0] == 'api':
         files = root / "files"
         files.mkdir()
         (files / "fixture.sha256").write_text("checksum\n")
-        env = {"PATH": str(binary) + ":/usr/bin:/bin", "HOME": str(root),
+        fixture_bin = root / "resolved-tools"
+        fixture_tools(REPO, fixture_bin, ("test",))
+        env = {"PATH": str(binary) + os.pathsep + str(fixture_bin), "HOME": str(root),
                "LC_ALL": "C.UTF-8", "GH_TEST_RECEIPT": str(receipt),
                "GITHUB_REPOSITORY": "botassembly/thinkthen", "GITHUB_REF": "refs/tags/v0.2.0"}
         expected = ((root / "release-notes/0.2.0.md").read_text() + "\n" +
@@ -137,7 +139,9 @@ sys.stderr.write('must not expose API diagnostics')
 sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 """)
         gh.chmod(0o755)
-        env = {"PATH": f"{root}:{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+        fixture_bin = root / "resolved-tools"
+        fixture_tools(REPO, fixture_bin, ("test",))
+        env = {"PATH": str(root) + os.pathsep + str(fixture_bin), "HOME": str(root), "LC_ALL": "C",
                "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
                "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
         endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
@@ -321,7 +325,7 @@ end
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
         fixture_bin = root / "resolved-tools"
-        fixture_tools(REPO, fixture_bin, ("test", "ruby"))
+        fixture_tools(REPO, fixture_bin, ("test",))
         env = {"PATH": str(fixture_bin), "HOME": str(root), "LC_ALL": "C"}
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)

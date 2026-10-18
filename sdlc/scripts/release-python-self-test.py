@@ -157,7 +157,7 @@ def wheel():
     with tempfile.TemporaryDirectory(prefix='thinkthen-wheel-python-') as temporary:
         root = Path(temporary)
         tools = root / 'tools'
-        tools.mkdir()
+        fixture_tools(REPO, tools, ("python",), exclude=("maturin",))
         result_path = root / 'maturin.json'
         maturin = tools / 'maturin'
         maturin.write_text(f'''#!{sys.executable}
@@ -168,7 +168,7 @@ sys.exit(97)
 ''')
         maturin.chmod(0o755)
         floor = str(root / 'Python 3.10/python')
-        env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + '/usr/bin:/bin',
+        env = child_env(home=root / 'home') | {'PATH': str(tools),
                                              'PYO3_PYTHON': floor}
         result = subprocess.run(['sh', str(REPO / 'libraries/python/build-wheel.sh')],
                                 env=env, capture_output=True, text=True, timeout=15)

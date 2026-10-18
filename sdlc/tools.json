@@ -179,7 +179,6 @@
       ],
       "groups": [
         "test",
-        "test",
         "lint",
         "install",
         "ruby"
