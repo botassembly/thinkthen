@@ -3,7 +3,7 @@
 
 use super::each::Models;
 use super::{Answered, Asks, Bound, Engine};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 use super::Request;
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
@@ -19,11 +19,11 @@ pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
     pub(crate) asked: Vec<RelateAsk>,
     pub(crate) asks: Asks,
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) requests: Vec<Request>,
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) questions_per_rule: Vec<usize>,
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) requests_per_rule: Vec<usize>,
 }
 
@@ -48,7 +48,7 @@ pub(crate) struct Execution {
     pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) replayed: bool,
     pub(crate) requests_sent: u64,
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) requests: Vec<String>,
     pub(crate) failed: usize,
     pub(crate) answered: usize,
@@ -66,14 +66,14 @@ pub(crate) fn relations(
         plan_relate(entities, &rules).map_err(|_| Error::Defect("relation planning failed"))?
     else {
         return Ok(PreparedRelations {
-            #[cfg(feature = "cli")]
+            #[cfg(any(feature = "cli", test))]
             questions_per_rule: vec![0; rules.len()],
-            #[cfg(feature = "cli")]
+            #[cfg(any(feature = "cli", test))]
             requests_per_rule: vec![0; rules.len()],
             rules,
             asked: Vec::new(),
             asks: Asks::default(),
-            #[cfg(feature = "cli")]
+            #[cfg(any(feature = "cli", test))]
             requests: Vec::new(),
         });
     };
@@ -114,11 +114,11 @@ pub(crate) fn relations(
         rules,
         asked: planned.asked,
         asks,
-        #[cfg(feature = "cli")]
+        #[cfg(any(feature = "cli", test))]
         requests,
-        #[cfg(feature = "cli")]
+        #[cfg(any(feature = "cli", test))]
         questions_per_rule,
-        #[cfg(feature = "cli")]
+        #[cfg(any(feature = "cli", test))]
         requests_per_rule,
     })
 }

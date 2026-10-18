@@ -13,7 +13,7 @@ pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
 mod timing;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
@@ -219,7 +219,7 @@ impl Counters {
     }
 
     /// Only generated usage filenames and fixed categories may reach diagnostics.
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
         self.shared.queue.lock().ok()?.failed_file.clone()
     }

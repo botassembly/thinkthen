@@ -31,7 +31,7 @@ impl BatchSetting {
     /// older saved row's `meta.batch.setting`. A line naming neither adds
     /// none, so an empty set means the setting is unknown. An invalid setting
     /// gives back its line and the member that named it.
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn in_results(
         lines: &[(usize, Json)],
     ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
@@ -51,7 +51,7 @@ impl BatchSetting {
         Ok(settings)
     }
 
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn listed(settings: &BTreeSet<Self>) -> String {
         let mut names: Vec<String> = settings.iter().map(ToString::to_string).collect();
         match names.pop() {

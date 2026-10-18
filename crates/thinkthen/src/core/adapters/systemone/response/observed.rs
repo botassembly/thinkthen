@@ -1,16 +1,16 @@
 use crate::core::{Question, Reply, ReportedUsage};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 use crate::core::Plan;
 
 use super::{DecodeError, Response, decode_each, decode_response};
 
 pub(crate) struct Decoded {
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) usage: Option<ReportedUsage>,
     pub(crate) reply: Result<Reply, DecodeError>,
 }
 
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) fn decode_observed(plan: &Plan, body: &[u8]) -> Decoded {
     decode_questions(plan.questions(), body)
 }
@@ -20,7 +20,7 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
         Ok(response) => response,
         Err(error) => {
             return Decoded {
-                #[cfg(feature = "cli")]
+                #[cfg(any(feature = "cli", test))]
                 usage: None,
                 reply: Err(DecodeError::Malformed(error.line(), error.column())),
             };
@@ -33,7 +33,7 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
     let reply = decode_response(questions, response, usage.and_then(ReportedUsage::complete))
         .map(|reply| reply.with_reported_usage(usage));
     Decoded {
- #[cfg(feature = "cli")]
+ #[cfg(any(feature = "cli", test))]
  usage, reply }
 }
 

@@ -102,7 +102,7 @@ impl ApiType {
             Self::Decisions => openai::join(state, model, questions),
         }
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn encode(self, plan: &crate::core::Plan) -> Result<Vec<u8>, EncodeError> {
         match self {
             Self::Primary => systemone::encode(plan),
@@ -116,7 +116,7 @@ impl ApiType {
             }
         }
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn decode_observed(
         self,
         plan: &crate::core::Plan,

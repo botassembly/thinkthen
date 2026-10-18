@@ -96,7 +96,7 @@ pub(crate) enum Source {
     /// The value the question file holds.
     File,
     /// The value the read-only process configuration holds.
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     Configuration,
     /// The value nobody named, which the tool supplies.
     Default,
@@ -109,7 +109,7 @@ impl Source {
         match self {
             Self::CommandLine => "command line",
             Self::File => "file",
-            #[cfg(feature = "cli")]
+            #[cfg(any(feature = "cli", test))]
             Self::Configuration => "configuration",
             Self::Default => "default",
         }
@@ -293,7 +293,7 @@ fn pointed(source: Source, key: &str) -> String {
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn origin(&self) -> Source {
         match self {
             Self::Blank { origin, .. }

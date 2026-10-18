@@ -22,7 +22,7 @@ mod backend_profile;
 pub(crate) mod batch;
 mod budget;
 pub(crate) mod cache_control;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) mod check;
 mod digest;
 mod find;
@@ -30,12 +30,12 @@ mod identity;
 pub(crate) use identity::answer::{AtomicReading, RecordScope};
 pub(crate) mod image;
 mod json;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) mod measure;
 mod order;
 pub(crate) mod pack;
 mod plan;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 mod plan_document;
 mod plan_summary;
 mod pointer;
@@ -47,7 +47,7 @@ mod question_set;
 mod recognition_result;
 mod recognize;
 pub(crate) use recognize::{ExamplesError, render_examples, selected_examples};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use recognize::{example_file};
 pub use recognize::{
     RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionMode,
@@ -79,11 +79,11 @@ pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
 pub(crate) use crate::core::backend::named::{self, Named};
 pub(crate) use crate::core::backend::{Backend, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::backend::{BackendError};
 pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{BackendProfile, ProfileLimit, ProfileName};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::backend_profile::{ProfileError};
 pub(crate) use crate::core::batch::{BatchError, BatchRecord, Setting};
 pub(crate) use crate::core::batch::{quoted_plan, quoted_plan_of};
@@ -98,7 +98,7 @@ pub(crate) use crate::core::json::Json;
 pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::{ranking, ranking_under, turns};
 pub(crate) use crate::core::plan::{Descriptions, Plan};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
@@ -106,7 +106,7 @@ pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub use crate::core::question_file::QuestionRole;
 pub(crate) use crate::core::question_file::{Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::question_file::{Resolved, Source, Sources, pointers};
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
@@ -115,13 +115,13 @@ pub(crate) use crate::core::recognize::{
     step_one_groups, step_one_questions, step_two_questions,
 };
 pub(crate) use crate::core::recognize_file::{RecognizeConfigError, RecognizeSpec, recognize_sha256};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::recognize_file::{RecognizeKinds, rule_side};
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{EntitySetError, RelateSpec, inline_rule};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::relate_file::{RelateConfigError, RelateFields};
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
@@ -144,14 +144,14 @@ pub(crate) use crate::core::result::complete::{
 };
 pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning, ReportedSum, RequestMeta, Usage, share};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::result::{RecordValue};
 pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::{Threshold};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::threshold::{Outcome, ThresholdError};
 pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
 pub use result::complete::MemberIdentity;

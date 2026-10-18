@@ -19,7 +19,7 @@ pub(crate) enum TransportKind {
     Other,
 }
 
-/// The stable class a host-facing error will use in a later ticket.
+/// The stable class exposed by public::ErrorKind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Kind {
     Usage,
@@ -234,6 +234,7 @@ pub(crate) fn relation_questions_message(
     )
 }
 
+#[cfg(test)]
 impl Kind {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
