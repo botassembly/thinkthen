@@ -19,7 +19,7 @@ use thinkthen::{
 use crate::ffi;
 
 mod settings;
-pub(crate) use settings::{Plan, file_directory, read, read_result, register, throttle_refusal};
+pub(crate) use settings::{SettingPairs, file_directory, read, read_result, register};
 
 /// A refusal of the call or its arguments, as `usage`.
 pub(crate) fn usage(message: impl Into<String>) -> Error {
@@ -122,9 +122,9 @@ impl<T> OrRaise<T> for Result<T, Error> {
 
 /// One engine per plan this backend used. Each engine counts its own sends,
 /// so the usage totals add them all.
-static ENGINES: Mutex<Vec<(Plan, Engine)>> = Mutex::new(Vec::new());
+static ENGINES: Mutex<Vec<(SettingPairs, Engine)>> = Mutex::new(Vec::new());
 
-fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
+fn engines() -> std::sync::MutexGuard<'static, Vec<(SettingPairs, Engine)>> {
     ENGINES
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -132,7 +132,7 @@ fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
 
 /// Build an engine from the server's environment and the plan. The engine
 /// refuses a throttle that differs from the one this backend selected.
-fn build(plan: &Plan) -> Result<Engine, Error> {
+fn build(plan: &SettingPairs) -> Result<Engine, Error> {
     let engine = settings::apply(plan, EngineBuilder::from_env()?.shared_host())?.build()?;
     // Kept before the call runs, so a cancelled call's sends still count.
     // A worker that lost the race uses the recorded engine, so every send counts.
@@ -176,7 +176,7 @@ pub(crate) fn usage_status() -> thinkthen::UsagePersistence {
 /// What a call read on the backend thread before its worker starts.
 #[derive(Debug)]
 pub(crate) struct Call {
-    pub(crate) plan: Plan,
+    pub(crate) plan: SettingPairs,
     pub(crate) deadline_ms: i64,
     pub(crate) context: Option<String>,
     pub(crate) batch: Option<BatchSetting>,
@@ -194,7 +194,8 @@ fn spent(total: u64) -> Error {
 
 impl Call {
     pub(crate) fn with_model(mut self, model: &str) -> Self {
-        self.plan = self.plan.with_model(model);
+        self.plan.retain(|(name, _)| name != "model");
+        self.plan.push(("model".to_owned(), serde_json::Value::String(model.to_owned()).to_string()));
         self
     }
 
@@ -217,7 +218,9 @@ impl Call {
     /// Refuse held records over `max_requests` before any send. The total
     /// belongs to transport attempts, so it cannot truncate record input.
     pub(crate) fn within(&self, count: usize) {
-        record_limit(count, self.plan.max_requests).or_raise();
+        let most = self.plan.iter().find(|(name, _)| name == "max_requests")
+            .and_then(|(_, raw)| raw.parse().ok());
+        record_limit(count, most).or_raise();
     }
 }
 

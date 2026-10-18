@@ -25,7 +25,8 @@ ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme (retryable: no)"
 MISSING_PART = "thinkthen usage: the record holds nothing at `/body` (retryable: no)"
-THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+EXPECTED = json.loads((Path(__file__).resolve().parents[3] / "conformance/settings-errors.json").read_text())
+THROTTLE = EXPECTED["throttle"]
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
 
 case(shared_settings_corpus)

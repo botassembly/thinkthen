@@ -9,39 +9,27 @@
 namespace duckdb {
 
 struct SessionSettings {
-	std::optional<string> batch;
-	int64_t throttle;
-	int64_t max_requests;
-	int64_t max_request_bytes;
-	int64_t max_requests_total;
-	std::optional<string> backend;
-	std::optional<string> cache;
-	int32_t cache_allowed = 1;
-	std::optional<string> model;
-	int64_t timeout;
-	int64_t max_retries;
-	std::optional<string> profile;
-	std::optional<string> record;
-	std::optional<string> replay;
-	int32_t record_allowed = 1;
-	int32_t replay_allowed = 1;
-    std::optional<string> base_url;
-    std::optional<string> input_price;
-    std::optional<string> output_price;
-    int32_t refresh_cache = 0;
-
-	ThinkThenSettings Bridge() const {
-		const auto bytes = [](const std::optional<string> &value) {
-			return value ? reinterpret_cast<const uint8_t *>(value->data()) : nullptr;
-		};
-		const auto length = [](const std::optional<string> &value) { return value ? value->size() : 0; };
-		return {bytes(batch), length(batch), throttle, max_requests, max_request_bytes, max_requests_total,
-		        bytes(backend), length(backend),
-		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
-		        cache ? cache->size() : 0, cache_allowed,
-		        bytes(model), length(model), timeout, max_retries, bytes(profile), length(profile),
-		        bytes(record), length(record), bytes(replay), length(replay), record_allowed, replay_allowed,bytes(base_url),length(base_url),bytes(input_price),length(input_price),bytes(output_price),length(output_price),refresh_cache};
-	}
+    struct Setting { string name; string value; bool literal; };
+    vector<Setting> values;
+    mutable vector<ThinkThenSetting> bridge_values;
+    std::optional<string> batch;
+    std::optional<string> model;
+    int64_t total = INT64_MIN;
+    int32_t cache_allowed = 1;
+    int32_t record_allowed = 1;
+    int32_t replay_allowed = 1;
+    ThinkThenSettings Bridge() const {
+        bridge_values.clear();
+        for (const auto &value : values) {
+            bridge_values.push_back({reinterpret_cast<const uint8_t *>(value.name.data()), value.name.size(),
+                reinterpret_cast<const uint8_t *>(value.value.data()), value.value.size(), value.literal ? 1 : 0});
+        }
+        const auto bytes = [](const std::optional<string> &value) {
+            return value ? reinterpret_cast<const uint8_t *>(value->data()) : nullptr;
+        };
+        return {bridge_values.data(), bridge_values.size(), bytes(batch), batch ? batch->size() : 0, total,
+            bytes(model), model ? model->size() : 0, cache_allowed, record_allowed, replay_allowed};
+    }
 };
 
 void ValidateRequestTotal(ClientContext &context);

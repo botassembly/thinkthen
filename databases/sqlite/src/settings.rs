@@ -1,159 +1,56 @@
 //! The process engine and SQL settings fixed before its first build.
 
-use std::num::NonZeroUsize;
-use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
-use std::time::Duration;
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{BatchSetting, Engine, EngineBuilder};
+use thinkthen::{Engine, EngineBuilder};
 
 use crate::{Failure, guard};
 
-/// The settings SQL stored, each applied over the environment at the build.
-#[derive(Debug, Default)]
-struct Stored {
-    base_url: Option<String>,
-    prices: Option<(String, String)>,
-    refresh_cache: bool,
-    backend: Option<String>,
-    throttle: Option<u8>,
-    batch: Option<BatchSetting>,
-    max_requests: Option<Option<usize>>,
-    max_request_bytes: Option<usize>,
-    cache: Option<Option<PathBuf>>,
-    total: Option<u64>,
-    model: Option<String>,
-    timeout: Option<Duration>,
-    max_retries: Option<u32>,
-    profile: Option<String>,
-    record: Option<PathBuf>,
-    replay: Option<PathBuf>,
-}
+const SETTING_NAMES: &[&str] = &[
+    "base_url", "backend", "model", "throttle", "batch", "max_requests",
+    "max_requests_total", "max_request_bytes", "cache", "refresh_cache", "timeout",
+    "max_retries", "profile", "record", "replay", "usd_per_million_input", "usd_per_million_output",
+];
+
+type SettingPairs = Vec<(String, String)>;
 
 /// The refusal for a folder on a single-thread host. The store opens its
 /// connection on the pipeline's thread (ADR 0111's 2026-09-30 amendment).
 const SINGLE_THREAD: &str = "a cache, record or replay folder needs a thread-safe SQLite, and this host's SQLite is single-threaded; name no folder, or load thinkthen into a thread-safe SQLite";
 
-impl Stored {
-    /// Refuse a named folder on a single-thread host. `THINKTHEN_CACHE`
-    /// names one when the settings leave `cache` unset.
-    fn threads_ready(&self) -> Result<(), Failure> {
-        let named = self.record.is_some()
-            || self.replay.is_some()
-            || match &self.cache {
-                Some(folder) => folder.is_some(),
-                None => std::env::var("THINKTHEN_CACHE").is_ok_and(|v| !v.trim().is_empty()),
-            };
-        if named && !crate::ffi::host_threads() {
-            return Err(Failure::usage(SINGLE_THREAD));
-        }
-        Ok(())
+fn threads_ready(settings: &SettingPairs) -> Result<(), Failure> {
+    let folder = |name| settings.iter().find(|(key, _)| key == name).map(|(_, raw)| raw);
+    let named = folder("record").is_some() || folder("replay").is_some()
+        || match folder("cache") {
+            Some(raw) => raw != "false",
+            None => std::env::var("THINKTHEN_CACHE").is_ok_and(|v| !v.trim().is_empty()),
+        };
+    if named && !crate::ffi::host_threads() {
+        return Err(Failure::usage(SINGLE_THREAD));
     }
-
-    fn apply(&self, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
-        builder = builder.refresh_cache(self.refresh_cache);
-        if let Some(value) = &self.base_url {
-            builder = builder.base_url(value)?;
-        }
-        if let Some(value) = &self.backend {
-            builder = builder.backend(value)?;
-        }
-        if let Some(value) = self.throttle {
-            builder = builder.throttle(value)?;
-        }
-        if let Some(value) = self.batch {
-            builder = builder.batch(value);
-        }
-        if let Some(value) = self.max_requests {
-            builder = builder.max_requests(value)?;
-        }
-        if let Some(value) = self.max_request_bytes {
-            builder = builder.max_request_bytes(value)?;
-        }
-        if let Some(value) = self.total {
-            builder = builder.max_requests_total(Some(value));
-        }
-        match &self.cache {
-            Some(Some(folder)) => builder = builder.cache_at(folder)?,
-            Some(None) => builder = builder.no_cache(),
-            None => {}
-        }
-        if let Some(value) = &self.model {
-            builder = builder.model(value)?;
-        }
-        if let Some(value) = self.timeout {
-            builder = builder.timeout(value)?;
-        }
-        if let Some(value) = self.max_retries {
-            builder = builder.max_retries(value);
-        }
-        if let Some(value) = &self.profile {
-            builder = builder.profile_json(value)?;
-        }
-        if let Some(value) = &self.record {
-            builder = builder.record(value)?;
-        }
-        if let Some(value) = &self.replay {
-            builder = builder.replay(value)?;
-        }
-        if let Some((input, output)) = &self.prices {
-            builder = builder.prices_usd_per_million(input, output)?;
-        }
-        Ok(builder)
-    }
+    Ok(())
 }
 
-static STORED: Mutex<Stored> = Mutex::new(Stored {
-    base_url: None,
-    prices: None,
-    refresh_cache: false,
-    backend: None,
-    throttle: None,
-    batch: None,
-    max_requests: None,
-    max_request_bytes: None,
-    cache: None,
-    total: None,
-    model: None,
-    timeout: None,
-    max_retries: None,
-    profile: None,
-    record: None,
-    replay: None,
-});
+fn apply(settings: &SettingPairs, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
+    for (name, raw) in settings {
+        builder = builder.setting(name, raw)?;
+    }
+    Ok(builder)
+}
+
+static STORED: Mutex<SettingPairs> = Mutex::new(Vec::new());
 
 static ENGINE: OnceLock<Engine> = OnceLock::new();
 
-fn batch(value: &serde_json::Value) -> Result<BatchSetting, Failure> {
-    if value.as_str() == Some("max") {
-        return Ok(BatchSetting::Max);
-    }
-    let count = value
-        .as_u64()
-        .and_then(|count| usize::try_from(count).ok())
-        .and_then(NonZeroUsize::new)
-        .ok_or_else(|| Failure::usage("settings batch has an invalid value"))?;
-    Ok(BatchSetting::Records(count))
-}
-
-fn request_total(value: &serde_json::Value) -> Result<Option<u64>, Failure> {
-    let total = value.as_u64();
-    if total == Some(0) {
-        return Err(Failure::usage(
-            "a request total is a whole number of 1 or more",
-        ));
-    }
-    Ok(total)
-}
-
 /// The selected cap for a safe SQLite refusal sentence.
 pub(crate) fn total() -> Option<u64> {
-    stored().total
+    stored().iter().find(|(name, _)| name == "max_requests_total")
+        .and_then(|(_, raw)| serde_json::from_str(raw).ok())
 }
 
-fn stored() -> MutexGuard<'static, Stored> {
+fn stored() -> MutexGuard<'static, SettingPairs> {
     STORED.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
@@ -167,10 +64,8 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     if let Some(engine) = ENGINE.get() {
         return Ok(engine);
     }
-    held.threads_ready()?;
-    let built = held
-        .apply(EngineBuilder::from_env()?.shared_host())?
-        .build()?;
+    threads_ready(&held)?;
+    let built = apply(&held, EngineBuilder::from_env()?.shared_host())?.build()?;
     crate::ffi::flush_usage_at_exit();
     Ok(ENGINE.get_or_init(|| built))
 }
@@ -210,74 +105,21 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         let fields = value
             .as_object()
             .ok_or_else(|| Failure::usage("settings JSON is one object"))?;
-        let mut next = Stored::default();
-        for (key, value) in fields {
-            match key.as_str() {
-                "refresh_cache" => next.refresh_cache = value.as_bool().unwrap_or(false),
-                "backend" => next.backend = value.as_str().map(str::to_owned),
-                "base_url" => next.base_url = value.as_str().map(str::to_owned),
-                "max_estimated_input_tokens_total" => {
-                    return Err(Failure::usage(
-                        "settings JSON has unknown key max_estimated_input_tokens_total",
-                    ));
-                }
-                "usd_per_million_input" | "usd_per_million_output" => {
-                    next.prices = Some((
-                        price(fields, "usd_per_million_input")?,
-                        price(fields, "usd_per_million_output")?,
-                    ));
-                }
-                "model" => next.model = value.as_str().map(str::to_owned),
-                "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
-                "batch" => next.batch = Some(batch(value)?),
-                "max_requests" => {
-                    next.max_requests = Some(
-                        value
-                            .as_u64()
-                            .map(|n| usize::try_from(n).unwrap_or(usize::MAX)),
-                    )
-                }
-                "max_requests_total" => next.total = request_total(value)?,
-                "max_request_bytes" => {
-                    next.max_request_bytes = value
-                        .as_u64()
-                        .map(|n| usize::try_from(n).unwrap_or(usize::MAX))
-                }
-                "cache" => next.cache = Some(value.as_str().map(PathBuf::from)),
-                "timeout" => next.timeout = value.as_u64().map(Duration::from_secs),
-                "max_retries" => {
-                    next.max_retries = value.as_u64().and_then(|n| u32::try_from(n).ok())
-                }
-                "profile" => next.profile = value.as_str().map(str::to_owned),
-                "record" => next.record = value.as_str().map(PathBuf::from),
-                "replay" => next.replay = value.as_str().map(PathBuf::from),
-                _ => {
-                    return Err(Failure::defect(
-                        "the shared settings reader accepted an unknown field",
-                    ));
-                }
+        for name in fields.keys() {
+            if !SETTING_NAMES.contains(&name.as_str()) {
+                return Err(Failure::usage(format!("settings JSON has unknown key {name}")));
             }
         }
+        let next = fields.iter().map(|(name, value)| (name.clone(), value.to_string())).collect();
         let mut held = stored();
         if ENGINE.get().is_some() {
             return Err(Failure::usage(
                 "settings apply before the first call; this process already built its engine",
             ));
         }
-        next.threads_ready()?;
-        next.apply(EngineBuilder::from_env()?)?;
+        threads_ready(&next)?;
+        apply(&next, EngineBuilder::from_env()?)?;
         *held = next;
         Ok(source.to_owned())
     })?)
-}
-
-fn price(
-    fields: &serde_json::Map<String, serde_json::Value>,
-    name: &str,
-) -> Result<String, Failure> {
-    fields
-        .get(name)
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned)
-        .ok_or_else(|| Failure::usage("prices require input and output decimal strings"))
 }

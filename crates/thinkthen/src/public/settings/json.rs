@@ -48,7 +48,7 @@ engine_fields! {
 // Serde structs also accept positional arrays. This map-only entry preserves
 // the engine constructor's object boundary while deriving all fields once.
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "Fields"))]
-pub(in crate::public) struct Document(Fields);
+pub(in crate::public) struct Document(Fields, Vec<(String, Box<serde_json::value::RawValue>)>);
 impl<'de> Deserialize<'de> for Document {
     fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
         struct Object;
@@ -58,7 +58,19 @@ impl<'de> Deserialize<'de> for Document {
                 formatter.write_str("one settings object")
             }
             fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
-                Fields::deserialize(serde::de::value::MapAccessDeserializer::new(map)).map(Document)
+                let mut map = map;
+                let mut pairs = Vec::<(String, Box<serde_json::value::RawValue>)>::new();
+                while let Some((name, value)) = map.next_entry()? {
+                    if pairs.iter().any(|(held, _)| held == &name) {
+                        return Err(serde::de::Error::custom("duplicate field"));
+                    }
+                    pairs.push((name, value));
+                }
+                let raw = pairs.iter().map(|(name, value)| (name, value))
+                    .collect::<std::collections::BTreeMap<_, _>>();
+                let source = serde_json::to_string(&raw).map_err(serde::de::Error::custom)?;
+                let fields = serde_json::from_str(&source).map_err(serde::de::Error::custom)?;
+                Ok(Document(fields, pairs))
             }
         }
         de.deserialize_map(Object)
@@ -115,7 +127,18 @@ impl Document {
             }
         })
     }
-    pub(super) fn apply(
+    pub(super) fn apply(&self, mut builder: EngineBuilder, captured: bool) -> Result<EngineBuilder, Error> {
+        // Reserved activation refuses before every other setting.
+        if self.0.proxy.is_some() {
+            builder = builder.proxy(&crate::public::ProxyActivation::Null);
+            builder.check_proxy()?;
+        }
+        for (name, value) in &self.1 {
+            builder = builder.apply_setting(name, value.get(), captured)?;
+        }
+        builder.check_setting_prices()
+    }
+    fn apply_fields(
         &self,
         mut builder: EngineBuilder,
         captured: bool,
@@ -126,19 +149,13 @@ impl Document {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
         }
         builder.check_proxy()?;
-        match (
-            &values.usd_per_million_input,
-            &values.usd_per_million_output,
-        ) {
-            (Some(input), Some(output)) => {
-                builder = builder.prices_usd_per_million(input, output)?
-            }
-            (None, None) => {}
-            _ => {
-                return Err(Error::usage(
-                    "settings prices require both input and output fields",
-                ));
-            }
+        if let Some(value) = &values.usd_per_million_input {
+            builder = builder.prices_usd_per_million(value, "0")?;
+            builder.setting_prices.0 = Some(value.clone());
+        }
+        if let Some(value) = &values.usd_per_million_output {
+            builder = builder.prices_usd_per_million("0", value)?;
+            builder.setting_prices.1 = Some(value.clone());
         }
         // Configured backend names belong to the captured configuration. All
         // other owner checks run before capture against a bare builder too.
@@ -176,7 +193,11 @@ impl Document {
             builder = builder.model(value)?;
         }
         if let Some(value) = &values.profile {
-            builder = builder.profile(value)?;
+            builder = if value.trim_start().starts_with('{') {
+                builder.profile_json(value)?
+            } else {
+                builder.profile(value)?
+            };
         }
         if let Some(value) = &values.record {
             builder = builder.record(value)?;
@@ -193,10 +214,41 @@ impl Document {
         if let Some(value) = values.timeout {
             builder = builder.timeout(Duration::from_secs(value))?;
         }
+        if let (Some(input), Some(output)) = (&builder.setting_prices.0, &builder.setting_prices.1) {
+            let (input, output) = (input.clone(), output.clone());
+            builder = builder.prices_usd_per_million(&input, &output)?;
+        }
         Ok(builder)
     }
 }
 impl EngineBuilder {
+    /// Apply one engine setting from its name and raw JSON value.
+    /// Text values use JSON string quoting; numbers and booleans use their literal text.
+    /// This validates without opening files or sending requests.
+    /// # Errors
+    /// Refuses unknown names and invalid values with the settings document's messages.
+    pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
+        self.apply_setting(name, raw, true)
+    }
+
+    fn apply_setting(self, name: &str, raw: &str, captured: bool) -> Result<Self, Error> {
+        let name = serde_json::to_string(name)
+            .map_err(|_| Error::usage("settings JSON is one object"))?;
+        Document::parse(&format!("{{{name}:{raw}}}"))?.apply_fields(self, captured)
+    }
+
+    pub(super) fn check_setting_prices(mut self) -> Result<Self, Error> {
+        match (&self.setting_prices.0, &self.setting_prices.1) {
+            (Some(input), Some(output)) => {
+                let (input, output) = (input.clone(), output.clone());
+                self = self.prices_usd_per_million(&input, &output)?;
+            }
+            (None, None) => {}
+            _ => return Err(Error::usage("settings prices require both input and output fields")),
+        }
+        Ok(self)
+    }
+
     /// Admit engine settings before capturing the environment and configuration.
     /// Configured backend names resolve against that captured configuration.
     /// # Errors
