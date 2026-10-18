@@ -13,6 +13,10 @@ ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
 args = parser.parse_args()
+job = os.environ.get('PM_JOB', '').split()
+ticket = job[0] if job else os.environ.get('PM_TICKET', '0619')
+if len(ticket) != 4 or not ticket.isdigit():
+    parser.error('container label requires a four-digit ticket')
 manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
 pin = manifest['linux']
 arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machine()]
@@ -47,7 +51,7 @@ for name in ('sccache', 'pip-cache', 'uv-cache', 'python', 'config', 'cache'):
     folder = owned / name
     folder.mkdir(exist_ok=True)
     cache_mounts += ['-v', str(folder) + ':' + manifest['linux_prefix'] + '/' + name]
-command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=0619',
+command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
            '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
            '--security-opt', 'seccomp=unconfined', '--security-opt', 'apparmor=unconfined',
            '--security-opt', 'systempaths=unconfined', '--user', str(os.getuid()) + ':' + str(os.getgid()),

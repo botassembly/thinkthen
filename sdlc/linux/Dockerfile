@@ -3,6 +3,8 @@ ARG BASE
 FROM ${BASE}
 LABEL pm.repo=thinkthen pm.ticket=0619
 ENV DEBIAN_FRONTEND=noninteractive
+# Print the enforced build cgroup limits before installing or compiling tools.
+RUN cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max
 # Docker fetches this verified bootstrap over TLS before apt has trust roots.
 ADD https://snapshot.ubuntu.com/ubuntu/20260923T150000Z/pool/main/c/ca-certificates/ca-certificates_20240203_all.deb /tmp/ca-certificates.deb
 RUN echo '641de77d8f142cfd62a1a6f964ba67b20754d3337c480efb529d086075a06c9a  /tmp/ca-certificates.deb' | sha256sum -c - && dpkg-deb --extract /tmp/ca-certificates.deb /tmp/ca-bootstrap && mkdir -p /etc/ssl/certs && cat /tmp/ca-bootstrap/usr/share/ca-certificates/mozilla/*.crt > /etc/ssl/certs/ca-certificates.crt

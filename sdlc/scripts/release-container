@@ -57,7 +57,9 @@ else
 	}
 fi
 tar -x -f "$RUN/source.tar" -C "$RUN/src"
-set -- --rm --label pm.repo=thinkthen --label "pm.ticket=${PM_TICKET:-0619}" --cpus "$CONTAINER_CPUS" --memory "${CONTAINER_MEMORY}g" --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
+job_ticket=${PM_JOB:-${PM_TICKET:-0619}}
+job_ticket=${job_ticket%% *}
+set -- --rm --label pm.repo=thinkthen --label "pm.ticket=$job_ticket" --cpus "$CONTAINER_CPUS" --memory "${CONTAINER_MEMORY}g" --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
 set -- "$@" -e PYTHONDONTWRITEBYTECODE=1 -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
 set -- "$@" -e GITHUB_ACTIONS -e RUNNER_ENVIRONMENT
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
