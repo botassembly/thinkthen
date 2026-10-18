@@ -4,6 +4,9 @@
 # loopback port as $1. The tests start their own backends, so this check does
 # not use it. It runs from the repository root, where the manifest is.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/polars
+tools_group=polars
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")/../.."
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
@@ -16,7 +19,7 @@ fi
 if ! cargo fetch --locked --offline >/dev/null 2>&1; then
 	echo 'polars: not run; the crate cache lacks the locked crates.' >&2
 	echo 'polars: on a networked machine, run: cargo fetch --locked' >&2
-	exit 77
+	exit 1
 fi
 
 # No paid backend: a fake key, a closed loopback port, and scratch folders.

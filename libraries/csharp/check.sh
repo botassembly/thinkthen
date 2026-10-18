@@ -1,14 +1,17 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/csharp
+tools_group=csharp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$here/ThinkThen.csproj")
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
-dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
-[ -x "$dotnet" ] || exit 77
-command -v python3 >/dev/null 2>&1 || exit 77
+dotnet=$(command -v dotnet || true)
+[ -x "$dotnet" ] || exit 1
+command -v python3 >/dev/null 2>&1 || exit 1
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
     routine|full|smoke) ;;
     *) echo 'C#: unknown test profile' >&2; exit 2 ;;

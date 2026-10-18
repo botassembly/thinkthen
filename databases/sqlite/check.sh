@@ -4,6 +4,8 @@
 # one counts sends, so the check leaves the shared port unused. Exit 77 means
 # "not run": a missing toolchain never reports a pass.
 set -eu
+tools_group=sqlite
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
@@ -27,7 +29,7 @@ case $(uname -s) in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 
 not_run() {
 	echo "not run  databases/sqlite: $1; run databases/sqlite/setup.sh once"
-	exit 77
+	exit 1
 }
 command -v cc >/dev/null || not_run "no cc to build the SQLite 3.50.0 host"
 if [ "$suffix" = dylib ]; then

@@ -1,31 +1,37 @@
-"""Stage the real source checks needed by thin installed-script fixtures."""
-import shutil
-import sys
-from pathlib import Path
+"""Run shell fixtures against the complete tracked checkout."""
+import json
+import subprocess
+import tarfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'sdlc/generators/results'))
-from sources import tracked_files
-
-from sdlc.generators.results.registry import OUTPUTS
+from conformance.children.children import child_env
 
 
-def stage_files(source, root, paths):
-    for relative in paths:
-        destination = root / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source / relative, destination)
+def stage_checkout(source, root):
+    """Extract HEAD so new sourced helpers need no fixture file list."""
+    env = child_env(home=root / 'fixture-git-home')
+    archive = subprocess.Popen(['git', 'archive', 'HEAD'], cwd=source, env=env, stdout=subprocess.PIPE)
+    try:
+        with tarfile.open(fileobj=archive.stdout, mode='r|') as packed:
+            packed.extractall(root, filter='data')
+    finally:
+        archive.stdout.close()
+        if archive.wait() != 0:
+            raise RuntimeError('cannot archive tracked fixture checkout')
+    subprocess.run(['git', 'init', '-q', str(root)], env=env, check=True)
+    subprocess.run(['git', '-C', str(root), 'add', '--force', '--all'], env=env, check=True)
 
 
-def stage_generated_source(source, root, target):
-    generator = 'sdlc/generators/results/'
-    stage_files(source, root, (
-        # Stage the producer and its dependency graph from the canonical tree.
-        # A new shared renderer import must not require another fixture copy list.
-        *(path.relative_to(source).as_posix()
-          for path in tracked_files(source / generator) if path.suffix == '.py'),
-        'conformance/children/children.py',
-        'crates/thinkthen/src/public/results/complete.schema.json',
-        'specification/request.schema.json',
-        'rust-toolchain.toml',
-        *(row.path for row in OUTPUTS if row.target == target),
-    ))
+def fixture_tool_groups(source):
+    """Let controlled tool stubs serve every declared library and rung."""
+    manifest = json.loads((source / 'sdlc/tools.json').read_text())
+    return ','.join(dict.fromkeys(('test', 'surfaces', *manifest['libraries'], *manifest['databases'])))
+
+
+def stub_other_surfaces(root, selected):
+    """Keep the real registry while isolating unrelated consumer processes."""
+    for line in (root / 'sdlc/surfaces.txt').read_text().splitlines():
+        fields = line.split()
+        if fields and fields[0].startswith('#'):
+            continue
+        if len(fields) > 1 and fields[1] in ('landed', 'feature') and fields[0] not in selected:
+            (root / fields[0] / 'check.sh').write_text('if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then printf "smoke: true\\n"; fi\nexit 0\n')

@@ -1,6 +1,9 @@
 #!/bin/sh
 # The Rust examples surface. The surface rung passes its loopback port as $1.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/rust
+tools_group=rust
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac

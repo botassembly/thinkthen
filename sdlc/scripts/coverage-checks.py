@@ -14,6 +14,8 @@ import tarfile
 import subprocess
 import unittest
 from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import child_env
 
 import coverage_installed_managed
 import coverage_installed_c_hosts
@@ -23,7 +25,7 @@ DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 class PlatformCommandEvidence(unittest.TestCase):
     def test_platform_commands_refuse_a_foreign_host_and_native_slice(self):
-        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--platform']
+        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--platform']
         foreign = 'apple' if sys.platform == 'linux' else 'linux'
         result = subprocess.run([*command, foreign], capture_output=True)
         self.assertEqual(result.returncode, 1)
@@ -41,7 +43,7 @@ class PlatformCommandEvidence(unittest.TestCase):
                              totals=dict(mapped_nonblank=100, **{name: 50 for name in names}))
                         for platform_name, names in (('linux', expected - {'installed-objective-c'}),
                                                     ('apple', {'installed-swift', 'installed-objective-c'}))]
-            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--join', *map(str, paths)]
+            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--join', *map(str, paths)]
             for payload, path in zip(payloads, paths):
                 path.write_text(json.dumps(payload))
             self.assertEqual(subprocess.run(command, capture_output=True).returncode, 0)
@@ -211,7 +213,14 @@ class ManagedToolAvailability(unittest.TestCase):
                 # XCFramework assembly requires macOS; package validation below is real.
                 framework = Path(args[args.index('-output') + 1])
                 framework.mkdir()
-                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+                identifier = 'macos-arm64'
+                library = framework / identifier
+                (library / 'Headers').mkdir(parents=True)
+                shutil.copyfile(native, library / 'libthinkthen.a')
+                metadata = {'XCFrameworkFormatVersion': '1.0', 'AvailableLibraries': [
+                    dict(SupportedPlatform='macos', SupportedArchitectures=['arm64'],
+                         LibraryIdentifier=identifier, LibraryPath='libthinkthen.a', HeadersPath='Headers')]}
+                (framework / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             context = dict(root=checkout, run=run, env={}, command=command,
                            missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)
@@ -415,7 +424,7 @@ else:
     def test_real_exit_and_diagnostics_survive(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for code, exception, message in ((77, DRIVER['MissingTool'], 'see'),
+            for code, exception, message in ((77, RuntimeError, 'see'),
                                              (4, RuntimeError, 'exit 4'),
                                              (-signal.SIGTERM, RuntimeError, 'exit -15')):
                 script = f"import os, sys; print('diagnostic', flush=True); "
@@ -477,7 +486,7 @@ class CollectionClassification(unittest.TestCase):
             harness = root / 'c-harness'
             harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
                                "assert os.environ['CARGO_PKG_NAME'] == 'thinkthen-c'\n"
-                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR']).resolve()\n"
                                "assert sys.argv[1:] == ['--test-threads=2']\n")
             harness.chmod(0o700)
             package = {'name': 'thinkthen-c', 'manifest_path': str(package_dir / 'Cargo.toml')}
@@ -487,7 +496,7 @@ class CollectionClassification(unittest.TestCase):
             production = {**artifact, 'profile': {'test': False}}
             artifacts = DRIVER['test_artifacts']('\n'.join(map(json.dumps, (artifact, production))), package)
             self.assertEqual(len(artifacts), 1)
-            DRIVER['collect_tests'](root, {}, artifacts, 'c-source-unit')
+            DRIVER['collect_tests'](root, child_env(home=root / 'home'), artifacts, 'c-source-unit')
             self.assertTrue((root / 'c-source-unit/thinkthen_c.log').is_file())
 
     def test_c_source_units_add_unit_hits_without_test_only_denominator(self):
@@ -541,7 +550,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                 return f'SF:{source}\nDA:1,1\n' + ('DA:2,0\n' if unavailable in objects else '')
             context = DRIVER['measure'].__globals__
             with patch.dict(context, ROOT=root, export=export):
-                for release, code in ((False, 77), (True, 1)):
+                for release, code in ((False, 1), (True, 1)):
                     if release:
                         for collection in installed:
                             shutil.rmtree(root / collection['name'])
@@ -549,7 +558,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                         DRIVER['measure'](root, {}, root, executable, [], [], installed, 'fixture',
                                           time.monotonic(), False)
                     with patch.dict(DRIVER['entry'].__globals__, main=main), patch.object(
-                            sys, 'argv', ['coverage'] + (['--release'] if release else [])):
+                            sys, 'argv', ['coverage'] + ([])):
                         self.assertEqual(DRIVER['entry'](), code)
                     result = json.loads((root / 'totals.json').read_text())
                     records = root / 'sdlc/records/coverage'

@@ -11,13 +11,15 @@
 if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 	if [ -n "${THINKTHEN_PG_CHECK_REEXEC:-}" ]; then
 		echo "not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found ${BASH_VERSION:-no bash}"
-		exit 77
+		exit 1
 	fi
 	unset POSIXLY_CORRECT
 	THINKTHEN_PG_CHECK_REEXEC=1 exec bash "$0" "$@"
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
+tools_group=postgresql
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Retained one-record listener fixtures keep their historical wire identity.
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.
@@ -29,7 +31,7 @@ export PG_MAJOR
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
+case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 1 ;; esac
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home

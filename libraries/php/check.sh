@@ -1,19 +1,21 @@
 #!/bin/sh
 # Exercise the installed Composer package; shared parity is release-only.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/php
+tools_group=php
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo 'php: unknown profile' >&2; exit 2 ;; esac
-[ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || { echo 'php: not run: Linux x86_64 required'; exit 77; }
-php_bin=${THINKTHEN_PHP_BIN:-/usr/bin/php8.3}
-python_bin=${THINKTHEN_PYTHON_BIN:-/usr/bin/python3}
-composer=${THINKTHEN_COMPOSER_BIN:-$(command -v composer || true)}
+case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 1 ;; *) echo 'php: unknown profile' >&2; exit 2 ;; esac
+php_bin=$(command -v php || true)
+python_bin=$(command -v python3 || true)
+composer=$(command -v composer || true)
 for tool in "$php_bin" "$python_bin" "$composer"; do
- case "$tool" in /*) ;; *) echo 'php: not run: tool needs an absolute path'; exit 77 ;; esac
- [ -f "$tool" ] || { echo 'php: not run: tool unavailable'; exit 77; }
+ case "$tool" in /*) ;; *) echo 'php: not run: tool needs an absolute path'; exit 1 ;; esac
+ [ -f "$tool" ] || { echo 'php: not run: tool unavailable'; exit 1; }
 done
-"$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' || exit 77
+"$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' || exit 1
 CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$repo/target}" --package conformance-backend -j2
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home

@@ -549,15 +549,14 @@ class PackageText(unittest.TestCase):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
                                env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
             for name in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/fetch.sh',
-                         'crates/thinkthen/Cargo.toml', 'libraries/ruby/toolchain.env',
+                         'crates/thinkthen/Cargo.toml', 'sdlc/tools.json', 'libraries/ruby/toolchain.env',
                          'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
                          'databases/duckdb/tools/version.env'):
                 path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(readmes.REPO / name, path)
             home = root / 'home'
-            ruby_pins = (root / 'libraries/ruby/toolchain.env').read_text()
-            prepared = [home / '.cache/thinkthen-toolchains/ruby' / pin / 'bin'
-                        for pin in readmes.re.findall(r'(?m)^RUBY_\d+_VERSION=(.*)$', ruby_pins)]
+            ruby_pin = json.loads((root / 'sdlc/tools.json').read_text())['tools']['ruby']['version']
+            prepared = [home / '.cache/thinkthen-toolchains/ruby' / ruby_pin / 'bin']
             sqlite = root / 'sqlite'
             duckdb_pin = readmes.re.search(r'(?m)^DUCKDB_ROUTINE_RELEASE=(.*)$',
                                           (root / 'databases/duckdb/tools/version.env').read_text())[1]
@@ -570,7 +569,7 @@ class PackageText(unittest.TestCase):
                 for folder in folders + [wrong]:
                     folder.mkdir(parents=True, exist_ok=True)
                     executable = folder / binary
-                    executable.write_text('#!/bin/sh\nprintf "' + ('wrong' if folder == wrong else 'prepared') + '\\n"\n')
+                    executable.write_text('#!/bin/sh\n[ "${1:-}" != --disable-gems ] || exit 0\nprintf "' + ('wrong' if folder == wrong else 'prepared') + '\\n"\n')
                     executable.chmod(0o755)
                     if binary == 'ruby' and folder != wrong:
                         (folder.parent / 'thinkthen-toolchain.stamp').touch()
@@ -581,7 +580,7 @@ class PackageText(unittest.TestCase):
                                '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
             done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
                                    'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
-                                  env={'PATH': str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
+                                  env={'PATH': str(prepared[0]) + os.pathsep + str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
                                   capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 

@@ -21,7 +21,7 @@ from session_cases import native_cases
 
 if sys.platform != "darwin":
     print("Foundation installed consumer requires macOS", file=sys.stderr)
-    sys.exit(77)
+    sys.exit(1)
 with contextlib.ExitStack() as installed:
     package = Path(os.environ.get("THINKTHEN_APPLE_PACKAGE", ROOT))
     if os.environ.get("THINKTHEN_ARTIFACT"):
@@ -30,7 +30,7 @@ with contextlib.ExitStack() as installed:
             archive.extractall(package, filter="data")
     if not (package / "CThinkThen.xcframework/Info.plist").is_file():
         print("Matching assembled Apple package with CThinkThen.xcframework is required; no native build is started", file=sys.stderr)
-        sys.exit(77)
+        sys.exit(1)
     consumer_stage = os.environ.get("THINKTHEN_COVERAGE_STAGE")
     if consumer_stage:
         Path(consumer_stage).mkdir(parents=True, exist_ok=True)

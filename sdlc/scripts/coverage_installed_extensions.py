@@ -1,8 +1,7 @@
 """Measure routine callers of packaged native extensions and Rust consumers."""
-import os
 from pathlib import Path
 import shutil
-import subprocess
+from tools import commands
 import tarfile
 
 COLLECTIONS = ('installed-javascript', 'installed-typescript', 'installed-ruby',
@@ -14,15 +13,10 @@ def prepare(context):
     command, missing = context['command'], context['missing_tool']
     env = {**context['env'], 'CARGO_BUILD_JOBS': '2', 'THINKTHEN_FULL_COMPILER': '1',
            'THINKTHEN_TEST_PROFILE': 'routine'}
-    tools = Path(env.get('THINKTHEN_TOOLCHAINS', str(Path(env['HOME']) / '.cache/thinkthen-toolchains')))
-    node = tools / 'node-v22.22.3-linux-x64/bin'
-    ruby = tools / 'ruby' / selected_ruby_version(root, env)
-    if not (node / 'node').is_file() or not (ruby / 'thinkthen-toolchain.stamp').is_file():
-        raise missing('installed extensions need the cached pinned Node and stamped Ruby toolchains')
-    env['PATH'] = str(node) + os.pathsep + env['PATH']
-    for tool in ('node', 'npm', 'R', 'Rscript', 'cargo', 'rustc', 'cc', 'nm'):
+    for tool in commands(['javascript', 'typescript', 'ruby', 'r', 'rust', 'polars']):
         if not shutil.which(tool, path=env['PATH']):
             raise missing('installed extensions need ' + tool)
+    ruby = Path(shutil.which('ruby', path=env['PATH'])).resolve().parent.parent
     clang = sorted(Path('/usr/lib').glob('llvm-*/lib/libclang.so.1'))
     if not clang:
         raise missing('installed Ruby needs cached host libclang')
@@ -53,7 +47,7 @@ def prepare(context):
                      'THINKTHEN_ARTIFACT': str(node_artifact), 'THINKTHEN_PARITY_CONSUMER': language,
                      'THINKTHEN_COVERAGE_OBJECT': str(folder / 'installed.node')}, folder / 'check.log', timeout=1800)
         collections.append(dict(name=name, objects=[run / name / 'installed.node'], runner=runner))
-    ruby_env = {**env, 'RUBY': str(ruby / 'bin/ruby'), 'PATH': str(ruby / 'bin') + os.pathsep + env['PATH'],
+    ruby_env = {**env, 'RUBY': str(ruby / 'bin/ruby'),
                 'LIBCLANG_PATH': str(clang[-1].parent), 'LD_LIBRARY_PATH': str(ruby / 'lib'),
                 'CARGO_TARGET_DIR': str(run / 'target-ruby')}
     command(['sh', 'build.sh'], tree / 'libraries/ruby', ruby_env, stage / 'ruby-build.log', timeout=1800)
@@ -131,10 +125,3 @@ def verify_packaged_core(root, artifact, prefix):
             compared += 1
     if not compared:
         raise RuntimeError('coverage package contains no core source: ' + str(artifact))
-
-
-def selected_ruby_version(root, env):
-    """Read the same pinned selector as setup, build and installed checks."""
-    return subprocess.check_output(
-        ['sh', '-c', '. "$1"; printf "%s" "$RUBY_VERSION"', 'ruby-toolchain',
-         str(root / 'libraries/ruby/toolchain.env')], env=env, text=True).strip()

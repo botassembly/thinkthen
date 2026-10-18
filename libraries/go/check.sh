@@ -1,36 +1,36 @@
 #!/bin/sh
 # Stage the Go module and run its installed consumers offline.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/go
+tools_group=go
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
     routine|full|smoke) ;;
-    stress) echo 'go: not run: no stress gate'; exit 77 ;;
+    stress) echo 'go: not run: no stress gate'; exit 1 ;;
     *) echo 'go: unknown profile' >&2; exit 2 ;;
 esac
-if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
-    echo 'go: not run: this package gate is proven on Linux x86_64'; exit 77
-fi
-go_bin=${THINKTHEN_GO_BIN:-$(command -v go || true)}
-python_bin=${THINKTHEN_PYTHON_BIN:-$(command -v python3 || true)}
+go_bin=$(command -v go || true)
+python_bin=$(command -v python3 || true)
 for named in "$go_bin" "$python_bin"; do
-    case "$named" in /*) ;; *) echo "go: not run: tool path is not absolute: $named" >&2; exit 77 ;; esac
-    [ -x "$named" ] || { echo "go: not run: tool is unavailable: $named" >&2; exit 77; }
+    case "$named" in /*) ;; *) echo "go: not run: tool path is not absolute: $named" >&2; exit 1 ;; esac
+    [ -x "$named" ] || { echo "go: not run: tool is unavailable: $named" >&2; exit 1; }
 done
 for tool in gofmt cargo cc nm node git; do
-    command -v "$tool" >/dev/null 2>&1 || { echo "go: not run: no $tool" >&2; exit 77; }
+    command -v "$tool" >/dev/null 2>&1 || { echo "go: not run: no $tool" >&2; exit 1; }
 done
 # Refuse unsupported toolchains before any native build or installed check.
 minimum=$(awk '$1 == "go" { print $2; exit }' go.mod)
 installed=$("$go_bin" version | sed -n 's/^go version go1\.\([0-9][0-9]*\)\.[0-9][0-9]* [^ ]*$/\1/p')
-[ -n "$installed" ] || { echo 'go: a stable Go 1.x release is required' >&2; exit 77; }
+[ -n "$installed" ] || { echo 'go: a stable Go 1.x release is required' >&2; exit 1; }
 minimum_minor=${minimum#1.}
 minimum_minor=${minimum_minor%%.*}
-[ "$installed" -ge "$minimum_minor" ] || { echo "go: Go $minimum or newer is required" >&2; exit 77; }
+[ "$installed" -ge "$minimum_minor" ] || { echo "go: Go $minimum or newer is required" >&2; exit 1; }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'go: missing C archive' >&2; exit 1; }
 fi
-"$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
+"$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 1; }
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_JOBS=2

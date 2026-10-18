@@ -1,0 +1,5 @@
+#!/bin/sh
+# Portable landing entry point; tool resolution owns the environment.
+set -eu
+cd -- "$(dirname -- "$0")/../.."
+exec /usr/bin/python3 sdlc/scripts/tools.py lint,test -- sh -eu -c 'sdlc/scripts/lint; sdlc/scripts/test'

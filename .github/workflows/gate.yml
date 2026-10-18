@@ -221,7 +221,6 @@ jobs:
           set -eu
           if [ "$(uname -s)" = Darwin ]; then
             . libraries/ruby/toolchain.env
-            brew install "openssl@$RUBY_OPENSSL_SERIES"
             printf 'MACOSX_DEPLOYMENT_TARGET=%s\n' "$RUBY_MACOS_DEPLOYMENT_TARGET" >> "$GITHUB_ENV"
             printf 'SDKROOT=%s\n' "$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
             clang=$(xcrun --find clang)
@@ -251,11 +250,9 @@ jobs:
           for minor in $RUBY_MINORS; do
             echo "Check installed Ruby $minor"
             THINKTHEN_ARTIFACT="$artifact" THINKTHEN_RUBY_MINOR=$minor sh libraries/ruby/check.sh || failed=1
-            THINKTHEN_RUBY_MINOR=$minor
-            . libraries/ruby/toolchain.env
-            prefix=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/ruby/$RUBY_VERSION
-            [ "$(uname -s)" != Darwin ] || prefix=$prefix-$(uname -m)-darwin
-            "$prefix/bin/ruby" libraries/ruby/tests/test_package.rb || failed=1
+            group=ruby; [ "$minor" != 3.4 ] || group=ruby34
+            THINKTHEN_RUBY_MINOR=$minor python3 sdlc/scripts/tools.py --check "$group" -- \
+              ruby libraries/ruby/tests/test_package.rb || failed=1
           done
           exit "$failed"
       - name: Pack and check only the selected installed language
@@ -353,10 +350,8 @@ jobs:
           printf '%s\n' "$RELEASE_WORK/typescript/node_modules/.bin" >> "$GITHUB_PATH"
           uv venv "$RELEASE_WORK/python"
           uv pip install --require-hashes --python "$RELEASE_WORK/python/bin/python" -r libraries/python/requirements-dev.txt
-          . libraries/ruby/toolchain.env
-          printf 'RUBY=%s\nRBCONFIG=%s\n' \
-            "$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION/bin/ruby" \
-            "$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION/lib/ruby/${RUBY_VERSION%.*}.0/x86_64-linux/rbconfig.rb" >> "$GITHUB_ENV"
+          python3 sdlc/scripts/tools.py --check ruby -- ruby -rrbconfig -e \
+            'puts "RUBY=#{RbConfig.ruby}"; puts "RBCONFIG=#{RbConfig::CONFIG.fetch("archdir")}/rbconfig.rb"' >> "$GITHUB_ENV"
           clang=$(for lib in /usr/lib/llvm-*/lib; do [ ! -e "$lib/libclang.so.1" ] || echo "$lib"; done | sort -V | tail -n 1)
           test -n "$clang"
           printf 'LIBCLANG_PATH=%s\n' "$clang" >> "$GITHUB_ENV"
@@ -395,7 +390,7 @@ jobs:
                            'LIBCLANG_PATH', 'PUB_CACHE', 'RUBY', 'RBCONFIG', 'R_LIBS_USER', 'JAVA_HOME',
                            'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache'), home=work / 'home')
           for key in ('THINKTHEN_DOTNET', 'THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME',
-                      'TT_DART', 'TT_FLUTTER', 'THINKTHEN_PHP_BIN'):
+                      'TT_DART', 'TT_FLUTTER'):
               env[key] = os.environ[key]
           env.update(CARGO_HOME=os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
                      RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),

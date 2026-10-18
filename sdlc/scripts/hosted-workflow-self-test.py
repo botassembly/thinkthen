@@ -374,7 +374,7 @@ def linux_coverage_destination_case():
         resolved = path if path == Path('/home') or Path('/home') in path.parents else path.resolve()
         with patch.dict(driver['main'].__globals__, tools=lambda: {}, installed_helpers=lambda: []), \
                 patch.object(sys, 'platform', 'linux'), \
-                patch.object(sys, 'argv', ['coverage', '--release', '--platform', 'linux', '--output', output]), \
+                patch.object(sys, 'argv', ['coverage', '--platform', 'linux', '--output', output]), \
                 patch.object(subprocess, 'check_output', side_effect=['0' * 40, b'']), \
                 patch.object(Path, 'resolve', return_value=resolved), \
                 patch.object(Path, 'mkdir', side_effect=AcceptedOutput) as create:

@@ -3,6 +3,8 @@ import contextlib
 import io
 import json
 import os
+import platform
+import signal
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,7 +15,7 @@ from unittest.mock import patch
 
 from conformance import parity
 from conformance.children.children import child_env
-from conformance.source_fixtures import stage_files, stage_generated_source
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -58,12 +60,10 @@ class CandidateSmokes(unittest.TestCase):
         # Four orchestrators must leave all four permits for their child builds.
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-nested-') as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
             for directory in (scripts, tools, binaries):
-                directory.mkdir(parents=True)
-            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh',
-                         'heavy-lock', 'allow-list', 'build-admission.py'):
-                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+                directory.mkdir(parents=True, exist_ok=True)
             (binaries / 'conformance-backend').write_text(
                 '#!/bin/sh\necho 12345\nwhile read line; do echo 1; done\n')
             (binaries / 'thinkthen').write_text('#!/bin/sh\ncat >/dev/null\necho true\n')
@@ -89,36 +89,40 @@ class CandidateSmokes(unittest.TestCase):
                 'subprocess.run(["./built-"+slot],env=env,check=True)\n'
                 'print("smoke: true")\n')
             env = child_env(home=root / 'home')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env['PATH'] = str(tools) + os.pathsep + env['PATH']
             children = []
             try:
                 for slot in range(4):
                     surface = 'libraries/child' + str(slot)
-                    (root / surface).mkdir(parents=True)
+                    (root / surface).mkdir(parents=True, exist_ok=True)
                     (root / surface / 'check.sh').write_text(
                         'exec python3 compile.py ' + str(slot) + '\n')
                     children.append(subprocess.Popen(
-                        ['sh', str(scripts / 'smoke'), '--full-functional', '--one', str(binaries), surface],
-                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True))
+                        ['sh', str(scripts / 'smoke'), '--one', str(binaries), surface],
+                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True))
                 for child in children:
-                    log, _ = child.communicate(timeout=10)
+                    try:
+                        log, _ = child.communicate(timeout=10)
+                    except subprocess.TimeoutExpired as error:
+                        self.fail(f'smoke stalled: ready={sorted(path.name for path in root.glob("ready-*"))}, '
+                                  f'built={sorted(path.name for path in root.glob("built-*"))}; {error.output}')
                     self.assertEqual(child.returncode, 0, log)
                 self.assertEqual(len(list(root.glob('built-*'))), 4)
             finally:
                 for child in children:
                     if child.poll() is None:
-                        child.kill()
-                    child.wait()
+                        os.killpg(child.pid, signal.SIGKILL)
+                    child.communicate(timeout=3)
 
-    def test_full_smoke_fails_exit77_and_only_delegates_apple(self):
+    def test_smoke_fails_required_exit77_and_reports_declared_unsupported(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             scripts, tools, binaries = root / 'sdlc/scripts', root / 'tools', root / 'bin'
             for directory in (scripts, tools, binaries):
-                directory.mkdir(parents=True)
-            for name in ('smoke', 'full-compiler', 'verdict.sh', 'scratch.sh', 'allow-list'):
-                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
-            (scripts / 'heavy-lock').write_text('')
+                directory.mkdir(parents=True, exist_ok=True)
+            (scripts / 'allow-list').write_text('')
             backend = binaries / 'conformance-backend'
             backend.write_text('#!/bin/sh\necho 12345\nwhile read line; do echo 1; done\n')
             binary = binaries / 'thinkthen'
@@ -129,44 +133,37 @@ class CandidateSmokes(unittest.TestCase):
             uname.write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for executable in (backend, binary, jq, uname):
                 executable.chmod(0o755)
-            for member in ('c', 'swift', 'objective-c'):
+            for member in ('c', 'swift', 'objective-c', 'go'):
                 library = root / 'libraries' / member
-                library.mkdir(parents=True)
+                library.mkdir(parents=True, exist_ok=True)
                 (library / 'check.sh').write_text('exit 77\n')
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home')}
-            for full, member, delegate, expected in [
-                    (False, 'c', '', 0), (True, 'c', '', 1),
-                    (True, 'c', 'required', 1), (True, 'objective-c', '', 1),
-                    (True, 'objective-c', 'required', 0), (True, 'swift', 'required', 0)]:
-                with self.subTest(full=full, member=member, delegate=delegate):
-                    args = ['sh', str(scripts / 'smoke')]
-                    if full:
-                        args.append('--full-functional')
-                    args += ['--one', str(binaries), 'libraries/' + member]
-                    result = subprocess.run(args, cwd=root,
-                                            env=env | {'THINKTHEN_MACOS_APPLE_CHECKS': delegate},
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
+            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            host = platform.system().lower() + '-' + arch
+            for member in ('c', 'swift', 'objective-c', 'go'):
+                required = host in manifest['libraries'][member]['check_platforms']
+                with self.subTest(member=member, required=required):
+                    args = ['sh', str(scripts / 'smoke'), '--one', str(binaries), 'libraries/' + member]
+                    result = subprocess.run(args, cwd=root, env=env,
                                             capture_output=True, text=True, check=False)
-                    self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
-                    if full and member != 'c' and delegate:
-                        self.assertIn('pending', result.stdout)
-                        self.assertNotIn('pass', result.stdout)
+                    self.assertEqual(result.returncode, int(required), result.stdout + result.stderr)
+                    self.assertIn('FAIL' if required else 'unsupported', result.stdout)
+                    self.assertNotIn('pass libraries/' + member, result.stdout)
+
 
 
 class RetainedNpmArtifact(unittest.TestCase):
     def test_full_preparation_keeps_the_package_release_pack_reuses(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-npm-retained-') as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             library = root / 'libraries/typescript'
             scripts = root / 'sdlc/scripts'
             tools = root / 'home/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
             for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
-                directory.mkdir(parents=True)
-            stage_generated_source(parity.ROOT, root, 'typescript')
-            stage_files(parity.ROOT, root, ('README.md', 'sdlc/scripts/registry-readmes.py',
-                        'libraries/typescript/README.md', 'libraries/typescript/package.json',
-                        'crates/thinkthen/Cargo.toml'))
-            shutil.copyfile(parity.ROOT / 'libraries/typescript/check.sh', library / 'check.sh')
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
+                directory.mkdir(parents=True, exist_ok=True)
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
             (library / 'fixture').write_text('package')
             packed_input = root / 'packed-input.tgz'
@@ -187,6 +184,7 @@ cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
                    'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)
             # Stop at installation: the real full preparation must already retain its input.
@@ -198,7 +196,6 @@ cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
             with tarfile.open(artifact) as archive:
                 self.assertEqual(archive.extractfile('package/fixture').read(), b'package')
             self.assertEqual(result.returncode, 91, result.stdout + result.stderr)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/release-pack', scripts / 'release-pack')
             (tools / 'rustc').write_text('#!/bin/sh\necho "host: x86_64-unknown-linux-gnu"\n')
             (tools / 'rustc').chmod(0o755)
             output = root / 'output'

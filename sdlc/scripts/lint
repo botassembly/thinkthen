@@ -1,6 +1,8 @@
 #!/bin/sh
 # Rung 1: the accepted policies, formatting, clippy, and docs.
 set -eu
+tools_group=lint
+. "$(dirname -- "$0")/resolved-tools"
 # Ticket 0133: every step and child sees only the names in allow-list.
 . "$(dirname -- "$0")/allow-list"
 . "$(dirname -- "$0")/scratch.sh"
