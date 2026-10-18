@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Depends on: 0688
+
 Reviews: revision f9cefb6, accept
 
 ## Outcome
