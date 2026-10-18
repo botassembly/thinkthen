@@ -1,6 +1,7 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in

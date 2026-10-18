@@ -1,7 +1,6 @@
 """Privacy checks follow indexed source and explicit shipping membership."""
 import gzip
 import io
-import os
 from pathlib import Path
 import subprocess
 import sys
@@ -11,6 +10,7 @@ import unittest
 import zipfile
 
 from conformance.children import privacy
+from conformance.children.children import child_env
 
 
 class PrivacyTests(unittest.TestCase):
@@ -59,7 +59,7 @@ class PrivacyTests(unittest.TestCase):
             checkout = Path(temporary) / 'checkout'
             root = checkout / 'libraries/dart'
             root.mkdir(parents=True)
-            env = {name: value for name, value in os.environ.items() if not name.startswith('GIT_')}
+            env = child_env(home=Path(temporary) / 'home')
             subprocess.run(['git', 'init', '-q', str(checkout)], env=env, check=True)
             for relative in ('pubspec.yaml', 'flutter/pubspec.yaml', 'flutter/example/pubspec.yaml',
                              'checks/session_consumer/pubspec.yaml', 'lib/target/pubspec.yaml'):
@@ -108,17 +108,17 @@ class PrivacyTests(unittest.TestCase):
             manifest = root / 'manifest'
             manifest.write_text(str(public) + '\n')
             command = [sys.executable, str(Path(privacy.__file__)), '--prefix', str(prefix), '--manifest', str(manifest)]
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, env=child_env(home=root / 'home'), capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn('PRIVATE_SOURCE_PASS', result.stdout)
             public.write_bytes(b'PRIVATE_KEY_MARKER')
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, env=child_env(home=root / 'home'), capture_output=True, text=True)
             self.assertEqual(result.returncode, 1)
             self.assertIn('private pattern in public.h', result.stderr)
             outside = root / 'outside.h'
             outside.write_text('public source')
             manifest.write_text(str(outside) + '\n')
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, env=child_env(home=root / 'home'), capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('INSTALL_MEMBER_OUTSIDE_PREFIX', result.stderr)
 

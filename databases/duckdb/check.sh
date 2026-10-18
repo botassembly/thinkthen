@@ -3,6 +3,7 @@
 # loopback port as $1. Each suite also starts its own backend, so counts
 # never mix. A missing toolchain reports "not run" (exit 77), never "pass".
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
 profile=${THINKTHEN_TEST_PROFILE:-routine}

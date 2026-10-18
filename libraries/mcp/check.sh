@@ -1,6 +1,7 @@
 #!/bin/sh
 # Execute the complete required MCP row, without a case selector.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 [ "$#" -eq 1 ] || { echo 'usage: libraries/mcp/check.sh LOOPBACK_PORT' >&2; exit 2; }
 command=${THINKTHEN_COMMAND:-$root/target/debug/thinkthen}

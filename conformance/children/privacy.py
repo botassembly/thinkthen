@@ -2,6 +2,7 @@
 import argparse
 import fnmatch
 import gzip
+import json
 import os
 from pathlib import Path
 import re
@@ -10,7 +11,7 @@ import tarfile
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'sdlc/generators/results'))
-from sources import tracked_files
+from sources import classification, generated_paths, source_owners, tracked_files
 
 PRIVATE = re.compile(rb'/home/|/Users/|auth\.json|-----BEGIN PRIVATE KEY-----|tt-canary-|'
                      rb'PRIVATE_PATH_MARKER|PRIVATE_KEY_MARKER|sk-private-[A-Za-z0-9]+')
@@ -59,10 +60,33 @@ def source_files(root, includes, excludes=()):
             and not any(fnmatch.fnmatchcase(path.relative_to(root).as_posix(), pattern) for pattern in excludes)]
 
 
+def public_files(root):
+    """Use the existing surface ownership to omit test fixtures from public source."""
+    root = Path(root).resolve()
+    repo = Path(__file__).resolve().parents[2]
+    manifest = json.loads((repo / 'conformance/library-surface.json').read_text())
+    relative_root = root.relative_to(repo).as_posix()
+    name = next((name for name, config in source_owners(manifest).items() if config['root'] == relative_root), None)
+    generated = generated_paths()
+    result = []
+    for path in tracked_files(root):
+        relative = path.relative_to(root)
+        public = relative.name in {'README.md', 'README-PUBLIC.md', 'LICENSE', 'Cargo.toml', 'package.json',
+                                   'pyproject.toml', 'source-package.json'} or relative.parts[0] in {'examples', 'Examples'}
+        if name is not None:
+            public |= classification(path.relative_to(repo).as_posix(), name, manifest, generated) in {'handwritten', 'generated'}
+        else:
+            public |= relative.parts[0] == 'src' or relative.as_posix() == 'client.py'
+        if path.is_file() and public:
+            result.append(path)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('files', type=Path, nargs='*')
     parser.add_argument('--sources', type=Path)
+    parser.add_argument('--public', action='store_true')
     parser.add_argument('--include', action='append', default=[])
     parser.add_argument('--exclude', action='append', default=[])
     parser.add_argument('--artifact-env', action='store_true')
@@ -71,7 +95,7 @@ def main():
     args = parser.parse_args()
     paths = list(args.files)
     if args.sources:
-        paths += source_files(args.sources, args.include or ['*'], args.exclude)
+        paths += public_files(args.sources) if args.public else source_files(args.sources, args.include or ['*'], args.exclude)
     if args.manifest:
         if not args.prefix:
             parser.error('--manifest requires --prefix')

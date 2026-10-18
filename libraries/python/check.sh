@@ -2,6 +2,7 @@
 # Check the package callers install. Full shared parity waits for a candidate.
 unset THINKTHEN_API_KEY
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
