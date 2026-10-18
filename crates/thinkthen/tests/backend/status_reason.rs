@@ -21,7 +21,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
     let too_long = concat!(
         "thinkthen: the backend answered with status 400 (max_tokens_exceeded): the request has ",
         "more input tokens than the backend takes; shorten the text, or set a lower ",
-        "--max-request-bytes or max_request_bytes with --profile\n"
+        "--max-request-bytes or max_request_bytes with --profile; provider type: max_tokens_exceeded\n"
     );
     let retried = [500, 502, 503, 504, 520, 521, 522, 523, 524, 529].map(|status| {
         let said = format!("thinkthen: the backend answered with status {status}: {RETRIED_OUT}");
@@ -35,7 +35,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
         (
             400,
             r#"{"detail":"max_tokens_exceeded"}"#,
-            "thinkthen: the backend answered with status 400: the backend refused the request; provider message: max_tokens_exceeded\n",
+            "thinkthen: the backend answered with status 400: the backend refused the request\n",
         ),
         (400, long.as_str(), REFUSED),
         (
@@ -46,7 +46,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
         (
             422,
             NAMED,
-            "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n",
+            "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large; provider type: max_tokens_exceeded\n",
         ),
         (
             429,
@@ -75,7 +75,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
 }
 
 #[test]
-fn quota_stops_without_retry_and_reports_the_providers_words() {
+fn quota_stops_without_retry_and_reports_only_the_provider_type() {
     let body =
         r#"{"error":{"type":"insufficient_quota","message":"You have no credits remaining"}}"#;
     let listener = Listener::serving(vec![Canned::status(429, body)]).unwrap();
@@ -90,12 +90,12 @@ fn quota_stops_without_retry_and_reports_the_providers_words() {
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
         crate::harness::said(&output),
-        "thinkthen: the backend systemone account is out of credit; provider message: You have no credits remaining\n"
+        "thinkthen: the backend systemone account is out of credit; provider type: insufficient_quota\n"
     );
 }
 
 #[test]
-fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
+fn provider_messages_are_discarded_including_credential_and_evidence_echoes() {
     for message in [
         "The selected model is unavailable",
         "sk-test-value",
@@ -133,7 +133,6 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         "%736b2d746573742d76616c7565",
         "736b2d746573742d76616c7565%GG",
         "736b2d746573%GG742d76616c7565",
-        "aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd",
         "content-type: application/json",
         "Host: example.org",
         "X-Custom: hello",
@@ -158,20 +157,13 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         assert_eq!(output.status.code(), Some(4));
         assert!(output.stdout.is_empty());
         assert_eq!(listener.requests().len(), 1);
-        if message == "The selected model is unavailable" {
-            assert_eq!(
-                said,
-                "thinkthen: the backend answered with status 400: the backend refused the request; provider message: The selected model is unavailable\n"
-            );
-        } else {
-            assert_eq!(said, REFUSED);
-        }
+        assert_eq!(said, REFUSED);
     }
 }
 
 #[test]
-fn reflected_nested_evidence_is_withheld_without_hiding_unrelated_prose() {
-    for (evidence, message, shown) in [
+fn reflected_nested_evidence_and_unrelated_prose_are_withheld() {
+    for (evidence, message, _shown) in [
         ("Z", "Rejected Z because it is unsupported", false),
         ("Ada", "Rejected Ada because it is unsupported", false),
         (
@@ -212,17 +204,13 @@ fn reflected_nested_evidence_is_withheld_without_hiding_unrelated_prose() {
         assert_eq!(output.status.code(), Some(4));
         assert!(output.stdout.is_empty());
         assert_eq!(listener.requests().len(), 1);
-        let expected = if shown {
-            format!("{}; provider message: {message}\n", REFUSED.trim_end())
-        } else {
-            REFUSED.to_owned()
-        };
+        let expected = REFUSED;
         assert_eq!(crate::harness::said(&output), expected);
     }
 }
 
 #[test]
-fn provider_prose_keeps_actionable_local_errors_and_trims_at_a_character_boundary() {
+fn actionable_and_multibyte_provider_prose_is_withheld() {
     for message in [
         "This endpoint does not support the requested model. Load a compatible model first."
             .to_owned(),
@@ -238,24 +226,18 @@ fn provider_prose_keeps_actionable_local_errors_and_trims_at_a_character_boundar
             EVIDENCE,
         )
         .unwrap();
-        let normalized = message.split_whitespace().collect::<Vec<_>>().join(" ");
-        let expected = if normalized.chars().count() > 320 {
-            normalized.chars().take(320).collect::<String>() + "…"
-        } else {
-            normalized
-        };
         assert_eq!(output.status.code(), Some(4));
         assert_eq!(listener.requests().len(), 1);
         assert_eq!(
             crate::harness::said(&output),
-            format!("{}; provider message: {expected}\n", REFUSED.trim_end())
+            REFUSED
         );
     }
 }
 
 #[test]
-fn declared_plain_text_uses_the_same_boundary_and_html_is_withheld() {
-    for (media_type, message, shown) in [
+fn plain_text_and_html_are_withheld() {
+    for (media_type, message, _shown) in [
         (
             "text/plain; charset=utf-8",
             "The local endpoint requires a decision model.",
@@ -284,11 +266,7 @@ fn declared_plain_text_uses_the_same_boundary_and_html_is_withheld() {
         .unwrap();
         assert_eq!(output.status.code(), Some(4));
         assert_eq!(listener.requests().len(), 1);
-        let expected = if shown {
-            format!("{}; provider message: {message}\n", REFUSED.trim_end())
-        } else {
-            REFUSED.to_owned()
-        };
+        let expected = REFUSED;
         assert_eq!(crate::harness::said(&output), expected);
     }
 }
@@ -308,7 +286,7 @@ fn readable_rate_limit_prose_does_not_turn_a_real_limit_into_a_quota_stop() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(listener.requests().len(), 2);
     let said = crate::harness::said(&output);
-    assert!(said.starts_with("thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries; provider message: Requests are arriving too quickly\n"));
+    assert!(said.starts_with("thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries; provider type: rate_limit_exceeded\n"));
     let facts: serde_json::Value = serde_json::from_str(said.lines().last().unwrap()).unwrap();
     assert_eq!(facts["retries"], 1);
     assert_eq!(

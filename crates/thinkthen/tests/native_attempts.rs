@@ -317,8 +317,8 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
                 .starts_with("the backend openai account is out of credit")
         );
         assert_eq!(
-            error.to_string().contains("provider message:"),
-            message == "You have no credits remaining"
+            error.to_string(),
+            "the backend openai account is out of credit; provider type: request_error; provider code: insufficient_quota"
         );
         assert!(!format!("{error:?}").contains("fixture-native-attempts"));
         assert!(!format!("{error:?}").contains("private evidence marker"));
