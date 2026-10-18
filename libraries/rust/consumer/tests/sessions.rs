@@ -295,8 +295,8 @@ fn dropping_the_caller_owner_returns_during_an_active_wait() {
     }
 }
 
+#[cfg(feature = "session-stress")]
 #[test]
-#[ignore = "repeated session contention belongs to test-stress"]
 fn repeated_session_contention_never_loses_wake_or_settlement() {
     for _ in 0..12 {
         push_all_then_finish_preserves_order_with_blocking_and_try_push();
