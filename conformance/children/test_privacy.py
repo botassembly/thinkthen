@@ -3,6 +3,7 @@ import gzip
 import io
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import tarfile
 import tempfile
@@ -158,6 +159,46 @@ class PrivacyTests(unittest.TestCase):
                 bundle.addfile(member, io.BytesIO())
             with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
                 privacy.check_file(archive)
+
+    def test_archive_allowances_never_hide_unscanned_bytes_or_alias_paths(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / 'source.crate'
+            for field in ('uname', 'gname', 'trailer'):
+                with self.subTest(field=field):
+                    content = io.BytesIO()
+                    with tarfile.open(fileobj=content, mode='w') as bundle:
+                        member = tarfile.TarInfo('public.txt')
+                        if field != 'trailer':
+                            setattr(member, field, 'PRIVATE_KEY_MARKER')
+                        bundle.addfile(member)
+                    data = content.getvalue()
+                    if field == 'trailer':
+                        data += b'PRIVATE_KEY_MARKER'
+                    path.write_bytes(gzip.compress(data))
+                    with self.assertRaises(privacy.PrivacyError):
+                        privacy.check_file(path)
+            # Stored ZIP sizes can declare more bytes than the reader returns.
+            with zipfile.ZipFile(path, 'w') as bundle:
+                bundle.writestr('public.txt', b'xPRIVATE_KEY_MARKER')
+            data = bytearray(path.read_bytes())
+            struct.pack_into('<I', data, 22, 1)
+            central = data.index(b'PK\x01\x02')
+            struct.pack_into('<I', data, central + 24, 1)
+            import zlib
+            crc = zlib.crc32(b'x')
+            struct.pack_into('<I', data, 14, crc)
+            struct.pack_into('<I', data, central + 16, crc)
+            path.write_bytes(data)
+            with self.assertRaises(privacy.PrivacyError):
+                privacy.check_file(path)
+            for name in ('thinkthen-0.2.0/src/config/./tests.rs',
+                         'thinkthen-0.2.0//src/config/tests.rs',
+                         './thinkthen-0.2.0/src/config/tests.rs'):
+                with self.subTest(name=name):
+                    with zipfile.ZipFile(path, 'w') as bundle:
+                        bundle.writestr(name, b'"/home/person"')
+                    with self.assertRaises(privacy.PrivacyError):
+                        privacy.check_file(path)
 
     def test_private_markers_and_valid_build_prefix(self):
         for marker in (b'/home/private', b'/Users/private', b'auth.json', b'-----BEGIN PRIVATE KEY-----',
