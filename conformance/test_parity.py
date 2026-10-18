@@ -781,7 +781,7 @@ class PublicAssertions(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            venv.EnvBuilder(with_pip=False).create(assets / 'venv')
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
             site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')

@@ -31,5 +31,7 @@ def stub_other_surfaces(root, selected):
     """Keep the real registry while isolating unrelated consumer processes."""
     for line in (root / 'sdlc/surfaces.txt').read_text().splitlines():
         fields = line.split()
+        if fields and fields[0].startswith('#'):
+            continue
         if len(fields) > 1 and fields[1] in ('landed', 'feature') and fields[0] not in selected:
             (root / fields[0] / 'check.sh').write_text('exit 0\n')

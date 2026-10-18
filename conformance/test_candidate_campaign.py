@@ -4,6 +4,7 @@ import io
 import json
 import os
 import platform
+import signal
 from pathlib import Path
 import shutil
 import subprocess
@@ -99,16 +100,20 @@ class CandidateSmokes(unittest.TestCase):
                         'exec python3 compile.py ' + str(slot) + '\n')
                     children.append(subprocess.Popen(
                         ['sh', str(scripts / 'smoke'), '--one', str(binaries), surface],
-                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True))
+                        cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True))
                 for child in children:
-                    log, _ = child.communicate(timeout=10)
+                    try:
+                        log, _ = child.communicate(timeout=10)
+                    except subprocess.TimeoutExpired as error:
+                        self.fail(f'smoke stalled: ready={sorted(path.name for path in root.glob("ready-*"))}, '
+                                  f'built={sorted(path.name for path in root.glob("built-*"))}; {error.output}')
                     self.assertEqual(child.returncode, 0, log)
                 self.assertEqual(len(list(root.glob('built-*'))), 4)
             finally:
                 for child in children:
                     if child.poll() is None:
-                        child.kill()
-                    child.wait()
+                        os.killpg(child.pid, signal.SIGKILL)
+                    child.communicate(timeout=3)
 
     def test_smoke_fails_required_exit77_and_reports_declared_unsupported(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
