@@ -203,15 +203,13 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
 
 def installed(check, target, cache, installed_files=False):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
-    check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
+    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    check.command(['uv', '--version'], '^uv ' + re.escape(manifest['tools']['uv']['version']) + r'\b')
     check.check('native prepared inputs', lambda: native_inputs(check, target, cache, installed_files=installed_files))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
-    # Read formatter pins from their existing bootstrap rather than keep a second authority.
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    for binary, expression, path in (
-            ('ruff', r"'ruff==([^']+)'", generators / 'bin/ruff'),
-            ('prettier', r"'prettier@([^']+)'", generators / 'node_modules/.bin/prettier')):
-        version = re.search(expression, bootstrap)[1]
+    for binary, path in (('ruff', generators / 'bin/ruff'),
+                         ('prettier', generators / 'node_modules/.bin/prettier')):
+        version = manifest['tools'][binary]['version']
         check.command([path, '--version'], re.escape(version))
         check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
                     require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
@@ -253,21 +251,16 @@ def consumer_tools(check):
     for binary, package in tools['OWNERS'].items():
         found = shutil.which(binary) or '/nonexistent'
         check.command(['dpkg-query', '-S', found], '^' + re.escape(package) + ':')
-    for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
-        block = re.split(r'\n[a-z][a-z-]*\)\n', bootstrap.split('\n' + operation + ')\n', 1)[1])[0]
-        for words in re.findall(r'for tool in ([^;]+); do', block):
-            check.tools(shlex.split(words))
-    for tool, args, expression in (
-            ('go', ['version'], r'go version go([0-9.]+) linux/amd64'),
-            ('zig', ['version'], r'Zig ([0-9.]+) archive'),
-            ('swift', ['--version'], r'Swift version ([0-9.]+) \(swift-'),
-            ('php8.3', ['-v'], r'PHP ([0-9.]+) executable')):
-        version = re.search(expression, bootstrap)[1]
-        check.command([tool, *args], re.escape(version))
+    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    resolver = runpy.run_path(str(ROOT / 'sdlc/scripts/tools.py'))
+    check.tools(resolver['commands']((*manifest['libraries'], *manifest['databases']), 'linux'))
+    for tool, binary, args in (('go', 'go', ['version']), ('zig', 'zig', ['version']),
+                               ('swift', 'swift', ['--version']), ('php', 'php8.3', ['-v'])):
+        check.command([binary, *args], re.escape(manifest['tools'][tool]['version']))
     check.command(['php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', '-r',
                    'exit(class_exists("FFI") ? 0 : 1);'])
     dart = os.environ.get('TT_DART', 'dart')
-    dart_version = re.search(r'dart-archive/channels/stable/release/([0-9.]+)/', bootstrap)[1]
+    dart_version = manifest['tools']['dart']['version']
     check.command([dart, '--version'], 'Dart SDK version: ' + re.escape(dart_version) + r' \(stable\)')
     pub_cache = Path(os.environ.get('PUB_CACHE', '/nonexistent'))
     check.file(pub_cache / 'hosted/pub.dev/ffi-2.2.0/pubspec.yaml')
@@ -361,6 +354,7 @@ def dart_locks(check):
 
 
 def qualify(check, stage, target):
+    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
     cache = Path(os.environ.get('THINKTHEN_TOOLCHAINS', Path.home() / '.cache/thinkthen-toolchains'))
@@ -380,7 +374,7 @@ def qualify(check, stage, target):
     cargo_cache(check, manifests)
     if stage == 'container':
         check.tools(('cc', 'c++', 'make', 'cmake', 'ninja', 'cargo-pgrx', 'rpm2archive'))
-        check.command(['maturin', '--version'], r'^maturin 1\.15\.0\s*$')
+        check.command(['maturin', '--version'], '^maturin ' + re.escape(manifest['tools']['maturin']['version']) + r'\s*$')
         native_inputs(check, target, cache, built_hosts=False, source_only=True)
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so')
         check.file(Path(os.environ.get('THINKTHEN_RUBY_OPENSSL', '/nonexistent')) / 'include/openssl/ssl.h')
@@ -392,8 +386,7 @@ def qualify(check, stage, target):
         check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    maturin = re.search(r"'maturin==([^']+)'", bootstrap)[1]
+    maturin = manifest['tools']['maturin']['version']
     check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
@@ -411,7 +404,6 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache, stage == 'smoke')
     if stage in ('core', 'functional', 'coverage'):
-        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
         resolver = runpy.run_path(str(ROOT / 'sdlc/scripts/tools.py'))
         requirements = resolver['selected'](manifest, ('install', 'lint', 'test'), 'linux')
         for tool in requirements.values():
@@ -454,8 +446,7 @@ def qualify(check, stage, target):
             check.file(os.environ.get(key, '/nonexistent'), True)
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so.1')
         flutter = Path.home() / '.local/opt/flutter'
-        workflow = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-        source = re.search(r'test "\$\(git -C "\$HOME/.local/opt/flutter" rev-parse HEAD\)" = ([0-9a-f]{40})', workflow)[1]
+        source = manifest['tools']['flutter']['source_commit']
         check.command(['git', '-C', flutter, 'rev-parse', 'HEAD'], '^' + source + r'\s*$')
         for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/artifacts/engine/linux-x64', 'packages/flutter_tools/.dart_tool/package_config.json'):
             path = flutter / asset

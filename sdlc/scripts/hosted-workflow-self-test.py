@@ -800,7 +800,7 @@ def preflight_cases():
             if state == 'wrong-pin': assert 'differs from pin' in cli_failures[0], cli_failures
         # The real coverage entry point must collect independent failures even
         # when a locked-input reader and several declared commands are absent.
-        missing_tools = ('node', 'cl.exe', 'lib.exe')
+        missing_tools = ('node', 'jq')
         for name in missing_tools:
             (tools / name).unlink()
         runner = ('import runpy, sys\n'
@@ -815,7 +815,7 @@ def preflight_cases():
             capture_output=True, text=True, timeout=5)
         assert coverage.returncode == 1, (coverage.returncode, coverage.stdout, coverage.stderr)
         for marker in ('yaml', 'same-SHA Apple coverage input', 'node: missing from PATH',
-                       'cargo-deny advisory cache', 'frozen Dart inputs'):
+                       'jq: missing from PATH', 'cargo-deny advisory cache', 'frozen Dart inputs'):
             assert marker in coverage.stderr, (marker, coverage.stderr)
         assert 'Traceback' not in coverage.stderr, coverage.stderr
         for name in missing_tools:
