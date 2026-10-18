@@ -10,18 +10,20 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::core::recording::{Digest};
 #[cfg(any(feature = "cli", test))]
-use crate::core::recording::{Exchange as Recorded};
-use crate::core::{Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value};
+use crate::core::Plan;
+use crate::core::recording::Digest;
 #[cfg(any(feature = "cli", test))]
-use crate::core::{Plan};
+use crate::core::recording::Exchange as Recorded;
+use crate::core::{
+    Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value,
+};
 #[cfg(test)]
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
-use crate::engine::http::{Client};
+use crate::engine::http::Client;
 #[cfg(any(feature = "cli", test))]
-use crate::engine::http::{Exchange};
+use crate::engine::http::Exchange;
 use crate::engine::process::Guarded;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
@@ -34,12 +36,12 @@ pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 #[cfg(test)]
 pub(crate) use recognize::Recognized;
+#[cfg(any(feature = "cli", test))]
+pub(crate) use recognize::step_one_context;
 pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition};
 #[cfg(any(feature = "cli", test))]
-pub(crate) use recognize::{step_one_context};
+pub(crate) use relate::PreparedRelations;
 pub(crate) use relate::{Execution, Logical, relations};
-#[cfg(any(feature = "cli", test))]
-pub(crate) use relate::{PreparedRelations};
 
 mod annotate;
 mod context;

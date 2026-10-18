@@ -27,7 +27,7 @@ use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, Questi
 #[schemars(rename = "callError")]
 #[expect(
     dead_code,
-    reason = "schema_tests::definitions derives the callError contract without constructing values"
+    reason = "schema_tests::register derives the callError contract without constructing values"
 )]
 struct CallError {
     kind: ErrorKind,

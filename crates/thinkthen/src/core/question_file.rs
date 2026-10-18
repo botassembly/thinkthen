@@ -202,6 +202,7 @@ pub(crate) enum QuestionFileError {
         "{}`filter` takes a single cut, so ask `decide --details` and split the three piles with `jq`",
         named(*.0, "threshold")
     )]
+    #[cfg(any(feature = "cli", test))]
     BandOnFilter(Source),
     /// A rule reached the caller that orders records and selects none.
     #[error("{}`rank` with a score question or question set takes no threshold", named(*.0, "threshold"))]

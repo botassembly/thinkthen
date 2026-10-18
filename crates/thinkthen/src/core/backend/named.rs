@@ -174,7 +174,7 @@ pub(crate) struct Choice<'a> {
     pub(crate) named: Option<Named>,
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::status and cli::check read the selected backend tier"))]
     pub(crate) tier: Option<usize>,
     /// Configured built-ins whose settings may enrich an exact unnamed posting URL.
     setups: Vec<Named>,
@@ -195,7 +195,7 @@ pub(crate) fn choose<'a>(
         .filter(|entry| Named::built_in(&entry.name).is_some())
         .cloned()
         .collect();
-    for (_index, &(name, url)) in tiers.iter().enumerate() {
+    for (index, &(name, url)) in tiers.iter().enumerate() {
         if name.is_none() && url.is_none() {
             continue;
         }
@@ -203,15 +203,13 @@ pub(crate) fn choose<'a>(
         return Ok(Choice {
             named,
             url,
-            #[cfg(any(feature = "cli", test))]
-            tier: Some(_index),
+            tier: Some(index),
             setups,
         });
     }
     Ok(Choice {
         named: None,
         url: None,
-        #[cfg(any(feature = "cli", test))]
         tier: None,
         setups,
     })
