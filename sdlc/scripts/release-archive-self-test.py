@@ -386,6 +386,38 @@ def archived_flutter_admission(commit, host):
     print("release archive: Flutter source identity and part refusals pass", flush=True)
 
 
+def dirty_checkout_admission(host):
+    with tempfile.TemporaryDirectory(prefix="thinkthen-release-checkout-") as temporary:
+        root = Path(temporary).resolve()
+        for name in ("sdlc/scripts/release-pack", "crates/thinkthen/Cargo.toml", "README.md"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, target)
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        subprocess.run(["git", "add", "."], cwd=root, check=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.name=Fixture",
+                        "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Fixture"],
+                       cwd=root, check=True)
+        env = os.environ.copy()
+        env.pop("THINKTHEN_ARCHIVED_SOURCE_TAR", None)
+        env.pop("THINKTHEN_ARCHIVED_SOURCE_COMMIT", None)
+        original = (root / "README.md").read_bytes()
+        for name in ("README.md", "untracked-source"):
+            changed = root / name
+            changed.write_text("uncommitted source\n")
+            output = root / "out"
+            result = run("sh", str(root / "sdlc/scripts/release-pack"), host,
+                         str(output), "c", "go", cwd=root, env=env)
+            if (result.returncode != 1 or result.stdout or result.stderr !=
+                    "release-pack: source wrappers need a clean committed tree\n" or output.exists()):
+                raise AssertionError((name, result.returncode, result.stdout, result.stderr))
+            if name == "README.md":
+                changed.write_bytes(original)
+            else:
+                changed.unlink()
+    print("release archive: dirty tracked and untracked source refused before building")
+
+
 def main():
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -393,6 +425,7 @@ def main():
     resolve_outputs(commit, version)
     tap_formula(version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
+    dirty_checkout_admission(host)
     archived_flutter_admission(commit, host)
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
