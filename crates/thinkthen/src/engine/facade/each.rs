@@ -5,6 +5,7 @@
 //! address, model, state and question, as the record functions' are.
 
 use crate::core::pack::{self, Ask, Entry, PackError, PackLimits, Packer};
+#[cfg(feature = "cli")]
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{Backend, BackendProfile, ModelName, Plan, Question};
 use crate::engine::Cancel;

@@ -1,4 +1,6 @@
-use crate::core::{Plan, Question, Reply, ReportedUsage};
+use crate::core::{Question, Reply, ReportedUsage};
+#[cfg(feature = "cli")]
+use crate::core::Plan;
 
 use super::{DecodeError, Response, decode_each, decode_response};
 
