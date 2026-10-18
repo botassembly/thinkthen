@@ -58,8 +58,32 @@ for name, tool in manifest['tools'].items():
                         '--profile', 'minimal'], env=env, check=True)
         continue
     identity = provider + '@' + tool['version']
-    subprocess.run([str(mise), 'install', identity], env=env, check=True)
-    selected = json.loads(subprocess.check_output([str(mise), 'env', '--json', identity], env=env))
+    if provider.startswith('cargo:'):
+        binaries = root / 'cargo-tools'
+        subprocess.run(['cargo-binstall', '--no-confirm', '--disable-strategies', 'compile',
+                        '--root', str(binaries), '--version', tool['version'], provider[6:]],
+                       env=env, check=True)
+        selected = {'PATH': str(binaries / 'bin') + ':' + env['PATH']}
+    else:
+        acquired = subprocess.run([str(mise), 'install', identity], env=env)
+        if acquired.returncode and name == 'flutter':
+            # This is the framework source, paired with downloaded engine and
+            # Dart compiler binaries. Never build a compiler from source.
+            framework = root / 'flutter'
+            subprocess.run(['git', 'init', str(framework)], env=env, check=True)
+            subprocess.run(['git', '-C', str(framework), 'remote', 'add', 'origin',
+                            'https://github.com/flutter/flutter.git'], env=env, check=True)
+            subprocess.run(['git', '-C', str(framework), 'fetch', '--depth=1', 'origin',
+                            tool['source_commit']], env=env, check=True)
+            subprocess.run(['git', '-C', str(framework), 'checkout', '--detach', 'FETCH_HEAD'], env=env, check=True)
+            head = subprocess.check_output(['git', '-C', str(framework), 'rev-parse', 'HEAD'], env=env, text=True).strip()
+            if head != tool['source_commit']:
+                raise SystemExit('Flutter framework differs from tools.json')
+            subprocess.run([str(framework / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
+            selected = {'PATH': str(framework / 'bin') + ':' + env['PATH']}
+        else:
+            acquired.check_returncode()
+            selected = json.loads(subprocess.check_output([str(mise), 'env', '--json', identity], env=env))
     paths = selected['PATH'].split(os.pathsep)
     destination = root / tool.get('linux_directory', 'bin')
     destination.mkdir(parents=True, exist_ok=True)
