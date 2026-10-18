@@ -3,6 +3,7 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 root=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}

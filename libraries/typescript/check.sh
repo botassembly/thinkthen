@@ -3,6 +3,7 @@
 # port as $1; each test starts its own backend, so this check reads none.
 # It runs only the pinned Node, fetches nothing, and holds no real key.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}

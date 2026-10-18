@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 python3 "$REPO/sdlc/generators/results/generate.py" --target objc --check

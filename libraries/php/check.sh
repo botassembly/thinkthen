@@ -1,6 +1,7 @@
 #!/bin/sh
 # Exercise the installed Composer package; shared parity is release-only.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}

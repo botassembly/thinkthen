@@ -4,6 +4,7 @@
 # loopback port as $1. The tests start their own backends, so this check does
 # not use it. It runs from the repository root, where the manifest is.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")/../.."
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac

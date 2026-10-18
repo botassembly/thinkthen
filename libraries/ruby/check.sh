@@ -4,6 +4,7 @@
 # the rung built, so the slide sample and the tests leave the rung's backend
 # alone. Exit 77 means no host toolchain: the rung reports "not run".
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
+python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in
@@ -42,5 +43,5 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$root/conformance/children/native_guard.py" "$THINKTHEN_ARTIFACT"
+python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"

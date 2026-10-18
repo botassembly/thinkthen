@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 9dd3407, accept
+
 ## Outcome
 
 - One privacy scanner lives in the shared test tools, and every library and database check calls it.
