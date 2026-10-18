@@ -195,7 +195,7 @@ pub(crate) fn choose<'a>(
         .filter(|entry| Named::built_in(&entry.name).is_some())
         .cloned()
         .collect();
-    for (index, &(name, url)) in tiers.iter().enumerate() {
+    for (_index, &(name, url)) in tiers.iter().enumerate() {
         if name.is_none() && url.is_none() {
             continue;
         }
@@ -204,7 +204,7 @@ pub(crate) fn choose<'a>(
             named,
             url,
             #[cfg(feature = "cli")]
-            tier: Some(index),
+            tier: Some(_index),
             setups,
         });
     }

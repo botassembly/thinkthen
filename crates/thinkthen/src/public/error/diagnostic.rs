@@ -2,13 +2,15 @@
 //! Stays: Private typed diagnostic causes must retain native error kinds and exact command projections without parsing message text.
 use std::any::Any;
 
-#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure reads retained native diagnostic payloads; SDK readers use RequestDecode, Refusal and Context"))]
 pub(crate) enum Diagnostic {
     RequestDecode(crate::public::request::RequestDecodeCause),
-    Engine(crate::engine::error::Error),
+    Engine(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] crate::engine::error::Error),
     EngineRange {
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         cause: crate::engine::error::Error,
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         first: usize,
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         last: usize,
     },
     Context {
@@ -16,22 +18,26 @@ pub(crate) enum Diagnostic {
         kind: crate::core::LimitKind,
         limit: usize,
         actual: usize,
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         profile: Option<crate::core::ProfileName>,
     },
     PartialReply {
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         cause: Option<crate::core::adapters::built_in::DecodeError>,
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         first: usize,
+        #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))]
         last: usize,
     },
     #[cfg(feature = "cli")]
     CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),
-    RelationEntityCount(usize),
-    Model(crate::core::BlankTextError),
-    Pointer(&'static str, String, crate::core::PointerError),
+    RelationEntityCount(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] usize),
+    Model(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] crate::core::BlankTextError),
+    Pointer(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] &'static str, #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] String, #[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] crate::core::PointerError),
     Batch,
-    ThresholdFunction(crate::RequestFunction),
-    QuestionRead(crate::QuestionFileError),
+    ThresholdFunction(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] crate::RequestFunction),
+    QuestionRead(#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure::convert reads this native cause for command diagnostics"))] crate::QuestionFileError),
 }
 
 #[cfg(all(test, feature = "cli"))]

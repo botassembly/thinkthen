@@ -96,6 +96,7 @@ pub(crate) enum Source {
     /// The value the question file holds.
     File,
     /// The value the read-only process configuration holds.
+    #[cfg(feature = "cli")]
     Configuration,
     /// The value nobody named, which the tool supplies.
     Default,
@@ -108,6 +109,7 @@ impl Source {
         match self {
             Self::CommandLine => "command line",
             Self::File => "file",
+            #[cfg(feature = "cli")]
             Self::Configuration => "configuration",
             Self::Default => "default",
         }

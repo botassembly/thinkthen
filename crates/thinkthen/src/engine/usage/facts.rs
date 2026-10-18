@@ -2,9 +2,13 @@
 
 use std::sync::PoisonError;
 
-use crate::core::{ModelName, Prices, ReportedSum, ReportedUsage};
+use crate::core::{ModelName, ReportedSum, ReportedUsage};
+#[cfg(feature = "cli")]
+use crate::core::Prices;
 
-use super::{Counters, Counts};
+use super::Counters;
+#[cfg(feature = "cli")]
+use super::Counts;
 
 #[derive(Debug)]
 pub(super) struct State {

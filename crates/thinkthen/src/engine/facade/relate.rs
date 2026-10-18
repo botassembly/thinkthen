@@ -2,7 +2,9 @@
 //! menu questions.
 
 use super::each::Models;
-use super::{Answered, Asks, Bound, Engine, Request};
+use super::{Answered, Asks, Bound, Engine};
+#[cfg(feature = "cli")]
+use super::Request;
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
     RelationEdge, RelationEntity, RelationRule, Usage, plan_relate, relate_edge,

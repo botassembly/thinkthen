@@ -368,6 +368,7 @@ impl NamedValues {
 
     /// Keep named values in question-set order.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {
         Self(values)
     }
