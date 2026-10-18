@@ -1,6 +1,7 @@
 #include "scalar_settings.hpp"
 #include "scalar_owner.hpp"
 #include "bridge.hpp"
+#include "duckdb/common/error_data.hpp"
 #include "duckdb/common/file_system.hpp"
 
 #include <limits>
@@ -28,10 +29,9 @@ bool FolderAllowed(ClientContext &context, const std::optional<string> &folder) 
 	}
 	try {
 		FileSystem::GetFileSystem(context).OpenFile(*folder + "/.probe", FileOpenFlags::FILE_FLAGS_READ);
-	} catch (const IOException &) {
-		// A missing probe file still means the caller could open the folder.
-	} catch (const Exception &) {
-		return false;
+	} catch (const std::exception &error) {
+		// Host DuckDB typeinfo can be private; classify missing-probe IO by its serialized type.
+		return ErrorData(error).Type() == ExceptionType::IO;
 	}
 	return true;
 }
