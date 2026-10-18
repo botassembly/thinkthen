@@ -175,7 +175,7 @@ pub(crate) struct Choice<'a> {
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
     #[cfg_attr(
-        not(feature = "cli"),
+        all(not(feature = "cli"), not(test)),
         expect(
             dead_code,
             reason = "cli::status and cli::check read the selected backend tier"
