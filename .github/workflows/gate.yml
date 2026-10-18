@@ -615,8 +615,11 @@ jobs:
                   )],extra={'GATE_OUTPUT':str(out)})
               elif stage == 'functional':
                   run('cli-fresh', ['cargo', 'build', '--locked', '--offline', '--package', 'thinkthen', '--bin', 'thinkthen', '-j2'])
-                  run('fullcases', ['sh', 'sdlc/scripts/test-full-cases', '--run'])
-                  shutil.copytree(root / 'target/parity', out / 'fullcases-parity')
+                  try:
+                      run('fullcases', ['sh', 'sdlc/scripts/test-full-cases', '--run'])
+                  finally:
+                      if (root / 'target/parity').is_dir():
+                          shutil.copytree(root / 'target/parity', out / 'fullcases-parity')
                   run('package', ['sh', 'sdlc/scripts/package'])
                   run('stress', ['sh', 'sdlc/scripts/test-stress', '--run'])
               elif stage == 'coverage':
