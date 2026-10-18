@@ -75,6 +75,19 @@ impl Session {
             dispatch!(self, s, s.try_push_with(descriptor).unwrap())
         }
     }
+    fn push_until_accepted(&self, index: usize, blocking: bool) {
+        loop {
+            let status = self.push(index, blocking);
+            if status == RequestSessionPushStatus::Accepted {
+                return;
+            }
+            assert_eq!(status, RequestSessionPushStatus::Full);
+            assert_ne!(
+                self.wait(RequestSessionWaitInterest::Input, Duration::from_secs(5)),
+                RequestSessionReady::Timeout
+            );
+        }
+    }
     fn cancel(&self) {
         dispatch!(self, s, s.cancel());
     }
@@ -112,7 +125,8 @@ impl Session {
                     .unwrap()
                 {
                     RequestRecoveringRead::Result(RequestRecoveringResult::Row(row)) => {
-                        rows.push(row.ordinal())
+                        assert!(row.outcome().is_ok());
+                        rows.push(row.ordinal());
                     }
                     RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(terminal)) => {
                         break terminal;
@@ -172,15 +186,7 @@ fn push_all_then_finish_preserves_order_with_blocking_and_try_push() {
         let listener = Listener::answering(response).unwrap();
         let session = Session::open(&engine(&listener), recovering);
         for index in 0..24 {
-            loop {
-                match session.push(index, blocking) {
-                    RequestSessionPushStatus::Accepted => break,
-                    RequestSessionPushStatus::Full => {
-                        session.wait(RequestSessionWaitInterest::Input, Duration::from_secs(5));
-                    }
-                    other => panic!("intake closed: {other:?}"),
-                }
-            }
+            session.push_until_accepted(index, blocking);
         }
         session.finish();
         let (rows, terminal) = session.drain();
