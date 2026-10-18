@@ -60,8 +60,6 @@ pub(crate) mod record_input;
 pub(crate) mod recording;
 mod records;
 mod relate_file;
-#[cfg(test)]
-pub(crate) use relate_file::RelateQuestion;
 pub(crate) mod relation;
 mod render;
 mod reply;
