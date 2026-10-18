@@ -377,7 +377,8 @@ def linux_source_staging_case():
         (native.parent / 'lib_thinkthen.so').write_bytes(b'current Python native')
         (native.parent / 'libthinkthen_ruby.so').write_bytes(b'current Ruby native')
         (native.parent / 'libthinkthen_typescript.so').write_bytes(b'current Node native')
-        (root / 'libraries/typescript/target').mkdir(parents=True)
+        for language in ('ruby', 'typescript'):
+            (root / 'libraries' / language / 'target').mkdir(parents=True)
         invoked = []
         def run(name, args, **kwargs):
             invoked.append(name)
