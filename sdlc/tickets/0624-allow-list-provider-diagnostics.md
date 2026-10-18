@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 09c9fa4, accept
+
 ## Outcome
 
 - Provider error diagnostics carry only fields from an allow-list: the status code, the provider error type or code from known response fields, and fixed thinkthen text for each failure cause. Free provider prose is never passed on.
