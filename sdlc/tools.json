@@ -846,7 +846,8 @@
           "--version"
         ],
         "contains": "rbs {version}"
-      }
+      },
+      "linux_directory": "ruby34/bin"
     }
   },
   "python_packages": {
