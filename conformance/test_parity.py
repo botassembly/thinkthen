@@ -837,6 +837,7 @@ class PublicAssertions(unittest.TestCase):
             tools.mkdir(exist_ok=True)
             runner = tools / 'python3'
             runner.write_text('#!/bin/sh\nset -eu\n'
+                              'case "$1" in */check_verdict.py) exec ' + shlex.quote(sys.executable) + ' "$@" ;; esac\n'
                               'test "$THINKTHEN_TEST_PROFILE" = full\n'
                               'test -z "${THINKTHEN_CONFORMANCE_IDS+x}"\n'
                               'test "$1" = -\ntest "$3" = "$2/libraries/rust/consumer/Cargo.toml"\n'
