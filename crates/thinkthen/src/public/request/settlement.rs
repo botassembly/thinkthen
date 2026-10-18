@@ -8,7 +8,10 @@ pub(super) struct Settlement {
 }
 impl Settlement {
     pub(super) fn new(input: &RequestInput) -> Self {
-        Self { answer: None, scalar: matches!(input, RequestInput::Text { .. } | RequestInput::Json { .. }) }
+        Self {
+            answer: None,
+            scalar: matches!(input, RequestInput::Text { .. } | RequestInput::Json { .. }),
+        }
     }
     pub(super) fn record(&mut self, value: &RequestValue) {
         if let Some(answer) = SettledAnswer::of(value) {
@@ -19,12 +22,18 @@ impl Settlement {
         }
     }
     pub(super) fn finish(mut self) -> Option<SettledAnswer> {
-        if self.scalar && let Some(answer) = &mut self.answer { answer.scalar(); }
+        if self.scalar
+            && let Some(answer) = &mut self.answer
+        {
+            answer.scalar();
+        }
         self.answer
     }
 }
 pub(super) fn answer(input: &RequestInput, value: &RequestValue) -> Result<SettledAnswer, Error> {
     let mut settlement = Settlement::new(input);
     settlement.record(value);
-    settlement.finish().ok_or_else(|| Error::defect("a native call has no settled answer"))
+    settlement
+        .finish()
+        .ok_or_else(|| Error::defect("a native call has no settled answer"))
 }

@@ -1,6 +1,6 @@
 //! Settled answers are computed from native typed readings before publication.
-use std::collections::BTreeMap;
 use serde::Serialize;
+use std::collections::BTreeMap;
 
 /// A single input keeps a scalar; records, sources and feeds keep collections.
 #[derive(Clone, Serialize)]
@@ -123,12 +123,18 @@ pub enum SettledAnswer {
 /// An original input value, including authored JSON null, without interpretation.
 #[derive(Clone, Serialize)]
 #[serde(transparent)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "serde_json::Value"))]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "serde_json::Value")
+)]
 pub struct SettledOriginal(pub(crate) crate::QuestionInput);
 impl SettledOriginal {
     /// Borrow the exact native original.
     #[must_use]
-    pub const fn original(&self) -> &crate::QuestionInput { &self.0 }
+    pub const fn original(&self) -> &crate::QuestionInput {
+        &self.0
+    }
 }
 impl std::fmt::Debug for SettledOriginal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -138,15 +144,21 @@ impl std::fmt::Debug for SettledOriginal {
 
 /// A primitive decision and its optional authored presentation, including null.
 #[derive(Clone)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "crate::core::complete_documents::wire::DecideValue<'static>"))]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(with = "crate::core::DecideValue<'static>")
+)]
 pub struct SettledDecision {
     pub(crate) value: Option<bool>,
-    pub(crate) meaning: Option<crate::core::text::Meaning>,
+    pub(crate) meaning: Option<crate::core::Meaning>,
 }
 impl SettledDecision {
     /// The primitive reading remains available when its authored value is null.
     #[must_use]
-    pub const fn primitive(&self) -> Option<bool> { self.value }
+    pub const fn primitive(&self) -> Option<bool> {
+        self.value
+    }
 }
 impl std::fmt::Debug for SettledDecision {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -155,7 +167,10 @@ impl std::fmt::Debug for SettledDecision {
 }
 impl Serialize for SettledDecision {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use crate::core::complete_documents::wire::DecideValue;
-        self.meaning.as_ref().map_or(DecideValue::Primitive(self.value), DecideValue::Authored).serialize(serializer)
+        use crate::core::DecideValue;
+        self.meaning
+            .as_ref()
+            .map_or(DecideValue::Primitive(self.value), DecideValue::Authored)
+            .serialize(serializer)
     }
 }

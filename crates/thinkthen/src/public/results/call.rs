@@ -199,7 +199,9 @@ impl<T: Serialize, R: Serialize, P: Serialize> Serialize for Call<T, R, P> {
         let mut document =
             serializer.serialize_struct("Call", if self.projected { 5 } else { 3 })?;
         document.serialize_field("value", &self.value)?;
-        if let Some(answer) = &self.answer { document.serialize_field("answer", answer)?; }
+        if let Some(answer) = &self.answer {
+            document.serialize_field("answer", answer)?;
+        }
         if self.projected {
             document.serialize_field("probability", &self.probability)?;
             document.serialize_field("results", &self.results)?;
@@ -234,7 +236,9 @@ impl<T> Call<T> {
 impl<T, R, P> Call<T, R, P> {
     /// The Rust-settled answer of a canonical native request.
     #[must_use]
-    pub const fn answer(&self) -> Option<&super::SettledAnswer> { self.answer.as_ref() }
+    pub const fn answer(&self) -> Option<&super::SettledAnswer> {
+        self.answer.as_ref()
+    }
 
     pub(crate) fn with_answer(mut self, answer: super::SettledAnswer) -> Self {
         self.answer = Some(answer);

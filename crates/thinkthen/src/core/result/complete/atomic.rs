@@ -158,7 +158,10 @@ impl Atomic {
             (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
             _ => None,
         };
-        meaning.map_or(super::wire::DecideValue::Primitive(value), super::wire::DecideValue::Authored)
+        meaning.map_or(
+            super::wire::DecideValue::Primitive(value),
+            super::wire::DecideValue::Authored,
+        )
     }
 
     fn document<'a, T: Serialize, V: Serialize>(

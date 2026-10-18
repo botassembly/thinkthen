@@ -109,13 +109,14 @@ pub use results::FindSelection;
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    AnswerResolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledJudgment, SettledOriginal, SettledDecision, SettledRecognition, SettledRelations,
-    Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, CallReply, Candidate,
-    CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
-    CompleteFacts, CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord,
-    CompleteScore, CompleteSetRank, CompleteTags, Counters, Details, Facts, Found, Judgment,
-    NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail,
-    RecordObservation, ResultMetadata, Row, Tally, TallyStart, Usage, complete_call_schema,
+    Answer, AnswerResolution, AnswerResolutions, AnswerShape, AttemptObservation, AttemptOutcome,
+    BatchMismatch, Call, CallReply, Candidate, CompleteAnnotated, CompleteAnnotationMember,
+    CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts, CompleteFilter,
+    CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord, CompleteScore,
+    CompleteSetRank, CompleteTags, Counters, Details, Facts, Found, Judgment, NamedProbability,
+    ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, RecordObservation,
+    ResultMetadata, Row, Settled, SettledAnswer, SettledDecision, SettledJudgment, SettledOriginal,
+    SettledRecognition, SettledRelations, Tally, TallyStart, Usage, complete_call_schema,
 };
 pub use results::{
     CompleteRecognized, NameProbabilities, PairProbability, PieceProbabilities,

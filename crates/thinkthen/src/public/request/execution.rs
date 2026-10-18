@@ -138,7 +138,10 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         match self.execute_request_sink(request, environment, None, None, None)? {
             RequestOutcome::Complete(call) => {
-                let answer = super::settlement::answer(&request.request.call.arguments().input, call.value())?;
+                let answer = super::settlement::answer(
+                    &request.request.call.arguments().input,
+                    call.value(),
+                )?;
                 Ok(RequestOutcome::Complete(call.with_answer(answer)))
             }
             failed => Ok(failed),

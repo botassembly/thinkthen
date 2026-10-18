@@ -491,13 +491,24 @@ fn run(
     // Recognition completes records incrementally, but exposes one whole-request packet.
     // Keep its completed prefix until the native invocation settles, including a failure.
     let recognized = RefCell::new(Vec::new());
-    let answers = RefCell::new(super::settlement::Settlement::new(&request.request.call.arguments().input));
+    let answers = RefCell::new(super::settlement::Settlement::new(
+        &request.request.call.arguments().input,
+    ));
     let sink = |value| match value {
         RequestValue::Recognized(rows) => {
-            answers.borrow_mut().record(&RequestValue::Recognized(rows.clone()));
+            answers
+                .borrow_mut()
+                .record(&RequestValue::Recognized(rows.clone()));
             recognized.borrow_mut().extend(rows);
-        },
-        value => publish_rows(queue, value, files_only, &files, options.all_filter_results, &answers),
+        }
+        value => publish_rows(
+            queue,
+            value,
+            files_only,
+            &files,
+            options.all_filter_results,
+            &answers,
+        ),
     };
     let feed = match &request.request.call.arguments().input {
         RequestInput::Feed { name, .. } => {
@@ -512,29 +523,29 @@ fn run(
             .observe(&observer),
         feed,
     };
-    let mut terminal = match engine.execute_request_sink(&request, environment, Some(&sink), None, None)
-    {
-        Ok(RequestOutcome::Complete(call)) => {
-            let facts = call.facts().clone();
-            queue.close_intake();
-            sink(call.into_value());
-            RequestSessionTerminal {
-                facts: Some(facts),
-                answer: None,
-                resolution: crate::AnswerResolution::Resolved,
-                error: None,
+    let mut terminal =
+        match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
+            Ok(RequestOutcome::Complete(call)) => {
+                let facts = call.facts().clone();
+                queue.close_intake();
+                sink(call.into_value());
+                RequestSessionTerminal {
+                    facts: Some(facts),
+                    answer: None,
+                    resolution: crate::AnswerResolution::Resolved,
+                    error: None,
+                }
             }
-        }
-        Ok(RequestOutcome::Failed { completed, error }) => {
-            queue.close_intake();
-            sink(completed);
-            RequestSessionTerminal::failed(error)
-        }
-        Err(error) => {
-            queue.close_intake();
-            RequestSessionTerminal::failed(error)
-        }
-    };
+            Ok(RequestOutcome::Failed { completed, error }) => {
+                queue.close_intake();
+                sink(completed);
+                RequestSessionTerminal::failed(error)
+            }
+            Err(error) => {
+                queue.close_intake();
+                RequestSessionTerminal::failed(error)
+            }
+        };
     if function == super::RequestFunction::Recognize {
         queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
             recognized.into_inner(),
@@ -559,7 +570,9 @@ fn publish_rows(
             }
         };
     }
-    if !matches!(&value, RequestValue::Filtered(_)) { answers.borrow_mut().record(&value); }
+    if !matches!(&value, RequestValue::Filtered(_)) {
+        answers.borrow_mut().record(&value);
+    }
     match value {
         RequestValue::Decisions(rows) => rows!(rows, Decision),
         RequestValue::Choices(rows) => rows!(rows, Choice),
@@ -579,7 +592,9 @@ fn publish_rows(
                     queue.publish(RequestSessionResult::Row(RequestSessionRow::Filter(row)));
                 }
             }
-            answers.borrow_mut().record(&RequestValue::Filtered(retained));
+            answers
+                .borrow_mut()
+                .record(&RequestValue::Filtered(retained));
         }
         aggregate => queue.publish(RequestSessionResult::Aggregate(aggregate)),
     }
@@ -621,9 +636,13 @@ fn run_recovering(
             value: event.to_owned(),
         })
     };
-    let answers = RefCell::new(super::settlement::Settlement::new(&request.request.call.arguments().input));
+    let answers = RefCell::new(super::settlement::Settlement::new(
+        &request.request.call.arguments().input,
+    ));
     let sink = |row: super::RequestRecoveredRow| {
-        if let Ok(value) = row.outcome() { answers.borrow_mut().record(value); }
+        if let Ok(value) = row.outcome() {
+            answers.borrow_mut().record(value);
+        }
         queue.publish(RequestRecoveringResult::Row(row));
     };
     let environment = RequestEnvironment {
