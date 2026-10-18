@@ -37,7 +37,7 @@ def main():
     if args.smoke_binaries:
         with tempfile.TemporaryDirectory(prefix='thinkthen-hidden-tools-') as temporary:
             path = Path(temporary)
-            fixture_tools(ROOT, path, ('python',), exclude=('uv',))
+            fixture_tools(ROOT, path, ('test', 'python'), exclude=('uv',))
             # Inject loss after resolution: a fresh resolver may legitimately
             # restore a pinned tool. Run the actual smoke and binding checks
             # with the resolved-group marker and remove only their tool paths.

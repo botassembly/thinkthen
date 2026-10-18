@@ -148,7 +148,8 @@
     "python": {
       "commands": [
         "python3",
-        "python"
+        "python",
+        "python3.13"
       ],
       "platforms": [
         "darwin",
@@ -177,6 +178,7 @@
         "linux"
       ],
       "groups": [
+        "test",
         "test",
         "lint",
         "install",

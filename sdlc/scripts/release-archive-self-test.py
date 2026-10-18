@@ -20,7 +20,7 @@ import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from conformance.source_fixtures import stage_checkout
+from conformance.source_fixtures import stage_checkout, fixture_tools
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
@@ -320,7 +320,9 @@ end
             archives.append(archive)
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
-        env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        fixture_bin = root / "resolved-tools"
+        fixture_tools(REPO, fixture_bin, ("test", "ruby"))
+        env = {"PATH": str(fixture_bin), "HOME": str(root), "LC_ALL": "C"}
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)
         wanted = template.replace("$version", version)
