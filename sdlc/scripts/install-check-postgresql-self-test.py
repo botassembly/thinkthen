@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import select
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
@@ -14,6 +15,7 @@ import unittest
 from unittest.mock import patch
 from install_check import Check, Failure, check_result, clean_environment, main
 from install_check_channels import postgresql
+import install_check_postgresql
 from install_check_postgresql import stop_postgres
 
 
@@ -24,7 +26,9 @@ class PostgresLifecycle(unittest.TestCase):
         cls.seed = tempfile.TemporaryDirectory(prefix='thinkthen-pg-fixture-')
         root = Path(cls.seed.name)
         source = root / 'postmaster.c'
-        source.write_text('#include <unistd.h>\nint main(void) { if (write(1, "ready\\n", 6) != 6) return 1; for (;;) pause(); }\n')
+        source.write_text('#include <unistd.h>\n#include <signal.h>\n#include <stdlib.h>\n'
+                          'int main(void) { if (getenv("FIXTURE_IGNORE_INTERRUPT")) signal(SIGINT, SIG_IGN); '
+                          'if (write(1, "ready\\n", 6) != 6) return 1; for (;;) pause(); }\n')
         cls.server = root / 'postgres'
         subprocess.run(['cc', source, '-o', cls.server], env=clean_environment(root), check=True, capture_output=True)
 
@@ -105,10 +109,31 @@ class PostgresLifecycle(unittest.TestCase):
                 check.tools(check, check.runtime)
                 check.start()
                 check.child.terminate(); check.child.wait()
-                with patch('install_check_postgresql.signal.pidfd_send_signal') as send:
+                with patch('install_check_postgresql.signal_postmaster') as send:
                     stop_postgres(check, check.data, check.socket, check.binary)
                 send.assert_not_called()
             finally: check.close()
+
+    def test_unresponsive_private_child_is_killed_and_reaped_without_signaling_neighbor(self):
+        with tempfile.TemporaryDirectory() as own, tempfile.TemporaryDirectory() as other:
+            check = PgFixture(Path(own), self.server)
+            check.env['FIXTURE_IGNORE_INTERRUPT'] = '1'
+            neighbor = PgFixture(Path(other), self.server)
+            select_ready = select.select
+            def wait(read, write, errors, timeout):
+                # Exercise escalation without spending the shutdown allowance.
+                return ([], [], []) if timeout == 25 else select_ready(read, write, errors, timeout)
+            try:
+                neighbor.tools(neighbor, neighbor.runtime); neighbor.start()
+                with patch('install_check_postgresql.select.select', wait), \
+                     patch('install_check_postgresql.signal_postmaster', wraps=install_check_postgresql.signal_postmaster) as send:
+                    self.run_fixture(check)
+                self.assertEqual([call.args[1] for call in send.call_args_list], [signal.SIGINT, signal.SIGKILL] * 3)
+                self.assertTrue(all(child.poll() is not None for child in check.children))
+                self.assertIsNone(neighbor.child.poll())
+                self.assertFalse(check.retain_scratch)
+            finally:
+                check.close(); neighbor.close()
 
 
 class ScratchRetention(unittest.TestCase):
@@ -210,10 +235,10 @@ class PgFixture(Check):
         return ''
 
     def close(self):
-        if self.child is not None:
-            if self.child.poll() is None: self.child.terminate()
-            self.child.wait()
-            if self.child.stdout is not None: self.child.stdout.close()
+        for child in self.children:
+            if child.poll() is None: child.terminate()
+            child.wait()
+            if child.stdout is not None: child.stdout.close()
 
 
 if __name__ == '__main__':

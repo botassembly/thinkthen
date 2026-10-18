@@ -1,9 +1,43 @@
 """Stop only the Linux private postmaster created by one install check."""
+import ctypes
 import os
 from pathlib import Path
 import select
 import signal
+import time
 from install_check import Failure
+
+
+def pidfd_call(name, *arguments):
+    # The pinned standalone Python is built without sys/pidfd.h. Ubuntu's
+    # libc exposes the same kernel handles even when CPython omits its wrappers.
+    # Use libc symbols, never architecture-specific syscall numbers or PID kills.
+    libc = ctypes.CDLL(None, use_errno=True)
+    try:
+        function = getattr(libc, name)
+    except AttributeError as error:
+        raise Failure('PostgreSQL cleanup requires Linux libc pidfd support') from error
+    function.argtypes = ([ctypes.c_int, ctypes.c_uint] if name == 'pidfd_open'
+                         else [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint])
+    function.restype = ctypes.c_int
+    result = function(*arguments)
+    if result == -1:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code))
+    return result
+
+
+def open_postmaster(pid):
+    if hasattr(os, 'pidfd_open'):
+        return os.pidfd_open(pid)
+    return pidfd_call('pidfd_open', pid, 0)
+
+
+def signal_postmaster(handle, number):
+    if hasattr(signal, 'pidfd_send_signal'):
+        signal.pidfd_send_signal(handle, number)
+    else:
+        pidfd_call('pidfd_send_signal', handle, number, None, 0)
 
 
 def stop_postgres(check, data, socket, binary):
@@ -26,7 +60,7 @@ def stop_postgres(check, data, socket, binary):
             or fields[4] != str(socket) or fields[5] != ''):
         raise Failure('PostgreSQL cleanup cannot verify this run\'s postmaster PID identity')
     try:
-        handle = os.pidfd_open(int(fields[0]))
+        handle = open_postmaster(int(fields[0]))
     except ProcessLookupError:
         return  # This exact PID has already exited; no process gets a signal.
     try:
@@ -45,10 +79,13 @@ def stop_postgres(check, data, socket, binary):
             raise Failure('PostgreSQL cleanup refuses a process outside this run\'s private cluster')
         # A pidfd binds the signal to this process even if its numeric PID is reused.
         try:
-            signal.pidfd_send_signal(handle, signal.SIGINT)
+            deadline = time.monotonic() + 30
+            signal_postmaster(handle, signal.SIGINT)
+            if not select.select([handle], [], [], 25)[0]:
+                signal_postmaster(handle, signal.SIGKILL)
         except ProcessLookupError:
             return
-        if not select.select([handle], [], [], 30)[0]:
+        if not select.select([handle], [], [], max(0, deadline - time.monotonic()))[0]:
             raise Failure('PostgreSQL cleanup timed out waiting for this run\'s postmaster')
     finally:
         os.close(handle)
