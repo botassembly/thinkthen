@@ -90,7 +90,8 @@ pub(super) fn written(call: Call<thinkthen::RequestValue>) -> Result<(String, Fa
             "results": call.value(),
             "facts": call.facts().complete(),
             "answer": call.answer(),
-        })).map_err(|_| usage("invalid native settled call"))?,
+        }))
+        .map_err(|_| usage("invalid native settled call"))?,
         call.facts().clone(),
     ))
 }

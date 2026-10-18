@@ -6,9 +6,7 @@
 mod fixture;
 use fixture::Fixture;
 use std::io::Write;
-use thinkthen::{
-    CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome,
-};
+use thinkthen::{CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome};
 
 fn run(f: Fixture) -> Result<String, Error> {
     let request = f.request()?;
@@ -77,9 +75,7 @@ fn run(f: Fixture) -> Result<String, Error> {
             .map_err(|_| fixture::usage("fixture cancellation failed"))?;
     }
     match outcome? {
-        RequestOutcome::Complete(call) => {
-            Ok(fixture::written(call)?.0)
-        }
+        RequestOutcome::Complete(call) => Ok(fixture::written(call)?.0),
         RequestOutcome::Failed { completed, error } => {
             let facts = error.facts().and_then(thinkthen::Facts::complete);
             let facts_json =

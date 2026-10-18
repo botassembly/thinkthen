@@ -124,9 +124,7 @@ impl SettledAnswer {
             RequestValue::Decisions(rows) => Self::Decide(Settled::rows(rows.iter().map(|row| {
                 let value = decision(row.result().value());
                 let meaning = match row.result().canonical.decide_value(value) {
-                    crate::core::DecideValue::Authored(meaning) => {
-                        Some(meaning.clone())
-                    }
+                    crate::core::DecideValue::Authored(meaning) => Some(meaning.clone()),
                     crate::core::DecideValue::Primitive(_) => None,
                 };
                 Settled::one(
