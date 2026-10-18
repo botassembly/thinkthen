@@ -10,6 +10,8 @@ Reviews: revision e718fad, accept
 
 Reviews: revision c93878a, accept
 
+Reviews: revision 8c956f0, accept
+
 ## Outcome
 
 - All 54 tracked `ratchet*.json` files are deleted, `sdlc/ratchet.json` included.
