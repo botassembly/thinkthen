@@ -40,7 +40,8 @@ def main():
                                'Authorization', 'fixture-header', 'fixturelongtoken',
                                'private evidence', 'provider message'):
                     assert marker not in result.stderr, (arm, marker)
-                assert lines[0].startswith('thinkthen: the backend '), (arm, lines)
+                prefix = 'thinkthen: the reply was refused:' if cause == 'reply' else 'thinkthen: the backend '
+                assert lines[0].startswith(prefix), (arm, lines)
         backend.stdin.close()
         assert backend.wait(timeout=10) == 0
         assert backend.stderr.read() == ''
