@@ -107,7 +107,8 @@ def resolve(manifest, groups, root, check=False):
     env['CARGO_BUILD_JOBS'] = '2'
     env['RUSTUP_TOOLCHAIN'] = manifest['tools']['rust']['version']
     paths = [str(root / tool['linux_directory']) for tool in requirements.values()
-             if host == 'linux' and 'linux_directory' in tool] + [str(root / 'bin')]
+             if host == 'linux' and 'linux_directory' in tool] + [str(root / 'bin'), str(root / 'bootstrap/mise/bin')]
+    env['PATH'] = os.pathsep.join(paths + [SYSTEM_PATH])
     failures = []
     installer = None
     for name, tool in requirements.items():
