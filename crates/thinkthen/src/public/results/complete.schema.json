@@ -295,6 +295,409 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "completeAnswerResolution": {
+      "oneOf": [
+        {
+          "const": "resolved",
+          "type": "string"
+        },
+        {
+          "const": "unresolved",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "completeAnswerResolutions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeAnswerResolution"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeAnswerResolution"
+          },
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^\\d+$": {
+              "$ref": "#/$defs/completeAnswerResolution"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "completeAnswerShape": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledDecision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape10": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape11": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uint",
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape12": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledOriginal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledOriginal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape13": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledRecognition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledRecognition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape14": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledRelations"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledRelations"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape15": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeSettledJudgment"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/completeSettledJudgment"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape2": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape3": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape4": {
+      "anyOf": [
+        {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "uint",
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape5": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeAnswerResolutions"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/completeAnswerResolutions"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape6": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape7": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape8": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape9": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/completeSettledOriginal"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/completeSettledOriginal"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
     "completeAnswers": {
       "properties": {
         "questions": {
@@ -1136,10 +1539,14 @@
               "$ref": "#/$defs/completeFacts"
             }
           ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerResolution"
         }
       },
       "required": [
         "completed",
+        "resolution",
         "error"
       ],
       "type": "object",
@@ -1180,6 +1587,27 @@
           "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
+        },
+        "file": {
+          "type": [
+            "string"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "length": {
           "format": "uint",
@@ -1235,9 +1663,13 @@
               "$ref": "#/$defs/completeFacts"
             }
           ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerResolution"
         }
       },
       "required": [
+        "resolution",
         "error"
       ],
       "type": "object",
@@ -1249,6 +1681,16 @@
     },
     "completeCallSuccess": {
       "properties": {
+        "answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completesettledAnswer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "facts": {
           "$ref": "#/$defs/completeFacts"
         },
@@ -1268,6 +1710,7 @@
       },
       "required": [
         "value",
+        "answer",
         "facts"
       ],
       "type": "object",
@@ -4110,6 +4553,376 @@
         }
       ]
     },
+    "completeSettled": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled10": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape15"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled2": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape6"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled3": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape7"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled4": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape8"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled5": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape10"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape9"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled6": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape10"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape11"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled7": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape2"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape12"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled8": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape10"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape13"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettled9": {
+      "properties": {
+        "index": {
+          "$ref": "#/$defs/completeAnswerShape4"
+        },
+        "pick": {
+          "$ref": "#/$defs/completeAnswerShape3"
+        },
+        "probability": {
+          "$ref": "#/$defs/completeAnswerShape10"
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerShape5"
+        },
+        "value": {
+          "$ref": "#/$defs/completeAnswerShape14"
+        }
+      },
+      "required": [
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution"
+      ],
+      "type": "object",
+      "unevaluatedProperties": false
+    },
+    "completeSettledDecision": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {}
+      ]
+    },
+    "completeSettledJudgment": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeSettledOriginal": {},
+    "completeSettledRecognition": {
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/completeentity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/completeentityEdge"
+              },
+              "type": [
+                "array"
+              ]
+            }
+          },
+          "required": [
+            "entities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/completeBoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/completeBoundaryProposal"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeSettledRelations": {
+      "items": {
+        "$ref": "#/$defs/completerelatedEntityEdge"
+      },
+      "type": "array"
+    },
     "completeSourceFields": {
       "properties": {
         "file": {
@@ -6580,6 +7393,16 @@
         },
         {
           "properties": {
+            "answer": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completesettledAnswer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "facts": {
               "anyOf": [
                 {
@@ -6597,10 +7420,15 @@
             "kind": {
               "const": "terminal",
               "type": "string"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerResolution"
             }
           },
           "required": [
-            "kind"
+            "kind",
+            "answer",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false
@@ -6862,6 +7690,160 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completesettledAnswer": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/completeSettled",
+          "properties": {
+            "function": {
+              "const": "decide",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "yes"
+        },
+        {
+          "$ref": "#/$defs/completeSettled2",
+          "properties": {
+            "function": {
+              "const": "choose",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "picked"
+        },
+        {
+          "$ref": "#/$defs/completeSettled3",
+          "properties": {
+            "function": {
+              "const": "tag",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        },
+        {
+          "$ref": "#/$defs/completeSettled4",
+          "properties": {
+            "function": {
+              "const": "score",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        },
+        {
+          "$ref": "#/$defs/completeSettled5",
+          "properties": {
+            "function": {
+              "const": "filter",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "yes"
+        },
+        {
+          "$ref": "#/$defs/completeSettled6",
+          "properties": {
+            "function": {
+              "const": "rank",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "$ref": "#/$defs/completeSettled7",
+          "properties": {
+            "function": {
+              "const": "find",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "picked"
+        },
+        {
+          "$ref": "#/$defs/completeSettled8",
+          "properties": {
+            "function": {
+              "const": "recognize",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "$ref": "#/$defs/completeSettled9",
+          "properties": {
+            "function": {
+              "const": "relate",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "$ref": "#/$defs/completeSettled10",
+          "properties": {
+            "function": {
+              "const": "annotate",
+              "type": "string"
+            }
+          },
+          "required": [
+            "function"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        }
+      ]
     },
     "completesourceRelationEndpoint": {
       "properties": {

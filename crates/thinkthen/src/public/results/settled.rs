@@ -182,7 +182,9 @@ impl SettledDecision {
     /// The authored presentation, retaining explicit null; None means the default boolean.
     #[must_use]
     pub fn authored(&self) -> Option<super::QuestionContent<'_>> {
-        self.meaning.as_ref().map(|meaning| super::QuestionContent(meaning.as_json()))
+        self.meaning
+            .as_ref()
+            .map(|meaning| super::QuestionContent(meaning.as_json()))
     }
 }
 impl std::fmt::Debug for SettledDecision {

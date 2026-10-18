@@ -80,7 +80,10 @@ impl SettledAnswer {
                 resolved(),
             )),
             RequestValue::Found(found) => Self::Find(Settled::one(
-                found.selected().cloned().map(|original| SettledOriginal(Box::new(original))),
+                found
+                    .selected()
+                    .cloned()
+                    .map(|original| SettledOriginal(Box::new(original))),
                 found.probability(),
                 Some(found.raw_pick().to_owned()),
                 match found.selection() {

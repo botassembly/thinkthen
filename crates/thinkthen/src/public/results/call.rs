@@ -268,9 +268,11 @@ impl<T, R, P> Call<T, R, P> {
             Ok((value, results, probability)) => {
                 let answer = match self.answer {
                     Some(answer) => answer,
-                    None => Box::new(results
-                        .settled_answer()
-                        .map_err(|error| error.with_facts(self.facts.clone()))?),
+                    None => Box::new(
+                        results
+                            .settled_answer()
+                            .map_err(|error| error.with_facts(self.facts.clone()))?,
+                    ),
                 };
                 Ok(Call {
                     value,
