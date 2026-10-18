@@ -500,12 +500,18 @@ def main():
         types = ET.fromstring(nuget.pop('[Content_Types].xml'))
         expected_nuget.pop('[Content_Types].xml')
         expected_nuget.update({asset['file']: ('native-' + target).encode() for target, asset in definition['native'].items()})
+        # Every tracked JVM source must reach the source archive, including new files.
+        expected_sources = subprocess.check_output(
+            ['git', '-C', str(root / 'libraries/jvm'), 'ls-files', '-z', 'session'],
+            env=child_env(home=root / 'source-inventory-home'), text=True).split('\0')
+        expected_sources = sorted(name for name in expected_sources
+                                  if pathlib.Path(name).suffix in ('.java', '.kt', '.scala'))
         checks = [
             ("nuget-native-assets-and-managed-bytes", nuget, expected_nuget),
             ("nuget-native-content-types", {node.get('Extension'): node.get('ContentType') for node in types},
              {'dll': 'application/octet', 'so': 'application/octet', 'dylib': 'application/octet'}),
             ("maven-layout", layout, sorted(f"{a}{s}" for a in artifacts for s in ("", ".md5", ".sha1"))),
-            ("maven-sources", source_names, sorted(["session/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
+            ("maven-sources", source_names, expected_sources),
             ("nuget-file", [p.name for p in (root / "out/nuget").iterdir()], [f"Botassembly.ThinkThen.{v}.nupkg"]),
             ("pub-files", pub, expected_pub),
         ]

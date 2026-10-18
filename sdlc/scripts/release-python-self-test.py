@@ -11,7 +11,7 @@ import tempfile
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
-from conformance.source_fixtures import stage_checkout, fixture_tools
+from conformance.source_fixtures import fixture_tools
 
 
 def community():
@@ -20,12 +20,11 @@ def community():
         root = Path(temporary)
         source_root = root / 'source'
         community = source_root / 'databases/duckdb/community'
-        stage_checkout(REPO, source_root)
+        source_root.mkdir()
         archive_path = root / 'source.tar'
-        with tarfile.open(archive_path, 'w') as archive:
-            for name in subprocess.check_output(['git', '-C', str(source_root), 'ls-files', '-z'], text=True).split('\0'):
-                if name:
-                    archive.add(source_root / name, arcname=name, recursive=False)
+        with archive_path.open('wb') as output:
+            subprocess.run(['git', 'archive', 'HEAD'], cwd=REPO, stdout=output,
+                           env=child_env(home=root / 'archive-home'), check=True)
         tools = root / 'tools'
         tools.mkdir()
         # Replace compilers at the process boundary; use the real helpers and manifest.

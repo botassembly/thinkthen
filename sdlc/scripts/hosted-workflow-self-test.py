@@ -465,6 +465,7 @@ def flutter_locked_setup_case():
     command += 'git diff --exit-code\n'
     with tempfile.TemporaryDirectory(prefix='thinkthen-flutter-locks-') as temporary:
         root = Path(temporary).resolve()
+        stage_checkout(REPO, root)
         sdk = root / 'home/.local/opt/flutter'
         # Exercise real Git acquisition through an isolated transport, without downloading an SDK.
         source = root / 'source'
@@ -494,7 +495,6 @@ def flutter_locked_setup_case():
         tools = sdk / 'packages/flutter_tools'
         tools.mkdir(parents=True)
         (tools / 'pubspec.lock').write_text('SDK lock fixture\n')
-        stage_checkout(REPO, root)
         example = root / 'libraries/dart/flutter/example'
         manifest = yaml.safe_load((example / 'pubspec.yaml').read_text())
         lock = yaml.safe_load((example / 'pubspec.lock').read_text())

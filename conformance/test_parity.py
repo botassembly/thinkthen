@@ -29,7 +29,7 @@ class NativeFixtureEnvironment(unittest.TestCase):
         def compiler(args, **kwargs):
             probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'; assert os.environ['CARGO_PROFILE_DEV_OPT_LEVEL'] == '2'; assert os.environ['RUSTFLAGS'] == '--remap-path-prefix=/checkout=/build'; assert os.environ['RUSTC_WRAPPER'] == ''"
             return launch([sys.executable, '-c', probe], **kwargs)
-        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+        with tempfile.TemporaryDirectory() as caller_home, patch.object(os, 'environ', child_env(home=caller_home, PATH=os.defpath, FAKE_SERVICE_API_KEY='parent-only', APPDATA='/ambient', CARGO_BUILD_JOBS='2', CARGO_PROFILE_DEV_OPT_LEVEL='2', RUSTFLAGS='--remap-path-prefix=/checkout=/build', RUSTC_WRAPPER='')), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
@@ -772,7 +772,6 @@ class PublicAssertions(unittest.TestCase):
                                     with self.assertRaises(ReachedReader): module.main()
 
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
-        import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             stage_checkout(parity.ROOT, root)
@@ -782,7 +781,9 @@ class PublicAssertions(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
+            # A prepared launcher may be a symlink outside the interpreter prefix.
+            subprocess.run([str(Path(sys.executable).resolve()), '-m', 'venv', '--without-pip',
+                            str(assets / 'venv')], env=child_env(home=root / 'venv-home'), check=True)
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
             site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
