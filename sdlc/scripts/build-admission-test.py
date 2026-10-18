@@ -96,7 +96,7 @@ class Admission(unittest.TestCase):
     def entry_scripts(self):
         scripts = self.root / 'scripts'
         scripts.mkdir()
-        for name in ('heavy-lock', 'heavy-compile', 'allow-list'):
+        for name in ('heavy-compile', 'allow-list'):
             (scripts / name).write_bytes(HELPER.with_name(name).read_bytes())
         # Reuse the controlled host-load boundary with the real supervisor.
         (scripts / 'build-admission.py').write_text(
@@ -385,7 +385,7 @@ class Admission(unittest.TestCase):
     def test_hosted_context_survives_rung_environment_isolation(self):
         scripts = self.entry_scripts()
         rung = scripts / 'rung'
-        rung.write_text('set -eu\n. "$(dirname -- "$0")/heavy-lock"\n'
+        rung.write_text('set -eu\n. "$(dirname -- "$0")/allow-list"\n'
                         'test "$GITHUB_ACTIONS" = true\n'
                         'test "$RUNNER_ENVIRONMENT" = github-hosted\n'
                         'test "${PRIVATE_SERVICE_KEY+x}" != x\n'
@@ -523,10 +523,10 @@ exit 23
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
         self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
         # The standalone sanitization entry also returns successfully.
-        self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'heavy-lock')], env=env, timeout=3).returncode, 0)
+        self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'allow-list')], env=env, timeout=3).returncode, 0)
         rung = scripts / 'rung'
         rung.write_text('''set -eu
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 python3 - <<'BOUNDARY'
 import os
 assert 'THINKTHEN_API_KEY' not in os.environ
@@ -563,7 +563,7 @@ BOUNDARY
         (hostile / 'build-admission.py').write_text('raise AssertionError("hostile supervisor invoked")\n')
         rung = scripts / 'rung'
         rung.write_text('''set -eu
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 python3 - "$1" <<'RUNG'
 import os,pathlib,sys,time
 assert 'THINKTHEN_API_KEY' not in os.environ

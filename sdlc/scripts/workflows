@@ -163,7 +163,7 @@ def every(name, doc, text, folder=None):
             out.append(f"{name}: image {image} carries no digest")
     if name == "gate.yml":
         runs = "\n".join(step.get("run") or "" for _, _, step in steps(doc))
-        for tool in ("cargo-public-api", "PUBLIC_API_TOOLCHAIN"):
+        for tool in ["cargo-public-api", "PUBLIC_API_TOOLCHAIN"]:
             if tool not in runs or "sdlc/scripts/install" not in runs:
                 out.append(f"{name}: no step installs {tool} from the pins in sdlc/scripts/install")
     out += other_dispatches(name, doc)

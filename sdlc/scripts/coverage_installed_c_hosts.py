@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+from tools import commands
 import tarfile
 
 COLLECTIONS = tuple('installed-' + name for name in ('cpp', 'go', 'zig', 'ada', 'php', 'cobol'))
@@ -17,8 +18,7 @@ def prepare(context):
     root, run = context['root'], context['run']
     command, missing = context['command'], context['missing_tool']
     env = dict(context['env'])
-    for tool in ('c++', 'cc', 'ar', 'ld', 'nm', 'objcopy', 'gprbuild', 'gnatmake', 'cobc',
-                 'clang', 'node', 'python3', 'gofmt', 'cmake', 'go', 'zig', 'php', 'composer'):
+    for tool in commands(['cpp', 'go', 'zig', 'ada', 'php', 'cobol']):
         if not shutil.which(tool, path=env.get('PATH')):
             raise missing(f'installed C door hosts need {tool}')
     # Host builds must use the profile runtime in the supplied native assets;

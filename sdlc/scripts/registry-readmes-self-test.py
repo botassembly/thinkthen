@@ -549,15 +549,14 @@ class PackageText(unittest.TestCase):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
                                env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
             for name in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/fetch.sh',
-                         'crates/thinkthen/Cargo.toml', 'libraries/ruby/toolchain.env',
+                         'crates/thinkthen/Cargo.toml', 'sdlc/tools.json', 'libraries/ruby/toolchain.env',
                          'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
                          'databases/duckdb/tools/version.env'):
                 path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(readmes.REPO / name, path)
             home = root / 'home'
-            ruby_pins = (root / 'libraries/ruby/toolchain.env').read_text()
-            prepared = [home / '.cache/thinkthen-toolchains/ruby' / pin / 'bin'
-                        for pin in readmes.re.findall(r'(?m)^RUBY_\d+_VERSION=(.*)$', ruby_pins)]
+            ruby_pin = json.loads((root / 'sdlc/tools.json').read_text())['tools']['ruby']['version']
+            prepared = [home / '.cache/thinkthen-toolchains/ruby' / ruby_pin / 'bin']
             sqlite = root / 'sqlite'
             duckdb_pin = readmes.re.search(r'(?m)^DUCKDB_ROUTINE_RELEASE=(.*)$',
                                           (root / 'databases/duckdb/tools/version.env').read_text())[1]

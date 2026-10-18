@@ -164,8 +164,8 @@ class ManagedToolAvailability(unittest.TestCase):
             native.write_bytes(b'fixture native')
             tools = root / 'tools'
             tools.mkdir()
-            for tool in ('node', 'bwrap', 'configured-dotnet', 'configured-dart',
-                         'configured-flutter', 'configured-swift'):
+            for tool in ['node', 'bwrap', 'configured-dotnet', 'configured-dart',
+                         'configured-flutter', 'configured-swift']:
                 binary = tools / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)
@@ -310,7 +310,7 @@ class ManagedToolAvailability(unittest.TestCase):
     def test_csharp_requires_executable_bwrap_at_the_consumer_path(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for tool in ('bwrap', 'dotnet'):
+            for tool in ['bwrap', 'dotnet']:
                 binary = root / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)

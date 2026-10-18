@@ -15,7 +15,7 @@ case ${1:-} in
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
 # Sanitize the campaign environment before starting its children.
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 shift
 artifact_dir=
 if [ "$#" -gt 0 ]; then

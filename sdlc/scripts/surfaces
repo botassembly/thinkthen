@@ -13,7 +13,7 @@ tools_group=surfaces
 # Required checks fail whenever they do not run.
 . "$(dirname -- "$0")/verdict.sh"
 # Sanitize the environment before starting build tools.
-[ "$*" = --registry ] || . "$(dirname -- "$0")/heavy-lock"
+[ "$*" = --registry ] || . "$(dirname -- "$0")/allow-list"
 profile=routine
 registry_only=0
 fetch_only=0

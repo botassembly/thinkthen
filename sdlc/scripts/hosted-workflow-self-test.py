@@ -959,11 +959,11 @@ def preflight_cases():
             (platform / name).write_bytes(b'corrupted archive')
         corrupt = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert corrupt.returncode == 1 and corrupt.stderr.count('SHA256 differs from pin') == 2, corrupt.stderr
-        for tool in ('node', 'cl.exe', 'lib.exe'):
+        for tool in ['node', 'cl.exe', 'lib.exe']:
             (tools / tool).unlink()
         missing = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert missing.returncode == 1, missing
-        for tool in ('node', 'cl.exe', 'lib.exe'):
+        for tool in ['node', 'cl.exe', 'lib.exe']:
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 

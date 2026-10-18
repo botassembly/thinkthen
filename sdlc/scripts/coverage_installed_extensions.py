@@ -1,6 +1,7 @@
 """Measure routine callers of packaged native extensions and Rust consumers."""
 from pathlib import Path
 import shutil
+from tools import commands
 import tarfile
 
 COLLECTIONS = ('installed-javascript', 'installed-typescript', 'installed-ruby',
@@ -12,7 +13,7 @@ def prepare(context):
     command, missing = context['command'], context['missing_tool']
     env = {**context['env'], 'CARGO_BUILD_JOBS': '2', 'THINKTHEN_FULL_COMPILER': '1',
            'THINKTHEN_TEST_PROFILE': 'routine'}
-    for tool in ('node', 'npm', 'ruby', 'gem', 'R', 'Rscript', 'cargo', 'rustc', 'cc', 'nm'):
+    for tool in commands(['javascript', 'typescript', 'ruby', 'r', 'rust', 'polars']):
         if not shutil.which(tool, path=env['PATH']):
             raise missing('installed extensions need ' + tool)
     ruby = Path(shutil.which('ruby', path=env['PATH'])).resolve().parent.parent

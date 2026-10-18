@@ -32,6 +32,14 @@ def selected(manifest, groups, host):
             if host in tool['platforms'] and set(tool['groups']) & {'common', *groups}}
 
 
+def commands(groups=(), host=None):
+    """Read the declared command set for fixture and collection environments."""
+    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    requirements = selected(manifest, groups, host or platform.system().lower())
+    return tuple(dict.fromkeys(command for tool in requirements.values()
+                               for command in tool['commands']))
+
+
 def bootstrap(manifest, root, env):
     binary = root / 'bootstrap/mise/bin/mise'
     if binary.is_file():
