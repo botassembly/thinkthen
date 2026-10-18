@@ -8,6 +8,7 @@ Phase: 1
 
 ## Outcome
 
+- Changes: `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
 - The installed-crate check unpacks the crate and points the consumer at it through a `[patch]` entry or a generated manifest, not a string replace.
 - The consumer builds with the toolchain the crate's `rust-version` declares, with no inline launcher script.
 - The coverage path remaps leave this gate. Coverage does not gate a release, so the coverage script sets them only if it still needs them.

@@ -177,6 +177,7 @@ FAILURES: list[str] = []
 
 def fail(check: str, message: str) -> None:
     FAILURES.append(f"{check}: {message}")
+    print(FAILURES[-1], file=sys.stderr, flush=True)
 
 
 def read_toml(relative: str) -> dict:
@@ -2755,8 +2756,6 @@ def main() -> int:
     check_live_stores()
     check_markers()
     check_loopback_servers()
-    for failure in FAILURES:
-        print(failure, file=sys.stderr)
     if FAILURES:
         return 1
     print("policy: every accepted table, ban list, and dependency matches")

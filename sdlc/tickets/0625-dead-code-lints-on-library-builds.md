@@ -8,6 +8,10 @@ Phase: 1
 
 Reviews: revision 59d0254, accept
 
+Reviews: revision cfe4c79, accept
+
+Reviews: revision adef2d4, accept
+
 ## Outcome
 
 - The blanket allow in `lib.rs` is gone. Code reached only by the CLI sits behind the `cli` feature, so the library build reports no dead code.
