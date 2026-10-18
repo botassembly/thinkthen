@@ -19,7 +19,7 @@ arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machi
 base = pin['images'][arch]
 # The image identity includes all construction inputs and the pinned base.
 digest = hashlib.sha256()
-for path in ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py'):
+for path in ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py', 'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env'):
     digest.update((ROOT / path).read_bytes())
 tag = 'thinkthen-check:' + arch + '-' + digest.hexdigest()[:20]
 subprocess.run(['docker', 'build', '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),

@@ -44,8 +44,13 @@ for name, tool in manifest['tools'].items():
     if 'linux' not in tool['platforms']:
         continue
     provider = tool.get('provider')
-    if name == 'swift':
-        provider = 'swift'
+    if name in ('swift', 'flutter'):
+        provider = name
+    if name == 'duckdb':
+        provider = 'aqua:duckdb/duckdb'
+        lines = Path('/tmp/duckdb-version.env').read_text().splitlines()
+        tool = dict(tool, version=next(line.split('=', 1)[1].removeprefix('v') for line in lines
+                                       if line.startswith('DUCKDB_ROUTINE_RELEASE=')))
     if provider is None or provider in ('python-package', 'ruby-bundled'):
         continue
     if provider == 'rustup':
@@ -91,3 +96,10 @@ for name in ('ruby', 'ruby34'):
             target.symlink_to(gem_bin / command)
 # Keep the binary toolchain readable by the host user's unprivileged container.
 subprocess.run(['chmod', '-R', 'a+rX', str(root)], check=True)
+
+# Missing commands and wrong versions must fail image preparation before checks.
+resolver = '/opt/thinkthen-image/sdlc/scripts/tools.py'
+groups = {group for tool in manifest['tools'].values() for group in tool['groups']} - {'ruby34'}
+subprocess.run([str(python), resolver, '--manifest', sys.argv[1], '--check', ','.join(sorted(groups))],
+               env=env, check=True)
+subprocess.run([str(python), resolver, '--manifest', sys.argv[1], '--check', 'ruby34'], env=env, check=True)

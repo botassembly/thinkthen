@@ -19,6 +19,8 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     libcurl4-openssl-dev libxml2-dev && rm -rf /var/lib/apt/lists/*
 COPY sdlc/tools.json /tmp/tools.json
 COPY sdlc/linux/install.py /tmp/install.py
+COPY databases/duckdb/tools/version.env /tmp/duckdb-version.env
+COPY sdlc/scripts/tools.py /opt/thinkthen-image/sdlc/scripts/tools.py
 RUN python3 /tmp/install.py /tmp/tools.json
 ENV PATH=/opt/thinkthen-tools/bin:/usr/lib/postgresql/16/bin:/usr/bin:/bin \
     RUSTUP_HOME=/opt/thinkthen-tools/rustup \
