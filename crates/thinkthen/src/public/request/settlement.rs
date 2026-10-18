@@ -34,6 +34,9 @@ impl Settlement {
         }
     }
     pub(super) fn finish(mut self) -> Option<SettledAnswer> {
+        if !self.failures.is_empty() && let Some(answer) = &mut self.answer {
+            answer.failed_occurrences(self.failures);
+        }
         if self.scalar
             && let Some(answer) = &mut self.answer
         {

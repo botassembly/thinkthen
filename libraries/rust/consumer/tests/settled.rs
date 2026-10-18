@@ -48,7 +48,7 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
         .ok_or("missing question")?;
     let mut question: Value = serde_json::from_str(raw.get()).map_err(failure)?;
     let mut options = json!({});
-    let texts = if let Some(units) = question.get("units").cloned() {
+    let mut texts = if let Some(units) = question.get("units").cloned() {
         question
             .as_object_mut()
             .ok_or("invalid find question")?
@@ -71,6 +71,7 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
             .map(|exchange| exchange["evidence"].clone())
             .collect()
     };
+    if !collection && matches!(case.verb.as_str(), "filter" | "rank") { texts.truncate(1); }
     let input = if !collection && texts.len() == 1 {
         json!({"kind":"text","text":texts.first().ok_or("missing input")?})
     } else {
@@ -84,7 +85,7 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
                 }
             })
             .collect::<Vec<_>>();
-        json!({"kind":"records","items":items})
+        json!({"kind": if !collection && case.verb == "find" { "units" } else if !collection && case.verb == "relate" { "entities" } else { "records" },"items":items})
     };
     // Preserve question-set member order exactly as the shared request recording.
     let question = if case.verb == "find" {
@@ -181,6 +182,7 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
                 .ok_or("missing selected inputs")?;
             let indexes = indexes
                 .iter()
+                .filter(|index| collection || index.as_u64() == Some(0))
                 .map(|index| {
                     index
                         .as_u64()
@@ -215,6 +217,10 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
                     .map(|row| row["probability"].clone())
                     .collect::<Vec<_>>()
             );
+            if !collection {
+                expected["value"] = json!([0]);
+                expected["probability"] = json!([first["details"]["answer"]["probability"]]);
+            }
         }
         "find" => {
             let index = &success["operation"]["selected"];
@@ -353,5 +359,39 @@ fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), Str
             assert_eq!(packet["answer"]["resolution"], resolution);
         }
     }
+    Ok(())
+}
+
+#[test]
+#[expect(clippy::indexing_slicing, reason = "the recovered final answer must keep every original input position")]
+fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> Result<(), String> {
+    let listener = conformance_backend::Listener::answering(|body| {
+        let text = String::from_utf8_lossy(body);
+        let answers = if text.contains("failed row") { json!({}) }
+            else { json!({"q1":{"type":"noul","noul":if text.contains("uncertain row") { 0.5 } else { 0.9 }}}) };
+        conformance_backend::Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
+    }).map_err(failure)?;
+    let engine = Engine::builder().base_url(listener.base())
+        .and_then(|builder| builder.api_key("sk-recovered-loopback"))
+        .map(|builder| builder.no_cache().max_retries(0).batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)))
+        .and_then(thinkthen::EngineBuilder::build).map_err(failure)?;
+    let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Fits?","threshold":"0.1:0.9"}},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"failed row"}},{"original":{"kind":"text","text":"uncertain row"}},{"original":{"kind":"text","text":"resolved row"}}]}}}).to_string()).map_err(failure)?;
+    let expected = json!({"function":"decide","value":[null,null,true],"probability":[null,null,0.9],"pick":[null,null,null],"index":[null,null,null],"resolution":["failed","unresolved","resolved"]});
+    let admitted = request.clone().admit().map_err(failure)?;
+    let call = engine.execute_request_recovering(&admitted, RequestEnvironment::default()).map_err(failure)?;
+    assert_eq!(serde_json::to_value(call.answer()).map_err(failure)?, expected);
+    let session = engine.start_request_recovering_session(request, thinkthen::Surface::Rust).map_err(failure)?;
+    loop {
+        match session.next_packet(RequestSessionWaitInterest::Settlement).map_err(failure)? {
+            thinkthen::RequestRecoveringRead::Result(thinkthen::RequestRecoveringResult::Terminal(terminal)) => {
+                assert!(terminal.error.is_none());
+                assert_eq!(serde_json::to_value(terminal.answer).map_err(failure)?, expected);
+                break;
+            }
+            thinkthen::RequestRecoveringRead::Result(_) => {}
+            read => return Err(format!("recovering terminal missing: {read:?}")),
+        }
+    }
+    assert_eq!(listener.count(), 6);
     Ok(())
 }
