@@ -176,7 +176,7 @@ def go_tag_cases():
             bin_dir = pathlib.Path(tmp)
             (bin_dir / "gh").write_text(GH)
             (bin_dir / "curl").write_text("#!/bin/sh\nexit 22\n")
-            for tool in ["gh", "curl"]:
+            for tool in ("gh", "curl"):
                 (bin_dir / tool).chmod(0o755)
             env = {k: v for k, v in os.environ.items() if k not in SECRETS}
             env.update(PATH=f"{bin_dir}:{env['PATH']}", FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
