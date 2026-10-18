@@ -27,3 +27,7 @@ Depends on: 0615
 Several conformance fixtures copy named entrypoint scripts into a fake checkout and stub the rest. When an entrypoint starts sourcing a new file, the copy lacks it and the fixture fails, one file per round. On 2026-10-17, three commits each added one missing file to the same hand-written lists: `cb9c71eb8` at 13:15 added `heavy-lock`, `2d5808174` at 13:17 changed the stress fixture's Python, and `3a4d5f0b3` at 13:58 added `libraries/ruby/toolchain.env` and `ruby`. All three touch `conformance/test_parity.py` and `conformance/test_stress_selection.py`. `de1013a59` (2026-10-16) is the same class. These fixtures check how the harness is laid out, not what the product does. `sdlc/scripts/heavy-lock` is now a two-line shim that sources `allow-list`, yet fixtures still have to copy it (`067453bd1`).
 
 The fixtures also build PATH from tool lists typed inline: there are 15 `for tool in (` loops under `sdlc/scripts`, for example `install-check-self-test.py:110`, `coverage-checks.py:167` and `coverage_installed_extensions.py:23`. `mktemp`, `sha256sum` and `shasum` were added to two of these lists only after a run failed without them (`7f1d4b7fb`).
+
+## Progress
+
+- 2026-10-18 started

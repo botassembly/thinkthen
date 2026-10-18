@@ -28,3 +28,7 @@ The 2026-10-12 ruling (`sdlc/decisions/2026-10-12-no-compatibility-before-1-0.md
 - `crates/thinkthen/src/public/options.rs:120-124,181` keeps a `legacy_annotation` switch.
 - `crates/thinkthen/src/public/plan.rs:97` and `crates/thinkthen/src/public/results/aggregate_reading.rs:57` describe compatibility diagnostics and a compatibility default.
 - About 77 compatibility or legacy mentions remain in non-test core source. Some may be ordinary words; that needs checking.
+
+## Progress
+
+- 2026-10-18 started

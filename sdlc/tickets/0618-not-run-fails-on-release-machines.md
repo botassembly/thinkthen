@@ -23,3 +23,7 @@ Depends on: 0615
 ## Evidence
 
 A check that lacks its toolchain exits 77, and whether that counts as passing depends on an argument or variable the caller has to remember to pass. `sdlc/scripts/verdict.sh:5` passes a 77 unless its first argument is `release`. `sdlc/scripts/smoke:78` returns success for a 77 unless `$campaign` is set. `sdlc/scripts/surfaces:311` and `sdlc/scripts/coverage:109` each handle it in their own way. A qualification run started without the flag can therefore report a pass when a language was never checked.
+
+## Progress
+
+- 2026-10-18 started
