@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0626
 
+Reviews: revision 2478857, accept
+
 ## Outcome
 
 - `crates/thinkthen/src/public/settings.rs` gains one setter that takes a setting name and its raw text value, validates it with the core's own messages, and applies it to the `EngineBuilder`. `from_settings_json` applies each entry through that setter, so the JSON form and the name-and-value form share one parser.
