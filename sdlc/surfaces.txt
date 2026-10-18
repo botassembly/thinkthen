@@ -6,8 +6,8 @@
 # The state `feature` names a surface that is a Cargo feature of `thinkthen`
 # (ticket 0130). Its folder holds `check.sh` and `README.md`; Polars also
 # holds its conventional public consumer (0410). The rung
-# runs its check as it runs a landed one, and the root ratchet and the root
-# `deny.toml` cover its code.
+# runs its check as it runs a landed one, and the root
+# `deny.toml` covers its code.
 libraries/rust        landed
 libraries/polars      feature
 libraries/c           landed

@@ -1,4 +1,4 @@
-"""Pure ownership and source classification shared by size and policy gates."""
+"""Pure ownership and source classification for native generation and policy gates."""
 from pathlib import Path as FilePath, PurePosixPath as Path
 import os
 import subprocess

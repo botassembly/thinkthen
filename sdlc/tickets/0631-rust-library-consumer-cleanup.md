@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision b389831, accept
+
 ## Outcome
 
 - The installed-crate check unpacks the crate and points the consumer at it through a `[patch]` entry or a generated manifest, not a string replace.
