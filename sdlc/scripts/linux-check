@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+"""Run Linux checks in the manifest's capped Ubuntu environment."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import shlex
+import shutil
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[2]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
+args = parser.parse_args()
+if 'prepare' in args.checks and args.checks != ['prepare']:
+    parser.error('prepare runs separately from checks')
+job = os.environ.get('PM_JOB', '').split()
+ticket = job[0] if job else os.environ.get('PM_TICKET', '0619')
+if len(ticket) != 4 or not ticket.isdigit():
+    parser.error('container label requires a four-digit ticket')
+manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+pin = manifest['linux']
+arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machine()]
+base = pin['images'][arch]
+is_yellow = platform.node().split('.')[0] == 'yellow'
+memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
+# The image identity includes all construction inputs and the pinned base.
+digest = hashlib.sha256()
+inputs = ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
+          'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env')
+for path in inputs:
+    digest.update((ROOT / path).read_bytes())
+tag = 'thinkthen-check:' + arch + '-' + digest.hexdigest()[:20]
+# The classic builder enforces these per-build cgroup limits. Docker's
+# default integrated BuildKit driver ignores the legacy resource flags.
+with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
+    context = Path(temporary)
+    for relative in inputs:
+        destination = context / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, destination)
+    subprocess.run(['docker', 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
+                    '--cpu-period', '100000', '--cpu-quota', str(pin['cpus'] * 100000), '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),
+                    '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
+image = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
+print('linux-check: image=' + image + ' base=' + base, flush=True)
+if args.checks == ['prepare']:
+    raise SystemExit(0)
+owned = ROOT / ('.linux-' + arch)
+(owned / 'home').mkdir(parents=True, exist_ok=True)
+(owned / 'cargo').mkdir(exist_ok=True)
+source = owned / 'src'
+sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+if not source.is_dir():
+    subprocess.run(['git', 'clone', '--no-hardlinks', str(ROOT), str(source)], check=True)
+subprocess.run(['git', 'fetch', 'origin', sha], cwd=source, check=True)
+# Each proof starts from committed source. Preserve only ignored build output.
+subprocess.run(['git', 'checkout', '--force', '--detach', sha], cwd=source, check=True)
+subprocess.run(['git', 'clean', '-fd'], cwd=source, check=True)
+cache_mounts = []
+for name in ('sccache', 'pip-cache', 'uv-cache', 'python', 'config', 'cache'):
+    folder = owned / name
+    folder.mkdir(exist_ok=True)
+    cache_mounts += ['-v', str(folder) + ':' + manifest['linux_prefix'] + '/' + name]
+command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
+           '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
+           '--security-opt', 'seccomp=unconfined', '--security-opt', 'apparmor=unconfined',
+           '--security-opt', 'systempaths=unconfined', '--user', str(os.getuid()) + ':' + str(os.getgid()),
+           '-v', str(owned) + ':' + str(owned),
+           '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
+           '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
+           '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
+# Fetch lockfile dependencies inside this environment once; checks stay offline.
+script = 'set -eu\n'
+locks = subprocess.check_output(['git', 'ls-files', '*Cargo.lock', 'Cargo.lock'], cwd=source, text=True)
+for relative in locks.splitlines():
+    cargo = source / Path(relative).with_name('Cargo.toml')
+    if cargo.is_file():
+        script += 'cargo fetch --locked --manifest-path ' + shlex.quote(str(cargo)) + '\n'
+for check in args.checks:
+    script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
+raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)

@@ -52,7 +52,7 @@ config_home
 temp_home
 
 if [ "$(uname -s)" = Darwin ]; then
-    echo "test: skip four invalid UTF-8 filename cases because macOS refuses those filenames; Linux CI runs them"
+    echo "test: skip four invalid UTF-8 filename cases because macOS refuses those filenames; the Linux container runs them"
 fi
 cargo nextest run --profile default --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
@@ -91,6 +91,6 @@ demos/16-triage-pipeline/self-test
 if [ "$(uname -s)" = Linux ]; then
     sdlc/live-test
 else
-    echo "test: skip Linux-only RLIMIT_NPROC, XDG-without-HOME and /proc thread assertions on macOS; Linux CI runs them"
-    echo "test: skip Linux live-ledger process checks on macOS; Linux CI runs sdlc/live-test"
+    echo "test: skip Linux-only RLIMIT_NPROC, XDG-without-HOME and /proc thread assertions on macOS; the Linux container runs them"
+    echo "test: skip Linux live-ledger process checks on macOS; the Linux container runs sdlc/live-test"
 fi

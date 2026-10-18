@@ -1,5 +1,8 @@
 #!/bin/sh
-# Portable landing entry point; tool resolution owns the environment.
+# Linux owns routine proof; native macOS also checks Apple-only behavior.
 set -eu
 cd -- "$(dirname -- "$0")/../.."
-exec /usr/bin/python3 sdlc/scripts/tools.py lint,test -- sh -eu -c 'sdlc/scripts/lint; sdlc/scripts/test'
+python3 sdlc/scripts/linux-check lint test
+if [ "$(uname -s)" = Darwin ]; then
+    exec /usr/bin/python3 sdlc/scripts/tools.py test -- sh sdlc/scripts/test
+fi

@@ -376,7 +376,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import hashlib, importlib.util, json, os, shutil, signal, subprocess, time
+          import hashlib, importlib.util, json, os, shutil, signal, subprocess, sys, time
           from conformance.children.children import child_env
           root = Path.cwd()
           out = Path(os.environ['GATE_OUTPUT'])
@@ -384,6 +384,9 @@ jobs:
           sha, tag, stage = (os.environ[key] for key in ('SHA', 'TAG', 'STAGE'))
           spec = importlib.util.spec_from_file_location('admission', root / 'sdlc/scripts/build-admission.py')
           admission = importlib.util.module_from_spec(spec); spec.loader.exec_module(admission)
+          sys.path.insert(0, str(root / 'sdlc/scripts'))
+          from check_verdict import verdict
+
           for signum in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
               signal.signal(signum, admission.interrupted)
           env = child_env(('GITHUB_ACTIONS', 'RUNNER_ENVIRONMENT', 'LANG', 'LC_ALL', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'CARGO_HOME', 'RUSTUP_HOME',
@@ -401,7 +404,7 @@ jobs:
                      R_LIBS=env['R_LIBS_USER'], PYTHON_HOST=str(work / 'python/bin/python'),
                      GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', CI='true',
                      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER='1', MSBUILDDISABLENODEREUSE='1',
-                     FLUTTER_SUPPRESS_ANALYTICS='true', THINKTHEN_MACOS_APPLE_CHECKS='required')
+                     FLUTTER_SUPPRESS_ANALYTICS='true')
           env['PATH'] = str(Path(env['THINKTHEN_DOTNET']).parent) + os.pathsep + env['PATH']
           for key in ('HOME', 'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'):
               Path(env[key]).mkdir(parents=True, exist_ok=True)
@@ -434,16 +437,18 @@ jobs:
               after = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
               clean = subprocess.call(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root) == 0
               guard = None if after == sha and clean and not remaining else 'source identity, tracked source or child ownership changed'
+              accepted = verdict('libraries/objective-c', code, prefix=name) if name == 'objective-c-platform' else code == 0
               receipt = ({'revision': sha, 'command': command, 'cwd': str(cwd), 'exit': code,
                           'seconds': round(time.time() - started, 2), 'remaining_children': remaining,
                           'io_before': before, 'io_after': snapshot(name + '.io-after')} if stage == 'core' else
                          {'sha': sha, 'tag': tag, 'command': command, 'started': started, 'finished': time.time(),
                           'state': 'completed', 'command_exit': code, 'exit': code if guard is None else 1,
                           'guard_error': guard, 'remaining_children': remaining})
+              receipt['accepted'] = accepted and guard is None
               result['gates' if stage == 'core' else 'phases'][name] = receipt
               (out / (name + '.json')).write_text(json.dumps(receipt, indent=2) + '\n'); save()
               print(name, 'exit', code, flush=True)
-              if guard or (code != 0 and (name, code) != ('objective-c-platform', 77)):
+              if not receipt['accepted']:
                   raise RuntimeError(name + ' failed: ' + str(code))
               return code
           save()
@@ -601,9 +606,9 @@ jobs:
                   run('stress', ['sh', 'sdlc/scripts/test-stress', '--run'])
               elif stage == 'coverage':
                   coverage = work / 'coverage'
-                  run('coverage', ['python3', 'sdlc/scripts/coverage', '--release', '--platform', 'linux', '--output', str(coverage)])
+                  run('coverage', ['python3', 'sdlc/scripts/coverage', '--platform', 'linux', '--output', str(coverage)])
                   apple = Path(os.environ['RUNNER_TEMP']) / 'thinkthen-apple-coverage/totals.json'
-                  run('coverage-join', ['python3', 'sdlc/scripts/coverage', '--release', '--join', str(coverage / 'totals.json'), str(apple)])
+                  run('coverage-join', ['python3', 'sdlc/scripts/coverage', '--join', str(coverage / 'totals.json'), str(apple)])
               else:
                   raise RuntimeError('unknown Linux stage')
               result['state'] = 'passed-local-platform-pending' if stage == 'core' else 'completed'
@@ -632,7 +637,7 @@ jobs:
                                 source_clean=subprocess.call(['git', 'diff', '--quiet', 'HEAD', '--'], cwd=root) == 0,
                                 remaining_children=sorted(admission.child_pids()), effective_routine='test',
                                 effective_failures=[name for name, row in result['gates'].items()
-                                                    if row['exit'] != 0 and (name, row['exit']) != ('objective-c-platform', 77)])
+                                                    if not row['accepted']])
                   result['artifacts'] = {str(path): {'revision': sha, 'bytes': path.stat().st_size,
                                                     'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
                                          for path in (out / 'thinkthen', root / 'target/debug/libthinkthen_c.so',
