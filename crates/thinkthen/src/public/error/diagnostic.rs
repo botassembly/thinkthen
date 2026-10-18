@@ -2,6 +2,7 @@
 //! Stays: Private typed diagnostic causes must retain native error kinds and exact command projections without parsing message text.
 use std::any::Any;
 
+#[cfg_attr(not(feature = "cli"), expect(dead_code, reason = "cli::failure reads retained native diagnostic payloads; SDK readers use RequestDecode, Refusal and Context"))]
 pub(crate) enum Diagnostic {
     RequestDecode(crate::public::request::RequestDecodeCause),
     Engine(crate::engine::error::Error),

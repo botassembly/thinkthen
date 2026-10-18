@@ -291,6 +291,7 @@ fn pointed(source: Source, key: &str) -> String {
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn origin(&self) -> Source {
         match self {
             Self::Blank { origin, .. }

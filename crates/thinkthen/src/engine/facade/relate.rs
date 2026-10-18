@@ -17,8 +17,11 @@ pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
     pub(crate) asked: Vec<RelateAsk>,
     pub(crate) asks: Asks,
+    #[cfg(feature = "cli")]
     pub(crate) requests: Vec<Request>,
+    #[cfg(feature = "cli")]
     pub(crate) questions_per_rule: Vec<usize>,
+    #[cfg(feature = "cli")]
     pub(crate) requests_per_rule: Vec<usize>,
 }
 
@@ -43,6 +46,7 @@ pub(crate) struct Execution {
     pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) replayed: bool,
     pub(crate) requests_sent: u64,
+    #[cfg(feature = "cli")]
     pub(crate) requests: Vec<String>,
     pub(crate) failed: usize,
     pub(crate) answered: usize,
@@ -60,11 +64,14 @@ pub(crate) fn relations(
         plan_relate(entities, &rules).map_err(|_| Error::Defect("relation planning failed"))?
     else {
         return Ok(PreparedRelations {
+            #[cfg(feature = "cli")]
             questions_per_rule: vec![0; rules.len()],
+            #[cfg(feature = "cli")]
             requests_per_rule: vec![0; rules.len()],
             rules,
             asked: Vec::new(),
             asks: Asks::default(),
+            #[cfg(feature = "cli")]
             requests: Vec::new(),
         });
     };
@@ -105,8 +112,11 @@ pub(crate) fn relations(
         rules,
         asked: planned.asked,
         asks,
+        #[cfg(feature = "cli")]
         requests,
+        #[cfg(feature = "cli")]
         questions_per_rule,
+        #[cfg(feature = "cli")]
         requests_per_rule,
     })
 }

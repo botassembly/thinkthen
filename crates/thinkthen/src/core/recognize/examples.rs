@@ -164,6 +164,7 @@ pub(crate) fn selected_examples(
         .transpose()
 }
 
+#[cfg(feature = "cli")]
 pub(crate) fn example_file(text: &str) -> Result<Vec<RecognitionExample>, ExamplesError> {
     let lines: Vec<_> = text
         .lines()

@@ -12,6 +12,7 @@ impl Wake {
             *held = Some(notify);
         }
     }
+    #[cfg(feature = "cli")]
     pub(crate) fn notify(&self) {
         if let Ok(held) = self.0.lock()
             && let Some(notify) = held.as_ref()
@@ -32,6 +33,7 @@ pub(crate) struct Readiness<'a> {
     wake: Wake,
 }
 impl<'a> Readiness<'a> {
+    #[cfg(feature = "cli")]
     pub(crate) fn new(ready: &'a (dyn Fn() -> bool + Sync), pause: Option<Duration>) -> Self {
         Self {
             ready,

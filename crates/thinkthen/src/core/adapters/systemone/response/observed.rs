@@ -3,10 +3,12 @@ use crate::core::{Plan, Question, Reply, ReportedUsage};
 use super::{DecodeError, Response, decode_each, decode_response};
 
 pub(crate) struct Decoded {
+    #[cfg(feature = "cli")]
     pub(crate) usage: Option<ReportedUsage>,
     pub(crate) reply: Result<Reply, DecodeError>,
 }
 
+#[cfg(feature = "cli")]
 pub(crate) fn decode_observed(plan: &Plan, body: &[u8]) -> Decoded {
     decode_questions(plan.questions(), body)
 }
@@ -16,6 +18,7 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
         Ok(response) => response,
         Err(error) => {
             return Decoded {
+                #[cfg(feature = "cli")]
                 usage: None,
                 reply: Err(DecodeError::Malformed(error.line(), error.column())),
             };
@@ -27,7 +30,9 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
         .map(|usage| ReportedUsage::new(usage.input_tokens, usage.output_tokens));
     let reply = decode_response(questions, response, usage.and_then(ReportedUsage::complete))
         .map(|reply| reply.with_reported_usage(usage));
-    Decoded { usage, reply }
+    Decoded {
+ #[cfg(feature = "cli")]
+ usage, reply }
 }
 
 /// Each question's answer or the error that failed it, and the reply's

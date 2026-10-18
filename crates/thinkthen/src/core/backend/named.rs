@@ -174,6 +174,7 @@ pub(crate) struct Choice<'a> {
     pub(crate) named: Option<Named>,
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
+    #[cfg(feature = "cli")]
     pub(crate) tier: Option<usize>,
     /// Configured built-ins whose settings may enrich an exact unnamed posting URL.
     setups: Vec<Named>,
@@ -202,6 +203,7 @@ pub(crate) fn choose<'a>(
         return Ok(Choice {
             named,
             url,
+            #[cfg(feature = "cli")]
             tier: Some(index),
             setups,
         });
@@ -209,6 +211,7 @@ pub(crate) fn choose<'a>(
     Ok(Choice {
         named: None,
         url: None,
+        #[cfg(feature = "cli")]
         tier: None,
         setups,
     })

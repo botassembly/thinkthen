@@ -314,6 +314,7 @@ impl Engine {
     }
 
     /// Whether a folder the caller named, rather than the private default, is in use.
+    #[cfg(feature = "cli")]
     pub(crate) const fn recording(&self) -> bool {
         (self.storage.record.is_some() || self.storage.replay.is_some())
             && !self.storage.private_default
@@ -321,10 +322,6 @@ impl Engine {
 
     /// The process counters, cumulative since the process began, or since
     /// this process was forked.
-    #[allow(
-        dead_code,
-        reason = "the command reads durable totals; ticket 0086 exposes this snapshot"
-    )]
     pub(crate) fn usage(&self) -> Result<Counts, Error> {
         Ok(self.state(&Cancel::default())?.usage.snapshot())
     }
@@ -389,6 +386,7 @@ impl Engine {
     /// Send one plan as one request with no store, as `check` does, which
     /// reads and writes no cache (`specification/check.md`). The send runs
     /// on an engine worker, so a host signal never lands in its socket read.
+    #[cfg(feature = "cli")]
     pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
         self.check_plan(plan)?;
         let body = self

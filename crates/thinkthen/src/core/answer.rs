@@ -39,7 +39,6 @@ pub(crate) enum DistributionError {
 
 impl Distribution {
     /// Take one probability per label, in label order.
-    #[allow(dead_code, reason = "generic default for later adapters")]
     pub(crate) fn new(entries: Vec<(String, Probability)>) -> Result<Self, DistributionError> {
         let tolerance = entries.len() as f64 * f64::EPSILON;
         Self::with_tolerance(entries, tolerance)
@@ -248,6 +247,7 @@ impl fmt::Debug for Value {
 impl Value {
     /// The label `--raw` prints, or `None` when there is no label to print.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) fn label(&self) -> Option<&str> {
         match self {
             Self::Choice(label) => label.as_deref(),

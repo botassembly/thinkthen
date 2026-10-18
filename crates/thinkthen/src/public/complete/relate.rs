@@ -165,6 +165,7 @@ fn admitted(
     Ok(entities)
 }
 
+#[cfg(feature = "cli")]
 mod preview;
 pub(crate) use preview::Preview as RelationPreview;
 pub(in crate::public) use preview::prepare as preview_relations;

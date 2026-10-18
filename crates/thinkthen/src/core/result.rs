@@ -21,12 +21,14 @@ mod fields;
 mod meta;
 pub(crate) use fields::Fields;
 mod profile_warning;
+#[cfg(feature = "cli")]
 mod record_value;
 
 pub use attempt::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
 pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;
+#[cfg(feature = "cli")]
 pub(crate) use record_value::RecordValue;
 
 /// The schema string a version one result carries.

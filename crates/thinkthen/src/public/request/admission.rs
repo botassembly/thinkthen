@@ -72,6 +72,7 @@ impl AdmittedRequest {
         self.definition = Some(definition);
         Ok(self)
     }
+    #[cfg(feature = "cli")]
     pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
         let args = self.request.call.arguments_mut();
         args.input = RequestInput::Feed {
@@ -98,6 +99,7 @@ impl AdmittedRequest {
             .ok_or_else(|| Error::defect("admitted question lost its definition"))
     }
 
+    #[cfg(feature = "cli")]
     pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
         let definition = self.resolve_question_for(Some(self.request.call.function()))?;
         if self.definition.is_none() {
