@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 3d338bb, accept
+
 ## Outcome
 
 - Changes: `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
