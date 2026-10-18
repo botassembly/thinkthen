@@ -584,14 +584,14 @@ def crate_failures(crates: dict[str, str]) -> list[str]:
 
 def binding_files(name: str, crate: str) -> dict[str, str]:
     """One binding's indexed manifest, lock, Clippy settings, Rust sources and deny.toml."""
-    folder = REPO / crate
+    folder = (REPO / crate).resolve()
     indexed = set(tracked_files(REPO / name))
     files = {name: (folder / name).read_text(encoding="utf-8")
              for name in ("Cargo.toml", "Cargo.lock", "clippy.toml") if folder / name in indexed}
     for source in sorted(indexed):
         if source.suffix == ".rs":
             files[posixpath.relpath(source.as_posix(), folder.as_posix())] = source.read_text(encoding="utf-8")
-    deny = REPO / name / "deny.toml"
+    deny = (REPO / name).resolve() / "deny.toml"
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny in indexed else files
 
 

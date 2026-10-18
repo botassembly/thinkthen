@@ -88,6 +88,7 @@ def inventory(root, surface, tracked):
 
 
 def check(root, surface):
+    root = root.resolve()
     tracked = set(tracked_files(root))
     expected = inventory(root, surface, tracked)
     actual = {path for path in tracked if path.is_relative_to(root / surface) and path.is_file()}
