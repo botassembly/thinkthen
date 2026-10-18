@@ -235,8 +235,8 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
             }
         }
         "recognize" => {
-            // The shared accent-and-emoji case's valid-path span posterior, before kind strength.
-            expected["probability"] = json!([0.9977]);
+            // specification/recognize.md retains the unrounded valid-path posterior, before kind strength.
+            expected["probability"] = json!([0.9976489290347367]);
             for key in ["value", "probability", "pick", "index", "resolution"] {
                 expected[key] = shaped(expected[key].clone(), collection);
             }
