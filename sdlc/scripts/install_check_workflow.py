@@ -1,5 +1,6 @@
 """Dispatch and permission boundaries for published install checks (0398B)."""
 import re
+import json
 from pathlib import Path
 
 DISPATCH_STEP = {
@@ -15,8 +16,8 @@ PUBLISH_STEP = {
     'run': 'sdlc/scripts/release-workflow publish "$NAME" "$SHA"',
 }
 RUNNERS = ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26']
-RUBIES = re.findall(r'^RUBY_\d+_VERSION=(.+)$',
-                    (Path(__file__).resolve().parents[2] / 'libraries/ruby/toolchain.env').read_text(), re.M)
+_TOOLS = json.loads((Path(__file__).resolve().parents[2] / 'sdlc/tools.json').read_text())['tools']
+RUBIES = [_TOOLS[name]['version'] for name in ('ruby34', 'ruby')]
 PORTABLE = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm']
 WINDOWS = ['download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c']
 LINUX = ['nuget', 'maven', 'pub', 'packagist', 'go', 'c', 'sqlite', 'duckdb', 'postgresql']

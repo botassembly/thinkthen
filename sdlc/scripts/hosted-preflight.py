@@ -151,15 +151,11 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
     minors = shell_values(ruby, ['RUBY_MINORS'])[0].split()
     for minor in minors:
         env = dict(os.environ, THINKTHEN_RUBY_MINOR=minor)
-        version, digest, yaml, yaml512 = shell_values(ruby, ['RUBY_VERSION', 'RUBY_SHA256', 'YAML_SHA256', 'YAML_SHA512'], env)
-        suffix = '-' + os.uname().machine + '-darwin' if 'apple' in target else ''
-        prefix = cache / 'ruby' / (version + suffix)
-        check.check('Ruby ' + version + ' stamp', lambda prefix=prefix, digest=digest, yaml=yaml, yaml512=yaml512:
-                    require((prefix / 'thinkthen-toolchain.stamp').read_text().splitlines()[:3] ==
-                            ['ruby ' + digest, 'yaml ' + yaml, 'yaml512 ' + yaml512], 'stamp differs from toolchain.env'))
-        check.command([prefix / 'bin/ruby', '-rpsych', '-rzlib', '-ropenssl', '-rminitest', '-rrbs', '-e', 'puts RUBY_VERSION'], '^' + re.escape(version) + r'\s*$')
-        rbs = shell_values(ruby, ['RUBY_RBS_VERSION'], env)[0]
-        check.command([prefix / 'bin/rbs', '_' + rbs + '_', '--version'], re.escape(rbs))
+        version, rbs = shell_values(ruby, ['RUBY_VERSION', 'RUBY_RBS_VERSION'], env)
+        group = 'ruby34' if minor == '3.4' else 'ruby'
+        resolver = [sys.executable, ROOT / 'sdlc/scripts/tools.py', '--check', group, '--']
+        check.command([*resolver, 'ruby', '-rpsych', '-rzlib', '-ropenssl', '-rminitest', '-rrbs', '-e', 'puts RUBY_VERSION'], '^' + re.escape(version) + r'\s*$', env=env)
+        check.command([*resolver, 'rbs', '_' + rbs + '_', '--version'], re.escape(rbs), env=env)
     if not source_only:
         check.hashes(ROOT / 'databases/sqlite/amalgamation.sha256', cache / 'sqlite-amalgamation-3500000')
         # runtime_ready verifies executable hosts, their headers and libclang, not
