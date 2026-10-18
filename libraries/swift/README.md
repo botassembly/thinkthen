@@ -1,6 +1,6 @@
 # ThinkThen for Swift
 
-Call a decision model from Swift and read its typed answer in one line. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
+Call a System One model from Swift and read its typed answer in one line. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
 
 ```swift
 import ThinkThen

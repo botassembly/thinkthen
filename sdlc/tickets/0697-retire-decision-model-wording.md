@@ -20,3 +20,7 @@ Milestone: 0.2.1
 Ian ruled on 2026-10-18 that "decision model" is a bad name for System One models: the model returns a probability, and the decision happens in the caller's code. About 41 public files outside `sdlc/` use the term, mostly on the site and in the library READMEs. ThinkThen's own vocabulary already prefers "System One model".
 
 This is a text-only change with no code or contract effect, so it can run as its own lane in any phase.
+
+## Progress
+
+- 2026-10-18 started

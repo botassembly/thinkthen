@@ -494,10 +494,10 @@ const ARTICLES = {
   competitors: {
     title: "Two weeks later, the field arrived.",
     label: "The field arrives",
-    goal: "Within two weeks of Jev's launch, other decision models arrived, and ThinkThen speaks to the ones that share Jev's interface.",
+    goal: "Within two weeks of Jev's launch, other System One models arrived, and ThinkThen speaks to the ones that share Jev's interface.",
     idea: [
       "TypeSafe launched Jev on 2026-09-15. Two weeks later, the field had moved on four fronts.",
-      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/models/liquid/).",
+      "Liquid released d1 on 2026-09-29. d1 is a System One model. Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/models/liquid/).",
       "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/models/ollama/).",
       "On 2026-09-30, Benchmark Heaven's JevBench board ranked 106 systems. Three days earlier it listed 62 open models. Cygnet tops its composite score, and Jev is third.",
       "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/models/openai/).",
@@ -508,7 +508,7 @@ const ARTICLES = {
       { text: "the JevBench board", href: 'https://www.benchmarkheaven.com/jev-models/v1.5.4' },
       { text: "OpenAI's DevDay 2026 recap", href: 'https://openai.com/index/devday-2026-recap/' },
     ],
-    takeaway: "Decision models now come from more than one maker, and one interface reaches them.",
+    takeaway: "System One models now come from more than one maker, and one interface reaches them.",
     link: REPO,
   },
 
@@ -520,7 +520,7 @@ const ARTICLES = {
       "The bench asks every system the same 1,501 questions. The hard set holds 505 of them, such as word traps and two-step questions. The easy set holds the other 996.",
       "These scores describe one small Beatles question set and do not rank models. Jev gets 70.5% of all the questions right and 56.9% of the hard ones. Liquid d1 gets 67.6% and 52.9%. Nimble 9B gets 51.9% and 41.6%. Kev-4B gets 47.2% and 39.0%. Laya gets 35.8% and 29.9%.",
       "The bench reports where answers differ: Jev alone answered 191 questions correctly, and d1 alone answered 140. These counts describe this question set.",
-      "GLM-5.3 Flash is a general language model, run with no reasoning. It gets 96.7% and 95.4%. The slide grays it out as the yardstick. It is not a decision model.",
+      "GLM-5.3 Flash is a general language model, run with no reasoning. It gets 96.7% and 95.4%. The slide grays it out as the yardstick. It is not a System One model.",
       "OpenAI announced its Decisions API on 2026-09-29. The bench has not run it, so it has no row.",
       "The bench is open source. The repository holds the songs, the questions and their right answers, and a saved recording of every answer. The data is CC BY-SA 4.0.",
     ],
