@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import shlex
 import shutil
 import subprocess
 import sys
@@ -100,7 +101,13 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
             raise SystemExit('installed provider lacks ' + command)
         target = destination / command
         if not target.exists():
-            target.symlink_to(executable)
+            if command == 'npm':
+                # npm's launcher locates its JS relative to argv[0]; a
+                # prefix symlink changes that path. Execute its actual path.
+                target.write_text('#!/bin/sh\nexec ' + shlex.quote(executable) + ' "$@"\n')
+                target.chmod(0o755)
+            else:
+                target.symlink_to(executable)
     env.update(selected)
     env['PATH'] = str(root / 'bin') + ':' + env['PATH']
     if name == 'rust':
