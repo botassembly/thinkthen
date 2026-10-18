@@ -11,7 +11,7 @@ import unittest
 
 from conformance import parity
 from conformance.children.children import child_env
-from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
 class StressSelection(unittest.TestCase):
@@ -24,7 +24,9 @@ class StressSelection(unittest.TestCase):
             (scripts / 'allow-list').write_text('')
             (scripts / 'scratch.sh').write_text('usage_guard() { :; }\n')
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
-            (root / 'sdlc/surfaces.txt').write_text('databases/postgresql landed\n')
+            stub_other_surfaces(root, {'databases/postgresql'})
+            (root / 'bin').mkdir(exist_ok=True)
+            (root / 'bin/python3').symlink_to(sys.executable)
             conformance = root / 'conformance'
             conformance.mkdir(exist_ok=True)
             (conformance / 'parity.py').write_text('')
@@ -34,7 +36,7 @@ class StressSelection(unittest.TestCase):
             (surface / 'check.sh').write_text(
                 'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
                 'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
-            env = child_env(home=root / 'home', PATH=os.defpath, FIXTURE_ROOT=str(root))
+            env = child_env(home=root / 'home', PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'], FIXTURE_ROOT=str(root))
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
                 with self.subTest(first=first, last=last):

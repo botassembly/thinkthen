@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 
-from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 from conformance import parity
 from conformance.children.children import child_env
 
@@ -24,7 +24,7 @@ class CampaignEnvironment(unittest.TestCase):
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
             for name in ('release-pack', 'release-smoke'):
                 (scripts / name).write_text('exit 0\n')
-            (root / 'sdlc/surfaces.txt').write_text('libraries/c landed\n')
+            stub_other_surfaces(root, {'libraries/c'})
             consumer = root / 'libraries/c'
             consumer.mkdir(parents=True, exist_ok=True)
             (consumer / 'Cargo.toml').write_text('[package]\nname="fixture"\n')
@@ -65,7 +65,8 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'uname': 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
+                'python3': f'''case "$1" in */feature-inventory.py|sdlc/scripts/feature-inventory.py) exec {python} "$@" ;; esac
+if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
     exec {python} -c 'import os,runpy,sys; os.getloadavg=lambda:(0,0,0); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
 fi
 if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then

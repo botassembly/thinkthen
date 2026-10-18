@@ -7,6 +7,7 @@ import subprocess
 import contextlib
 import io
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -14,7 +15,8 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -541,7 +543,7 @@ class PublicAssertions(unittest.TestCase):
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -563,7 +565,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -665,10 +667,10 @@ class PublicAssertions(unittest.TestCase):
                             else: sentinel.write_text('preexisting extension')
                         script = root / 'run.sh'
                         script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
-                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + '\nPG_HOST=Darwin\nPG_CONFIG=$(command -v pg_config)\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
                             + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
-                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
-                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                        env = {'PATH': str(root) + os.pathsep + os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'FIXTURE_ROOT': str(root), 'RUN': str(root),
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
@@ -787,7 +789,7 @@ class PublicAssertions(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            venv.EnvBuilder(with_pip=False).create(assets / 'venv')
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
             site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
@@ -1144,7 +1146,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': 'postgresql', 'case': key, 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
@@ -1294,6 +1296,7 @@ esac
                     stage_checkout(parity.ROOT, root)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True, exist_ok=True)
+                    stub_other_surfaces(root, {'libraries/c'})
                     files = {
                         # Environment filtering is covered by the real nested campaign fixture.
                         'sdlc/scripts/allow-list': '',
@@ -1306,13 +1309,12 @@ esac
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
                         'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
                         'sdlc/scripts/smoke': 'printf "binding-smoke\\n" >> calls\n',
-                        'sdlc/surfaces.txt': 'libraries/c landed\n',
                         'libraries/c/Cargo.toml': '',
                         'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
                         'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
                         'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
-                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/git': '#!/bin/sh\ncase "$1" in rev-parse) printf "source-hash\\n" ;; status) : ;; *) exec ' + shlex.quote(shutil.which('git')) + ' "$@" ;; esac\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
                         'site/package.json': '{}\n',
                         'bin/npm': (
@@ -1345,6 +1347,7 @@ esac
                         target = root / path
                         target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_text(text)
+                    (root / 'bin/python3').symlink_to(sys.executable)
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
