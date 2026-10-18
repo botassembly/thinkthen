@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision b389831, accept
 
+Reviews: revision d2762c9, accept
+
 ## Outcome
 
 - The installed-crate check unpacks the crate and points the consumer at it through a `[patch]` entry or a generated manifest, not a string replace.
