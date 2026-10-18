@@ -1,5 +1,5 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
+import collections,json,os,pathlib,re,shutil,sys,time,zipfile,xml.etree.ElementTree as ET
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
@@ -46,7 +46,7 @@ else:
  shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs')
 shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
 barrier=work/'barrier';barrier.mkdir();server=Backend(barrier, arrivals='state' if mode.startswith('example') else 'packed', packed_questions=None if mode.startswith('example') else {'Is it?', 'Is it relevant?'}, hold_first=True)
-cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet','run','--project','/work/Installed.csproj','--configuration','Release','-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true']
+cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet']
 env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
 if os.environ.get('LLVM_PROFILE_FILE'):
  observation=pathlib.Path(os.environ['LLVM_PROFILE_FILE']).parent.absolute()
@@ -61,9 +61,17 @@ if mode.startswith('usage-'):
  env['XDG_STATE_HOME']='/work/state'
  if mode=='usage-disabled': env.update(HOME='relative', XDG_STATE_HOME='')
 try:
+ # SDK setup messages belong to the build log, never the sample's exact stdout.
+ started=time.monotonic()
+ build=run(cmd+['build','/work/Installed.csproj','--configuration','Release','-o','/work/bin',
+                '-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true'],timeout=100,env=env)
+ (work/'build.log').write_bytes(build.stdout+build.stderr)
+ assert build.exit==0,(build.exit,build.stdout[-1500:],build.stderr[-1500:])
+ runtime_timeout=max(0,100-(time.monotonic()-started))
+ cmd+=['/work/bin/Installed.dll']
  result=(run_usage(cmd, state=work/'state/thinkthen', mode=mode.removeprefix('usage-'), env=env,
-                   execute=lambda command, *, env: run(command, timeout=100, env=env))
-         if mode.startswith('usage-') else run(cmd,timeout=100,env=env))
+                   execute=lambda command, *, env: run(command, timeout=runtime_timeout, env=env))
+         if mode.startswith('usage-') else run(cmd,timeout=runtime_timeout,env=env))
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
