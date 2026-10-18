@@ -164,7 +164,10 @@ impl Document {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
         }
         builder.check_proxy()?;
-        builder = builder.apply_setting_prices(values.usd_per_million_input.as_deref(), values.usd_per_million_output.as_deref())?;
+        builder = builder.apply_setting_prices(
+            values.usd_per_million_input.as_deref(),
+            values.usd_per_million_output.as_deref(),
+        )?;
         // Configured backend names belong to the captured configuration. All
         // other owner checks run before capture against a bare builder too.
         if captured && let Some(value) = &values.backend {

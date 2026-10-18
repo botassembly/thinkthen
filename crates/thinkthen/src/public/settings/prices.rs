@@ -18,7 +18,11 @@ impl EngineBuilder {
         Ok(self)
     }
 
-    pub(super) fn apply_setting_prices(mut self, input: Option<&str>, output: Option<&str>) -> Result<Self, Error> {
+    pub(super) fn apply_setting_prices(
+        mut self,
+        input: Option<&str>,
+        output: Option<&str>,
+    ) -> Result<Self, Error> {
         if let Some(input) = input {
             parse(input, "0")?;
             self.setting_prices.0 = Some(input.to_owned());
@@ -41,8 +45,6 @@ impl EngineBuilder {
             )),
         }
     }
-
-
 }
 
 fn parse(input: &str, output: &str) -> Result<Prices, Error> {
