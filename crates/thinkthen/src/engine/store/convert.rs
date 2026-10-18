@@ -10,7 +10,7 @@ use std::io;
 use std::io::Write as _;
 use std::path::Path;
 
-#[cfg(all(not(windows), feature = "cli"))]
+#[cfg(all(not(windows), any(feature = "cli", test)))]
 use std::time::Duration;
 
 #[cfg(any(feature = "cli", test))]
@@ -18,13 +18,13 @@ use rusqlite::Connection;
 
 #[cfg(any(feature = "cli", test))]
 use super::{Entries, JSONL, SQLITE, exists, fixture};
-#[cfg(all(not(windows), feature = "cli"))]
+#[cfg(all(not(windows), any(feature = "cli", test)))]
 use super::{storage, waiting};
-#[cfg(all(not(windows), feature = "cli"))]
+#[cfg(all(not(windows), any(feature = "cli", test)))]
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
-#[cfg(all(windows, feature = "cli"))]
+#[cfg(all(windows, any(feature = "cli", test)))]
 mod windows;
 
 /// What one conversion did.
@@ -90,7 +90,7 @@ pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
             return Err(Error::RecordingStorage);
         }
         sync_folder(folder).map_err(|_| Error::RecordingStorage)?;
-        #[cfg(all(not(windows), feature = "cli"))]
+        #[cfg(all(not(windows), any(feature = "cli", test)))]
         drop(connection);
     }
     Ok(summary)
@@ -98,7 +98,7 @@ pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
 
 /// Open the live file and take its write lock, waiting up to 30 seconds
 /// for another writer. The lock ends when the connection drops.
-#[cfg(all(not(windows), feature = "cli"))]
+#[cfg(all(not(windows), any(feature = "cli", test)))]
 #[cfg(any(feature = "cli", test))]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     let connection = super::opening::open(sqlite, rusqlite::OpenFlags::default())?;
