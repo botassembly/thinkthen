@@ -4,6 +4,23 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any milestone, 
 
 Every open ticket and open issue carries a `Milestone:` line with `0.1`, `0.2` or `later`. The lists below come from those lines. `grep -rn '^Milestone:' sdlc/tickets sdlc/issues` reads them until `pm` supports milestones; the pm team was asked on 2026-10-01. Whoever changes a `Milestone:` line updates the list here in the same commit.
 
+## Hardest problems
+
+ThinkThen puts decision models in your code from about eighteen languages, three databases, a command line and an MCP server, all over one Rust core. These are the hardest problems in that work.
+
+1. **One answer everywhere.** Each language library has computed a call's final answer and probability from raw results, so the copies drift apart. Rust must compute the answer once and every language must only pass it through.
+2. **One native path.** The languages reach Rust through a C session, fixed memory layouts, a JSON session and several direct Rust bridges. Every contract change lands three or four ways until one path remains.
+3. **A stable core contract.** The C interface and the result packet changed many times while the bindings were being built. The core has to freeze before language work starts, and stay frozen.
+4. **Concurrency and cancellation in every language.** Each language ran its own loop to wait for results and read errors from a per-thread slot. One blocking call with its own error result must work the same way under every language's threading model.
+5. **Native packaging for every ecosystem.** Each package manager wants native code its own way: Python wheels, npm, Maven, Swift and Dart binary assets, Go modules, R, Ruby gems, CMake. Each must install on every supported platform without compiling Rust on the user's machine.
+6. **A test machinery smaller than the product.** The checks grew to about 70,000 lines and often tested the build environment instead of ThinkThen. They need to run on the real checkout, fail when a tool is missing, and shrink.
+7. **One environment on every machine.** Checks run on an arm64 Mac, Linux on two architectures and hosted Linux runners. One pinned container and one declared tool list have to give the same result everywhere.
+8. **Secrets never leak.** Provider keys must never appear in any output, error message or log from any language. Provider error text must pass through an allow-list, not a pattern filter.
+9. **Release proof without paid calls.** Every check replays saved model responses, so a release qualifies offline and costs nothing. The recordings must stay faithful to what the providers actually return.
+10. **Database hosts that move.** DuckDB, PostgreSQL and SQLite each load ThinkThen as an extension, and their versions and build rules change on their own schedules.
+11. **Long Linux runs that time out.** The full consumer runs time out on Linux and the cause has not been measured. It must be measured before it is fixed.
+12. **An answer store that lasts.** The next release adds one answer database. Its schema must already hold what later curation and evaluation need, and many writers must share one file safely.
+
 ## 0.1
 
 Outcome: the first public release, on every registry, with every surface and binding ([preserved release ruling](../decisions/2026-10-08-preserve-planning-rulings.md#cache-types-and-release-rulings)).
