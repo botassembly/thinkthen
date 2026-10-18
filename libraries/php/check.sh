@@ -16,6 +16,7 @@ for tool in "$php_bin" "$python_bin" "$composer"; do
  [ -f "$tool" ] || { echo 'php: not run: tool unavailable'; exit 1; }
 done
 "$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' || exit 1
+"$python_bin" "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$repo/target}" --package conformance-backend -j2
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home

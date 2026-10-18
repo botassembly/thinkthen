@@ -17,6 +17,7 @@ case "${THINKTHEN_TEST_PROFILE:-routine}" in
     *) echo 'C#: unknown test profile' >&2; exit 2 ;;
 esac
 python3 "$here/tests/toolchains.py"
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 python3 "$here/tests/generate_fixture_questions.py" --check
 python3 "$root/sdlc/generators/results/generate.py" --inputs --check
 python3 "$root/sdlc/generators/results/generate.py" --bridge --check

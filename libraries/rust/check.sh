@@ -24,6 +24,7 @@ fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
 fi
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     scratch_dir installed
     mkdir "$installed/crate" "$installed/consumer"

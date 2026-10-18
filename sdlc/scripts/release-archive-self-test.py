@@ -452,13 +452,13 @@ def main():
             'const char *thinkthen_fixture(void) { return "/build/host/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
-        cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
+        cpp_guard = str(REPO / "conformance/children/privacy.py")
         native_members = base / "native-members.txt"
         native_members.write_text("\n".join(str(native / name) for name in
                                  ("libthinkthen_c.so", "libthinkthen_c.a")) + "\n")
         # Later build output is not part of the captured shipping install.
         (native / "later-output.md").write_bytes(b"/Users/synthetic-private-location")
-        expect(run(sys.executable, cpp_guard, str(native), str(native_members)), "PRIVATE_PACKAGE_PASS", success=True)
+        expect(run(sys.executable, cpp_guard, "--prefix", str(native), "--manifest", str(native_members)), "PRIVATE_SOURCE_PASS", success=True)
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
@@ -469,7 +469,7 @@ def main():
             (private_cpp / "libthinkthen.a").write_bytes((native / "libthinkthen_c.a").read_bytes() + private_bytes)
             private_members = base / "private-members.txt"
             private_members.write_text(str(private_cpp / "libthinkthen.a") + "\n")
-            expect(run(sys.executable, cpp_guard, str(private_cpp), str(private_members)), "private pattern in libthinkthen.a")
+            expect(run(sys.executable, cpp_guard, "--prefix", str(private_cpp), "--manifest", str(private_members)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
                    CARGO_TARGET_DIR=str(native.parent),

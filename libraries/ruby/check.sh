@@ -73,6 +73,7 @@ export THINKTHEN_RUBY_MINOR
 RUBY=$(command -v ruby)
 prefix=$(cd "$(dirname "$RUBY")/.." && pwd)
 
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).
