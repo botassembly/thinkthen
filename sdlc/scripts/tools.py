@@ -119,7 +119,10 @@ def resolve(manifest, groups, root, check=False):
                     env['RUBY_CONFIGURE_OPTS'] = '--with-libyaml-source-dir=' + str(ruby_source(manifest, root))
                 install = [installer, 'install']
                 if tool['provider'] == 'rust' and not (root / 'cargo/bin/rustup').is_file():
-                    install.append('--force')
+                    cached = root / 'mise/installs/rust' / tool['version']
+                    if cached.is_dir():
+                        # A cached provider marker cannot supply deleted owned proxies.
+                        shutil.rmtree(cached)
                 run([*install, identity], env)
             installer = installer or root / 'bootstrap/mise/bin/mise'
             resolved = json.loads(subprocess.check_output(

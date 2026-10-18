@@ -43,7 +43,19 @@
         "cc",
         "clang",
         "make",
-        "curl"
+        "curl",
+        "ar",
+        "nm",
+        "ld",
+        "strip",
+        "c++",
+        "diff",
+        "cmp",
+        "wc",
+        "tee",
+        "touch",
+        "readlink",
+        "install"
       ],
       "platforms": [
         "darwin",
@@ -59,7 +71,8 @@
         "rustc",
         "rustup",
         "rustfmt",
-        "cargo-clippy"
+        "cargo-clippy",
+        "rustdoc"
       ],
       "platforms": [
         "darwin",
@@ -295,7 +308,7 @@
         "install"
       ],
       "provider": "python-package",
-      "version": "0.13.0",
+      "version": "0.13.2",
       "probe": {
         "argv": [
           "ruff",
