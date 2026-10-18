@@ -24,7 +24,7 @@ def linux_tool_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
                 if step.get('name') == 'Install existing pinned Linux host and consumer tools')
-    block, checksum = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)
+    block = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)[0]
     url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
         root = Path(temporary)
@@ -35,7 +35,7 @@ def linux_tool_destination_case():
                'JQ_SHA256': hashlib.sha256(payload.read_bytes()).hexdigest()}
         assert not (home / '.local/bin').exists()
         # Keep missing-parent failures deterministic without waiting for retry pauses.
-        command = 'sleep() { :; }\n' + (block + 'printf ' + checksum.splitlines()[0] + '\n').replace(url, payload.as_uri())
+        command = 'sleep() { :; }\n' + block.replace(url, payload.as_uri())
         result = subprocess.run(['/bin/sh', '-ec', command],
                                 cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
