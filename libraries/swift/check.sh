@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/swift
 tools_group=swift
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -14,7 +15,7 @@ Darwin)
     ;;
 esac
 swift=$(command -v swift || true)
-[ -x "$swift" ] || exit 77
+[ -x "$swift" ] || exit 1
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 for mode in '' --inputs --bridge; do
     python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
@@ -35,7 +36,7 @@ Darwin)
     fi
     exit 0 ;;
 Linux) ;;
-*) echo 'Swift installed checks require Linux or macOS' >&2; exit 77 ;;
+*) echo 'Swift installed checks require Linux or macOS' >&2; exit 1 ;;
 esac
 . "$root/sdlc/scripts/scratch.sh"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then

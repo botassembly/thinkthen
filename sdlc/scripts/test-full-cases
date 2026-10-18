@@ -38,9 +38,9 @@ temp_home
 scratch_dir smoke_log
 # macOS has no setsid, so perl makes the group there.
 if command -v setsid >/dev/null 2>&1; then
-    setsid sh sdlc/scripts/smoke --full-functional >"$smoke_log/out" 2>&1 &
+    setsid sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
 else
-    perl -e 'setpgrp(0, 0); exec @ARGV' sh sdlc/scripts/smoke --full-functional >"$smoke_log/out" 2>&1 &
+    perl -e 'setpgrp(0, 0); exec @ARGV' sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
 fi
 smoke=$!
 trap 'code=$?; set +e; [ -z "$smoke" ] || { kill -TERM -"$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; }; scratch_clean; exit "$code"' EXIT

@@ -1,12 +1,13 @@
 #!/bin/sh
 # Exercise the installed owned API; complete shared parity is release-only.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/cpp
 tools_group=cpp
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
- routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 77 ;;
+ routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 1 ;;
  *) echo 'cpp: unknown profile' >&2; exit 2 ;;
 esac
 . "$repo/sdlc/scripts/scratch.sh"
@@ -15,8 +16,8 @@ export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 cmake_bin=$(command -v cmake || true)
 python_bin=$(command -v python3 || true)
 for tool in "$cmake_bin" "$python_bin"; do
- case "$tool" in /*) ;; *) echo 'cpp: tool path must be absolute' >&2; exit 77 ;; esac
- [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 77; }
+ case "$tool" in /*) ;; *) echo 'cpp: tool path must be absolute' >&2; exit 1 ;; esac
+ [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 1; }
 done
 scratch_dir output
 out=${THINKTHEN_COVERAGE_STAGE:-$output}

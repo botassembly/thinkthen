@@ -1,6 +1,7 @@
 #!/bin/sh
 # The Rust examples surface. The surface rung passes its loopback port as $1.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/rust
 tools_group=rust
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
@@ -12,7 +13,7 @@ if [ "$profile" = routine ]; then
 fi
 if [ "$profile" = stress ]; then
     echo 'rust: not run: no port load campaign'
-    exit 77
+    exit 1
 fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
