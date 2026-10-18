@@ -267,18 +267,31 @@ fn dropping_the_caller_owner_returns_during_an_active_wait() {
         let listener = Listener::answering(response).unwrap();
         let session = Arc::new(Session::open(&engine(&listener), recovering));
         let waiting = Arc::clone(&session);
+        let canceller = Arc::clone(&session);
         let (sent, entered) = mpsc::sync_channel(0);
+        let (completed, wake) = mpsc::channel();
         let worker = std::thread::spawn(move || {
             sent.send(()).unwrap();
-            waiting.wait(RequestSessionWaitInterest::Result, Duration::from_secs(5))
+            completed
+                .send(waiting.wait(RequestSessionWaitInterest::Result, Duration::from_secs(5)))
+                .unwrap();
         });
         entered.recv_timeout(Duration::from_secs(1)).unwrap();
-        session.cancel();
+        assert!(matches!(
+            wake.recv_timeout(Duration::from_millis(20)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
         drop(session);
         assert!(matches!(
-            worker.join().unwrap(),
+            wake.recv_timeout(Duration::from_millis(20)),
+            Err(mpsc::RecvTimeoutError::Timeout)
+        ));
+        canceller.cancel();
+        assert!(matches!(
+            wake.recv_timeout(Duration::from_secs(1)).unwrap(),
             RequestSessionReady::Cancelled | RequestSessionReady::Result
         ));
+        worker.join().unwrap();
     }
 }
 

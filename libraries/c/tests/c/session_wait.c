@@ -5,7 +5,8 @@
 #include <string.h>
 static const char request[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
 static const char item[] = "{\"item\":{\"original\":{\"kind\":\"text\",\"text\":\"hold-session\"}}}";
-static void check(int value) { if (!value) { fputs("session contract failed\n", stderr); exit(1); } }
+static void check_at(int value, int line) { if (!value) { fprintf(stderr, "session contract failed at line %d\n", line); exit(1); } }
+#define check(value) check_at((value), __LINE__)
 struct waiter { thinkthen_session *session; uint32_t ready; };
 static THREAD_RESULT wait_result(void *argument) {
     struct waiter *waiter = argument;
@@ -25,8 +26,14 @@ int main(int argc, char **argv) {
     int blocking = strcmp(argv[1], "push") == 0;
     if (!cancel) {
         for (int i = 0; i < (held ? 1 : 24); ++i) {
+            char generated[128];
+            const char *descriptor = item;
+            if (!held) {
+                snprintf(generated, sizeof generated, "{\"item\":{\"original\":{\"kind\":\"text\",\"text\":\"row %d\"}}}", i);
+                descriptor = generated;
+            }
             do {
-                int code = blocking ? thinkthen_session_push(session, item, strlen(item), &status) : thinkthen_session_try_push(session, item, strlen(item), &status);
+                int code = blocking ? thinkthen_session_push(session, descriptor, strlen(descriptor), &status) : thinkthen_session_try_push(session, descriptor, strlen(descriptor), &status);
                 check(code == THINKTHEN_OK);
                 if (status == THINKTHEN_SESSION_FULL_V1) {
                     uint32_t ready;
