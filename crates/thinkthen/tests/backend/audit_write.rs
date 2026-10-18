@@ -114,13 +114,11 @@ fn audit_refuses_an_invalid_saved_batch_without_writing() {
     let file = scratch.write("decide.json", &fixture("write/decide.json"));
     let rows = payment_rows(&scratch.0, "decide.json");
     // Row: how line 2 names its setting, and the member the refusal names.
-    for (from, to, member) in [
-        (
-            "\"batch_setting\":1",
-            "\"batch_setting\":\"bogus\"",
-            "meta.batch_setting",
-        ),
-    ] {
+    for (from, to, member) in [(
+        "\"batch_setting\":1",
+        "\"batch_setting\":\"bogus\"",
+        "meta.batch_setting",
+    )] {
         let invalid: String = rows
             .lines()
             .enumerate()
