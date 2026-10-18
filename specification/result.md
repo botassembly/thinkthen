@@ -69,9 +69,9 @@ Retain existing metadata fields and optionality: `tool`, the applicable question
 
 `question_sources` aligns one-to-one with `meta.requests` in logical question order, including repeated occurrences. Each entry requires `origin` and `answered_by`, the validated model reported by the response behind that occurrence, including a recoverable member failure in a validated response. Each source may additionally carry batch_size, a positive unsigned 32-bit integer: the actual wire-question count in the successful request that produced that observation under corrected ticket 0454. It is outside identity. Retain the original count on cache/replay/coalescing; split children carry their own counts. Omit it when historical data never recorded the count; never infer one. Aggregates expose the aligned constituent counts without a guessed scalar batch size. `observations` has exactly the same alignment. Each entry is exclusively `{"observation_id":ObservationId}` or `{"failure_id":FailureId}`. Failed occurrences do not become stored answers. Whole transport failures return terminal errors rather than fabricated source entries.
 
-Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. Historical `meta.model` remains a compatibility field, not proof that mixed sources agree.
+Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. `meta.model` retains the requested or reported model; `answered_by` identifies agreement among actual sources.
 
-When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the historical `model` fallback as a requested-model compatibility value, never an actual answered model. An empty actionable array with observations is different: it reports those observations' real origins/model.
+When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the `model` fallback as the requested model; `answered_by` remains absent. An empty actionable array with observations is different: it reports those observations' real origins/model.
 
 Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Result/2 must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. This exception changes result/2 truthfulness; all detailed views share this rule.
 
@@ -194,16 +194,15 @@ Every result is compact and sits on one line, so one answer is also one record f
 
 | Command | `answer.kind` | Fields under `answer` | Read `value` as |
 | --- | --- | --- | --- |
-| `decide`, `filter`, plain `rank` | `yes_no` | `probability` (of yes) | Boolean or `null` for `decide`; `true` on a kept `filter` row; `null` for `rank`, which orders by probability |
+| `decide`, `filter`, plain `rank` | `yes_no` | `probability` (of yes) | Boolean or `null` for `decide`; `true` on a kept `filter` row; positive integer final position for `rank` |
 | `choose` | `choice` | `pick`, `probabilities`, optional `confidence` | Selected label or `null` |
 | `tag` | `tag` | `probabilities` | Labels that reach the cut, possibly `[]` |
-| `score`, graded `rank` | `score` | `level`, `probabilities`, optional `confidence` | Weighted numeric position |
+| `score`, graded `rank` | `score` | `level`, `probabilities`, optional `confidence` | Weighted numeric position for `score`; positive integer final position for graded `rank` |
 | `find` | `find` | `pick`, `probabilities`, optional `confidence` | Selected original unit or `null` |
 
 `pick` and `level` name a leading option even when `value` is `null` or numeric; use `value` for the actionable judgment. The probabilities describe answers, not confidence in the final judgment. `confidence` appears only when the backend reports it. Aggregate `annotate`, `recognize`, and `relate` details have their own [shapes below](#a-detailed-result-keeps-everything) and do not have one outer `answer.kind` from this table.
 
-For example, one detailed `decide` result is:
-
+The [recorded CLI example](#recorded-cli-example) shows a detailed `decide` result.
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
 - Complete native atomic results include `source` only when the input supplied a physical location. It holds the exact `file`, with paired `first_line` and `last_line` for text units. Image filenames omit line coordinates. The original `input` remains intact; physical location changes no model request, cache key or answer identity.
@@ -231,23 +230,19 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 **`choice`**, from `choose`.
 
-
 `answer.pick` is the first option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the sole leading label when it clears a supplied cut, or the sole leader when no cut was supplied.
 
 `value` is `null` when the answer is not sure, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading a not sure row learns from `pick` what the model was leaning toward.
 
 **`tag`**, from `tag`.
 
-
 `answer.probabilities` holds one entry per label in the order sent. `value` keeps every label whose probability reaches the one cut, in that order. An empty array is a complete successful answer.
 
 **`score`**, from `score` and `rank` with a saved `score` question.
 
-
 `answer.level` is the first level with the highest probability, so an exact top tie names the lowest tied level. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic. A 0.5, 0, 0.5 split across three levels gives `value: 1` and names the lowest level in `answer.level`.
 
 **`find`**, from `find`.
-
 
 `answer.pick` names the first wire choice at the highest probability. `answer.probabilities` follows unit order and puts `none` last. `value` is the selected original unit. A strict `none` lead or any top tie involving `none` makes `value` null. A tie among real units selects the first input unit.
 
@@ -310,27 +305,21 @@ The default record row for `decide`, `choose`, `tag`, and `score` keeps the pars
 
 Under `--details`, the full result object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the default view would have taken. `filter --details` still prints only kept records.
 
-
 An ordinary yes/no ranked detailed row keeps the same complete shape, with its positive integer rank under `value` and a null `threshold`.
-
 
 A set-ranked row carries the selecting member name and its probability and receipt.
 
-
 A graded rank row retains its score question and answer and a null threshold; `value` is its positive integer rank.
-
 
 ## `annotate`
 
-`annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`. The command prints no `meta.batches`, by ADR 0111 section 7.
-
+`annotate --details` prints `schema`, `answer_id`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`. The command prints no `meta.batches`, by ADR 0111 section 7.
 
 Each successful entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. Its detailed entry carries `question`, `failure`, and `request`, and omits `value`, `answer`, and `threshold`. The closed causes are `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. A failed `tag` counts once even when one of its wire members failed. `null` remains a valid not sure answer.
 
-
 Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha256` is the digest of the resolved canonical question set, so spacing, its path, and runtime backend settings do not change it. Each answer carries `request`, the key of its question, or the first of its keys when the question expands to several wire questions. `meta.requests` lists the record's question keys in question-set order, even when concurrent replies finish in another order.
 
-Read `annotate --details` as a row whose known outer members are `schema`, `input`, `value`, `answers`, `meta`, and optional CLI `position`. The names under `value` and `answers` come from the question set; read them with `to_entries` rather than hard-coded member names. An original object may itself have members named `input`, `value`, or `meta`, and those remain inside detailed `input`. The [mixed-stream recipe](annotate.md#read-a-mixed-record-stream) uses the presence of `failure` in each detailed answer entry to distinguish failure from a successful `null`. It does not infer a wrapper from the keys of a bare row.
+Read `annotate --details` as a row whose known outer members are `schema`, `answer_id`, `input`, `value`, `answers`, `meta`, and optional `index`, `source` and CLI `position`. The names under `value` and `answers` come from the question set; read them with `to_entries` rather than hard-coded member names. An original object may itself have members named `input`, `value`, or `meta`, and those remain inside detailed `input`. The [mixed-stream recipe](annotate.md#read-a-mixed-record-stream) uses the presence of `failure` in each detailed answer entry to distinguish failure from a successful `null`. It does not infer a wrapper from the keys of a bare row.
 
 The readable `question` in each answer prints `choose` options and `tag` labels as names. Their descriptions still take part in `meta.questions_sha256`, so identical readable options do not prove two sets identical. Use that digest for resolved question-set identity, and use `request` for the particular exchange that produced an answer. The [canonical question rules](question-file.md#the-canonical-form) define which descriptions and settings enter the digest.
 

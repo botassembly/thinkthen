@@ -39,14 +39,18 @@ names = {"decide":"completeDecide", "choose":"completeChoose", "tag":"completeTa
          "score":"completeScore", "filter":"completeFilter", "rank":"completeRank",
          "find":"completeFind", "annotate":"completeAnnotation", "recognize":"completeRecognition",
          "relate":"completeRelation"}
+seen = set()
 for line in open(sys.argv[1]):
     case = json.loads(line)
     row = case["row"]
     assert row["schema"] == "thinkthen.result/2", case["command"]
     if row["schema"] == "thinkthen.result/2":
         command = case["command"].split("-")[0]
+        if case["from"] == "replayed":
+            seen.add(command)
         Draft202012Validator({"$ref":"#/$defs/"+names[command], "$defs":schema["$defs"]}).validate(row)
         if command == "rank":
             assert isinstance(row["value"], int) and not isinstance(row["value"], bool) and row["value"] > 0
+assert seen == set(names), seen
 PY_SCHEMA
 ```
