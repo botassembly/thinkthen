@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared SQL test proxy, counted in SQLite's Python test ratchet.
+"""Shared SQL test proxy.
 
 SQLite, DuckDB, and PostgreSQL use this loopback-only proxy to prove that a backend failure remains a
 value for one row while later rows in the same statement still reach the

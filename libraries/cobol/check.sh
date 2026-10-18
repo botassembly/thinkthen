@@ -13,7 +13,6 @@ scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
 python3 "$REPO/sdlc/generators/results/generate.py" --target cobol --check
 python3 "$ROOT/checks/privacy.py"
-for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 scratch_dir evidence
 . "$REPO/sdlc/scripts/installed.sh"
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

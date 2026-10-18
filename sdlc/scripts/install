@@ -16,8 +16,8 @@ export PATH
 DENY_VERSION=0.19.4
 
 # A rung that fails on a missing tool fails deep inside a build. Name it here.
-# cargo builds and tests, python3 reads the accepted policies, node measures the
-# size ceiling, mustmatch runs the spec pages, the demos, and the demo runner's
+# cargo builds and tests, python3 reads the accepted policies, node runs the
+# JavaScript checks, mustmatch runs the spec pages, the demos, and the demo runner's
 # own tests under rung 2, jq runs the metric transforms the eval how-tos teach,
 # and script gives one test a pseudo-terminal so the line a person at a terminal
 # reads is proved on a real terminal rather than assumed.
