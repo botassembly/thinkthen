@@ -188,8 +188,8 @@ if '--message-format=json' in sys.argv:
             real_git = shutil.which('git')
             self.assertIsNotNone(real_git)
             (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
-                                      'pin = pathlib.Path(sys.argv[2]) / "PIN"\n'
-                                      f'if pin.is_file() and pin.is_relative_to({str(cache)!r}):\n'
+                                      'pin = pathlib.Path(sys.argv[2]) / "PIN" if len(sys.argv) > 2 and sys.argv[1] == "-C" else None\n'
+                                      f'if pin is not None and pin.is_file() and pin.is_relative_to({str(cache)!r}):\n'
                                       '    print(pin.read_text())\n'
                                       f'else: os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
             (tools / 'python3').symlink_to(sys.executable)
@@ -197,6 +197,9 @@ if '--message-format=json' in sys.argv:
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for path in (tools / 'cargo', tools / 'make', tools / 'git', tools / 'uname'):
                 path.chmod(0o755)
+            delegated = subprocess.run([str(tools / 'git'), '--version'],
+                                       capture_output=True, text=True, check=True)
+            self.assertIn('git version ', delegated.stdout)
             binary = root / 'target/debug/conformance-backend'
             binary.parent.mkdir(parents=True, exist_ok=True)
             binary.write_text('#!/bin/sh\nexit 0\n')
