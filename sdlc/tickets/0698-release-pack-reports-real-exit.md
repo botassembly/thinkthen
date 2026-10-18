@@ -8,7 +8,7 @@ Reviews: revision 8d9ac12, accept
 
 ## Outcome
 
-- Changes: `sdlc/scripts/release-pack`.
+- Changes: `sdlc/scripts/release-pack`, `sdlc/scripts/release-archive-self-test.py`.
 - `release-pack` runs under `set -u` without reading an unset `CFLAGS`, and its cleanup trap preserves the script's exit status. A pack that writes no archive exits nonzero and names the missing archive.
 
 ### Proof
