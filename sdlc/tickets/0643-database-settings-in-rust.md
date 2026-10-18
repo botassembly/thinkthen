@@ -31,3 +31,4 @@ The core already parses a settings object for the C library: `EngineBuilder::fro
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: Code review accepted at 2478857b6 with native and SQL profile formats preserved by one shared private parser mode; five core settings cases and nine SQLite settings cases pass, but the installed C and PostgreSQL/DuckDB matrix, DuckDB C++ build, core rebase and final routine gate remain unproved, with missing runtimes and existing packaging/usage fixtures recorded separately.
