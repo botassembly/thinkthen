@@ -4,11 +4,11 @@ Status: **Settled** for the bare value, the object, the five answer kinds, the f
 
 ## Result/2 for 0.2
 
-Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). This section is the adoption contract, not a claim of landed behavior. Tickets 0443–0445, 0450 and the carrier owners below implement it. The native branch implements the complete Rust calls and CLI details. The remaining result/1 examples document the retained explicit compatibility projection; they are not the new CLI details. Whole-code acceptance and host adoption remain open. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions under ADR 0112. The additive native `complete_call_schema()` supplies the packaged strict complete success/error schema to consumers such as MCP. Both artifacts derive from the production serializers; host adoption requires actual consumer execution.
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). Result/2 is the only detailed result shape. The generated [result schema](result.schema.json) and packaged `complete_call_schema()` derive from the production serializers.
 
-### Complete results and compatibility
+### Complete results
 
-Every new complete result carries `schema:"thinkthen.result/2"` and required top-level `answer_id:AnswerId`. Identity is available without opting into probability details. Existing bare CLI, scalar SQL, convenience values and generic C compatibility views retain their projections. C retains its failed-call NULL/error-facts route. An additive complete C route exposes identity; ticket 0426 owns its exports and lifetimes. No changed rank value may claim result/1.
+Every new complete result carries `schema:"thinkthen.result/2"` and required top-level `answer_id:AnswerId`. Identity is available without opting into probability details. Existing bare CLI, scalar SQL, convenience values and generic C value views retain their projections. C retains its failed-call NULL/error-facts route. An additive complete C route exposes identity; ticket 0426 owns its exports and lifetimes.
 
 Optional fields are omitted unless explicitly nullable. Existing question, entity, span, endpoint, location, distribution and confidence fields retain their types and meanings. This table fixes all ten complete result variants. All rows require `schema`, `answer_id` and `meta` in addition to the listed members.
 
@@ -35,7 +35,7 @@ Complete records with ancillary images retain optional ordered `images` beside t
 
 An incremental complete batch failure can carry ordered `completed` native result documents alongside its safe `error` and final `facts`. Those documents are the actual completed prefix observed by the existing batch, with original indexes and identities. Ordinary whole-call failure envelopes remain unchanged; no successful answer is fabricated for the terminal failure.
 
-An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,request` and omits the successful fields. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
+An annotate success entry requires `answer_id,value,question,answer,threshold,request`. A failure entry requires `failure_id,question,failure,threshold,request` and omits `answer_id`, `value` and `answer`. The existing bare failure marker and six backend member causes remain unchanged. Recognize retains `answer:{pieces,names,pairs}` with complete probabilities. Relate retains `answer:{questions}`; each entry keeps `relation,reads,method,direction,source,target,request` and requires either success `answer_id,probability,accepted` or failure `failure_id,failure`. Existing nullable target rules remain.
 
 ### Recorded CLI example
 
@@ -69,11 +69,11 @@ Retain existing metadata fields and optionality: `tool`, the applicable question
 
 `question_sources` aligns one-to-one with `meta.requests` in logical question order, including repeated occurrences. Each entry requires `origin` and `answered_by`, the validated model reported by the response behind that occurrence, including a recoverable member failure in a validated response. Each source may additionally carry batch_size, a positive unsigned 32-bit integer: the actual wire-question count in the successful request that produced that observation under corrected ticket 0454. It is outside identity. Retain the original count on cache/replay/coalescing; split children carry their own counts. Omit it when historical data never recorded the count; never infer one. Aggregates expose the aligned constituent counts without a guessed scalar batch size. `observations` has exactly the same alignment. Each entry is exclusively `{"observation_id":ObservationId}` or `{"failure_id":FailureId}`. Failed occurrences do not become stored answers. Whole transport failures return terminal errors rather than fabricated source entries.
 
-Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. Historical `meta.model` remains a compatibility field, not proof that mixed sources agree.
+Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memory` as type values without emitting them. A direct call to a proxy hostname over ordinary model wire is `live`. Explicit replay with observations is `replay`; otherwise any required live response makes the result `live`, and wholly cached observations make it `cache`. Mixed cache/live results retain each occurrence's actual source. Emit scalar `answered_by` only when nonempty constituent sources all agree. Retain current mixed-model refusals; this metadata admits no previously refused combination. `meta.model` retains the requested or reported model; `answered_by` identifies agreement among actual sources.
 
-When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the historical `model` fallback as a requested-model compatibility value, never an actual answered model. An empty actionable array with observations is different: it reports those observations' real origins/model.
+When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the `model` fallback as the requested model; `answered_by` remains absent. An empty actionable array with observations is different: it reports those observations' real origins/model.
 
-Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Result/2 must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. This exception changes result/2 truthfulness; the result/1 examples below retain their historical meaning.
+Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Result/2 must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. This exception changes result/2 truthfulness; all detailed views share this rule.
 
 | Case | origin | question_sources | answered_by | cached |
 | --- | --- | --- | --- | --- |
@@ -153,15 +153,11 @@ Decide and filter expose the yes probability. Choose and find expose the selecte
 
 Rust represents this contract with `Call<T, R, P>` and function-specific aliases. Scalar probabilities are `Option<f64>`; list probabilities are ordered optional numbers. Rust filter and annotate collect their existing streams into one call. The CLI `--details` view and the C/native packet layer retain their own existing output contracts. Library calls have no details switch or separate details call.
 
-## Landed result/1 behavior
-
-The sections below describe the existing views, shapes and examples. Result/2 above supersedes them only as its owning implementation tickets adopt it.
+## Library serialization
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
-Rust complete decision, choice, tag and score carriers expose typed values, questions, probabilities, usage and metadata. Their `to_json()` writes canonical result/2; `to_scalar_json()` writes result/1 without a record original and keeps actual batch and context metadata. Their `to_unbatched_scalar_json()` writes single-text result/1 without scheduler batch metadata and preserves context metadata. Serializing `CompleteRecord` retains the caller original and occurrence ordinal in the canonical result/2 document.
-
-Native detail producers construct `Details` privately from the complete result. When a record original is supplied, `Details::to_json()` retains it and `Details::to_scalar_json()` omits it. Both result/1 documents keep actual batch and context metadata. Complete annotation `value_json()` preserves the existing primitive named values, abstention null and failed-member markers. It does not introduce authored structured annotation meanings. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
+Rust complete carriers expose typed values, questions, probabilities, usage and metadata. Their `to_json()` writes canonical result/2. Serializing `CompleteRecord` retains the caller original and occurrence ordinal. Complete annotation `value_json()` preserves primitive named values, abstention null and failed-member markers. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains the engine's counters rather than a call result. Each engine counts its own calls and its clones', and a host that keeps several engines adds them; the durable usage totals give the process view.
 
@@ -198,19 +194,15 @@ Every result is compact and sits on one line, so one answer is also one record f
 
 | Command | `answer.kind` | Fields under `answer` | Read `value` as |
 | --- | --- | --- | --- |
-| `decide`, `filter`, plain `rank` | `yes_no` | `probability` (of yes) | Boolean or `null` for `decide`; `true` on a kept `filter` row; `null` for `rank`, which orders by probability |
+| `decide`, `filter`, plain `rank` | `yes_no` | `probability` (of yes) | Boolean or `null` for `decide`; `true` on a kept `filter` row; positive integer final position for `rank` |
 | `choose` | `choice` | `pick`, `probabilities`, optional `confidence` | Selected label or `null` |
 | `tag` | `tag` | `probabilities` | Labels that reach the cut, possibly `[]` |
-| `score`, graded `rank` | `score` | `level`, `probabilities`, optional `confidence` | Weighted numeric position |
+| `score`, graded `rank` | `score` | `level`, `probabilities`, optional `confidence` | Weighted numeric position for `score`; positive integer final position for graded `rank` |
 | `find` | `find` | `pick`, `probabilities`, optional `confidence` | Selected original unit or `null` |
 
 `pick` and `level` name a leading option even when `value` is `null` or numeric; use `value` for the actionable judgment. The probabilities describe answers, not confidence in the final judgment. `confidence` appears only when the backend reports it. Aggregate `annotate`, `recognize`, and `relate` details have their own [shapes below](#a-detailed-result-keeps-everything) and do not have one outer `answer.kind` from this table.
 
-For example, one detailed `decide` result is:
-
-```json decide
-{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f...88","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
+The [recorded CLI example](#recorded-cli-example) shows a detailed `decide` result.
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
 - Complete native atomic results include `source` only when the input supplied a physical location. It holds the exact `file`, with paired `first_line` and `last_line` for text units. Image filenames omit line coordinates. The original `input` remains intact; physical location changes no model request, cache key or answer identity.
@@ -238,35 +230,19 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 **`choice`**, from `choose`.
 
-```json choose
-{"schema":"thinkthen.result/1","value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02},"confidence":0.91},"threshold":0.8,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"5d5f...25","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
-
 `answer.pick` is the first option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the sole leading label when it clears a supplied cut, or the sole leader when no cut was supplied.
 
 `value` is `null` when the answer is not sure, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading a not sure row learns from `pick` what the model was leaning toward.
 
 **`tag`**, from `tag`.
 
-```json tag
-{"schema":"thinkthen.result/1","value":["billing"],"question":{"verb":"tag","text":"Which topics?","labels":["billing","urgent"]},"answer":{"kind":"tag","probabilities":{"billing":0.91,"urgent":0.22}},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"00b0...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
-
 `answer.probabilities` holds one entry per label in the order sent. `value` keeps every label whose probability reaches the one cut, in that order. An empty array is a complete successful answer.
 
 **`score`**, from `score` and `rank` with a saved `score` question.
 
-```json score
-{"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"005c...f5","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
-
 `answer.level` is the first level with the highest probability, so an exact top tie names the lowest tied level. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic. A 0.5, 0, 0.5 split across three levels gives `value: 1` and names the lowest level in `answer.level`.
 
 **`find`**, from `find`.
-
-```json find
-{"schema":"thinkthen.result/1","value":"Refunds take five days.","question":{"verb":"find","text":"When does a refund arrive?","none":true},"answer":{"kind":"find","pick":"u002","probabilities":{"u001":0.01,"u002":0.98,"none":0.01}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"1f2a...9c","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
 
 `answer.pick` names the first wire choice at the highest probability. `answer.probabilities` follows unit order and puts `none` last. `value` is the selected original unit. A strict `none` lead or any top tie involving `none` makes `value` null. A tie among real units selects the first input unit.
 
@@ -309,7 +285,6 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 | `requests` | The stored-answer question keys behind this result, in answer order. These are request digests in the existing public vocabulary, not a list of transport sends. Packing and retries do not make their count equal to `requests_sent`. See the [glossary](../CONTRIBUTING.md#calls-requests-and-decisions) and [question-store contract](recording.md#the-question-store). |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
-| `batch` | No longer written. Rows saved before ADR 0111 may hold it, with the run's `setting` beside the batch's `records`, `position`, `closed`, `usage` and `requests_sent`. `audit` and `diff` still read its `setting` when a row has no `batch_setting` |
 | `batch_setting` | The run's resolved batch setting: a whole number of at least 1, or `"max"`. A structured JSON question runs one record a request and names 1. Present on each detailed record row of `decide`, `filter`, `rank`, `choose`, `tag` and `score`, from the command and from every library call over records. Absent on one document. `audit` and `diff` read it, by ADR 0085 |
 | `batch_warning` | The file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise. A file with a threshold and no batch key was tuned at 1, without changing the run's setting |
 | `context_sha256` | The SHA-256 of the exact `--context` file bytes. Absent without a context |
@@ -319,33 +294,6 @@ Library and SQL details forms carry the same optional warning in `meta`. The pub
 On an asking command, `--facts` prints one compact `thinkthen.run/1` JSON object as the last standard-error line. Without the flag, a finished run stays silent there. The line follows a stop diagnostic and any usage-counter warning, and precedes a stopping signal's re-raise. `records` counts finished input records, including filtered rows and rows dropped by `rank --top`; a one-document success and one finished `find` or `relate` set count one, while a plan counts zero and sends nothing. `requests_sent`, `retries`, and `cache_answers` come from this process's counters. `cache_answers` counts answers from the answer cache only, never from a replay or record folder, as [recording.md](recording.md#the-question-store) says. A started invocation includes `call_id`, the same opaque ID sent on its requests; a pre-start refusal or plan omits it. `seconds` is elapsed wall time in seconds, rounded to three decimals. `input_tokens` and `output_tokens` appear only if at least one live reply arrived, every live reply reported usage, and their exact sum remained valid. `model` appears only if at least one reply arrived and all live or stored replies named the same model. With both caller prices configured, `estimated_cost_usd` is a six-decimal string only when every started attempt supplied both token counts and the exact sum remained valid. Priced no-send, cache-only and replay-only work reports `"0.000000"`; an unpriced run omits this member. The estimate uses caller-selected prices, not a provider bill or admission limit.
 
 A failed run adds `stopped` with `cause` and `retryable`, plus `at` when the stop line names a record. A signal stop has no `at`. `status` appears only for the `status` cause. The stable causes are `usage` for exit 2, `local` for exit 5, `no_key`, `transport`, `status`, `too_large`, `reply`, and `backend` for exit 4, `cancelled` for a stopping signal, and `defect` for exit 70. `too_large` covers status 413 and status 400 naming `max_tokens_exceeded`. Only `status` with a retried status (429, 500, 502, 503, 504, 520, 521, 522, 523, 524, or 529, as [backends.md](backends.md) lists) has `retryable:true`; transport has false because the request may have arrived. Exit 6 is a finished partial result and has no `stopped`.
-
-## Compatibility
-
-Under `thinkthen.result/1` a release may add a member to a row. It never renames or removes one, and it never changes a member's type or meaning. A change of that kind moves every row to `thinkthen.result/2`, and the changelog names it. A reader ignores a member it does not know. The rule binds from 0.1. ADR 0036's rename came before it. Compare `value` and the probabilities between runs, not the bytes, because a release can add a member.
-
-Each command's detailed row holds these members. A member with a trailing `?` is sometimes absent. `input?` appears only on a record row. [spec/result.md](../spec/result.md) holds this table to rows the binary writes.
-
-The CLI adds optional `position` to detailed line, JSONL, window, and document rows from `decide`, `filter`, `rank`, `choose`, `tag`, `score`, `find`, and `annotate`. It carries `file` (a path string, or `null` for stdin), `first`, and `last` (one-based physical lines). Each file restarts its line count. Text windows span their first through last physical lines; JSONL records span one line. A selected find candidate spans one physical line. An unresolved find result has no selected source and omits position. Find positions are CLI metadata; shared C, Rust and SQL typed Find results keep their existing members. CSV and TSV positions remain deferred. Default-document runs with several named files add `input_file` to each detailed `decide`, `choose`, `tag`, or `score` result. These members are CLI metadata and remain optional for library results and rows without a location. File access preserves the original operating-system path. JSON path strings preserve valid UTF-8 and use lossy display only for invalid UTF-8, replacing those bytes with the replacement character.
-
-CLI rank-set details add optional `question_name`, naming the member that first selected the original. The answer probability, question digest and request/usage/cache receipt belong only to that member. `question.verb` remains decide; value and threshold are null. Ordinary rank omits the name. Rust's additive `SetRanked<T>` carries its name and probability without changing `Ranked<T>` or shared C/SQL shapes. Question observations keep every member answer with its original input index. Set facts count original records once.
-
-The generated [result schema](result.schema.json) derives the shared Rust result types. Its `decisionDetails`, `findDetails` and `annotateDetails` definitions admit additive members, including this CLI metadata. The schema does not require these members on shared library results.
-
-| Command | `question.verb` | Members | `meta` members |
-| --- | --- | --- | --- |
-| `decide` | `decide` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `filter` | `decide` | `schema` `position?` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `rank` | `decide`, `score` | `schema` `question_name?` `position?` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `choose` | `choose` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `tag` | `tag` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `batch_warning?` `context_sha256?` |
-| `score` | `score` | `schema` `position?` `input_file?` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch_setting?` `context_sha256?` |
-| `find` | `find` | `schema` `position?` `value` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `annotate` | none | `schema` `position?` `input` `value` `answers` `meta` | `tool` `questions_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `recognize` | `recognize` | `schema` `value` `input?` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `relate` | `relate` | `schema` `value` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-
-`question.verb` names the kind of question asked, not the command. A `filter` row, an ordinary `rank` row and a `decide` record row print `decide` with the same members. A graded `rank` row from a saved `score` question prints `score` and keeps the same outer members, including its numeric `value`. A reader that needs the command keeps it from the command line that wrote the rows.
 
 ## Record rows
 
@@ -357,45 +305,21 @@ The default record row for `decide`, `choose`, `tag`, and `score` keeps the pars
 
 Under `--details`, the full result object also carries `input`, the original record. `input` holds the whole record, including parts that were never sent. On `filter` and `rank`, `--details` prints these objects for the same records in the same order that the default view would have taken. `filter --details` still prints only kept records.
 
-```json decide
-{"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
+An ordinary yes/no ranked detailed row keeps the same complete shape, with its positive integer rank under `value` and a null `threshold`.
 
-The preceding row is a `decide --details` example. An ordinary yes/no ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
+A set-ranked row carries the selecting member name and its probability and receipt.
 
-```json rank
-{"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
-
-A set-ranked row carries the selecting member name, keeping that member's probability and receipt:
-
-```json rank-set
-{"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0},"question_name":"billing"}
-```
-
-A graded rank row instead keeps the numeric score under `value`, a `score` question and answer, and a null threshold.
-
-```json rank-score
-{"schema":"thinkthen.result/1","value":1.5,"input":"alpha","question":{"verb":"score","text":"How relevant?","levels":["low","middle","high"]},"answer":{"kind":"score","level":"high","probabilities":{"low":0.1,"middle":0.3,"high":0.6}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"d20f...21d6","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
+A graded rank row retains its score question and answer and a null threshold; `value` is its positive integer rank.
 
 ## `annotate`
 
-`annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`. The command prints no `meta.batches`, by ADR 0111 section 7.
+`annotate --details` prints `schema`, `answer_id`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`. The command prints no `meta.batches`, by ADR 0111 section 7.
 
-```json annotate
-{"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"open":true,"kind":"bug"},"answers":{"open":{"value":true,"question":{"verb":"decide","text":"Is this still open?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
-```
-
-Each successful entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. Its detailed entry carries `question`, `failure`, and `request`, and omits `value`, `answer`, and `threshold`. The closed causes are `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. A failed `tag` counts once even when one of its wire members failed. `null` remains a valid not sure answer.
-
-```json annotate
-{"schema":"thinkthen.result/1","input":"one note","value":{"ready":true,"kind":{"failed":{"kind":"backend","cause":"missing_probability"}}},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Is this ready?"},"answer":{"kind":"yes_no","probability":0.91},"threshold":0.5,"request":"6b1f...c4"},"kind":{"question":{"verb":"choose","text":"Which kind?","options":["bug","other"]},"failure":{"kind":"backend","cause":"missing_probability"},"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":1}}
-```
+Each successful entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. Its detailed entry carries `failure_id`, `question`, `failure`, `threshold`, and `request`, and omits `answer_id`, `value`, and `answer`. The closed causes are `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. A failed `tag` counts once even when one of its wire members failed. `null` remains a valid not sure answer.
 
 Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha256` is the digest of the resolved canonical question set, so spacing, its path, and runtime backend settings do not change it. Each answer carries `request`, the key of its question, or the first of its keys when the question expands to several wire questions. `meta.requests` lists the record's question keys in question-set order, even when concurrent replies finish in another order.
 
-Read `annotate --details` as a row whose known outer members are `schema`, `input`, `value`, `answers`, `meta`, and optional CLI `position`. The names under `value` and `answers` come from the question set; read them with `to_entries` rather than hard-coded member names. An original object may itself have members named `input`, `value`, or `meta`, and those remain inside detailed `input`. The [mixed-stream recipe](annotate.md#read-a-mixed-record-stream) uses the presence of `failure` in each detailed answer entry to distinguish failure from a successful `null`. It does not infer a wrapper from the keys of a bare row.
+Read `annotate --details` as a row whose known outer members are `schema`, `answer_id`, `input`, `value`, `answers`, `meta`, and optional `index`, `source` and CLI `position`. The names under `value` and `answers` come from the question set; read them with `to_entries` rather than hard-coded member names. An original object may itself have members named `input`, `value`, or `meta`, and those remain inside detailed `input`. The [mixed-stream recipe](annotate.md#read-a-mixed-record-stream) uses the presence of `failure` in each detailed answer entry to distinguish failure from a successful `null`. It does not infer a wrapper from the keys of a bare row.
 
 The readable `question` in each answer prints `choose` options and `tag` labels as names. Their descriptions still take part in `meta.questions_sha256`, so identical readable options do not prove two sets identical. Use that digest for resolved question-set identity, and use `request` for the particular exchange that produced an answer. The [canonical question rules](question-file.md#the-canonical-form) define which descriptions and settings enter the digest.
 
@@ -410,7 +334,7 @@ place a separate error row among successful detailed rows when a question-set
 ```
 
 `at` is the one-based input position. This row has no `input`, `value`,
-`answers`, `meta`, request, or usage. It is not a `thinkthen.result/1` judgment;
+`answers`, `meta`, request, or usage. It is not a `thinkthen.result/2` judgment;
 consumers distinguish the two by `schema`. The `recordError` definition in
 [`result.schema.json`](result.schema.json) validates this row separately; the
 schema root remains the successful detailed result. [annotate.md](annotate.md)

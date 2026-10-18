@@ -158,6 +158,7 @@ fi
 cargo fmt --all -- --check
 cargo fmt --all --manifest-path crates/thinkthen-host/Cargo.toml -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo clippy --locked -p thinkthen --lib --no-default-features --features bundled-sqlite -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
 # Ticket 0086: the built public API equals the frozen declarations, and the
 # check refuses a planted export, removal, signature change, and extra trait.

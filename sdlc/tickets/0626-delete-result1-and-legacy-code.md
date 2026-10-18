@@ -1,10 +1,12 @@
 # 0626: Delete result/1, compatibility projections and legacy options
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
+
+Reviews: revision 184b415, accept
 
 ## Outcome
 

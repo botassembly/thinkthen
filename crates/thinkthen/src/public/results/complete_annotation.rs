@@ -14,11 +14,11 @@ pub struct CompleteAnnotated {
 
 impl CompleteAnnotated {
     /// Project the existing primitive named annotation values, including failed members.
-    /// Authored structured readings retain the compatibility annotation's primitive semantics.
+    /// Authored structured readings retain the annotation's primitive semantics.
     /// # Errors
     /// Returns Defect if the native named values cannot be serialized.
     pub fn value_json(&self) -> Result<String, Error> {
-        core::json_line(self.canonical.compatibility.value())
+        core::json_line(self.canonical.reading.value())
             .map_err(|_| Error::defect("annotation values could not be written as JSON"))
     }
 
@@ -145,7 +145,7 @@ impl CompleteAnnotationMember<'_> {
     #[must_use]
     pub fn probabilities(&self) -> Option<Probabilities> {
         self.canonical
-            .compatibility
+            .reading
             .answered()
             .map(|(_, answer, _, _)| super::complete::probabilities(answer))
     }
@@ -154,7 +154,7 @@ impl CompleteAnnotationMember<'_> {
     #[must_use]
     pub fn confidence(&self) -> Option<f64> {
         self.canonical
-            .compatibility
+            .reading
             .answered()
             .and_then(|(_, answer, _, _)| answer.confidence())
             .map(|p| p.as_f64())
@@ -163,12 +163,9 @@ impl CompleteAnnotationMember<'_> {
     /// The typed failed-member cause, absent for a successful member.
     #[must_use]
     pub fn failure(&self) -> Option<FailureCause> {
-        self.canonical
-            .compatibility
-            .failed()
-            .map(|(_, failure, _)| {
-                crate::public::annotated::cause(core::FailedValue::new(failure).cause())
-            })
+        self.canonical.reading.failed().map(|(_, failure, _)| {
+            crate::public::annotated::cause(core::FailedValue::new(failure).cause())
+        })
     }
 
     /// The saved question key associated with this logical member.
