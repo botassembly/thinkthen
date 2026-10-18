@@ -341,6 +341,70 @@ def linux_failed_phase_evidence_case():
                 assert json.loads((out / 'fullcases-parity/matrix.json').read_text()) == [{'exit': code}]
 
 
+def linux_source_staging_case():
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    command = next(step['run'] for step in gate['jobs']['linux-release']['steps']
+                   if step.get('name') == 'Run the selected existing gates and retain their actual exits')
+    # Execute the actual inline staging with generated output from earlier checks present.
+    start = command.rfind('\n', 0, command.index('# Fresh stage follows')) + 1
+    end = command.rfind('\n', 0, command.index("r=root/'libraries/r/target'")) + 1
+    driver = command[start:end]
+    import textwrap
+    driver = textwrap.dedent(driver)
+    with tempfile.TemporaryDirectory(prefix='thinkthen-linux-source-') as temporary:
+        root = Path(temporary)
+        archived = subprocess.check_output(['git', 'archive', 'HEAD', 'libraries/dart',
+                                            'libraries/python/thinkthen', 'specification/fixtures/images/red.png'], cwd=REPO)
+        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
+            source.extractall(root, filter='data')
+        (root / 'sdlc').mkdir()
+        (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators', target_is_directory=True)
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', 'libraries', 'specification'], check=True)
+        flutter = root / 'libraries/dart/flutter'
+        loop = flutter / 'example/linux/flutter/ephemeral/.plugin_symlinks/thinkthen_flutter'
+        loop.parent.mkdir(parents=True, exist_ok=True)
+        loop.symlink_to(flutter, target_is_directory=True)
+        for relative in ('libraries/dart/checks/session_consumer/bin', 'libraries/python/thinkthen'):
+            folder = root / relative
+            (folder / 'generated-loop').symlink_to(folder, target_is_directory=True)
+            (folder / 'stale.so').write_bytes(b'old native output')
+        native = root / 'target/debug/libthinkthen_c.so'
+        native.parent.mkdir(parents=True)
+        native.write_bytes(b'current native')
+        (native.parent / 'lib_thinkthen.so').write_bytes(b'current Python native')
+        (native.parent / 'libthinkthen_ruby.so').write_bytes(b'current Ruby native')
+        invoked = []
+        def run(name, args, **kwargs):
+            invoked.append(name)
+            if name == 'dart-stage':
+                subprocess.run([sys.executable, *args[1:]], cwd=root,
+                               env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'), check=True)
+        import importlib.util
+        namespace = dict(root=root, run=run, env=dict(TT_DART='dart', TT_FLUTTER='flutter',
+                         RUBY='ruby', PYTHON_HOST=sys.executable), Path=Path, shutil=shutil,
+                         importlib=importlib)
+        previous = Path.cwd()
+        try:
+            os.chdir(root)
+            exec(compile(driver, 'gate.yml', 'exec'), namespace)
+        finally:
+            os.chdir(previous)
+        staged = root / 'libraries/dart/target/core-wave-flutter'
+        for item in subprocess.check_output(['git', '-C', str(flutter), 'ls-files', '-z'], text=True).split('\0'):
+            if item:
+                assert (staged / item).is_file(), item
+        assert not (staged / 'example/linux/flutter/ephemeral').exists()
+        for relative in ('libraries/dart/target/core-wave/bin', 'libraries/python/target/core-wave/thinkthen'):
+            assert not (root / relative / 'generated-loop').exists()
+            assert not (root / relative / 'stale.so').exists()
+        assert (root / 'libraries/dart/target/core-wave/bin/shipped_example.dart').is_file()
+        assert (root / 'libraries/dart/target/core-wave/bin/fixture_values_generated.dart').is_file()
+        assert (staged / 'example/pubspec_overrides.yaml').is_file()
+        assert (root / 'libraries/python/target/core-wave/thinkthen/_thinkthen.so').read_bytes() == b'current Python native'
+        assert 'flutter-linux' in invoked and 'python-pandas-polars-import' in invoked
+
+
 def postgresql_package_case():
     # The package entry point must select its pinned headers without ~/.pgrx.
     with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-package-') as temporary:
@@ -935,6 +999,7 @@ workflow_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_failed_phase_evidence_case()
+linux_source_staging_case()
 postgresql_package_case()
 linux_coverage_destination_case()
 dart_cache_setup_case()
