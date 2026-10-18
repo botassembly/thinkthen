@@ -124,14 +124,20 @@ class PrivacyTests(unittest.TestCase):
                         output.write(b'PRIVATE_KEY_MARKER')
                     with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
                         privacy.check_file(archive)
+            with zipfile.ZipFile(archive, 'w') as bundle:
+                bundle.comment = b'PRIVATE_KEY_MARKER'
+            with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
+                privacy.check_file(archive)
             plants = [(name, b'PRIVATE_KEY_MARKER') for name in members]
+            plants += [('src/config/nested/tests.rs', (unpacked / members[0]).read_bytes()),
+                       ('tests/extra.rs', (unpacked / members[1]).read_bytes())]
             plants += [('src/config/tests.rs', b'/home/private'),
                        ('src/config/tests.rs', b'/Users/private'),
                        ('src/config/tests.rs', b'/home/person-extra'),
                        ('src/config/tests.rs', b'/Users/person-extra'),
                        ('tests/library/ca_bundle.rs', b'-----BEGIN PRIVATE KEY-----\\nREALKEY'),
-                       ('src/config/production.rs', b'/home/person'),
-                       ('src/config/production.rs', b'/Users/person'),
+                       ('src/config/production.rs', b'"/home/person"'),
+                       ('src/config/production.rs', b'"/Users/person"'),
                        ('tests/extra.rs', b'-----BEGIN PRIVATE KEY-----'),
                        ('tests/library/tls/extra.key', b'-----BEGIN PRIVATE KEY-----'),
                        ('src/production.key', b'-----BEGIN PRIVATE KEY-----')]
