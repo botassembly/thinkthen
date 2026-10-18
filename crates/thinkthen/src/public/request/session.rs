@@ -640,9 +640,7 @@ fn run_recovering(
         &request.request.call.arguments().input,
     ));
     let sink = |row: super::RequestRecoveredRow| {
-        if let Ok(value) = row.outcome() {
-            answers.borrow_mut().record(value);
-        }
+        answers.borrow_mut().recovered(function, &row);
         queue.publish(RequestRecoveringResult::Row(row));
     };
     let environment = RequestEnvironment {

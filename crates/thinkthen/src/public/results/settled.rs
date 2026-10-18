@@ -40,12 +40,15 @@ pub enum AnswerResolutions {
     State(AnswerResolution),
     /// Every named member, including members omitted from the bare value on failure.
     Members(BTreeMap<String, AnswerResolution>),
+    /// Recoverable failures at original input indexes in a whole-call aggregate.
+    Occurrences(BTreeMap<usize, AnswerResolution>),
 }
 
 impl std::fmt::Debug for AnswerResolutions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::State(state) => state.fmt(f),
+            Self::Occurrences(rows) => f.debug_struct("AnswerResolutions").field("occurrences", &rows.len()).finish(),
             Self::Members(members) => f.debug_struct("AnswerResolutions").field("members", &members.len()).finish(),
         }
     }
@@ -56,9 +59,9 @@ impl std::fmt::Debug for AnswerResolutions {
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct Settled<T, P> {
     /// The bare value in the caller's input shape.
-    pub value: AnswerShape<T>,
+    pub value: AnswerShape<Option<T>>,
     /// Yes, selected-option or aligned item odds according to the function's schema.
-    pub probability: AnswerShape<P>,
+    pub probability: AnswerShape<Option<P>>,
     /// Raw accepted leading option; absent when the function has no choice.
     pub pick: AnswerShape<Option<String>>,
     /// Selected zero-based original input index, when the function selects one unit.

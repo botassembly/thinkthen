@@ -119,18 +119,45 @@ impl SettledAnswer {
             (Self::Annotate(left), Self::Annotate(right)) => left.append(right),
             (Self::Recognize(left), Self::Recognize(right)) => left.append(right),
             (Self::Filter(left), Self::Filter(right)) => {
-                if let (super::AnswerShape::Scalar(values), super::AnswerShape::Scalar(more)) =
-                    (&mut left.value, right.value)
-                {
-                    values.extend(more);
-                }
-                if let (super::AnswerShape::Scalar(values), super::AnswerShape::Scalar(more)) =
-                    (&mut left.probability, right.probability)
-                {
-                    values.extend(more);
-                }
+                append_selected(&mut left.value, right.value);
+                append_selected(&mut left.probability, right.probability);
             }
             (left, right) => *left = right,
+        }
+    }
+    pub(crate) fn empty(function: crate::RequestFunction) -> Self {
+        use crate::RequestFunction as Function;
+        let resolved = || AnswerResolutions::State(AnswerResolution::Resolved);
+        match function {
+            Function::Decide => Self::Decide(Settled::rows(std::iter::empty())),
+            Function::Choose => Self::Choose(Settled::rows(std::iter::empty())),
+            Function::Tag => Self::Tag(Settled::rows(std::iter::empty())),
+            Function::Score => Self::Score(Settled::rows(std::iter::empty())),
+            Function::Annotate => Self::Annotate(Settled::rows(std::iter::empty())),
+            Function::Recognize => Self::Recognize(Settled::rows(std::iter::empty())),
+            Function::Filter => Self::Filter(Settled::one(Vec::new(), Vec::new(), None, None, resolved())),
+            Function::Rank => Self::Rank(Settled::one(Vec::new(), Vec::new(), None, None, resolved())),
+            Function::Find | Function::Relate => Self::failed(function),
+        }
+    }
+    pub(crate) fn failed(function: crate::RequestFunction) -> Self {
+        use crate::RequestFunction as Function;
+        match function {
+            Function::Decide => Self::Decide(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Choose => Self::Choose(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Tag => Self::Tag(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Score => Self::Score(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Annotate => Self::Annotate(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Recognize => Self::Recognize(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Filter => Self::Filter(Settled::failed()),
+            Function::Rank => Self::Rank(Settled::failed()),
+            Function::Find => Self::Find(Settled::failed()),
+            Function::Relate => Self::Relate(Settled::failed()),
+        }
+    }
+    pub(crate) fn failed_occurrences(&mut self, failures: std::collections::BTreeMap<usize, AnswerResolution>) {
+        if let Self::Filter(answer) = self {
+            answer.resolution = super::AnswerShape::Scalar(AnswerResolutions::Occurrences(failures));
         }
     }
     pub(crate) fn scalar(&mut self) {
@@ -143,5 +170,13 @@ impl SettledAnswer {
             Self::Recognize(answer) => answer.scalar(),
             Self::Filter(_) | Self::Rank(_) | Self::Find(_) | Self::Relate(_) => {}
         }
+    }
+}
+
+fn append_selected<T>(left: &mut super::AnswerShape<Option<Vec<T>>>, right: super::AnswerShape<Option<Vec<T>>>) {
+    match (left, right) {
+        (super::AnswerShape::Scalar(Some(values)), super::AnswerShape::Scalar(Some(more))) => values.extend(more),
+        (left @ super::AnswerShape::Scalar(None), right) => *left = right,
+        _ => {}
     }
 }

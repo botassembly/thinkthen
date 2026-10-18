@@ -15,11 +15,18 @@ impl<T, P> Settled<T, P> {
         resolution: AnswerResolutions,
     ) -> Self {
         Self {
-            value: AnswerShape::Scalar(value),
-            probability: AnswerShape::Scalar(probability),
+            value: AnswerShape::Scalar(Some(value)),
+            probability: AnswerShape::Scalar(Some(probability)),
             pick: AnswerShape::Scalar(pick),
             index: AnswerShape::Scalar(index),
             resolution: AnswerShape::Scalar(resolution),
+        }
+    }
+    pub(crate) fn failed() -> Self {
+        Self {
+            value: AnswerShape::Scalar(None), probability: AnswerShape::Scalar(None),
+            pick: AnswerShape::Scalar(None), index: AnswerShape::Scalar(None),
+            resolution: AnswerShape::Scalar(AnswerResolutions::State(Resolution::Failed)),
         }
     }
     pub(crate) fn rows(rows: impl Iterator<Item = Self>) -> Self {
