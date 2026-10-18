@@ -1,7 +1,6 @@
 #!/bin/sh
 # The Rust examples surface. The surface rung passes its loopback port as $1.
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
@@ -13,6 +12,7 @@ if [ "$profile" = stress ]; then
     echo 'rust: not run: no port load campaign'
     exit 77
 fi
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home

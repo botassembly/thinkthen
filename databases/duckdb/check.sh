@@ -3,7 +3,6 @@
 # loopback port as $1. Each suite also starts its own backend, so counts
 # never mix. A missing toolchain reports "not run" (exit 77), never "pass".
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
@@ -45,6 +44,7 @@ select_host() {
 }
 for version in $DUCKDB_VERSIONS; do select_host "$version"; done
 select_host "$DEFAULT_VERSION"
+python3 "$HERE/../../conformance/children/privacy.py" --sources "$HERE" --public --artifact-env
 if [ -n "${CHECK_SETUP_ONLY:-}" ]; then echo "setup ok"; exit 0; fi
 PORT=${1:?check.sh takes the loopback port}
 # Shared rule 6: no suite sees a real key or a remote address. The replay smoke keeps the

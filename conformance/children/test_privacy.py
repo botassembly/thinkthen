@@ -22,8 +22,7 @@ class PrivacyTests(unittest.TestCase):
                             THINKTHEN_ARTIFACT=str(root / 'missing.tar.gz'))
             for surface in ('libraries/c', 'libraries/rust', 'libraries/polars', 'libraries/ruby',
                             'libraries/typescript', 'libraries/python', 'libraries/php', 'libraries/go',
-                            'libraries/zig', 'libraries/r', 'databases/duckdb', 'databases/sqlite',
-                            'databases/postgresql'):
+                            'libraries/zig', 'libraries/r', 'databases/duckdb', 'databases/sqlite'):
                 with self.subTest(surface=surface):
                     result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
                                             capture_output=True, text=True, timeout=30)

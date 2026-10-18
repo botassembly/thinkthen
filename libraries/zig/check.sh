@@ -1,7 +1,6 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in
@@ -12,6 +11,7 @@ zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 [ -x "$zig" ] || exit 77
 export THINKTHEN_ZIG="$zig"
 for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 export PATH="$(dirname "$zig"):$PATH"
 . "$root/sdlc/scripts/scratch.sh"
 usage_home

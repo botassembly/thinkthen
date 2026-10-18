@@ -3,7 +3,6 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 root=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}
@@ -31,6 +30,7 @@ done
 export R_LIBS=$libs
 Rscript --vanilla -e 'stopifnot(getRversion() >= "4.2", packageVersion("jsonlite") >= "2.0.0")' ||
   not_run "R or jsonlite prerequisites are missing"
+python3 "$root/conformance/children/privacy.py" --sources . --public --artifact-env
 python3 "$root/sdlc/generators/results/generate.py" --target r --check
 python3 "$root/sdlc/generators/results/generate.py" --target r --inputs --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

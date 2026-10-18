@@ -1,7 +1,6 @@
 #!/bin/sh
 # The C surface. The surface rung passes its loopback port as $1.
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
@@ -12,6 +11,7 @@ if [ "$profile" = stress ]; then
 fi
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home

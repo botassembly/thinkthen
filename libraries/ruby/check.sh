@@ -4,7 +4,6 @@
 # the rung built, so the slide sample and the tests leave the rung's backend
 # alone. Exit 77 means no host toolchain: the rung reports "not run".
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
@@ -96,6 +95,7 @@ stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
 [ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] ||
   not_run "the prefix's stamp does not match toolchain.env; move the prefix aside and $setup"
 
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).

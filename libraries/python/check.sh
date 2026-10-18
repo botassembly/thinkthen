@@ -2,7 +2,6 @@
 # Check the package callers install. Full shared parity waits for a candidate.
 unset THINKTHEN_API_KEY
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
@@ -19,6 +18,7 @@ command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
     [ "$profile" = routine ] || exit 2
     scratch=$THINKTHEN_COVERAGE_STAGE

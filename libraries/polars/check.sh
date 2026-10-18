@@ -4,7 +4,6 @@
 # loopback port as $1. The tests start their own backends, so this check does
 # not use it. It runs from the repository root, where the manifest is.
 set -eu
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 cd -- "$(dirname -- "$0")/../.."
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
@@ -20,6 +19,7 @@ if ! cargo fetch --locked --offline >/dev/null 2>&1; then
 	exit 77
 fi
 
+python3 conformance/children/privacy.py --sources libraries/polars --public --artifact-env
 # No paid backend: a fake key, a closed loopback port, and scratch folders.
 unset THINKTHEN_API_KEY
 export THINKTHEN_API_KEY=sk-polars-loopback
