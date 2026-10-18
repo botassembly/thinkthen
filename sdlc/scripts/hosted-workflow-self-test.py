@@ -293,7 +293,8 @@ def linux_failed_phase_evidence_case():
     read_text = Path.read_text
     def pressure_text(path, *args, **kwargs):
         return 'some avg10=0.00\n' if str(path) == '/proc/pressure/io' else read_text(path, *args, **kwargs)
-    for code, evidence in ((0, True), (1, True), (23, True), (23, False)):
+    for preparation, code, evidence in ((0, 0, True), (0, 1, True), (0, 23, True),
+                                        (0, 23, False), (23, None, False)):
         with tempfile.TemporaryDirectory(prefix='thinkthen-linux-phase-') as temporary:
             root = Path(temporary)
             out = root / 'out'; out.mkdir()
@@ -305,6 +306,8 @@ def linux_failed_phase_evidence_case():
             invoked = []
             def child(command, env, deadline):
                 invoked.append(command)
+                if command[:2] == ['sh', '-c']:
+                    return subprocess.run([sys.executable, '-c', f'raise SystemExit({preparation})'], env=env).returncode
                 if command[:2] != ['sh', 'sdlc/scripts/test-full-cases']:
                     return subprocess.run([sys.executable, '-c', 'raise SystemExit(0)'], env=env).returncode
                 script = ('from pathlib import Path\n'
@@ -323,18 +326,29 @@ def linux_failed_phase_evidence_case():
                     try:
                         exec(compile(driver, 'gate.yml', 'exec'), namespace)
                     except RuntimeError as error:
-                        assert code != 0 and str(error) == f'fullcases failed: {code}', error
+                        failed, status = ('polars-prepare', preparation) if preparation else ('fullcases', code)
+                        assert status != 0 and str(error) == f'{failed} failed: {status}', error
                     else:
                         assert code == 0
             finally:
                 os.chdir(previous)
             result = json.loads((out / 'result.json').read_text())
-            assert result['state'] == ('failed' if code else 'completed'), result
-            assert result['phases']['fullcases']['command_exit'] == code
-            assert result['phases']['fullcases']['exit'] == code
-            assert set(result['phases']) == ({'cli-fresh', 'fullcases'} if code else
-                                             {'cli-fresh', 'fullcases', 'package', 'stress'})
-            assert len(invoked) == (2 if code else 4)
+            assert result['state'] == ('failed' if preparation or code else 'completed'), result
+            assert result['phases']['polars-prepare']['command_exit'] == preparation
+            assert result['phases']['polars-prepare']['exit'] == preparation
+            if not preparation:
+                assert result['phases']['fullcases']['command_exit'] == code
+                assert result['phases']['fullcases']['exit'] == code
+            phases = {'cli-fresh', 'polars-prepare'}
+            if not preparation:
+                phases.add('fullcases')
+                if not code: phases.update(('package', 'stress'))
+            assert set(result['phases']) == phases
+            assert len(invoked) == len(phases)
+            assert invoked[1][:2] == ['sh', '-c']
+            assert '. sdlc/scripts/full-compiler; unset CARGO_INCREMENTAL' in invoked[1][2]
+            assert 'CARGO_TARGET_DIR="$PWD/target/polars"' in invoked[1][2]
+            assert invoked[1][2].index('--test polars --no-run') < invoked[1][2].index('cargo build')
             assert (out / 'fullcases-parity').exists() == evidence
             if evidence:
                 assert (out / 'fullcases-parity/consumer.log').read_text() == 'child diagnostic\n'
