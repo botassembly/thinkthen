@@ -294,3 +294,26 @@ fn readable_rate_limit_prose_does_not_turn_a_real_limit_into_a_quota_stop() {
         serde_json::json!({"at":1,"cause":"status","status":429,"retryable":true})
     );
 }
+
+#[test]
+fn only_known_error_identifier_fields_cross_the_boundary() {
+    for (body, suffix) in [
+        (r#"{"error":{"type":"invalid_request_error","code":"model_missing","message":"private prose"}}"#, "; provider type: invalid_request_error; provider code: model_missing"),
+        (r#"{"detail":{"error_type":"model_missing","message":"private prose"}}"#, "; provider type: model_missing"),
+        (r#"{"type":"request_error","code":"404","message":"private prose"}"#, "; provider type: request_error; provider code: 404"),
+        (r#"{"error":{"type":"sk-test-value","code":"c2stdGVzdC12YWx1ZQ"}}"#, ""),
+        (r#"{"error":{"type":"sk%2Dtest%2Dvalue","code":"736b2d746573742d76616c7565"}}"#, ""),
+        (r#"{"error":{"type":"private evidence marker","code":"Authorization: fixture"}}"#, ""),
+        (r#"{"error":{"type":42,"code":null},"other":{"type":"hidden"}}"#, ""),
+    ] {
+        let listener = Listener::serving(vec![Canned::status(400, body)]).unwrap();
+        let output = decide(listener.base(), &["--max-retries", "0", "--facts"], Some("sk-test-value"), EVIDENCE).unwrap();
+        let said = crate::harness::said(&output);
+        assert_eq!(output.status.code(), Some(4));
+        let mut lines = said.lines();
+        assert_eq!(lines.next().unwrap(), format!("{}{suffix}", REFUSED.trim_end()));
+        let facts: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+        assert_eq!(facts["stopped"], serde_json::json!({"at":1,"cause":"status","status":400,"retryable":false}));
+        assert!(lines.next().is_none());
+    }
+}
