@@ -107,16 +107,23 @@ fn environment_engine_child() {
             .expect("the environment details");
         let other = &other.results()[0];
         assert_eq!(comparable_score(one), comparable_score(other));
-        assert_eq!(
-            one.to_json().expect("engine scalar JSON"),
-            other.to_json().expect("environment scalar JSON")
+        assert_ne!(
+            one.answer_id(),
+            other.answer_id(),
+            "separate live observations derive separate answer identities"
         );
         assert_eq!(one.value(), other.value());
         assert_eq!(one.probabilities(), other.probabilities());
         assert_eq!(one.reported_usage(), other.reported_usage());
         let observations = (
-            one.identity().observations().to_vec(),
-            other.identity().observations().to_vec(),
+            (
+                one.answer_id().to_owned(),
+                one.identity().observations().to_vec(),
+            ),
+            (
+                other.answer_id().to_owned(),
+                other.identity().observations().to_vec(),
+            ),
         );
         compare_observations(previous_observations.as_ref(), &observations);
         previous_observations = Some(observations);
@@ -409,7 +416,7 @@ fn compare_observations<T: PartialEq + std::fmt::Debug>(
     current: &(T, T),
 ) {
     if let Some(previous) = previous {
-        assert_eq!(current, previous, "each cache retains its own observation");
+        assert_eq!(current, previous, "each cache retains its own observation and answer identity");
     } else {
         assert_ne!(
             current.0, current.1,
