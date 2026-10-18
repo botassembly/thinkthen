@@ -128,7 +128,8 @@ class LinuxSourceIdentity(unittest.TestCase):
             root = Path(folder)
             for relative in ('sdlc/scripts/linux-check', 'sdlc/tools.json',
                              'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
-                             'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env'):
+                             'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
+                             'conformance/children/children.py'):
                 destination = root / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / relative, destination)

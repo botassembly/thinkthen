@@ -14,6 +14,9 @@ import tarfile
 import tempfile
 import urllib.request
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import child_env
+
 manifest = json.loads(Path(sys.argv[1]).read_text())
 root = Path(manifest['linux_prefix'])
 root.mkdir(parents=True, exist_ok=True)
@@ -32,7 +35,7 @@ with tarfile.open(archive) as packed:
     packed.extractall(root / 'bootstrap')
 archive.unlink()
 mise = root / 'bootstrap/mise/bin/mise'
-env = dict(os.environ, PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root / 'cache'),
+env = child_env(keep=('HOME',), PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root / 'cache'),
            MISE_CONFIG_DIR=str(root / 'config'), MISE_YES='1', MISE_JOBS='2',
            MISE_CARGO_BINSTALL='1', MISE_RUBY_COMPILE='0', MISE_PYTHON_COMPILE='0',
            RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'),
@@ -177,7 +180,7 @@ for name in ('ruby', 'ruby34'):
         if not target.exists():
             target.symlink_to(gem_bin / command)
 # Keep the binary toolchain readable by the host user's unprivileged container.
-subprocess.run(['chmod', '-R', 'a+rX', str(root)], check=True)
+subprocess.run(['chmod', '-R', 'a+rX', str(root)], env=env, check=True)
 
 # Missing commands and wrong versions must fail image preparation before checks.
 resolver = '/opt/thinkthen-image/sdlc/scripts/tools.py'

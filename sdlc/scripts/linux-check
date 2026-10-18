@@ -30,7 +30,8 @@ memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 # The image identity includes all construction inputs and the pinned base.
 digest = hashlib.sha256()
 inputs = ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
-          'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env')
+          'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
+          'conformance/children/children.py')
 for path in inputs:
     digest.update((ROOT / path).read_bytes())
 tag = 'thinkthen-check:' + arch + '-' + digest.hexdigest()[:20]

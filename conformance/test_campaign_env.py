@@ -188,16 +188,19 @@ if '--message-format=json' in sys.argv:
             real_git = shutil.which('git')
             self.assertIsNotNone(real_git)
             (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
+                                      f'sys.path.insert(0, {str(parity.ROOT)!r})\n'
+                                      'from conformance.children.children import child_env\n'
                                       'pin = pathlib.Path(sys.argv[2]) / "PIN" if len(sys.argv) > 2 and sys.argv[1] == "-C" else None\n'
                                       f'if pin is not None and pin.is_file() and pin.is_relative_to({str(cache)!r}):\n'
                                       '    print(pin.read_text())\n'
-                                      f'else: os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
+                                      f'else: os.execve({real_git!r}, [{real_git!r}, *sys.argv[1:]], child_env(keep=("HOME",)))\n')
             (tools / 'python3').symlink_to(sys.executable)
             (root / 'probe.py').write_text(capture)
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for path in (tools / 'cargo', tools / 'make', tools / 'git', tools / 'uname'):
                 path.chmod(0o755)
             delegated = subprocess.run([str(tools / 'git'), '--version'],
+                                       env=child_env(home=root / 'git-home'),
                                        capture_output=True, text=True, check=True)
             self.assertIn('git version ', delegated.stdout)
             binary = root / 'target/debug/conformance-backend'

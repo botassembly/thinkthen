@@ -24,10 +24,11 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg libedit2 libpython3.12t64 libcurl4t64 libz3-4 tzdata && rm -rf /var/lib/apt/lists/*
 COPY sdlc/tools.json /tmp/tools.json
-COPY sdlc/linux/install.py /tmp/install.py
+COPY sdlc/linux/install.py /opt/thinkthen-image/sdlc/linux/install.py
 COPY databases/duckdb/tools/version.env /tmp/duckdb-version.env
 COPY sdlc/scripts/tools.py /opt/thinkthen-image/sdlc/scripts/tools.py
-RUN python3 /tmp/install.py /tmp/tools.json
+COPY conformance/children/children.py /opt/thinkthen-image/conformance/children/children.py
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json
 ENV PATH=/opt/thinkthen-tools/bin:/usr/bin:/bin \
     RUSTUP_HOME=/opt/thinkthen-tools/rustup \
     THINKTHEN_LINUX_IMAGE=1
