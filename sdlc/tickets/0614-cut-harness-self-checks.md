@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision eee512a, accept
+
 ## Outcome
 
 - Changes: `libraries/ruby/check.sh`, `libraries/typescript/check.sh`, `sdlc/scripts/README.md`, `sdlc/scripts/catalog.py`, `sdlc/scripts/feature-inventory.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/hosted-workflow.py`, `sdlc/scripts/install-check-workflow-self-test.py`, `sdlc/scripts/install_check_workflow.py`, `sdlc/scripts/lint`, `sdlc/scripts/policy.py`, `sdlc/scripts/release-managed-pair-self-test.py`, `sdlc/scripts/release-windows-c-self-test.py`, `sdlc/scripts/release-windows-c-workflow.py`, `sdlc/scripts/test`, `sdlc/scripts/workflows`.
