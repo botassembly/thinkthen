@@ -8,6 +8,7 @@ Phase: 1
 
 ## Outcome
 
+- Changes: `conformance/backend/src/arms.rs`, `conformance/children/provider_diagnostics.py`, `crates/thinkthen/src/engine/error/provider.rs`, `crates/thinkthen/src/engine/http/diagnostic.rs`, `crates/thinkthen/src/engine/http/send.rs`, `crates/thinkthen/src/engine/http/tests/ollama.rs`, `crates/thinkthen/tests/backend/status_reason.rs`, `crates/thinkthen/tests/native_attempts.rs`, `specification/backends.md`.
 - Provider error diagnostics carry only fields from an allow-list: the status code, the provider error type or code from known response fields, and fixed thinkthen text for each failure cause. Free provider prose is never passed on.
 - The deny-word list, the opaque-token check and the related guessing helpers in `diagnostic.rs` are deleted. A key-echo check stays only if an allowed field could still contain the key.
 - Error facts, the CLI, the C interface and the bindings all show the same allowed fields.

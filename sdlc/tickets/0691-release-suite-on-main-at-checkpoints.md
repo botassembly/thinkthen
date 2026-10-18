@@ -12,6 +12,7 @@ Reviews: revision 5b6430e, accept
 
 ## Outcome
 
+- Changes: `AGENTS.md`, `conformance/test_candidate_campaign.py`, `sdlc/planning/release-process.md`, `sdlc/scripts/README.md`, `sdlc/scripts/test-full-cases`.
 - One command runs the release suite (`test-full-cases`, `package`, `test-stress`) on a named main revision, writes one log, and needs no separate runner, verifier or receipt format.
 - At each checkpoint (the end of phase 1, the core-freeze commit 0688, and each batch of phase 3 landings the coordinator names) the coordinator runs that command through pm job with `--memory 16` on the M5 natively, in the arm64 container on the M5, and in the x86_64 container on Yellow.
 - A failure on a checkpoint run is a ticket against the lane that caused it, fixed on main before the next checkpoint.
