@@ -7,7 +7,6 @@ use thinkthen::{
     SourceItem,
 };
 
-pub(super) type Original = QuestionInput;
 #[allow(
     dead_code,
     reason = "Rust and Polars callers use different fixture controls"

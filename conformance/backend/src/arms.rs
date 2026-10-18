@@ -34,7 +34,7 @@ const MOST_DELAY: u64 = 10_000;
 const WAIT_BOUND: Duration = Duration::from_secs(30);
 
 /// The shared cases, compiled in so the binary needs no path.
-const CASES: &str = include_str!("../../cases.json");
+use crate::CASES;
 
 /// The six malformed replies, one per failure cause.
 const CAUSES: [&str; 6] = [

@@ -51,7 +51,7 @@ RUSTCONSUMER
         export CARGO_ENCODED_RUSTFLAGS
     fi
     if [ "$profile" != stress ]; then native_cases "$installed/consumer/Cargo.toml"; fi
-    cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --test sessions -- --test-threads=1
+    cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --test sessions --test settled -- --test-threads=1
     if [ "$profile" = stress ]; then
         cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --features session-stress --test sessions repeated_session_contention_never_loses_wake_or_settlement -- --exact --test-threads=1
     fi
