@@ -4,13 +4,13 @@ FROM ${BASE}
 ENV DEBIAN_FRONTEND=noninteractive
 # Docker fetches this verified bootstrap over TLS before apt has trust roots.
 ADD --checksum=sha256:641de77d8f142cfd62a1a6f964ba67b20754d3337c480efb529d086075a06c9a https://snapshot.ubuntu.com/ubuntu/20260923T150000Z/pool/main/c/ca-certificates/ca-certificates_20240203_all.deb /tmp/ca-certificates.deb
-RUN dpkg --unpack /tmp/ca-certificates.deb && mkdir -p /etc/ssl/certs && cat /usr/share/ca-certificates/mozilla/*.crt > /etc/ssl/certs/ca-certificates.crt
+RUN dpkg-deb --extract /tmp/ca-certificates.deb /tmp/ca-bootstrap && mkdir -p /etc/ssl/certs && cat /tmp/ca-bootstrap/usr/share/ca-certificates/mozilla/*.crt > /etc/ssl/certs/ca-certificates.crt
 # One archive snapshot fixes the system packages as well as the base filesystem.
 RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble main universe' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble-updates main universe' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble-security main universe' \
-    > /etc/apt/sources.list && apt-get update && apt-get install -y --fix-broken --no-install-recommends \
+    > /etc/apt/sources.list && apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates curl git python3 python3-venv build-essential clang libclang-dev \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev pkg-config xz-utils unzip zip \
     bubblewrap gnat-13 gprbuild gnucobol4 libncurses-dev r-base-dev \
