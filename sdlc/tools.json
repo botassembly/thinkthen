@@ -415,13 +415,15 @@
         "swiftc"
       ],
       "platforms": [
-        "darwin"
+        "darwin",
+        "linux"
       ],
       "groups": [
         "lint",
         "install",
         "swift"
-      ]
+      ],
+      "version": "6.4"
     },
     "gcc": {
       "commands": [
@@ -574,7 +576,8 @@
       ],
       "groups": [
         "jvm"
-      ]
+      ],
+      "version": "0.9.0"
     },
     "gnat": {
       "commands": [
@@ -586,7 +589,8 @@
       ],
       "groups": [
         "ada"
-      ]
+      ],
+      "version": "13.3.0"
     },
     "cobol": {
       "commands": [
@@ -597,7 +601,8 @@
       ],
       "groups": [
         "cobol"
-      ]
+      ],
+      "version": "4.0-early-dev.0"
     },
     "r": {
       "commands": [
@@ -605,6 +610,7 @@
         "Rscript"
       ],
       "platforms": [
+        "darwin",
         "linux"
       ],
       "groups": [
@@ -621,7 +627,8 @@
       ],
       "groups": [
         "php"
-      ]
+      ],
+      "version": "8.3"
     },
     "postgresql": {
       "commands": [
@@ -669,7 +676,9 @@
       ],
       "groups": [
         "dart"
-      ]
+      ],
+      "version": "3.47.5",
+      "source_commit": "6a19cca56475dbfba1478ee68d7bd0c2ef891da1"
     },
     "process-limit": {
       "commands": [

@@ -2,6 +2,8 @@
 """Exercise missing-tool refusal and PATH isolation through the resolver command."""
 import json
 import os
+import platform
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -21,6 +23,24 @@ class ToolResolution(unittest.TestCase):
 
     def test_starts_the_command_after_system_tools_resolve(self):
         self.check(['sh'], True)
+
+    @unittest.skipUnless(platform.system() == 'Darwin' and
+                         'test' in os.environ.get('THINKTHEN_RESOLVED_TOOLS', '').split(','),
+                         'requires the prepared native macOS test environment')
+    def test_refuses_a_hidden_manifest_tool_before_starting_work(self):
+        tool = Path(shutil.which('jq')).resolve()
+        self.assertIn(ROOT / '.tools', tool.parents)
+        hidden = tool.with_name(tool.name + '.hidden')
+        tool.rename(hidden)
+        try:
+            result = subprocess.run([sys.executable, str(SCRIPT), '--check', 'test', '--',
+                                     '/bin/sh', '-c', 'echo command-started'],
+                                    text=True, capture_output=True)
+        finally:
+            hidden.rename(tool)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('jq', result.stderr)
+        self.assertNotIn('command-started', result.stdout)
 
     def check(self, commands, succeeds, inherited=False):
         owned = ROOT / '.tools'
