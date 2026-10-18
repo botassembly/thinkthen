@@ -150,7 +150,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	sh libraries/ruby/setup-ruby.sh
 	/opt/python/cp313-cp313/bin/python sdlc/scripts/hosted-preflight.py container "$TARGET"
 	if [ "$ARCH" = x86_64 ]; then
-		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart ada cobol
+		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart flutter ada cobol
 	else
 		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby
 	fi

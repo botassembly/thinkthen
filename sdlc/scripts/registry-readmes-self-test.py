@@ -548,6 +548,42 @@ class PackageText(unittest.TestCase):
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
                                env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
+            for name in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/fetch.sh',
+                         'crates/thinkthen/Cargo.toml', 'libraries/ruby/toolchain.env',
+                         'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
+                         'databases/duckdb/tools/version.env'):
+                path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(readmes.REPO / name, path)
+            home = root / 'home'
+            ruby_pins = (root / 'libraries/ruby/toolchain.env').read_text()
+            prepared = [home / '.cache/thinkthen-toolchains/ruby' / pin / 'bin'
+                        for pin in readmes.re.findall(r'(?m)^RUBY_\d+_VERSION=(.*)$', ruby_pins)]
+            sqlite = root / 'sqlite'
+            duckdb_pin = readmes.re.search(r'(?m)^DUCKDB_ROUTINE_RELEASE=(.*)$',
+                                          (root / 'databases/duckdb/tools/version.env').read_text())[1]
+            duckdb = root / 'databases/duckdb/build/community' / duckdb_pin / 'build/release'
+            wrong = root / 'wrong'; wrong.mkdir()
+            host_name = wrong / 'uname'
+            host_name.write_text('#!/bin/sh\ncase $1 in -s) echo Linux ;; *) echo x86_64 ;; esac\n')
+            host_name.chmod(0o755)
+            for binary, folders in [('ruby', prepared), ('sqlite3', [sqlite]), ('duckdb', [duckdb])]:
+                for folder in folders + [wrong]:
+                    folder.mkdir(parents=True, exist_ok=True)
+                    executable = folder / binary
+                    executable.write_text('#!/bin/sh\nprintf "' + ('wrong' if folder == wrong else 'prepared') + '\\n"\n')
+                    executable.chmod(0o755)
+                    if binary == 'ruby' and folder != wrong:
+                        (folder.parent / 'thinkthen-toolchain.stamp').touch()
+            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True)
+            host.write_text('#!/bin/sh\nprintf "%s\\n" ' + readmes.json.dumps(str(sqlite)) + '\n')
+            checker = root / 'sdlc/scripts/registry-readmes.py'
+            checker.write_text('import subprocess\nfor name in ("ruby", "sqlite3", "duckdb"):\n'
+                               '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
+            done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
+                                   'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
+                                  env={'PATH': str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
+                                  capture_output=True, text=True)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
     @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')
     def test_compilers_lock_without_flock_and_replay_uses_prepared_cache(self):

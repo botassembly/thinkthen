@@ -235,7 +235,9 @@ def installed(check, target, cache, installed_files=False):
         check.command([node / 'bin/node', '--version'], r'^v22\.22\.3\s*$')
         managed(check)
         check.file('/usr/bin/bwrap', True)
-        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'gofmt', 'composer', 'php8.3', 'R', 'Rscript', 'psql', 'dpkg-deb'))
+        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'gofmt', 'composer', 'php8.3', 'R', 'Rscript', 'psql', 'dpkg-deb', 'xvfb-run', 'xauth'))
+        check.command(['pkg-config', '--exists', 'gtk+-3.0'])
+        check.file(os.environ.get('TT_FLUTTER', '/nonexistent'), True)
         consumer_tools(check)
         check.hashes(ROOT / 'libraries/r/tools/pins.sha256', cache / 'archives')
         code = re.search(r"Rscript --vanilla -e '([^']+)'", (ROOT / 'libraries/r/check.sh').read_text())[1]
@@ -452,7 +454,7 @@ def qualify(check, stage, target):
             check.file(os.environ.get(key, '/nonexistent'), True)
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so.1')
         flutter = Path.home() / '.local/opt/flutter'
-        workflow = (ROOT / '.github/workflows/gate.yml').read_text()
+        workflow = (ROOT / 'sdlc/scripts/release-workflow').read_text()
         source = re.search(r'test "\$\(git -C "\$HOME/.local/opt/flutter" rev-parse HEAD\)" = ([0-9a-f]{40})', workflow)[1]
         check.command(['git', '-C', flutter, 'rev-parse', 'HEAD'], '^' + source + r'\s*$')
         for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/artifacts/engine/linux-x64', 'packages/flutter_tools/.dart_tool/package_config.json'):
