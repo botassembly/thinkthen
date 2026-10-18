@@ -2,7 +2,7 @@
 
 Status: in progress. Slices A, B, B2 and C landed through `ddfcbc74c`; B2 fixes the R binary contribution paths. Hosted rehearsal and installed-package proof remain pending.
 
-Milestone: 0.2
+Milestone: 0.2.1
 
 ## Outcome
 

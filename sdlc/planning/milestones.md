@@ -45,6 +45,8 @@ Closed 2026-10-02 by the release rehearsals: 0222, 0224, 0226, 0227, 0231, 0268,
 
 ## 0.2
 
+Not published. Ian ruled on 2026-10-18 that the current code will not ship: [0.2.1 rebuilds the basis](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Its open tickets moved to 0.2.1. The text below records the 0.2 scope that 0.2.1 inherits.
+
 Ian's 2026-10-08 architecture ruling requires the shared Request contract, generated header and host types, bounded binding experiment and all language migrations in 0.2. The [waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md) sets the remaining order. The request contract and binding experiment run alongside the final per-record context checks. The PM cleared tagged examples in 0490: render only answered step-1 questions, before the recognition controls and language migrations. Stage context 0478, boundary-only 0479, MCP protocol 0488 and Windows Node/C#/JVM packaging 0383–0385 are also 0.2. These rulings supersede earlier SDK deferrals; the proxy moved to 0.5 under the 2026-10-14 ruling. All languages stay, and release management remains held.
 
 Ian lifted the 2026-10-08 release hold on 2026-10-10 except for publication. [0462](../tickets/0462-after-sprint-review.md) owns the complete after-sprint code review and bug sweep. The PM’s later addendum promotes 0461 into 0.2; its help/shared-case correction precedes landing. [0462’s findings](../records/0462-after-sprint-review.md) have fix owners 0463–0472; these remain 0.2 work. 0473 fixes the reported old configuration upgrade refusal.
@@ -136,13 +138,29 @@ The 0456 amendment defines implementation scope. [0425 completion criteria](../t
 
 ## 0.2.1
 
-Outcome: the docs and site sell one idea after 0.2 ships: put Jev-class decision models in your code, whatever model, language or database you use. This is the first thing committed after 0.2 goes out, ideally a docs-only change with no new release. Jarvis owns it as the docs team; the 0.2 team does not work on it (Ian, 2026-10-12).
+Outcome: the first release after 0.1, published as 0.2.1, with the 0.2 scope on a rebuilt basis. Rust computes every call's answer. Each language is a thin, idiomatic, properly packaged wrapper over one C entry point or one direct Rust bridge. One pinned environment per architecture runs every check. Adding a core feature mostly touches only Rust. Ruling and root causes: [0.2.1 rebuilds the basis](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md). Findings: [the 2026-10-18 quality review](../records/2026-10-18-0-2-quality-review.md).
+
+Order, in three phases. A phase's tickets run in parallel where they do not collide. Read their status through pm.
+
+1. The test machinery, release workflows, Rust core, host crate, settings parser and Rust library. The release suite runs on main at the end of this phase and at each later checkpoint.
+2. The C interface's run-call entry point, single input path and single result representation, the value tree for the direct Rust bridges, the C library, the command line, the installers, the generator, the binding contract and conformance. Phase 2 adds the new path and moves the C and Rust libraries onto it; it deletes nothing another language still uses. Phase 2 ends with a named core-freeze commit that fixes the C interface and the final result packet.
+3. Every other language and the three database extensions, starting from the frozen core. Each language ticket deletes its own projection, session loop and fixture consumer. A final ticket then deletes the old shared C paths and answer rules.
+
+Exit criteria:
+
+1. Every 0.2.1 ticket is closed, and no language or template code computes a call's answer.
+2. The release qualification ticket passes on one frozen main revision: every language library builds natively and passes its installed tests on every platform it supports, with the rehearsal and the hosted Linux jobs on the same revision. Coverage does not gate it.
+3. The artifact QA control job passes on the tag, and Ian gives the go to publish.
+
+## 0.2.2
+
+Outcome: the docs and site sell one idea after 0.2.1 ships: put Jev-class decision models in your code, whatever model, language or database you use. This is the first thing committed after 0.2.1 goes out, ideally a docs-only change with no new release. Jarvis owns it as the docs team; the release team does not work on it (Ian, 2026-10-12).
 
 ## 0.3
 
 Outcome: ThinkThen owns your answers. One answer database, designed from the start with the full schema that 0.4's curation and evals need. A toolbox and a `run` command. MCP as one tool. Publishing. Spreadsheets join only if the writer prototype passes. Libraries gain only the ten functions and `run`; the toolbox, answers and admin stay in Rust and the command line. Ruling: [three releases after 0.2](../decisions/2026-10-14-three-releases-after-0-2.md).
 
-Experiments before 0.3 product tickets. A dedicated build coordinator drives them with experiment agents, apart from the 0.2 team. None changes product code, spends model money or publishes; each lands record-only, and all run on the M5 through `pm job`. None starts before 0.2 is published: [0.3 plans while 0.2 ships](../decisions/2026-10-17-0-3-plans-while-0-2-ships.md).
+Experiments before 0.3 product tickets. A dedicated build coordinator drives them with experiment agents, apart from the 0.2 team. None changes product code, spends model money or publishes; each lands record-only, and all run on the M5 through `pm job`. None starts before 0.2.1 is published: [0.3 plans while 0.2 ships](../decisions/2026-10-17-0-3-plans-while-0-2-ships.md).
 
 1. [0583](../tickets/0583-experiment-duckdb-one-build-across-versions.md) first: DuckDB 2.0 is due about 2026-10-21, and the result may also help 0577.
 2. [0584](../tickets/0584-experiment-answer-schema-covers-0-4.md), [0585](../tickets/0585-experiment-many-writers-one-sqlite-file.md), [0586](../tickets/0586-experiment-split-wording-evidence-context.md), [0587](../tickets/0587-experiment-command-inside-python-and-npm.md) and [0588](../tickets/0588-experiment-spreadsheet-writer-round-trip.md) in parallel. 0585 uses 0584's tables when they are ready and a minimal table before then. 0584 and 0586 set the database ticket; 0587 and 0588 answer Ian's decisions 16 and 7.

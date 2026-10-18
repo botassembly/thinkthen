@@ -47,15 +47,13 @@ Ian asked for an adversarial review of 0.2 across every language, surface and bi
 5. The harness tests the shape of the environment: hand-written tool lists and PATHs (15 loops in `sdlc/scripts`, machine folders in the `sdlc/pm.json` gate), fixtures that copy entrypoints, checks that exit 77 when a tool is missing. Each new machine or tool brings another round.
 6. Source-size ceilings: 44 ratchet files and over 400 ceiling-only commits since 2026-09-15, against the binding guide's own rule to set no line target.
 
-## For 0.2
+## Correction from the coordinator
 
-These shorten qualification without changing the product:
+The review's lead on the Linux timeouts was wrong about where the overlap happens. `test-full-cases` waits for the binding smokes to finish before the full functional pass. The failed consumers ran in the four-worker pool in `conformance/parity.py`. Main now runs those consumers one at a time (412d17372), but that is not proven on Linux, and the cause is still unmeasured. Every hosted job now has a time limit (14e97f9e7), though long jobs kept six hours.
 
-- `sdlc/scripts/smoke:104` runs binding smokes four at a time while the Rust release tests share the machine; four groups near 4 GB each is the leading explanation for the Linux timeouts in C, Go, Zig and SQLite.
-- Add `timeout-minutes` to every hosted job.
-- Replace the machine-specific PATH in the `sdlc/pm.json` gate with the login environment.
+## Follow-up
 
-## After 0.2
+Ian ruled the same day that these fixes are the next release, 0.2.1: [the ruling](../decisions/2026-10-18-0-2-1-rebuilds-the-basis.md).
 
 1. Compute each call's answer, probability, pick and resolution in Rust and put them in the final packet; delete `host_answers.py` rules and the per-language projections.
 2. Add one blocking run-call C function with an error out-parameter; shrink every session loop to a wrapper.

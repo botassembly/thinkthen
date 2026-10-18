@@ -2,7 +2,7 @@
 
 Status: OPEN.
 
-Milestone: 0.2
+Milestone: 0.2.1
 
 Reviews: revision f825e1e, reject
 

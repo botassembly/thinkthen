@@ -2,7 +2,7 @@
 
 Status: in progress. Reviewed workflow slice A is landed and passed full tests, lint and specification checks. Final rehearsal, authorized registry staging and Ian’s npm approval remain.
 
-Milestone: 0.2
+Milestone: 0.2.1
 
 Owner: builder.
 Ticket review: accepted 2026-10-06; blocking findings corrected.

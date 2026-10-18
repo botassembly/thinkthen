@@ -2,9 +2,9 @@
 
 Status: OPEN.
 
-Milestone: 0.2.1
+Milestone: 0.2.2
 
-Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2 ships.
+Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2.1 ships.
 ## Why
 
 Ian asked that readers of the `recognize` function page understand at least the level of detail in a review the ThinkThen team sent him on 2026-10-01. Today the page shows calls and options. It does not say how `recognize` finds names, picks kinds, scores them or asks for relations.

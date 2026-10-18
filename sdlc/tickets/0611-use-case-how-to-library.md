@@ -2,9 +2,9 @@
 
 Status: OPEN.
 
-Milestone: 0.2.1
+Milestone: 0.2.2
 
-Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2 ships.
+Source: Ian asked for this on 2026-10-01. The site content team handed it to ThinkThen on 2026-10-17 with its rulings and evidence intact. It starts after 0.2.1 ships.
 ## Why
 
 Ian wants every use-case idea from 2026-10-01 on the site as its own how-to page. People search for how to use a decision model like Jev for a job. Those searches should land on these pages. The section stays out of the main menu, so it does not clutter it. The sitemap, the footer's sitemap columns and an index page reach it, so search engines find every page.
@@ -102,7 +102,7 @@ The fresh ticket review of 2026-10-01 returned ten findings. The lead decided ea
 6. Where an idea matches an existing how-to (data 4, 8, 16 and 17; shell 1, 10, 12 and 15; agent 1), do not write a duplicate. Improve the existing page's title for search if needed, and list it on the index under its idea.
 7. Shell 19 feeds a saved `gh` JSON file. Shell 16 stubs the email step with `echo`. Agent 5, the cascade, folds into agent 4, Model choice. Agent 11, Evaluation, is a short page that links the audit how-to. Agent 15, Write order, is dropped. Data 1 uses `WHERE thinkthen_decide`, and data 10 uses `ORDER BY thinkthen_probability`. Data 11 and 14 keep a small rules file or unit list in the sample folder.
 8. Every name is invented. Shell 13's fake key uses an obviously fake format that secret scanners and push protection ignore.
-9. The build starts after 0.2 ships.
+9. The build starts after 0.2.1 ships.
 10. Agent pages name these functions: Permission `decide` with a band; Tool choice `rank`; Context `decide`; Model choice `decide` with a band; Parallel work `decide`; Data safety `decide`; Off track `decide`; Done check `decide`; Review `decide`; Evaluation `audit`; Refusal guard several `decide` questions; Memory recall `rank`; Escalate `decide` with a band.
 
 ## Retained behavior

@@ -19,6 +19,7 @@
       "0.1",
       "0.2",
       "0.2.1",
+      "0.2.2",
       "0.3",
       "0.4",
       "later"
@@ -36,10 +37,15 @@
     {
       "name": "0.2",
       "targetRef": "origin/main",
-      "state": "active"
+      "state": "settled"
     },
     {
       "name": "0.2.1",
+      "targetRef": "origin/main",
+      "state": "active"
+    },
+    {
+      "name": "0.2.2",
       "targetRef": "origin/main",
       "state": "active"
     },

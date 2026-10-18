@@ -1,0 +1,23 @@
+# 0695: Replace SQLite's own suites with a replay of the shared cases
+
+Status: OPEN.
+
+Milestone: 0.2.1
+
+Phase: 3
+
+Depends on: 0688
+
+## Outcome
+
+- A small driver loads the installed SQLite extension, replays `conformance/cases.json` as SQL, and compares each result against the 0642 oracle. It adds no case file of its own.
+- SQLite's duplicated case files and suites are deleted. Tests of SQLite-only behavior, such as loading and file reads, stay.
+
+### Proof
+
+- On the M5 through pm job, the installed extension passes the replay.
+- Done once by hand and not committed: a wrong expected answer in the oracle fails the replay.
+
+## Evidence
+
+The SQLite extension carries its own Python suites under `databases/sqlite/tests/` (for example `test_typed_family.py`) for behaviors the core and the shared cases already define. Commit `09e424609` changed one line of shared Rust and needed new cases in all three database suites.
