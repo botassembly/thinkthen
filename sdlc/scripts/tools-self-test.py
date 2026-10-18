@@ -155,14 +155,25 @@ class LinuxSourceIdentity(unittest.TestCase):
             binary = root / 'fake-bin'
             binary.mkdir()
             docker = binary / 'docker'
-            docker.write_text('#!/bin/sh\n'
-                              'if [ "$1" = image ]; then echo sha256:test; fi\n')
+            calls = root / 'docker-calls.jsonl'
+            docker.write_text('#!' + sys.executable + '\nimport json,sys\n'
+                              + 'with open(' + repr(str(calls)) + ', "a") as log:\n'
+                              + '    log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
+                              + 'if sys.argv[1] == "image": print("sha256:test")\n')
             docker.chmod(0o755)
             env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'])
             command = [sys.executable, str(root / 'sdlc/scripts/linux-check'), 'test']
             first = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
             source = next(root.glob('.linux-*/src'))
+            run = next(json.loads(line) for line in calls.read_text().splitlines()
+                       if json.loads(line)[0] == 'run')
+            fixture_mounts = [run[index + 1] for index, value in enumerate(run)
+                              if value == '--tmpfs']
+            owner = ':uid=' + str(os.getuid()) + ',gid=' + str(os.getgid()) + ',mode=0700'
+            self.assertEqual(fixture_mounts, [str(source / relative) + owner
+                             for relative in ('target/tmp', 'target/library-only/tmp')])
+            self.assertIn(str(source.parent) + ':' + str(source.parent), run)
             (source / 'source.txt').write_text('left by previous check\n')
             (source / 'stray.txt').write_text('untracked source\n')
             (source / 'target').mkdir()

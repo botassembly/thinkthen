@@ -74,6 +74,14 @@ command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', '
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
            '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
+# Cargo embeds these fixture paths at compile time. Host-shared filesystems
+# can bypass Unix permissions and locks and reject filename bytes, even for
+# a nonroot container user. Keep fixtures on Linux while retaining builds,
+# saved results and caches on their existing persistent mounts. tmpfs pages
+# count toward the container's memory cap and disappear with the container.
+for relative in ('target/tmp', 'target/library-only/tmp'):
+    command += ['--tmpfs', str(source / relative) + ':uid=' + str(os.getuid())
+                + ',gid=' + str(os.getgid()) + ',mode=0700']
 # Fetch lockfile dependencies inside this environment once; checks stay offline.
 script = 'set -eu\n'
 locks = subprocess.check_output(['git', 'ls-files', '*Cargo.lock', 'Cargo.lock'], cwd=source, text=True)
