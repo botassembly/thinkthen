@@ -353,6 +353,39 @@ end
             raise AssertionError(("tap version", result.returncode, result.stdout, result.stderr))
 
 
+def archived_flutter_admission(commit, host):
+    # Admission and source identity need no compiler, including on Apple hosts.
+    with tempfile.TemporaryDirectory(prefix="thinkthen-flutter-archive-") as temporary:
+        base = Path(temporary).resolve()
+        source = base / "source"
+        source.mkdir()
+        archive = base / "source.tar"
+        with archive.open("wb") as output:
+            subprocess.run(["git", "archive", "--format=tar", "HEAD"], cwd=REPO, stdout=output, check=True)
+        subprocess.run(["tar", "-xf", str(archive), "-C", str(source)], check=True)
+        env = os.environ | {"THINKTHEN_ARCHIVED_SOURCE_TAR": str(archive),
+                            "THINKTHEN_ARCHIVED_SOURCE_COMMIT": commit}
+        command = ("sh", str(source / "sdlc/scripts/release-pack"), host, str(base / "out"))
+        expect(run(*command, "dart", "flutter", cwd=source, env=env),
+               "source wrappers need c in this invocation")
+        for part in ("unknown", "csharp", "jvm", "command", "crate", "r", "first-run"):
+            expect(run(*command, "c", "dart", "flutter", part, cwd=source, env=env),
+                   f"archived source does not permit {part}")
+        member = source / "libraries/dart/flutter/lib/thinkthen_flutter.dart"
+        original = member.read_bytes()
+        for payload in (None, original + b"\n// altered archived Flutter source\n"):
+            if payload is None:
+                member.unlink()
+            else:
+                member.write_bytes(payload)
+            expect(run(*command, "c", "dart", "flutter", cwd=source, env=env),
+                   "source file differs: libraries/dart/flutter/lib/thinkthen_flutter.dart")
+        member.write_bytes(original)
+        if (base / "out").exists():
+            raise AssertionError("archive refusal created package output")
+    print("release archive: Flutter source identity and part refusals pass", flush=True)
+
+
 def main():
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -360,6 +393,7 @@ def main():
     resolve_outputs(commit, version)
     tap_formula(version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
+    archived_flutter_admission(commit, host)
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
@@ -555,10 +589,10 @@ def main():
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, commit), "", success=True)
         # Exercise the shared Dart/Flutter route with the real builder and fake native outputs.
-        flutter_env = {key: value for key, value in env.items() if not key.startswith("THINKTHEN_ARCHIVED_SOURCE_")}
+        flutter_env = env
         flutter_pair = base / "flutter-pair"
-        expect(run("sh", str(REPO / "sdlc/scripts/release-pack"), host, str(flutter_pair),
-                   "c", "dart", "flutter", env=flutter_env), "", success=True)
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host, str(flutter_pair),
+                   "c", "dart", "flutter", cwd=source, env=flutter_env), "", success=True)
         expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(flutter_pair),
                    "dart-flutter"), "", success=True)
         # Repairing membership must still reject missing new inputs and unexpected source.
@@ -604,18 +638,24 @@ def main():
                            "last=\nfor arg do last=$arg; done\n"
                            "/bin/cp \"$@\" || exit\n"
                            "for arg do if [ \"$arg\" = \"$THINKTHEN_PLANT_SOURCE\" ]; then\n"
-                           "  printf 'changed copy\\n' >>\"$last/${arg##*/}\"\n"
+                           "  destination=$last\n"
+                           "  [ ! -d \"$last\" ] || destination=$last/${arg##*/}\n"
+                           "  printf 'changed copy\\n' >>\"$destination\"\n"
                            "fi; if [ \"$arg\" = \"$THINKTHEN_PLANT_TWIN\" ]; then\n"
                            "  : >\"$last/$(printf %s \"${arg##*/}\" | tr A-Z a-z)\"\n"
                            "fi; done\n")
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
-                                 ("cobol", "src/tt_session.c")):
-            copied_env = env | {"THINKTHEN_PLANT_SOURCE": f"libraries/{family}/{relative}"}
+                                 ("cobol", "src/tt_session.c"),
+                                 ("flutter", "README-PUBLIC.md")):
+            source_member = f"libraries/dart/flutter/{relative}" if family == "flutter" else f"libraries/{family}/{relative}"
+            copied_env = env | {"THINKTHEN_PLANT_SOURCE": source_member}
             output = base / f"{family}-copied-change"
+            selected_parts = ("c", "dart", "flutter") if family == "flutter" else parts
+            packed_member = "flutter/README.md" if family == "flutter" else relative
             expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
-                       str(output), *parts, cwd=source, env=copied_env),
-                   f"{family} source differs from archived commit: {relative}")
+                       str(output), *selected_parts, cwd=source, env=copied_env),
+                   f"{family} source differs from archived commit: {packed_member}")
             if list(output.glob(f"thinkthen-{family}-*")):
                 raise AssertionError(f"changed {family} copied member created wrapper output")
         # The archive writer still refuses names that collide on case-blind Apple volumes.
