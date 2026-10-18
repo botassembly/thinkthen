@@ -33,3 +33,11 @@ Qualification has moved between machines: the Linux mini PC (load cap only there
 `sdlc/scripts/release-container:16-18` already pins a `manylinux_2_28` image by digest for each Linux architecture, but only release packing uses it. The M5's default pm job memory is 8 GiB, below the hosted runner's 16 GB.
 
 The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matching line in `AGENTS.md` say "Linux CI runs on each push". Every workflow in `.github/workflows/` starts only by `workflow_dispatch` or `workflow_call`, which matches the ruling that GitHub Actions run only for public releases after local testing.
+
+## Progress
+
+- 2026-10-18 started
+
+## Amendment, 2026-10-18
+
+All Linux checks run in one pinned Ubuntu 24.04 image per architecture, which the hosted Linux jobs also use. The existing manylinux_2_28 step stays only to build distribution artifacts at the old glibc floor; the installed-artifact checks then run in the Ubuntu image. Yellow books 14 GiB through pm job with a 14 GiB container cap and one heavy job at a time, because it has 15 GiB of physical memory. The M5 container waits until its Docker runtime is running again; ThinkThen changes no host configuration.

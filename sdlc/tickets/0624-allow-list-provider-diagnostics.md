@@ -8,6 +8,7 @@ Phase: 1
 
 ## Outcome
 
+- Changes: `conformance/backend/src/arms.rs`, `conformance/children/provider_diagnostics.py`, `crates/thinkthen/src/engine/error/provider.rs`, `crates/thinkthen/src/engine/http/diagnostic.rs`, `crates/thinkthen/src/engine/http/send.rs`, `crates/thinkthen/src/engine/http/tests/ollama.rs`, `crates/thinkthen/tests/backend/status_reason.rs`, `crates/thinkthen/tests/native_attempts.rs`, `specification/backends.md`.
 - Provider error diagnostics carry only fields from an allow-list: the status code, the provider error type or code from known response fields, and fixed thinkthen text for each failure cause. Free provider prose is never passed on.
 - The deny-word list, the opaque-token check and the related guessing helpers in `diagnostic.rs` are deleted. A key-echo check stays only if an allowed field could still contain the key.
 - Error facts, the CLI, the C interface and the bindings all show the same allowed fields.
@@ -20,3 +21,7 @@ Phase: 1
 ## Evidence
 
 `crates/thinkthen/src/engine/http/diagnostic.rs:83-128` decides whether a provider's error text is safe to show. It blocks a list of words ("bearer ", "api_key=", "sha256:" and others), strips long tokens that look opaque, and checks for echoes of the key and of the request. Every new provider message format can find a gap. The fixes keep coming: ffa0cb509, 59bbe9cf2, 3a0ff2e2c and 234ef4472, all on 2026-10-13, plus 3d39770af, c4257158c and facc6d280 earlier. Fifteen commits since 2026-09-15 add more hiding rules.
+
+## Progress
+
+- 2026-10-18 started
