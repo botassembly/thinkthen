@@ -53,6 +53,7 @@ The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select 
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The combined batch includes all accepted fixture, manifest, preflight, Linux temporary-filesystem and PostgreSQL pidfd portability repairs; gate 8df9d122a is running on M5, prior Linux runs passed all 2047 Rust tests and 21 consumer checks before later harness failures, and Yellow proof 0619/1792336898214-4087081 remains active at 0ff5c4cbd.
 
 ## Amendment, 2026-10-18
 
