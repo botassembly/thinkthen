@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 07f89ac, accept
+
 ## Outcome
 
 - ThinkThen's public text calls Jev and models like it "System One models", never "decision models": the root README, the crate and library READMEs, the skill, the site pages, site data and the site's generated Markdown.
