@@ -637,6 +637,39 @@ php-dart-tools)
 	mkdir -p -- "$3"
 	install_dart "$3"
 	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
+	mkdir -p "$HOME/.local/opt/flutter"
+	git -C "$HOME/.local/opt/flutter" init
+	git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
+	# Flutter derives its SDK version from the official release tag.
+	git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
+	test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+	git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
+	test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+	flutter="$HOME/.local/opt/flutter/bin/flutter"
+	dart="$HOME/.local/opt/flutter/bin/cache/dart-sdk/bin/dart"
+	export PUB_CACHE=$pub_cache FLUTTER_SUPPRESS_ANALYTICS=true
+	"$flutter" config --no-analytics --enable-linux-desktop
+	"$flutter" precache --linux
+	"$dart" --version 2>&1 | grep -F 'Dart SDK version: 3.13.4 (stable)'
+	# Seed the SDK and every frozen consumer lock before offline gates.
+	(cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
+	# The example locks both local packages; the Flutter library has no lock.
+	# Match the installed consumer's local override without changing shipped manifests.
+	(
+		overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
+		test ! -e "$overrides"
+		test ! -L "$overrides"
+		(set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
+		trap 'rm -f "$overrides"' EXIT
+		for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
+			(cd "$project" && "$flutter" pub get --enforce-lockfile)
+		done
+	)
+	git diff --exit-code
+	printf 'TT_FLUTTER=%s\n' "$flutter" >> "$GITHUB_ENV"
+	dart_bin=$dart
+	printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
+	[ -z "${GATE_OUTPUT:-}" ] || git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
 	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
 	;;
 swift-zig-tools)
@@ -804,6 +837,15 @@ public-examples)
 	[ "$#" = 3 ] || fail 'public-examples TARGET DIR'
 	case $2 in
 	x86_64-unknown-linux-gnu)
+		# Resolve prepared hosts before the replay gives each caller an empty HOME.
+		. libraries/ruby/toolchain.env
+		ruby=$(ruby_source_host)
+		sqlite=$(sh databases/sqlite/tests/host_sqlite.sh)
+		INPUTS_HERE=$repo/databases/duckdb/tools
+		. "$INPUTS_HERE/inputs.sh"
+		input_select "" "$2"
+		PATH=${ruby%/*}:$sqlite:$repo/databases/duckdb/build/community/$DUCKDB_VERSION/build/release:$PATH
+		export PATH
 		python3 sdlc/scripts/registry-readmes.py examples "$3" \
 			--family command --family crate --family python --family typescript \
 			--family ruby --family go --family cpp --family c --family csharp \

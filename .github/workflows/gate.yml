@@ -369,41 +369,6 @@ jobs:
           sdlc/scripts/release-workflow managed-tools "$TARGET"
           # Nested gates discard SDK environment overrides and discover the same tools through PATH.
           printf '%s\n' "$THINKTHEN_JDK_HOME/bin" "$THINKTHEN_KOTLIN_HOME/bin" "$THINKTHEN_SCALA_HOME/bin" >> "$GITHUB_PATH"
-      - name: Acquire Flutter from its pinned official source commit
-        run: |
-          set -eu
-          mkdir -p "$HOME/.local/opt/flutter"
-          git -C "$HOME/.local/opt/flutter" init
-          git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
-          # Flutter derives its SDK version from the official release tag.
-          git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
-          test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
-          git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
-          test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
-          flutter="$HOME/.local/opt/flutter/bin/flutter"
-          dart="$HOME/.local/opt/flutter/bin/cache/dart-sdk/bin/dart"
-          export PUB_CACHE="$RELEASE_WORK/dart/pub-cache"
-          "$flutter" config --no-analytics --enable-linux-desktop
-          "$flutter" precache --linux
-          "$dart" --version 2>&1 | grep -F 'Dart SDK version: 3.13.4 (stable)'
-          # Seed the SDK and every frozen consumer lock before offline gates.
-          (cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
-          # The example locks both local packages; the Flutter library has no lock.
-          # Match the installed consumer's local override without changing shipped manifests.
-          overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
-          test ! -e "$overrides"
-          test ! -L "$overrides"
-          (set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
-          trap 'rm -f "$overrides"' EXIT
-          for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
-            (cd "$project" && "$flutter" pub get --enforce-lockfile)
-          done
-          rm "$overrides"
-          trap - EXIT
-          git diff --exit-code
-          printf 'TT_DART=%s\nTT_FLUTTER=%s\n' "$dart" "$flutter" >> "$GITHUB_ENV"
-          printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
-          git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
       - name: Report hosted disk before the selected stage
         run: sdlc/scripts/release-workflow disk "$STAGE start" "$RELEASE_WORK" "$HOME/.cargo" "$HOME/.rustup" "$HOME/.cache/thinkthen-toolchains" target
       - name: Check every prepared hosted input

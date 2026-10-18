@@ -453,9 +453,9 @@ def dart_cache_setup_case():
 
 
 def flutter_locked_setup_case():
-    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
-                if step.get('name') == 'Acquire Flutter from its pinned official source commit')
+    workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
+    step = workflow.split('\nphp-dart-tools)\n', 1)[1].split('\nswift-zig-tools)', 1)[0]
+    step = step[step.index('mkdir -p "$HOME/.local/opt/flutter"'):]
     acquisition = step.split('flutter=', 1)[0]
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
     command += 'git diff --exit-code\n'

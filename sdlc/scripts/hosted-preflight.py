@@ -452,7 +452,7 @@ def qualify(check, stage, target):
             check.file(os.environ.get(key, '/nonexistent'), True)
         check.file(Path(os.environ.get('LIBCLANG_PATH', '/nonexistent')) / 'libclang.so.1')
         flutter = Path.home() / '.local/opt/flutter'
-        workflow = (ROOT / '.github/workflows/gate.yml').read_text()
+        workflow = (ROOT / 'sdlc/scripts/release-workflow').read_text()
         source = re.search(r'test "\$\(git -C "\$HOME/.local/opt/flutter" rev-parse HEAD\)" = ([0-9a-f]{40})', workflow)[1]
         check.command(['git', '-C', flutter, 'rev-parse', 'HEAD'], '^' + source + r'\s*$')
         for asset in ('bin/cache/dart-sdk/bin/dart', 'bin/cache/artifacts/engine/linux-x64', 'packages/flutter_tools/.dart_tool/package_config.json'):
