@@ -12,6 +12,8 @@ Reviews: revision 04b84c5, accept
 
 Reviews: revision e09063b, accept
 
+Reviews: revision 9b34e0e, accept
+
 ## Outcome
 
 - One tracked manifest names every tool each gate, check and library gate needs, with its pinned version where one is pinned, and the platforms on which each library is supported.
