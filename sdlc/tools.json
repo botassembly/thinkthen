@@ -726,7 +726,12 @@
         "install"
       ],
       "provider": "rustup",
-      "version": "nightly-2026-08-24"
+      "version": "nightly-2026-08-24",
+      "rustc_date": "2026-08-23",
+      "probe": {
+        "argv": ["rustc", "+{version}", "--version"],
+        "contains": " {rustc_date})"
+      }
     },
     "ruby34": {
       "commands": [

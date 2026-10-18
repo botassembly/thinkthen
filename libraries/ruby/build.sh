@@ -30,7 +30,7 @@ python3 "$repo/sdlc/scripts/tools.py" "$group" -- sh -eu -c '
   RUBY=$(command -v ruby); export RUBY
   exec cargo build --release --locked --offline
 '
-RUBY=$(command -v ruby)
+RUBY=$(/usr/bin/python3 "$repo/sdlc/scripts/tools.py" --check "$group" -- sh -eu -c 'command -v ruby')
 export RUBY
 target=$CARGO_TARGET_DIR/release
 # The library file's name follows the host: lib<name>.so, lib<name>.dylib.

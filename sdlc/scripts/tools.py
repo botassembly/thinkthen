@@ -163,8 +163,9 @@ def resolve(manifest, groups, root, check=False):
         probe = tool.get('probe')
         if probe and probe['argv'][0] not in missing:
             try:
-                result = subprocess.check_output(probe['argv'], env=env, text=True, stderr=subprocess.STDOUT)
-                if probe['contains'].format(version=tool['version']) not in result:
+                argv = [argument.format(**tool) for argument in probe['argv']]
+                result = subprocess.check_output(argv, env=env, text=True, stderr=subprocess.STDOUT)
+                if probe['contains'].format(**tool) not in result:
                     failures.append(name + ': version differs from tools.json')
             except (OSError, subprocess.CalledProcessError) as error:
                 failures.append(name + ': ' + str(error))

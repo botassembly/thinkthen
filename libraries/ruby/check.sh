@@ -124,7 +124,7 @@ RUBY=$prefix/bin/ruby
 if [ "$host" = Darwin ]; then
   command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
   openssl=$prefix/openssl
-  [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing"
+  [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_VERSION host prefix is missing"
   case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_VERSION "*) ;; *) not_run "OpenSSL host version differs from tools.json" ;; esac
   clang=$(xcrun --find clang 2>/dev/null)
   clang=${clang%/bin/clang}/lib
