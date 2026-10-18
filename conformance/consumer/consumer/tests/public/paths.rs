@@ -416,7 +416,10 @@ fn compare_observations<T: PartialEq + std::fmt::Debug>(
     current: &(T, T),
 ) {
     if let Some(previous) = previous {
-        assert_eq!(current, previous, "each cache retains its own observation and answer identity");
+        assert_eq!(
+            current, previous,
+            "each cache retains its own observation and answer identity"
+        );
     } else {
         assert_ne!(
             current.0, current.1,
