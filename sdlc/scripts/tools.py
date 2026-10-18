@@ -152,8 +152,13 @@ def resolve(manifest, groups, root, check=False):
                  *[name + '==' + version for name, version in packages.items()]], env)
         except subprocess.CalledProcessError as error:
             failures.append('Python tools: ' + str(error))
-    missing = [command for tool in requirements.values() for command in tool['commands']
-               if shutil.which(command, path=env['PATH']) is None]
+    missing = []
+    for tool in requirements.values():
+        for command in tool['commands']:
+            executable = shutil.which(command, path=env['PATH'])
+            if executable is None or (host == 'darwin' and 'provider' in tool
+                                      and root not in Path(executable).resolve().parents):
+                missing.append(command)
     for name, tool in requirements.items():
         probe = tool.get('probe')
         if probe and probe['argv'][0] not in missing:
