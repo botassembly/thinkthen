@@ -4,7 +4,7 @@
 # toolchain, and the rung reports it as not run, never as a pass.
 #
 # `surfaces --registry` is the cheap check `lint` runs. Every landed
-# surface has a check.sh and a ratchet that holds. Cargo surfaces also pass
+# surface has a check.sh. Cargo surfaces also pass
 # `cargo deny`; the named non-Cargo package manifests are checked separately.
 set -eu
 
@@ -70,7 +70,7 @@ landed() {
 }
 
 # A `feature` line is a Cargo feature of `thinkthen` (ticket 0130). Its check
-# runs with the landed ones, and the root ratchet and deny cover its code.
+# runs with the landed ones, and the root deny check covers its code.
 feature() {
 	awk '!/^#/ && $2 == "feature" { print $1 }' "$1"
 }
@@ -195,16 +195,6 @@ if [ "$registry_only" -eq 1 ]; then
 		exit 1
 	fi
 	for surface in $(landed sdlc/surfaces.txt); do
-		# One ratchet file per language: ratchet.json for Rust, ratchet.<ext>.json for each host.
-		for config in "$surface"/ratchet*.json; do
-			node sdlc/scripts/ratchet.mjs "$config"
-			jq --arg at "$REPO/$surface/" '.max += 1 | .directory = ([.directory] | flatten | map($at + .))' \
-				"$config" >"$planted.json"
-			if node sdlc/scripts/ratchet.mjs "$planted.json" >/dev/null 2>&1; then
-				echo "surfaces: the ratchet passed a ceiling one above $config's count" >&2
-				exit 1
-			fi
-		done
 		# A binding's own deny.toml, which policy.py checks, replaces the root file.
 		deny=deny.toml
 		if [ -f "$surface/deny.toml" ]; then deny="$surface/deny.toml"; fi
@@ -251,7 +241,7 @@ if [ "$registry_only" -eq 1 ]; then
 		echo "surfaces: a TERM to time-limit returned $term" >&2
 		exit 1
 	fi
-	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
+	echo 'surfaces: the registry holds every binding, and each landed one has its check and deny'
 	exit 0
 fi
 

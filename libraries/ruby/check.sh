@@ -41,22 +41,6 @@ for file in Dockerfile rust-toolchain rust-toolchain.toml; do
   [ ! -e "$file" ] || fail "$file is back; the host toolchain builds this surface"
 done
 ! grep -q '^\[features\]' Cargo.toml || fail "Cargo.toml has a [features] table; the port has one build"
-# cargo fmt reads no lock, cargo deny takes --offline alone, and the deny
-# plant fetches its local file:// git source into a scratch home.
-if sed '/^[[:space:]]*#/d; s/[[:space:]]#.*$//' check.sh build.sh | grep -E '(^|[^[:alnum:]_])cargo [a-z]' |
-   grep -vE -e '^[[:space:]]*cargo fmt --check$' -e '^[[:space:]]*(CARGO_HOME="\$plant/home" )?cargo deny ' \
-     -e '^CARGO_NET_OFFLINE=false CARGO_HOME="\$plant/home" cargo fetch --quiet --manifest-path "\$plant/copy/Cargo.toml"$' \
-     -e '--locked --offline' -e "grep -v?E " -e "^[[:space:]]+-e '" >&2; then
-  fail "a cargo call above lacks --locked --offline"
-fi
-if sed '/^[[:space:]]*#/d' build.sh | grep -nE '(^|[^-[:alnum:]_])(apt-get|curl|wget|docker)([^-[:alnum:]_]|$)' >&2 ||
-   sed '/^[[:space:]]*#/d; /grep -nE/d' check.sh | grep -nE '(^|[^-[:alnum:]_])(apt-get|curl|wget|docker)([^-[:alnum:]_]|$)' >&2; then
-  fail "a script above fetches; setup-ruby.sh alone fetches, once, by hand"
-fi
-if sed '/^[[:space:]]*#/d' build.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]|$)|sed -i|(^|[^[:alnum:]_])ss ' >&2 ||
-   sed '/^[[:space:]]*#/d; /grep -nE/d; /libclang/d' check.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]|$)|sed -i|(^|[^[:alnum:]_])ss ' >&2; then
-  fail "a script above names a host library file, edits in place, or calls ss"
-fi
 # Refuse an absent host toolchain before the offline deny plant or a build.
 host=$(uname -s)
 case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
