@@ -74,7 +74,10 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
     if !collection && matches!(case.verb.as_str(), "filter" | "rank") {
         texts.truncate(1);
     }
-    let input = if !collection && texts.len() == 1 && !matches!(case.verb.as_str(), "rank" | "find" | "relate") {
+    let input = if !collection
+        && texts.len() == 1
+        && !matches!(case.verb.as_str(), "rank" | "find" | "relate")
+    {
         json!({"kind":"text","text":texts.first().ok_or("missing input")?})
     } else {
         let items = texts
@@ -301,9 +304,9 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                 .execute_request(&admitted, RequestEnvironment::default())
                 .map_err(failure)?
             {
-                RequestOutcome::Complete(call) => call,
-                RequestOutcome::Failed { error, .. } => return Err(format!("{id}: {error}")),
-            };
+                RequestOutcome::Complete(call) => Ok(call),
+                RequestOutcome::Failed { error, .. } => Err(format!("{id}: {error}")),
+            }?;
             let answer: Value =
                 serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
                     .map_err(failure)?;
@@ -351,7 +354,7 @@ fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), Str
             .map(|builder| builder.no_cache().max_retries(0))
             .and_then(thinkthen::EngineBuilder::build)
             .map_err(failure)?;
-        let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":question},"input":{"kind":"text","text":"original"}}}).to_string()).map_err(failure)?;
+        let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":question},"input":{"kind":"json","value":null}}}).to_string()).map_err(failure)?;
         let packet = terminal(&engine, request)?;
         assert_eq!(packet["resolution"], terminal_resolution);
         if resolution == "failed" {

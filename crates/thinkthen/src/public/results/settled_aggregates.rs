@@ -107,7 +107,7 @@ impl SettledAnswer {
                 None,
                 resolved(),
             )),
-            rows => return Self::rows(rows),
+            rows @ (RequestValue::Decisions(_) | RequestValue::Choices(_) | RequestValue::Tags(_) | RequestValue::Scores(_) | RequestValue::Filtered(_) | RequestValue::Annotations(_)) => return Self::rows(rows),
         })
     }
     pub(crate) fn append(&mut self, other: Self) {
