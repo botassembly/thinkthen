@@ -33,6 +33,7 @@ class StressSelection(unittest.TestCase):
                 'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
                 'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
             env = child_env(home=root / 'home', PATH=os.defpath, FIXTURE_ROOT=str(root))
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
                 with self.subTest(first=first, last=last):
                     calls = root / 'calls'
@@ -83,6 +84,7 @@ class StressSelection(unittest.TestCase):
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
             unsupported = subprocess.run(['sh', str(php)], env=env,
                                          capture_output=True, text=True)

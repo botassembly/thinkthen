@@ -87,6 +87,7 @@ class CandidateSmokes(unittest.TestCase):
                 'subprocess.run(["./built-"+slot],env=env,check=True)\n'
                 'print("smoke: true")\n')
             env = child_env(home=root / 'home')
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             env['PATH'] = str(tools) + os.pathsep + env['PATH']
             children = []
             try:
@@ -131,6 +132,7 @@ class CandidateSmokes(unittest.TestCase):
                 library.mkdir(parents=True, exist_ok=True)
                 (library / 'check.sh').write_text('exit 77\n')
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home')}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             for full, member, delegate, expected in [
                     (False, 'c', '', 0), (True, 'c', '', 1),
                     (True, 'c', 'required', 1), (True, 'objective-c', '', 1),
@@ -179,6 +181,7 @@ cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
                    'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)
             # Stop at installation: the real full preparation must already retain its input.
