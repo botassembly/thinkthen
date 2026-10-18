@@ -18,7 +18,6 @@ if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
-python3 "$(dirname -- "$0")/../../conformance/children/privacy.py" --sources "$(dirname -- "$0")" --public --artifact-env
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Retained one-record listener fixtures keep their historical wire identity.
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.
@@ -37,6 +36,7 @@ usage_home
 . ./runtime.sh
 runtime_ready
 runtime_target
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 REPO=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
 	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}
