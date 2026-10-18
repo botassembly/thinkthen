@@ -158,7 +158,10 @@ fn expected(case: &Case, collection: bool) -> Result<Value, String> {
     Ok(expected)
 }
 
-#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the shared expected answer fields must exist or fail the consumer test"
+)]
 fn scalar_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
     let bare = expected["value"].clone();
     let detail = &case.rest["expect"]["success"]["answers"][0]["details"]["answer"];
@@ -168,9 +171,8 @@ fn scalar_expected(case: &Case, collection: bool, expected: &mut Value) -> Resul
         } else if case.verb == "decide" {
             expected["probability"] = detail["probability"].clone();
         } else {
-            expected["probability"] = detail["probabilities"]
-                [detail["pick"].as_str().ok_or("missing pick")?]
-            .clone();
+            expected["probability"] =
+                detail["probabilities"][detail["pick"].as_str().ok_or("missing pick")?].clone();
         }
     }
     if case.verb == "choose" {
@@ -185,9 +187,14 @@ fn scalar_expected(case: &Case, collection: bool, expected: &mut Value) -> Resul
     Ok(())
 }
 
-#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the shared expected answer fields must exist or fail the consumer test"
+)]
 fn annotation_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
-    let answers = case.rest["expect"]["success"]["answers"].as_array().ok_or("missing annotations")?;
+    let answers = case.rest["expect"]["success"]["answers"]
+        .as_array()
+        .ok_or("missing annotations")?;
     let mut values = serde_json::Map::new();
     let mut resolutions = serde_json::Map::new();
     for answer in answers {
@@ -215,10 +222,15 @@ fn annotation_expected(case: &Case, collection: bool, expected: &mut Value) -> R
     Ok(())
 }
 
-#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the shared expected answer fields must exist or fail the consumer test"
+)]
 fn filter_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
     let success = &case.rest["expect"]["success"];
-    let answers = success["answers"].as_array().ok_or("missing filter answers")?;
+    let answers = success["answers"]
+        .as_array()
+        .ok_or("missing filter answers")?;
     let indexes = success["operation"]["indexes"]
         .as_array()
         .ok_or("missing selected inputs")?;
@@ -247,7 +259,10 @@ fn filter_expected(case: &Case, collection: bool, expected: &mut Value) -> Resul
     Ok(())
 }
 
-#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the shared expected answer fields must exist or fail the consumer test"
+)]
 fn rank_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<(), String> {
     let success = &case.rest["expect"]["success"];
     let first = &success["answers"][0];
@@ -271,7 +286,10 @@ fn rank_expected(case: &Case, collection: bool, expected: &mut Value) -> Result<
     Ok(())
 }
 
-#[expect(clippy::indexing_slicing, reason = "the shared expected answer fields must exist or fail the consumer test")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the shared expected answer fields must exist or fail the consumer test"
+)]
 fn find_expected(case: &Case, _collection: bool, expected: &mut Value) -> Result<(), String> {
     let success = &case.rest["expect"]["success"];
     let detail = &success["answers"][0]["details"]["answer"];
@@ -287,18 +305,13 @@ fn find_expected(case: &Case, _collection: bool, expected: &mut Value) -> Result
         None => Value::Null,
     };
     if !index.is_null() {
-        expected["probability"] = detail["probabilities"]
-            [detail["pick"].as_str().ok_or("missing find pick")?]
-        .clone();
+        expected["probability"] =
+            detail["probabilities"][detail["pick"].as_str().ok_or("missing find pick")?].clone();
     }
     Ok(())
 }
 
 #[test]
-#[expect(
-    clippy::indexing_slicing,
-    reason = "shared fixture fields and expected outputs must exist or fail the consumer test"
-)]
 fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> {
     let cases: Cases = serde_json::from_str(CASES).map_err(failure)?;
     let backend = Backend::start().map_err(failure)?;
@@ -351,10 +364,6 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
 }
 
 #[test]
-#[expect(
-    clippy::indexing_slicing,
-    reason = "each final packet must retain the exact public resolution and nullable value"
-)]
 fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), String> {
     for (question, reply, resolution, terminal_resolution) in [
         (
@@ -396,10 +405,6 @@ fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), Str
 }
 
 #[test]
-#[expect(
-    clippy::indexing_slicing,
-    reason = "the recovered final answer must keep every original input position"
-)]
 fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> Result<(), String> {
     let listener = conformance_backend::Listener::answering(|body| {
         let text = String::from_utf8_lossy(body);
