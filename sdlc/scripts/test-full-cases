@@ -2,6 +2,36 @@
 # The full functional checkpoint: release boundaries, required parity and packaging.
 set -eu
 case ${1:-} in
+--checkpoint)
+    [ "$#" -eq 3 ] || { echo 'usage: test-full-cases --checkpoint MAIN_SHA LOG' >&2; exit 2; }
+    checkpoint_sha=$2 checkpoint_log=$3
+    REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+    cd -- "$REPO"
+    # pm job checks out the named revision and fetches origin before running this command.
+    [ "$(git rev-parse HEAD)" = "$checkpoint_sha" ] &&
+        git merge-base --is-ancestor "$checkpoint_sha" refs/remotes/origin/main || {
+        echo 'test-full-cases: checkpoint must name the checked-out main commit' >&2; exit 2;
+    }
+    [ -z "$(git status --porcelain --untracked-files=normal)" ] || {
+        echo 'test-full-cases: checkpoint needs a clean checkout' >&2; exit 2;
+    }
+    # Refuse an existing log rather than overwrite an earlier checkpoint.
+    (set -C; : >"$checkpoint_log") || exit 2
+    exec >>"$checkpoint_log" 2>&1
+    printf 'checkpoint %s on %s %s\n' "$checkpoint_sha" "$(uname -s)" "$(uname -m)"
+    for checkpoint_step in test-full-cases package test-stress; do
+        printf 'checkpoint: start %s\n' "$checkpoint_step"
+        checkpoint_code=0
+        if [ "$checkpoint_step" = package ]; then
+            sh sdlc/scripts/package || checkpoint_code=$?
+        else
+            sh "sdlc/scripts/$checkpoint_step" --run || checkpoint_code=$?
+        fi
+        printf 'checkpoint: %s exit %s\n' "$checkpoint_step" "$checkpoint_code"
+        [ "$checkpoint_code" -eq 0 ] || exit "$checkpoint_code"
+    done
+    printf 'checkpoint %s passed\n' "$checkpoint_sha"
+    exit 0 ;;
 --list)
     unset THINKTHEN_CONFORMANCE_IDS
     REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)

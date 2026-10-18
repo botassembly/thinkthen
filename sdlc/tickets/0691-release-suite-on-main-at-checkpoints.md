@@ -23,3 +23,7 @@ Depends on: 0615, 0618, 0619
 ## Evidence
 
 Rule 6 of the 0.2.1 ruling says candidates are main revisions and the release suite runs on main at each checkpoint, so no release-only check meets a candidate first. In 0.2, release-only checks ran for the first time at each candidate, and each candidate found one new setup fault. Nothing in the 0.2.1 set runs the release suite before 0687. The retired campaign-owner verifier needs no replacement runner: the suite already has entrypoints.
+
+## Progress
+
+- 2026-10-18 started

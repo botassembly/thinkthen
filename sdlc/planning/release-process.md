@@ -8,6 +8,18 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 2. Checkpoints
 
+For 0.2.1, checkpoints are the end of phase 1, the core-freeze main commit (0688), and each batch of phase 3 landings the coordinator names. Name a full main commit SHA and run the existing entrypoint through pm job:
+
+```sh
+pm job run --machine m5 0691 MAIN_SHA --disk 40 --memory 16 -- sh sdlc/scripts/test-full-cases --checkpoint MAIN_SHA /tmp/thinkthen-checkpoint-MAIN_SHA-native.log
+```
+
+The command runs the release suite in order and writes one log for the target. Use a new absolute log path for each run. The job checkout must equal the named revision, which must belong to fetched `origin/main`. The command does not move branches. The coordinator retains each target's log with the existing job output and cites its revision.
+
+Run the same command natively on M5, inside the Linux arm64 container on M5, and inside the Linux x86_64 container on Yellow. The pinned container entrypoint and its placement belong to 0619; pass this command through that entrypoint, with a log path retained outside the container. Book M5 with `--memory 16`; Yellow uses the 0619 amendment's `--memory 14` and matching container cap. Do not substitute the distribution-artifact `release-container` helper for the check environment. The manifest (0615), required-check handling (0618), and container entrypoint (0619) must land before the coordinator qualifies the checkpoint on all three targets. Keep the existing ticket gate until its container replacement lands.
+
+File each checkpoint failure against the lane that caused it and fix main before the next checkpoint. At the first checkpoint after 0613, 0620 and 0622 land, dispatch one nonpublishing hosted rehearsal on that same revision to prove those workflow changes. Hosted runs provide no everyday proof. Candidate and publication steps below remain subject to their existing authorization.
+
 1. The required local checkpoint is the complete installed-package campaign, its generated support table and the applicable test, lint, specification and documentation checks, including `cd site && npm run test-docs`. Name its result in the checkpoint handoff. Every required public consumer runs without missing or skipped cells. Reuse passing checks while their relevant code, inputs, environment and assumptions remain unchanged; rerun affected checks after a fix. Do not repeat a complete source matrix to prepare a QA handoff.
 2. Send release QA the reviewed commit, qualified package locations, generated table, known rulings and outstanding platform checks through the mailroom. State which source and package revisions each check covers. A current table does not qualify an untested platform, and metadata changes do not manufacture a new product test result.
 3. The existing `surfaces --publish TAG` helper can archive a separate debug-build checkpoint under `THINKTHEN_PUBLISH_ROOT`. It runs on Linux x86_64 only, keeps its newest three checkpoint folders and removes no other folder. Its debug packages do not replace the release packages tested by the required installed campaign. This archive is optional; release QA does not require another debug-build sweep or an auxiliary checkpoint tag.

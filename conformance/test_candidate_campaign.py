@@ -52,6 +52,70 @@ class CandidatePlatforms(unittest.TestCase):
                         self.assertEqual(swift['adopted_case_count'], 0)
 
 
+class CheckpointCommand(unittest.TestCase):
+    def test_main_checkpoint_orders_stages_logs_output_and_stops_on_failure(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-checkpoint-') as folder:
+            root = Path(folder)
+            source = root / 'source'
+            scripts = source / 'sdlc/scripts'
+            tools = source / 'tools'
+            scripts.mkdir(parents=True)
+            tools.mkdir()
+            shutil.copyfile(parity.ROOT / 'sdlc/scripts/test-full-cases', scripts / 'test-full-cases')
+            # Only the expensive suite children are doubles; invoke the real command and Git.
+            shell = tools / 'sh'
+            shell.write_text('#!/bin/sh\n'
+                'echo "child: $*"\n'
+                'echo "diagnostic: $1" >&2\n'
+                'if [ -f .git/fail ] && [ "$1" = "$(cat .git/fail)" ]; then exit 23; fi\n')
+            shell.chmod(0o755)
+            env = child_env(home=root / 'home')
+            def git(*args):
+                return subprocess.run(['git', *args], cwd=source, env=env,
+                    check=True, capture_output=True, text=True).stdout.strip()
+            git('init', '-b', 'main')
+            git('add', '.')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                '-c', 'commit.gpgsign=false', 'commit', '-m', 'Create checkpoint fixture')
+            sha = git('rev-parse', 'HEAD')
+            git('update-ref', 'refs/remotes/origin/main', sha)
+            env['PATH'] = str(tools) + os.pathsep + env['PATH']
+            def invoke(revision, log):
+                return subprocess.run(['/bin/sh', str(scripts / 'test-full-cases'),
+                    '--checkpoint', revision, str(log)], cwd=root, env=env,
+                    capture_output=True, text=True, check=False)
+            log = root / 'pass.log'
+            result = invoke(sha, log)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, '')
+            output = log.read_text()
+            self.assertEqual([line for line in output.splitlines() if line.startswith('child:')],
+                ['child: sdlc/scripts/test-full-cases --run',
+                 'child: sdlc/scripts/package', 'child: sdlc/scripts/test-stress --run'])
+            self.assertIn('diagnostic: sdlc/scripts/package', output)
+            self.assertIn(f'checkpoint {sha} passed', output)
+            self.assertEqual(invoke(sha, log).returncode, 2)
+            self.assertEqual(log.read_text(), output)
+            for index, stage in enumerate(('test-full-cases', 'package', 'test-stress')):
+                (source / '.git/fail').write_text('sdlc/scripts/' + stage)
+                log = root / f'{stage}.log'
+                self.assertEqual(invoke(sha, log).returncode, 23)
+                output = log.read_text()
+                self.assertEqual(output.count('child:'), index + 1)
+                self.assertIn(f'checkpoint: {stage} exit 23', output)
+                self.assertNotIn(f'checkpoint {sha} passed', output)
+            # Neither a different checkout nor a branch-only commit qualifies main.
+            log = root / 'refused.log'
+            self.assertEqual(invoke('0' * 40, log).returncode, 2)
+            (source / 'dirty').touch()
+            self.assertEqual(invoke(sha, log).returncode, 2)
+            git('add', 'dirty')
+            git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                '-c', 'commit.gpgsign=false', 'commit', '-m', 'Create branch-only fixture')
+            self.assertEqual(invoke(git('rev-parse', 'HEAD'), log).returncode, 2)
+            self.assertFalse(log.exists())
+
+
 class CandidateSmokes(unittest.TestCase):
     @unittest.skipUnless(shutil.which('cc'), 'C compiler required')
     def test_four_smokes_admit_real_nested_compilers(self):
