@@ -311,7 +311,10 @@ mod reader {
 #[cfg(test)]
 #[derive(schemars::JsonSchema)]
 #[serde(untagged)]
-#[expect(dead_code, reason = "RequestInput schema derives use ContextSchema without constructing its variants")]
+#[expect(
+    dead_code,
+    reason = "RequestInput schema derives use ContextSchema without constructing its variants"
+)]
 enum ContextSchema {
     Text(String),
     Object(std::collections::BTreeMap<String, serde_json::Value>),

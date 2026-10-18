@@ -274,7 +274,9 @@ fn named(source: Source, key: &str) -> String {
             _ => String::new(),
         },
         Source::File => format!("the question file's `{key}`: "),
-        Source::Configuration | Source::Default => String::new(),
+        Source::Default => String::new(),
+        #[cfg(any(feature = "cli", test))]
+        Source::Configuration => String::new(),
     }
 }
 
@@ -286,7 +288,9 @@ fn pointed(source: Source, key: &str) -> String {
     match source {
         Source::CommandLine => format!("--{key} "),
         Source::File => format!("the question file's `{key}` "),
-        Source::Configuration | Source::Default => String::new(),
+        Source::Default => String::new(),
+        #[cfg(any(feature = "cli", test))]
+        Source::Configuration => String::new(),
     }
 }
 
@@ -430,7 +434,9 @@ pub use role::QuestionRole;
 mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;
-pub(crate) use crate::core::question_file::resolve::{Cutting, Resolved, Sources, Typed, resolve};
+pub(crate) use crate::core::question_file::resolve::{Cutting, Typed, resolve};
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::question_file::resolve::{Resolved, Sources};
 use fields::{labels_in, meaning, model_in, pointers_in, question_text, threshold_in};
 use profile::profile_in;
 

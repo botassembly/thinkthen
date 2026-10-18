@@ -5,7 +5,9 @@ use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
-use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut, rule_side};
+use crate::core::recognize_file::{parse_json_cut, parse_relations, rule_side};
+#[cfg(any(feature = "cli", test))]
+use crate::core::recognize_file::{parse_typed_cut};
 use crate::core::{
     ModelName, Pointer, ProfileName, QuestionFile, RecognizeConfigError, RecognizeSpec,
     RelationEntity, RelationEntityView, RelationRule, RenderError, Threshold, json_line,

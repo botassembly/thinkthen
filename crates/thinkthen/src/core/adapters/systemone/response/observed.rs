@@ -1,6 +1,6 @@
-use crate::core::{Question, Reply, ReportedUsage};
 #[cfg(any(feature = "cli", test))]
 use crate::core::Plan;
+use crate::core::{Question, Reply, ReportedUsage};
 
 use super::{DecodeError, Response, decode_each, decode_response};
 
@@ -33,8 +33,10 @@ pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
     let reply = decode_response(questions, response, usage.and_then(ReportedUsage::complete))
         .map(|reply| reply.with_reported_usage(usage));
     Decoded {
- #[cfg(any(feature = "cli", test))]
- usage, reply }
+        #[cfg(any(feature = "cli", test))]
+        usage,
+        reply,
+    }
 }
 
 /// Each question's answer or the error that failed it, and the reply's

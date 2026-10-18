@@ -1,10 +1,10 @@
 //! Relations between given entities, planned as one ordered set of pair and
 //! menu questions.
 
-use super::each::Models;
-use super::{Answered, Asks, Bound, Engine};
 #[cfg(any(feature = "cli", test))]
 use super::Request;
+use super::each::Models;
+use super::{Answered, Asks, Bound, Engine};
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
     RelationEdge, RelationEntity, RelationRule, Usage, plan_relate, relate_edge,
@@ -48,7 +48,6 @@ pub(crate) struct Execution {
     pub(crate) reported_usage: Option<crate::core::ReportedUsage>,
     pub(crate) replayed: bool,
     pub(crate) requests_sent: u64,
-    #[cfg(any(feature = "cli", test))]
     pub(crate) requests: Vec<String>,
     pub(crate) failed: usize,
     pub(crate) answered: usize,

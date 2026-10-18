@@ -4,8 +4,11 @@ use std::cell::Cell;
 use std::sync::Once;
 use std::thread::{self, ScopedJoinHandle};
 
+#[cfg(any(feature = "cli", test))]
 use crate::engine::Cancel;
-use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
+use crate::engine::fork_safe::{Receiver, Sender, channel};
+#[cfg(any(feature = "cli", test))]
+use crate::engine::fork_safe::{RecvTimeoutError};
 
 thread_local! {
     /// Whether this thread is an engine worker with host signals masked.

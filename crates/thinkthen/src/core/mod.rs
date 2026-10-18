@@ -46,9 +46,9 @@ mod question_file;
 mod question_set;
 mod recognition_result;
 mod recognize;
-pub(crate) use recognize::{ExamplesError, render_examples, selected_examples};
 #[cfg(any(feature = "cli", test))]
-pub(crate) use recognize::{example_file};
+pub(crate) use recognize::example_file;
+pub(crate) use recognize::{ExamplesError, render_examples, selected_examples};
 pub use recognize::{
     RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionMode,
     RecognitionSeedSpan, RecognitionStageContext,
@@ -77,14 +77,14 @@ mod threshold;
 
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::backend::BackendError;
 pub(crate) use crate::core::backend::named::{self, Named};
 pub(crate) use crate::core::backend::{Backend, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE};
-#[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::backend::{BackendError};
 pub(crate) use crate::core::backend_profile::LimitKind;
-pub(crate) use crate::core::backend_profile::{BackendProfile, ProfileLimit, ProfileName};
 #[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::backend_profile::{ProfileError};
+pub(crate) use crate::core::backend_profile::ProfileError;
+pub(crate) use crate::core::backend_profile::{BackendProfile, ProfileLimit, ProfileName};
 pub(crate) use crate::core::batch::{BatchError, BatchRecord, Setting};
 pub(crate) use crate::core::batch::{quoted_plan, quoted_plan_of};
 pub use crate::core::budget::{EstimatedInputDenial, SendBudgetDenial};
@@ -105,7 +105,9 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub use crate::core::question_file::QuestionRole;
-pub(crate) use crate::core::question_file::{Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key};
+pub(crate) use crate::core::question_file::{
+    Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key,
+};
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::question_file::{Resolved, Source, Sources, pointers};
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
@@ -114,7 +116,9 @@ pub(crate) use crate::core::recognize::{
     evidence as window, kind_question, name_groups, pieces, settle as settle_names,
     step_one_groups, step_one_questions, step_two_questions,
 };
-pub(crate) use crate::core::recognize_file::{RecognizeConfigError, RecognizeSpec, recognize_sha256};
+pub(crate) use crate::core::recognize_file::{
+    RecognizeConfigError, RecognizeSpec, recognize_sha256,
+};
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::recognize_file::{RecognizeKinds, rule_side};
 pub(crate) use crate::core::records::{
@@ -131,6 +135,8 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{
     AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
 };
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::result::RecordValue;
 pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
 pub(crate) use crate::core::result::complete::Find as CompleteFind;
 pub(crate) use crate::core::result::complete::Recognition as CompleteRecognition;
@@ -143,14 +149,16 @@ pub(crate) use crate::core::result::complete::{
     Relation as CompleteRelation, RelationEntry as CompleteRelationEntry,
 };
 pub use crate::core::result::complete::{RelationDirection, RelationMethod};
-pub(crate) use crate::core::result::{AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning, ReportedSum, RequestMeta, Usage, share};
-#[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::result::{RecordValue};
+pub(crate) use crate::core::result::{
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
+    AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
+    ReportedSum, RequestMeta, Usage, share,
+};
 pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
-pub(crate) use crate::core::threshold::{Threshold};
+pub(crate) use crate::core::threshold::Threshold;
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::threshold::{Outcome, ThresholdError};
 pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
