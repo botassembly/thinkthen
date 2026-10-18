@@ -33,3 +33,7 @@ Qualification has moved between machines: the Linux mini PC (load cap only there
 `sdlc/scripts/release-container:16-18` already pins a `manylinux_2_28` image by digest for each Linux architecture, but only release packing uses it. The M5's default pm job memory is 8 GiB, below the hosted runner's 16 GB.
 
 The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matching line in `AGENTS.md` say "Linux CI runs on each push". Every workflow in `.github/workflows/` starts only by `workflow_dispatch` or `workflow_call`, which matches the ruling that GitHub Actions run only for public releases after local testing.
+
+## Progress
+
+- 2026-10-18 started
