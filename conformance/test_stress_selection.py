@@ -36,7 +36,7 @@ class StressSelection(unittest.TestCase):
                 'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
             env = child_env(home=root / 'home', PATH=os.defpath, FIXTURE_ROOT=str(root))
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
+            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77), (0, 0)):
                 with self.subTest(first=first, last=last):
                     calls = root / 'calls'
                     calls.write_text('')
@@ -45,7 +45,7 @@ class StressSelection(unittest.TestCase):
                                             capture_output=True, text=True)
                     self.assertEqual(calls.read_text().splitlines(), ['16', '18'],
                                      result.stdout + result.stderr)
-                    self.assertEqual(result.returncode, int(1 in (first, last)),
+                    self.assertEqual(result.returncode, int(bool(first or last)),
                                      result.stdout + result.stderr)
 
     def test_actual_registry_excludes_unsupported_php_and_requires_selected_checks(self):
