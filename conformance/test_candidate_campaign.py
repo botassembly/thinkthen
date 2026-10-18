@@ -16,6 +16,7 @@ from unittest.mock import patch
 from conformance import parity
 from conformance.children.children import child_env
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.children.children import child_env
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -43,7 +44,7 @@ class CandidatePlatforms(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, exit_code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(os, 'environ', {'PATH': os.defpath, 'THINKTHEN_MACOS_APPLE_CHECKS': delegation}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(os, 'environ', child_env(home=folder, PATH=os.defpath, THINKTHEN_MACOS_APPLE_CHECKS=delegation)):
                     self.assertEqual(parity.run('12345'), expected)
                 matrix = json.loads((root / 'target/parity/matrix.json').read_text())
                 self.assertTrue(any(row.get('platform_pending') for row in matrix))

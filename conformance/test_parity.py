@@ -16,6 +16,7 @@ from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from conformance.children.children import child_env
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -503,7 +504,7 @@ class PublicAssertions(unittest.TestCase):
             with lock:
                 active -= 1
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(peak, 1)
@@ -538,7 +539,7 @@ class PublicAssertions(unittest.TestCase):
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -560,7 +561,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -825,7 +826,7 @@ class PublicAssertions(unittest.TestCase):
                     kwargs['stdout'].write(output)
                     self.assertEqual(kwargs['env']['THINKTHEN_TEST_PROFILE'], 'full')
                     return subprocess.CompletedProcess(args, code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
@@ -843,7 +844,7 @@ class PublicAssertions(unittest.TestCase):
                 contract = {'functions': ['decide'], 'consumers': [
                     {'id': 'rust', 'owner': '0431', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', child_env(home=scratch)):
                     self.assertEqual(parity.run('12345'), 1)
                 row = json.loads((root / 'target/parity/matrix.json').read_text())[0]
                 if expected_exit is not None:
@@ -984,7 +985,7 @@ class CliApplicability(unittest.TestCase):
             cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
             def command(args, **kwargs):
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
@@ -1070,7 +1071,7 @@ class InstalledInputs(unittest.TestCase):
             def command(args, **kwargs):
                 self.assertIn('libraries/objective-c/check.sh', args)
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_pending', row)
@@ -1100,7 +1101,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': 'postgresql', 'case': key, 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
@@ -1125,7 +1126,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):
