@@ -361,9 +361,10 @@ def linux_source_staging_case():
             source.extractall(root, filter='data')
         (root / 'sdlc').mkdir()
         (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators', target_is_directory=True)
-        subprocess.run(['git', 'init', '-q', str(root)], check=True)
-        subprocess.run(['git', '-C', str(root), 'add', 'libraries', 'specification'], check=True)
         flutter = root / 'libraries/dart/flutter'
+        (flutter / 'linked_readme.md').symlink_to('README.md')
+        subprocess.run(['git', 'init', '-q', str(root)], check=True)
+        subprocess.run(['git', '-C', str(root), 'add', '-f', 'libraries', 'specification'], check=True)
         loop = flutter / 'example/linux/flutter/ephemeral/.plugin_symlinks/thinkthen_flutter'
         loop.parent.mkdir(parents=True, exist_ok=True)
         loop.symlink_to(flutter, target_is_directory=True)
@@ -399,6 +400,8 @@ def linux_source_staging_case():
         for item in subprocess.check_output(['git', '-C', str(flutter), 'ls-files', '-z'], text=True).split('\0'):
             if item:
                 assert (staged / item).is_file(), item
+                if Path(item).name != 'pubspec.yaml':
+                    assert (staged / item).read_bytes() == (flutter / item).read_bytes(), item
         assert not (staged / 'example/linux/flutter/ephemeral').exists()
         for relative in ('libraries/dart/target/core-wave/bin', 'libraries/python/target/core-wave/thinkthen'):
             assert not (root / relative / 'generated-loop').exists()
