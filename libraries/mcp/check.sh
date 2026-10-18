@@ -1,6 +1,8 @@
 #!/bin/sh
 # Execute the complete required MCP row, without a case selector.
 set -eu
+tools_group=mcp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 [ "$#" -eq 1 ] || { echo 'usage: libraries/mcp/check.sh LOOPBACK_PORT' >&2; exit 2; }
 command=${THINKTHEN_COMMAND:-$root/target/debug/thinkthen}

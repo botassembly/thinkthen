@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+tools_group=objective-c
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 python3 "$REPO/sdlc/generators/results/generate.py" --target objc --check

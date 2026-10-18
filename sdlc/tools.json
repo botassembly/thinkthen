@@ -123,7 +123,8 @@
           "--version"
         ],
         "contains": "ruby {version}"
-      }
+      },
+      "openssl_version": "3.0.22"
     },
     "nextest": {
       "commands": [
@@ -183,7 +184,8 @@
         "lint",
         "install",
         "typescript",
-        "surfaces"
+        "surfaces",
+        "test"
       ],
       "provider": "node",
       "version": "22.22.3",
@@ -251,7 +253,8 @@
       ],
       "groups": [
         "lint",
-        "install"
+        "install",
+        "c"
       ],
       "provider": "cargo:cbindgen",
       "version": "0.29.4",
@@ -432,7 +435,8 @@
       ],
       "groups": [
         "cpp",
-        "duckdb"
+        "duckdb",
+        "test"
       ],
       "provider": "cmake",
       "version": "4.1.1"
@@ -446,7 +450,8 @@
         "linux"
       ],
       "groups": [
-        "duckdb"
+        "duckdb",
+        "test"
       ],
       "provider": "ninja",
       "version": "1.13.1"
@@ -691,7 +696,9 @@
           "--version"
         ],
         "contains": "ruby {version}"
-      }
+      },
+      "linux_directory": "ruby34/bin",
+      "openssl_version": "3.0.22"
     }
   },
   "python_packages": {

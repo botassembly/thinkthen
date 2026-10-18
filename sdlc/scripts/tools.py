@@ -77,8 +77,8 @@ def environment(root):
                MISE_SYSTEM_CONFIG_FILE=str(root / 'config/system.toml'),
                MISE_USE_TOML='0', MISE_YES='1', MISE_CARGO_BINSTALL='0',
                MISE_JOBS='2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
-               RUSTUP_HOME=str(root / 'rustup'), RUSTUP_TOOLCHAIN='1.95.0',
-               PIP_CONFIG_FILE='/dev/null', PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
+               RUSTUP_HOME=str(root / 'rustup'),
+               PIP_CONFIG_FILE='/dev/null', PIP_CACHE_DIR=str(root / 'pip-cache'), PYTHONNOUSERSITE='1', UV_CACHE_DIR=str(root / 'uv-cache'),
                UV_PYTHON_INSTALL_DIR=str(root / 'python'))
     return env
 
@@ -90,7 +90,8 @@ def resolve(manifest, groups, root, check=False):
     env['CARGO_HOME'] = str(root / 'cargo')
     env['CARGO_BUILD_JOBS'] = '2'
     env['RUSTUP_TOOLCHAIN'] = manifest['tools']['rust']['version']
-    paths = [str(root / 'bin')]
+    paths = [str(root / tool['linux_directory']) for tool in requirements.values()
+             if host == 'linux' and 'linux_directory' in tool] + [str(root / 'bin')]
     failures = []
     installer = None
     for name, tool in requirements.items():

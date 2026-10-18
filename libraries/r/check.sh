@@ -3,6 +3,8 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
+tools_group=r
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 root=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}

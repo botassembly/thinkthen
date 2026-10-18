@@ -1,0 +1,8 @@
+# Entry scripts name their manifest group before any build or test work.
+case ,${THINKTHEN_RESOLVED_TOOLS:-}, in
+    *,$tools_group,*) ;;
+    *)
+        tools_repo=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+        exec /usr/bin/python3 "$tools_repo/sdlc/scripts/tools.py" "$tools_group" -- "$0" "$@"
+        ;;
+esac

@@ -22,14 +22,16 @@ case $base_target in /*) ;; *) base_target=$PWD/$base_target ;; esac
 for THINKTHEN_RUBY_MINOR in $RUBY_MINORS; do
 export THINKTHEN_RUBY_MINOR
 . ./toolchain.env
-prefix=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/ruby/$RUBY_VERSION
-[ "$(uname -s)" != Darwin ] || prefix=$prefix-$(uname -m)-darwin
 unset RBCONFIG
-RUBY=$prefix/bin/ruby
-[ -x "$RUBY" ] || { echo "build ruby: run setup-ruby.sh for Ruby $RUBY_VERSION" >&2; exit 77; }
 CARGO_TARGET_DIR=$base_target/ruby-$THINKTHEN_RUBY_MINOR
-export RUBY CARGO_TARGET_DIR
-cargo build --release --locked --offline
+export CARGO_TARGET_DIR
+group=ruby; [ "$THINKTHEN_RUBY_MINOR" != 3.4 ] || group=ruby34
+python3 "$repo/sdlc/scripts/tools.py" "$group" -- sh -eu -c '
+  RUBY=$(command -v ruby); export RUBY
+  exec cargo build --release --locked --offline
+'
+RUBY=$(command -v ruby)
+export RUBY
 target=$CARGO_TARGET_DIR/release
 # The library file's name follows the host: lib<name>.so, lib<name>.dylib.
 built=$(find "$target" -maxdepth 1 -name 'libthinkthen_ruby.*' ! -name '*.d' ! -name '*.rlib' | head -n 1)

@@ -7,6 +7,8 @@
 # surface has a check.sh and a ratchet that holds. Cargo surfaces also pass
 # `cargo deny`; the named non-Cargo package manifests are checked separately.
 set -eu
+tools_group=surfaces
+. "$(dirname -- "$0")/resolved-tools"
 
 # `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
 . "$(dirname -- "$0")/verdict.sh"

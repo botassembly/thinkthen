@@ -4,6 +4,9 @@
 # the rung built, so the slide sample and the tests leave the rung's backend
 # alone. Exit 77 means no host toolchain: the rung reports "not run".
 set -eu
+tools_group=ruby
+[ "${THINKTHEN_RUBY_MINOR:-4.0}" != 3.4 ] || tools_group=ruby34
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
@@ -12,8 +15,6 @@ case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THIN
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
-THINKTHEN_TOOLCHAINS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
-export THINKTHEN_TOOLCHAINS
 usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
@@ -66,7 +67,8 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
   failed=0
   for minor in $RUBY_MINORS; do
     code=0
-    (unset RUBY RBCONFIG; THINKTHEN_RUBY_MINOR=$minor sh "$PWD/check.sh" "$@") >"$versions/$minor.log" 2>&1 || code=$?
+    group=ruby; [ "$minor" != 3.4 ] || group=ruby34
+    (unset RUBY RBCONFIG; THINKTHEN_RUBY_MINOR=$minor /usr/bin/python3 "$repo/sdlc/scripts/tools.py" "$group" -- "$PWD/check.sh" "$@") >"$versions/$minor.log" 2>&1 || code=$?
     # Strict parity accepts one cell per consumer. Keep the alternate Ruby's
     # asserted results visible without emitting duplicate canonical cells.
     if [ "$minor" = 4.0 ]; then
@@ -84,16 +86,8 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
 fi
 THINKTHEN_RUBY_MINOR=${THINKTHEN_RUBY_MINOR:-4.0}
 export THINKTHEN_RUBY_MINOR
-if [ "$host" = Darwin ]; then
-  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION-$(uname -m)-darwin
-else
-  prefix=$THINKTHEN_TOOLCHAINS/ruby/$RUBY_VERSION
-fi
-setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
-[ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"
-stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
-[ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] ||
-  not_run "the prefix's stamp does not match toolchain.env; move the prefix aside and $setup"
+RUBY=$(command -v ruby)
+prefix=$(cd "$(dirname "$RUBY")/.." && pwd)
 
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
@@ -129,9 +123,9 @@ RUBY=$prefix/bin/ruby
 "$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || fail "$RUBY is not Ruby $RUBY_VERSION behind a matching stamp"
 if [ "$host" = Darwin ]; then
   command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
-  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES" 2>/dev/null || true)}
+  openssl=$prefix/openssl
   [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_SERIES host prefix is missing"
-  case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
+  case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_VERSION "*) ;; *) not_run "OpenSSL host version differs from tools.json" ;; esac
   clang=$(xcrun --find clang 2>/dev/null)
   clang=${clang%/bin/clang}/lib
   [ -f "$clang/libclang.dylib" ] || not_run "no libclang.dylib beside the selected Xcode clang"
@@ -151,10 +145,9 @@ cargo fetch --locked --offline --quiet 2>/dev/null ||
 backend=${THINKTHEN_TEST_BACKEND:-${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend}
 case $backend in /*) ;; *) backend=$repo/$backend ;; esac
 [ "$profile" = smoke ] || [ -x "$backend" ] || fail "no loopback backend at $backend; the surfaces rung builds it"
-PATH=$prefix/bin:$PATH
 LIBCLANG_PATH=$clang
 THINKTHEN_TEST_BACKEND=$backend
-export RUBY PATH LIBCLANG_PATH THINKTHEN_TEST_BACKEND
+export RUBY LIBCLANG_PATH THINKTHEN_TEST_BACKEND
 
 if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
   python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
