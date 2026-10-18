@@ -36,6 +36,7 @@ env = dict(os.environ, PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DA
            CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
            CARGO_PROFILE_RELEASE_DEBUG='0')
 (root / 'bin').mkdir()
+(root / 'bin/mise').symlink_to(mise)
 # cargo-binstall must exist before mise handles cargo:* providers. It selects
 # upstream binaries first; the existing locked Cargo helper fallback follows below.
 subprocess.run([str(mise), 'install', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env, check=True)
