@@ -241,7 +241,8 @@ fn loaded(
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(answer.value()), bare)?;
-            return detailed(
+            return complete(
+                question,
                 &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &success["answers"][0],
                 base,
@@ -289,16 +290,22 @@ fn loaded(
                 &expected.map(|answer| answer["bare"].clone()).collect(),
             )
         }
-        _ => single(engine, &asked, texts[0], success, base),
+        _ => single(engine, &asked, texts[0], success, base, question),
     }
 }
 
 /// One judgment and its complete result, then twice through a cache for a counters case.
-fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
+fn single(
+    engine: &Engine,
+    asked: &Question,
+    text: &str,
+    success: &Value,
+    base: &str,
+    question: &str,
+) -> Checked {
     let expected = &success["answers"][0];
     let (typed, details) = atomic(engine, asked, text)?;
-    same("bare", &details["value"], &expected["bare"])?;
-    detailed(&details, expected, base)?;
+    complete(question, &details, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
@@ -322,6 +329,22 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
         "cache_answers": after.cache_answers() - before.cache_answers(),
     });
     same("counters", &moved, counters)
+}
+
+/// Check complete values from the written question, independently of typed values.
+fn complete(question: &str, details: &Value, expected: &Value, base: &str) -> Checked {
+    let authored: Value = serde_json::from_str(question).map_err(|error| error.to_string())?;
+    let meaning = expected["bare"].as_bool().and_then(|yes| {
+        authored
+            .get("decide")
+            .and_then(|_| authored.get(if yes { "true" } else { "false" }))
+    });
+    same(
+        "complete value",
+        &details["value"],
+        meaning.unwrap_or(&expected["bare"]),
+    )?;
+    detailed(details, expected, base)
 }
 
 /// With `one`, the case names one record, and every answer reads it.
