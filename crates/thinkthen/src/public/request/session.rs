@@ -410,7 +410,13 @@ impl Engine {
     ) -> Result<RequestSession, Error> {
         self.start_session(request, surface, options, Mode::Ordinary)
     }
-    pub(super) fn start_session(&self, request: Request, surface: Surface, options: RequestSessionFeedOptions, mode: Mode) -> Result<RequestSession, Error> {
+    pub(super) fn start_session(
+        &self,
+        request: Request,
+        surface: Surface,
+        options: RequestSessionFeedOptions,
+        mode: Mode,
+    ) -> Result<RequestSession, Error> {
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
@@ -442,10 +448,10 @@ impl Engine {
         let engine = self.clone();
         std::thread::Builder::new()
             .name("request-session".into())
-            .spawn(move || {
-                match mode {
-                    Mode::Ordinary => run(engine, admitted, &worker_queue, surface, options),
-                    Mode::Recovering => run_recovering(engine, admitted, &worker_queue, surface, options),
+            .spawn(move || match mode {
+                Mode::Ordinary => run(engine, admitted, &worker_queue, surface, options),
+                Mode::Recovering => {
+                    run_recovering(engine, admitted, &worker_queue, surface, options)
                 }
             })
             .map_err(|_| Error::local("session worker could not be started"))?;
@@ -568,31 +574,59 @@ fn publish_rows(
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) enum Mode { Ordinary, Recovering }
+pub(super) enum Mode {
+    Ordinary,
+    Recovering,
+}
 fn ordinary_read(read: super::session_queue::Read) -> RequestSessionRead {
     use super::session_queue::{Packet, Read};
     match read {
         Read::Packet(Packet::Ordinary(packet)) => RequestSessionRead::Result(packet),
-        Read::Terminal(terminal) => RequestSessionRead::Result(RequestSessionResult::Terminal(terminal)),
+        Read::Terminal(terminal) => {
+            RequestSessionRead::Result(RequestSessionResult::Terminal(terminal))
+        }
         Read::Pending => RequestSessionRead::Pending,
         Read::End => RequestSessionRead::End,
-        Read::Packet(Packet::Recovering(_)) => RequestSessionRead::Result(RequestSessionResult::Terminal(RequestSessionTerminal::failed(Error::defect("recovering packet in ordinary session")))),
+        Read::Packet(Packet::Recovering(_)) => RequestSessionRead::Result(
+            RequestSessionResult::Terminal(RequestSessionTerminal::failed(Error::defect(
+                "recovering packet in ordinary session",
+            ))),
+        ),
     }
 }
-fn run_recovering(engine: Engine, request: AdmittedRequest, queue: &Arc<Queue>, surface: Surface, options: RequestSessionFeedOptions) {
+fn run_recovering(
+    engine: Engine,
+    request: AdmittedRequest,
+    queue: &Arc<Queue>,
+    surface: Surface,
+    options: RequestSessionFeedOptions,
+) {
     use super::RequestRecoveringResult;
     let function = request.request.call.function();
-    let observe = |event: crate::RecordObservation<'_>| queue.publish(RequestRecoveringResult::Observation { function, value: event.to_owned() });
+    let observe = |event: crate::RecordObservation<'_>| {
+        queue.publish(RequestRecoveringResult::Observation {
+            function,
+            value: event.to_owned(),
+        })
+    };
     let sink = |row| queue.publish(RequestRecoveringResult::Row(row));
     let environment = RequestEnvironment {
-        controls: CallOptions::new().surface(surface).cancel(&queue.cancel).observe(&observe),
+        controls: CallOptions::new()
+            .surface(surface)
+            .cancel(&queue.cancel)
+            .observe(&observe),
         feed: match &request.request.call.arguments().input {
-            RequestInput::Feed { name, .. } => Some(configured_feed(name.clone(), Arc::clone(queue), &options)),
+            RequestInput::Feed { name, .. } => {
+                Some(configured_feed(name.clone(), Arc::clone(queue), &options))
+            }
             _ => None,
         },
     };
     let terminal = match engine.execute_request_recovering_sink(&request, environment, &sink) {
-        Ok(call) => RequestSessionTerminal { facts: Some(call.facts().clone()), error: None },
+        Ok(call) => RequestSessionTerminal {
+            facts: Some(call.facts().clone()),
+            error: None,
+        },
         Err(error) => RequestSessionTerminal::failed(error),
     };
     queue.settle(terminal);

@@ -42,10 +42,14 @@ pub(super) enum Read {
     End,
 }
 impl From<RequestSessionResult> for Packet {
-    fn from(value: RequestSessionResult) -> Self { Self::Ordinary(value) }
+    fn from(value: RequestSessionResult) -> Self {
+        Self::Ordinary(value)
+    }
 }
 impl From<super::RequestRecoveringResult> for Packet {
-    fn from(value: super::RequestRecoveringResult) -> Self { Self::Recovering(value) }
+    fn from(value: super::RequestRecoveringResult) -> Self {
+        Self::Recovering(value)
+    }
 }
 
 #[derive(Debug, Default)]

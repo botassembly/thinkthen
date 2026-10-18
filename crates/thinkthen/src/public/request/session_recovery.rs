@@ -1,5 +1,8 @@
 //! Typed recovering view of the shared session owner; no independent state or wake.
-use super::{Request, RequestFunction, RequestRecoveredRow, RequestSession, RequestSessionFeedOptions, RequestSessionPushStatus, RequestSessionTerminal, RequestSessionWaitInterest};
+use super::{
+    Request, RequestFunction, RequestRecoveredRow, RequestSession, RequestSessionFeedOptions,
+    RequestSessionPushStatus, RequestSessionTerminal, RequestSessionWaitInterest,
+};
 use crate::{Engine, Error, OwnedRecordObservation, Surface};
 /// A recovered native row, observation, or joined invocation terminal.
 #[derive(Debug)]
@@ -93,38 +96,66 @@ impl RequestRecoveringSession {
     /// Wait for the next recovered output or joined terminal.
     /// # Errors
     /// Refuses unsupported interests; Result observes cancellation promptly.
-    pub fn next_packet(&self, interest: RequestSessionWaitInterest) -> Result<RequestRecoveringRead, Error> {
+    pub fn next_packet(
+        &self,
+        interest: RequestSessionWaitInterest,
+    ) -> Result<RequestRecoveringRead, Error> {
         self.input.queue.next_packet(interest).map(recovered_read)
     }
     /// Wait without consuming output; arm before checking caller cancellation.
     #[must_use]
-    pub fn wait(&self, interest: RequestSessionWaitInterest, timeout: std::time::Duration) -> super::RequestSessionReady {
+    pub fn wait(
+        &self,
+        interest: RequestSessionWaitInterest,
+        timeout: std::time::Duration,
+    ) -> super::RequestSessionReady {
         self.input.wait(interest, timeout)
     }
     /// Stop descriptor intake while retaining final output.
-    pub fn cancel(&self) { self.input.cancel(); }
+    pub fn cancel(&self) {
+        self.input.cancel();
+    }
 }
 fn recovered_read(read: super::session_queue::Read) -> RequestRecoveringRead {
     use super::session_queue::{Packet, Read};
     match read {
         Read::Packet(Packet::Recovering(packet)) => RequestRecoveringRead::Result(packet),
-        Read::Terminal(terminal) => RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(terminal)),
+        Read::Terminal(terminal) => {
+            RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(terminal))
+        }
         Read::Pending => RequestRecoveringRead::Pending,
         Read::End => RequestRecoveringRead::End,
-        Read::Packet(Packet::Ordinary(_)) => RequestRecoveringRead::Result(RequestRecoveringResult::Terminal(RequestSessionTerminal::failed(Error::defect("ordinary packet in recovering session")))),
+        Read::Packet(Packet::Ordinary(_)) => RequestRecoveringRead::Result(
+            RequestRecoveringResult::Terminal(RequestSessionTerminal::failed(Error::defect(
+                "ordinary packet in recovering session",
+            ))),
+        ),
     }
 }
 impl Engine {
     /// Start a recovering source or inline request with owned unread output.
     /// # Errors
     /// Returns declaration refusal or failure to start the worker.
-    pub fn start_request_recovering_session(&self, request: Request, surface: Surface) -> Result<RequestRecoveringSession, Error> {
-        self.request_recovering_session_with_feed_options(request, surface, RequestSessionFeedOptions::default())
+    pub fn start_request_recovering_session(
+        &self,
+        request: Request,
+        surface: Surface,
+    ) -> Result<RequestRecoveringSession, Error> {
+        self.request_recovering_session_with_feed_options(
+            request,
+            surface,
+            RequestSessionFeedOptions::default(),
+        )
     }
     /// Start a recovering feed with bounded intake and native reader controls.
     /// # Errors
     /// Refuses incompatible controls before descriptor intake.
-    pub fn request_recovering_session_with_feed_options(&self, request: Request, surface: Surface, options: RequestSessionFeedOptions) -> Result<RequestRecoveringSession, Error> {
+    pub fn request_recovering_session_with_feed_options(
+        &self,
+        request: Request,
+        surface: Surface,
+        options: RequestSessionFeedOptions,
+    ) -> Result<RequestRecoveringSession, Error> {
         self.start_session(request, surface, options, super::session::Mode::Recovering)
             .map(|input| RequestRecoveringSession { input })
     }

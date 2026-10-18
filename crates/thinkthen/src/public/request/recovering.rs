@@ -1,6 +1,7 @@
 //! Explicit native recovery leaves ordinary results and packet serialization intact.
 use super::{
-    AdmittedRequest, RequestEnvironment, RequestFunction, RequestInput, RequestOutcome, RequestRecoveredRow,
+    AdmittedRequest, RequestEnvironment, RequestFunction, RequestInput, RequestOutcome,
+    RequestRecoveredRow,
 };
 use crate::{Call, Engine, Error};
 
