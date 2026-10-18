@@ -137,7 +137,7 @@ registry() {
 		[ -d "$folder" ] || continue
 		# MCP WIP is an explicitly planned command adapter, not installed support.
 		if [ "${folder%/}" = libraries/mcp ] && awk '$1 == "libraries/mcp" && $2 == "planned" { found = 1 } END { exit !found }' "$1"; then continue; fi
-		if ! { landed "$1"; feature "$1"; } | grep -qx "${folder%/}"; then
+		if ! { landed "$1"; feature "$1"; } | grep -x "${folder%/}" >/dev/null; then
 			printf 'surfaces: %s is not a landed surface in %s\n' "${folder%/}" "$1" >&2
 			status=1
 		fi

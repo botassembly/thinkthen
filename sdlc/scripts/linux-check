@@ -81,6 +81,9 @@ for relative in locks.splitlines():
     cargo = source / Path(relative).with_name('Cargo.toml')
     if cargo.is_file():
         script += 'cargo fetch --locked --manifest-path ' + shlex.quote(str(cargo)) + '\n'
+# Advisory data is a separate prerequisite from Cargo registry dependencies.
+# Fetch it in this same mounted home before the offline checks consume it.
+script += 'cargo deny fetch db\n'
 for check in args.checks:
     script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)
