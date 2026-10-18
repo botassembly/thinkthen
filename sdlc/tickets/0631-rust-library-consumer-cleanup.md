@@ -26,3 +26,7 @@ On the M5 through pm job, the gate unpacks the packaged crate, builds the consum
 - It sets coverage path remaps through `CARGO_ENCODED_RUSTFLAGS` (`check.sh:48-52`).
 
 The consumer's own projection code goes in 0612, and its packet dump comes with 0642.
+
+## Progress
+
+- 2026-10-18 started

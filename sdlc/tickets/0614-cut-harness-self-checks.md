@@ -25,3 +25,7 @@ Reviews: revision ba9fd2c, accept
 ## Evidence
 
 A large share of the harness tests the harness itself, not the product. `sdlc/scripts/workflows` is 1,403 lines. Its `release()` rules, about lines 173 to 484, assert the text of `release.yml` step by step, so every workflow edit also needs a matching checker edit. The file has 81 commits since 2026-09-15. `sdlc/scripts/lint` plants a forbidden `rm` and a forbidden test run to check its own checkers (around its first dozen lines). It builds a fake git dependency to check that `cargo deny` refuses it (its last block). It also runs an environment-name planting check. `sdlc/scripts` and `conformance` together hold about 70,000 lines, against about 116,000 lines in `crates/thinkthen/src`.
+
+## Progress
+
+- 2026-10-18 started

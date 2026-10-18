@@ -14,7 +14,7 @@ Phase: 1
 
 ### Proof
 
-- On the M5 through pm job, the installed Rust library consumer runs the session checks for both ordinary and recovering calls, and the installed C library runs them for ordinary calls (the C interface exposes no recovering session today; check before relying on one): bounded push-all, try-push, cancel before wait, cancel during a held provider, free while a wait is active, and draining settlement after cancel.
+- On the M5 through pm job, the installed Rust library consumer runs the session checks for both ordinary and recovering calls, and the installed C library runs them for ordinary calls (the C interface exposes no recovering session today; check before relying on one): bounded push-all, try-push, cancel before wait, cancel during a held provider, and draining settlement after cancel. The C checks keep the documented lifetime contract: cancel, then join every wait, then free. Dropping the owner while a wait is active is checked only in Rust, where ownership allows it. Any new C lifetime design belongs to 0638.
 - A repeated stress run of those checks (`sdlc/scripts/test-stress`) finishes with no timeout or hang.
 
 ## Evidence
@@ -27,3 +27,11 @@ The core has two session types, each with its own lock and wake-up code: `crates
 - f01ef4cd7 and a15757cf8 (2026-10-15) adjusted session regression scheduling.
 
 Two locking designs that must behave the same will keep producing bugs of this kind.
+
+## Progress
+
+- 2026-10-18 started
+
+## Amendment, 2026-10-18
+
+The C proof keeps the documented lifetime contract (cancel, join, then free) instead of freeing during an active wait; live-owner and wait-lifetime checks stay in Rust. 0628 does not change the C contract.
