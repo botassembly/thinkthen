@@ -11,7 +11,7 @@ Tickets and the notes that drive work on thinkthen. Tickets exist to drive the c
 | surfaces.txt | The nine surfaces and their state. `sdlc/scripts/surfaces` reads it |
 | ratchet.json | The source size ceiling. `sdlc/scripts/lint` reads it |
 
-Run every build and check on M5 through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND` at a pushed commit. The job owns its worktree and output, reserves disk and memory, and limits concurrent builds. The Beelink runs agents and lightweight scripts only.
+Run every build and check on M5 through `pm job run --machine m5 NNNN SHA --disk GIB --memory GIB -- COMMAND` at a pushed commit. The job owns its worktree and output, reserves disk and memory, and limits concurrent builds. Linux checks use the pinned arm64 container on M5. Proof specific to Linux x86_64 uses the pinned container on Yellow through `pm job run --machine yellow`; container jobs declare `--memory 16`. Hosted workflows run by hand for releases after local checks pass.
 
 PM job admission is the only build turn-taking mechanism. Do not wrap jobs or toolchain mutations in another build lock.
 
