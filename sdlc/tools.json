@@ -565,7 +565,7 @@
         "jvm"
       ],
       "provider": "java",
-      "version": "temurin-25.0.4+1"
+      "version": "temurin-25.0.4+7"
     },
     "kotlin": {
       "commands": [
