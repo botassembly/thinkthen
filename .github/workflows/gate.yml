@@ -59,6 +59,7 @@ jobs:
     if: inputs.language == '' || inputs.language == 'none'
     name: install, lint, test, spec
     runs-on: ubuntu-24.04
+    timeout-minutes: 360
 
     steps:
       - name: Check out the commit
@@ -140,6 +141,7 @@ jobs:
     name: Installed ${{ inputs.language }} package on ${{ inputs.platform || 'ubuntu-24.04' }}
     if: inputs.language != '' && inputs.language != 'none' && inputs.language != 'linux-release'
     runs-on: ${{ inputs.platform || 'ubuntu-24.04' }}
+    timeout-minutes: 360
     defaults: {run: {shell: bash}}
     env:
       LANGUAGE: ${{ inputs.language }}
@@ -273,6 +275,7 @@ jobs:
     name: Linux release ${{ matrix.stage }}
     if: inputs.language == 'linux-release'
     runs-on: ubuntu-24.04
+    timeout-minutes: 360
     defaults: {run: {shell: bash}}
     strategy:
       fail-fast: false
