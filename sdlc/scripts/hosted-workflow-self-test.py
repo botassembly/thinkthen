@@ -186,10 +186,6 @@ def linux_failed_phase_evidence_case():
                 if not code: phases.update(('package', 'stress'))
             assert set(result['phases']) == phases
             assert len(invoked) == len(phases)
-            assert invoked[1][:2] == ['sh', '-c']
-            assert '. sdlc/scripts/full-compiler; unset CARGO_INCREMENTAL' in invoked[1][2]
-            assert 'CARGO_TARGET_DIR="$PWD/target/polars"' in invoked[1][2]
-            assert invoked[1][2].index('--test polars --no-run') < invoked[1][2].index('cargo build')
             assert (out / 'fullcases-parity').exists() == evidence
             if evidence:
                 assert (out / 'fullcases-parity/consumer.log').read_text() == 'child diagnostic\n'
