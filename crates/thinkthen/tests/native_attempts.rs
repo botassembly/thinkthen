@@ -381,6 +381,8 @@ fn fault_arm_error_debug_and_facts_exclude_provider_prose() {
     let backend = conformance_backend::Backend::start().unwrap();
     let question = Question::choose::<DiagnosticChoice>("Which?")
         .unwrap()
+        .option(DiagnosticChoice::A, None).unwrap()
+        .option(DiagnosticChoice::B, None).unwrap()
         .build()
         .unwrap();
     for arm in [
