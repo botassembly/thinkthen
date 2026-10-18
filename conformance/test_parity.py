@@ -525,7 +525,6 @@ class PublicAssertions(unittest.TestCase):
         prepared, homes = {}, {}
         def command(args, **kwargs):
             env = kwargs['env']
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
                 Path(destination, 'installed-package').write_text('immutable')
@@ -1129,7 +1128,6 @@ class InstalledInputs(unittest.TestCase):
                 def command(args, **kwargs):
                     major = args[-1]
                     env = kwargs['env']
-                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     self.assertEqual(args[2], '900')
                     if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                         preparations.append(major)
