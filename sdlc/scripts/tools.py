@@ -203,6 +203,10 @@ def resolve(manifest, groups, root, check=False):
                                       and root not in Path(executable).resolve().parents):
                 missing.append(command)
     for name, tool in requirements.items():
+        probe_env = dict(env)
+        if host == 'linux':
+            # Alternate tool versions share command names; probe each declared prefix.
+            probe_env['PATH'] = str(root / tool.get('linux_directory', 'bin')) + os.pathsep + env['PATH']
         probes = ([tool['probe']] if 'probe' in tool else []) + tool.get('probes', [])
         if check and 'readiness' in tool:
             probes.append(tool['readiness'])
@@ -211,7 +215,7 @@ def resolve(manifest, groups, root, check=False):
                 continue
             try:
                 argv = [argument.format(**tool) for argument in probe['argv']]
-                result = subprocess.check_output(argv, env=env, text=True, stderr=subprocess.STDOUT)
+                result = subprocess.check_output(argv, env=probe_env, text=True, stderr=subprocess.STDOUT)
                 if probe['contains'].format(**tool) not in result:
                     failures.append(name + ': version differs from tools.json')
             except (OSError, subprocess.CalledProcessError) as error:

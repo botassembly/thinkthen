@@ -85,9 +85,8 @@ for relative in locks.splitlines():
 # Fetch it in this same mounted home before the offline checks consume it.
 script += 'cargo deny fetch db\n'
 # Check the whole manifest before any gate work, including the mounted advisory DB.
-groups = {group for tool in manifest['tools'].values() for group in tool['groups']} - {'ruby34'}
+groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
 script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(sorted(groups))) + '\n'
-script += 'python3 sdlc/scripts/tools.py --check ruby34\n'
 for check in args.checks:
     script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)
