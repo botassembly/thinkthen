@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import struct
 import tarfile
 import zipfile
 
@@ -64,30 +65,42 @@ def crate_member(name):
 
 
 def distribution_bytes(path):
-    """Read explicit shipping files, member content and archive metadata separately."""
+    """Scan member content separately; keep all container metadata under every rule."""
     path = Path(path)
+    raw = bytearray(path.read_bytes())
     yield None, path.name.encode()
     if tarfile.is_tarfile(path):
-        with tarfile.open(path) as archive:
+        try:
+            archive = tarfile.open(path, 'r:')
+            stored = True
+        except tarfile.ReadError:
+            archive = tarfile.open(path)
+            stored = False
+        with archive:
             yield None, repr(archive.pax_headers).encode()
             for member in archive:
-                yield None, member.name.encode()
-                yield None, repr(member.pax_headers).encode()
-                if member.issym() or member.islnk():
-                    yield None, member.linkname.encode()
+                yield None, member.name.encode() + member.linkname.encode() + repr(member.pax_headers).encode()
                 if member.isfile():
-                    yield crate_member(member.name), archive.extractfile(member).read()
+                    data = archive.extractfile(member).read()
+                    yield crate_member(member.name), data
+                    if stored:
+                        raw[member.offset_data:member.offset_data + member.size] = b'\0' * member.size
     elif zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
-            yield None, archive.comment
             for member in archive.infolist():
                 yield None, member.filename.encode() + member.comment + member.extra
                 yield crate_member(member.filename), archive.read(member)
+                if member.compress_type == zipfile.ZIP_STORED:
+                    name_size, extra_size = struct.unpack_from('<HH', raw, member.header_offset + 26)
+                    start = member.header_offset + 30 + name_size + extra_size
+                    raw[start:start + member.compress_size] = b'\0' * member.compress_size
     elif path.suffix == '.gz':
-        yield None, path.read_bytes()
-        yield None, gzip.decompress(path.read_bytes())
+        yield None, gzip.decompress(raw)
     else:
-        yield crate_member(path.resolve()), path.read_bytes()
+        yield crate_member(path.resolve()), raw
+        return
+    # Stored payloads were checked above; trailers, headers and compressed bytes still have no allowance.
+    yield None, raw
 
 
 def check_file(path):
