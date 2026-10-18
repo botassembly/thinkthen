@@ -1,12 +1,12 @@
-//! Input and output cells, ordered parked output and independent terminal cells.
+//! One lock owns bounded intake, ordered output, cancellation and settlement.
 use super::{
     RequestReaderFailure, RequestSessionDescriptor, RequestSessionPush, RequestSessionPushStatus,
-    RequestSessionRead, RequestSessionResult, RequestSessionTerminal,
+    RequestSessionResult, RequestSessionTerminal,
 };
 use crate::{CallOptions, CancelToken, Error};
 use std::{
     collections::VecDeque,
-    sync::{Arc, Condvar, Mutex, MutexGuard},
+    sync::{Condvar, Mutex, MutexGuard},
 };
 
 #[derive(Debug)]
@@ -20,86 +20,44 @@ struct State {
     input: Option<RequestSessionDescriptor>,
     finish: Option<Finish>,
     intake_closed: bool,
-    output: Option<RequestSessionResult>,
-    parked: VecDeque<RequestSessionResult>,
+    output: Option<Packet>,
+    parked: VecDeque<Packet>,
     terminal: Option<RequestSessionTerminal>,
     settled: bool,
     receiver_closed: bool,
     settlement_interrupted: bool,
 }
 
-/// A separate generation prevents lost wakeups across the independent intake and output locks.
-#[derive(Debug, Default)]
-pub(super) struct Change {
-    generation: Mutex<u64>,
-    wake: Condvar,
+/// Execution mode chooses packet contents; synchronization remains shared.
+#[derive(Debug)]
+pub(super) enum Packet {
+    Ordinary(RequestSessionResult),
+    Recovering(super::RequestRecoveringResult),
 }
-impl Change {
-    pub(super) fn observed(&self) -> u64 {
-        *self
-            .generation
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-    }
-    pub(super) fn notify(&self) {
-        let mut generation = self
-            .generation
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        *generation = generation.wrapping_add(1);
-        self.wake.notify_all();
-    }
-    fn wait_changed(&self, observed: u64) {
-        let mut generation = self
-            .generation
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        while *generation == observed {
-            generation = self
-                .wake
-                .wait(generation)
-                .unwrap_or_else(|error| error.into_inner());
-        }
-    }
-    pub(super) fn wait(&self, observed: u64, timeout: std::time::Duration) {
-        let generation = self
-            .generation
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        if *generation == observed {
-            drop(
-                self.wake
-                    .wait_timeout(generation, timeout)
-                    .unwrap_or_else(|error| error.into_inner()),
-            );
-        }
-    }
+#[derive(Debug)]
+pub(super) enum Read {
+    Packet(Packet),
+    Terminal(RequestSessionTerminal),
+    Pending,
+    End,
 }
-
-pub(super) trait ParkOutput: std::fmt::Debug + Send + Sync {
-    fn park(&self);
+impl From<RequestSessionResult> for Packet {
+    fn from(value: RequestSessionResult) -> Self { Self::Ordinary(value) }
+}
+impl From<super::RequestRecoveringResult> for Packet {
+    fn from(value: super::RequestRecoveringResult) -> Self { Self::Recovering(value) }
 }
 
 #[derive(Debug, Default)]
 pub(super) struct Queue {
     state: Mutex<State>,
     wake: Condvar,
-    changed: Arc<Change>,
-    recovering_output: Option<Arc<dyn ParkOutput>>,
     pub(super) cancel: CancelToken,
 }
 
 impl Queue {
-    pub(super) fn recovering(changed: Arc<Change>, output: Arc<dyn ParkOutput>) -> Self {
-        Self {
-            changed,
-            recovering_output: Some(output),
-            ..Self::default()
-        }
-    }
     fn notify(&self) {
         self.wake.notify_all();
-        self.changed.notify();
     }
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|error| error.into_inner())
@@ -177,22 +135,16 @@ impl Queue {
             state.parked.push_back(packet);
             self.notify();
         }
-        if let Some(output) = &self.recovering_output {
-            output.park();
-        }
     }
     fn wait_for_room(&self) -> MutexGuard<'_, State> {
-        loop {
-            // Observe before inspecting either queue so publication cannot lose a wake.
-            let observed = self.changed.observed();
-            let mut state = self.lock();
-            if state.input.is_none() || state.intake_closed || state.finish.is_some() {
-                return state;
-            }
+        let mut state = self.lock();
+        while state.input.is_some() && !state.intake_closed && state.finish.is_none() {
             self.park(&mut state);
-            drop(state);
-            self.changed.wait_changed(observed);
+            // Publication, intake and this check share one lock. Condvar::wait
+            // atomically releases it, so neither queue can lose a notification.
+            state = self.wait(state);
         }
+        state
     }
     pub(super) fn input_room(&self) -> bool {
         let state = self.wait_for_room();
@@ -290,13 +242,13 @@ impl Queue {
             };
         }
     }
-    pub(super) fn publish(&self, packet: RequestSessionResult) {
+    pub(super) fn publish(&self, packet: impl Into<Packet>) {
         let mut state = self.lock();
         while state.output.is_some() && !state.receiver_closed {
             state = self.wait(state);
         }
         if !state.receiver_closed {
-            state.output = Some(packet);
+            state.output = Some(packet.into());
             self.notify();
         }
     }
@@ -308,13 +260,13 @@ impl Queue {
         state.settled = true;
         self.notify();
     }
-    pub(super) fn read(&self) -> RequestSessionRead {
+    pub(super) fn read(&self) -> Read {
         self.read_locked(&mut self.lock())
     }
     pub(super) fn next_packet(
         &self,
         interest: super::RequestSessionWaitInterest,
-    ) -> Result<RequestSessionRead, crate::Error> {
+    ) -> Result<Read, crate::Error> {
         use super::RequestSessionWaitInterest as Interest;
         if !matches!(interest, Interest::Result | Interest::Settlement) {
             return Err(crate::Error::usage(
@@ -325,7 +277,7 @@ impl Queue {
         loop {
             // Consume queued output before observing cancellation.
             let packet = self.read_locked(&mut state);
-            if !matches!(packet, RequestSessionRead::Pending) {
+            if !matches!(packet, Read::Pending) {
                 return Ok(packet);
             }
             if interest != Interest::Settlement && self.cancel.is_cancelled() {
@@ -334,18 +286,18 @@ impl Queue {
             state = self.wait(state);
         }
     }
-    fn read_locked(&self, state: &mut State) -> RequestSessionRead {
+    fn read_locked(&self, state: &mut State) -> Read {
         if let Some(packet) = state.parked.pop_front() {
-            RequestSessionRead::Result(packet)
+            Read::Packet(packet)
         } else if let Some(packet) = state.output.take() {
             self.notify();
-            RequestSessionRead::Result(packet)
+            Read::Packet(packet)
         } else if let Some(terminal) = state.terminal.take() {
-            RequestSessionRead::Result(RequestSessionResult::Terminal(terminal))
+            Read::Terminal(terminal)
         } else if state.settled || state.receiver_closed {
-            RequestSessionRead::End
+            Read::End
         } else {
-            RequestSessionRead::Pending
+            Read::Pending
         }
     }
     pub(super) fn close_intake(&self) {
