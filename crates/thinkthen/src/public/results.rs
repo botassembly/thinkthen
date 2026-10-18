@@ -7,6 +7,7 @@ mod aggregate_reading;
 mod settled;
 mod settled_aggregates;
 mod settled_rows;
+mod settled_carriers;
 pub use settled::{
     AnswerResolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledDecision,
     SettledJudgment, SettledOriginal,

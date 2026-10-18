@@ -82,9 +82,10 @@ fn run(f: Fixture) -> Result<String, Error> {
                 serde_json::to_string(&facts).map_err(|_| fixture::usage("invalid facts"))?;
             let prefix = fixture::packet(&completed, facts)?;
             Ok(format!(
-                "{{\"error\":{},\"facts\":{},\"completed\":{prefix}}}",
+                "{{\"error\":{},\"facts\":{},\"completed\":{prefix},\"resolution\":{}}}",
                 fixture::failure(&error)?,
-                facts_json
+                facts_json,
+                serde_json::to_string(error.complete().resolution()).map_err(|_| fixture::usage("invalid resolution"))?
             ))
         }
     }
@@ -98,9 +99,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match result {
         Ok(packet) => println!("{packet}"),
         Err(error) => println!(
-            "{{\"error\":{},\"facts\":{}}}",
+            "{{\"error\":{},\"facts\":{},\"resolution\":{}}}",
             fixture::failure(&error)?,
-            serde_json::to_string(&error.facts().and_then(thinkthen::Facts::complete))?
+            serde_json::to_string(&error.facts().and_then(thinkthen::Facts::complete))?,
+            serde_json::to_string(error.complete().resolution())?
         ),
     }
     Ok(())

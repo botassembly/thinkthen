@@ -118,61 +118,36 @@ fn annotation(
         AnswerResolutions::Members(resolutions),
     )
 }
+pub(crate) fn decision_answer(result: &crate::CompleteDecision) -> Settled<SettledDecision, Option<f64>> {
+    let value = decision(result.value());
+    let meaning = match result.canonical.decide_value(value) {
+        crate::core::DecideValue::Authored(meaning) => Some(meaning.clone()),
+        crate::core::DecideValue::Primitive(_) => None,
+    };
+    Settled::one(SettledDecision { value, meaning }, result.probability(), None, None, nullable(value.is_some()))
+}
+pub(crate) fn choice_answer(result: &crate::CompleteChoice) -> Settled<Option<String>, Option<f64>> {
+    Settled::one(result.value().map(str::to_owned), result.probability(), result.raw_pick().map(str::to_owned), None, nullable(result.value().is_some()))
+}
+pub(crate) fn tag_answer(result: &crate::CompleteTags) -> Settled<Vec<String>, Option<f64>> {
+    Settled::one(result.value().to_vec(), None, None, None, resolved())
+}
+pub(crate) fn score_answer(result: &crate::CompleteScore) -> Settled<f64, Option<f64>> {
+    Settled::one(result.value(), None, result.raw_level().map(str::to_owned), None, resolved())
+}
 impl SettledAnswer {
     pub(crate) fn rows(value: &RequestValue) -> Option<Self> {
         Some(match value {
-            RequestValue::Decisions(rows) => Self::Decide(Settled::rows(rows.iter().map(|row| {
-                let value = decision(row.result().value());
-                let meaning = match row.result().canonical.decide_value(value) {
-                    crate::core::DecideValue::Authored(meaning) => Some(meaning.clone()),
-                    crate::core::DecideValue::Primitive(_) => None,
-                };
-                Settled::one(
-                    SettledDecision { value, meaning },
-                    row.result().probability(),
-                    None,
-                    None,
-                    nullable(value.is_some()),
-                )
-            }))),
-            RequestValue::Choices(rows) => Self::Choose(Settled::rows(rows.iter().map(|row| {
-                let result = row.result();
-                Settled::one(
-                    result.value().map(str::to_owned),
-                    result.probability(),
-                    result.raw_pick().map(str::to_owned),
-                    None,
-                    nullable(result.value().is_some()),
-                )
-            }))),
-            RequestValue::Tags(rows) => Self::Tag(Settled::rows(rows.iter().map(|row| {
-                Settled::one(row.result().value().to_vec(), None, None, None, resolved())
-            }))),
-            RequestValue::Scores(rows) => Self::Score(Settled::rows(rows.iter().map(|row| {
-                Settled::one(
-                    row.result().value(),
-                    None,
-                    row.result().raw_level().map(str::to_owned),
-                    None,
-                    resolved(),
-                )
-            }))),
+            RequestValue::Decisions(rows) => Self::Decide(Settled::rows(rows.iter().map(|row| decision_answer(row.result())))),
+            RequestValue::Choices(rows) => Self::Choose(Settled::rows(rows.iter().map(|row| choice_answer(row.result())))),
+            RequestValue::Tags(rows) => Self::Tag(Settled::rows(rows.iter().map(|row| tag_answer(row.result())))),
+            RequestValue::Scores(rows) => Self::Score(Settled::rows(rows.iter().map(|row| score_answer(row.result())))),
             RequestValue::Filtered(rows) => Self::Filter(Settled::one(
-                rows.iter()
-                    .filter(|row| row.result().value())
-                    .map(|row| SettledOriginal(row.original().clone()))
-                    .collect(),
-                rows.iter()
-                    .filter(|row| row.result().value())
-                    .map(|row| row.result().probability())
-                    .collect(),
-                None,
-                None,
-                resolved(),
+                rows.iter().filter(|row| row.result().value()).map(|row| SettledOriginal(row.original().clone())).collect(),
+                rows.iter().filter(|row| row.result().value()).map(|row| row.result().probability()).collect(),
+                None, None, resolved(),
             )),
-            RequestValue::Annotations(rows) => {
-                Self::Annotate(Settled::rows(rows.iter().map(annotation)))
-            }
+            RequestValue::Annotations(rows) => Self::Annotate(Settled::rows(rows.iter().map(annotation))),
             _ => return None,
         })
     }
