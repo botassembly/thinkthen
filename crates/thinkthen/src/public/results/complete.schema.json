@@ -1685,9 +1685,6 @@
           "anyOf": [
             {
               "$ref": "#/$defs/completesettledAnswer"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -1710,7 +1707,6 @@
       },
       "required": [
         "value",
-        "answer",
         "facts"
       ],
       "type": "object",
