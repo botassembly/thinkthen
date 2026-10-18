@@ -1,5 +1,7 @@
 """Select declared stress cases before running registered surface checks."""
 import os
+import json
+import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -9,7 +11,7 @@ import unittest
 
 from conformance import parity
 from conformance.children.children import child_env
-from conformance.source_fixtures import stage_checkout
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class StressSelection(unittest.TestCase):
@@ -33,7 +35,7 @@ class StressSelection(unittest.TestCase):
                 'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
                 'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
             env = child_env(home=root / 'home', PATH=os.defpath, FIXTURE_ROOT=str(root))
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
                 with self.subTest(first=first, last=last):
                     calls = root / 'calls'
@@ -84,12 +86,16 @@ class StressSelection(unittest.TestCase):
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
             unsupported = subprocess.run(['sh', str(php)], env=env,
                                          capture_output=True, text=True)
-            self.assertEqual(unsupported.returncode, 77, unsupported.stdout + unsupported.stderr)
-            self.assertIn('no stress gate', unsupported.stdout)
+            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            host = platform.system().lower() + '-' + arch
+            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            supported = host in manifest['libraries']['php']['check_platforms']
+            self.assertEqual(unsupported.returncode, 1 if supported else 77, unsupported.stdout + unsupported.stderr)
+            self.assertIn('no stress gate' if supported else 'not run', unsupported.stdout)
             for failed in ('', 'libraries/typescript'):
                 with self.subTest(failed=failed):
                     calls = root / 'calls'

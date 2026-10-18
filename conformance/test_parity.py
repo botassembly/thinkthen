@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_checkout
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -338,7 +338,7 @@ class PublicAssertions(unittest.TestCase):
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -450,7 +450,7 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -474,7 +474,7 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -524,7 +524,7 @@ class PublicAssertions(unittest.TestCase):
         prepared, homes = {}, {}
         def command(args, **kwargs):
             env = kwargs['env']
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
                 Path(destination, 'installed-package').write_text('immutable')
@@ -581,7 +581,7 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -673,7 +673,7 @@ class PublicAssertions(unittest.TestCase):
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
-                        env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+                        env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -742,7 +742,7 @@ class PublicAssertions(unittest.TestCase):
                             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
-                            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+                            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
@@ -813,7 +813,7 @@ class PublicAssertions(unittest.TestCase):
             for member in ('python', 'pandas', 'python-polars'):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
-                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -1128,7 +1128,7 @@ class InstalledInputs(unittest.TestCase):
                 def command(args, **kwargs):
                     major = args[-1]
                     env = kwargs['env']
-                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     self.assertEqual(args[2], '900')
                     if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                         preparations.append(major)
@@ -1252,7 +1252,7 @@ esac
             demo.chmod(0o755)
             env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
 
             def run(entry, *args):
                 log.write_text("")
@@ -1359,7 +1359,7 @@ esac
                            'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
-                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']

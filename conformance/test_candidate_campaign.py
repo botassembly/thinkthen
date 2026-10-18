@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 from conformance import parity
 from conformance.children.children import child_env
-from conformance.source_fixtures import stage_checkout
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -88,7 +88,7 @@ class CandidateSmokes(unittest.TestCase):
                 'subprocess.run(["./built-"+slot],env=env,check=True)\n'
                 'print("smoke: true")\n')
             env = child_env(home=root / 'home')
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env['PATH'] = str(tools) + os.pathsep + env['PATH']
             children = []
             try:
@@ -128,16 +128,16 @@ class CandidateSmokes(unittest.TestCase):
             uname.write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for executable in (backend, binary, jq, uname):
                 executable.chmod(0o755)
-            for member in ('c', 'swift', 'objective-c'):
+            for member in ('c', 'swift', 'objective-c', 'go'):
                 library = root / 'libraries' / member
                 library.mkdir(parents=True, exist_ok=True)
                 (library / 'check.sh').write_text('exit 77\n')
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home')}
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             manifest = json.loads((root / 'sdlc/tools.json').read_text())
             arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
             host = platform.system().lower() + '-' + arch
-            for member in ('c', 'swift', 'objective-c'):
+            for member in ('c', 'swift', 'objective-c', 'go'):
                 required = host in manifest['libraries'][member]['check_platforms']
                 with self.subTest(member=member, required=required):
                     args = ['sh', str(scripts / 'smoke'), '--one', str(binaries), 'libraries/' + member]
@@ -179,7 +179,7 @@ cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
                    'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
-            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)
             # Stop at installation: the real full preparation must already retain its input.
