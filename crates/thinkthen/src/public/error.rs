@@ -389,9 +389,7 @@ fn message(error: &EngineError) -> String {
         EngineError::StoreVersion(file) => {
             return format!("{file} uses an old store format; delete it");
         }
-        EngineError::Entry(..) => {
-            "the cache or recording folder holds a malformed entry"
-        }
+        EngineError::Entry(..) => "the cache or recording folder holds a malformed entry",
         #[cfg(any(feature = "cli", test))]
         EngineError::CacheEntry => "the cache or recording folder holds a malformed entry",
         EngineError::RecordingStorage => "the recording folder could not be written",
