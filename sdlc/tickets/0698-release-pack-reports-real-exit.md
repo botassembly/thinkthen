@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 8d9ac12, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/release-pack`.
