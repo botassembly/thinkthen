@@ -66,7 +66,7 @@ impl SettledCarrier for Vec<crate::CompleteRecognized> {
     fn settled_answer(&self) -> Result<SettledAnswer, Error> {
         let mut answer = SettledAnswer::Recognize(Settled::rows(self.iter().map(|result| {
             Settled::one(
-                super::SettledRecognition(result.clone()),
+                super::SettledRecognition(Box::new(result.clone())),
                 result.probability(),
                 None,
                 None,
@@ -83,7 +83,7 @@ impl SettledCarrier for Vec<crate::CompleteRelated> {
             return Err(Error::defect("a relation call has no single aggregate"));
         };
         Ok(SettledAnswer::Relate(Settled::one(
-            super::SettledRelations(result.clone()),
+            super::SettledRelations(Box::new(result.clone())),
             result.probability(),
             None,
             None,

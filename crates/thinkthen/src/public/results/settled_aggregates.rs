@@ -12,7 +12,7 @@ use serde::{Serialize, Serializer};
     derive(schemars::JsonSchema),
     schemars(with = "crate::core::RecognizedValue")
 )]
-pub struct SettledRecognition(pub(crate) CompleteRecognized);
+pub struct SettledRecognition(pub(crate) Box<CompleteRecognized>);
 impl SettledRecognition {
     /// Native names, relations or boundary proposals.
     #[must_use]
@@ -40,7 +40,7 @@ impl Serialize for SettledRecognition {
     derive(schemars::JsonSchema),
     schemars(with = "Vec<crate::core::RelationEdge<crate::core::RelationEntity>>")
 )]
-pub struct SettledRelations(pub(crate) CompleteRelated);
+pub struct SettledRelations(pub(crate) Box<CompleteRelated>);
 impl SettledRelations {
     /// Native selected edges.
     #[must_use]
@@ -92,7 +92,7 @@ impl SettledAnswer {
             RequestValue::Recognized(rows) => {
                 Self::Recognize(Settled::rows(rows.iter().map(|row| {
                     Settled::one(
-                        SettledRecognition(row.result().clone()),
+                        SettledRecognition(Box::new(row.result().clone())),
                         row.result().probability(),
                         None,
                         None,
@@ -101,7 +101,7 @@ impl SettledAnswer {
                 })))
             }
             RequestValue::Related(row) => Self::Relate(Settled::one(
-                SettledRelations(row.result().clone()),
+                SettledRelations(Box::new(row.result().clone())),
                 row.result().probability(),
                 None,
                 None,
