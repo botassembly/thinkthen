@@ -2,7 +2,7 @@
 
 The repository gate and its hand-run support scripts.
 
-[`../tools.json`](../tools.json) declares gate and library tools, versions and supported platforms. Individual rungs and binding checks enter through `resolved-tools`. The existing landing command remains in `pm.json` until the Linux container ticket lands. The resolver starts with system folders, installs macOS tools under the checkout’s ignored `.tools` folder, and refuses all missing tools together before starting the requested command. Dependency caches may be reused; executable tool paths come from the job folder.
+[`../tools.json`](../tools.json) declares gate and library tools, versions and supported platforms. Native test and library checks enter through `resolved-tools`. Native lint retains the existing landing environment until the Linux container owns lint, including its registry-only child; its manifest group requires GNU gcc, which macOS does not provide. The existing landing command remains in `pm.json` until the Linux container ticket lands. The resolver starts with system folders, installs macOS tools under the checkout’s ignored `.tools` folder, and refuses all missing tools together before starting the requested command. Dependency caches may be reused; executable tool paths come from the job folder.
 
 Linux image construction reads `tools.py --list install,lint,test,spec,surfaces`. The image places its tools under the manifest’s `linux_prefix`, with executables in `bin`; alternate Ruby uses its declared `linux_directory`. Linux resolution checks that prefix and system folders without installing. `--root` selects another owned prefix; `--check` validates preparation without installing. `tools.py GROUP -- COMMAND` resolves a gate or library group and executes the command.
 

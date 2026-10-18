@@ -1,8 +1,8 @@
 #!/bin/sh
 # Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
 set -eu
-tools_group=lint
-. "$(dirname -- "$0")/resolved-tools"
+# Native lint retains the landing environment until the Linux container owns
+# lint. The manifest lint group requires GNU gcc, which macOS does not provide.
 # Ticket 0133: every step and child sees only the names in allow-list.
 . "$(dirname -- "$0")/allow-list"
 . "$(dirname -- "$0")/scratch.sh"
@@ -134,7 +134,8 @@ node sdlc/scripts/named-answers.mjs --self-test
 node sdlc/scripts/named-answers.mjs
 node sdlc/scripts/ratchet.mjs
 # ADR 0047: the surface registry, and each binding's ratchet and lock.
-sh sdlc/scripts/surfaces --registry
+# Keep this lint-only registry child on the same temporary native tool setup.
+THINKTHEN_RESOLVED_TOOLS=surfaces sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses
