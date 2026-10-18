@@ -74,5 +74,7 @@ mod streaming;
 
 #[cfg(feature = "cli")]
 mod preview;
+#[cfg(feature = "cli")]
 pub(crate) use preview::Preview as RecognitionPreview;
+#[cfg(feature = "cli")]
 pub(in crate::public) use preview::prepare as preview_recognition;

@@ -167,5 +167,7 @@ fn admitted(
 
 #[cfg(feature = "cli")]
 mod preview;
+#[cfg(feature = "cli")]
 pub(crate) use preview::Preview as RelationPreview;
+#[cfg(feature = "cli")]
 pub(in crate::public) use preview::prepare as preview_relations;

@@ -3,7 +3,9 @@ mod request;
 mod response;
 pub(crate) use super::systemone::request::Parts;
 pub(crate) use request::{canonical_question, input, join, parts};
-pub(crate) use response::{decode_observed, reported_model, split, stored, validate_exchange};
+pub(crate) use response::{reported_model, split, stored, validate_exchange};
+#[cfg(feature = "cli")]
+pub(crate) use response::decode_observed;
 pub(crate) const NAME: &str = "openai-decisions";
 pub(crate) const BUILT_IN: super::systemone::backends::BuiltIn =
     super::systemone::backends::BuiltIn {
