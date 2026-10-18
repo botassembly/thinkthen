@@ -354,7 +354,9 @@ def linux_source_staging_case():
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-source-') as temporary:
         root = Path(temporary)
         archived = subprocess.check_output(['git', 'archive', 'HEAD', 'libraries/dart',
-                                            'libraries/python/thinkthen', 'specification/fixtures/images/red.png'], cwd=REPO)
+                                            'libraries/python/thinkthen', 'specification/fixtures/images/red.png',
+                                            'specification/request.schema.json',
+                                            'crates/thinkthen/src/public/results/complete.schema.json'], cwd=REPO)
         with tarfile.open(fileobj=io.BytesIO(archived)) as source:
             source.extractall(root, filter='data')
         (root / 'sdlc').mkdir()
@@ -383,7 +385,7 @@ def linux_source_staging_case():
                 subprocess.run([sys.executable, *args[1:]], cwd=root,
                                env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'), check=True)
         import importlib.util
-        namespace = dict(root=root, run=run, env=dict(TT_DART='dart', TT_FLUTTER='flutter',
+        namespace = dict(root=root, native=native, run=run, env=dict(TT_DART='dart', TT_FLUTTER='flutter',
                          RUBY='ruby', PYTHON_HOST=sys.executable), Path=Path, shutil=shutil,
                          importlib=importlib)
         previous = Path.cwd()
