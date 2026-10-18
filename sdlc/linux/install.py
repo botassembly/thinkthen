@@ -29,7 +29,7 @@ with tarfile.open(archive) as packed:
     packed.extractall(root / 'bootstrap')
 archive.unlink()
 mise = root / 'bootstrap/mise/bin/mise'
-env = dict(os.environ, MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root / 'cache'),
+env = dict(os.environ, PATH=str(mise.parent) + ':' + os.environ['PATH'], MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root / 'cache'),
            MISE_CONFIG_DIR=str(root / 'config'), MISE_YES='1', MISE_JOBS='2',
            MISE_CARGO_BINSTALL='1', MISE_RUBY_COMPILE='0', MISE_PYTHON_COMPILE='0',
            RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'),
