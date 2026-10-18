@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 7a2c32b, accept
+
 ## Outcome
 
 - The build job uploads each pinned DuckDB host it compiled as a build output named by version, target and SHA.
