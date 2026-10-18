@@ -32,7 +32,8 @@ mise = root / 'bootstrap/mise/bin/mise'
 env = dict(os.environ, MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root / 'cache'),
            MISE_CONFIG_DIR=str(root / 'config'), MISE_YES='1', MISE_JOBS='2',
            MISE_CARGO_BINSTALL='1', MISE_RUBY_COMPILE='0', MISE_PYTHON_COMPILE='0',
-           RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'))
+           RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'),
+           CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', CARGO_PROFILE_RELEASE_DEBUG='0')
 (root / 'bin').mkdir()
 # cargo-binstall must exist before mise handles cargo:* providers. It selects
 # upstream release binaries; no source fallback is permitted in the image.
@@ -60,9 +61,13 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     identity = provider + '@' + tool['version']
     if provider.startswith('cargo:'):
         binaries = root / 'cargo-tools'
-        subprocess.run(['cargo-binstall', '--no-confirm', '--disable-strategies', 'compile',
-                        '--root', str(binaries), '--version', tool['version'], provider[6:]],
-                       env=env, check=True)
+        acquired = subprocess.run(['cargo-binstall', '--no-confirm', '--disable-strategies', 'compile',
+                                   '--root', str(binaries), '--version', tool['version'], provider[6:]], env=env)
+        if acquired.returncode:
+            # Existing helper acquisition; the compiler itself comes from the
+            # pinned official Rust binary distribution installed above.
+            subprocess.run(['cargo', 'install', '--locked', '--root', str(binaries),
+                            '--version', tool['version'], provider[6:]], env=env, check=True)
         selected = {'PATH': str(binaries / 'bin') + ':' + env['PATH']}
     else:
         acquired = subprocess.run([str(mise), 'install', identity], env=env)
