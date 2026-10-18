@@ -14,6 +14,60 @@ from conformance.children.children import child_env
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_profiles_refuse_before_reading_an_artifact(self):
+        repo = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env = child_env(home=root / 'home', THINKTHEN_TEST_PROFILE='invalid',
+                            THINKTHEN_ARTIFACT=str(root / 'missing.tar.gz'))
+            for surface in ('libraries/c', 'libraries/rust', 'libraries/polars', 'libraries/ruby',
+                            'libraries/typescript', 'libraries/python', 'libraries/php', 'libraries/go',
+                            'libraries/zig', 'libraries/r', 'databases/duckdb', 'databases/sqlite',
+                            'databases/postgresql'):
+                with self.subTest(surface=surface):
+                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True, timeout=30)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn('profile', result.stderr)
+                    self.assertNotIn('missing.tar.gz', result.stderr)
+
+    def test_unsupported_hosts_refuse_before_reading_an_artifact(self):
+        repo = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shim = root / 'bin'
+            shim.mkdir()
+            uname = shim / 'uname'
+            uname.write_text('#!/bin/sh\necho Unsupported\n')
+            uname.chmod(0o755)
+            env = child_env(home=root / 'home', THINKTHEN_ARTIFACT=str(root / 'missing.tar.gz'))
+            env['PATH'] = str(shim) + ':' + env['PATH']
+            for surface in ('libraries/php', 'libraries/go', 'libraries/ruby', 'libraries/objective-c',
+                            'libraries/ada', 'libraries/cobol', 'libraries/typescript', 'libraries/swift',
+                            'databases/duckdb', 'databases/postgresql'):
+                with self.subTest(surface=surface):
+                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True, timeout=30)
+                    self.assertEqual(result.returncode, 77, result.stderr)
+                    self.assertNotIn('missing.tar.gz', result.stderr)
+
+    def test_selected_artifacts_must_exist_and_pass_privacy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            command = [sys.executable, str(Path(privacy.__file__)), '--artifact-env']
+            for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_DART_ARTIFACT', 'THINKTHEN_C_ARTIFACT'):
+                with self.subTest(name=name):
+                    path = root / 'distribution.txt'
+                    env = child_env(home=root / 'home', **{name: str(path)})
+                    result = subprocess.run(command, env=env, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn('distribution.txt', result.stderr)
+                    path.write_bytes(b'PRIVATE_KEY_MARKER')
+                    result = subprocess.run(command, env=env, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn('private pattern in distribution.txt', result.stderr)
+                    path.unlink()
+
     def test_private_markers_and_valid_build_prefix(self):
         for marker in (b'/home/private', b'/Users/private', b'auth.json', b'-----BEGIN PRIVATE KEY-----',
                        b'tt-canary-private', b'PRIVATE_PATH_MARKER', b'PRIVATE_KEY_MARKER', b'sk-private-SECRET123',
