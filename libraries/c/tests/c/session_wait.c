@@ -71,14 +71,25 @@ int main(int argc, char **argv) {
         check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &status, &packet) == THINKTHEN_OK);
         if (status == THINKTHEN_SESSION_END_V1) break;
         check(status == THINKTHEN_SESSION_RESULT_V1 && packet != NULL);
-        const char *json = NULL; size_t len = 0;
-        check(thinkthen_session_result_json(packet, &json, &len) == THINKTHEN_OK);
-        if (strstr(json, "\"kind\":\"row\"")) rows++;
-        if (strstr(json, "\"kind\":\"terminal\"")) {
+        const thinkthen_complete_session_packet_v1 *view = NULL;
+        check(thinkthen_session_result_view(packet, &view) == THINKTHEN_OK && view != NULL);
+        if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
+            const thinkthen_complete_atomic_decide_value_v1 *row = view->data.decide_row->value;
+            check(row->index.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1);
+            check(row->index.value == (uint64_t)rows);
+            rows++;
+        }
+        if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
+            const thinkthen_complete_session_packet_terminal_v1 *terminal = view->data.terminal;
             terminals++;
-            if (held || cancel) check(strstr(json, "\"kind\":\"cancelled\"") != NULL);
-            if (held) check(strstr(json, "\"requests_sent\":1") != NULL);
-            if (!held && !cancel) check(strstr(json, "\"requests_sent\":24") != NULL);
+            if (held || cancel) {
+                check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1);
+                check(terminal->failure.value->error->kind->kind == THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1);
+            } else check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1);
+            if (!cancel) {
+                check(terminal->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1);
+                check(terminal->facts.value->requests_sent == (held ? 1 : 24));
+            }
         }
         thinkthen_session_result_free(packet);
     }
