@@ -40,6 +40,11 @@ if not source.is_dir():
     subprocess.run(['git', 'clone', '--no-hardlinks', str(ROOT), str(source)], check=True)
 subprocess.run(['git', 'fetch', 'origin', sha], cwd=source, check=True)
 subprocess.run(['git', 'checkout', '--detach', sha], cwd=source, check=True)
+cache_mounts = []
+for name in ('sccache', 'pip-cache', 'uv-cache', 'python', 'config', 'cache'):
+    folder = owned / name
+    folder.mkdir(exist_ok=True)
+    cache_mounts += ['-v', str(folder) + ':' + manifest['linux_prefix'] + '/' + name]
 command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=0619',
            '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
            '--security-opt', 'seccomp=unconfined', '--security-opt', 'apparmor=unconfined',
@@ -57,4 +62,4 @@ for relative in locks.splitlines():
         script += 'cargo fetch --locked --manifest-path ' + shlex.quote(str(cargo)) + '\n'
 for check in args.checks:
     script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
-raise SystemExit(subprocess.run([*command, image, 'sh', '-c', script]).returncode)
+raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)

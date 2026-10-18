@@ -19,12 +19,16 @@ aarch64-unknown-linux-gnu) ARCH=aarch64; NODE_ARCH=arm64 ;;
 *) echo "release-container: no image for $TARGET" >&2; exit 77 ;;
 esac
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
-IMAGE=$(python3 - "$REPO/sdlc/tools.json" "$ARCH" <<'PYIMAGE'
-import json, sys
+read -r IMAGE CONTAINER_CPUS CONTAINER_MEMORY <<EOF
+$(python3 - "$REPO/sdlc/tools.json" "$ARCH" <<'PYIMAGE'
+import json, platform, sys
 arch = {"aarch64": "arm64"}.get(sys.argv[2], sys.argv[2])
-print(json.load(open(sys.argv[1]))["linux"]["distribution_images"][arch])
+pin = json.load(open(sys.argv[1]))["linux"]
+memory = pin["yellow_memory_gib"] if platform.node().split('.')[0] == 'yellow' else pin["memory_gib"]
+print(pin["distribution_images"][arch], pin["cpus"], memory)
 PYIMAGE
 )
+EOF
 mkdir -p -- "$1/cache" "$2"
 WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
 # Each run builds in its own mktemp folder, mounted as /work, and removes it at exit.
@@ -53,7 +57,7 @@ else
 	}
 fi
 tar -x -f "$RUN/source.tar" -C "$RUN/src"
-set -- --rm --label pm.repo=thinkthen --label "pm.ticket=${PM_TICKET:-0619}" --cpus 4 --memory "${THINKTHEN_CONTAINER_MEMORY_GIB:-16}g" --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
+set -- --rm --label pm.repo=thinkthen --label "pm.ticket=${PM_TICKET:-0619}" --cpus "$CONTAINER_CPUS" --memory "${CONTAINER_MEMORY}g" --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TMPDIR=/work/tmp -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
 set -- "$@" -e PYTHONDONTWRITEBYTECODE=1 -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
 set -- "$@" -e GITHUB_ACTIONS -e RUNNER_ENVIRONMENT
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
