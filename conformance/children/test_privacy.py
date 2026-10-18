@@ -189,7 +189,7 @@ class PrivacyTests(unittest.TestCase):
             struct.pack_into('<I', data, 14, crc)
             struct.pack_into('<I', data, central + 16, crc)
             path.write_bytes(data)
-            with self.assertRaises(privacy.PrivacyError):
+            with self.subTest(kind='stored-zip-extra-payload'), self.assertRaises(privacy.PrivacyError):
                 privacy.check_file(path)
             for name in ('thinkthen-0.2.0/src/config/./tests.rs',
                          'thinkthen-0.2.0//src/config/tests.rs',

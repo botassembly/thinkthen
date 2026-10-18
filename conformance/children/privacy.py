@@ -2,6 +2,7 @@
 import argparse
 import fnmatch
 import gzip
+import io
 import json
 import os
 from pathlib import Path
@@ -47,6 +48,8 @@ def check_bytes(label, data, *, crate_member=None):
 def crate_member(name):
     """Recognize exact crate paths in the checkout or Cargo's versioned root."""
     path = Path(name)
+    if path.as_posix() != str(name) or '..' in path.parts:
+        return None
     repo = Path(__file__).resolve().parents[2]
     if path.is_absolute():
         try:
@@ -77,14 +80,22 @@ def distribution_bytes(path):
             archive = tarfile.open(path)
             stored = False
         with archive:
-            yield None, repr(archive.pax_headers).encode()
+            # Keep the entire decoded stream, including ignored headers and trailers.
+            archive.fileobj.seek(0)
+            decoded = bytearray(archive.fileobj.read())
+        with tarfile.open(fileobj=io.BytesIO(decoded), mode='r:') as archive:
             for member in archive:
                 yield None, member.name.encode() + member.linkname.encode() + repr(member.pax_headers).encode()
                 if member.isfile():
                     data = archive.extractfile(member).read()
                     yield crate_member(member.name), data
-                    if stored:
-                        raw[member.offset_data:member.offset_data + member.size] = b'\0' * member.size
+                    start = member.offset_data
+                    # Sparse or inconsistent layouts must retain their raw coverage.
+                    if decoded[start:start + len(data)] == data:
+                        decoded[start:start + len(data)] = b'\0' * len(data)
+        yield None, decoded
+        if stored:
+            return
     elif zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
             for member in archive.infolist():
@@ -93,7 +104,9 @@ def distribution_bytes(path):
                 if member.compress_type == zipfile.ZIP_STORED:
                     name_size, extra_size = struct.unpack_from('<HH', raw, member.header_offset + 26)
                     start = member.header_offset + 30 + name_size + extra_size
-                    raw[start:start + member.compress_size] = b'\0' * member.compress_size
+                    data = archive.read(member)
+                    if raw[start:start + len(data)] == data:
+                        raw[start:start + len(data)] = b'\0' * len(data)
     elif path.suffix == '.gz':
         yield None, gzip.decompress(raw)
     else:
