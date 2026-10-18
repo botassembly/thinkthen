@@ -176,7 +176,7 @@ class LinuxSourceIdentity(unittest.TestCase):
             self.assertIn(str(source.parent) + ':' + str(source.parent), run)
             (source / 'source.txt').write_text('left by previous check\n')
             (source / 'stray.txt').write_text('untracked source\n')
-            (source / 'target').mkdir()
+            (source / 'target').mkdir(exist_ok=True)
             (source / 'target/cached').write_text('build output\n')
             second = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(second.returncode, 0, second.stderr)
