@@ -8,6 +8,7 @@ Phase: 1
 
 ## Outcome
 
+- Changes: `.github/workflows/release.yml`, `databases/duckdb/tools/setup.sh`, `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `sdlc/scripts/workflows`.
 - The build job uploads each pinned DuckDB host it compiled as a build output named by version, target and SHA.
 - Every smoke job that needs a DuckDB host downloads that output. No smoke job compiles DuckDB.
 - The Intel-only `duckdb-hosts` cache step, the `THINKTHEN_DUCKDB_HOST_CACHE_HIT` switch and the cache-ban policy exception are deleted.
