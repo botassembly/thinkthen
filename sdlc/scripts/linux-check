@@ -79,10 +79,11 @@ command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', '
 # a nonroot container user. Keep fixtures on Linux while retaining builds,
 # saved results and caches on their existing persistent mounts. tmpfs pages
 # count toward the container's memory cap and disappear with the container.
+# Fixtures also build and run programs, so override Docker's default noexec.
 for relative in ('target/tmp', 'target/library-only/tmp'):
     (source / relative).mkdir(parents=True, exist_ok=True)
     command += ['--tmpfs', str(source / relative) + ':uid=' + str(os.getuid())
-                + ',gid=' + str(os.getgid()) + ',mode=0700']
+                + ',gid=' + str(os.getgid()) + ',mode=0700,exec']
 # Fetch lockfile dependencies inside this environment once; checks stay offline.
 script = 'set -eu\n'
 locks = subprocess.check_output(['git', 'ls-files', '*Cargo.lock', 'Cargo.lock'], cwd=source, text=True)

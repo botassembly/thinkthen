@@ -170,7 +170,7 @@ class LinuxSourceIdentity(unittest.TestCase):
                        if json.loads(line)[0] == 'run')
             fixture_mounts = [run[index + 1] for index, value in enumerate(run)
                               if value == '--tmpfs']
-            owner = ':uid=' + str(os.getuid()) + ',gid=' + str(os.getgid()) + ',mode=0700'
+            owner = ':uid=' + str(os.getuid()) + ',gid=' + str(os.getgid()) + ',mode=0700,exec'
             self.assertEqual(fixture_mounts, [str(source / relative) + owner
                              for relative in ('target/tmp', 'target/library-only/tmp')])
             self.assertIn(str(source.parent) + ':' + str(source.parent), run)
