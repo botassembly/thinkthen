@@ -457,11 +457,15 @@ fn generic(body: &[u8], cause: Option<&str>, full: bool) -> Canned {
     } else {
         ""
     };
+    let private = if cause.is_some() {
+        format!(r#","message":{}"#, quoted(PRIVATE_PROSE))
+    } else {
+        String::new()
+    };
     Canned::ok(&format!(
-        r#"{{"model":{},"answers":{{{}}}{usage},"message":{}}}"#,
+        r#"{{"model":{},"answers":{{{}}}{usage}{private}}}"#,
         quoted(&request.model),
-        answers.join(","),
-        quoted(PRIVATE_PROSE)
+        answers.join(",")
     ))
 }
 
