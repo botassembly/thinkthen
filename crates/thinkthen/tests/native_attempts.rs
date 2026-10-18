@@ -381,25 +381,61 @@ fn fault_arm_error_debug_and_facts_exclude_provider_prose() {
     let backend = conformance_backend::Backend::start().unwrap();
     let question = Question::choose::<DiagnosticChoice>("Which?")
         .unwrap()
-        .option(DiagnosticChoice::A, None).unwrap()
-        .option(DiagnosticChoice::B, None).unwrap()
+        .option(DiagnosticChoice::A, None)
+        .unwrap()
+        .option(DiagnosticChoice::B, None)
+        .unwrap()
         .build()
         .unwrap();
     for arm in [
-        "status/401", "status/402", "status/403", "status/404", "refuse",
-        "malformed/missing_answer", "malformed/wrong_kind", "malformed/missing_probability",
-        "malformed/invalid_probability", "malformed/invalid_distribution",
+        "status/401",
+        "status/402",
+        "status/403",
+        "status/404",
+        "refuse",
+        "malformed/missing_answer",
+        "malformed/wrong_kind",
+        "malformed/missing_probability",
+        "malformed/invalid_probability",
+        "malformed/invalid_distribution",
         "malformed/unexpected_probability",
     ] {
         let engine = Engine::builder()
-            .base_url(&format!("{}/arm/{arm}/v1", backend.origin())).unwrap()
-            .model("fixed").unwrap()
-            .api_key("sk-loopback-arms").unwrap()
-            .max_retries(0).no_cache().build().unwrap();
-        let error = engine.choose_with(&question, "private evidence", CallOptions::new().attempts(true)).unwrap_err();
-        let displays = [error.to_string(), format!("{error:?}"), format!("{:?}", error.facts()), format!("{:?}", error.stopped())];
+            .base_url(&format!("{}/arm/{arm}/v1", backend.origin()))
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("sk-loopback-arms")
+            .unwrap()
+            .max_retries(0)
+            .no_cache()
+            .build()
+            .unwrap();
+        let error = engine
+            .choose_with(
+                &question,
+                "private evidence",
+                CallOptions::new().attempts(true),
+            )
+            .unwrap_err();
+        let displays = [
+            error.to_string(),
+            format!("{error:?}"),
+            format!("{:?}", error.facts()),
+            format!("{:?}", error.stopped()),
+        ];
         for display in displays {
-            for marker in ["sk-loopback-arms", "c2stbG9vcGJhY2stYXJtcw", "sk%2Dloopback%2Darms", "736b2d6c6f6f706261636b2d61726d73", "Authorization", "fixture-header", "fixturelongtoken", "private evidence", "provider message"] {
+            for marker in [
+                "sk-loopback-arms",
+                "c2stbG9vcGJhY2stYXJtcw",
+                "sk%2Dloopback%2Darms",
+                "736b2d6c6f6f706261636b2d61726d73",
+                "Authorization",
+                "fixture-header",
+                "fixturelongtoken",
+                "private evidence",
+                "provider message",
+            ] {
                 assert!(!display.contains(marker), "{arm}: {display}");
             }
         }

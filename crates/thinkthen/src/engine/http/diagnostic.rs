@@ -187,4 +187,3 @@ fn percent_decoded(word: &str) -> Option<Vec<u8>> {
     }
     Some(output)
 }
-

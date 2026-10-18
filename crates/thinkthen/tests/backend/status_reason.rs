@@ -37,7 +37,11 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
             r#"{"detail":"max_tokens_exceeded"}"#,
             "thinkthen: the backend answered with status 400: the backend refused the request\n",
         ),
-        (400, long.as_str(), "thinkthen: the backend answered with status 400: the backend refused the request; provider type: max_tokens_exceeded\n"),
+        (
+            400,
+            long.as_str(),
+            "thinkthen: the backend answered with status 400: the backend refused the request; provider type: max_tokens_exceeded\n",
+        ),
         (
             413,
             "{}",
@@ -166,26 +170,14 @@ fn reflected_nested_evidence_and_unrelated_prose_are_withheld() {
     for (evidence, message) in [
         ("Z", "Rejected Z because it is unsupported"),
         ("Ada", "Rejected Ada because it is unsupported"),
-        (
-            "S7code!",
-            "Rejected S7code! because it is unsupported",
-        ),
-        (
-            "S8code!!",
-            "Rejected S8code!! because it is unsupported",
-        ),
+        ("S7code!", "Rejected S7code! because it is unsupported"),
+        ("S8code!!", "Rejected S8code!! because it is unsupported"),
         (
             r#"{"nested":{"text":"private \"quoted\" evidence"}}"#,
             "Rejected private \"quoted\" evidence because it is unsupported",
         ),
-        (
-            "unrelated evidence",
-            "The selected model is unavailable",
-        ),
-        (
-            "separate evidence",
-            "The selected model is unavailable",
-        ),
+        ("unrelated evidence", "The selected model is unavailable"),
+        ("separate evidence", "The selected model is unavailable"),
     ] {
         let body = serde_json::json!({"error":{"message":message}}).to_string();
         let listener = Listener::serving(vec![Canned::status(400, &body)]).unwrap();
@@ -223,10 +215,7 @@ fn actionable_and_multibyte_provider_prose_is_withheld() {
         .unwrap();
         assert_eq!(output.status.code(), Some(4));
         assert_eq!(listener.requests().len(), 1);
-        assert_eq!(
-            crate::harness::said(&output),
-            REFUSED
-        );
+        assert_eq!(crate::harness::said(&output), REFUSED);
     }
 }
 
@@ -242,10 +231,7 @@ fn plain_text_and_html_are_withheld() {
             "text/plain",
             "<html>The local endpoint requires a decision model.</html>",
         ),
-        (
-            "text/html",
-            "The local endpoint requires a decision model.",
-        ),
+        ("text/html", "The local endpoint requires a decision model."),
     ] {
         let listener =
             Listener::serving(vec![Canned::status(400, message).media_type(media_type)]).unwrap();
@@ -290,22 +276,55 @@ fn readable_rate_limit_prose_does_not_turn_a_real_limit_into_a_quota_stop() {
 #[test]
 fn only_known_error_identifier_fields_cross_the_boundary() {
     for (body, suffix) in [
-        (r#"{"error":{"type":"invalid_request_error","code":"model_missing","message":"private prose"}}"#, "; provider type: invalid_request_error; provider code: model_missing"),
-        (r#"{"detail":{"error_type":"model_missing","message":"private prose"}}"#, "; provider type: model_missing"),
-        (r#"{"type":"request_error","code":"404","message":"private prose"}"#, "; provider type: request_error; provider code: 404"),
-        (r#"{"error":{"type":"sk-test-value","code":"c2stdGVzdC12YWx1ZQ"}}"#, ""),
-        (r#"{"error":{"type":"sk%2Dtest%2Dvalue","code":"736b2d746573742d76616c7565"}}"#, ""),
-        (r#"{"error":{"type":"private evidence marker","code":"Authorization: fixture"}}"#, ""),
-        (r#"{"error":{"type":42,"code":null},"other":{"type":"hidden"}}"#, ""),
+        (
+            r#"{"error":{"type":"invalid_request_error","code":"model_missing","message":"private prose"}}"#,
+            "; provider type: invalid_request_error; provider code: model_missing",
+        ),
+        (
+            r#"{"detail":{"error_type":"model_missing","message":"private prose"}}"#,
+            "; provider type: model_missing",
+        ),
+        (
+            r#"{"type":"request_error","code":"404","message":"private prose"}"#,
+            "; provider type: request_error; provider code: 404",
+        ),
+        (
+            r#"{"error":{"type":"sk-test-value","code":"c2stdGVzdC12YWx1ZQ"}}"#,
+            "",
+        ),
+        (
+            r#"{"error":{"type":"sk%2Dtest%2Dvalue","code":"736b2d746573742d76616c7565"}}"#,
+            "",
+        ),
+        (
+            r#"{"error":{"type":"private evidence marker","code":"Authorization: fixture"}}"#,
+            "",
+        ),
+        (
+            r#"{"error":{"type":42,"code":null},"other":{"type":"hidden"}}"#,
+            "",
+        ),
     ] {
         let listener = Listener::serving(vec![Canned::status(400, body)]).unwrap();
-        let output = decide(listener.base(), &["--max-retries", "0", "--facts"], Some("sk-test-value"), EVIDENCE).unwrap();
+        let output = decide(
+            listener.base(),
+            &["--max-retries", "0", "--facts"],
+            Some("sk-test-value"),
+            EVIDENCE,
+        )
+        .unwrap();
         let said = crate::harness::said(&output);
         assert_eq!(output.status.code(), Some(4));
         let mut lines = said.lines();
-        assert_eq!(lines.next().unwrap(), format!("{}{suffix}", REFUSED.trim_end()));
+        assert_eq!(
+            lines.next().unwrap(),
+            format!("{}{suffix}", REFUSED.trim_end())
+        );
         let facts: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
-        assert_eq!(facts["stopped"], serde_json::json!({"at":1,"cause":"status","status":400,"retryable":false}));
+        assert_eq!(
+            facts["stopped"],
+            serde_json::json!({"at":1,"cause":"status","status":400,"retryable":false})
+        );
         assert!(lines.next().is_none());
     }
 }
