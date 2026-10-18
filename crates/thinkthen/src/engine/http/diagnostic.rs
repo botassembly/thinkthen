@@ -1,11 +1,10 @@
-//! Keep error codes and bounded prose, never raw bodies or header dumps.
+//! Carry only provider error identifiers from known fields, never provider prose.
 
 use super::{Exchange, Key};
 use crate::core::{Json, adapters::ApiType};
 use crate::engine::error::{Error, ProviderDiagnostic};
 use base64::{Engine as _, engine::general_purpose};
 
-const MAX_MESSAGE_CHARS: usize = 320;
 const BASE64_ENCODINGS: [general_purpose::GeneralPurpose; 4] = [
     general_purpose::STANDARD,
     general_purpose::STANDARD_NO_PAD,
@@ -18,7 +17,6 @@ pub(super) fn decorate(
     body: Option<&[u8]>,
     exchange: &Exchange<'_>,
     api: ApiType,
-    plain: bool,
 ) -> Error {
     let parsed = body
         .and_then(|bytes| std::str::from_utf8(bytes).ok())
@@ -45,28 +43,25 @@ pub(super) fn decorate(
             });
     let ollama = matches!(error, Error::Status(400) | Error::TokenLimit)
         && super::send::ollama_address(exchange.url);
-    let message = parsed
-        .as_ref()
-        .and_then(|body| {
-            let details = body.member("error").or_else(|| body.member("detail"));
+    let details = parsed.as_ref().map(|body| {
+        body.member("error")
+            .or_else(|| body.member("detail"))
+            .unwrap_or(body)
+    });
+    let field = |names: &[&str]| {
+        names.iter().find_map(|name| {
             details
-                .and_then(|value| {
-                    value
-                        .member("message")
-                        .and_then(Json::as_str)
-                        .or_else(|| value.as_str())
-                })
-                .or_else(|| body.member("message").and_then(Json::as_str))
+                .and_then(|body| body.member(name))
+                .and_then(Json::as_str)
+                .filter(|text| identifier(text))
+                .filter(|text| !key_echo(text, exchange.key))
+                .filter(|text| !request_echo(text, exchange.body))
+                .map(str::to_owned)
         })
-        .or_else(|| {
-            plain
-                .then_some(body)
-                .flatten()
-                .and_then(|bytes| std::str::from_utf8(bytes).ok())
-        })
-        .filter(|text| !request_echo(text, exchange.body))
-        .and_then(|text| safe_message(text, exchange.key));
-    if !quota && !ollama && message.is_none() {
+    };
+    let error_type = field(&["type", "error_type"]);
+    let code = field(&["code"]);
+    if !quota && !ollama && error_type.is_none() && code.is_none() {
         return error;
     }
     Error::Provider {
@@ -75,59 +70,21 @@ pub(super) fn decorate(
             backend: api.provider_name(),
             quota,
             ollama,
-            message,
+            error_type,
+            code,
         },
     }
 }
 
-fn safe_message(text: &str, key: &Key) -> Option<String> {
-    let lower = text.to_ascii_lowercase();
-    let forbidden = [
-        "bearer ",
-        "authorization=",
-        "api_key=",
-        "api-key=",
-        "apikey=",
-        "password=",
-        "credential=",
-        "secret=",
-        "key hash",
-        "key fingerprint",
-        "sha256:",
-    ];
-    if text.trim().is_empty()
-        || forbidden.iter().any(|word| lower.contains(word))
-        || header_lines(text)
-        || text
-            .chars()
-            .any(|character| character.is_control() && !character.is_whitespace())
-        || text.contains(['{', '}', '[', ']', '<', '>'])
-        || text
-            .split_whitespace()
-            .any(|word| opaque_token(word) || word.split([':', '=', '.']).any(opaque_token))
-        || key_echo(text, key)
-    {
-        return None;
-    }
-    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut chars = normalized.chars();
-    let mut message: String = chars.by_ref().take(MAX_MESSAGE_CHARS).collect();
-    if chars.next().is_some() {
-        message.push('…');
-    }
-    Some(message)
-}
-
-fn opaque_token(word: &str) -> bool {
-    let word =
-        word.trim_matches(|ch: char| matches!(ch, '.' | ',' | ':' | ';' | '\'' | '"' | '(' | ')'));
-    word.len() >= 32
-        && word
+// Error identifiers are single bounded machine fields, not display prose.
+fn identifier(text: &str) -> bool {
+    (1..=128).contains(&text.len())
+        && text
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || b"_-/+=".contains(&byte))
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_-.".contains(&byte))
 }
 
-/// Apply the submitted-body collision boundary before carrying untrusted prose.
+/// Apply the submitted-body collision boundary before carrying provider fields.
 pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
     !text.is_empty()
         && (body.windows(text.len()).any(|part| part == text.as_bytes())
@@ -231,18 +188,4 @@ fn percent_decoded(word: &str) -> Option<Vec<u8>> {
         }
     }
     Some(output)
-}
-
-/// A single HTTP field name before a colon is ambiguous untrusted prose.
-fn header_lines(text: &str) -> bool {
-    text.lines().any(|line| {
-        let Some((name, _)) = line.split_once(':') else {
-            return false;
-        };
-        let name = name.trim();
-        !name.is_empty()
-            && name
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&byte))
-    })
 }
