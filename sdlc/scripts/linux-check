@@ -57,7 +57,9 @@ sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True)
 if not source.is_dir():
     subprocess.run(['git', 'clone', '--no-hardlinks', str(ROOT), str(source)], check=True)
 subprocess.run(['git', 'fetch', 'origin', sha], cwd=source, check=True)
-subprocess.run(['git', 'checkout', '--detach', sha], cwd=source, check=True)
+# Each proof starts from committed source. Preserve only ignored build output.
+subprocess.run(['git', 'checkout', '--force', '--detach', sha], cwd=source, check=True)
+subprocess.run(['git', 'clean', '-fd'], cwd=source, check=True)
 cache_mounts = []
 for name in ('sccache', 'pip-cache', 'uv-cache', 'python', 'config', 'cache'):
     folder = owned / name
