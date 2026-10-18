@@ -21,7 +21,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-from conformance.source_fixtures import stage_checkout  # noqa: E402
+from conformance.source_fixtures import fixture_tool_groups, stage_checkout  # noqa: E402
 
 def linux_tool_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
@@ -722,7 +722,8 @@ def preflight_cases():
                          'if name == "maturin": print("maturin " + tools["maturin"]["version"])\n' +
                          'if name == "rustup": print("\\n".join(c + "-fixture" for c in rust["components"]))\n')
         probe.chmod(0o755)
-        required = (*resolver['commands'](('install', 'lint', 'test'), 'linux'),
+        groups = ('install', 'lint', *fixture_tool_groups(root).split(','))
+        required = (*resolver['commands'](groups, 'linux'),
                     'cl.exe', 'lib.exe', 'link.exe')
         for tool in required:
             (tools / tool).symlink_to(probe)
