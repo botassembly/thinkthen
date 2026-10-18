@@ -72,7 +72,7 @@ pub(crate) enum Error {
     StoreVersion(String),
     Entry(
         #[cfg_attr(
-            not(feature = "cli"),
+            all(not(feature = "cli"), not(test)),
             expect(
                 dead_code,
                 reason = "cli::failure::convert retains this detail in the command diagnostic"
