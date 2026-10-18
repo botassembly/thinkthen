@@ -1,4 +1,4 @@
-//! Usage overflow and omitted provider usage retain direct contract checks.
+//! Stays: usage overflow and omitted provider usage retain direct contract checks.
 use super::{Meta, RequestMeta, Usage};
 use crate::core::text::{ModelName, Url};
 const DIGEST: &str = "982f744e7565001cab74fab677df4bf339916fa48b14ee909fde153869a89888";

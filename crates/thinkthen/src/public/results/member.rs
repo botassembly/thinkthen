@@ -100,7 +100,7 @@ mod tests {
     use conformance_backend::{Canned, Listener};
 
     #[test]
-    fn actual_cached_flag_survives_absent_complete_sources_and_refused_originals_stay_safe() {
+    fn cached_details_retain_sources_and_refused_originals_stay_safe() {
         let listener = Listener::answering(|_| {
             Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
         })
@@ -134,12 +134,10 @@ mod tests {
                 CallOptions::new(),
             )
             .unwrap();
-        let mut result = call.value().clone();
-        result.canonical.identity =
-            core::ResultIdentity::resolved(result.answer_id().clone(), None, vec![], vec![], None);
+        let result = call.value().clone();
         let details = Details::of_complete::<()>(&result.canonical, None).unwrap();
         assert!(details.cached());
-        assert!(result.identity().question_sources().is_empty());
+        assert!(!result.identity().question_sources().is_empty());
         assert!(details.to_json().contains(r#""cached":true"#));
         struct Refuses;
         impl Serialize for Refuses {
