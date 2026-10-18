@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
 args = parser.parse_args()
+if 'prepare' in args.checks and args.checks != ['prepare']:
+    parser.error('prepare runs separately from checks')
 job = os.environ.get('PM_JOB', '').split()
 ticket = job[0] if job else os.environ.get('PM_TICKET', '0619')
 if len(ticket) != 4 or not ticket.isdigit():
@@ -67,7 +69,7 @@ command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', '
            '--security-opt', 'systempaths=unconfined', '--user', str(os.getuid()) + ':' + str(os.getgid()),
            '-v', str(owned) + ':' + str(owned),
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
-           '-e', 'CARGO_HOME=' + str(owned / 'cargo'), '-e', 'CARGO_TARGET_DIR=' + str(owned / 'target'),
+           '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
 # Fetch lockfile dependencies inside this environment once; checks stay offline.
 script = 'set -eu\n'
