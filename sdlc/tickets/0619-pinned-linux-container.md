@@ -41,6 +41,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-18 started
 - 2026-10-18 next: Preparation is stopped at a3b114084 pending rulings on the unavailable JDK pin, constructed-image identity and Yellow memory; exact Swift acquisition is repaired and no full image or gate pass is claimed.
 - 2026-10-18 next: Source review fixed owned-clone identity and capped M5 image preparation passed at 0394d50ec in job 1792332355377-88717; the combined manifest needs its own image and integrated gates, with image-identity and Yellow-memory rulings still pending.
+- 2026-10-18 next: The combined image prepared at 59232c300 but gate 0615/1792335815346-64212 stopped on stale DuckDB exit-77 fixture expectations; their repair is under focused checks, Yellow is running the approved 13.5 GiB proof at 0ff5c4cbd, and the PM accepts digest-pinned bases plus the tracked recipe and manifest with actual per-machine image IDs.
 
 ## Amendment, 2026-10-18
 
