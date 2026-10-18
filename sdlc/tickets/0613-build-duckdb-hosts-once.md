@@ -20,3 +20,7 @@ Phase: 1
 ## Evidence
 
 Release smoke jobs on the Intel macOS runner ran into the six-hour cap while handling the DuckDB hosts. The build job already compiles the pinned DuckDB hosts. `65acd9a5e` ("Reuse Intel DuckDB hosts within the release run") then added an `actions/cache` keyed by run id for the Intel target only (`.github/workflows/release.yml`, the `duckdb-hosts` step in the `smoke` job). That patches one target through a cache, which the workflow policy otherwise bans. Run 39102241482 saved the cache, but the restore and a complete Intel smoke have not run.
+
+## Progress
+
+- 2026-10-18 started

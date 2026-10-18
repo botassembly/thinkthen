@@ -27,3 +27,7 @@ Phase: 1
 Checks find their tools through PATHs written by hand, so a missing tool turns up only when a run fails on a new machine. `sdlc/pm.json` (the `ticketsGate` line) hard-codes one machine's folders, `/opt/zerobrew/opt/rustup/bin` and `$HOME/.local/share/thinkthen-0589/...`. `sdlc/scripts/test` prepends Ruby to PATH by hand after sourcing `libraries/ruby/toolchain.env`. Library gates find their own tools in their own ways: absolute `THINKTHEN_*_BIN` variables (`libraries/go/check.sh:15-20`, `libraries/cpp/check.sh:13-17`), a Flutter under `$HOME/.local/opt/flutter` (`libraries/dart/check.sh:8`), `/usr/bin/php8.3` (`libraries/php/check.sh:9`), the variable mapping in `libraries/jvm/toolchains.py:34`, R's pinned toolchain lookup, and a Node under `~/.cache/thinkthen-toolchains` (`libraries/typescript/check.sh:62`). Commit `7f1d4b7fb` shows the result: `mktemp`, `sha256sum` and `shasum` were added to tool lists only after a run failed without them. Release record 0543 shows the same class returning across rc.13 to rc.17.
 
 The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select Python 3.9.6, so the main landing gate still names this machine's tool folders. An accepted, unmerged portable gate wrapper sits on `ticket/0543-landing-login-environment` (9ec101b94); it uses the real login shell and keeps the `lint && test` exits, but it cannot pass until tool discovery is solved once. This ticket builds on that branch.
+
+## Progress
+
+- 2026-10-18 started

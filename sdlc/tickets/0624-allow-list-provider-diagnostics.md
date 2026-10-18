@@ -20,3 +20,7 @@ Phase: 1
 ## Evidence
 
 `crates/thinkthen/src/engine/http/diagnostic.rs:83-128` decides whether a provider's error text is safe to show. It blocks a list of words ("bearer ", "api_key=", "sha256:" and others), strips long tokens that look opaque, and checks for echoes of the key and of the request. Every new provider message format can find a gap. The fixes keep coming: ffa0cb509, 59bbe9cf2, 3a0ff2e2c and 234ef4472, all on 2026-10-13, plus 3d39770af, c4257158c and facc6d280 earlier. Fifteen commits since 2026-09-15 add more hiding rules.
+
+## Progress
+
+- 2026-10-18 started
