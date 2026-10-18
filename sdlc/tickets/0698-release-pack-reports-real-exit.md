@@ -22,3 +22,4 @@ The 0643 installed proof on the M5 hit `release-pack` reading an unbound `CFLAGS
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: Fresh review accepted 8d9ac1252 and the focused archive check passed with unset CFLAGS and exact forced exit 42; run its separate main closing gate after the current core landing, then land it alone as ruled.
