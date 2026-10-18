@@ -612,7 +612,8 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             lanes.insert(0, rust_lane)
         def run_lane(lane):
             return [row for command, ids, preparation in lane for row in run_command(command, ids, preparation)]
-        with ThreadPoolExecutor(max_workers=4) as workers:
+        # Each full consumer exercises large image inputs; keep runtime lanes isolated.
+        with ThreadPoolExecutor(max_workers=1) as workers:
             for rows in workers.map(run_lane, lanes):
                 matrix.extend(rows)
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
