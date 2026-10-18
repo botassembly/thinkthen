@@ -70,6 +70,7 @@ pub(crate) struct Asks {
 /// nothing cached.
 pub(crate) struct Request {
     pub(crate) body: Vec<u8>,
+    #[cfg(feature = "cli")]
     pub(crate) digest: Digest,
     /// The place of each logical question it holds, once per wire question.
     pub(crate) places: Vec<usize>,
@@ -96,6 +97,7 @@ impl Asks {
         Ok(self)
     }
 
+    #[cfg(feature = "cli")]
     pub(crate) fn with_context(self, backend: &Backend, context: &str) -> Result<Self, Error> {
         self.with_context_value(backend, &crate::core::Json::String(context.to_owned()))
     }
@@ -190,6 +192,7 @@ impl Asks {
         Ok(closed
             .into_iter()
             .map(|request| Request {
+                #[cfg(feature = "cli")]
                 digest: Recorded::new(backend.url(), &request.body).digest(),
                 body: request.body,
                 places: request.items,
@@ -269,6 +272,7 @@ impl Asker for Each<'_> {
 impl Engine {
     /// Admit one fixed request without splitting it, before keys or transport.
     /// `check` validates all its probes this way before sending the first.
+    #[cfg(feature = "cli")]
     pub(crate) fn check_plan(&self, plan: &Plan) -> Result<(), Error> {
         let Some(profile) = self.profile() else {
             return Ok(());

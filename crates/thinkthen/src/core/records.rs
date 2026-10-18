@@ -35,8 +35,10 @@ pub(crate) enum Framing {
     /// Each line is one JSON value and one record.
     Jsonl,
     /// A comma-separated table with a header row.
+    #[cfg(feature = "cli")]
     Csv,
     /// A tab-separated table with a header row.
+    #[cfg(feature = "cli")]
     Tsv,
 }
 
@@ -51,6 +53,7 @@ pub(crate) enum ReadingError {
     KeyClash(String),
     /// A question reads `on` under `--lines`, whose records have no members.
     #[error("question `{0}` reads `on`, and a --lines record is text with no members")]
+    #[cfg(feature = "cli")]
     LinesPart(String),
 }
 
@@ -91,6 +94,7 @@ pub(crate) enum RecordError {
     ContextText(String),
     /// A complete structured entity document is not one list.
     #[error("the entity document is one JSON array")]
+    #[cfg(feature = "cli")]
     EntityDocument,
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
@@ -163,18 +167,21 @@ impl Record {
 
     /// True when this record is an object holding the given member.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) fn has_member(&self, name: &str) -> bool {
         matches!(&self.0, Held::Json(Json::Object(members)) if members.iter().any(|(held, _)| held == name))
     }
 
     /// True when this record is a JSON object that annotations can enrich.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn is_object(&self) -> bool {
         matches!(&self.0, Held::Json(Json::Object(_)))
     }
 
     /// Add named answers to an object record, or return the answers alone.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) fn annotated(
         self,
         answers: Vec<(String, crate::core::AnnotatedValue)>,
@@ -237,11 +244,13 @@ impl Record {
 
 /// One record with its named bare answers appended.
 #[derive(Clone, Debug, PartialEq)]
+#[cfg(feature = "cli")]
 pub(crate) struct AnnotatedRecord {
     record: Record,
     answers: Vec<(String, crate::core::AnnotatedValue)>,
 }
 
+#[cfg(feature = "cli")]
 impl Serialize for AnnotatedRecord {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let original = match &self.record.0 {
@@ -273,6 +282,7 @@ pub(crate) struct Reading {
 
 /// The `input` field a plan carries in record mode.
 #[derive(Debug, Serialize)]
+#[cfg(feature = "cli")]
 pub(crate) struct ReadingPlan<'a> {
     framing: Framing,
     field: &'a [Pointer],
@@ -314,6 +324,7 @@ impl Reading {
 
     /// Mark the framing as the default's choice, which the plan names.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn by_default(mut self) -> Self {
         self.by_default = true;
         self
@@ -326,12 +337,14 @@ impl Reading {
     }
 
     /// A blank text line has a place in the input, but no record to judge.
+    #[cfg(feature = "cli")]
     pub(crate) fn skips(&self, bytes: &[u8]) -> bool {
         self.framing == Framing::Lines
             && str::from_utf8(self.ended(bytes)).is_ok_and(|text| text.trim().is_empty())
     }
 
     /// Name the framing and the pointers, as the record-mode plan prints them.
+    #[cfg(feature = "cli")]
     pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {
             framing: self.framing,
@@ -390,6 +403,7 @@ impl Reading {
     }
 
     /// Read one structured document as a complete ordered entity set.
+    #[cfg(feature = "cli")]
     pub(crate) fn entity_document(&self, bytes: &[u8]) -> Result<Vec<Record>, RecordError> {
         let Record(Held::Json(Json::Array(items))) = self.record(bytes)? else {
             return Err(RecordError::EntityDocument);
@@ -432,6 +446,7 @@ impl Reading {
     ///
     /// Returns [`RecordError`] when a pointer finds nothing, when the evidence
     /// is blank, and when it cannot be written as JSON.
+    #[cfg(feature = "cli")]
     pub(crate) fn evidence(&self, record: &Record) -> Result<Evidence, RecordError> {
         self.selected(record)?.evidence()
     }
@@ -487,6 +502,7 @@ enum Selected<'a> {
 }
 
 impl Selected<'_> {
+    #[cfg(feature = "cli")]
     fn evidence(self) -> Result<Evidence, RecordError> {
         match self {
             Self::Text(text) => Ok(Evidence::new(text)?),

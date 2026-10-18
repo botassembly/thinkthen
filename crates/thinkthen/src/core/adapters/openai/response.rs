@@ -215,6 +215,7 @@ pub(crate) fn split(
         answers,
     })
 }
+#[cfg(feature = "cli")]
 pub(crate) fn decode_observed(plan: &Plan, body: &[u8]) -> Decoded {
     let decoders = plan
         .questions()

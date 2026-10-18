@@ -72,6 +72,7 @@ mod records;
 mod recovering;
 mod streaming;
 
+#[cfg(feature = "cli")]
 mod preview;
 pub(crate) use preview::Preview as RecognitionPreview;
 pub(in crate::public) use preview::prepare as preview_recognition;

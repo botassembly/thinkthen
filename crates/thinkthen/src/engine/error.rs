@@ -21,10 +21,6 @@ pub(crate) enum TransportKind {
 
 /// The stable class a host-facing error will use in a later ticket.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[allow(
-    dead_code,
-    reason = "the private bridge fixes all six accepted kinds before public engine errors land"
-)]
 pub(crate) enum Kind {
     Usage,
     Local,
@@ -36,10 +32,6 @@ pub(crate) enum Kind {
 
 /// One exact engine failure. The command maps it to its existing diagnostics.
 #[derive(Clone, Debug)]
-#[allow(
-    dead_code,
-    reason = "deterministic conformance injections exercise kinds absent from the current command"
-)]
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
@@ -142,10 +134,6 @@ impl fmt::Display for Budget {
     }
 }
 
-#[allow(
-    dead_code,
-    reason = "the command runner reads kinds while normal command paths preserve exact causes"
-)]
 impl Error {
     /// A refusal that a smaller batch may answer.
     pub(crate) const fn too_large(&self) -> bool {
@@ -246,10 +234,6 @@ pub(crate) fn relation_questions_message(
     )
 }
 
-#[allow(
-    dead_code,
-    reason = "the offline command runner compares the accepted kind spellings"
-)]
 impl Kind {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {

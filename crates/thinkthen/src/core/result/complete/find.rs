@@ -13,6 +13,7 @@ pub(crate) struct Find {
 }
 
 impl Find {
+    #[cfg(feature = "cli")]
     pub(crate) fn display_question<'a>(
         &'a self,
         declarations: &'a crate::core::declaration::QuestionMetadata,

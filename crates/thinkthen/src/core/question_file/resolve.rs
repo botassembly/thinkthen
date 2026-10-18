@@ -30,6 +30,7 @@ pub(crate) enum Cutting {
     #[default]
     AsTheVerbAllows,
     /// One cut and never a band.
+    #[cfg(feature = "cli")]
     OneCut,
     /// No rule in either home.
     NoRule,
@@ -79,6 +80,7 @@ pub(crate) struct Resolved {
 }
 
 impl Resolved {
+    #[cfg(feature = "cli")]
     pub(crate) const fn metadata(&self) -> &crate::core::declaration::QuestionMetadata {
         &self.metadata
     }
@@ -139,6 +141,7 @@ pub(crate) struct Sources {
 }
 
 impl Sources {
+    #[cfg(feature = "cli")]
     pub(crate) const fn for_find(on: Source, model: Source) -> Self {
         Self {
             verb: None,
@@ -154,6 +157,7 @@ impl Sources {
     }
     /// True when a question file settled the question, which a plan names.
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn question_is_from_file(&self) -> bool {
         matches!(self.question, Source::File)
     }
@@ -163,6 +167,7 @@ impl Sources {
     }
 
     #[must_use]
+    #[cfg(feature = "cli")]
     pub(crate) const fn with_configuration_model(mut self) -> Self {
         self.model = Source::Configuration;
         self
@@ -435,9 +440,11 @@ fn threshold_of(
         }
         match typed.cutting {
             Cutting::AsTheVerbAllows => {}
+            #[cfg(feature = "cli")]
             Cutting::OneCut if !rule.is_cut() => {
                 return Err(QuestionFileError::BandOnFilter(source));
             }
+            #[cfg(feature = "cli")]
             Cutting::OneCut => {}
             Cutting::NoRule => return Err(QuestionFileError::RuleOnRank(source)),
             Cutting::RankCut if !rule.is_cut() => {

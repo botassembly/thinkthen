@@ -139,6 +139,7 @@ struct FieldsShape {
 }
 
 impl RelateSpec {
+    #[cfg(feature = "cli")]
     pub(crate) fn inline(relations: &[String], either: bool) -> Result<Self, RelateConfigError> {
         let relations = relations
             .iter()
@@ -218,6 +219,7 @@ impl RelateSpec {
         })
     }
 
+    #[cfg(feature = "cli")]
     pub(crate) fn override_threshold(&mut self, value: &str) -> Result<(), RelateConfigError> {
         self.threshold = parse_typed_cut(Some(value)).map_err(|_| RelateConfigError::Threshold)?;
         Ok(())
@@ -287,6 +289,7 @@ impl RelateSpec {
         }
     }
 
+    #[cfg(feature = "cli")]
     pub(crate) const fn fields(&self) -> &RelateFields {
         &self.fields
     }
@@ -310,6 +313,7 @@ impl RelateSpec {
         &self.fields.kind
     }
 
+    #[cfg(feature = "cli")]
     pub(crate) const fn presence(&self) -> RelatePresence {
         self.presence
     }

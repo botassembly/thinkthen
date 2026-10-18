@@ -20,6 +20,7 @@ use crate::core::pack::{Ask, QuestionKey, State};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
+#[cfg(feature = "cli")]
 mod convert;
 mod fixture;
 mod images;
@@ -34,10 +35,13 @@ mod validation;
 mod versioned;
 pub(crate) use original::Original;
 mod probe;
+#[cfg(feature = "cli")]
 mod prune;
+#[cfg(feature = "cli")]
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
 pub(crate) use probe::Probe;
+#[cfg(feature = "cli")]
 pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 
 /// The live container's file name.
