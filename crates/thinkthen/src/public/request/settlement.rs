@@ -23,18 +23,28 @@ impl Settlement {
             }
         }
     }
-    pub(super) fn recovered(&mut self, function: super::RequestFunction, row: &super::RequestRecoveredRow) {
+    pub(super) fn recovered(
+        &mut self,
+        function: super::RequestFunction,
+        row: &super::RequestRecoveredRow,
+    ) {
         match row.outcome() {
             Ok(value) => self.record(value),
             Err(_) => {
-                self.failures.insert(row.ordinal(), crate::AnswerResolution::Failed);
+                self.failures
+                    .insert(row.ordinal(), crate::AnswerResolution::Failed);
                 let answer = SettledAnswer::failed(function);
-                match &mut self.answer { Some(previous) => previous.append(answer), None => self.answer = Some(answer) }
+                match &mut self.answer {
+                    Some(previous) => previous.append(answer),
+                    None => self.answer = Some(answer),
+                }
             }
         }
     }
     pub(super) fn finish(mut self) -> Option<SettledAnswer> {
-        if !self.failures.is_empty() && let Some(answer) = &mut self.answer {
+        if !self.failures.is_empty()
+            && let Some(answer) = &mut self.answer
+        {
             answer.failed_occurrences(self.failures);
         }
         if self.scalar
@@ -53,9 +63,18 @@ pub(super) fn answer(input: &RequestInput, value: &RequestValue) -> Result<Settl
         .ok_or_else(|| Error::defect("a native call has no settled answer"))
 }
 
-pub(super) fn recovered(request: &super::AdmittedRequest, call: crate::Call<Vec<super::RequestRecoveredRow>>) -> crate::Call<Vec<super::RequestRecoveredRow>> {
+pub(super) fn recovered(
+    request: &super::AdmittedRequest,
+    call: crate::Call<Vec<super::RequestRecoveredRow>>,
+) -> crate::Call<Vec<super::RequestRecoveredRow>> {
     let function = request.request.call.function();
     let mut settlement = Settlement::new(&request.request.call.arguments().input);
-    for row in call.value() { settlement.recovered(function, row); }
-    call.with_answer(settlement.finish().unwrap_or_else(|| SettledAnswer::empty(function)))
+    for row in call.value() {
+        settlement.recovered(function, row);
+    }
+    call.with_answer(
+        settlement
+            .finish()
+            .unwrap_or_else(|| SettledAnswer::empty(function)),
+    )
 }

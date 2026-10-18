@@ -48,8 +48,14 @@ impl std::fmt::Debug for AnswerResolutions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::State(state) => state.fmt(f),
-            Self::Occurrences(rows) => f.debug_struct("AnswerResolutions").field("occurrences", &rows.len()).finish(),
-            Self::Members(members) => f.debug_struct("AnswerResolutions").field("members", &members.len()).finish(),
+            Self::Occurrences(rows) => f
+                .debug_struct("AnswerResolutions")
+                .field("occurrences", &rows.len())
+                .finish(),
+            Self::Members(members) => f
+                .debug_struct("AnswerResolutions")
+                .field("members", &members.len())
+                .finish(),
         }
     }
 }
@@ -58,9 +64,11 @@ impl std::fmt::Debug for AnswerResolutions {
 #[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct Settled<T, P> {
-    /// The bare value in the caller's input shape.
+    /// The bare value in the caller's input shape. None means no answer after a
+    /// failure; Some(None) on nullable values retains an unresolved or authored null.
     pub value: AnswerShape<Option<T>>,
     /// Yes, selected-option or aligned item odds according to the function's schema.
+    /// The outer None retains absence after a failure.
     pub probability: AnswerShape<Option<P>>,
     /// Raw accepted leading option; absent when the function has no choice.
     pub pick: AnswerShape<Option<String>>,

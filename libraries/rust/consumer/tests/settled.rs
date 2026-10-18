@@ -71,8 +71,10 @@ fn request(case: &Case, collection: bool) -> Result<Request, String> {
             .map(|exchange| exchange["evidence"].clone())
             .collect()
     };
-    if !collection && matches!(case.verb.as_str(), "filter" | "rank") { texts.truncate(1); }
-    let input = if !collection && texts.len() == 1 {
+    if !collection && matches!(case.verb.as_str(), "filter" | "rank") {
+        texts.truncate(1);
+    }
+    let input = if !collection && texts.len() == 1 && !matches!(case.verb.as_str(), "rank" | "find" | "relate") {
         json!({"kind":"text","text":texts.first().ok_or("missing input")?})
     } else {
         let items = texts
@@ -363,7 +365,10 @@ fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), Str
 }
 
 #[test]
-#[expect(clippy::indexing_slicing, reason = "the recovered final answer must keep every original input position")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the recovered final answer must keep every original input position"
+)]
 fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> Result<(), String> {
     let listener = conformance_backend::Listener::answering(|body| {
         let text = String::from_utf8_lossy(body);
@@ -371,21 +376,43 @@ fn recovered_failures_keep_their_place_beside_unresolved_and_resolved_rows() -> 
             else { json!({"q1":{"type":"noul","noul":if text.contains("uncertain row") { 0.5 } else { 0.9 }}}) };
         conformance_backend::Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
     }).map_err(failure)?;
-    let engine = Engine::builder().base_url(listener.base())
+    let engine = Engine::builder()
+        .base_url(listener.base())
         .and_then(|builder| builder.api_key("sk-recovered-loopback"))
-        .map(|builder| builder.no_cache().max_retries(0).batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)))
-        .and_then(thinkthen::EngineBuilder::build).map_err(failure)?;
+        .map(|builder| {
+            builder
+                .no_cache()
+                .max_retries(0)
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+        })
+        .and_then(thinkthen::EngineBuilder::build)
+        .map_err(failure)?;
     let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Fits?","threshold":"0.1:0.9"}},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"failed row"}},{"original":{"kind":"text","text":"uncertain row"}},{"original":{"kind":"text","text":"resolved row"}}]}}}).to_string()).map_err(failure)?;
     let expected = json!({"function":"decide","value":[null,null,true],"probability":[null,null,0.9],"pick":[null,null,null],"index":[null,null,null],"resolution":["failed","unresolved","resolved"]});
     let admitted = request.clone().admit().map_err(failure)?;
-    let call = engine.execute_request_recovering(&admitted, RequestEnvironment::default()).map_err(failure)?;
-    assert_eq!(serde_json::to_value(call.answer()).map_err(failure)?, expected);
-    let session = engine.start_request_recovering_session(request, thinkthen::Surface::Rust).map_err(failure)?;
+    let call = engine
+        .execute_request_recovering(&admitted, RequestEnvironment::default())
+        .map_err(failure)?;
+    assert_eq!(
+        serde_json::to_value(call.answer()).map_err(failure)?,
+        expected
+    );
+    let session = engine
+        .start_request_recovering_session(request, thinkthen::Surface::Rust)
+        .map_err(failure)?;
     loop {
-        match session.next_packet(RequestSessionWaitInterest::Settlement).map_err(failure)? {
-            thinkthen::RequestRecoveringRead::Result(thinkthen::RequestRecoveringResult::Terminal(terminal)) => {
+        match session
+            .next_packet(RequestSessionWaitInterest::Settlement)
+            .map_err(failure)?
+        {
+            thinkthen::RequestRecoveringRead::Result(
+                thinkthen::RequestRecoveringResult::Terminal(terminal),
+            ) => {
                 assert!(terminal.error.is_none());
-                assert_eq!(serde_json::to_value(terminal.answer).map_err(failure)?, expected);
+                assert_eq!(
+                    serde_json::to_value(terminal.answer).map_err(failure)?,
+                    expected
+                );
                 break;
             }
             thinkthen::RequestRecoveringRead::Result(_) => {}

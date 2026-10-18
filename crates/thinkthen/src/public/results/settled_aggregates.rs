@@ -135,8 +135,12 @@ impl SettledAnswer {
             Function::Score => Self::Score(Settled::rows(std::iter::empty())),
             Function::Annotate => Self::Annotate(Settled::rows(std::iter::empty())),
             Function::Recognize => Self::Recognize(Settled::rows(std::iter::empty())),
-            Function::Filter => Self::Filter(Settled::one(Vec::new(), Vec::new(), None, None, resolved())),
-            Function::Rank => Self::Rank(Settled::one(Vec::new(), Vec::new(), None, None, resolved())),
+            Function::Filter => {
+                Self::Filter(Settled::one(Vec::new(), Vec::new(), None, None, resolved()))
+            }
+            Function::Rank => {
+                Self::Rank(Settled::one(Vec::new(), Vec::new(), None, None, resolved()))
+            }
             Function::Find | Function::Relate => Self::failed(function),
         }
     }
@@ -148,16 +152,22 @@ impl SettledAnswer {
             Function::Tag => Self::Tag(Settled::rows(std::iter::once(Settled::failed()))),
             Function::Score => Self::Score(Settled::rows(std::iter::once(Settled::failed()))),
             Function::Annotate => Self::Annotate(Settled::rows(std::iter::once(Settled::failed()))),
-            Function::Recognize => Self::Recognize(Settled::rows(std::iter::once(Settled::failed()))),
+            Function::Recognize => {
+                Self::Recognize(Settled::rows(std::iter::once(Settled::failed())))
+            }
             Function::Filter => Self::Filter(Settled::failed()),
             Function::Rank => Self::Rank(Settled::failed()),
             Function::Find => Self::Find(Settled::failed()),
             Function::Relate => Self::Relate(Settled::failed()),
         }
     }
-    pub(crate) fn failed_occurrences(&mut self, failures: std::collections::BTreeMap<usize, AnswerResolution>) {
+    pub(crate) fn failed_occurrences(
+        &mut self,
+        failures: std::collections::BTreeMap<usize, AnswerResolution>,
+    ) {
         if let Self::Filter(answer) = self {
-            answer.resolution = super::AnswerShape::Scalar(AnswerResolutions::Occurrences(failures));
+            answer.resolution =
+                super::AnswerShape::Scalar(AnswerResolutions::Occurrences(failures));
         }
     }
     pub(crate) fn scalar(&mut self) {
@@ -173,9 +183,14 @@ impl SettledAnswer {
     }
 }
 
-fn append_selected<T>(left: &mut super::AnswerShape<Option<Vec<T>>>, right: super::AnswerShape<Option<Vec<T>>>) {
+fn append_selected<T>(
+    left: &mut super::AnswerShape<Option<Vec<T>>>,
+    right: super::AnswerShape<Option<Vec<T>>>,
+) {
     match (left, right) {
-        (super::AnswerShape::Scalar(Some(values)), super::AnswerShape::Scalar(Some(more))) => values.extend(more),
+        (super::AnswerShape::Scalar(Some(values)), super::AnswerShape::Scalar(Some(more))) => {
+            values.extend(more)
+        }
         (left @ super::AnswerShape::Scalar(None), right) => *left = right,
         _ => {}
     }

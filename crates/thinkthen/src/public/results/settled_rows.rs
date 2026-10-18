@@ -24,8 +24,10 @@ impl<T, P> Settled<T, P> {
     }
     pub(crate) fn failed() -> Self {
         Self {
-            value: AnswerShape::Scalar(None), probability: AnswerShape::Scalar(None),
-            pick: AnswerShape::Scalar(None), index: AnswerShape::Scalar(None),
+            value: AnswerShape::Scalar(None),
+            probability: AnswerShape::Scalar(None),
+            pick: AnswerShape::Scalar(None),
+            index: AnswerShape::Scalar(None),
             resolution: AnswerShape::Scalar(AnswerResolutions::State(Resolution::Failed)),
         }
     }
