@@ -30,10 +30,15 @@ pub(crate) struct Asked {
 }
 impl Asked {
     pub(crate) fn with_model(&mut self, model: String) {
-        self.settings.insert("model".to_owned(), serde_json::Value::String(model).to_string());
+        self.settings.insert(
+            "model".to_owned(),
+            serde_json::Value::String(model).to_string(),
+        );
     }
     fn folder(&self, name: &str) -> Option<String> {
-        self.settings.get(name).and_then(|raw| serde_json::from_str(raw).ok())
+        self.settings
+            .get(name)
+            .and_then(|raw| serde_json::from_str(raw).ok())
     }
 }
 
@@ -267,7 +272,9 @@ pub(crate) fn engine_for_typed(
 
 /// Validate every raw setting before reusing an engine from the registry.
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
-    let mut builder = EngineBuilder::from_env().map_err(RowError::from)?.shared_host();
+    let mut builder = EngineBuilder::from_env()
+        .map_err(RowError::from)?
+        .shared_host();
     for (name, raw) in &asked.settings {
         builder = builder.setting(name, raw).map_err(RowError::from)?;
     }

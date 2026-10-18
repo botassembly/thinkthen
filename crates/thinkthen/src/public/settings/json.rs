@@ -66,7 +66,9 @@ impl<'de> Deserialize<'de> for Document {
                     }
                     pairs.push((name, value));
                 }
-                let raw = pairs.iter().map(|(name, value)| (name, value))
+                let raw = pairs
+                    .iter()
+                    .map(|(name, value)| (name, value))
                     .collect::<std::collections::BTreeMap<_, _>>();
                 let source = serde_json::to_string(&raw).map_err(serde::de::Error::custom)?;
                 let fields = serde_json::from_str(&source).map_err(serde::de::Error::custom)?;
@@ -127,7 +129,11 @@ impl Document {
             }
         })
     }
-    pub(super) fn apply(&self, mut builder: EngineBuilder, captured: bool) -> Result<EngineBuilder, Error> {
+    pub(super) fn apply(
+        &self,
+        mut builder: EngineBuilder,
+        captured: bool,
+    ) -> Result<EngineBuilder, Error> {
         // Reserved activation refuses before every other setting.
         if self.0.proxy.is_some() {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
@@ -214,7 +220,8 @@ impl Document {
         if let Some(value) = values.timeout {
             builder = builder.timeout(Duration::from_secs(value))?;
         }
-        if let (Some(input), Some(output)) = (&builder.setting_prices.0, &builder.setting_prices.1) {
+        if let (Some(input), Some(output)) = (&builder.setting_prices.0, &builder.setting_prices.1)
+        {
             let (input, output) = (input.clone(), output.clone());
             builder = builder.prices_usd_per_million(&input, &output)?;
         }
@@ -222,19 +229,10 @@ impl Document {
     }
 }
 impl EngineBuilder {
-    /// Apply one engine setting from its name and raw JSON value.
-    /// Text values use JSON string quoting; numbers and booleans use their literal text.
-    /// This validates without opening files or sending requests.
-    /// # Errors
-    /// Refuses unknown names and invalid values with the settings document's messages.
-    pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
-        self.apply_setting(name, raw, true)
-    }
-
-    fn apply_setting(self, name: &str, raw: &str, captured: bool) -> Result<Self, Error> {
-        let name = serde_json::to_string(name)
-            .map_err(|_| Error::usage("settings JSON is one object"))?;
-        Document::parse(&format!("{{{name}:{raw}}}"))?.apply_fields(self, captured)
+    pub(super) fn apply_setting(self, name: &str, raw: &str, captured: bool) -> Result<Self, Error> {
+        let name =
+            serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
+        Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(self, captured)
     }
 
     pub(super) fn check_setting_prices(mut self) -> Result<Self, Error> {
@@ -244,7 +242,11 @@ impl EngineBuilder {
                 self = self.prices_usd_per_million(&input, &output)?;
             }
             (None, None) => {}
-            _ => return Err(Error::usage("settings prices require both input and output fields")),
+            _ => {
+                return Err(Error::usage(
+                    "settings prices require both input and output fields",
+                ));
+            }
         }
         Ok(self)
     }

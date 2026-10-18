@@ -195,7 +195,10 @@ fn spent(total: u64) -> Error {
 impl Call {
     pub(crate) fn with_model(mut self, model: &str) -> Self {
         self.plan.retain(|(name, _)| name != "model");
-        self.plan.push(("model".to_owned(), serde_json::Value::String(model.to_owned()).to_string()));
+        self.plan.push((
+            "model".to_owned(),
+            serde_json::Value::String(model.to_owned()).to_string(),
+        ));
         self
     }
 
@@ -218,7 +221,10 @@ impl Call {
     /// Refuse held records over `max_requests` before any send. The total
     /// belongs to transport attempts, so it cannot truncate record input.
     pub(crate) fn within(&self, count: usize) {
-        let most = self.plan.iter().find(|(name, _)| name == "max_requests")
+        let most = self
+            .plan
+            .iter()
+            .find(|(name, _)| name == "max_requests")
             .and_then(|(_, raw)| raw.parse().ok());
         record_limit(count, most).or_raise();
     }

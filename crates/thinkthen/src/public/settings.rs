@@ -129,6 +129,15 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Apply one engine setting from its name and raw JSON value.
+    /// Text values use JSON string quoting; numbers and booleans use their literal text.
+    /// This validates without opening files or sending requests.
+    /// # Errors
+    /// Refuses unknown names and invalid values with the settings document's messages.
+    pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
+        self.apply_setting(name, raw, true)
+    }
+
     /// Validate the closed C/host engine-settings object without reading the
     /// environment. The total-request cap is active before any send.
     ///

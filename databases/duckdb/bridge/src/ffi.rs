@@ -47,6 +47,12 @@ mod tests;
 
 pub(crate) use settings::{BridgeSettings, asked, batch, probe};
 
+fn setting_values(settings: &BridgeSettings) -> &[settings::BridgeSetting] {
+    if settings.count == 0 { return &[]; }
+    // SAFETY: C++ owns `count` live settings for the duration of this call.
+    unsafe { std::slice::from_raw_parts(settings.settings, settings.count) }
+}
+
 unsafe extern "C" {
     fn thinkthen_cpp_interrupt_busy();
 }

@@ -71,6 +71,15 @@ def run(native, scratch, *, header=None, library=None):
         finally:
             backend.process.stdin.write('release\n'); backend.process.stdin.flush()
             if process.poll() is None: process.kill(); process.wait()
+    expected = json.loads((ROOT / 'conformance/settings-errors.json').read_text())
+    refusal = scratch / 'refused-settings.json'
+    refusal.write_text('{}')
+    output = subprocess.run([str(binary), str(refusal), '{"throttle":33}', '-', '-'],
+                            env=env, capture_output=True, text=True, check=True)
+    assert not output.stderr, output.stderr
+    admission = json.loads(output.stdout)['admission']
+    assert admission['code'] == 2, admission
+    assert f"thinkthen usage: {admission['message']} (retryable: no)" == expected['throttle'], admission
     shared_cases.native_cases(binary, consumer='c', invoke=invoke)
 
 

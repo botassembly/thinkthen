@@ -351,8 +351,12 @@ unsafe extern "C-unwind" fn check_throttle(
 ) -> bool {
     // SAFETY: PostgreSQL passes the proposed value, live for this call.
     let proposed = unsafe { *value };
-    if proposed == -1 { return true; }
-    let Err(error) = thinkthen::EngineBuilder::validate_settings_json(&format!("{{\"throttle\":{proposed}}}")) else {
+    if proposed == -1 {
+        return true;
+    }
+    let Err(error) =
+        thinkthen::EngineBuilder::validate_settings_json(&format!("{{\"throttle\":{proposed}}}"))
+    else {
         return true;
     };
     let refusal = crate::call::text(&error);

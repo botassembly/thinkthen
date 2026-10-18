@@ -1,14 +1,19 @@
 //! PostgreSQL GUC registration and raw engine settings captured before the worker.
-use std::ffi::{CStr, CString};
-use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
-use thinkthen::{EngineBuilder, Error};
 use super::{Call, OrRaise};
 use crate::ffi;
+use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
+use std::ffi::{CStr, CString};
+use thinkthen::{EngineBuilder, Error};
 pub(crate) const UNSET: i32 = -1;
 pub(crate) type SettingPairs = Vec<(String, String)>;
 
-pub(super) fn apply(pairs: &SettingPairs, mut builder: EngineBuilder) -> Result<EngineBuilder, Error> {
-    for (name, raw) in pairs { builder = builder.setting(name, raw)?; }
+pub(super) fn apply(
+    pairs: &SettingPairs,
+    mut builder: EngineBuilder,
+) -> Result<EngineBuilder, Error> {
+    for (name, raw) in pairs {
+        builder = builder.setting(name, raw)?;
+    }
     Ok(builder)
 }
 
@@ -50,7 +55,9 @@ static API_KEY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new
 static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 
 fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
-    setting.get().map(|held| held.to_string_lossy().into_owned())
+    setting
+        .get()
+        .map(|held| held.to_string_lossy().into_owned())
 }
 /// Everything a call reads before its worker starts. `GucSetting::get`
 /// panics off the backend thread, so this runs first in every function.
@@ -68,23 +75,36 @@ pub(crate) fn read_result() -> Result<Call, Error> {
     }
     let mut plan = Vec::new();
     for (name, _, _, control) in controls() {
-        let key = name.to_str().map_err(|_| super::defect("invalid setting name"))?
-            .strip_prefix("thinkthen.").ok_or_else(|| super::defect("invalid setting name"))?;
+        let key = name
+            .to_str()
+            .map_err(|_| super::defect("invalid setting name"))?
+            .strip_prefix("thinkthen.")
+            .ok_or_else(|| super::defect("invalid setting name"))?;
         let raw = match control {
             Control::Number(setting, _) => {
                 let value = setting.get();
-                if value == UNSET { continue; }
+                if value == UNSET {
+                    continue;
+                }
                 value.to_string()
             }
             Control::Text(setting) => {
-                let Some(value) = text_of(setting).filter(|value| !value.is_empty()) else { continue; };
-                if matches!(key, "cache" | "record" | "replay") && value != "off"
-                    && !std::path::Path::new(&value).is_absolute() {
+                let Some(value) = text_of(setting).filter(|value| !value.is_empty()) else {
+                    continue;
+                };
+                if matches!(key, "cache" | "record" | "replay")
+                    && value != "off"
+                    && !std::path::Path::new(&value).is_absolute()
+                {
                     return Err(super::usage("a SQL folder must be absolute"));
                 }
-                if key == "batch" && value != "max" { value }
-                else if key == "cache" && value == "off" { "false".to_owned() }
-                else { serde_json::Value::String(value).to_string() }
+                if key == "batch" && value != "max" {
+                    value
+                } else if key == "cache" && value == "off" {
+                    "false".to_owned()
+                } else {
+                    serde_json::Value::String(value).to_string()
+                }
             }
             Control::Flag(setting) => setting.get().to_string(),
         };
@@ -110,15 +130,59 @@ pub(crate) fn file_directory() -> Option<String> {
 pub(crate) fn register() {
     for (name, about, context, control) in controls() {
         match control {
-            Control::Number(setting, flags) if name == c"thinkthen.throttle" => { let _ = flags; ffi::define_throttle(setting); }
-            Control::Number(setting, flags) => GucRegistry::define_int_guc(name, about, c"", setting, -1, i32::MAX, context, flags),
-            Control::Text(setting) => GucRegistry::define_string_guc(name, about, c"", setting, context, GucFlags::default()),
-            Control::Flag(setting) => GucRegistry::define_bool_guc(name, about, c"", setting, context, GucFlags::default()),
+            Control::Number(setting, flags) if name == c"thinkthen.throttle" => {
+                let _ = flags;
+                ffi::define_throttle(setting);
+            }
+            Control::Number(setting, flags) => {
+                GucRegistry::define_int_guc(name, about, c"", setting, -1, i32::MAX, context, flags)
+            }
+            Control::Text(setting) => GucRegistry::define_string_guc(
+                name,
+                about,
+                c"",
+                setting,
+                context,
+                GucFlags::default(),
+            ),
+            Control::Flag(setting) => GucRegistry::define_bool_guc(
+                name,
+                about,
+                c"",
+                setting,
+                context,
+                GucFlags::default(),
+            ),
         }
     }
-    GucRegistry::define_int_guc(c"thinkthen.deadline_ms", c"per-call deadline in milliseconds: -1 none, 0 spent", c"", &DEADLINE_MS, -1, i32::MAX, GucContext::Userset, GucFlags::default());
-    GucRegistry::define_int_guc(c"thinkthen.max_requests_total", c"most requests one backend sends; -1 means no total", c"", &TOTAL, -1, i32::MAX, GucContext::Suset, GucFlags::default());
-    GucRegistry::define_string_guc(c"thinkthen.file_directory", c"the only directory an unprivileged named-file read may touch", c"", &FILE_DIRECTORY, GucContext::Suset, GucFlags::NO_SHOW_ALL);
+    GucRegistry::define_int_guc(
+        c"thinkthen.deadline_ms",
+        c"per-call deadline in milliseconds: -1 none, 0 spent",
+        c"",
+        &DEADLINE_MS,
+        -1,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_int_guc(
+        c"thinkthen.max_requests_total",
+        c"most requests one backend sends; -1 means no total",
+        c"",
+        &TOTAL,
+        -1,
+        i32::MAX,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.file_directory",
+        c"the only directory an unprivileged named-file read may touch",
+        c"",
+        &FILE_DIRECTORY,
+        GucContext::Suset,
+        GucFlags::NO_SHOW_ALL,
+    );
     ffi::define_ignored_api_key(&API_KEY);
 }
 

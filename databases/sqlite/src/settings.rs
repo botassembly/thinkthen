@@ -9,9 +9,23 @@ use thinkthen::{Engine, EngineBuilder};
 use crate::{Failure, guard};
 
 const SETTING_NAMES: &[&str] = &[
-    "base_url", "backend", "model", "throttle", "batch", "max_requests",
-    "max_requests_total", "max_request_bytes", "cache", "refresh_cache", "timeout",
-    "max_retries", "profile", "record", "replay", "usd_per_million_input", "usd_per_million_output",
+    "base_url",
+    "backend",
+    "model",
+    "throttle",
+    "batch",
+    "max_requests",
+    "max_requests_total",
+    "max_request_bytes",
+    "cache",
+    "refresh_cache",
+    "timeout",
+    "max_retries",
+    "profile",
+    "record",
+    "replay",
+    "usd_per_million_input",
+    "usd_per_million_output",
 ];
 
 type SettingPairs = Vec<(String, String)>;
@@ -21,8 +35,14 @@ type SettingPairs = Vec<(String, String)>;
 const SINGLE_THREAD: &str = "a cache, record or replay folder needs a thread-safe SQLite, and this host's SQLite is single-threaded; name no folder, or load thinkthen into a thread-safe SQLite";
 
 fn threads_ready(settings: &SettingPairs) -> Result<(), Failure> {
-    let folder = |name| settings.iter().find(|(key, _)| key == name).map(|(_, raw)| raw);
-    let named = folder("record").is_some() || folder("replay").is_some()
+    let folder = |name| {
+        settings
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, raw)| raw)
+    };
+    let named = folder("record").is_some()
+        || folder("replay").is_some()
         || match folder("cache") {
             Some(raw) => raw != "false",
             None => std::env::var("THINKTHEN_CACHE").is_ok_and(|v| !v.trim().is_empty()),
@@ -33,7 +53,10 @@ fn threads_ready(settings: &SettingPairs) -> Result<(), Failure> {
     Ok(())
 }
 
-fn apply(settings: &SettingPairs, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
+fn apply(
+    settings: &SettingPairs,
+    mut builder: EngineBuilder,
+) -> Result<EngineBuilder, thinkthen::Error> {
     for (name, raw) in settings {
         builder = builder.setting(name, raw)?;
     }
@@ -46,7 +69,9 @@ static ENGINE: OnceLock<Engine> = OnceLock::new();
 
 /// The selected cap for a safe SQLite refusal sentence.
 pub(crate) fn total() -> Option<u64> {
-    stored().iter().find(|(name, _)| name == "max_requests_total")
+    stored()
+        .iter()
+        .find(|(name, _)| name == "max_requests_total")
         .and_then(|(_, raw)| serde_json::from_str(raw).ok())
 }
 
@@ -107,10 +132,15 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
             .ok_or_else(|| Failure::usage("settings JSON is one object"))?;
         for name in fields.keys() {
             if !SETTING_NAMES.contains(&name.as_str()) {
-                return Err(Failure::usage(format!("settings JSON has unknown key {name}")));
+                return Err(Failure::usage(format!(
+                    "settings JSON has unknown key {name}"
+                )));
             }
         }
-        let next = fields.iter().map(|(name, value)| (name.clone(), value.to_string())).collect();
+        let next = fields
+            .iter()
+            .map(|(name, value)| (name.clone(), value.to_string()))
+            .collect();
         let mut held = stored();
         if ENGINE.get().is_some() {
             return Err(Failure::usage(

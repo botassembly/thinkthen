@@ -1239,7 +1239,7 @@ a_role_limit_applies() {
 check a_role_limit_applies
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
-THROTTLE_RANGE=$(python3 -c 'import json; print(json.load(open("conformance/settings-errors.json"))["throttle"])')
+THROTTLE_RANGE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["throttle"])' "$REPO/conformance/settings-errors.json")
 throttle_setting_range() {
 	fresh generic "thinkthen.throttle = 0"
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")

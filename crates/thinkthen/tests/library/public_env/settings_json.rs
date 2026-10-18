@@ -121,3 +121,36 @@ pub(super) fn budget(text: &str) -> Vec<String> {
         .expect("configured engine");
     vec![ask(&engine)]
 }
+
+#[test]
+fn raw_setting_pairs_share_document_validation_and_never_send() {
+    let listener = listener();
+    for (name, raw) in [
+        ("throttle", "33"),
+        ("throttle", "-1"),
+        ("timeout", "0"),
+        ("timeout", "86401"),
+        ("max_requests", "0"),
+        ("max_request_bytes", "0"),
+        ("cache", "true"),
+        ("model", r#"" ""#),
+        ("unknown_control", r#""private-value""#),
+    ] {
+        let document = format!("{{\"{name}\":{raw}}}");
+        let expected = EngineBuilder::validate_settings_json(&document).unwrap_err();
+        let actual = Engine::builder().setting(name, raw).unwrap_err();
+        assert_eq!(actual.kind(), expected.kind());
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+    for raw in ["1,\"model\":\"private-marker\"", "1} {}"] {
+        let error = Engine::builder().setting("batch", raw).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert!(!error.to_string().contains("private-marker"));
+    }
+    let error = Engine::builder().setting("throttle", "33").unwrap_err();
+    let expected: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../conformance/settings-errors.json"
+    )).expect("shared expected settings messages");
+    assert_eq!(format!("thinkthen usage: {error} (retryable: no)"), expected["throttle"]);
+    assert_eq!(listener.count(), 0);
+}
