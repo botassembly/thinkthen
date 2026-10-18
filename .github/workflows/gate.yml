@@ -588,6 +588,13 @@ jobs:
                   )],extra={'GATE_OUTPUT':str(out)})
               elif stage == 'functional':
                   run('cli-fresh', ['cargo', 'build', '--locked', '--offline', '--package', 'thinkthen', '--bin', 'thinkthen', '-j2'])
+                  # Prepare the same optimized Polars artifacts before the consumer's existing clock starts.
+                  run('polars-prepare', ['sh', '-c', (
+                      'set -eu; REPO=$PWD; . sdlc/scripts/full-compiler; unset CARGO_INCREMENTAL; '
+                      'export CARGO_TARGET_DIR="$PWD/target/polars"; '
+                      'cargo test --locked --offline --package thinkthen --features polars --test polars --no-run; '
+                      'cargo build --locked --offline --manifest-path libraries/polars/consumer/Cargo.toml'
+                  )])
                   try:
                       run('fullcases', ['sh', 'sdlc/scripts/test-full-cases', '--run'])
                   finally:
