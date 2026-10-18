@@ -407,11 +407,7 @@ impl EngineBuilder {
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
         self.check_proxy()?;
-        let self_held = self.check_setting_prices()?;
-        self_held.build_checked()
-    }
-
-    fn build_checked(self) -> Result<super::Engine, Error> {
+        self.check_setting_prices()?;
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {

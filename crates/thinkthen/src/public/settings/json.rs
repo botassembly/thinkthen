@@ -51,31 +51,32 @@ engine_fields! {
 pub(in crate::public) struct Document(Fields, Vec<(String, Box<serde_json::value::RawValue>)>);
 impl<'de> Deserialize<'de> for Document {
     fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
-        struct Object;
-        impl<'de> serde::de::Visitor<'de> for Object {
-            type Value = Document;
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("one settings object")
-            }
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
-                let mut map = map;
-                let mut pairs = Vec::<(String, Box<serde_json::value::RawValue>)>::new();
-                while let Some((name, value)) = map.next_entry()? {
-                    if pairs.iter().any(|(held, _)| held == &name) {
-                        return Err(serde::de::Error::custom("duplicate field"));
-                    }
-                    pairs.push((name, value));
-                }
-                let raw = pairs
-                    .iter()
-                    .map(|(name, value)| (name, value))
-                    .collect::<std::collections::BTreeMap<_, _>>();
-                let source = serde_json::to_string(&raw).map_err(serde::de::Error::custom)?;
-                let fields = serde_json::from_str(&source).map_err(serde::de::Error::custom)?;
-                Ok(Document(fields, pairs))
-            }
-        }
         de.deserialize_map(Object)
+    }
+}
+
+struct Object;
+impl<'de> serde::de::Visitor<'de> for Object {
+    type Value = Document;
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("one settings object")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
+        let mut map = map;
+        let mut pairs = Vec::<(String, Box<serde_json::value::RawValue>)>::new();
+        while let Some((name, value)) = map.next_entry()? {
+            if pairs.iter().any(|(held, _)| held == &name) {
+                return Err(serde::de::Error::custom("duplicate field"));
+            }
+            pairs.push((name, value));
+        }
+        let raw = pairs
+            .iter()
+            .map(|(name, value)| (name, value))
+            .collect::<std::collections::BTreeMap<_, _>>();
+        let source = serde_json::to_string(&raw).map_err(serde::de::Error::custom)?;
+        let fields = serde_json::from_str(&source).map_err(serde::de::Error::custom)?;
+        Ok(Document(fields, pairs))
     }
 }
 
@@ -149,7 +150,8 @@ impl Document {
                 builder.apply_setting(name, value.get(), false)?
             };
         }
-        builder.check_setting_prices()
+        builder.check_setting_prices()?;
+        Ok(builder)
     }
     fn apply_fields(
         &self,
@@ -162,14 +164,7 @@ impl Document {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
         }
         builder.check_proxy()?;
-        if let Some(value) = &values.usd_per_million_input {
-            super::prices::parse(value, "0")?;
-            builder.setting_prices.0 = Some(value.clone());
-        }
-        if let Some(value) = &values.usd_per_million_output {
-            super::prices::parse("0", value)?;
-            builder.setting_prices.1 = Some(value.clone());
-        }
+        builder = builder.apply_setting_prices(values.usd_per_million_input.as_deref(), values.usd_per_million_output.as_deref())?;
         // Configured backend names belong to the captured configuration. All
         // other owner checks run before capture against a bare builder too.
         if captured && let Some(value) = &values.backend {
@@ -227,11 +222,6 @@ impl Document {
         if let Some(value) = values.timeout {
             builder = builder.timeout(Duration::from_secs(value))?;
         }
-        if let (Some(input), Some(output)) = (&builder.setting_prices.0, &builder.setting_prices.1)
-        {
-            let (input, output) = (input.clone(), output.clone());
-            builder.prices = Some(super::prices::parse(&input, &output)?);
-        }
         Ok(builder)
     }
 }
@@ -251,15 +241,6 @@ impl EngineBuilder {
         let name =
             serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
         Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(self, captured)
-    }
-
-    pub(super) fn check_setting_prices(self) -> Result<Self, Error> {
-        match (&self.setting_prices.0, &self.setting_prices.1) {
-            (Some(_), Some(_)) | (None, None) => Ok(self),
-            _ => Err(Error::usage(
-                "settings prices require both input and output fields",
-            )),
-        }
     }
 
     /// Admit engine settings before capturing the environment and configuration.
