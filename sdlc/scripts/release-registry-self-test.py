@@ -13,6 +13,7 @@ import json
 import io
 import os
 import pathlib
+import platform
 import runpy
 import shutil
 import subprocess
@@ -25,6 +26,9 @@ import yaml
 from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
@@ -317,6 +321,46 @@ def jvm_contract_cases():
                     assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
 
 
+def apple_admission_cases(root, env, artifact):
+    """Control manifest admission separately from the Apple shell/asset boundary."""
+    manifest_path = root / 'sdlc/tools.json'
+    original = manifest_path.read_text()
+    manifest = json.loads(original)
+    arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+    host = platform.system().lower() + '-' + arch
+    private = root / 'target/private.txt'
+    private.write_bytes(b'PRIVATE_KEY_MARKER')
+    calls = pathlib.Path(env['APPLE_CALLS'])
+
+    def check(family, code, sentence, selected):
+        result = subprocess.run(['sh', str(root / f'libraries/{family}/check.sh')],
+                                cwd=root, env=env | {'THINKTHEN_ARTIFACT': str(selected)},
+                                text=True, capture_output=True, timeout=30)
+        diagnostic = result.stdout + result.stderr
+        assert result.returncode == code and sentence in diagnostic, result
+        assert not calls.exists(), calls.read_text() if calls.exists() else ''
+        return diagnostic
+
+    try:
+        for family in ('swift', 'objective-c'):
+            # Shared admission reads Python's real host and the tracked manifest,
+            # never uname. The shim below controls only the later Apple shell route.
+            manifest['libraries'][family]['check_platforms'] = []
+            manifest_path.write_text(json.dumps(manifest))
+            diagnostic = check(family, 77, f'sdlc/tools.json libraries.{family}', private)
+            assert 'private pattern' not in diagnostic
+            check(family, 1, 'missing input THINKTHEN_ARTIFACT', root / 'target/missing.tar.gz')
+            manifest['libraries'][family]['check_platforms'] = [host]
+            manifest_path.write_text(json.dumps(manifest))
+            check(family, 1, 'missing input THINKTHEN_ARTIFACT', root / 'target/missing.tar.gz')
+            check(family, 1, 'private pattern in private.txt', private)
+        check('swift', 1, 'no native build is started', '')
+        check('swift', 1, 'missing its XCFramework', artifact)
+    finally:
+        manifest_path.write_text(original)
+    print('Apple admission: unsupported, missing input, privacy and missing framework refuse before builds or sends')
+
+
 def apple_package_cases():
     """Assemble source archives without invoking Cargo or claiming Apple execution."""
     jobs = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())['jobs']
@@ -330,22 +374,7 @@ def apple_package_cases():
         'apple-packages-aarch64-apple-darwin', 'apple-packages-x86_64-apple-darwin'}
     with tempfile.TemporaryDirectory(prefix='apple-package-') as temporary:
         root = pathlib.Path(temporary)
-        for relative in ('libraries/swift', 'libraries/objective-c'):
-            names = subprocess.check_output(['git', 'ls-files', relative], cwd=REPO, text=True).splitlines()
-            for name in names:
-                destination = root / name
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(REPO / name, destination)
-        for name in ('README.md', 'specification/request.schema.json',
-                     'crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
-                     'sdlc/scripts/release-pack', 'sdlc/scripts/release-go-cpp-pair',
-                     'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
-            destination = root / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, destination)
-        (root / '.gitignore').write_text('target/\nlibraries/swift/CThinkThen.xcframework/\n')
-        subprocess.run(['git', 'init', '-q', str(root)], check=True)
-        subprocess.run(['git', 'add', '.'], cwd=root, check=True)
+        stage_checkout(REPO, root)
         subprocess.run(['git', '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
                         'commit', '-qm', 'Capture wrapper inputs'], cwd=root, check=True)
         commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
@@ -353,7 +382,9 @@ def apple_package_cases():
         # Shell helpers need the same supported Python as this test, not the host's system Python.
         (tools / 'python3').symlink_to(sys.executable)
         for name, body in {'uname': 'echo Darwin', 'rustc': 'echo "host: aarch64-apple-darwin"',
-                           'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
+                           'cargo': 'echo cargo >> "$APPLE_CALLS"; exit 99',
+                           'swift': 'echo swift >> "$APPLE_CALLS"; exit 99',
+                           'curl': 'echo curl >> "$APPLE_CALLS"; exit 99'}.items():
             tool = tools / name
             tool.write_text('#!/bin/sh\n' + body + '\n'); tool.chmod(0o755)
         framework = root / 'libraries/swift/CThinkThen.xcframework'; framework.mkdir()
@@ -367,14 +398,11 @@ def apple_package_cases():
             package.add(native / 'include', arcname='./include')
         digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
-        env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
-                            'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
-        apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
-        refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
-        assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
-        apple_env['THINKTHEN_ARTIFACT'] = str(output / name)
-        refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
-        assert refused.returncode == 1 and 'missing its XCFramework' in refused.stderr, refused
+        env = child_env(home=root / 'target/home', PATH=str(tools) + os.pathsep + os.defpath,
+                        THINKTHEN_RELEASE_EXPECTED_SHA=commit,
+                        THINKTHEN_RESOLVED_TOOLS=fixture_tool_groups(root),
+                        APPLE_CALLS=str(root / 'target/apple-calls'))
+        apple_admission_cases(root, env, output / name)
         command = ['sh', 'sdlc/scripts/release-pack', '--apple-wrappers', target,
                    str(output), 'swift', 'objective-c']
         for corrupted in (True, False):
