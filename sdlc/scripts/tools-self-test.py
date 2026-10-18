@@ -44,6 +44,56 @@ class ToolResolution(unittest.TestCase):
             'readiness': {'argv': ['sh', '-c', 'exit 1'], 'contains': 'advisories ok'},
         }, diagnostic='selected')
 
+    @unittest.skipUnless(platform.system() == 'Darwin', 'macOS owns native Cargo resolution')
+    def test_cargo_dispatch_ignores_ambient_plugins_and_aliases_but_shares_cache_locks(self):
+        cargo = subprocess.check_output(['rustup', 'which', 'cargo'], text=True).strip()
+        owned = ROOT / '.tools'
+        owned.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='resolver-cargo-', dir=owned) as folder:
+            root = Path(folder)
+            resolved = root / 'resolved'
+            binary = resolved / 'bin'
+            ambient = root / 'ambient'
+            binary.mkdir(parents=True)
+            (ambient / 'bin').mkdir(parents=True)
+            (binary / 'cargo').symlink_to(cargo)
+            plugins = ('fmt', 'clippy', 'nextest', 'deny', 'public-api')
+            for name in plugins:
+                for directory, output in ((binary, 'owned-'), (ambient / 'bin', 'ambient-')):
+                    executable = directory / ('cargo-' + name)
+                    executable.write_text('#!/bin/sh\nprintf "%s\\n" ' + output + name + '\n')
+                    executable.chmod(0o755)
+            (ambient / 'config.toml').write_text('[alias]\nnextest = "!echo ambient-config"\n')
+            (ambient / 'credentials.toml').write_text('fixture credential, never forwarded\n')
+            caches = ('registry', 'git', 'advisory-dbs')
+            locks = ('.package-cache', '.package-cache-mutate', '.global-cache')
+            for name in caches:
+                (ambient / name).mkdir()
+            for name in locks:
+                (ambient / name).write_text('shared fixture\n')
+            manifest = {'libraries': {}, 'databases': {}, 'python_packages': {}, 'tools': {
+                'rust': {'commands': [], 'version': 'unused', 'groups': ['common'],
+                         'platforms': ['darwin']},
+                'plugins': {'commands': ['cargo', *['cargo-' + name for name in plugins]],
+                            'groups': ['test'], 'platforms': ['darwin'],
+                            'probes': [{'argv': ['cargo', name, '--version'],
+                                        'contains': 'owned-' + name} for name in plugins]}}}
+            source = root / 'tools.json'
+            source.write_text(json.dumps(manifest))
+            env = {'HOME': str(root), 'CARGO_HOME': str(ambient), 'PATH': '/usr/bin:/bin',
+                   'CARGO_ALIAS_NEXTEST': '!echo ambient-env'}
+            command = '; '.join('cargo ' + name + ' --version' for name in plugins)
+            result = subprocess.run([sys.executable, str(SCRIPT), '--check', '--manifest', str(source),
+                                     '--root', str(resolved), 'test', '--', '/bin/sh', '-ec', command],
+                                    env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, ''.join('owned-' + name + '\n' for name in plugins))
+            runtime = resolved / 'cargo-runtime'
+            for name in (*caches, *locks):
+                self.assertTrue((runtime / name).samefile(ambient / name), name)
+            for name in ('bin', 'config', 'config.toml', 'credentials', 'credentials.toml'):
+                self.assertFalse((runtime / name).exists(), name)
+
     @unittest.skipUnless(platform.system() == 'Darwin' and
                          'test' in os.environ.get('THINKTHEN_RESOLVED_TOOLS', '').split(','),
                          'requires the prepared native macOS test environment')
