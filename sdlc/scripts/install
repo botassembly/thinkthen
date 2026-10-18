@@ -5,7 +5,7 @@ tools_group=install
 . "$(dirname -- "$0")/resolved-tools"
 
 # Sanitize the environment inherited by build tools.
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cargo fetch --manifest-path "$REPO/Cargo.toml" --locked

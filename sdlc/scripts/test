@@ -39,7 +39,7 @@ if [ "$(uname -s)" = Linux ]; then
         exit 2
     fi
 fi
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 # An exported selector must not narrow the full run.
 unset THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_PROFILE
 

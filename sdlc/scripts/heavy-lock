@@ -1,2 +1,0 @@
-# pm job owns build admission and isolates output; retain child environment sanitization.
-. "$(dirname -- "$0")/allow-list"

@@ -1,4 +1,4 @@
-# Sourced by heavy-lock and lint (ticket 0133). The rung and every child it
+# Sourced by the build rungs and lint (ticket 0133). The rung and every child it
 # starts see only the names below. A developer's unrelated service key never
 # reaches cargo, a build script, a test binary, or a surface check.
 # CARGO_TARGET_DIR is left off, so every rung builds in the lane's own target
