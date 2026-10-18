@@ -83,6 +83,56 @@ class PrivacyTests(unittest.TestCase):
                         self.assertIn('private pattern in distribution.txt', result.stderr)
                     path.unlink()
 
+    def test_crate_fixture_allowances_keep_other_rules_and_paths_active(self):
+        repo = Path(__file__).resolve().parents[2]
+        members = ('src/config/tests.rs', 'tests/library/ca_bundle.rs',
+                   'tests/library/tls/localhost.key', 'tests/library/tls/other-host.key')
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive = root / 'source.crate'
+            unpacked = root / 'thinkthen-0.2.0'
+            for name in members:
+                source = repo / 'crates/thinkthen' / name
+                privacy.check_file(source)
+                dest = unpacked / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(source.read_bytes())
+                privacy.check_file(dest)
+            # Both stored and compressed archives must inspect each member by its exact path.
+            for mode in ('w', 'w:gz'):
+                with self.subTest(mode=mode):
+                    with tarfile.open(archive, mode) as bundle:
+                        bundle.add(unpacked, arcname=unpacked.name)
+                    privacy.check_file(archive)
+            plants = [(name, b'PRIVATE_KEY_MARKER') for name in members]
+            plants += [('src/config/tests.rs', b'/home/private'),
+                       ('src/config/tests.rs', b'/Users/private'),
+                       ('src/config/tests.rs', b'/home/person-extra'),
+                       ('src/config/tests.rs', b'/Users/person-extra'),
+                       ('tests/library/ca_bundle.rs', b'-----BEGIN PRIVATE KEY-----\\nREALKEY'),
+                       ('src/config/production.rs', b'/home/person'),
+                       ('src/config/production.rs', b'/Users/person'),
+                       ('tests/extra.rs', b'-----BEGIN PRIVATE KEY-----'),
+                       ('tests/library/tls/extra.key', b'-----BEGIN PRIVATE KEY-----'),
+                       ('src/production.key', b'-----BEGIN PRIVATE KEY-----')]
+            for name, plant in plants:
+                with self.subTest(name=name, plant=plant):
+                    original = (repo / 'crates/thinkthen' / name)
+                    data = (original.read_bytes() if original.is_file() else b'') + b'\n' + plant
+                    with tarfile.open(archive, 'w:gz') as bundle:
+                        member = tarfile.TarInfo('thinkthen-0.2.0/' + name)
+                        member.size = len(data)
+                        bundle.addfile(member, io.BytesIO(data))
+                    with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
+                        privacy.check_file(archive)
+            # Allowances never cover names, symlink targets or container metadata.
+            with tarfile.open(archive, 'w:gz', format=tarfile.PAX_FORMAT) as bundle:
+                member = tarfile.TarInfo('thinkthen-0.2.0/src/config/tests.rs')
+                member.pax_headers = {'comment': '/home/person'}
+                bundle.addfile(member, io.BytesIO())
+            with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
+                privacy.check_file(archive)
+
     def test_private_markers_and_valid_build_prefix(self):
         for marker in (b'/home/private', b'/Users/private', b'auth.json', b'-----BEGIN PRIVATE KEY-----',
                        b'tt-canary-private', b'PRIVATE_PATH_MARKER', b'PRIVATE_KEY_MARKER', b'sk-private-SECRET123',

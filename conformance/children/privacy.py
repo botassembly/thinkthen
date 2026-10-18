@@ -13,43 +13,86 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'sdlc/generators/results'))
 from sources import classification, generated_paths, source_owners, tracked_files
 
-PRIVATE = re.compile(rb'/home/|/Users/|auth\.json|-----BEGIN PRIVATE KEY-----|tt-canary-|'
-                     rb'PRIVATE_PATH_MARKER|PRIVATE_KEY_MARKER|sk-private-[A-Za-z0-9]+')
+PRIVATE = re.compile(rb'(?P<home_path>/home/)|(?P<users_path>/Users/)|(?P<auth_file>auth\.json)|'
+                     rb'(?P<private_key>-----BEGIN PRIVATE KEY-----)|(?P<canary>tt-canary-)|'
+                     rb'(?P<path_marker>PRIVATE_PATH_MARKER)|(?P<key_marker>PRIVATE_KEY_MARKER)|'
+                     rb'(?P<secret_key>sk-private-[A-Za-z0-9]+)')
+
+# Exact crate member and rule pairs; every other match still fails.
+ALLOWANCES = {
+    ('src/config/tests.rs', 'home_path'): rb'/home/person(?=[/"\\])',  # Synthetic config home used by path tests.
+    ('src/config/tests.rs', 'users_path'): rb'/Users/person(?=[/"\\])',  # Synthetic macOS home used by path tests.
+    ('tests/library/ca_bundle.rs', 'private_key'):
+        rb'-----BEGIN PRIVATE KEY-----\\nAA==\\n-----END PRIVATE KEY-----\\n',  # Malformed PEM rejection case.
+    ('tests/library/tls/localhost.key', 'private_key'): None,  # Public loopback TLS fixture.
+    ('tests/library/tls/other-host.key', 'private_key'): None,  # Public wrong-host TLS fixture.
+}
 
 
 class PrivacyError(AssertionError):
     """A distributable contains private bytes."""
 
 
-def check_bytes(label, data):
-    if PRIVATE.search(data):
+def check_bytes(label, data, *, crate_member=None):
+    for match in PRIVATE.finditer(data):
+        pair = (crate_member, match.lastgroup)
+        if pair in ALLOWANCES:
+            allowed = ALLOWANCES[pair]
+            if allowed is None or re.match(allowed, data[match.start():]):
+                continue
         raise PrivacyError(f'private pattern in {label}')
 
 
+def crate_member(name):
+    """Recognize exact crate paths in the checkout or Cargo's versioned root."""
+    path = Path(name)
+    repo = Path(__file__).resolve().parents[2]
+    if path.is_absolute():
+        try:
+            return path.relative_to(repo / 'crates/thinkthen').as_posix()
+        except ValueError:
+            # Cargo unpack directories retain the archive's exact versioned root.
+            path = Path(*path.parts[1:])
+            for parent in path.parents:
+                if re.fullmatch(r'thinkthen-[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?', parent.name):
+                    path = Path(parent.name) / path.relative_to(parent)
+                    break
+    parts = path.parts
+    if len(parts) > 1 and re.fullmatch(r'thinkthen-[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?', parts[0]):
+        return Path(*parts[1:]).as_posix()
+    return None
+
+
 def distribution_bytes(path):
-    """Read only an explicit shipping file and its compressed members."""
+    """Read explicit shipping files, member content and archive metadata separately."""
     path = Path(path)
-    yield path.read_bytes()
+    yield None, path.name.encode()
     if tarfile.is_tarfile(path):
         with tarfile.open(path) as archive:
+            yield None, repr(archive.pax_headers).encode()
             for member in archive:
-                yield member.name.encode()
+                yield None, member.name.encode()
+                yield None, repr(member.pax_headers).encode()
                 if member.issym() or member.islnk():
-                    yield member.linkname.encode()
+                    yield None, member.linkname.encode()
                 if member.isfile():
-                    yield archive.extractfile(member).read()
+                    yield crate_member(member.name), archive.extractfile(member).read()
     elif zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
+            yield None, archive.comment
             for member in archive.infolist():
-                yield member.filename.encode()
-                yield archive.read(member)
+                yield None, member.filename.encode() + member.comment + member.extra
+                yield crate_member(member.filename), archive.read(member)
     elif path.suffix == '.gz':
-        yield gzip.decompress(path.read_bytes())
+        yield None, path.read_bytes()
+        yield None, gzip.decompress(path.read_bytes())
+    else:
+        yield crate_member(path.resolve()), path.read_bytes()
 
 
 def check_file(path):
-    for data in distribution_bytes(path):
-        check_bytes(Path(path).name, data)
+    for member, data in distribution_bytes(path):
+        check_bytes(Path(path).name, data, crate_member=member)
 
 
 def source_files(root, includes, excludes=()):
