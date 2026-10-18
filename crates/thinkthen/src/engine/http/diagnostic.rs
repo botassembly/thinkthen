@@ -53,13 +53,7 @@ pub(super) fn decorate(
             details
                 .and_then(|body| body.member(name))
                 .and_then(Json::as_str)
-                // Error identifiers are single bounded machine fields, not display prose.
-                .filter(|text| (1..=128).contains(&text.len()))
-                .filter(|text| {
-                    text.bytes().all(|byte| {
-                        byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'.')
-                    })
-                })
+                .filter(|text| identifier(text))
                 .filter(|text| !key_echo(text, exchange.key))
                 .filter(|text| !request_echo(text, exchange.body))
                 .map(str::to_owned)
@@ -82,7 +76,15 @@ pub(super) fn decorate(
     }
 }
 
-/// Apply the submitted-body collision boundary before carrying untrusted prose.
+// Error identifiers are single bounded machine fields, not display prose.
+fn identifier(text: &str) -> bool {
+    (1..=128).contains(&text.len())
+        && text
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_-.".contains(&byte))
+}
+
+/// Apply the submitted-body collision boundary before carrying provider fields.
 pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
     !text.is_empty()
         && (body.windows(text.len()).any(|part| part == text.as_bytes())

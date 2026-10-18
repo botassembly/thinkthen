@@ -70,8 +70,6 @@ fn send(
         Box::new(attempt)
     })?;
     let status = response.status().as_u16();
-    let header =
-        |name: &str| unique(response.headers(), name).and_then(|value| value.to_str().ok());
     let storable = crate::core::cache_control::permits(
         response
             .headers()
@@ -79,6 +77,8 @@ fn send(
             .iter()
             .map(|value| value.as_bytes()),
     );
+    let header =
+        |name: &str| unique(response.headers(), name).and_then(|value| value.to_str().ok());
     let info = ResponseInfo::of(
         status,
         header("x-envoy-upstream-service-time"),
