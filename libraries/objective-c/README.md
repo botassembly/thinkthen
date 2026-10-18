@@ -1,6 +1,6 @@
 # ThinkThen for Objective-C
 
-Call a decision model from Objective-C and read its answer through a typed call. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
+Call a System One model from Objective-C and read its answer through a typed call. The ten functions are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`.
 
 ```objc
 #import "ThinkThenFoundation.h"

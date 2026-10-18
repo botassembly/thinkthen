@@ -54,7 +54,7 @@ Diogo sets a high bar for this. "The highest honor of reliability will be to get
 
 ## An example: which tool to call next
 
-An agent has a set of tools. At each step it has to pick one. In my talk I listed this as a use for decision models. They can give agents "guardrails like permissions or tool choice" ([TT 16:17](https://youtu.be/YbzrlpAyCV4?t=977)).
+An agent has a set of tools. At each step it has to pick one. In my talk I listed this as a use for System One models. They can give agents "guardrails like permissions or tool choice" ([TT 16:17](https://youtu.be/YbzrlpAyCV4?t=977)).
 
 Ask a chat model to pick, and it writes back a tool name in a sentence. It sounds just as sure on a hard step as on an easy one. Your code can't tell the difference.
 
