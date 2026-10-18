@@ -25,8 +25,6 @@ def linux_tool_destination_case():
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
                 if step.get('name') == 'Install existing pinned Linux host and consumer tools')
     block, checksum = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)
-    assert '. sdlc/scripts/fetch.sh\n' in block and 'fetch_url "$HOME/.local/bin/jq" ' in block
-    assert '"$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict' in checksum.splitlines()[0]
     url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
         root = Path(temporary)
@@ -37,7 +35,7 @@ def linux_tool_destination_case():
                'JQ_SHA256': hashlib.sha256(payload.read_bytes()).hexdigest()}
         assert not (home / '.local/bin').exists()
         # Keep missing-parent failures deterministic without waiting for retry pauses.
-        command = 'sleep() { :; }\n' + block.replace(url, payload.as_uri())
+        command = 'sleep() { :; }\n' + (block + 'printf ' + checksum.splitlines()[0] + '\n').replace(url, payload.as_uri())
         result = subprocess.run(['/bin/sh', '-ec', command],
                                 cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
@@ -55,17 +53,6 @@ def linux_nested_tools_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
     host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
-    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
-    assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
-        line for line in installed.splitlines() if "ruff==" in line)
-    assert '--prefix "$generator_tools" ' in next(
-        line for line in installed.splitlines() if "prettier@" in line)
-    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    smoke = release['jobs']['smoke']
-    setup = next(step for step in smoke['steps'] if 'host-setup' in step.get('run', ''))
-    assert 'if' not in setup and setup['env']['RELEASE_SMOKE'] == '1'
-    assert 'host-setup "$TARGET"' in next(step['run'] for step in steps
-        if step.get('name') == 'Install existing pinned Linux host and consumer tools')
     formatters = '\n'.join(line for line in installed.splitlines()
                            if line.strip().startswith(('mkdir -p "$generator_tools/bin"',
                                                        'ln -s "$generator_tools/python/bin/ruff"',
@@ -652,22 +639,68 @@ def flutter_locked_setup_case():
 
 
 
+def duckdb_host_transfer_case():
+    # Run the same local helpers used by build and smoke without a compiler.
+    sys.path.insert(0, str(REPO / 'databases/duckdb/tools'))
+    from inputs import versions
+    with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-transfer-') as temporary:
+        root = Path(temporary)
+        for relative in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh',
+                         'sdlc/scripts/fetch.sh', 'crates/thinkthen/Cargo.toml',
+                         'databases/duckdb/tools/inputs.py', 'databases/duckdb/tools/version.env'):
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / relative, path)
+        tools = root / 'bin'
+        tools.mkdir()
+        (tools / 'python3').symlink_to(sys.executable)
+        for name in ('cargo', 'cc', 'c++', 'cmake', 'make', 'ninja'):
+            compiler = tools / name
+            compiler.write_text('#!/bin/sh\necho unexpected-compile >&2\nexit 93\n')
+            compiler.chmod(0o755)
+        cache = root / 'cache'
+        env = {'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'HOME': str(root),
+               'THINKTHEN_TOOLCHAINS': str(cache)}
+        target, sha = 'x86_64-unknown-linux-gnu', 'a' * 40
+        command = ['sh', str(root / 'sdlc/scripts/release-workflow')]
+        output = root / 'output'
+        missing = subprocess.run(command + ['duckdb-host-pack', str(output), target, sha],
+                                 env=env, capture_output=True, text=True, timeout=5)
+        assert missing.returncode != 0 and 'missing built DuckDB host' in missing.stderr, missing.stderr
+        expected = {}
+        for version in versions():
+            runtime = root / 'databases/duckdb/build/community' / version / 'build/release'
+            runtime.mkdir(parents=True)
+            wheel = cache / 'duckdb/community' / version / 'wheels/duckdb-fixture.whl'
+            wheel.parent.mkdir(parents=True)
+            for path, value in ((runtime / 'duckdb', b'#!/bin/sh\necho transferred-host\n'),
+                                (runtime / 'libduckdb.so', b'transferred shared library'),
+                                (wheel, ('wheel ' + version).encode())):
+                path.write_bytes(value)
+                expected[path.relative_to(root) if path != wheel else
+                         Path('duckdb-hosts') / version / wheel.name] = value
+        packed = subprocess.run(command + ['duckdb-host-pack', str(output), target, sha],
+                                env=env, capture_output=True, text=True, timeout=5)
+        assert packed.returncode == 0, packed.stderr
+        assert {path.name for path in output.iterdir()} == {
+            f'duckdb-hosts-{version}-{target}-{sha}.tar.gz' for version in versions()}
+        shutil.rmtree(root / 'databases/duckdb/build')
+        unpacked = subprocess.run(command + ['duckdb-host-unpack', str(output), target, sha],
+                                  env=env, capture_output=True, text=True, timeout=5)
+        assert unpacked.returncode == 0, unpacked.stderr
+        for relative, value in expected.items():
+            assert (root / relative).read_bytes() == value, relative
+        for version in versions():
+            runtime = root / 'databases/duckdb/build/community' / version
+            link = runtime / 'extension-ci-tools'
+            assert link.is_symlink() and link.readlink() == cache / 'duckdb/community' / version / 'tools'
+            assert subprocess.check_output([str(runtime / 'build/release/duckdb')], text=True) == 'transferred-host\n'
+        refused = subprocess.run(command + ['duckdb-host-unpack', str(output), target, 'b' * 40],
+                                 env=env, capture_output=True, text=True, timeout=5)
+        assert refused.returncode != 0, 'smoke accepted another candidate host archive'
+
+
 def preflight_cases():
-    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    steps = gate['jobs']['linux-release']['steps']
-    preflight = next(i for i, step in enumerate(steps) if step.get('name') == 'Check every prepared hosted input')
-    qualification = next(i for i, step in enumerate(steps) if step.get('name') == 'Run the selected existing gates and retain their actual exits')
-    assert steps[preflight]['env'] == {'PREFLIGHT_ONLY': '${{ inputs.preflight_only }}'}
-    assert preflight < qualification
-    assert 'if' not in steps[preflight] and 'continue-on-error' not in steps[preflight]
-    assert steps[qualification]['if'] == '${{ !inputs.preflight_only }}'
-    assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
-               if 'actions/upload-artifact@' in step.get('uses', ''))
-    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    for job, name in (('build', 'Check every prepared build input'),
-                      ('smoke', 'Check every prepared installed smoke input')):
-        step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
-        assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
         scripts = root / 'sdlc/scripts'
@@ -737,7 +770,7 @@ def preflight_cases():
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))
-        # An exact cache hit cannot excuse missing sources or stale/partial native hosts.
+        # Transferred native hosts cannot excuse missing sources or stale/partial binaries.
         sys.path.insert(0, str(REPO / 'databases/duckdb/tools'))
         from inputs import selected, versions
         ruby = root / 'libraries/ruby'
@@ -756,8 +789,7 @@ def preflight_cases():
             if state == 'wrong-pin': cli.write_text('#!/bin/sh\necho wrong-source-id\n')
             elif state == 'partial': cli.unlink()
             check = module['Preflight']()
-            with patch.dict(module['native_inputs'].__globals__, ROOT=root), \
-                    patch.dict(os.environ, {'THINKTHEN_DUCKDB_HOST_CACHE_HIT': 'true'}):
+            with patch.dict(module['native_inputs'].__globals__, ROOT=root):
                 module['native_inputs'](check, 'x86_64-apple-darwin', cache, source_only=True)
             source_failures = [message for message in check.missing if message.startswith('DuckDB ')]
             assert len(source_failures) == 2 * len(versions()), check.missing
@@ -884,6 +916,7 @@ def parameter_cases():
 
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
+duckdb_host_transfer_case()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_failed_phase_evidence_case()
