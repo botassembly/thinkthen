@@ -571,7 +571,7 @@ def check(folder, lint_text=None):
     return out
 
 
-def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
+def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False, cache_hit=""):
     """Run the real setup branch while a temporary PATH records its host calls.
 
     A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
@@ -597,7 +597,8 @@ maturin) echo 'maturin 1.15.0' ;;
 npm) case $* in "ci --no-audit --no-fund --silent --prefix $FAKE_ROOT/"*) echo npm-seed >> "$FAKE_LOG" ;;
   "install --no-audit --no-fund --no-package-lock --prefix $FAKE_ROOT/runner/thinkthen-generators prettier@3.6.2") ;;
   *) echo "unexpected npm call: $*" >&2; exit 94 ;; esac ;;
-python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
+python3) [ "$1" != databases/duckdb/tools/source_hosts.py ] || echo duckdb-source-hosts >> "$FAKE_LOG"
+  case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
 python3.14) exit 1 ;;
 sudo) case "$*" in
@@ -670,7 +671,7 @@ esac
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
                    GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
-                   RELEASE_SMOKE="1" if smoke else "0")
+                   RELEASE_SMOKE="1" if smoke else "0", THINKTHEN_DUCKDB_HOST_CACHE_HIT=cache_hit)
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
         calls = [line.replace(str(root), "$ROOT") for line in log.read_text().splitlines()] if log.exists() else []
@@ -1234,6 +1235,7 @@ def self_test():
                       "libraries/ruby/setup-ruby.sh ",
                       "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
                       *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,
+                      *(["duckdb-source-hosts"] if smoke else []),
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', handoff,
                       *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
@@ -1242,7 +1244,7 @@ def self_test():
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
                       *(["libraries/typescript/setup-toolchain.sh ", "r-host", "r-dependencies"]
                         if target == "x86_64-unknown-linux-gnu" else []),
-                      "npm-seed", *seed, handoff]
+                      "npm-seed", *seed, "duckdb-source-hosts", handoff]
         else:
             # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
             wanted = [f"rustup target add --toolchain 1.95.0 {target.replace('-gnu', '-musl')}"]
@@ -1250,6 +1252,21 @@ def self_test():
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
                   f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
+    # Only an exact Intel hit skips the duplicate native host build. Fetch and
+    # Python preparation still run through the same host setup on every path.
+    for target, hit, compile_host in (
+            ("x86_64-apple-darwin", "true", False),
+            ("x86_64-apple-darwin", "false", True),
+            ("x86_64-apple-darwin", "True", True),
+            ("aarch64-apple-darwin", "true", True),
+            ("x86_64-unknown-linux-gnu", "true", True)):
+        result, calls = host_setup_calls(target, True, cache_hit=hit)
+        if (result.returncode != 0 or ("duckdb-source-hosts" in calls) != compile_host
+                or "databases/duckdb/tools/setup.sh --fetch" not in calls
+                or "seed $ROOT/bin/python3.13" not in calls):
+            bad += 1
+            print(f"workflows self-test DuckDB cache {target} hit={hit}: "
+                  f"exit {result.returncode}, calls {calls}, stderr {result.stderr}", file=sys.stderr)
     with tempfile.TemporaryDirectory() as tmp:
         folder = pathlib.Path(tmp)
         for path in workflow_files(REPO / '.github/workflows'):
