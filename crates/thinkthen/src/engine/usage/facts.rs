@@ -2,9 +2,9 @@
 
 use std::sync::PoisonError;
 
-use crate::core::{ModelName, ReportedSum, ReportedUsage};
 #[cfg(any(feature = "cli", test))]
 use crate::core::Prices;
+use crate::core::{ModelName, ReportedSum, ReportedUsage};
 
 use super::{Counters, Counts};
 

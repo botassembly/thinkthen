@@ -24,14 +24,12 @@ use crate::core::text::ModelName;
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::adapters::systemone::request::encode;
-pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::adapters::systemone::request::{drops_any, drops_detail};
+pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
-pub(crate) use crate::core::adapters::systemone::response::{
-    decode_answers, decode_questions,
-};
+pub(crate) use crate::core::adapters::systemone::response::{decode_answers, decode_questions};
 
 #[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::adapters::systemone::response::decode_observed;

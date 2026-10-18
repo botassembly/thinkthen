@@ -1,11 +1,13 @@
 //! The saved batch setting that differs from this run's setting.
 
+#[cfg(any(feature = "cli", test))]
 use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::Serialize;
 
 use crate::core::batch::Setting;
+#[cfg(any(feature = "cli", test))]
 use crate::core::json::Json;
 
 /// One batch setting in the documented number-or-`max` JSON form.

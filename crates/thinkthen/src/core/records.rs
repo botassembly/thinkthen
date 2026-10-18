@@ -4,11 +4,11 @@
 //! opens the file, reads standard input, and writes the rows. This module
 //! decides what one record is and what part of it leaves the machine.
 
-#[cfg(any(feature = "cli", test))]
-use serde::ser::SerializeMap;
 use serde::Serialize;
 #[cfg(any(feature = "cli", test))]
 use serde::Serializer;
+#[cfg(any(feature = "cli", test))]
+use serde::ser::SerializeMap;
 use thiserror::Error;
 
 use crate::core::batch::BatchRecord;
