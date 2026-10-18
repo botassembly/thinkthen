@@ -191,7 +191,8 @@ class PrivacyTests(unittest.TestCase):
             path.write_bytes(data)
             with self.subTest(kind='stored-zip-extra-payload'), self.assertRaises(privacy.PrivacyError):
                 privacy.check_file(path)
-            for name in ('thinkthen-0.2.0/src/config/./tests.rs',
+            for name in ('/tmp/thinkthen-0.2.0/src/config/tests.rs',
+                         'thinkthen-0.2.0/src/config/./tests.rs',
                          'thinkthen-0.2.0//src/config/tests.rs',
                          './thinkthen-0.2.0/src/config/tests.rs'):
                 with self.subTest(name=name):

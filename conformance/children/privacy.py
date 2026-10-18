@@ -45,13 +45,15 @@ def check_bytes(label, data, *, crate_member=None):
         raise PrivacyError(f'private pattern in {label}')
 
 
-def crate_member(name):
+def crate_member(name, *, local=False):
     """Recognize exact crate paths in the checkout or Cargo's versioned root."""
     path = Path(name)
     if path.as_posix() != str(name) or '..' in path.parts:
         return None
     repo = Path(__file__).resolve().parents[2]
     if path.is_absolute():
+        if not local:
+            return None
         try:
             return path.relative_to(repo / 'crates/thinkthen').as_posix()
         except ValueError:
@@ -110,7 +112,7 @@ def distribution_bytes(path):
     elif path.suffix == '.gz':
         yield None, gzip.decompress(raw)
     else:
-        yield crate_member(path.resolve()), raw
+        yield crate_member(path.resolve(), local=True), raw
         return
     # Stored payloads were checked above; trailers, headers and compressed bytes still have no allowance.
     yield None, raw
