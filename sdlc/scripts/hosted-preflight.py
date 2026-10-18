@@ -411,21 +411,25 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache, stage == 'smoke')
     if stage in ('core', 'functional', 'coverage'):
-        install = (ROOT / 'sdlc/scripts/install').read_text()
-        check.tools(shlex.split(re.search(r'for tool in ([^;]+); do', install)[1]))
-        check.tools(('ld', 'objcopy', 'ar', 'mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
-        pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', install, re.M))
-        check.command(['python3', '-c', 'import sys; assert sys.version_info >= (3, 12)'])
-        check.command(['jq', '--version'], '^' + re.escape(pins['JQ_VERSION']) + r'\s*$')
+        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+        resolver = runpy.run_path(str(ROOT / 'sdlc/scripts/tools.py'))
+        requirements = resolver['selected'](manifest, ('install', 'lint', 'test'), 'linux')
+        for tool in requirements.values():
+            check.tools(tool['commands'])
+            probes = ([tool['probe']] if 'probe' in tool else []) + tool.get('probes', [])
+            for probe in probes:
+                check.command([argument.format(**tool) for argument in probe['argv']],
+                              re.escape(probe['contains'].format(**tool)))
+        packages = dict(manifest['python_packages'])
+        packages.update({tool['commands'][0]: tool['version'] for tool in requirements.values()
+                         if tool.get('provider') == 'python-package'})
+        for package, version in packages.items():
+            check.command(['python3', '-c', 'from importlib.metadata import version; import sys; '
+                           'print(version(sys.argv[1]))', package], '^' + re.escape(version) + r'\s*$')
         check.command(['gcc', '--version'], r'\b(?:gcc|GCC)\b')
         check.command(['swift', 'format', '--help'])
         check.command(['sh', '-ec', '. libraries/ruby/toolchain.env; ruby_source_host'])
-        check.tools(('prlimit',))
         check.check('nonroot Linux routine host', lambda: require(os.getuid() != 0, 'RLIMIT_NPROC needs a nonroot user'))
-        check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')
-        check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['PUBLIC_API_VERSION']) + r'\s*$')
-        check.command(['rustc', '+' + pins['PUBLIC_API_TOOLCHAIN'], '--version'], re.escape(pins['PUBLIC_API_RUSTC_DATE']))
-        check.command(['python3', '-c', 'import yaml; print(yaml.__version__)'], '^' + re.escape(pins['PYYAML_VERSION']) + r'\s*$')
         advisory = Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))) / 'advisory-dbs'
         databases = list(advisory.glob('*/.git'))
         check.check('cargo-deny advisory cache', lambda: require(databases, 'fetched advisory database missing'))

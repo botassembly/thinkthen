@@ -20,6 +20,9 @@ from unittest.mock import patch
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout  # noqa: E402
+
 def linux_tool_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
@@ -699,31 +702,33 @@ def duckdb_host_transfer_case():
 def preflight_cases():
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
-        scripts = root / 'sdlc/scripts'
-        scripts.mkdir(parents=True)
-        helper = scripts / 'hosted-preflight.py'
-        helper.write_bytes((REPO / 'sdlc/scripts/hosted-preflight.py').read_bytes())
-        children = root / 'conformance/children'
-        children.mkdir(parents=True)
-        (children / 'children.py').write_bytes((REPO / 'conformance/children/children.py').read_bytes())
-        (root / 'rust-toolchain.toml').write_bytes((REPO / 'rust-toolchain.toml').read_bytes())
-        (root / 'libraries/typescript').mkdir(parents=True)
-        (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
-        (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
+        stage_checkout(REPO, root)
+        helper = root / 'sdlc/scripts/hosted-preflight.py'
+        resolver = runpy.run_path(str(root / 'sdlc/scripts/tools.py'))
         tools = root / 'bin'
         tools.mkdir()
         probe = tools / 'fixture'
         probe.write_text(f'#!{sys.executable}\n' +
-                         'from pathlib import Path\nimport sys\n' +
+                         'from pathlib import Path\nimport json, sys, tomllib\n' +
+                         f'root = Path({str(root)!r})\n' +
+                         'tools = json.loads((root / "sdlc/tools.json").read_text())["tools"]\n' +
+                         'rust = tomllib.loads((root / "rust-toolchain.toml").read_text())["toolchain"]\n' +
                          'name = Path(sys.argv[0]).name\n' +
-                         'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
-                         'if name == "node": print("v22.22.3")\n' +
-                         'if name == "maturin": print("maturin 1.15.0")\n' +
-                         'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
+                         'if name == "rustc":\n' +
+                         '    if "--print" in sys.argv: print(root / "missing-sysroot")\n' +
+                         '    elif "-vV" in sys.argv: print("host: x86_64-unknown-linux-gnu")\n' +
+                         '    else: print("rustc " + rust["channel"] + " (fixture)")\n' +
+                         'if name == "node": print("v" + tools["node"]["version"])\n' +
+                         'if name == "maturin": print("maturin " + tools["maturin"]["version"])\n' +
+                         'if name == "rustup": print("\\n".join(c + "-fixture" for c in rust["components"]))\n')
         probe.chmod(0o755)
-        required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
+        required = (*resolver['commands'](('install', 'lint', 'test'), 'linux'),
+                    'cl.exe', 'lib.exe', 'link.exe')
         for tool in required:
             (tools / tool).symlink_to(probe)
+        for name in ('sh', 'git'):
+            (tools / name).unlink()
+            (tools / name).symlink_to(shutil.which(name))
         # Compiler fixtures stand at the process boundary; no digest check is bypassed.
         command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
         env = {'PATH': str(tools), 'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
@@ -770,7 +775,7 @@ def preflight_cases():
         sys.path.insert(0, str(REPO / 'databases/duckdb/tools'))
         from inputs import selected, versions
         ruby = root / 'libraries/ruby'
-        ruby.mkdir(parents=True)
+        ruby.mkdir(parents=True, exist_ok=True)
         (ruby / 'toolchain.env').write_text("RUBY_MINORS=''\n")
         cache = root / 'toolchains'
         for version in versions():
@@ -792,17 +797,28 @@ def preflight_cases():
             cli_failures = [message for message in check.missing if str(cli) in message]
             assert bool(cli_failures) == (state != 'matching'), (state, check.missing)
             if state == 'wrong-pin': assert 'differs from pin' in cli_failures[0], cli_failures
-        # Missing lock-reading support must not hide an independent coverage input.
-        globals_ = module['qualify'].__globals__
-        check = module['Preflight']()
-        with patch.dict(globals_, ROOT=REPO, rust=lambda *args: None,
-                        cargo_cache=lambda *args: None, installed=lambda *args: None), \
-                patch.object(check, 'command'), patch.object(check, 'tools'), \
-                patch.dict(sys.modules, {'yaml': None}), \
-                patch.dict(os.environ, {'RUNNER_TEMP': str(root), 'PREFLIGHT_ONLY': 'false'}):
-            check.check('prepared host inputs', lambda: module['qualify'](check, 'coverage', 'x86_64-unknown-linux-gnu'))
-        assert any('yaml' in message for message in check.missing), check.missing
-        assert any('same-SHA Apple coverage input' in message for message in check.missing), check.missing
+        # The real coverage entry point must collect independent failures even
+        # when a locked-input reader and several declared commands are absent.
+        missing_tools = ('node', 'cl.exe', 'lib.exe')
+        for name in missing_tools:
+            (tools / name).unlink()
+        runner = ('import runpy, sys\n'
+                  'sys.modules["yaml"] = None\n'
+                  f'sys.path.insert(0, {str(root / "conformance")!r})\n'
+                  f'sys.argv = [{str(helper)!r}, "coverage", "x86_64-unknown-linux-gnu"]\n'
+                  f'runpy.run_path({str(helper)!r}, run_name="__main__")\n')
+        coverage = subprocess.run([sys.executable, '-c', runner], cwd=root,
+            env=dict(env, RUNNER_TEMP=str(root), PREFLIGHT_ONLY='false',
+                     THINKTHEN_TOOLCHAINS=str(cache), CARGO_HOME=str(root / 'cargo'),
+                     PUB_CACHE=str(root / 'pub-cache'), RELEASE_WORK=str(root / 'work')),
+            capture_output=True, text=True, timeout=5)
+        assert coverage.returncode == 1, (coverage.returncode, coverage.stdout, coverage.stderr)
+        for marker in ('yaml', 'same-SHA Apple coverage input', 'node: missing from PATH',
+                       'cargo-deny advisory cache', 'frozen Dart inputs'):
+            assert marker in coverage.stderr, (marker, coverage.stderr)
+        assert 'Traceback' not in coverage.stderr, coverage.stderr
+        for name in missing_tools:
+            (tools / name).symlink_to(probe)
         check = module['Preflight']()
         module['dart_locks'](check)
         for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
@@ -818,9 +834,8 @@ def preflight_cases():
                 module['apple_input'](check, local_only)
             assert int(bool(check.missing)) == wanted, (local_only, source, check.missing)
         # Exercise real checksum bytes through the installed-smoke entry point.
-        (root / 'crates/thinkthen').mkdir(parents=True)
+        (root / 'crates/thinkthen').mkdir(parents=True, exist_ok=True)
         manifest = REPO / 'crates/thinkthen/Cargo.toml'
-        (root / 'crates/thinkthen/Cargo.toml').write_bytes(manifest.read_bytes())
         import tomllib
         version = tomllib.loads(manifest.read_text())['package']['version']
         platform = root / 'platform'
@@ -863,11 +878,9 @@ def parameter_cases():
             assert result.stderr.startswith('hosted-candidate: '), result.stderr
     with tempfile.TemporaryDirectory(prefix='thinkthen-apple-workflow-') as temporary:
         root = Path(temporary)
-        for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
-            (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'hosted-candidate.py'):
-            (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
-        (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
+        stage_checkout(REPO, root)
+        for name in ('bin', 'packages'):
+            (root / name).mkdir()
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),
                            ('tar', f'echo source_commit={head}')]:
@@ -875,11 +888,6 @@ def parameter_cases():
             path.write_text('#!/bin/sh\n' + body + '\n')
             path.chmod(0o755)
         env = {'PATH': f'{root}/bin:{os.defpath}', 'HOME': str(root), 'LANG': 'C.UTF-8'}
-        # Exercise the workflow caller with the real archived, non-executable helper.
-        archived = subprocess.check_output(['git', 'archive', 'HEAD',
-                                            'libraries/swift/build-xcframework.sh'], cwd=REPO)
-        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
-            source.extractall(root, filter='data')
         release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
         apple = release['jobs']['apple-packages']
         assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
