@@ -1,6 +1,7 @@
 """Privacy checks follow indexed source and explicit shipping membership."""
 import gzip
 import io
+import json
 from pathlib import Path
 import subprocess
 import struct
@@ -12,6 +13,7 @@ import zipfile
 
 from conformance.children import privacy
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class PrivacyTests(unittest.TestCase):
@@ -28,35 +30,52 @@ class PrivacyTests(unittest.TestCase):
                     result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
                                             capture_output=True, text=True, timeout=30)
                     self.assertEqual(result.returncode, 2, result.stderr)
-                    self.assertIn('profile', result.stderr.lower())
-                    self.assertNotIn('missing.tar.gz', result.stderr)
+                    diagnostic = result.stdout + result.stderr
+                    self.assertIn('profile', diagnostic.lower())
+                    self.assertNotIn('missing.tar.gz', diagnostic)
 
     def test_unsupported_hosts_refuse_before_reading_an_artifact(self):
         repo = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
+            stage_checkout(repo, root)
+            manifest_path = root / 'sdlc/tools.json'
+            manifest = json.loads(manifest_path.read_text())
+            for entry in manifest['libraries'].values():
+                entry['check_platforms'] = []
+            manifest_path.write_text(json.dumps(manifest))
+            artifact = root / 'distribution.txt'
+            artifact.write_bytes(b'PRIVATE_KEY_MARKER')
+            env = child_env(home=root / 'home', THINKTHEN_ARTIFACT=str(artifact))
+            for name in manifest['libraries']:
+                surface = 'libraries/' + name
+                gate = root / surface / 'check.sh'
+                if not gate.is_file():
+                    continue
+                with self.subTest(surface=surface):
+                    result = subprocess.run(['sh', str(gate)], env=env,
+                                            capture_output=True, text=True, timeout=30)
+                    diagnostic = result.stdout + result.stderr
+                    self.assertEqual(result.returncode, 77, diagnostic)
+                    self.assertIn('sdlc/tools.json libraries.' + name, diagnostic)
+                    self.assertIn('not run', diagnostic)
+                    self.assertNotIn('private pattern', diagnostic)
+                    self.assertNotIn('distribution.txt', diagnostic)
+            # DuckDB's source-input selector owns its separate uname boundary.
             shim = root / 'bin'
             shim.mkdir()
             uname = shim / 'uname'
             uname.write_text('#!/bin/sh\necho Unsupported\n')
             uname.chmod(0o755)
-            env = child_env(home=root / 'home', THINKTHEN_ARTIFACT=str(root / 'missing.tar.gz'))
             env['PATH'] = str(shim) + ':' + env['PATH']
-            for surface, reason in (('libraries/php', 'Linux x86_64 required'),
-                                    ('libraries/go', 'proven on Linux x86_64'),
-                                    ('libraries/ruby', 'no Ruby host route'),
-                                    ('libraries/objective-c', 'requires macOS'),
-                                    ('libraries/ada', ''),
-                                    ('libraries/cobol', 'unavailable on this host'),
-                                    ('libraries/typescript', 'no native Node target for this host'),
-                                    ('libraries/swift', 'require Linux or macOS'),
-                                    ('databases/duckdb', 'no pinned DuckDB C++ inputs')):
-                with self.subTest(surface=surface):
-                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
-                                            capture_output=True, text=True, timeout=30)
-                    self.assertEqual(result.returncode, 77, result.stderr)
-                    self.assertIn(reason, result.stdout + result.stderr)
-                    self.assertNotIn('missing.tar.gz', result.stderr)
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(root)
+            result = subprocess.run(['sh', str(root / 'databases/duckdb/check.sh')], env=env,
+                                    capture_output=True, text=True, timeout=30)
+            diagnostic = result.stdout + result.stderr
+            self.assertEqual(result.returncode, 77, diagnostic)
+            self.assertIn('no pinned DuckDB C++ inputs', diagnostic)
+            self.assertNotIn('private pattern', diagnostic)
+            self.assertNotIn('distribution.txt', diagnostic)
 
     def test_selected_artifacts_must_exist_and_pass_privacy(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -66,6 +85,7 @@ class PrivacyTests(unittest.TestCase):
                 with self.subTest(name=name):
                     path = root / 'distribution.txt'
                     env = child_env(home=root / 'home', **{name: str(path)})
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(Path(privacy.__file__).resolve().parents[2])
                     result = subprocess.run(command, env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1)
                     self.assertIn('distribution.txt', result.stderr)
@@ -73,7 +93,7 @@ class PrivacyTests(unittest.TestCase):
                         gate = ['sh', str(Path(privacy.__file__).resolve().parents[2] / 'libraries/c/check.sh')]
                         result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
                         self.assertEqual(result.returncode, 1)
-                        self.assertIn('distribution.txt', result.stderr)
+                        self.assertIn('distribution.txt', result.stdout + result.stderr)
                     path.write_bytes(b'PRIVATE_KEY_MARKER')
                     result = subprocess.run(command, env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1)

@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -182,8 +183,16 @@ if '--message-format=json' in sys.argv:
                       'target':{'name':'conformance-backend'},
                       'executable':str(Path.cwd() / 'target/debug/conformance-backend')}))
 ''')
-            (tools / 'git').write_text(f'#!{sys.executable}\nimport pathlib,sys\n'
-                                      'print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n')
+            # Only the synthetic external checkouts carry PIN; source indexing
+            # and every other Git operation use the real checkout executable.
+            real_git = shutil.which('git')
+            self.assertIsNotNone(real_git)
+            (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
+                                      'pin = pathlib.Path(sys.argv[2]) / "PIN"\n'
+                                      f'if pin.is_file() and pin.is_relative_to({str(cache)!r}):\n'
+                                      '    print(pin.read_text())\n'
+                                      f'else: os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
+            (tools / 'python3').symlink_to(sys.executable)
             (root / 'probe.py').write_text(capture)
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for path in (tools / 'cargo', tools / 'make', tools / 'git', tools / 'uname'):
