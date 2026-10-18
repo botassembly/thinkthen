@@ -338,7 +338,6 @@ class PublicAssertions(unittest.TestCase):
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -450,7 +449,6 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -474,7 +472,6 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -524,7 +521,6 @@ class PublicAssertions(unittest.TestCase):
         prepared, homes = {}, {}
         def command(args, **kwargs):
             env = kwargs['env']
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
                 Path(destination, 'installed-package').write_text('immutable')
@@ -581,7 +577,6 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
-            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -673,7 +668,6 @@ class PublicAssertions(unittest.TestCase):
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
-                        env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -742,7 +736,6 @@ class PublicAssertions(unittest.TestCase):
                             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
-                            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
@@ -837,6 +830,7 @@ class PublicAssertions(unittest.TestCase):
             tools.mkdir(exist_ok=True)
             runner = tools / 'python3'
             runner.write_text('#!/bin/sh\nset -eu\n'
+                              'case "$1" in */check_verdict.py) exec ' + shlex.quote(sys.executable) + ' "$@" ;; esac\n'
                               'test "$THINKTHEN_TEST_PROFILE" = full\n'
                               'test -z "${THINKTHEN_CONFORMANCE_IDS+x}"\n'
                               'test "$1" = -\ntest "$3" = "$2/libraries/rust/consumer/Cargo.toml"\n'
@@ -854,7 +848,7 @@ class PublicAssertions(unittest.TestCase):
                 ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
                 ' return False\n')
             runner.chmod(0o755)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {'PATH': str(tools) + ':' + os.defpath}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity, 'tool_environment', return_value={'THINKTHEN_RESOLVED_TOOLS': fixture_tool_groups(root)}), patch.object(parity.os, 'environ', {'PATH': str(tools) + ':' + os.defpath}):
                 self.assertEqual(parity.run('12345'), 0)
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
@@ -1128,7 +1122,6 @@ class InstalledInputs(unittest.TestCase):
                 def command(args, **kwargs):
                     major = args[-1]
                     env = kwargs['env']
-                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     self.assertEqual(args[2], '900')
                     if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                         preparations.append(major)
