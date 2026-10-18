@@ -7,7 +7,7 @@ mod fixture;
 use fixture::Fixture;
 use std::io::Write;
 use thinkthen::{
-    CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome, RequestValue,
+    CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome,
 };
 
 fn run(f: Fixture) -> Result<String, Error> {
@@ -78,11 +78,9 @@ fn run(f: Fixture) -> Result<String, Error> {
     }
     match outcome? {
         RequestOutcome::Complete(call) => {
-            check(call.value());
             Ok(fixture::written(call)?.0)
         }
         RequestOutcome::Failed { completed, error } => {
-            check(&completed);
             let facts = error.facts().and_then(thinkthen::Facts::complete);
             let facts_json =
                 serde_json::to_string(&facts).map_err(|_| fixture::usage("invalid facts"))?;
@@ -92,78 +90,6 @@ fn run(f: Fixture) -> Result<String, Error> {
                 fixture::failure(&error)?,
                 facts_json
             ))
-        }
-    }
-}
-fn check(value: &RequestValue) {
-    match value {
-        RequestValue::Decisions(rows) => {
-            for row in rows {
-                let _: &fixture::Original = row.original();
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Choices(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Tags(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Scores(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Filtered(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().value());
-            }
-        }
-        RequestValue::Ranked(rows) => {
-            for row in rows {
-                let _ = (row.ordinal(), row.original(), row.result().probabilities());
-            }
-        }
-        RequestValue::SetRanked(rows) => {
-            for row in rows {
-                let _ = (row.ordinal(), row.original(), row.result().members());
-            }
-        }
-        RequestValue::Found(found) => {
-            let _ = (found.selection(), found.candidates(), found.answer_id());
-        }
-        RequestValue::Annotations(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().members());
-            }
-        }
-        RequestValue::Recognized(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().value().entities());
-            }
-        }
-        RequestValue::Related(row) => {
-            let _ = (row.original(), row.result().members());
         }
     }
 }

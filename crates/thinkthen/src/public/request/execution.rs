@@ -136,7 +136,13 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, None, None, None)
+        match self.execute_request_sink(request, environment, None, None, None)? {
+            RequestOutcome::Complete(call) => {
+                let answer = super::settlement::answer(&request.request.call.arguments().input, call.value())?;
+                Ok(RequestOutcome::Complete(call.with_answer(answer)))
+            }
+            failed => Ok(failed),
+        }
     }
     pub(crate) fn execute_request_sink<'a>(
         &self,
