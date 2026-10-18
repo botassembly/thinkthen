@@ -26,3 +26,4 @@ Reviews: revision 79afa73, accept
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The independent privacy source is fresh-accepted at 79afa7362 with exact extraction and retained scanner protections checked; focused execution and the main closing gate remain after the active core gate.
