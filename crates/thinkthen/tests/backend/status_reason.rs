@@ -37,7 +37,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
             r#"{"detail":"max_tokens_exceeded"}"#,
             "thinkthen: the backend answered with status 400: the backend refused the request\n",
         ),
-        (400, long.as_str(), REFUSED),
+        (400, long.as_str(), "thinkthen: the backend answered with status 400: the backend refused the request; provider type: max_tokens_exceeded\n"),
         (
             413,
             "{}",
@@ -163,33 +163,28 @@ fn provider_messages_are_discarded_including_credential_and_evidence_echoes() {
 
 #[test]
 fn reflected_nested_evidence_and_unrelated_prose_are_withheld() {
-    for (evidence, message, _shown) in [
-        ("Z", "Rejected Z because it is unsupported", false),
-        ("Ada", "Rejected Ada because it is unsupported", false),
+    for (evidence, message) in [
+        ("Z", "Rejected Z because it is unsupported"),
+        ("Ada", "Rejected Ada because it is unsupported"),
         (
             "S7code!",
             "Rejected S7code! because it is unsupported",
-            false,
         ),
         (
             "S8code!!",
             "Rejected S8code!! because it is unsupported",
-            false,
         ),
         (
             r#"{"nested":{"text":"private \"quoted\" evidence"}}"#,
             "Rejected private \"quoted\" evidence because it is unsupported",
-            false,
         ),
         (
             "unrelated evidence",
             "The selected model is unavailable",
-            true,
         ),
         (
             "separate evidence",
             "The selected model is unavailable",
-            true,
         ),
     ] {
         let body = serde_json::json!({"error":{"message":message}}).to_string();
@@ -237,22 +232,19 @@ fn actionable_and_multibyte_provider_prose_is_withheld() {
 
 #[test]
 fn plain_text_and_html_are_withheld() {
-    for (media_type, message, _shown) in [
+    for (media_type, message) in [
         (
             "text/plain; charset=utf-8",
             "The local endpoint requires a decision model.",
-            true,
         ),
-        ("text/plain", "sk-test-value", false),
+        ("text/plain", "sk-test-value"),
         (
             "text/plain",
             "<html>The local endpoint requires a decision model.</html>",
-            false,
         ),
         (
             "text/html",
             "The local endpoint requires a decision model.",
-            false,
         ),
     ] {
         let listener =
