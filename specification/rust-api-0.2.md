@@ -18,6 +18,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0582](../sdlc/tickets/0582-one-sql-details-route-per-function.md) adds a separate recovering Request path. `RequestRecoveredRow` retains its original ordinal, canonical successful records or safe error, and the typed logical failure cause when present. Invalid eager input refuses before sending; runtime record failures can remain alongside completed records. Rank, find and relate retain one whole-set invocation. Ordinary Request values and packet shapes retain their existing contracts.
 
+[0628](../sdlc/tickets/0628-one-session-queue.md) makes recovery a mode of the shared session queue. `RequestRecoveringSession` delegates ownership to its inner `RequestSession`, whose destructor cancels and joins the worker. The recovering wrapper no longer implements `Drop` itself.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -324,7 +326,6 @@ fn RequestSession::try_push_with<E: From<Error>>(&self, impl FnOnce() -> Result<
 fn RequestSession::wait(&self, RequestSessionWaitInterest, Duration) -> RequestSessionReady
 fn Tally::run<T, R, P>(&self, impl FnOnce() -> Result<Call<T, R, P>, Error>) -> Result<Call<T, R, P>, Error>
 impl Display for SourceBudgetExceeded
-impl Drop for RequestRecoveringSession
 impl Error for SourceBudgetExceeded
 impl From<(Question, RecordReading)> for RequestDefinition
 impl From<(Recognize, RecordReading)> for RequestDefinition
