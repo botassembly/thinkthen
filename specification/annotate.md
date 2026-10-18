@@ -130,7 +130,7 @@ In record mode, the questions no stored answer covers pack into shared requests 
 
 `--details` reports each available `meta.usage` count as the checked sum over the record's requests only when every reply reports that count. A reported input count remains available when output is unknown. `meta.requests` lists the record's question keys in question-set order, by ADR 0111. `meta.requests_sent` sums each question's share of actual sends, including retries. A detailed row carries no `meta.batches`. `meta.cached` is true only when every question came from the store. Each answer also carries its question's key. Every live reply must report the same model; a stored answer's model takes no part in that check. [result.md](result.md) gives the shape.
 
-A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `question`, `failure`, and `request`, and carries no `value`, `answer`, or `threshold`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
+A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `failure_id`, `question`, `failure`, `threshold`, and `request`, and carries no `answer_id`, `value`, or `answer`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
 
 Questions sharing one `on` selection ride in one logical group. A reply with at
 least one usable answer prints that answer beside a failed marker for each
