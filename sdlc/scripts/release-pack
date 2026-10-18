@@ -46,9 +46,9 @@ case " $* " in
 		[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	else
 		[ -z "$reuse" ] || { echo 'release-pack: archived source does not permit --reuse' >&2; exit 1; }
-		case " $* " in *' go '* | *' cpp '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' ada '* | *' objective-c '* | *' cobol '*) ;; *) echo 'release-pack: archived source permits only selected source wrappers' >&2; exit 1 ;; esac
+		case " $* " in *' go '* | *' cpp '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*) ;; *) echo 'release-pack: archived source permits only selected source wrappers' >&2; exit 1 ;; esac
 		for part in "$@"; do
-			case $part in c | go | cpp | swift | zig | php | dart | ada | objective-c | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) ;;
+			case $part in c | go | cpp | swift | zig | php | dart | flutter | ada | objective-c | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) ;;
 			*) echo "release-pack: archived source does not permit $part" >&2; exit 1 ;; esac
 		done
 		case ${THINKTHEN_ARCHIVED_SOURCE_TAR:-} in /*) ;; *) echo 'release-pack: archived source tar path must be absolute' >&2; exit 1 ;; esac
@@ -441,10 +441,15 @@ cobol)
 	twins=$(cd -- "$folder" && find . | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sort | uniq -d)
 	[ -z "$twins" ] || { echo "release-pack: $1 holds names that differ only in case: $twins" >&2; exit 1; }
 	if [ -n "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}" ]; then
-		case $1 in go | cpp | swift | zig | php | dart | ada | objective-c | cobol) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
+		case $1 in go | cpp | swift | zig | php | dart | flutter | ada | objective-c | cobol) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
+			# Flutter retains its directory inside the Dart source package.
+			if [ "$1" = flutter ]; then
+				member=libraries/dart/$relative
+				if [ "$relative" = flutter/README.md ]; then member=libraries/dart/flutter/README-PUBLIC.md; fi
+			fi
 			if [ "$relative" = README.md ] && [ "$1" != go ]; then member=libraries/$1/README-PUBLIC.md; fi
 			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
 				native_input=$(mktemp "$stage/swift-native.XXXXXX")
