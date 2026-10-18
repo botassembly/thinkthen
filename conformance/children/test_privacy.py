@@ -56,7 +56,7 @@ class PrivacyTests(unittest.TestCase):
 
     def test_tracked_sources_and_shipped_archives_ignore_working_output(self):
         with tempfile.TemporaryDirectory() as temporary:
-            checkout = Path(temporary) / 'checkout'
+            checkout = Path(temporary).resolve() / 'checkout'
             root = checkout / 'libraries/dart'
             root.mkdir(parents=True)
             env = child_env(home=Path(temporary) / 'home')
