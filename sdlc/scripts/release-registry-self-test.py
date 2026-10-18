@@ -520,13 +520,17 @@ def main():
             result = run(root, *args, env=env)
             checks.append((name, (result.returncode, result.stderr.strip()), (1, f"release-registry: {refusal}")))
         if shutil.which("gpg"):
-            signed = run(root, "maven-sign", "out/maven", "rehearse")
-            checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), sorted(p.name for p in base.iterdir())),
-                           (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", layout)))
-            (base / f"{stem}.jar.sha1").write_text("0" * 40)
-            stale = run(root, "maven-sign", "out/maven", "rehearse")
-            checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),
-                           (1, f"release-registry: {stem}.jar.sha1 differs")))
+            # Nested macOS temporary paths exceed the gpg-agent socket path limit.
+            with tempfile.TemporaryDirectory(prefix="gpg-", dir="/tmp" if sys.platform == "darwin" else None) as signing_tmp:
+                signing_env = dict.fromkeys(("TMPDIR", "TMP", "TEMP"), signing_tmp)
+                signed = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
+                checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), signed.stderr.strip(),
+                                                sorted(p.name for p in base.iterdir())),
+                               (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", "", layout)))
+                (base / f"{stem}.jar.sha1").write_text("0" * 40)
+                stale = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
+                checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),
+                               (1, f"release-registry: {stem}.jar.sha1 differs")))
         else:
             checks.append(("rehearse-sign", "gpg missing", "gpg present"))
         checks += go_tag_cases()

@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Depends on: 0688
+
 ## Outcome
 
 Every library, database and data-frame page shows the same short example in Ian's style. Every page teaches the batched way to judge many records on that surface. One site page explains batching and caching as the way to cut cost and time, with measured numbers.
