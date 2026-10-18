@@ -32,7 +32,7 @@ pub enum AnswerResolution {
 }
 
 /// Resolution follows input rows and named annotation members without losing failures.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(untagged)]
 pub enum AnswerResolutions {
@@ -40,6 +40,15 @@ pub enum AnswerResolutions {
     State(AnswerResolution),
     /// Every named member, including members omitted from the bare value on failure.
     Members(BTreeMap<String, AnswerResolution>),
+}
+
+impl std::fmt::Debug for AnswerResolutions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::State(state) => state.fmt(f),
+            Self::Members(members) => f.debug_struct("AnswerResolutions").field("members", &members.len()).finish(),
+        }
+    }
 }
 
 /// Rust-owned answer fields. Probability is answer odds, never model confidence.

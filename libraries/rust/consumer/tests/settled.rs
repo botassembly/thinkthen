@@ -286,7 +286,8 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
         let engine = engine(&backend, id)?;
         for collection in [false, true] {
             let request = request(case, collection)?;
-            let expected: Value = serde_json::from_str(&expected(case, collection)?.to_string()).map_err(failure)?;
+            let expected: Value =
+                serde_json::from_str(&expected(case, collection)?.to_string()).map_err(failure)?;
             let admitted = request.clone().admit().map_err(failure)?;
             let call = match engine
                 .execute_request(&admitted, RequestEnvironment::default())
@@ -295,7 +296,9 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                 RequestOutcome::Complete(call) => call,
                 RequestOutcome::Failed { error, .. } => return Err(format!("{id}: {error}")),
             };
-            let answer: Value = serde_json::from_str(&serde_json::to_string(call.answer()).map_err(failure)?).map_err(failure)?;
+            let answer: Value =
+                serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
+                    .map_err(failure)?;
             assert_eq!(answer, expected, "{id}, collection={collection}");
             let packet = terminal(&engine, request)?;
             assert_eq!(packet["resolution"], "resolved", "{id}");
@@ -309,19 +312,37 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
 }
 
 #[test]
-#[expect(clippy::indexing_slicing, reason = "each final packet must retain the exact public resolution and nullable value")]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "each final packet must retain the exact public resolution and nullable value"
+)]
 fn authored_null_unresolved_and_failed_answers_stay_distinct() -> Result<(), String> {
     for (question, reply, resolution, terminal_resolution) in [
-        (json!({"decide":"Fits?","true":null}), json!({"q1":{"type":"noul","noul":0.9}}), "resolved", "resolved"),
-        (json!({"decide":"Fits?","threshold":"0.1:0.9"}), json!({"q1":{"type":"noul","noul":0.5}}), "unresolved", "resolved"),
+        (
+            json!({"decide":"Fits?","true":null}),
+            json!({"q1":{"type":"noul","noul":0.9}}),
+            "resolved",
+            "resolved",
+        ),
+        (
+            json!({"decide":"Fits?","threshold":"0.1:0.9"}),
+            json!({"q1":{"type":"noul","noul":0.5}}),
+            "unresolved",
+            "resolved",
+        ),
         (json!({"decide":"Fits?"}), json!({}), "failed", "failed"),
     ] {
         let response = json!({"model":"fixed","answers":reply}).to_string();
-        let listener = conformance_backend::Listener::answering(move |_| conformance_backend::Canned::ok(&response)).map_err(failure)?;
-        let engine = Engine::builder().base_url(listener.base())
+        let listener = conformance_backend::Listener::answering(move |_| {
+            conformance_backend::Canned::ok(&response)
+        })
+        .map_err(failure)?;
+        let engine = Engine::builder()
+            .base_url(listener.base())
             .and_then(|builder| builder.api_key("sk-null-loopback"))
             .map(|builder| builder.no_cache().max_retries(0))
-            .and_then(thinkthen::EngineBuilder::build).map_err(failure)?;
+            .and_then(thinkthen::EngineBuilder::build)
+            .map_err(failure)?;
         let request = Request::from_json(&json!({"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":question},"input":{"kind":"text","text":"original"}}}).to_string()).map_err(failure)?;
         let packet = terminal(&engine, request)?;
         assert_eq!(packet["resolution"], terminal_resolution);
