@@ -7,6 +7,7 @@ import subprocess
 import contextlib
 import io
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -1235,11 +1236,12 @@ class FullCheckpoint(unittest.TestCase):
             command = '''#!/bin/sh
 printf '%s %s\\n' "${0##*/}" "$*" >> "$ROUTING_LOG"
 case ${0##*/} in
-python3) case $* in *--tool-environment*) printf "THINKTHEN_TOOLCHAINS=%s/tools\\n" "$HOME" ;; esac ;;
+python3) if [ "$1" = - ]; then exec REAL_PYTHON "$@"; fi; case $* in *--tool-environment*) printf "THINKTHEN_TOOLCHAINS=%s/tools\\n" "$HOME" ;; esac ;;
 uname) echo Darwin ;;
 sh) case $* in *sdlc/scripts/smoke*) exit "$ROUTING_SMOKE_CODE" ;; esac ;;
 esac
 '''
+            command = command.replace('REAL_PYTHON', shlex.quote(sys.executable))
             for name in ("cargo", "python3", "ruby", "sh", "uname"):
                 path = fake / name
                 path.write_text(command)

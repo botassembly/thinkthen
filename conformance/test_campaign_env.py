@@ -65,7 +65,8 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'uname': 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
+                'python3': f'''case "$1" in */check_verdict.py|sdlc/scripts/check_verdict.py) exec {python} "$@" ;; esac
+if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
     exec {python} -c 'import os,runpy,sys; os.getloadavg=lambda:(0,0,0); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
 fi
 if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then
