@@ -120,8 +120,10 @@ def resolve(manifest, groups, root, check=False):
                 install = [installer, 'install']
                 if tool['provider'] == 'rust' and not (root / 'cargo/bin/rustup').is_file():
                     cached = root / 'mise/installs/rust' / tool['version']
-                    if cached.is_dir():
-                        # A cached provider marker cannot supply deleted owned proxies.
+                    # Remove only the provider marker, including a legacy symlink.
+                    if cached.is_symlink():
+                        cached.unlink()
+                    elif cached.is_dir():
                         shutil.rmtree(cached)
                 run([*install, identity], env)
             installer = installer or root / 'bootstrap/mise/bin/mise'
