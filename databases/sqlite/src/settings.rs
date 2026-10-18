@@ -137,6 +137,10 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                 )));
             }
         }
+        // SQLite admits positive process caps; a refused replacement keeps the prior settings.
+        if fields.get("max_requests_total").and_then(serde_json::Value::as_u64) == Some(0) {
+            return Err(Failure::usage("a request total is a whole number of 1 or more"));
+        }
         let next = fields
             .iter()
             .map(|(name, value)| (name.clone(), value.to_string()))

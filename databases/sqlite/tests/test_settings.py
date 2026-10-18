@@ -199,7 +199,7 @@ details = run(db, "SELECT question_detail_model FROM thinkthen_decide_details('I
 say(valid=valid, zero=zero, details=details)
 """, environment(backend))
     expect(held["valid"], [['{"model":"judge-b","max_requests_total":null}']], "null resets the total")
-    expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more (retryable: no)", "zero refused")
+    expect(held["zero"], EXPECTED["sqlite_request_total"], "zero refused")
     expect(held["details"][0][0], "judge-b", "prior model survived")
     expect(backend.close(), 1, "only the valid configuration sent")
 
