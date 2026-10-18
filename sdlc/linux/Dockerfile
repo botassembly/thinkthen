@@ -10,7 +10,7 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble main universe' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble-updates main universe' \
     'deb [check-valid-until=no] http://snapshot.ubuntu.com/ubuntu/20260923T150000Z noble-security main universe' \
-    > /etc/apt/sources.list && apt-get update && apt-get install -y --no-install-recommends \
+    > /etc/apt/sources.list && printf 'Package: *\nPin: origin snapshot.ubuntu.com\nPin-Priority: 1001\n' > /etc/apt/preferences.d/snapshot && apt-get update && apt-get install -y --allow-downgrades --no-install-recommends \
     ca-certificates curl git python3 python3-venv build-essential clang libclang-dev \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev pkg-config xz-utils unzip zip \
     bubblewrap gnat-13 gprbuild gnucobol4 libncurses-dev r-base-dev \
