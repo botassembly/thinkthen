@@ -372,7 +372,7 @@ fn declarations<T>(
 /// Snapshot custom input evidence exactly once while retaining caller ownership.
 pub(in crate::public) struct Original<T> {
     pub(in crate::public) original: T,
-    input: crate::QuestionInput,
+    pub(super) input: crate::QuestionInput,
 }
 impl<T> crate::InputEvidence for Original<T> {
     fn question_input(&self) -> crate::QuestionInput {
