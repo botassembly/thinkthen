@@ -83,5 +83,44 @@ class ToolResolution(unittest.TestCase):
                     self.assertIn(diagnostic, result.stderr)
 
 
+class LinuxSourceIdentity(unittest.TestCase):
+    def test_reused_clone_discards_source_edits_and_keeps_build_output(self):
+        with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
+            root = Path(folder)
+            for relative in ('sdlc/scripts/linux-check', 'sdlc/tools.json',
+                             'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
+                             'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env'):
+                destination = root / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / relative, destination)
+            (root / '.gitignore').write_text('.linux-*/\ntarget/\n')
+            (root / 'source.txt').write_text('committed\n')
+            git = ['git', '-C', str(root)]
+            subprocess.run([*git, 'init', '-q'], check=True)
+            subprocess.run([*git, 'add', '.'], check=True)
+            subprocess.run([*git, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid',
+                            'commit', '-qm', 'Create source fixture'], check=True)
+            binary = root / 'fake-bin'
+            binary.mkdir()
+            docker = binary / 'docker'
+            docker.write_text('#!/bin/sh\n'
+                              'if [ "$1" = image ]; then echo sha256:test; fi\n')
+            docker.chmod(0o755)
+            env = dict(os.environ, PATH=str(binary) + os.pathsep + os.environ['PATH'])
+            command = [sys.executable, str(root / 'sdlc/scripts/linux-check'), 'test']
+            first = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            source = next(root.glob('.linux-*/src'))
+            (source / 'source.txt').write_text('left by previous check\n')
+            (source / 'stray.txt').write_text('untracked source\n')
+            (source / 'target').mkdir()
+            (source / 'target/cached').write_text('build output\n')
+            second = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertEqual((source / 'source.txt').read_text(), 'committed\n')
+            self.assertFalse((source / 'stray.txt').exists())
+            self.assertEqual((source / 'target/cached').read_text(), 'build output\n')
+
+
 if __name__ == '__main__':
     unittest.main()
