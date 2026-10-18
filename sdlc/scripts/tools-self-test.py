@@ -67,10 +67,8 @@ class ToolResolution(unittest.TestCase):
             (ambient / 'credentials.toml').write_text('fixture credential, never forwarded\n')
             caches = ('registry', 'git', 'advisory-dbs')
             locks = ('.package-cache', '.package-cache-mutate', '.global-cache')
-            for name in caches:
-                (ambient / name).mkdir()
-            for name in locks:
-                (ambient / name).write_text('shared fixture\n')
+            (ambient / 'registry').mkdir()
+            (ambient / '.package-cache').write_text('shared fixture\n')
             manifest = {'libraries': {}, 'databases': {}, 'python_packages': {}, 'tools': {
                 'rust': {'commands': [], 'version': 'unused', 'groups': ['common'],
                          'platforms': ['darwin']},
@@ -83,14 +81,18 @@ class ToolResolution(unittest.TestCase):
             env = {'HOME': str(root), 'CARGO_HOME': str(ambient), 'PATH': '/usr/bin:/bin',
                    'CARGO_ALIAS_NEXTEST': '!echo ambient-env'}
             command = '; '.join('cargo ' + name + ' --version' for name in plugins)
-            result = subprocess.run([sys.executable, str(SCRIPT), '--check', '--manifest', str(source),
-                                     '--root', str(resolved), 'test', '--', '/bin/sh', '-ec', command],
-                                    env=env, text=True, capture_output=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(result.stdout, ''.join('owned-' + name + '\n' for name in plugins))
+            argv = [sys.executable, str(SCRIPT), '--check', '--manifest', str(source),
+                    '--root', str(resolved), 'test', '--', '/bin/sh', '-ec', command]
+            children = [subprocess.Popen(argv, env=env, text=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE) for _ in range(2)]
+            for child in children:
+                stdout, stderr = child.communicate()
+                self.assertEqual(child.returncode, 0, stderr)
+                self.assertEqual(stdout, ''.join('owned-' + name + '\n' for name in plugins))
             runtime = resolved / 'cargo-runtime'
             for name in (*caches, *locks):
                 self.assertTrue((runtime / name).samefile(ambient / name), name)
+            self.assertEqual((ambient / '.package-cache').read_text(), 'shared fixture\n')
             for name in ('bin', 'config', 'config.toml', 'credentials', 'credentials.toml'):
                 self.assertFalse((runtime / name).exists(), name)
 

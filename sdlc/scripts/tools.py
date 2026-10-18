@@ -133,17 +133,22 @@ def cargo_runtime(root, shared):
     owned.mkdir(parents=True, exist_ok=True)
     shared = Path(shared).resolve()
     if shared != owned.resolve():
+        shared.mkdir(parents=True, exist_ok=True)
         for name in ('registry', 'git', 'advisory-dbs', '.package-cache',
                      '.package-cache-mutate', '.global-cache'):
             link = owned / name
             target = shared / name
-            if not target.exists():
-                continue
-            if link.is_symlink():
-                if link.readlink() == target:
-                    continue
-                link.unlink()
-            link.symlink_to(target)
+            if name.startswith('.'):
+                # Establish one inode before any Cargo process creates its lock.
+                with target.open('ab'):
+                    pass
+            else:
+                target.mkdir(exist_ok=True)
+            try:
+                link.symlink_to(target)
+            except FileExistsError:
+                if not link.is_symlink() or link.readlink() != target:
+                    raise RuntimeError('Cargo cache target changed: ' + str(link))
     return str(owned)
 
 
