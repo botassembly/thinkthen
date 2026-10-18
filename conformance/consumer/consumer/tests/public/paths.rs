@@ -108,8 +108,8 @@ fn environment_engine_child() {
         let other = &other.results()[0];
         assert_eq!(comparable_score(one), comparable_score(other));
         assert_eq!(
-            one.to_scalar_json().expect("engine scalar JSON"),
-            other.to_scalar_json().expect("environment scalar JSON")
+            one.to_json().expect("engine scalar JSON"),
+            other.to_json().expect("environment scalar JSON")
         );
         assert_eq!(one.value(), other.value());
         assert_eq!(one.probabilities(), other.probabilities());

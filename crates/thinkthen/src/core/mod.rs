@@ -65,8 +65,6 @@ pub(crate) mod record_input;
 pub(crate) mod recording;
 mod records;
 mod relate_file;
-#[cfg(test)]
-pub(crate) use relate_file::RelateQuestion;
 pub(crate) mod relation;
 mod render;
 mod reply;
@@ -151,7 +149,7 @@ pub(crate) use crate::core::result::complete::{
 pub use crate::core::result::complete::{RelationDirection, RelationMethod};
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
+    AnnotatedValue, BatchSetting, BatchWarning, Meta, NamedValues, ProfileWarning,
     ReportedSum, RequestMeta, Usage, share,
 };
 pub use crate::core::result::{AttemptObservation, AttemptOutcome, CompleteAttempt, ReportedUsage};

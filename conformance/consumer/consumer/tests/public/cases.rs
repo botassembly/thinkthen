@@ -242,7 +242,7 @@ fn loaded(
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(answer.value()), bare)?;
             return detailed(
-                &scalar(&answer.results()[0].to_scalar_json().map_err(said)?)?,
+                &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &success["answers"][0],
                 base,
@@ -471,7 +471,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.decide(asked, text).map_err(said)?;
             (
                 json!(call.value()),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -479,7 +479,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.score(asked, text).map_err(said)?;
             (
                 json!(call.value()),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -488,21 +488,21 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.choose(&typed, text).map_err(said)?;
             (
                 json!(call.value().map(|team| team.label())),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
                 call.results()[0].to_json().map_err(said)?,
             )
         }
         QuestionKind::Tag => match asked.clone().into_tag::<Mark>() {
             Ok(typed) => {
                 let call = engine.tag(&typed, text).map_err(said)?;
-                let written = call.results()[0].to_scalar_json().map_err(said)?;
+                let written = call.results()[0].to_json().map_err(said)?;
                 let complete = call.results()[0].to_json().map_err(said)?;
                 (tags(call.into_value()), written, complete)
             }
             Err(_) => {
                 let typed = asked.clone().into_tag::<Word>().map_err(said)?;
                 let call = engine.tag(&typed, text).map_err(said)?;
-                let written = call.results()[0].to_scalar_json().map_err(said)?;
+                let written = call.results()[0].to_json().map_err(said)?;
                 let complete = call.results()[0].to_json().map_err(said)?;
                 (tags(call.into_value()), written, complete)
             }
