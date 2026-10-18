@@ -25,6 +25,10 @@ macro_rules! dispatch {
     };
 }
 impl Session {
+    #[expect(
+        clippy::unwrap_used,
+        reason = "the fixture must admit before session behavior is exercised"
+    )]
     fn open(engine: &Engine, recovering: bool) -> Self {
         let request = Request::new(RequestCall::new(
             RequestFunction::Decide,
@@ -54,6 +58,10 @@ impl Session {
     fn wait(&self, interest: RequestSessionWaitInterest, timeout: Duration) -> RequestSessionReady {
         dispatch!(self, s, s.wait(interest, timeout))
     }
+    #[expect(
+        clippy::unwrap_used,
+        reason = "fixture conversion and admission failures stop the caller check"
+    )]
     fn push(&self, index: usize, blocking: bool) -> RequestSessionPushStatus {
         let descriptor = || {
             RequestSessionDescriptor::from_json(
@@ -70,9 +78,18 @@ impl Session {
     fn cancel(&self) {
         dispatch!(self, s, s.cancel());
     }
+    #[expect(
+        clippy::unwrap_used,
+        reason = "fixture EOF must be accepted before settlement is checked"
+    )]
     fn finish(&self) {
         dispatch!(self, s, s.finish(None).unwrap());
     }
+    #[expect(
+        clippy::unwrap_used,
+        clippy::panic,
+        reason = "caller reads must retain their ordered rows and exactly one terminal"
+    )]
     fn drain(&self) -> (Vec<usize>, RequestSessionTerminal) {
         let mut rows = Vec::new();
         let terminal = loop {
@@ -112,6 +129,10 @@ impl Session {
         (rows, terminal)
     }
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "the fixture engine names only its owned listener and fake key"
+)]
 fn engine(listener: &Listener) -> Engine {
     Engine::builder()
         .base_url(listener.base())
@@ -130,6 +151,11 @@ fn engine(listener: &Listener) -> Engine {
         .build()
         .unwrap()
 }
+#[expect(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "the local fixture answers the actual native request or fails the caller check"
+)]
 fn response(body: &[u8]) -> Canned {
     let body: Value = serde_json::from_slice(body).unwrap();
     let answers = body["questions"]
@@ -142,29 +168,28 @@ fn response(body: &[u8]) -> Canned {
 }
 #[test]
 fn push_all_then_finish_preserves_order_with_blocking_and_try_push() {
-    for recovering in [false, true] {
-        for blocking in [false, true] {
-            let listener = Listener::answering(response).unwrap();
-            let session = Session::open(&engine(&listener), recovering);
-            for index in 0..24 {
-                loop {
-                    match session.push(index, blocking) {
-                        RequestSessionPushStatus::Accepted => break,
-                        RequestSessionPushStatus::Full => {
-                            session.wait(RequestSessionWaitInterest::Input, Duration::from_secs(5));
-                        }
-                        other => panic!("intake closed: {other:?}"),
+    for (recovering, blocking) in [(false, false), (false, true), (true, false), (true, true)] {
+        let listener = Listener::answering(response).unwrap();
+        let session = Session::open(&engine(&listener), recovering);
+        for index in 0..24 {
+            loop {
+                match session.push(index, blocking) {
+                    RequestSessionPushStatus::Accepted => break,
+                    RequestSessionPushStatus::Full => {
+                        session.wait(RequestSessionWaitInterest::Input, Duration::from_secs(5));
                     }
+                    other => panic!("intake closed: {other:?}"),
                 }
             }
-            session.finish();
-            let (rows, terminal) = session.drain();
-            assert_eq!(rows, (0..24).collect::<Vec<_>>());
-            assert!(terminal.error.is_none());
-            assert_eq!(terminal.facts.unwrap().requests_sent(), 24);
         }
+        session.finish();
+        let (rows, terminal) = session.drain();
+        assert_eq!(rows, (0..24).collect::<Vec<_>>());
+        assert!(terminal.error.is_none());
+        assert_eq!(terminal.facts.unwrap().requests_sent(), 24);
     }
 }
+
 #[test]
 fn cancel_before_wait_closes_intake_and_settles_without_a_send() {
     for recovering in [false, true] {
