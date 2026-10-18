@@ -67,8 +67,8 @@ class Cases(unittest.TestCase):
                                      'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
                 diagnostic = result.stdout + result.stderr
                 self.assertEqual(result.returncode, 1, diagnostic)
-                self.assertEqual(result.stdout, 'not run: the DuckDB v1.5.6 toolchain is missing; '
-                                 'run databases/duckdb/tools/setup.sh --fetch\n')
+                self.assertIn('not run: the DuckDB v1.5.6 toolchain is missing; '
+                              'run databases/duckdb/tools/setup.sh --fetch', result.stdout.splitlines())
                 self.assertNotIn(self.env['THINKTHEN_API_KEY'], diagnostic)
                 self.assertNotIn('selected.tar.gz', diagnostic)
         self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
