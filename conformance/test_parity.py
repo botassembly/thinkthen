@@ -15,7 +15,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
