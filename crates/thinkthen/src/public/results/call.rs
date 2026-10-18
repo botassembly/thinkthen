@@ -179,6 +179,7 @@ impl Facts {
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
 pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
+    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
     answer: Option<Box<super::SettledAnswer>>,
     #[cfg_attr(test, schemars(skip))]
     results: R,
