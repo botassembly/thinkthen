@@ -366,7 +366,7 @@ def linux_source_staging_case():
     import textwrap
     driver = textwrap.dedent(driver)
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-source-') as temporary:
-        root = Path(temporary)
+        root = Path(temporary).resolve()
         archived = subprocess.check_output(['git', 'archive', 'HEAD', 'libraries/dart',
                                             'libraries/python/thinkthen', 'specification/fixtures/images/red.png',
                                             'specification/request.schema.json',
