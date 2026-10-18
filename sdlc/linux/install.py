@@ -40,10 +40,10 @@ subprocess.run([str(mise), 'install', 'aqua:cargo-bins/cargo-binstall@' + manife
 resolved = json.loads(subprocess.check_output([str(mise), 'env', '--json', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env))
 env['PATH'] = resolved['PATH']
 env['BINSTALL_DISABLE_STRATEGIES'] = 'compile'
-for name, tool in manifest['tools'].items():
+for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] != 'rust'):
     if 'linux' not in tool['platforms']:
         continue
-    provider = tool.get('provider')
+    provider = tool.get('linux_provider', tool.get('provider'))
     if name in ('swift', 'flutter'):
         provider = name
     if name == 'duckdb':
