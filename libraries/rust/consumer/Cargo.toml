@@ -12,6 +12,12 @@ thinkthen = { path = "../../../crates/thinkthen", default-features = false, feat
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = { version = "=1.0.151", features = ["raw_value"] }
 
+[dev-dependencies]
+conformance-backend = { path = "../../../conformance/backend" }
+
+[features]
+session-stress = []
+
 [profile.release]
 overflow-checks = true
 panic = "unwind"

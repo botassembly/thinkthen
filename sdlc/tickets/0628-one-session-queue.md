@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 1680ce6, accept
+
 ## Outcome
 
 - One session type owns intake, output, cancellation and settlement under one lock, or on one well-tested channel. Recovery is a mode of that type, not a second type.
