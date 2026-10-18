@@ -33,10 +33,11 @@ env = dict(os.environ, MISE_DATA_DIR=str(root / 'mise'), MISE_CACHE_DIR=str(root
            MISE_CONFIG_DIR=str(root / 'config'), MISE_YES='1', MISE_JOBS='2',
            MISE_CARGO_BINSTALL='1', MISE_RUBY_COMPILE='0', MISE_PYTHON_COMPILE='0',
            RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'),
-           CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', CARGO_PROFILE_RELEASE_DEBUG='0')
+           CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
+           CARGO_PROFILE_RELEASE_DEBUG='0')
 (root / 'bin').mkdir()
 # cargo-binstall must exist before mise handles cargo:* providers. It selects
-# upstream release binaries; no source fallback is permitted in the image.
+# upstream binaries first; the existing locked Cargo helper fallback follows below.
 subprocess.run([str(mise), 'install', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env, check=True)
 resolved = json.loads(subprocess.check_output([str(mise), 'env', '--json', 'aqua:cargo-bins/cargo-binstall@' + manifest['linux']['binstall_version']], env=env))
 env['PATH'] = resolved['PATH']
