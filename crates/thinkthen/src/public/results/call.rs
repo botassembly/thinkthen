@@ -179,7 +179,7 @@ impl Facts {
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
 pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
-    answer: Option<super::SettledAnswer>,
+    answer: Option<Box<super::SettledAnswer>>,
     #[cfg_attr(test, schemars(skip))]
     results: R,
     #[cfg_attr(test, schemars(skip))]
@@ -236,12 +236,12 @@ impl<T> Call<T> {
 impl<T, R, P> Call<T, R, P> {
     /// The Rust-settled answer of a canonical native request.
     #[must_use]
-    pub const fn answer(&self) -> Option<&super::SettledAnswer> {
-        self.answer.as_ref()
+    pub fn answer(&self) -> Option<&super::SettledAnswer> {
+        self.answer.as_deref()
     }
 
     pub(crate) fn with_answer(mut self, answer: super::SettledAnswer) -> Self {
-        self.answer = Some(answer);
+        self.answer = Some(Box::new(answer));
         self
     }
 
@@ -268,9 +268,9 @@ impl<T, R, P> Call<T, R, P> {
             Ok((value, results, probability)) => {
                 let answer = match self.answer {
                     Some(answer) => answer,
-                    None => results
+                    None => Box::new(results
                         .settled_answer()
-                        .map_err(|error| error.with_facts(self.facts.clone()))?,
+                        .map_err(|error| error.with_facts(self.facts.clone()))?),
                 };
                 Ok(Call {
                     value,

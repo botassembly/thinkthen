@@ -148,11 +148,11 @@ pub enum SettledAnswer {
     derive(schemars::JsonSchema),
     schemars(with = "serde_json::Value")
 )]
-pub struct SettledOriginal(pub(crate) crate::QuestionInput);
+pub struct SettledOriginal(pub(crate) Box<crate::QuestionInput>);
 impl SettledOriginal {
     /// Borrow the exact native original.
     #[must_use]
-    pub const fn original(&self) -> &crate::QuestionInput {
+    pub fn original(&self) -> &crate::QuestionInput {
         &self.0
     }
 }

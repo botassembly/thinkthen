@@ -184,7 +184,7 @@ impl SettledAnswer {
             RequestValue::Filtered(rows) => Self::Filter(Settled::one(
                 rows.iter()
                     .filter(|row| row.result().value())
-                    .map(|row| SettledOriginal(row.original().clone()))
+                    .map(|row| SettledOriginal(Box::new(row.original().clone())))
                     .collect(),
                 rows.iter()
                     .filter(|row| row.result().value())

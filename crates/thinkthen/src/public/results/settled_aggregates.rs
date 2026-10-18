@@ -80,7 +80,7 @@ impl SettledAnswer {
                 resolved(),
             )),
             RequestValue::Found(found) => Self::Find(Settled::one(
-                found.selected().cloned().map(SettledOriginal),
+                found.selected().cloned().map(|original| SettledOriginal(Box::new(original))),
                 found.probability(),
                 Some(found.raw_pick().to_owned()),
                 match found.selection() {
@@ -107,7 +107,12 @@ impl SettledAnswer {
                 None,
                 resolved(),
             )),
-            rows @ (RequestValue::Decisions(_) | RequestValue::Choices(_) | RequestValue::Tags(_) | RequestValue::Scores(_) | RequestValue::Filtered(_) | RequestValue::Annotations(_)) => return Self::rows(rows),
+            rows @ (RequestValue::Decisions(_)
+            | RequestValue::Choices(_)
+            | RequestValue::Tags(_)
+            | RequestValue::Scores(_)
+            | RequestValue::Filtered(_)
+            | RequestValue::Annotations(_)) => return Self::rows(rows),
         })
     }
     pub(crate) fn append(&mut self, other: Self) {
