@@ -22,3 +22,7 @@ Depends on: 0688
 ## Evidence
 
 `databases/postgresql/check.sh` is 1,639 lines of bash 5 with 125 shell functions. It builds the extension, runs a server, restarts it per test, times statements, starts loopback proxies and matches literal output (its header comments around lines 2-166). A second Python layer sits under `databases/postgresql/tests/`, with 16 files. Commit `09e424609` changed one line of shared Rust and needed new cases in three separate database suites (`databases/duckdb/tools/native_records.py`, `databases/postgresql/tests/native_records.py`, `databases/sqlite/tests/test_typed_family.py`). DuckDB and SQLite get the same change in 0694 and 0695.
+
+## Progress
+
+- 2026-10-18 Carried from 0628 stress job 1792330323744-7191: the native Mac PostgreSQL check selects system Bash 3.2 and lacks the required PostgreSQL 16, 17 and 18 toolchains; this ticket decides whether a native Mac repair is needed after the pinned-container checks, and no repair starts before phase 3.

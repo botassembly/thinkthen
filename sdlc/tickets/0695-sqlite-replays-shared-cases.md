@@ -21,3 +21,7 @@ Depends on: 0688
 ## Evidence
 
 The SQLite extension carries its own Python suites under `databases/sqlite/tests/` (for example `test_typed_family.py`) for behaviors the core and the shared cases already define. Commit `09e424609` changed one line of shared Rust and needed new cases in all three database suites.
+
+## Progress
+
+- 2026-10-18 Carried from 0628 stress job 1792330323744-7191: the native Mac SQLite check compares padded BSD wc counts as strings; this ticket decides whether a native Mac repair is needed after the pinned-container checks, and no repair starts before phase 3.
