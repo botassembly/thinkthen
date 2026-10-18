@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision ba9fd2c, accept
 
+Reviews: revision 5262ed6, accept
+
 ## Outcome
 
 - The workflow checker keeps only rules that protect a public release: pinned action SHAs, no unpinned installs, no expanded untrusted inputs, and publishing only through the approved dispatch. The step-by-step text assertions on `release.yml` and their self-tests are deleted.
