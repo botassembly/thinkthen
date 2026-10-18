@@ -400,7 +400,7 @@ PYWIN
 			if [ "$2" = x86_64-unknown-linux-gnu ]; then
 				# Installed coverage and full TypeScript checks use the pinned cache, not PATH's Node.
 				sh libraries/typescript/setup-toolchain.sh
-				sudo apt-get install -y r-base-dev
+				sudo apt-get install -y r-base-dev libgtk-3-dev
 				bash libraries/r/tools/setup.sh
 			fi
 		fi

@@ -322,7 +322,7 @@ jobs:
           set -eu
           sudo apt-get update -qq
           sudo apt-get install -y libclang-dev libssl-dev musl-tools php8.3-cli php8.3-common composer \
-            clang cmake ninja-build pkg-config libgtk-3-dev xvfb xauth
+            clang cmake ninja-build pkg-config xvfb xauth
           sdlc/scripts/release-workflow host-setup "$TARGET"
           python3 sdlc/scripts/release-language-tools.py smoke "$RELEASE_WORK/language-tools" "$SHA" --acquire
           cargo install --locked --no-default-features --version 0.17.0 cargo-pgrx

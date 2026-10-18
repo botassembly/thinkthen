@@ -235,7 +235,9 @@ def installed(check, target, cache, installed_files=False):
         check.command([node / 'bin/node', '--version'], r'^v22\.22\.3\s*$')
         managed(check)
         check.file('/usr/bin/bwrap', True)
-        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'gofmt', 'composer', 'php8.3', 'R', 'Rscript', 'psql', 'dpkg-deb'))
+        check.tools(('bwrap', 'flock', 'gprbuild', 'gnatmake', 'cobc', 'swift', 'zig', 'go', 'gofmt', 'composer', 'php8.3', 'R', 'Rscript', 'psql', 'dpkg-deb', 'xvfb-run', 'xauth'))
+        check.command(['pkg-config', '--exists', 'gtk+-3.0'])
+        check.file(os.environ.get('TT_FLUTTER', '/nonexistent'), True)
         consumer_tools(check)
         check.hashes(ROOT / 'libraries/r/tools/pins.sha256', cache / 'archives')
         code = re.search(r"Rscript --vanilla -e '([^']+)'", (ROOT / 'libraries/r/check.sh').read_text())[1]
