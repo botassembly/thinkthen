@@ -258,11 +258,12 @@ class ImageRequestArrivals(unittest.TestCase):
 
 class PublicAssertions(unittest.TestCase):
     def setUp(self):
-        corpus = json.loads((c_images.ROOT / 'conformance/cases.json').read_text())
-        row = next(row for row in corpus['parity']['required_cases']
-                   if row['id'] == 'image-admission-packing-overflow-choose')
-        self.steps = [step for step in c_images.project(row)['steps']
-                      if step['image_scenario']['id'] == 'liquid-d1-complete-question-split']
+        self.cases = {
+            'typed-decide': {'id': 'typed-decide', 'verb': 'decide', 'kind': 'typed-result',
+                             'checks': ['named', 'compile', 'runtime'], 'preconditions': []},
+            'files-decide': {'id': 'files-decide', 'verb': 'decide', 'kind': 'located',
+                             'checks': ['named', 'compile', 'runtime'], 'preconditions': []},
+        }
 
     def cell(self, **changes):
         row = {'consumer': 'rust', 'case': 'typed-decide',
@@ -336,6 +337,7 @@ class PublicAssertions(unittest.TestCase):
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -447,6 +449,7 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -470,6 +473,7 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -519,6 +523,7 @@ class PublicAssertions(unittest.TestCase):
         prepared, homes = {}, {}
         def command(args, **kwargs):
             env = kwargs['env']
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
                 Path(destination, 'installed-package').write_text('immutable')
@@ -546,21 +551,18 @@ class PublicAssertions(unittest.TestCase):
             self.assertTrue(all(row['duration_seconds'] >= .04 for row in matrix))
             self.assertTrue(all(not Path(path).exists() for path in prepared))
             self.assertTrue(all(not Path(env['HOME']).exists() for env in homes.values()))
+
+    def test_failed_or_exhausted_family_setup_fails_every_member_without_runtime(self):
+        names = ['python', 'pandas', 'python-polars']
+        contract = {'functions': ['decide'], 'consumers': [
+            {'id': name, 'owner': '0431', 'baseline': ['sh', 'family']}
+            for name in names], 'required_cases': list(self.cases.values())}
         for failure in (77, 0):
             clock = [0]
             def command(args, **kwargs):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
-                self.assertEqual(parity.run('12345'), 1)
-                matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
-                self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
-                self.assertTrue(all(row['adopted_case_count'] == 0 and 'preparation' in row['baseline_error'] for row in matrix))
-                self.assertTrue(all(row['duration_seconds'] == clock[0] for row in matrix))
-            with lock:
-                active -= 1
-            return subprocess.CompletedProcess(args, 0)
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
@@ -578,6 +580,7 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -669,6 +672,7 @@ class PublicAssertions(unittest.TestCase):
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -737,6 +741,7 @@ class PublicAssertions(unittest.TestCase):
                             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
@@ -807,6 +812,7 @@ class PublicAssertions(unittest.TestCase):
             for member in ('python', 'pandas', 'python-polars'):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
+                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                     env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -866,15 +872,6 @@ class PublicAssertions(unittest.TestCase):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
-                kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
-            kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
-            with lock:
-                active -= 1
-            return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                    self.assertEqual(parity.run('12345'), 1)
-                matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
-                self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
 
     def test_actual_runner_failure_and_missing_command_cannot_qualify_cells(self):
         for baseline, expected_exit in [
@@ -910,11 +907,8 @@ class PublicAssertions(unittest.TestCase):
 
 class CliApplicability(unittest.TestCase):
     def setUp(self):
-        corpus = json.loads((c_images.ROOT / 'conformance/cases.json').read_text())
-        row = next(row for row in corpus['parity']['required_cases']
-                   if row['id'] == 'image-admission-packing-overflow-choose')
-        self.steps = [step for step in c_images.project(row)['steps']
-                      if step['image_scenario']['id'] == 'liquid-d1-complete-question-split']
+        self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
+        self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
 
     def test_cli_resolves_actual_boundary_checks_without_changing_sdk_or_mcp(self):
         original = copy.deepcopy(self.contract['required_cases'])
@@ -1027,7 +1021,6 @@ class CliApplicability(unittest.TestCase):
         ]:
             with self.subTest(case_id=case_id, checks=checks), self.assertRaisesRegex(ValueError, cause):
                 parity.cells(cell(case_id, checks), ['cli'], cases, self.contract)
-                parity.cells(cell(case_id, checks), ['cli'], cases, self.contract)
 
     def test_matrix_keeps_rulings_separate_and_analogue_missing_when_unexecuted(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -1043,26 +1036,14 @@ class CliApplicability(unittest.TestCase):
             table = (Path(scratch) / 'target/parity/matrix.md').read_text()
             self.assertIn('named-uppercase: sdk-only, outside CLI', table)
             self.assertIn('declaration-null: question-file, boundary coverage missing', table)
-                active -= 1
-            return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                self.assertEqual(parity.run('12345'), 1)
-            row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
-            self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
-            self.assertNotIn('named-uppercase', row['cells'])
-            self.assertEqual(row['cells']['declaration-null'], 'missing')
-            table = (Path(scratch) / 'target/parity/matrix.md').read_text()
-            self.assertIn('named-uppercase: sdk-only, outside CLI', table)
-            self.assertIn('declaration-null: question-file, boundary coverage missing', table)
 
 
 class InstalledInputs(unittest.TestCase):
     def setUp(self):
-        corpus = json.loads((c_images.ROOT / 'conformance/cases.json').read_text())
-        row = next(row for row in corpus['parity']['required_cases']
-                   if row['id'] == 'image-admission-packing-overflow-choose')
-        self.steps = [step for step in c_images.project(row)['steps']
-                      if step['image_scenario']['id'] == 'liquid-d1-complete-question-split']
+        self.consumers = {row['id']: row for row in parity.all_consumers(parity.inventory())}
+        self.native = 'thinkthen-c-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
+        self.command = 'thinkthen-0.2.0-x86_64-unknown-linux-musl.tar.gz'
+        self.dart = 'thinkthen-dart-0.2.0-x86_64-unknown-linux-gnu.tar.gz'
 
     def packages(self, folder):
         names = [self.command, self.native, self.dart, 'thinkthen-0.2.0.crate',
@@ -1137,16 +1118,6 @@ class InstalledInputs(unittest.TestCase):
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_pending', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
-                kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
-            kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
-            with lock:
-                active -= 1
-            return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                self.assertEqual(parity.run('12345'), 1)
-            row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
-            self.assertNotIn('platform_pending', row)
-            self.assertEqual(set(row['cells'].values()), {'missing'})
 
     def test_postgresql_requires_every_case_on_every_server_major(self):
         contract = parity.inventory() | {'consumers': [self.consumers['postgresql']], 'pending_consumers': []}
@@ -1156,6 +1127,7 @@ class InstalledInputs(unittest.TestCase):
                 def command(args, **kwargs):
                     major = args[-1]
                     env = kwargs['env']
+                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                     self.assertEqual(args[2], '900')
                     if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                         preparations.append(major)
@@ -1176,6 +1148,12 @@ class InstalledInputs(unittest.TestCase):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
+
+    def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
+        contract = parity.inventory()
+        contract = contract | {'consumers': [self.consumers[key] for key in ('objective-c', 'c', 'python')],
+                               'pending_consumers': []}
+        binding_case = 'typed-decide'
         self.assertEqual(parity.required_cases(contract, 'python')[binding_case]['tier'], 'binding')
         for missing in (None, 'c', 'python'):
             with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
@@ -1206,7 +1184,6 @@ class InstalledInputs(unittest.TestCase):
                 self.assertIsNone(apple['named_typed_functions'])
                 table = (Path(scratch) / 'target/parity/matrix.md').read_text()
                 self.assertIn('Apple qualification pending', table)
-                self.assertIn('no local pass', table)
                 self.assertIn('no local pass', table)
 
     def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
@@ -1273,11 +1250,14 @@ esac
             demo.chmod(0o755)
             env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
 
-            def run(adapter, *, consumer):
-                calls.append(adapter.read_text())
-                for row in cases.values():
-                    print(parity.PREFIX + json.dumps(dict(consumer=consumer, case=row['id'], checks=row.get('checks', ['named', 'runtime']), status='pass')))
+            def run(entry, *args):
+                log.write_text("")
+                result = subprocess.run(["/bin/sh", str(scripts / entry), *args],
+                                        cwd=root, env=env, capture_output=True,
+                                        text=True, timeout=5)
+                return result, log.read_text().splitlines()
 
             routine, calls = run("test")
             self.assertEqual(routine.returncode, 0, routine.stderr)
@@ -1377,6 +1357,7 @@ esac
                            'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']

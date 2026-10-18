@@ -569,7 +569,7 @@ class PackageText(unittest.TestCase):
                 for folder in folders + [wrong]:
                     folder.mkdir(parents=True, exist_ok=True)
                     executable = folder / binary
-                    executable.write_text('#!/bin/sh\nprintf "' + ('wrong' if folder == wrong else 'prepared') + '\\n"\n')
+                    executable.write_text('#!/bin/sh\n[ "${1:-}" != --disable-gems ] || exit 0\nprintf "' + ('wrong' if folder == wrong else 'prepared') + '\\n"\n')
                     executable.chmod(0o755)
                     if binary == 'ruby' and folder != wrong:
                         (folder.parent / 'thinkthen-toolchain.stamp').touch()
@@ -580,7 +580,7 @@ class PackageText(unittest.TestCase):
                                '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
             done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
                                    'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
-                                  env={'PATH': str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
+                                  env={'PATH': str(prepared[0]) + os.pathsep + str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
                                   capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 

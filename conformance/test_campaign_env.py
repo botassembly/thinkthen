@@ -89,6 +89,7 @@ exit 2
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
                    'CARGO_PROFILE_DEV_OPT_LEVEL': '0',
                    'CARGO_PROFILE_TEST_OPT_LEVEL': '0', 'CARGO_BUILD_RUSTC_WRAPPER': '/ambient/wrapper'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
             result = subprocess.run(['sh', str(scripts / 'test-full-cases'), '--run'], cwd=root,
                                     env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             self.assertEqual(result.returncode, 0, result.stdout.decode())
@@ -203,6 +204,7 @@ if '--message-format=json' in sys.argv:
                            'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
                            'THINKTHEN_TEST_PROFILE': profile, 'RUSTFLAGS': '--ambient',
                            'CFLAGS': '-O1', 'CXXFLAGS': '-O1'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = 'test,surfaces'
                     env.pop('THINKTHEN_FULL_COMPILER', None)
                     command = 'REPO=$PWD; '
                     if full:
