@@ -1,10 +1,14 @@
 # 0623: Set a time limit on every workflow job
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-18, superseded by 0622.
 
 Milestone: 0.2.1
 
 Phase: 1
+
+Superseded by: 0622
 
 ## Outcome
 

@@ -1,6 +1,8 @@
 # 0576: Give every library a first-class experience
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-18, Its accepted work landed on main in 2667437bd; the remaining library quality work moved to the 0.2.1 phase 3 tickets..
 
 Milestone: 0.2
 

@@ -1,6 +1,8 @@
 # 0543: Pass one 0.2 candidate on Linux, macOS and Windows
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-18, superseded by 0687.
 
 Milestone: 0.2
 
@@ -340,6 +342,8 @@ Reviews: revision 3ef6630, accept
 Reviews: revision 14e97f9, accept
 
 Reviews: revision 412d173, accept
+
+Superseded by: 0687
 
 ## Outcome
 

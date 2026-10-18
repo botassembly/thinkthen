@@ -1,10 +1,14 @@
 # 0616: Correct the CI statement in the repo instructions
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-18, superseded by 0619.
 
 Milestone: 0.2.1
 
 Phase: 1
+
+Superseded by: 0619
 
 ## Outcome
 

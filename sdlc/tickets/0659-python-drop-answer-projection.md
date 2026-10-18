@@ -1,12 +1,16 @@
 # 0659: Delete Python's handwritten answer and probability projection
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-18, superseded by 0662.
 
 Milestone: 0.2.1
 
 Phase: 3
 
 Depends on: 0612
+
+Superseded by: 0662
 
 ## Outcome
 
