@@ -72,9 +72,9 @@ mod records;
 mod recovering;
 mod streaming;
 
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 mod preview;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use preview::Preview as RecognitionPreview;
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(in crate::public) use preview::prepare as preview_recognition;

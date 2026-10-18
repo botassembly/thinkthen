@@ -60,7 +60,7 @@ impl Reading {
 }
 
 impl Reading {
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_item_schema(
         mut self,
         schema: Option<crate::core::InputDeclaration>,
@@ -68,12 +68,12 @@ impl Reading {
         self.item_schema = schema.into_iter().collect();
         self
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_item_schemas(mut self, schemas: Vec<crate::core::InputDeclaration>) -> Self {
         self.item_schema = schemas;
         self
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn declares_item(&self) -> bool {
         !self.item_schema.is_empty()
     }

@@ -65,7 +65,7 @@ pub(crate) fn with_host_diagnostics<T>(check: impl FnOnce() -> T) -> T {
 ///
 /// The calling thread polls the call's stop meanwhile, so the host check runs
 /// there during a width gate or retry wait and never during a blocking send.
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T + Send) -> T {
     if ENGINE_WORKER.get() {
         return with_engine_diagnostics(send);

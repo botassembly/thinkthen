@@ -70,7 +70,7 @@ pub(crate) struct Entries {
 
 impl Entries {
     /// Merge identical snapshots, refusing any conflicting answer or history.
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn merge(&mut self, other: Self) -> Result<(), Error> {
         for (key, answer) in &other.answers {
             if self.answers.get(key).is_some_and(|held| held != answer) {
@@ -99,7 +99,7 @@ impl Entries {
 
     /// The fixture text: states, then answers, each sorted, one per line.
     /// States no answer uses are left out.
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn written(&self) -> Result<String, Error> {
         let used: std::collections::BTreeSet<&str> = self
             .answers

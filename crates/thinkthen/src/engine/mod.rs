@@ -112,7 +112,7 @@ impl<'a> Cancel<'a> {
             ..self.clone()
         }
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
         Self {
             invocation: invocation::Context::new(surface),
@@ -124,7 +124,7 @@ impl<'a> Cancel<'a> {
         self.invocation.get()
     }
 
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
         self.invocation.call_id()
     }
@@ -183,7 +183,7 @@ impl<'a> Cancel<'a> {
         self.fired.store(true, Ordering::Release);
     }
 
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn reset(&self) {
         self.fired.store(false, Ordering::Release);
     }

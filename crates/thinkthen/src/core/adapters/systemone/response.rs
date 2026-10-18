@@ -111,7 +111,7 @@ struct ResponseUsage {
 mod observed;
 
 pub(crate) use observed::{Decoded, decode_answers};
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 pub(crate) use observed::decode_observed;
 
 /// Read the response body as one answer per question the plan asked.

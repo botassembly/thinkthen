@@ -28,7 +28,7 @@ impl Engine {
         Ok((summary, dropped))
     }
 
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn plan_annotation_request<'a>(
         &self,
         request: &'a AdmittedRequest,
@@ -194,7 +194,7 @@ fn annotation_groups(
 }
 
 impl AdmittedRequest {
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn plan_find<'a>(
         &'a self,
         engine: &Engine,
@@ -208,7 +208,7 @@ impl AdmittedRequest {
         };
         engine.preview_find_records(question, rows, controls)
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn plan_recognition<'a>(
         &'a self,
         backend: &crate::core::Backend,
@@ -235,7 +235,7 @@ impl AdmittedRequest {
             limit,
         )
     }
-    #[cfg(feature = "cli")]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn plan_relations<'a>(
         &'a self,
         backend: &crate::core::Backend,
@@ -250,7 +250,7 @@ impl AdmittedRequest {
     }
 }
 
-#[cfg(feature = "cli")]
+#[cfg(any(feature = "cli", test))]
 fn route_preview<'a>(
     request: &'a AdmittedRequest,
     environment: RequestEnvironment<'a>,
