@@ -1,6 +1,7 @@
 #!/bin/sh
 # The C surface. The surface rung passes its loopback port as $1.
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/c
 tools_group=c
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
@@ -9,10 +10,10 @@ case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THI
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 if [ "$profile" = stress ]; then
 	echo 'libraries/c: not run: no port load campaign'
-	exit 77
+	exit 1
 fi
 
-command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
+command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 1; }
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home

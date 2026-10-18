@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/dart
 tools_group=dart
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -9,10 +10,10 @@ if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
 fi
 TT_DART=$(command -v dart || true)
 TT_FLUTTER=$(command -v flutter || true)
-[ -x "$TT_DART" ] || exit 77
+[ -x "$TT_DART" ] || exit 1
 case ${THINKTHEN_ARTIFACT:-} in
   *thinkthen-dart-*.tar.gz) ;;
-  *) [ -x "$TT_FLUTTER" ] || exit 77 ;;
+  *) [ -x "$TT_FLUTTER" ] || exit 1 ;;
 esac
 python3 "$ROOT/checks/privacy.py"
 node "$ROOT/../../sdlc/scripts/ratchet.mjs" "$ROOT/ratchet.dart.json"

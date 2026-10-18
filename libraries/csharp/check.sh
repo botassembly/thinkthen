@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/csharp
 tools_group=csharp
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -9,8 +10,8 @@ version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$here/ThinkThen.csproj"
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 dotnet=$(command -v dotnet || true)
-[ -x "$dotnet" ] || exit 77
-command -v python3 >/dev/null 2>&1 || exit 77
+[ -x "$dotnet" ] || exit 1
+command -v python3 >/dev/null 2>&1 || exit 1
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
     routine|full|smoke) ;;
     *) echo 'C#: unknown test profile' >&2; exit 2 ;;

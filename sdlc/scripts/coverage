@@ -17,6 +17,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
+from check_verdict import verdict
 from coverage_report import report, UNIT_COLLECTIONS, join_platforms
 
 NATIVE_COLLECTIONS = ('rust-integration', *UNIT_COLLECTIONS)
@@ -106,9 +107,8 @@ def command(args, cwd, env, log, *, capture=False, timeout=None):
     if timed_out:
         raise RuntimeError(f'timed out (exit {child.returncode}): {shlex.join(args)}; see {log}')
     if child.returncode:
-        if child.returncode == 77:
-            raise MissingTool(f'{shlex.join(args)}; see {log}')
-        raise RuntimeError(f'exit {child.returncode}: {shlex.join(args)}; see {log}')
+        if not verdict('coverage collection', child.returncode, 'coverage'):
+            raise RuntimeError(f'exit {child.returncode}: {shlex.join(args)}; see {log}')
     return stdout if capture else None
 
 
@@ -332,7 +332,6 @@ def measure(run, env, llvm, executable, native, artifacts, installed, revision, 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release', action='store_true')
     parser.add_argument('--platform', choices=('linux', 'apple'), help='Measure required collections on their own host; join both before acceptance')
     parser.add_argument('--join', nargs=2, type=Path, metavar=('LINUX', 'APPLE'), help='Require successful same-commit Linux and Apple coverage reports')
     parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
@@ -409,7 +408,8 @@ def entry():
         main()
     except MissingTool as error:
         print(f'coverage: not run: {error}', file=sys.stderr)
-        return 1 if '--release' in sys.argv else 77
+        verdict('coverage prerequisites', 77, 'coverage')
+        return 1
     except (RuntimeError, subprocess.CalledProcessError, OSError) as error:
         print(f'coverage: FAIL: {error}', file=sys.stderr)
         return 1

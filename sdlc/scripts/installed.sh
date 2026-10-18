@@ -111,7 +111,7 @@ own_panic_hook() {
 	*) own_tools='readelf nm' own_libc=libc.so.6 own_mac= ;;
 	esac
 	for own_tool in $own_tools; do
-		command -v "$own_tool" >/dev/null 2>&1 || { echo "not run: no $own_tool to read ${1##*/}" >&2; exit 77; }
+		command -v "$own_tool" >/dev/null 2>&1 || { echo "not run: no $own_tool to read ${1##*/}" >&2; exit 1; }
 	done
 	if [ -n "$own_mac" ]; then
 		own_needed=$(otool -L "$1") && own_imported=$(nm -u "$1") && own_exported=$(nm -gU "$1") ||

@@ -29,7 +29,7 @@ case $(uname -s) in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 
 not_run() {
 	echo "not run  databases/sqlite: $1; run databases/sqlite/setup.sh once"
-	exit 77
+	exit 1
 }
 command -v cc >/dev/null || not_run "no cc to build the SQLite 3.50.0 host"
 if [ "$suffix" = dylib ]; then

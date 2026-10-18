@@ -2,6 +2,7 @@
 # Check the package callers install. Full shared parity waits for a candidate.
 unset THINKTHEN_API_KEY
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/python
 tools_group=python
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
@@ -15,11 +16,11 @@ if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
 fi
 python3 "$repo/sdlc/generators/results/generate.py" --target python --check
 python3 "$repo/sdlc/generators/results/generate.py" --target python --inputs --check
-command -v uv >/dev/null 2>&1 || { echo 'not run: no uv'; exit 77; }
-command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
+command -v uv >/dev/null 2>&1 || { echo 'libraries/python: not run: no uv'; exit 1; }
+command -v maturin >/dev/null 2>&1 || { echo 'libraries/python: not run: no maturin'; exit 1; }
 . ./host.sh
 host=$(python_host)
-[ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
+[ -n "$host" ] || { echo 'libraries/python: not run: no supported Python'; exit 1; }
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
     [ "$profile" = routine ] || exit 2
     scratch=$THINKTHEN_COVERAGE_STAGE
