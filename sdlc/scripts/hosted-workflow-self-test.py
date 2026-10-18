@@ -819,9 +819,14 @@ def preflight_cases():
         assert 'Traceback' not in coverage.stderr, coverage.stderr
         for name in missing_tools:
             (tools / name).symlink_to(probe)
+        # Remove real tracked locks in this owned checkout to exercise missing
+        # lock files separately from the unavailable YAML reader above.
+        projects = ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example')
+        for project in projects:
+            (root / project / 'pubspec.lock').unlink()
         check = module['Preflight']()
         module['dart_locks'](check)
-        for project in ('libraries/dart', 'libraries/dart/checks/session_consumer', 'libraries/dart/flutter/example'):
+        for project in projects:
             assert any(message.startswith(project + ' frozen Dart inputs:') for message in check.missing), check.missing
         report = root / 'thinkthen-apple-coverage/totals.json'
         for local_only, source, wanted in ((True, None, 0), (False, None, 1),
