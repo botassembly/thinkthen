@@ -422,8 +422,14 @@
         "lint",
         "install"
       ],
-      "provider": "asdf:virtualstaticvoid/asdf-gcc",
-      "version": "15.2.0"
+      "version": "13.3.0",
+      "probe": {
+        "argv": [
+          "gcc",
+          "--version"
+        ],
+        "contains": "{version}"
+      }
     },
     "cmake": {
       "commands": [
@@ -706,97 +712,245 @@
     "jsonschema": "4.23.0"
   },
   "libraries": {
-    "swift": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "polars": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "php": [
-      "linux-x86_64"
-    ],
-    "zig": [
-      "linux-x86_64"
-    ],
-    "dart": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "go": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "typescript": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "c": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "r": [
-      "linux-x86_64"
-    ],
-    "csharp": [
-      "linux-x86_64"
-    ],
-    "ruby": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "objective-c": [
-      "darwin-arm64",
-      "darwin-x86_64"
-    ],
-    "cobol": [
-      "linux-x86_64"
-    ],
-    "python": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "cpp": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "mcp": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ],
-    "ada": [
-      "linux-x86_64"
-    ],
-    "jvm": [
-      "linux-x86_64"
-    ],
-    "rust": [
-      "darwin-arm64",
-      "darwin-x86_64",
-      "linux-arm64",
-      "linux-x86_64"
-    ]
+    "swift": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "polars": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "php": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "zig": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "dart": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "go": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "typescript": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "c": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "r": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "csharp": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "ruby": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "objective-c": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64"
+      ]
+    },
+    "cobol": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "python": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "cpp": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "mcp": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    },
+    "ada": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "jvm": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    },
+    "rust": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    }
   },
   "databases": {
     "sqlite": [

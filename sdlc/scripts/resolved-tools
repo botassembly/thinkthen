@@ -3,6 +3,6 @@ case ,${THINKTHEN_RESOLVED_TOOLS:-}, in
     *,$tools_group,*) ;;
     *)
         tools_repo=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-        exec /usr/bin/python3 "$tools_repo/sdlc/scripts/tools.py" "$tools_group" -- "$0" "$@"
+        exec /usr/bin/python3 "$tools_repo/sdlc/scripts/tools.py" "$tools_group" -- /bin/sh "$0" "$@"
         ;;
 esac

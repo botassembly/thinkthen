@@ -396,7 +396,7 @@ jobs:
                            'LIBCLANG_PATH', 'PUB_CACHE', 'RUBY', 'RBCONFIG', 'R_LIBS_USER', 'JAVA_HOME',
                            'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache'), home=work / 'home')
           for key in ('THINKTHEN_DOTNET', 'THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME',
-                      'TT_DART', 'TT_FLUTTER', 'THINKTHEN_PHP_BIN'):
+                      'TT_DART', 'TT_FLUTTER'):
               env[key] = os.environ[key]
           env.update(CARGO_HOME=os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
                      RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),

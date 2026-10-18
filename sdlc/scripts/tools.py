@@ -21,6 +21,13 @@ def run(argv, env, **kwargs):
 
 
 def selected(manifest, groups, host):
+    groups = set(groups)
+    if 'surfaces' in groups:
+        arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+        target = host + '-' + arch
+        groups.update(name for name, library in manifest['libraries'].items()
+                      if target in library['check_platforms'])
+        groups.update(manifest['databases'])
     return {name: tool for name, tool in manifest['tools'].items()
             if host in tool['platforms'] and set(tool['groups']) & {'common', *groups}}
 
@@ -110,7 +117,10 @@ def resolve(manifest, groups, root, check=False):
                 installer = installer or bootstrap(manifest, root, env)
                 if tool['provider'] == 'ruby':
                     env['RUBY_CONFIGURE_OPTS'] = '--with-libyaml-source-dir=' + str(ruby_source(manifest, root))
-                run([installer, 'install', identity], env)
+                install = [installer, 'install']
+                if tool['provider'] == 'rust' and not (root / 'cargo/bin/rustup').is_file():
+                    install.append('--force')
+                run([*install, identity], env)
             installer = installer or root / 'bootstrap/mise/bin/mise'
             resolved = json.loads(subprocess.check_output(
                 [str(installer), 'env', '--json', identity], env=env, text=True))
@@ -147,6 +157,18 @@ def resolve(manifest, groups, root, check=False):
                     failures.append(name + ': version differs from tools.json')
             except (OSError, subprocess.CalledProcessError) as error:
                 failures.append(name + ': ' + str(error))
+    packages = dict(manifest.get('python_packages', {}))
+    packages.update({tool['commands'][0]: tool['version'] for tool in requirements.values()
+                     if tool.get('provider') == 'python-package'})
+    for name, version in packages.items():
+        try:
+            found = subprocess.check_output(['python3', '-c',
+                'from importlib.metadata import version; import sys; print(version(sys.argv[1]))', name],
+                env=env, text=True, stderr=subprocess.DEVNULL).strip()
+            if found != version:
+                missing.append(name + '==' + version)
+        except (OSError, subprocess.CalledProcessError):
+            missing.append(name + '==' + version)
     if missing or failures:
         raise RuntimeError('missing tools: ' + ', '.join(sorted(set(missing)))
                            + ('; installation failures: ' + '; '.join(failures) if failures else ''))
@@ -187,10 +209,6 @@ def main():
         command = command[1:]
     if command:
         child = dict(os.environ, **env)
-        # Compiler overrides and tool locations must not bypass the resolver.
-        for name in list(child):
-            if name.startswith('THINKTHEN_') and name.endswith('_BIN'):
-                del child[name]
         os.execvpe(command[0], command, child)
     print(env['PATH'])
     return 0
