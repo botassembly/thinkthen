@@ -1080,7 +1080,7 @@
   "linux": {
     "cpus": 4,
     "memory_gib": 16,
-    "yellow_memory_gib": 14,
+    "yellow_memory_gib": 13.5,
     "images": {
       "arm64": "ubuntu:24.04@sha256:18b33ff3829707f31ada654a963b9ee35f2e6f0241b964bd17a22a9b330cb63d",
       "x86_64": "ubuntu:24.04@sha256:a2d43bffc46670d7108bb3c0468c67c5557c4c92e83e1e34cbff1322ad1b94dc"
