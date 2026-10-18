@@ -517,9 +517,10 @@ jobs:
                       'pkg.mkdir(parents=True)\n'
                       "spec=importlib.util.spec_from_file_location('assets',source/'checks/native_assets.py');assets=importlib.util.module_from_spec(spec);spec.loader.exec_module(assets)\n"
                       'for member in assets.package_members(source):\n'
-                      ' target=pkg/member;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/member,target)\n'
+                      ' target=pkg/member;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/member,target,follow_symlinks=False)\n'
                       "assets.configure(pkg,root/'target/debug/libthinkthen_c.so',[pkg])\n"
-                      "shutil.copytree(source/'checks/session_consumer/bin',pkg/'bin')\n"
+                      "for item in assets.tracked_files(source/'checks/session_consumer/bin'):\n"
+                      " target=pkg/'bin'/item.relative_to(source/'checks/session_consumer/bin');target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)\n"
                       "shutil.copyfile(source/'example/main.dart',pkg/'bin/shipped_example.dart')\n"
                       "print('fresh Dart stage contains current documented example and exact-source native asset')\n"
                       '\n'
@@ -533,7 +534,9 @@ jobs:
                   spec=importlib.util.spec_from_file_location('assets',root/'libraries/dart/checks/native_assets.py');assets=importlib.util.module_from_spec(spec);spec.loader.exec_module(assets)
                   flutter=dart/'core-wave-flutter'
                   if flutter.exists():shutil.rmtree(flutter)
-                  shutil.copytree(root/'libraries/dart/flutter',flutter,ignore=shutil.ignore_patterns('build','.dart_tool','target'))
+                  source=root/'libraries/dart/flutter'
+                  for item in assets.tracked_files(source):
+                   target=flutter/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
                   assets.configure(pkg,native,[flutter,flutter/'example'])
                   run('flutter-dependencies',[env['TT_FLUTTER'],'pub','get','--offline'],cwd=flutter/'example')
                   run('flutter-linux',[env['TT_FLUTTER'],'build','linux','--no-pub'],cwd=flutter/'example')
@@ -544,8 +547,13 @@ jobs:
                   run('csharp-offline-build',['dotnet','build','libraries/csharp/ThinkThen.csproj','-c','Release','-p:RestoreSources='+str(root/'libraries/csharp/target/feed'),'-o','libraries/csharp/target/core-wave','-v','quiet','--disable-build-servers','-p:UseSharedCompilation=false','-nodeReuse:false'])
                   ts=root/'libraries/typescript/target'; ts.mkdir(exist_ok=True); shutil.copyfile(root/'target/debug/libthinkthen_typescript.so',ts/'thinkthen-core-checkpoint.node')
                   # Copy the complete existing build consumer, including both local imports.
-                  pkg=root/'libraries/dart/target/core-wave'; shutil.copytree(root/'libraries/dart/checks/session_consumer/bin',pkg/'bin',dirs_exist_ok=True)
-                  python=root/'libraries/python/target/core-wave'; (python/'thinkthen').mkdir(parents=True,exist_ok=True); shutil.copytree(root/'libraries/python/thinkthen',python/'thinkthen',dirs_exist_ok=True); shutil.copyfile(root/'target/debug/lib_thinkthen.so',python/'thinkthen/_thinkthen.so')
+                  pkg=root/'libraries/dart/target/core-wave';source=root/'libraries/dart/checks/session_consumer/bin'
+                  for item in assets.tracked_files(source):
+                   target=pkg/'bin'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
+                  python=root/'libraries/python/target/core-wave';source=root/'libraries/python/thinkthen'
+                  for item in assets.tracked_files(source):
+                   target=python/'thinkthen'/item.relative_to(source);target.parent.mkdir(parents=True,exist_ok=True);target.unlink(missing_ok=True);shutil.copyfile(item,target,follow_symlinks=False)
+                  shutil.copyfile(root/'target/debug/lib_thinkthen.so',python/'thinkthen/_thinkthen.so')
                   run('python-pandas-polars-import',[env['PYTHON_HOST'],'-c',"import sys; sys.path.insert(0,'libraries/python/target/core-wave'); import thinkthen, thinkthen.pandas, thinkthen.polars; print('Python, pandas and Polars import passed')"])
                   r=root/'libraries/r/target'; r.mkdir(exist_ok=True); shutil.copyfile(root/'libraries/r/thinkthen/src/entrypoint.c',r/'entrypoint.c')
                   run('r-bridge',['R','CMD','SHLIB','entrypoint.c','-o','thinkthen.so'],cwd=r,extra={'PKG_LIBS':'-L'+str(root/'target/debug')+' -lthinkthen_r -lpthread -ldl -lm'})
