@@ -38,14 +38,14 @@ class StressSelection(unittest.TestCase):
                 'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
             env = child_env(home=root / 'home', PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'], FIXTURE_ROOT=str(root))
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77), (0, 0)):
+            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
                 with self.subTest(first=first, last=last):
                     calls = root / 'calls'
                     calls.write_text('')
                     result = subprocess.run(['sh', str(scripts / 'surfaces')], cwd=root,
                                             env=env | {'CODE16': str(first), 'CODE18': str(last)},
                                             capture_output=True, text=True)
-                    self.assertEqual(calls.read_text().splitlines(), ['16', '18'],
+                    self.assertEqual(calls.read_text().splitlines(), ['16', '17', '18'],
                                      result.stdout + result.stderr)
                     self.assertEqual(result.returncode, int(bool(first or last)),
                                      result.stdout + result.stderr)

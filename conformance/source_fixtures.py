@@ -34,4 +34,4 @@ def stub_other_surfaces(root, selected):
         if fields and fields[0].startswith('#'):
             continue
         if len(fields) > 1 and fields[1] in ('landed', 'feature') and fields[0] not in selected:
-            (root / fields[0] / 'check.sh').write_text('exit 0\n')
+            (root / fields[0] / 'check.sh').write_text('if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then printf "smoke: true\\n"; fi\nexit 0\n')
