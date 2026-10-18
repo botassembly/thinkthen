@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0615, 0618, 0619
 
+Reviews: revision 5b6430e, accept
+
 ## Outcome
 
 - One command runs the release suite (`test-full-cases`, `package`, `test-stress`) on a named main revision, writes one log, and needs no separate runner, verifier or receipt format.
