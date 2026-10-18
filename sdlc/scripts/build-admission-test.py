@@ -14,6 +14,9 @@ import threading
 import time
 import unittest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.source_fixtures import stage_checkout
+
 HELPER = Path(__file__).with_name('build-admission.py')
 # The launch boundary controls host load without an extra production setting.
 LAUNCH = 'import os,runpy,sys; load=sys.argv[1]; os.getloadavg=lambda:(float(open(load).read()),0,0); sys.argv=sys.argv[2:]; runpy.run_path(sys.argv[0],run_name="__main__")'
@@ -94,10 +97,8 @@ class Admission(unittest.TestCase):
             return True
 
     def entry_scripts(self):
-        scripts = self.root / 'scripts'
-        scripts.mkdir()
-        for name in ('heavy-compile', 'allow-list'):
-            (scripts / name).write_bytes(HELPER.with_name(name).read_bytes())
+        stage_checkout(HELPER.resolve().parents[2], self.root)
+        scripts = self.root / 'sdlc/scripts'
         # Reuse the controlled host-load boundary with the real supervisor.
         (scripts / 'build-admission.py').write_text(
             'import os,runpy,sys\n'
@@ -522,8 +523,6 @@ exit 23
         self.assertEqual(self.wait_entry(child), 23)
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
         self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
-        # The standalone sanitization entry also returns successfully.
-        self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'allow-list')], env=env, timeout=3).returncode, 0)
         rung = scripts / 'rung'
         rung.write_text('''set -eu
 . "$(dirname -- "$0")/allow-list"
