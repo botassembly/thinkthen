@@ -104,6 +104,26 @@ class PrivacyTests(unittest.TestCase):
                     with tarfile.open(archive, mode) as bundle:
                         bundle.add(unpacked, arcname=unpacked.name)
                     privacy.check_file(archive)
+            for compression in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+                with self.subTest(compression=compression):
+                    with zipfile.ZipFile(archive, 'w', compression=compression) as bundle:
+                        for name in members:
+                            bundle.write(unpacked / name, unpacked.name + '/' + name)
+                    privacy.check_file(archive)
+            # Non-member bytes remain subject to all rules, even beside allowed content.
+            for kind in ('tar', 'zip'):
+                with self.subTest(trailer=kind):
+                    if kind == 'tar':
+                        with tarfile.open(archive, 'w') as bundle:
+                            bundle.add(unpacked, arcname=unpacked.name)
+                    else:
+                        with zipfile.ZipFile(archive, 'w') as bundle:
+                            bundle.write(unpacked / members[0], unpacked.name + '/' + members[0])
+                            bundle.comment = b'PRIVATE_KEY_MARKER'
+                    with archive.open('ab') as output:
+                        output.write(b'PRIVATE_KEY_MARKER')
+                    with self.assertRaisesRegex(privacy.PrivacyError, 'private pattern'):
+                        privacy.check_file(archive)
             plants = [(name, b'PRIVATE_KEY_MARKER') for name in members]
             plants += [('src/config/tests.rs', b'/home/private'),
                        ('src/config/tests.rs', b'/Users/private'),
