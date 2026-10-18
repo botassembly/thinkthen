@@ -3,6 +3,7 @@ import contextlib
 import io
 import json
 import os
+import platform
 import signal
 from pathlib import Path
 import shutil
@@ -98,7 +99,7 @@ class CandidateSmokes(unittest.TestCase):
                     (root / surface / 'check.sh').write_text(
                         'exec python3 compile.py ' + str(slot) + '\n')
                     children.append(subprocess.Popen(
-                        ['sh', str(scripts / 'smoke'), '--full-functional', '--one', str(binaries), surface],
+                        ['sh', str(scripts / 'smoke'), '--one', str(binaries), surface],
                         cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True))
                 for child in children:
                     log, _ = child.communicate(timeout=10)
@@ -110,7 +111,7 @@ class CandidateSmokes(unittest.TestCase):
                         os.killpg(child.pid, signal.SIGKILL)
                     child.communicate(timeout=3)
 
-    def test_full_smoke_fails_exit77_and_only_delegates_apple(self):
+    def test_smoke_fails_required_exit77_and_accepts_declared_unsupported_platforms(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
             root = Path(folder)
             stage_checkout(parity.ROOT, root)
@@ -128,28 +129,27 @@ class CandidateSmokes(unittest.TestCase):
             uname.write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for executable in (backend, binary, jq, uname):
                 executable.chmod(0o755)
-            for member in ('c', 'swift', 'objective-c'):
+            for member in ('c', 'go', 'swift', 'objective-c'):
                 library = root / 'libraries' / member
                 library.mkdir(parents=True, exist_ok=True)
                 (library / 'check.sh').write_text('exit 77\n')
             env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home')}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            for full, member, delegate, expected in [
-                    (False, 'c', '', 0), (True, 'c', '', 1),
-                    (True, 'c', 'required', 1), (True, 'objective-c', '', 1),
-                    (True, 'objective-c', 'required', 0), (True, 'swift', 'required', 0)]:
-                with self.subTest(full=full, member=member, delegate=delegate):
-                    args = ['sh', str(scripts / 'smoke')]
-                    if full:
-                        args.append('--full-functional')
-                    args += ['--one', str(binaries), 'libraries/' + member]
-                    result = subprocess.run(args, cwd=root,
-                                            env=env | {'THINKTHEN_MACOS_APPLE_CHECKS': delegate},
-                                            capture_output=True, text=True, check=False)
-                    self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
-                    if full and member != 'c' and delegate:
-                        self.assertIn('pending', result.stdout)
-                        self.assertNotIn('pass', result.stdout)
+            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+            host = platform.system().lower() + '-' + arch
+            for member in ('c', 'go', 'swift', 'objective-c'):
+                supported = host in manifest['libraries'][member]['check_platforms']
+                with self.subTest(member=member, host=host):
+                    result = subprocess.run(
+                        ['sh', str(scripts / 'smoke'), '--one', str(binaries), 'libraries/' + member],
+                        cwd=root, env=env, capture_output=True, text=True, check=False)
+                    self.assertEqual(result.returncode, int(supported), result.stdout + result.stderr)
+                    expected = f'FAIL libraries/{member} (not run)' if supported else f'unsupported libraries/{member}'
+                    self.assertIn(expected, result.stdout)
+                    if not supported:
+                        self.assertIn(f'sdlc/tools.json libraries.{member} =', result.stdout)
+                    self.assertNotIn('smoke: pass', result.stdout)
 
 
 class RetainedNpmArtifact(unittest.TestCase):

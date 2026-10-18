@@ -983,8 +983,9 @@ def parameter_cases():
         root = Path(temporary)
         for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
             (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'hosted-candidate.py'):
+        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'hosted-candidate.py'):
             (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
+        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
         (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),
