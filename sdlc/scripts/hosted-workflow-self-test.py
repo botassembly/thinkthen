@@ -20,6 +20,38 @@ from unittest.mock import patch
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+
+
+def linux_work_destination_cases():
+    for name, sudo, free, destination in (
+            ('roomy', 0, 900, '/mnt/thinkthen-container'),
+            ('no sudo', 1, 900, 'FALLBACK'),
+            ('small', 0, 50, 'FALLBACK'),
+            ('missing', 0, None, 'FALLBACK')):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-linux-work-') as temporary:
+            root = Path(temporary).resolve()
+            log = root / 'calls'
+            capacity = 'exit 1' if free is None else f'free={free}'
+            df = ('echo "df $*" >> "$FAKE_LOG"; case $2 in /mnt) %s ;; *) free=100 ;; esac; '
+                  'printf "Filesystem 1024-blocks Used Available Capacity Mounted\\nx 1 1 %%s 1%%%% %%s\\n" '
+                  '"$free" "$2"' % capacity)
+            for tool, body in (('df', df), ('sudo', f'echo "sudo $*" >> "$FAKE_LOG"; exit {sudo}')):
+                path = root / tool
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            result = subprocess.run(['/bin/sh', str(REPO / 'sdlc/scripts/release-workflow'),
+                                     'linux-work', 'FALLBACK'],
+                                    env={**os.environ, 'PATH': f'{root}:/usr/bin:/bin',
+                                         'FAKE_LOG': str(log)}, capture_output=True, text=True, timeout=20)
+            calls = log.read_text().splitlines() if log.exists() else []
+            sudo_calls = [call for call in calls if call.startswith('sudo ')]
+            assert result.returncode == 0 and result.stdout.strip() == destination, (
+                name, result.returncode, result.stdout, result.stderr)
+            assert calls[:1] == ['df -h / /mnt'], (name, calls)
+            assert not any(' rm ' in f' {call} ' for call in calls), (name, calls)
+            assert bool(sudo_calls) == bool(free and free > 100), (name, calls)
+
+
 def linux_tool_destination_case():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
@@ -884,6 +916,7 @@ def parameter_cases():
 
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
+linux_work_destination_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_failed_phase_evidence_case()
