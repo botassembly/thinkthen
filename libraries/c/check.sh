@@ -5,16 +5,24 @@ cd -- "$(dirname -- "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-if [ "$profile" = stress ]; then
-	echo 'libraries/c: not run: no port load campaign'
-	exit 77
-fi
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 scratch_dir cache
+if [ "$profile" = stress ]; then
+    . ../../sdlc/scripts/installed.sh
+    native_install "$(cd ../.. && pwd)" "$cache/native"
+    python3 - "$cache/native" "$cache" <<'SESSIONSTRESS'
+from pathlib import Path
+import sys
+sys.path.insert(0, "tests")
+from session_wait import run
+run(Path(sys.argv[1]), Path(sys.argv[2]), rounds=12)
+SESSIONSTRESS
+    exit
+fi
 if [ "$profile" = smoke ]; then
     smoke_guard
     . ../../sdlc/scripts/installed.sh

@@ -288,7 +288,7 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
         # These check.sh scripts select existing stress cases. Other profiles
         # cannot stand in for stress, and unsupported selection is not a pass.
         case $surface in
-        libraries/polars | libraries/typescript | libraries/r | databases/sqlite | databases/duckdb | databases/postgresql) ;;
+        libraries/c | libraries/rust | libraries/polars | libraries/typescript | libraries/r | databases/sqlite | databases/duckdb | databases/postgresql) ;;
         *) echo "surfaces: not selected $surface (no stress cases)"; continue ;;
         esac
         selected_checks=$((selected_checks + 1))
