@@ -88,7 +88,24 @@ def prepare(context):
                 {**r_env, 'CARGO_TARGET_DIR': str(run / 'target-tools'), 'THINKTHEN_COVERAGE_PHASE': 'run'},
                 folder / 'check.log', timeout=1800)
     collections.append(dict(name='installed-r', objects=[stage / 'r/lib/thinkthen/libs/thinkthen.so'], runner=r_runner))
-    for language, binary in (('rust', 'thinkthen-rust-consumer'), ('polars', 'thinkthen-polars-consumer')):
+    rust_stage = stage / 'rust'
+    (rust_stage / 'crate').mkdir(parents=True)
+    with tarfile.open(crate) as archive:
+        archive.extractall(rust_stage, filter='data')
+    (rust_stage / 'crate').rmdir()
+    (rust_stage / crate.stem).rename(rust_stage / 'crate')
+    rust_target = run / 'target-rust'
+    def rust_runner(folder):
+        rust_flags = env.get('CARGO_ENCODED_RUSTFLAGS', '')
+        rust_flags += '\x1f' + f'--remap-path-prefix={rust_stage / "crate"}=/build/source/crates/thinkthen'
+        command(['python3', 'libraries/rust/check.py', str(root), str(rust_stage)], root,
+                {**env, 'CARGO_TARGET_DIR': str(rust_target), 'CARGO_ENCODED_RUSTFLAGS': rust_flags,
+                 'THINKTHEN_TEST_BACKEND': str(run / 'target-tools/debug/conformance-backend'),
+                 'THINKTHEN_CONFORMANCE_IDS': str(root / 'conformance/routine-ids.txt')},
+                folder / 'check.log', timeout=3600)
+    collections.append(dict(name='installed-rust',
+                            objects=[rust_target / 'debug/thinkthen-rust-consumer'], runner=rust_runner))
+    for language, binary in (('polars', 'thinkthen-polars-consumer'),):
         target = run / ('target-' + language)
         def runner(folder, language=language, target=target):
             command(['sh', './check.sh'], root / 'libraries' / language,
