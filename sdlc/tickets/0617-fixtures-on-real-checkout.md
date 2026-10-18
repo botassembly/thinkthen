@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0615
 
+Reviews: revision bdff727, accept
+
 ## Outcome
 
 - Fixtures that exercise `test`, `test-full-cases`, `smoke` or `surfaces` run against a worktree of the tracked checkout (`git worktree add` or a `git archive` of `HEAD`), never against a hand-picked list of copied files.
