@@ -31,3 +31,7 @@ Rust sends rows and aggregates, and each language then works out the call's answ
 The Rust library's outside consumer (`libraries/rust/consumer/src/main.rs`, `consumer/src/fixture.rs`) also repeats per-function projection that `Call::value()` and `Call::probability()` already provide.
 
 0626 rewrites the same result schema and serializers, so this ticket follows it.
+
+## Progress
+
+- 2026-10-18 started
