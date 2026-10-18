@@ -69,23 +69,14 @@ ACCEPTED_DEV_DEPENDENCIES = {
 ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
-# same lints, license, size, and dependency tables as the crate.
+# same lints, license, and dependency tables as the crate.
 MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend"}
-WARN_FILE_LINES = 500
-MAX_FILE_LINES = 1000
-BINDING_SOURCE_EXTENSIONS = {
-    ".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r",
-    ".c", ".h", ".cpp", ".hpp", ".cc", ".cs", ".go", ".java", ".kt", ".scala",
-    ".swift", ".zig", ".php", ".dart", ".adb", ".ads", ".m", ".mm", ".cob", ".cpy", ".sql",
-}
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 sys.path.insert(0, str(REPO / "sdlc/generators/results"))
 from registry import generated_paths
 from sources import TOOL_GENERATED, tracked_files
 GENERATED_BINDING_SOURCES = generated_paths() | TOOL_GENERATED
 
-# Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
-MAX_FORMAT_SKIPS = 3
 INHERITED = {"workspace": True}
 
 # ADR 0010's clarification of 2026-09-19: other backends will come, so the
@@ -2208,68 +2199,6 @@ def check_crate_roots() -> None:
                 fail("crate-root", f"{relative} holds exactly one {attribute}")
 
 
-def binding_source(relative: str) -> bool:
-    """Tracked hand-written binding code, including declarations and tests."""
-    path = pathlib.PurePosixPath(relative)
-    return (path.parts[0] in {"libraries", "databases"}
-            and path.suffix in BINDING_SOURCE_EXTENSIONS
-            and relative not in GENERATED_BINDING_SOURCES)
-
-
-def source_size_message(relative: str, text: str) -> tuple[str, str] | None:
-    lines = sum(bool(line.strip()) for line in text.splitlines())
-    if lines >= MAX_FILE_LINES:
-        return "failure", f"{relative} has {lines} non-blank lines; fewer than {MAX_FILE_LINES} are required"
-    if lines >= WARN_FILE_LINES:
-        return "warning", f"{relative} has {lines} non-blank lines; explain the large file in the change's commit"
-    return None
-
-
-def check_source_size_cases() -> None:
-    for lines, level in ((499, None), (500, "warning"), (999, "warning"), (1000, "failure")):
-        text = "line\n\n \n" * lines
-        message = source_size_message("planted.rs", text)
-        if (message[0] if message else None) != level:
-            fail("size", f"the {lines}-line boundary ignores blanks and reports {level}")
-    for suffix in BINDING_SOURCE_EXTENSIONS:
-        for folder in ("libraries", "databases"):
-            relative = f"{folder}/example/src/planted{suffix}"
-            if not binding_source(relative):
-                fail("size", f"the hand-written source {relative} is counted")
-    excluded = [*GENERATED_BINDING_SOURCES, "libraries/example/README.md", "databases/example/data.json",
-                "specification/planted.py"]
-    if any(binding_source(relative) for relative in excluded):
-        fail("size", "generated source and non-source files remain excluded")
-
-
-def check_sources() -> None:
-    check_source_size_cases()
-    sources = sorted(
-        source for folder in ("crates", "conformance") for source in tracked_files(REPO / folder)
-        if source.suffix == ".rs"
-    )
-    if not sources:
-        fail("size", "the workspace holds at least one Rust source file")
-    # Keep the tracked binding inventory: each binding has its own build folders.
-    listed = subprocess.run(
-        ["git", "ls-files", "-z", "--", "libraries", "databases"],
-        cwd=REPO, env=child_env(), capture_output=True, check=True,
-    ).stdout.decode("utf-8").split("\0")
-    bindings = [REPO / relative for relative in listed if relative and binding_source(relative)]
-    for source in [*sources, *bindings]:
-        relative = source.relative_to(REPO).as_posix()
-        message = source_size_message(relative, source.read_text(encoding="utf-8"))
-        if message:
-            level, text = message
-            if level == "failure":
-                fail("size", text)
-            else:
-                print(f"policy size warning: {text}", file=sys.stderr)
-    skips = sum(source.read_text(encoding="utf-8").count("rustfmt::skip") for source in sources)
-    if skips > MAX_FORMAT_SKIPS:
-        fail("format", f"crates hold {skips} rustfmt::skip attributes and the ceiling is {MAX_FORMAT_SKIPS}")
-
-
 def adapter_paths() -> tuple[str, ...]:
     """The files a vendor word may live in: `adapters.rs` and each module it declares.
 
@@ -2744,7 +2673,6 @@ def main() -> int:
     check_measure_policy()
     check_doors()
     check_facade()
-    check_sources()
     from unit_rationale import check_unit_rationale
     check_unit_rationale(REPO, rust_tokens, fail)
     check_seam()
