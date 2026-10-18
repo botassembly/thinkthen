@@ -480,46 +480,45 @@ class PublicAssertions(unittest.TestCase):
                 self.assertEqual(env[name], value)
             self.assertNotEqual(env['HOME'], '/caller')
 
-    def test_four_consumers_run_together_while_rust_consumers_share_one_lane(self):
+    def test_full_consumers_run_alone_and_keep_every_public_cell(self):
         import threading
+        import time
         ids = ['rust', 'rust-polars', 'one', 'two', 'three']
         contract = {'functions': ['decide'], 'consumers': [
             {'id': name, 'owner': '0431', 'baseline': ['sh', name]}
             for name in ids], 'required_cases': list(self.cases.values())}
-        barrier = threading.Barrier(4, timeout=3)
-        finished_rust = threading.Event()
+        active, peak = 0, 0
+        lock = threading.Lock()
         def command(args, **kwargs):
+            nonlocal active, peak
             name = args[-2]
-            if name == 'rust-polars':
-                self.assertTrue(finished_rust.is_set())
-            else:
-                barrier.wait()
+            with lock:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(.03)
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
             kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
-            if name == 'rust':
-                finished_rust.set()
+            with lock:
+                active -= 1
             return subprocess.CompletedProcess(args, 0)
         with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+            self.assertEqual(peak, 1)
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))
             self.assertTrue(all(0 <= row['duration_seconds'] < 3 for row in matrix))
             self.assertTrue(all(row['duration_seconds'] != 0.25 for row in matrix))
             self.assertIn('Duration (s)', (Path(scratch) / 'target/parity/matrix.md').read_text())
 
     def test_family_prepares_once_and_gives_each_member_private_state_and_remaining_budget(self):
-        import threading
         import time
         names = ['python', 'pandas', 'python-polars', 'java', 'kotlin', 'scala']
         contract = {'functions': ['decide'], 'consumers': [
             {'id': name, 'owner': '0431', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
             for name in names], 'required_cases': list(self.cases.values())}
-        prepared, homes, active, peak = {}, {}, 0, 0
-        lock = threading.Lock()
-        first_four = threading.Barrier(4, timeout=3)
+        prepared, homes = {}, {}
         def command(args, **kwargs):
-            nonlocal active, peak
             env = kwargs['env']
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
@@ -533,24 +532,15 @@ class PublicAssertions(unittest.TestCase):
             homes[member] = {key: env[key] for key in ('HOME', 'XDG_CONFIG_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME', 'TMPDIR')}
             # Each backend/cache fixture counter belongs to this member alone.
             Path(env['XDG_STATE_HOME'], 'counter').write_text(member)
-            with lock:
-                active += 1
-                peak = max(peak, active)
-                join = len(homes) <= 4
-            if join:
-                first_four.wait()
             time.sleep(.01)
             self.assertEqual(Path(env['XDG_STATE_HOME'], 'counter').read_text(), member)
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
-            with lock:
-                active -= 1
             return subprocess.CompletedProcess(args, 0)
         with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
-            self.assertEqual(peak, 4)
             self.assertEqual(len(homes), len(names))
             for key in next(iter(homes.values())):
                 self.assertEqual(len({env[key] for env in homes.values()}), len(names))
