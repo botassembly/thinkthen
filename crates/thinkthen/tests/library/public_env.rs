@@ -236,6 +236,9 @@ fn run(case: &str, argument: &str) -> Vec<String> {
     let seed = || EngineBuilder::from_env().expect("a seed");
     match case {
         "settings-json" => vec![shown(EngineBuilder::from_settings_json(argument))],
+        "settings-profile" => vec![shown(
+            EngineBuilder::from_settings_json(argument).and_then(EngineBuilder::build),
+        )],
         "settings-budget" => settings_json::budget(argument),
         "second-base" => vec![ask(&seed()
             .base_url(argument)

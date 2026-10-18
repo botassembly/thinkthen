@@ -131,6 +131,7 @@ impl fmt::Debug for EngineBuilder {
 impl EngineBuilder {
     /// Apply one engine setting from its name and raw JSON value.
     /// Text values use JSON string quoting; numbers and booleans use their literal text.
+    /// SQL profiles contain inline JSON; settings documents name profile files.
     /// This validates without opening files or sending requests.
     /// # Errors
     /// Refuses unknown names and invalid values with the settings document's messages.
@@ -140,7 +141,7 @@ impl EngineBuilder {
         {
             match crate::core::Setting::parse(&text) {
                 Some(crate::core::Setting::Records(count)) => {
-                    return self.apply_setting(name, &count.to_string(), true);
+                    return self.apply_setting(name, &count.to_string(), true, true);
                 }
                 Some(crate::core::Setting::Max) => {}
                 None => {
@@ -148,7 +149,7 @@ impl EngineBuilder {
                 }
             }
         }
-        self.apply_setting(name, raw, true)
+        self.apply_setting(name, raw, true, true)
     }
 
     /// Validate the closed C/host engine-settings object without reading the

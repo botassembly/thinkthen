@@ -144,11 +144,9 @@ impl Document {
             batch.native()?;
         }
         for (name, value) in &self.1 {
-            builder = if captured {
-                builder.setting(name, value.get())?
-            } else {
-                builder.apply_setting(name, value.get(), false)?
-            };
+            // Native documents name profile files; SQL pairs carry inline profiles.
+            // Both sources use the same field parser and builder application.
+            builder = builder.apply_setting(name, value.get(), captured, false)?;
         }
         builder.check_setting_prices()?;
         Ok(builder)
@@ -157,6 +155,7 @@ impl Document {
         &self,
         mut builder: EngineBuilder,
         captured: bool,
+        inline_profile: bool,
     ) -> Result<EngineBuilder, Error> {
         let values = &self.0;
         // Reserved activation has no executable protocol; presence alone refuses.
@@ -204,7 +203,7 @@ impl Document {
             builder = builder.model(value)?;
         }
         if let Some(value) = &values.profile {
-            builder = if value.trim_start().starts_with('{') {
+            builder = if inline_profile {
                 builder.profile_json(value)?
             } else {
                 builder.profile(value)?
@@ -234,6 +233,7 @@ impl EngineBuilder {
         name: &str,
         raw: &str,
         captured: bool,
+        inline_profile: bool,
     ) -> Result<Self, Error> {
         let value: &serde_json::value::RawValue = serde_json::from_str(raw).map_err(|_| {
             Error::usage(format!(
@@ -243,7 +243,11 @@ impl EngineBuilder {
         })?;
         let name =
             serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
-        Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(self, captured)
+        Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(
+            self,
+            captured,
+            inline_profile,
+        )
     }
 
     /// Admit engine settings before capturing the environment and configuration.
