@@ -1,5 +1,5 @@
 //! Native row projections share the settled contract with collecting and streamed calls.
-use super::settled::{AnswerResolution as Resolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledJudgment, SettledOriginal};
+use super::settled::{AnswerResolution as Resolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledJudgment, SettledOriginal, SettledDecision};
 use crate::{Answer, CompleteAnnotated, CompleteRecord, Judgment, QuestionInput, RequestValue};
 use std::collections::BTreeMap;
 
@@ -86,7 +86,11 @@ impl SettledAnswer {
         Some(match value {
             RequestValue::Decisions(rows) => Self::Decide(Settled::rows(rows.iter().map(|row| {
                 let value = decision(row.result().value());
-                Settled::one(value, row.result().probability(), None, None, nullable(value.is_some()))
+                let meaning = match row.result().canonical.decide_value(value) {
+                    crate::core::complete_documents::wire::DecideValue::Authored(meaning) => Some(meaning.clone()),
+                    crate::core::complete_documents::wire::DecideValue::Primitive(_) => None,
+                };
+                Settled::one(SettledDecision { value, meaning }, row.result().probability(), None, None, nullable(value.is_some()))
             }))),
             RequestValue::Choices(rows) => Self::Choose(Settled::rows(rows.iter().map(|row| {
                 let result = row.result();

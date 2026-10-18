@@ -90,7 +90,7 @@ impl std::fmt::Debug for SettledJudgment {
 pub enum SettledAnswer {
     /// Decision values carry yes odds when resolved.
     #[cfg_attr(test, schemars(extend("x-probability-mode" = "yes")))]
-    Decide(Settled<Option<bool>, Option<f64>>),
+    Decide(Settled<SettledDecision, Option<f64>>),
     /// Choice values carry the selected option's odds when resolved.
     #[cfg_attr(test, schemars(extend("x-probability-mode" = "picked")))]
     Choose(Settled<Option<String>, Option<f64>>),
@@ -103,6 +103,18 @@ pub enum SettledAnswer {
     /// Filtering keeps selected originals and their yes odds in matching order.
     #[cfg_attr(test, schemars(extend("x-probability-mode" = "yes")))]
     Filter(Settled<Vec<SettledOriginal>, Vec<Option<f64>>>),
+    /// Ranked zero-based originals carry aligned item odds.
+    #[cfg_attr(test, schemars(extend("x-probability-mode" = "items")))]
+    Rank(Settled<Vec<usize>, Vec<Option<f64>>>),
+    /// Find's successful synthetic none is resolved null with no selected index.
+    #[cfg_attr(test, schemars(extend("x-probability-mode" = "picked")))]
+    Find(Settled<Option<SettledOriginal>, Option<f64>>),
+    /// Recognition carries probabilities aligned with its names or proposals.
+    #[cfg_attr(test, schemars(extend("x-probability-mode" = "items")))]
+    Recognize(Settled<super::settled_aggregates::SettledRecognition, Vec<Option<f64>>>),
+    /// Relations carry probabilities aligned with their selected edges.
+    #[cfg_attr(test, schemars(extend("x-probability-mode" = "items")))]
+    Relate(Settled<super::settled_aggregates::SettledRelations, Vec<Option<f64>>>),
     /// Named answers retain successful nulls and omit failed values.
     #[cfg_attr(test, schemars(extend("x-probability-mode" = "null")))]
     Annotate(Settled<BTreeMap<String, SettledJudgment>, Option<f64>>),
@@ -121,5 +133,29 @@ impl SettledOriginal {
 impl std::fmt::Debug for SettledOriginal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SettledOriginal").finish_non_exhaustive()
+    }
+}
+
+/// A primitive decision and its optional authored presentation, including null.
+#[derive(Clone)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "crate::core::complete_documents::wire::DecideValue<'static>"))]
+pub struct SettledDecision {
+    pub(crate) value: Option<bool>,
+    pub(crate) meaning: Option<crate::core::text::Meaning>,
+}
+impl SettledDecision {
+    /// The primitive reading remains available when its authored value is null.
+    #[must_use]
+    pub const fn primitive(&self) -> Option<bool> { self.value }
+}
+impl std::fmt::Debug for SettledDecision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SettledDecision").finish_non_exhaustive()
+    }
+}
+impl Serialize for SettledDecision {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use crate::core::complete_documents::wire::DecideValue;
+        self.meaning.as_ref().map_or(DecideValue::Primitive(self.value), DecideValue::Authored).serialize(serializer)
     }
 }

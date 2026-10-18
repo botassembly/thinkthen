@@ -130,15 +130,7 @@ impl Atomic {
         }
         match (self.function, &self.value) {
             (InputFunction::Decide, Value::YesNo(value)) => {
-                let meaning = match (&self.question, value) {
-                    (crate::core::Question::Decide { yes, .. }, Some(true)) => yes.as_ref(),
-                    (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
-                    _ => None,
-                };
-                let value = meaning.map_or(
-                    super::wire::DecideValue::Primitive(*value),
-                    super::wire::DecideValue::Authored,
-                );
+                let value = self.decide_value(*value);
                 self.document(input, question_name, index, members, value)
                     .serialize(serializer)
             }
@@ -158,6 +150,15 @@ impl Atomic {
                 .document(input, question_name, index, members, &self.value)
                 .serialize(serializer),
         }
+    }
+
+    pub(crate) fn decide_value(&self, value: Option<bool>) -> super::wire::DecideValue<'_> {
+        let meaning = match (&self.question, value) {
+            (crate::core::Question::Decide { yes, .. }, Some(true)) => yes.as_ref(),
+            (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
+            _ => None,
+        };
+        meaning.map_or(super::wire::DecideValue::Primitive(value), super::wire::DecideValue::Authored)
     }
 
     fn document<'a, T: Serialize, V: Serialize>(

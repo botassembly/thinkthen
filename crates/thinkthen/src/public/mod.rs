@@ -109,7 +109,7 @@ pub use results::FindSelection;
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    AnswerResolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledJudgment, SettledOriginal,
+    AnswerResolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledJudgment, SettledOriginal, SettledDecision, SettledRecognition, SettledRelations,
     Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, CallReply, Candidate,
     CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
     CompleteFacts, CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord,
