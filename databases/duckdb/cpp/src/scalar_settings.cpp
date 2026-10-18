@@ -30,8 +30,7 @@ bool FolderAllowed(ClientContext &context, const std::optional<string> &folder) 
 	try {
 		FileSystem::GetFileSystem(context).OpenFile(*folder + "/.probe", FileOpenFlags::FILE_FLAGS_READ);
 	} catch (const std::exception &error) {
-		// Host exceptions can carry private typeinfo across the extension boundary.
-		// A missing probe is allowed; every other DuckDB error refuses the folder.
+		// Host DuckDB typeinfo can be private; classify missing-probe IO by its serialized type.
 		return ErrorData(error).Type() == ExceptionType::IO;
 	}
 	return true;
