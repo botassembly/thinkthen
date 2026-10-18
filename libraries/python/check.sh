@@ -18,6 +18,7 @@ command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
     [ "$profile" = routine ] || exit 2
     scratch=$THINKTHEN_COVERAGE_STAGE

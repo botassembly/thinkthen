@@ -12,7 +12,7 @@ case ${THINKTHEN_ARTIFACT:-} in
   *thinkthen-dart-*.tar.gz) ;;
   *) [ -x "$TT_FLUTTER" ] || exit 77 ;;
 esac
-python3 "$ROOT/checks/privacy.py"
+python3 "$ROOT/../../conformance/children/privacy.py" --sources "$ROOT" --include '*.dart' --include '*.py' --include '*.sh' --include '*.md' --include '*.yaml' --include '*.json' --artifact-env
 node "$ROOT/../../sdlc/scripts/ratchet.mjs" "$ROOT/ratchet.dart.json"
 if [ "${1:-}" = --native-assets ]; then
   shift

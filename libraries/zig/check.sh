@@ -11,6 +11,7 @@ zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 [ -x "$zig" ] || exit 77
 export THINKTHEN_ZIG="$zig"
 for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 export PATH="$(dirname "$zig"):$PATH"
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
@@ -44,5 +45,5 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$root/conformance/children/native_guard.py" "$THINKTHEN_ARTIFACT"
+python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"

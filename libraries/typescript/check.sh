@@ -36,6 +36,21 @@ public_types() {
     done
 }
 
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ] || [ "$profile" = full ]; then
+    # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
+    # cases and examples from a copy of tests/, which import the package by its name.
+    case $(uname -s):$(uname -m) in
+        Linux:x86_64) expected=linux-x64; [ ! -x "$node_home/bin/node" ] || PATH=$node_home/bin:$PATH ;;
+        Linux:aarch64) expected=linux-arm64 ;;
+        Darwin:x86_64) expected=darwin-x64 ;;
+        Darwin:arm64) expected=darwin-arm64 ;;
+        *) echo 'typescript: not run; no native Node target for this host'; exit 77 ;;
+    esac
+    command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 77; }
+    [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
+    [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
+fi
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 # Full qualification installs one real package, then runs isolated family members.
 if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ -x "$node_home/bin/node" ] || exit 77
@@ -49,18 +64,6 @@ if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHE
     [ -f "$THINKTHEN_ARTIFACT" ] || fail 'npm pack did not retain the release package'
 fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
-    # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
-    # cases and examples from a copy of tests/, which import the package by its name.
-    case $(uname -s):$(uname -m) in
-        Linux:x86_64) expected=linux-x64; [ ! -x "$node_home/bin/node" ] || PATH=$node_home/bin:$PATH ;;
-        Linux:aarch64) expected=linux-arm64 ;;
-        Darwin:x86_64) expected=darwin-x64 ;;
-        Darwin:arm64) expected=darwin-arm64 ;;
-        *) echo 'typescript: not run; no native Node target for this host'; exit 77 ;;
-    esac
-    command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 77; }
-    [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
-    [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
     if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
         scratch_dir project
         cp -R "$THINKTHEN_PARITY_PREPARED/tests" "$project/tests"

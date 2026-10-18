@@ -36,6 +36,7 @@ usage_home
 . ./runtime.sh
 runtime_ready
 runtime_target
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 REPO=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
 	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}

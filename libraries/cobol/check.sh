@@ -12,7 +12,8 @@ usage_home
 scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
 python3 "$REPO/sdlc/generators/results/generate.py" --target cobol --check
-python3 "$ROOT/checks/privacy.py"
+python3 "$ROOT/checks/generated_names.py"
+python3 "$REPO/conformance/children/privacy.py" --sources "$ROOT" --include README.md --include LICENSE --include source-package.json --include 'src/*' --include 'Src/*' --include 'Sources/*' --include 'examples/*' --include 'Examples/*' --include 'copybooks/*' --artifact-env
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 scratch_dir evidence
 . "$REPO/sdlc/scripts/installed.sh"

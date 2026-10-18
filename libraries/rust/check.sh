@@ -12,6 +12,7 @@ if [ "$profile" = stress ]; then
     echo 'rust: not run: no port load campaign'
     exit 77
 fi
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home

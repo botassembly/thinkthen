@@ -11,6 +11,7 @@ if [ "$profile" = stress ]; then
 fi
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
