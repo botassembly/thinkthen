@@ -7,7 +7,9 @@ import os
 from pathlib import Path
 import platform
 import shlex
+import shutil
 import subprocess
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -25,14 +27,22 @@ is_yellow = platform.node().split('.')[0] == 'yellow'
 memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 # The image identity includes all construction inputs and the pinned base.
 digest = hashlib.sha256()
-for path in ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py', 'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env'):
+inputs = ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
+          'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env')
+for path in inputs:
     digest.update((ROOT / path).read_bytes())
 tag = 'thinkthen-check:' + arch + '-' + digest.hexdigest()[:20]
 # The classic builder enforces these per-build cgroup limits. Docker's
 # default integrated BuildKit driver ignores the legacy resource flags.
-subprocess.run(['docker', 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
-                '--cpu-period', '100000', '--cpu-quota', str(pin['cpus'] * 100000), '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),
-                '--build-arg', 'BASE=' + base, '-f', 'sdlc/linux/Dockerfile', '-t', tag, '.'], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
+with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
+    context = Path(temporary)
+    for relative in inputs:
+        destination = context / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / relative, destination)
+    subprocess.run(['docker', 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
+                    '--cpu-period', '100000', '--cpu-quota', str(pin['cpus'] * 100000), '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),
+                    '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
 image = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
 print('linux-check: image=' + image + ' base=' + base, flush=True)
 if args.checks == ['prepare']:
