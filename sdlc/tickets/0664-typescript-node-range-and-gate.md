@@ -25,3 +25,7 @@ On the M5 through pm job, natively and in the pinned arm64 container, the packed
 - The gate expects that Node under ~/.cache/thinkthen-toolchains, placed by setup-toolchain.sh with a linux-x64 archive name hardcoded (setup-toolchain.sh:9). Commit a6cfcabe4 added a pinned compiler download for the installed smoke.
 - native-platforms.json lists five addon targets, but only the host's addon is built and tested (build-addon.sh:14-15).
 - check.sh is 246 lines.
+
+## Progress
+
+- 2026-10-18 Carried from 0628 stress job 1792330323744-7191: the native Mac TypeScript check hard-codes a Linux Node cache path; this ticket decides whether a native Mac repair is needed after the pinned-container checks, and no repair starts before phase 3.

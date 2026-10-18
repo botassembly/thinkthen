@@ -27,3 +27,7 @@ Depends on: 0615, 0618, 0682, 0688
 - **Unix only.** The package declares `OS_type: unix`.
 - **Boilerplate.** `tools/msrv.R` is extendr boilerplate.
 - **Fixture consumers.** About 25 R scripts drive conformance.
+
+## Progress
+
+- 2026-10-18 Carried from 0628 stress job 1792330323744-7191: the native Mac R source archive carries extended-attribute metadata with an embedded NUL that breaks rawToChar; this ticket decides whether a native Mac repair is needed after the pinned-container checks, and no repair starts before phase 3.
