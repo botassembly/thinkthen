@@ -150,7 +150,11 @@ fn raw_setting_pairs_share_document_validation_and_never_send() {
     let error = Engine::builder().setting("throttle", "33").unwrap_err();
     let expected: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../conformance/settings-errors.json"
-    )).expect("shared expected settings messages");
-    assert_eq!(format!("thinkthen usage: {error} (retryable: no)"), expected["throttle"]);
+    ))
+    .expect("shared expected settings messages");
+    assert_eq!(
+        format!("thinkthen usage: {error} (retryable: no)"),
+        expected["throttle"]
+    );
     assert_eq!(listener.count(), 0);
 }

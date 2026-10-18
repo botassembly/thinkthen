@@ -139,10 +139,15 @@ impl Document {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
             builder.check_proxy()?;
         }
-        if let Some(batch) = &self.0.batch { batch.native()?; }
+        if let Some(batch) = &self.0.batch {
+            batch.native()?;
+        }
         for (name, value) in &self.1 {
-            builder = if captured { builder.setting(name, value.get())? }
-                else { builder.apply_setting(name, value.get(), false)? };
+            builder = if captured {
+                builder.setting(name, value.get())?
+            } else {
+                builder.apply_setting(name, value.get(), false)?
+            };
         }
         builder.check_setting_prices()
     }
@@ -231,9 +236,17 @@ impl Document {
     }
 }
 impl EngineBuilder {
-    pub(super) fn apply_setting(self, name: &str, raw: &str, captured: bool) -> Result<Self, Error> {
+    pub(super) fn apply_setting(
+        self,
+        name: &str,
+        raw: &str,
+        captured: bool,
+    ) -> Result<Self, Error> {
         let value: &serde_json::value::RawValue = serde_json::from_str(raw).map_err(|_| {
-            Error::usage(format!("settings {} has an invalid value", crate::core::safe_key(name)))
+            Error::usage(format!(
+                "settings {} has an invalid value",
+                crate::core::safe_key(name)
+            ))
         })?;
         let name =
             serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
@@ -243,7 +256,9 @@ impl EngineBuilder {
     pub(super) fn check_setting_prices(self) -> Result<Self, Error> {
         match (&self.setting_prices.0, &self.setting_prices.1) {
             (Some(_), Some(_)) | (None, None) => Ok(self),
-            _ => Err(Error::usage("settings prices require both input and output fields")),
+            _ => Err(Error::usage(
+                "settings prices require both input and output fields",
+            )),
         }
     }
 

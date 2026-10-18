@@ -135,13 +135,17 @@ impl EngineBuilder {
     /// # Errors
     /// Refuses unknown names and invalid values with the settings document's messages.
     pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
-        if name == "batch" && let Ok(text) = serde_json::from_str::<String>(raw) {
+        if name == "batch"
+            && let Ok(text) = serde_json::from_str::<String>(raw)
+        {
             match crate::core::Setting::parse(&text) {
                 Some(crate::core::Setting::Records(count)) => {
                     return self.apply_setting(name, &count.to_string(), true);
                 }
                 Some(crate::core::Setting::Max) => {}
-                None => { crate::public::RequestBatch::Named(text).native()?; }
+                None => {
+                    crate::public::RequestBatch::Named(text).native()?;
+                }
             }
         }
         self.apply_setting(name, raw, true)
