@@ -127,6 +127,26 @@ def rust_components(manifest, env, install=False):
         raise RuntimeError('Rust components missing: ' + ', '.join(missing))
 
 
+def cargo_runtime(root, shared):
+    """Share Cargo's package data and locks without its commands or configuration."""
+    owned = root / 'cargo-runtime'
+    owned.mkdir(parents=True, exist_ok=True)
+    shared = Path(shared).resolve()
+    if shared != owned.resolve():
+        for name in ('registry', 'git', 'advisory-dbs', '.package-cache',
+                     '.package-cache-mutate', '.global-cache'):
+            link = owned / name
+            target = shared / name
+            if not target.exists():
+                continue
+            if link.is_symlink():
+                if link.readlink() == target:
+                    continue
+                link.unlink()
+            link.symlink_to(target)
+    return str(owned)
+
+
 def resolve(manifest, groups, root, check=False):
     host = platform.system().lower()
     requirements = selected(manifest, groups, host)
@@ -203,7 +223,8 @@ def resolve(manifest, groups, root, check=False):
             rust_components(manifest, env, install=host == 'darwin' and not check)
         except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
             failures.append('rust: ' + str(error))
-    env['CARGO_HOME'] = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
+    shared = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
+    env['CARGO_HOME'] = cargo_runtime(root, shared) if host == 'darwin' else shared
     missing = []
     for tool in requirements.values():
         for command in tool['commands']:
@@ -279,7 +300,9 @@ def main():
     if command[:1] == ['--']:
         command = command[1:]
     if command:
-        child = dict(os.environ, **env)
+        child = {name: value for name, value in os.environ.items()
+                 if not name.startswith('CARGO_ALIAS_')}
+        child.update(env)
         os.execvpe(command[0], command, child)
     print(env['PATH'])
     return 0
