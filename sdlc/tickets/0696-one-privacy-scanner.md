@@ -28,3 +28,4 @@ Reviews: revision cbec1bf, accept
 
 - 2026-10-18 started
 - 2026-10-18 next: The shared scanner is held outside the clean closing batch pending a narrow ruling on synthetic paths and public TLS test keys shipped in the Rust crate; no scanner exception or package membership change has been made.
+- 2026-10-18 next: The exact path-and-rule fixture allowances and archive coverage repairs are accepted at cbec1bfc4, with nine privacy tests and the real crate plus 1041 unpacked files passing; integrated routine gates remain.
