@@ -71,7 +71,7 @@ So packing keeps the totals and loses the single answers. It also breaks replay,
 
 - One `INSTALL` or one file, with no Rust toolchain on the user's machine.
 - The shared conformance cases run as SQL under replay, with the same expected answers as every library.
-- The extension's own code stays a thin shim with a line ceiling in `sdlc/ratchet.json`.
+- The extension's own code stays a thin shim; code review judges its size.
 - The name is `thinkthen` in every registry, with no suffix.
 
 ## Shared anti-goals

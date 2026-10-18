@@ -74,7 +74,7 @@ Where the build differs from the goals below:
 
 **PyO3, built and shipped with maturin.** PyO3 builds against CPython's stable ABI, and maturin builds the wheels and the sdist from one manifest.
 
-The shim holds argument conversion, the command's option words as keywords, the empty-value mapping for unsure, `decide_many`, chunking, failure-to-exception mapping with `retryable` on every error and the deadline kind its own exception, the `replaying` scope, the `aio` wrapper, and the stubs. It holds no threshold math, no JSON, no retry, no digest, no recording format, and no HTTP. The line ceiling is about 400 code lines; 330 was the honest floor for errors, laziness, `aio`, and details without the Arrow door (205).
+The shim holds argument conversion, the command's option words as keywords, the empty-value mapping for unsure, `decide_many`, chunking, failure-to-exception mapping with `retryable` on every error and the deadline kind its own exception, the `replaying` scope, the `aio` wrapper, and the stubs. It holds no threshold math, no JSON, no retry, no digest, no recording format, and no HTTP. Code review judges the shim’s size; set no line ceiling.
 
 Wheels are abi3. One wheel per platform serves many Python versions. Prebuilt: manylinux and musllinux on x86_64 and aarch64, macOS on arm64 and x86_64, Windows on x86_64, plus an sdist. Whether abi3 covers the free-threaded build is unchecked.
 

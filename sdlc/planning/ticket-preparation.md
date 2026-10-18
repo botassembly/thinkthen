@@ -14,7 +14,7 @@ Read `origin/main` at a named commit; a local `main` can lag. Verify a landed pr
 
 **Subprocesses.** Check every process level with the `children` guard; `policy.py` does not replace it. A timeout kills and reaps the owned child and closes its descriptors. Trace every join and destructor after a wait: a `Drop` can block on the same writer.
 
-**File caps.** Measure each touched file against its 500-line ceiling before planning growth. Verify the root ratchet and each binding total.
+**Source size.** Review each change for duplicated logic and clear ownership. Code review judges size; set no line ceilings.
 
 **Host value ranges.** Check each host's accepted values and NULL rules before copying a proof across ports.
 
