@@ -15,3 +15,6 @@ libraries/swift/CThinkThen.xcframework/
 
 # The gate resolver installs tools only inside its job checkout.
 /.tools/
+
+# Job-owned Linux container caches and build output.
+.linux-*/

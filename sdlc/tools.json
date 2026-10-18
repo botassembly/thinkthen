@@ -5,6 +5,10 @@
     "sha256": {
       "arm64": "dca4edac473d8950973bc90d47e2a579c8ed05b5c1e5ca4acd20f4870480d711",
       "x64": "0fa699789de2729602e5ef47e63470b69db7d76488e82dad5bd7c68779c0bb63"
+    },
+    "linux_sha256": {
+      "arm64": "767561482e50bff20bb93fb406f981afc52a2e6240ea1b2aabc6ece7bbd7ab25",
+      "x64": "1f27c7a3fbae8017d91e5109404d016387feee1fa5cf9ee96a969e655c779d37"
     }
   },
   "tools": {
@@ -729,7 +733,11 @@
       "version": "nightly-2026-08-24",
       "rustc_date": "2026-08-23",
       "probe": {
-        "argv": ["rustc", "+{version}", "--version"],
+        "argv": [
+          "rustc",
+          "+{version}",
+          "--version"
+        ],
         "contains": " {rustc_date})"
       }
     },
@@ -1066,5 +1074,19 @@
       "sha256": "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4",
       "directory": "yaml-0.2.5"
     }
+  },
+  "linux": {
+    "cpus": 4,
+    "memory_gib": 16,
+    "yellow_memory_gib": 14,
+    "images": {
+      "arm64": "ubuntu:24.04@sha256:18b33ff3829707f31ada654a963b9ee35f2e6f0241b964bd17a22a9b330cb63d",
+      "x86_64": "ubuntu:24.04@sha256:a2d43bffc46670d7108bb3c0468c67c5557c4c92e83e1e34cbff1322ad1b94dc"
+    },
+    "distribution_images": {
+      "arm64": "quay.io/pypa/manylinux_2_28_aarch64@sha256:c22ffd129ac99a8a42d1f2c2f4e88a9089288dd9ee987a7092da1c7dc48f27a9",
+      "x86_64": "quay.io/pypa/manylinux_2_28_x86_64@sha256:407f771c51a2c3e83ebe5a7970b4289ead3a6db21d9b9c089168775cad11d328"
+    },
+    "binstall_version": "1.15.5"
   }
 }

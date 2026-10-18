@@ -602,9 +602,9 @@ jobs:
                   run('stress', ['sh', 'sdlc/scripts/test-stress', '--run'])
               elif stage == 'coverage':
                   coverage = work / 'coverage'
-                  run('coverage', ['python3', 'sdlc/scripts/coverage', '--release', '--platform', 'linux', '--output', str(coverage)])
+                  run('coverage', ['python3', 'sdlc/scripts/coverage', '--platform', 'linux', '--output', str(coverage)])
                   apple = Path(os.environ['RUNNER_TEMP']) / 'thinkthen-apple-coverage/totals.json'
-                  run('coverage-join', ['python3', 'sdlc/scripts/coverage', '--release', '--join', str(coverage / 'totals.json'), str(apple)])
+                  run('coverage-join', ['python3', 'sdlc/scripts/coverage', '--join', str(coverage / 'totals.json'), str(apple)])
               else:
                   raise RuntimeError('unknown Linux stage')
               result['state'] = 'passed-local-platform-pending' if stage == 'core' else 'completed'
