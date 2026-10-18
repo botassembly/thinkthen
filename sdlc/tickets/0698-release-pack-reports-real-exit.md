@@ -18,3 +18,7 @@ Reviews: revision 8d9ac12, accept
 ## Evidence
 
 The 0643 installed proof on the M5 hit `release-pack` reading an unbound `CFLAGS` near line 724; its cleanup trap then reported exit 0 although no archive existed, and the installed session failed later with no clear cause. This is a false success in the release machinery, the class 0.2.1 rule 3 forbids. It is a small prerequisite that lands alone, ahead of any installed proof that packs the C library.
+
+## Progress
+
+- 2026-10-18 started
