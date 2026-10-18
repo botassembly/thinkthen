@@ -1,8 +1,0 @@
-{
-  "directory": [
-    "src"
-  ],
-  "extension": ".cs",
-  "scope": "handwritten-production",
-  "max": 423
-}

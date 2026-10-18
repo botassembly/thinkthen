@@ -74,7 +74,7 @@ SELECT id, json_extract(a, '$.spam.value'), json_extract(a, '$.folder.value')
 
 `rusqlite` has a maintained `loadable_extension` feature since 0.30.0, and its own example registers a scalar function. Its `functions` feature carries `create_aggregate_function`, and a maintainer discussion says a loadable extension needs neither `modern_sqlite` nor `vtab` to use it. `sqlite-loadable-rs` carries table functions, and its README calls itself beta, very unstable, and unsafe. Its newest published version is an alpha from 2023. Start with `rusqlite` and let the experiment prove it can carry an aggregate.
 
-The shim registers the functions, converts text and numbers, holds the parsed question in auxiliary data, maps a failure to a SQL error, and writes the entry point. No threshold math, no JSON building, no retry, no HTTP. The ceiling goes in `sdlc/ratchet.json` at about 240 code lines for this surface (207).
+The shim registers the functions, converts text and numbers, holds the parsed question in auxiliary data, maps a failure to a SQL error, and writes the entry point. No threshold math, no JSON building, no retry, no HTTP. Code review judges the shim’s size; set no line ceiling.
 
 The file ships from a GitHub release first, the way `sqlite-vec` does. A pip package and an npm package carrying the same file come later. The install page opens with the check. A CPython built without `--enable-loadable-sqlite-extensions` has no `enable_load_extension` method at all, and the macOS system SQLite omits extension loading.
 
