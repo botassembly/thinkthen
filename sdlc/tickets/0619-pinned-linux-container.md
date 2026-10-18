@@ -37,3 +37,4 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: Preparation is stopped at a3b114084 pending rulings on the unavailable JDK pin, constructed-image identity and Yellow memory; exact Swift acquisition is repaired and no full image or gate pass is claimed.
