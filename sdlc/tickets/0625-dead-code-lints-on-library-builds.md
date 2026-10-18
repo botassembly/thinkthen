@@ -33,3 +33,4 @@ Dead-code exceptions also point at work that already landed:
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The separated core is fresh-accepted at59d0254, but main prerequisite fixtures failed first on canonical temporary paths and then rehearsal signing; the independently reviewed path/diagnostic repair is held for the existing short-GPG-socket fixture fix and its full main gate, after which core landing unlocks0612 without waiting on the container.
