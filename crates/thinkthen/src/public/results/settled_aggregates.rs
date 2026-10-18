@@ -65,33 +65,9 @@ impl SettledAnswer {
     pub(crate) fn of(value: &RequestValue) -> Option<Self> {
         let resolved = || AnswerResolutions::State(AnswerResolution::Resolved);
         Some(match value {
-            RequestValue::Ranked(rows) => Self::Rank(Settled::one(
-                rows.iter().map(|row| row.ordinal()).collect(),
-                rows.iter().map(|row| row.result().probability()).collect(),
-                None,
-                None,
-                resolved(),
-            )),
-            RequestValue::SetRanked(rows) => Self::Rank(Settled::one(
-                rows.iter().map(|row| row.ordinal()).collect(),
-                rows.iter().map(|row| row.result().probability()).collect(),
-                None,
-                None,
-                resolved(),
-            )),
-            RequestValue::Found(found) => Self::Find(Settled::one(
-                found
-                    .selected()
-                    .cloned()
-                    .map(|original| SettledOriginal(Box::new(original))),
-                found.probability(),
-                Some(found.raw_pick().to_owned()),
-                match found.selection() {
-                    crate::FindSelection::Unit(index) => Some(index),
-                    crate::FindSelection::None => None,
-                },
-                resolved(),
-            )),
+            RequestValue::Ranked(rows) => Self::Rank(rank_answer(rows.iter().map(|row| (row.ordinal(), row.result().probability())))),
+            RequestValue::SetRanked(rows) => Self::Rank(rank_answer(rows.iter().map(|row| (row.ordinal(), row.result().probability())))),
+            RequestValue::Found(found) => Self::Find(find_answer(found)),
             RequestValue::Recognized(rows) => {
                 Self::Recognize(Settled::rows(rows.iter().map(|row| {
                     Settled::one(
@@ -202,4 +178,14 @@ fn append_selected<T>(
         (left @ super::AnswerShape::Scalar(None), right) => *left = right,
         _ => {}
     }
+}
+
+pub(crate) fn rank_answer(rows: impl Iterator<Item = (usize, Option<f64>)>) -> Settled<Vec<usize>, Vec<Option<f64>>> {
+    let (indexes, probabilities) = rows.unzip();
+    Settled::one(indexes, probabilities, None, None, AnswerResolutions::State(AnswerResolution::Resolved))
+}
+pub(crate) fn find_answer<T>(found: &crate::CompleteFound<T>) -> Settled<Option<SettledOriginal>, Option<f64>> {
+    let index = match found.selection() { crate::FindSelection::Unit(index) => Some(index), crate::FindSelection::None => None };
+    let value = index.and_then(|index| found.inputs.get(index)).map(|input| SettledOriginal(Box::new(input.as_ref().clone())));
+    Settled::one(value, found.probability(), Some(found.raw_pick().to_owned()), index, AnswerResolutions::State(AnswerResolution::Resolved))
 }

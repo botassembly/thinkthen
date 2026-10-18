@@ -1,6 +1,6 @@
 //! Typed convenience calls adopt the same settlement used by Request packets.
 use super::settled::{AnswerResolution, AnswerResolutions, Settled, SettledAnswer};
-use crate::{CompleteRecord, Error, InputEvidence, RequestValue};
+use crate::{CompleteRecord, Error, RequestValue};
 
 pub(crate) trait SettledCarrier {
     fn settled_answer(&self) -> Result<SettledAnswer, Error>;
@@ -30,36 +30,34 @@ scalar!(CompleteChoice, Choose, super::settled_rows::choice_answer);
 scalar!(CompleteTags, Tag, super::settled_rows::tag_answer);
 scalar!(CompleteScore, Score, super::settled_rows::score_answer);
 
-macro_rules! records {
-    ($result:ident, $variant:ident) => {
-        impl<T: InputEvidence> SettledCarrier for Vec<CompleteRecord<T, crate::$result>> {
+impl<T> SettledCarrier for Vec<CompleteRecord<T, crate::CompleteFilter>> {
+    fn settled_answer(&self) -> Result<SettledAnswer, Error> {
+        let selected = self.iter().filter(|row| row.result().value()).map(|row| {
+            let input = row.result().input.as_ref().ok_or_else(|| Error::defect("a filter result lost its original snapshot"))?;
+            Ok((super::SettledOriginal(input.clone()), row.result().probability()))
+        }).collect::<Result<Vec<_>, Error>>()?;
+        Ok(SettledAnswer::Filter(super::settled_rows::filter_answer(selected.into_iter())))
+    }
+}
+macro_rules! ranked {
+    ($result:ident) => {
+        impl<T> SettledCarrier for Vec<CompleteRecord<T, crate::$result>> {
             fn settled_answer(&self) -> Result<SettledAnswer, Error> {
-                RequestValue::$variant(
-                    self.iter()
-                        .map(|row| CompleteRecord {
-                            original: row.original().question_input(),
-                            ordinal: row.ordinal(),
-                            result: row.result().clone(),
-                        })
-                        .collect(),
-                )
-                .settled_answer()
+                Ok(SettledAnswer::Rank(super::settled_aggregates::rank_answer(self.iter().map(|row| (row.ordinal(), row.result().probability())))))
             }
         }
     };
 }
-records!(CompleteFilter, Filtered);
-records!(CompleteRank, Ranked);
-records!(CompleteSetRank, SetRanked);
-records!(CompleteAnnotated, Annotations);
-
-impl<T: InputEvidence + Clone> SettledCarrier for crate::CompleteFound<T> {
+ranked!(CompleteRank);
+ranked!(CompleteSetRank);
+impl<T> SettledCarrier for Vec<CompleteRecord<T, crate::CompleteAnnotated>> {
     fn settled_answer(&self) -> Result<SettledAnswer, Error> {
-        RequestValue::Found(
-            self.clone()
-                .map_original(|original| original.question_input()),
-        )
-        .settled_answer()
+        Ok(SettledAnswer::Annotate(Settled::rows(self.iter().map(|row| super::settled_rows::annotation(row.result())))))
+    }
+}
+impl<T> SettledCarrier for crate::CompleteFound<T> {
+    fn settled_answer(&self) -> Result<SettledAnswer, Error> {
+        Ok(SettledAnswer::Find(super::settled_aggregates::find_answer(self)))
     }
 }
 impl SettledCarrier for Vec<crate::CompleteRecognized> {

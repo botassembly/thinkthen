@@ -3,7 +3,7 @@ use super::settled::{
     AnswerResolution as Resolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer,
     SettledDecision, SettledJudgment, SettledOriginal,
 };
-use crate::{Answer, CompleteAnnotated, CompleteRecord, Judgment, QuestionInput, RequestValue};
+use crate::{Answer, CompleteAnnotated, Judgment, RequestValue};
 use std::collections::BTreeMap;
 
 impl<T, P> Settled<T, P> {
@@ -94,12 +94,12 @@ fn decision(value: Answer) -> Option<bool> {
         Answer::Unsure => None,
     }
 }
-fn annotation(
-    row: &CompleteRecord<QuestionInput, CompleteAnnotated>,
+pub(crate) fn annotation(
+    result: &CompleteAnnotated,
 ) -> Settled<BTreeMap<String, SettledJudgment>, Option<f64>> {
     let mut values = BTreeMap::new();
     let mut resolutions = BTreeMap::new();
-    for member in row.result().members() {
+    for member in result.members() {
         let value = match member.value() {
             Some(Judgment::Decision(value)) => SettledJudgment::Decision(decision(value)),
             Some(Judgment::Choice(value)) => SettledJudgment::Choice(value),
@@ -166,6 +166,10 @@ pub(crate) fn score_answer(result: &crate::CompleteScore) -> Settled<f64, Option
         resolved(),
     )
 }
+pub(crate) fn filter_answer(selected: impl Iterator<Item = (SettledOriginal, Option<f64>)>) -> Settled<Vec<SettledOriginal>, Vec<Option<f64>>> {
+    let (values, probabilities) = selected.unzip();
+    Settled::one(values, probabilities, None, None, resolved())
+}
 impl SettledAnswer {
     pub(crate) fn rows(value: &RequestValue) -> Option<Self> {
         Some(match value {
@@ -181,21 +185,9 @@ impl SettledAnswer {
             RequestValue::Scores(rows) => Self::Score(Settled::rows(
                 rows.iter().map(|row| score_answer(row.result())),
             )),
-            RequestValue::Filtered(rows) => Self::Filter(Settled::one(
-                rows.iter()
-                    .filter(|row| row.result().value())
-                    .map(|row| SettledOriginal(Box::new(row.original().clone())))
-                    .collect(),
-                rows.iter()
-                    .filter(|row| row.result().value())
-                    .map(|row| row.result().probability())
-                    .collect(),
-                None,
-                None,
-                resolved(),
-            )),
+            RequestValue::Filtered(rows) => Self::Filter(filter_answer(rows.iter().filter(|row| row.result().value()).map(|row| (SettledOriginal(Box::new(row.original().clone())), row.result().probability())))),
             RequestValue::Annotations(rows) => {
-                Self::Annotate(Settled::rows(rows.iter().map(annotation)))
+                Self::Annotate(Settled::rows(rows.iter().map(|row| annotation(row.result()))))
             }
             _ => return None,
         })

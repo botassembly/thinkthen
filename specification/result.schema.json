@@ -1317,276 +1317,6 @@
         }
       ]
     },
-    "Settled": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled10": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape15"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled2": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape6"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled3": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape7"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled4": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape8"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled5": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape9"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled6": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape11"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled7": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape12"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled8": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape13"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
-    "Settled9": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/AnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/AnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/AnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/AnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/AnswerShape14"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object"
-    },
     "SettledDecision": {
       "anyOf": [
         {
@@ -6751,286 +6481,6 @@
         }
       ]
     },
-    "completeSettled": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled10": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape15"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled2": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape6"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled3": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape7"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled4": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape8"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled5": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape9"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled6": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape11"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled7": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape2"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape12"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled8": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape13"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
-    "completeSettled9": {
-      "properties": {
-        "index": {
-          "$ref": "#/$defs/completeAnswerShape4"
-        },
-        "pick": {
-          "$ref": "#/$defs/completeAnswerShape3"
-        },
-        "probability": {
-          "$ref": "#/$defs/completeAnswerShape10"
-        },
-        "resolution": {
-          "$ref": "#/$defs/completeAnswerShape5"
-        },
-        "value": {
-          "$ref": "#/$defs/completeAnswerShape14"
-        }
-      },
-      "required": [
-        "value",
-        "probability",
-        "pick",
-        "index",
-        "resolution"
-      ],
-      "type": "object",
-      "unevaluatedProperties": false
-    },
     "completeSettledDecision": {
       "anyOf": [
         {
@@ -9892,150 +9342,340 @@
     "completesettledAnswer": {
       "oneOf": [
         {
-          "$ref": "#/$defs/completeSettled",
           "properties": {
             "function": {
               "const": "decide",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "yes"
         },
         {
-          "$ref": "#/$defs/completeSettled2",
           "properties": {
             "function": {
               "const": "choose",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape6"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "picked"
         },
         {
-          "$ref": "#/$defs/completeSettled3",
           "properties": {
             "function": {
               "const": "tag",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape7"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "null"
         },
         {
-          "$ref": "#/$defs/completeSettled4",
           "properties": {
             "function": {
               "const": "score",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape8"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "null"
         },
         {
-          "$ref": "#/$defs/completeSettled5",
           "properties": {
             "function": {
               "const": "filter",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape9"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "yes"
         },
         {
-          "$ref": "#/$defs/completeSettled6",
           "properties": {
             "function": {
               "const": "rank",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape11"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/completeSettled7",
           "properties": {
             "function": {
               "const": "find",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape12"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "picked"
         },
         {
-          "$ref": "#/$defs/completeSettled8",
           "properties": {
             "function": {
               "const": "recognize",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape13"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/completeSettled9",
           "properties": {
             "function": {
               "const": "relate",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape14"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/completeSettled10",
           "properties": {
             "function": {
               "const": "annotate",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape15"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false,
@@ -12805,141 +12445,331 @@
     "settledAnswer": {
       "oneOf": [
         {
-          "$ref": "#/$defs/Settled",
           "properties": {
             "function": {
               "const": "decide",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "yes"
         },
         {
-          "$ref": "#/$defs/Settled2",
           "properties": {
             "function": {
               "const": "choose",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape6"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "picked"
         },
         {
-          "$ref": "#/$defs/Settled3",
           "properties": {
             "function": {
               "const": "tag",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape7"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "null"
         },
         {
-          "$ref": "#/$defs/Settled4",
           "properties": {
             "function": {
               "const": "score",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape8"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "null"
         },
         {
-          "$ref": "#/$defs/Settled5",
           "properties": {
             "function": {
               "const": "filter",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape9"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "yes"
         },
         {
-          "$ref": "#/$defs/Settled6",
           "properties": {
             "function": {
               "const": "rank",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape11"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/Settled7",
           "properties": {
             "function": {
               "const": "find",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape12"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "picked"
         },
         {
-          "$ref": "#/$defs/Settled8",
           "properties": {
             "function": {
               "const": "recognize",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape13"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/Settled9",
           "properties": {
             "function": {
               "const": "relate",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape14"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "items"
         },
         {
-          "$ref": "#/$defs/Settled10",
           "properties": {
             "function": {
               "const": "annotate",
               "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape15"
             }
           },
           "required": [
-            "function"
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
           ],
           "type": "object",
           "x-probability-mode": "null"
