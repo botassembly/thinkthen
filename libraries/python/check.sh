@@ -14,10 +14,10 @@ case "$profile" in routine|full|smoke) ;; *) echo 'unknown Python test profile' 
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "$profile" = full ] || exit 2
 fi
-python3 "$repo/sdlc/generators/results/generate.py" --target python --check
-python3 "$repo/sdlc/generators/results/generate.py" --target python --inputs --check
 command -v uv >/dev/null 2>&1 || { echo 'libraries/python: not run: no uv'; exit 1; }
 command -v maturin >/dev/null 2>&1 || { echo 'libraries/python: not run: no maturin'; exit 1; }
+python3 "$repo/sdlc/generators/results/generate.py" --target python --check
+python3 "$repo/sdlc/generators/results/generate.py" --target python --inputs --check
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'libraries/python: not run: no supported Python'; exit 1; }
