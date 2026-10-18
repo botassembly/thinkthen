@@ -62,7 +62,7 @@ impl std::fmt::Debug for AnswerResolutions {
 
 /// Rust-owned answer fields. Probability is answer odds, never model confidence.
 #[derive(Clone, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 pub struct Settled<T, P> {
     /// The bare value in the caller's input shape. None means no answer after a
     /// failure; Some(None) on nullable values retains an unresolved or authored null.
