@@ -5,26 +5,31 @@
 //! Conversion holds the live store's write lock through its removal.
 
 use std::fs;
-use std::io::{self, Write as _};
+use std::io;
+#[cfg(feature = "cli")]
+use std::io::Write as _;
 use std::path::Path;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "cli"))]
 use std::time::Duration;
 
+#[cfg(feature = "cli")]
 use rusqlite::Connection;
 
+#[cfg(feature = "cli")]
 use super::{Entries, JSONL, SQLITE, exists, fixture};
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "cli"))]
 use super::{storage, waiting};
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "cli"))]
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
-#[cfg(windows)]
+#[cfg(all(windows, feature = "cli"))]
 mod windows;
 
 /// What one conversion did.
 #[derive(Debug, Default)]
+#[cfg(feature = "cli")]
 pub(crate) struct Summary {
     /// Answers the written fixture holds.
     pub(crate) answers: usize,
@@ -37,6 +42,7 @@ pub(crate) struct Summary {
 ///
 /// A fixture that does not parse, a live file that cannot be read, or an old
 /// entry refuses the whole conversion before anything is written.
+#[cfg(feature = "cli")]
 pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
     let (jsonl, sqlite) = (folder.join(JSONL), folder.join(SQLITE));
     let has_sqlite = exists(&sqlite)?;
@@ -84,7 +90,7 @@ pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
             return Err(Error::RecordingStorage);
         }
         sync_folder(folder).map_err(|_| Error::RecordingStorage)?;
-        #[cfg(not(windows))]
+        #[cfg(all(not(windows), feature = "cli"))]
         drop(connection);
     }
     Ok(summary)
@@ -92,7 +98,8 @@ pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
 
 /// Open the live file and take its write lock, waiting up to 30 seconds
 /// for another writer. The lock ends when the connection drops.
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "cli"))]
+#[cfg(feature = "cli")]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     let connection = super::opening::open(sqlite, rusqlite::OpenFlags::default())?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
@@ -103,6 +110,7 @@ fn locked(sqlite: &Path) -> Result<Connection, Error> {
 }
 
 #[cfg(windows)]
+#[cfg(feature = "cli")]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     super::read_only(sqlite)
 }
@@ -131,6 +139,7 @@ pub(super) fn digest_named(name: &str) -> bool {
 }
 
 /// Write `path` through a temporary file in the same folder, then rename it.
+#[cfg(feature = "cli")]
 fn replace(folder: &Path, path: &Path, text: &[u8]) -> Result<(), Error> {
     let temporary = folder.join(format!(".{JSONL}.{}.tmp", std::process::id()));
     let written = (|| -> io::Result<()> {

@@ -20,7 +20,6 @@ use crate::core::pack::{Ask, QuestionKey, State};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
-#[cfg(feature = "cli")]
 mod convert;
 mod fixture;
 mod images;
