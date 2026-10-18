@@ -219,7 +219,8 @@
         "install",
         "typescript",
         "surfaces",
-        "test"
+        "test",
+        "common"
       ],
       "provider": "node",
       "version": "22.22.3",
@@ -456,7 +457,9 @@
       ],
       "groups": [
         "lint",
-        "install"
+        "install",
+        "ada",
+        "cobol"
       ],
       "version": "13.3.0",
       "probe": {
@@ -748,6 +751,48 @@
       },
       "linux_directory": "ruby34/bin",
       "openssl_version": "3.0.22"
+    },
+    "rbs": {
+      "commands": [
+        "rbs"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby"
+      ],
+      "provider": "ruby-bundled",
+      "version": "3.10.0",
+      "probe": {
+        "argv": [
+          "rbs",
+          "--version"
+        ],
+        "contains": "rbs {version}"
+      }
+    },
+    "rbs34": {
+      "commands": [
+        "rbs"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby34"
+      ],
+      "provider": "ruby-bundled",
+      "version": "3.8.0",
+      "probe": {
+        "argv": [
+          "rbs",
+          "--version"
+        ],
+        "contains": "rbs {version}"
+      }
     }
   },
   "python_packages": {
@@ -808,9 +853,6 @@
         "linux-x86_64"
       ],
       "check_platforms": [
-        "darwin-arm64",
-        "darwin-x86_64",
-        "linux-arm64",
         "linux-x86_64"
       ]
     },
@@ -822,9 +864,6 @@
         "linux-x86_64"
       ],
       "check_platforms": [
-        "darwin-arm64",
-        "darwin-x86_64",
-        "linux-arm64",
         "linux-x86_64"
       ]
     },

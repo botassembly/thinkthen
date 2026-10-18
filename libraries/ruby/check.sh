@@ -179,7 +179,7 @@ export THINKTHEN_TEST_LIBRARY
   abort "native gem signature inventory differs from manifest" unless !expected.empty? && expected == package.files.grep(/\.rbs$/).sort
   expected.each { |path| abort "installed signature is absent" unless File.file?(File.join(ARGV[2], path)) }' \
   "$repo/libraries/ruby" "$THINKTHEN_ARTIFACT" "${THINKTHEN_TEST_LIBRARY%/lib}"
-"$prefix/bin/rbs" "_$RUBY_RBS_VERSION"_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
+rbs "_$RUBY_RBS_VERSION"_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
   cp "$THINKTHEN_TEST_LIBRARY/thinkthen/$THINKTHEN_RUBY_MINOR/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"

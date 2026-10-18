@@ -103,7 +103,7 @@ def resolve(manifest, groups, root, check=False):
     failures = []
     installer = None
     for name, tool in requirements.items():
-        if host != 'darwin' or 'provider' not in tool or tool['provider'] == 'python-package':
+        if host != 'darwin' or 'provider' not in tool or tool['provider'] in ('python-package', 'ruby-bundled'):
             continue
         if tool['provider'] == 'rustup':
             try:
