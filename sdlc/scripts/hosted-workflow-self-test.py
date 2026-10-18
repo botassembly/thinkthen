@@ -57,6 +57,30 @@ def workflow_cases():
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
     assert workflow_command('release.yml', release)[0] == 0
     assert workflow_command('windows.yml', windows)[0] == 0
+    # The host cache exception must not admit another release cache or a wider key.
+    for job in ('build', 'smoke'):
+        steps = release['jobs'][job]['steps']
+        cache = next(step for step in steps if step.get('id') == 'duckdb-hosts')
+        setup = next(step for step in steps if 'host-setup' in step.get('run', ''))
+        assert steps.index(cache) < steps.index(setup)
+        if job == 'smoke':
+            assert setup['env']['THINKTHEN_DUCKDB_HOST_CACHE_HIT'] == '${{ steps.duckdb-hosts.outputs.cache-hit }}'
+        for defect in ('path', 'restore-keys', 'sha', 'target', 'run', 'action', 'runner', 'publish'):
+            doc = deepcopy(release)
+            candidate = next(step for step in doc['jobs'][job]['steps'] if step.get('id') == 'duckdb-hosts')
+            if defect == 'path': candidate['with']['path'] = '~/.cache/thinkthen-toolchains'
+            elif defect == 'restore-keys': candidate['with']['restore-keys'] = 'duckdb-hosts-'
+            elif defect in ('sha', 'target', 'run'):
+                expression = {'sha': 'needs.resolve.outputs.sha', 'target': 'matrix.target', 'run': 'github.run_id'}[defect]
+                candidate['with']['key'] = candidate['with']['key'].replace('${{ ' + expression + ' }}', 'any')
+            elif defect == 'action': candidate['uses'] = 'actions/cache@' + 'a' * 40
+            elif defect == 'runner': candidate['if'] = "runner.os == 'macOS'"
+            else:
+                doc['jobs'][job]['steps'].remove(candidate)
+                doc['jobs']['publish']['steps'].append(candidate)
+            code, output = workflow_command('release.yml', doc)
+            owner = 'publish' if defect == 'publish' else job
+            assert code == 1 and f'job {owner} uses a cache' in output, (job, defect, output)
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     assert workflow_command('gate.yml', gate)[0] == 0
     for defect in ('options', 'declaration', 'dynamic', 'paid', 'string', 'default'):
@@ -760,6 +784,33 @@ def preflight_cases():
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))
+        # An exact cache hit cannot excuse missing sources or stale/partial native hosts.
+        sys.path.insert(0, str(REPO / 'databases/duckdb/tools'))
+        from inputs import selected, versions
+        ruby = root / 'libraries/ruby'
+        ruby.mkdir(parents=True)
+        (ruby / 'toolchain.env').write_text("RUBY_MINORS=''\n")
+        cache = root / 'toolchains'
+        for version in versions():
+            identity = selected(version, 'x86_64-apple-darwin')
+            python = cache / 'duckdb/community' / version / 'venv/bin/python'
+            cli = root / 'databases/duckdb/build/community' / version / 'build/release/duckdb'
+            for binary, value in ((python, identity['source_commit'][:10]), (cli, identity['source_commit'][:8])):
+                binary.parent.mkdir(parents=True, exist_ok=True)
+                binary.write_text('#!/bin/sh\necho ' + value + '\n')
+                binary.chmod(0o755)
+        for state in ('matching', 'wrong-pin', 'partial'):
+            if state == 'wrong-pin': cli.write_text('#!/bin/sh\necho wrong-source-id\n')
+            elif state == 'partial': cli.unlink()
+            check = module['Preflight']()
+            with patch.dict(module['native_inputs'].__globals__, ROOT=root), \
+                    patch.dict(os.environ, {'THINKTHEN_DUCKDB_HOST_CACHE_HIT': 'true'}):
+                module['native_inputs'](check, 'x86_64-apple-darwin', cache, source_only=True)
+            source_failures = [message for message in check.missing if message.startswith('DuckDB ')]
+            assert len(source_failures) == 2 * len(versions()), check.missing
+            cli_failures = [message for message in check.missing if str(cli) in message]
+            assert bool(cli_failures) == (state != 'matching'), (state, check.missing)
+            if state == 'wrong-pin': assert 'differs from pin' in cli_failures[0], cli_failures
         # Missing lock-reading support must not hide an independent coverage input.
         globals_ = module['qualify'].__globals__
         check = module['Preflight']()

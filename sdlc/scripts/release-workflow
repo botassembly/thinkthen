@@ -425,7 +425,11 @@ PYWIN
 		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
 		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
 		# setup.sh fetched the pinned inputs; installed checks require their built CLIs too.
-		python3 databases/duckdb/tools/source_hosts.py
+		# An exact same-run Intel cache carries the native CLI and its adjacent libraries.
+		# Setup above still prepares Python; preflight below still checks both source IDs.
+		if [ "$2" != x86_64-apple-darwin ] || [ "${THINKTHEN_DUCKDB_HOST_CACHE_HIT:-}" != true ]; then
+			python3 databases/duckdb/tools/source_hosts.py
+		fi
 	fi
 	;;
 resolve)
