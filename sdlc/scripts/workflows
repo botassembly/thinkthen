@@ -463,14 +463,7 @@ def release(name, doc):
     for job, spec, step in steps(doc):
         uses = step.get("uses") or ""
         if "cache" in uses or "cache" in (step.get("with") or {}):
-            # Only native Intel DuckDB hosts may pass from build to smoke in this run.
-            host_cache = {
-                "uses": "actions/cache@caa296126883cff596d87d8935842f9db880ef25",
-                "id": "duckdb-hosts", "if": "matrix.target == 'x86_64-apple-darwin'",
-                "with": {"path": "databases/duckdb/build/community/*/build/release",
-                         "key": "duckdb-hosts-${{ needs.resolve.outputs.sha }}-${{ matrix.target }}-${{ github.run_id }}"}}
-            if job not in ("build", "smoke") or step != host_cache:
-                out.append(f"{name}: job {job} uses a cache")
+            out.append(f"{name}: job {job} uses a cache")
         if uses.startswith("actions/checkout@"):
             ref = (step.get("with") or {}).get("ref")
             if ref != RESOLVED and not (job == "resolve" and ref == "${{ github.sha }}"):
