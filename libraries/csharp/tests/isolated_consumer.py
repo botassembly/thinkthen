@@ -1,5 +1,5 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
+import collections,json,os,pathlib,re,shutil,sys,time,zipfile,xml.etree.ElementTree as ET
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
@@ -62,14 +62,16 @@ if mode.startswith('usage-'):
  if mode=='usage-disabled': env.update(HOME='relative', XDG_STATE_HOME='')
 try:
  # SDK setup messages belong to the build log, never the sample's exact stdout.
+ started=time.monotonic()
  build=run(cmd+['build','/work/Installed.csproj','--configuration','Release','-o','/work/bin',
                 '-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true'],timeout=100,env=env)
  (work/'build.log').write_bytes(build.stdout+build.stderr)
  assert build.exit==0,(build.exit,build.stdout[-1500:],build.stderr[-1500:])
+ runtime_timeout=max(0,100-(time.monotonic()-started))
  cmd+=['/work/bin/Installed.dll']
  result=(run_usage(cmd, state=work/'state/thinkthen', mode=mode.removeprefix('usage-'), env=env,
-                   execute=lambda command, *, env: run(command, timeout=100, env=env))
-         if mode.startswith('usage-') else run(cmd,timeout=100,env=env))
+                   execute=lambda command, *, env: run(command, timeout=runtime_timeout, env=env))
+         if mode.startswith('usage-') else run(cmd,timeout=runtime_timeout,env=env))
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
