@@ -29,7 +29,7 @@ is_yellow = platform.node().split('.')[0] == 'yellow'
 memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 # The image identity includes all construction inputs and the pinned base.
 digest = hashlib.sha256()
-inputs = ('sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
+inputs = ('rust-toolchain.toml', 'sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
           'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
           'conformance/children/children.py')
 for path in inputs:
@@ -84,6 +84,10 @@ for relative in locks.splitlines():
 # Advisory data is a separate prerequisite from Cargo registry dependencies.
 # Fetch it in this same mounted home before the offline checks consume it.
 script += 'cargo deny fetch db\n'
+# Check the whole manifest before any gate work, including the mounted advisory DB.
+groups = {group for tool in manifest['tools'].values() for group in tool['groups']} - {'ruby34'}
+script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(sorted(groups))) + '\n'
+script += 'python3 sdlc/scripts/tools.py --check ruby34\n'
 for check in args.checks:
     script += 'sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)

@@ -97,7 +97,9 @@
         "rustc",
         "rustup",
         "rustfmt",
+        "cargo-fmt",
         "cargo-clippy",
+        "clippy-driver",
         "rustdoc"
       ],
       "platforms": [
@@ -115,7 +117,29 @@
           "--version"
         ],
         "contains": "rustc {version}"
-      }
+      },
+      "toolchain_file": "rust-toolchain.toml",
+      "components": [
+        "llvm-tools-preview"
+      ],
+      "probes": [
+        {
+          "argv": [
+            "cargo",
+            "fmt",
+            "--version"
+          ],
+          "contains": "rustfmt "
+        },
+        {
+          "argv": [
+            "cargo",
+            "clippy",
+            "--version"
+          ],
+          "contains": "clippy "
+        }
+      ]
     },
     "python": {
       "commands": [
@@ -181,7 +205,8 @@
       "version": "0.9.114",
       "probe": {
         "argv": [
-          "cargo-nextest",
+          "cargo",
+          "nextest",
           "--version"
         ],
         "contains": "cargo-nextest {version}"
@@ -255,10 +280,21 @@
       "version": "0.19.4",
       "probe": {
         "argv": [
-          "cargo-deny",
+          "cargo",
+          "deny",
           "--version"
         ],
         "contains": "cargo-deny {version}"
+      },
+      "readiness": {
+        "argv": [
+          "cargo",
+          "deny",
+          "--offline",
+          "check",
+          "advisories"
+        ],
+        "contains": "advisories ok"
       }
     },
     "public-api": {
@@ -277,7 +313,8 @@
       "version": "0.52.0",
       "probe": {
         "argv": [
-          "cargo-public-api",
+          "cargo",
+          "public-api",
           "--version"
         ],
         "contains": "cargo-public-api {version}"

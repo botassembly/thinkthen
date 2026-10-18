@@ -99,6 +99,34 @@ def environment(root):
     return env
 
 
+def rust_toolchain(manifest, env):
+    """Read the repository's Rust contract with its prepared Python."""
+    tool = manifest['tools']['rust']
+    source = ROOT / tool['toolchain_file']
+    contract = json.loads(subprocess.check_output(['python3', '-c',
+        'import json, sys, tomllib; '
+        'print(json.dumps(tomllib.load(open(sys.argv[1], "rb"))["toolchain"]))',
+        str(source)], env=env, text=True))
+    if contract['channel'] != tool['version']:
+        raise RuntimeError('Rust manifest version differs from rust-toolchain.toml')
+    return contract, [*contract['components'], *tool.get('components', [])]
+
+
+def rust_components(manifest, env, install=False):
+    contract, components = rust_toolchain(manifest, env)
+    version = contract['channel']
+    if install:
+        run(['rustup', 'toolchain', 'install', version, '--profile', contract['profile'],
+             *[arg for component in components for arg in ('--component', component)]], env)
+    installed = subprocess.check_output(['rustup', 'component', 'list', '--toolchain', version,
+                                        '--installed'], env=env, text=True).splitlines()
+    missing = [component for component in components
+               if not any(line == component or line.startswith(component.removesuffix('-preview') + '-')
+                          for line in installed)]
+    if missing:
+        raise RuntimeError('Rust components missing: ' + ', '.join(missing))
+
+
 def resolve(manifest, groups, root, check=False):
     host = platform.system().lower()
     requirements = selected(manifest, groups, host)
@@ -161,6 +189,12 @@ def resolve(manifest, groups, root, check=False):
                  *[name + '==' + version for name, version in packages.items()]], env)
         except subprocess.CalledProcessError as error:
             failures.append('Python tools: ' + str(error))
+    if 'toolchain_file' in requirements.get('rust', {}):
+        try:
+            rust_components(manifest, env, install=host == 'darwin' and not check)
+        except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
+            failures.append('rust: ' + str(error))
+    env['CARGO_HOME'] = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
     missing = []
     for tool in requirements.values():
         for command in tool['commands']:
@@ -169,8 +203,12 @@ def resolve(manifest, groups, root, check=False):
                                       and root not in Path(executable).resolve().parents):
                 missing.append(command)
     for name, tool in requirements.items():
-        probe = tool.get('probe')
-        if probe and probe['argv'][0] not in missing:
+        probes = ([tool['probe']] if 'probe' in tool else []) + tool.get('probes', [])
+        if check and 'readiness' in tool:
+            probes.append(tool['readiness'])
+        for probe in probes:
+            if probe['argv'][0] in missing:
+                continue
             try:
                 argv = [argument.format(**tool) for argument in probe['argv']]
                 result = subprocess.check_output(argv, env=env, text=True, stderr=subprocess.STDOUT)
@@ -193,7 +231,6 @@ def resolve(manifest, groups, root, check=False):
     if missing or failures:
         raise RuntimeError('missing tools: ' + ', '.join(sorted(set(missing)))
                            + ('; installation failures: ' + '; '.join(failures) if failures else ''))
-    env['CARGO_HOME'] = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
     env['THINKTHEN_RESOLVED_TOOLS'] = ','.join(groups)
     return env
 

@@ -30,6 +30,18 @@ class ToolResolution(unittest.TestCase):
         self.check([], False, requirement={**pin, 'version': 'nightly-1900-01-01',
                                          'groups': ['test']}, diagnostic='selected')
 
+    def test_reports_an_unavailable_cargo_subcommand_before_starting_work(self):
+        self.check(['sh'], False, requirement={
+            'commands': ['sh'], 'groups': ['test'], 'platforms': ['darwin', 'linux'],
+            'probes': [{'argv': ['sh', '-c', 'exit 1'], 'contains': 'cargo fmt'}],
+        }, diagnostic='selected')
+
+    def test_reports_unprepared_advisories_before_starting_work(self):
+        self.check(['sh'], False, requirement={
+            'commands': ['sh'], 'groups': ['test'], 'platforms': ['darwin', 'linux'],
+            'readiness': {'argv': ['sh', '-c', 'exit 1'], 'contains': 'advisories ok'},
+        }, diagnostic='selected')
+
     @unittest.skipUnless(platform.system() == 'Darwin' and
                          'test' in os.environ.get('THINKTHEN_RESOLVED_TOOLS', '').split(','),
                          'requires the prepared native macOS test environment')
@@ -126,7 +138,7 @@ class LinuxSourceIdentity(unittest.TestCase):
     def test_reused_clone_discards_source_edits_and_keeps_build_output(self):
         with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
             root = Path(folder)
-            for relative in ('sdlc/scripts/linux-check', 'sdlc/tools.json',
+            for relative in ('rust-toolchain.toml', 'sdlc/scripts/linux-check', 'sdlc/tools.json',
                              'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
                              'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
                              'conformance/children/children.py'):

@@ -16,6 +16,7 @@ import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import rust_components
 
 manifest = json.loads(Path(sys.argv[1]).read_text())
 root = Path(manifest['linux_prefix'])
@@ -158,7 +159,7 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     env.update(selected)
     env['PATH'] = str(root / 'bin') + ':' + env['PATH']
     if name == 'rust':
-        subprocess.run(['rustup', 'component', 'add', 'clippy', 'rustfmt', 'llvm-tools-preview'], env=env, check=True)
+        rust_components(manifest, env, install=True)
 python = root / 'bin/python3'
 packages = dict(manifest['python_packages'])
 packages.update({tool['commands'][0]: tool['version'] for tool in manifest['tools'].values()
@@ -185,6 +186,6 @@ subprocess.run(['chmod', '-R', 'a+rX', str(root)], env=env, check=True)
 # Missing commands and wrong versions must fail image preparation before checks.
 resolver = '/opt/thinkthen-image/sdlc/scripts/tools.py'
 groups = {group for tool in manifest['tools'].values() for group in tool['groups']} - {'ruby34'}
-subprocess.run([str(python), resolver, '--manifest', sys.argv[1], '--check', ','.join(sorted(groups))],
+subprocess.run([str(python), resolver, '--manifest', sys.argv[1], ','.join(sorted(groups))],
                env=env, check=True)
-subprocess.run([str(python), resolver, '--manifest', sys.argv[1], '--check', 'ruby34'], env=env, check=True)
+subprocess.run([str(python), resolver, '--manifest', sys.argv[1], 'ruby34'], env=env, check=True)
