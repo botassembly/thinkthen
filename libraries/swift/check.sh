@@ -68,7 +68,7 @@ else
     RUSTC_WRAPPER= RUSTFLAGS="$build_flags" cargo build --locked --offline --manifest-path "$root/libraries/c/Cargo.toml" --lib -j2
     package=$package_scratch/package
     python3 "$here/Tests/fixtures/package_local.py" --native "${CARGO_TARGET_DIR:-$root/libraries/c/target}/debug/libthinkthen_c.so" --out "$package"
-    python3 "$here/Tests/fixtures/guard.py" "$package_scratch/thinkthen-swift-0.2.0.tar.gz"
+    python3 "$root/conformance/children/privacy.py" "$package_scratch/thinkthen-swift-0.2.0.tar.gz"
 fi
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
     consumer_scratch=$THINKTHEN_COVERAGE_STAGE

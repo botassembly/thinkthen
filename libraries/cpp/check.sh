@@ -46,7 +46,8 @@ THINKTHEN_NATIVE_HEADER="$header" THINKTHEN_NATIVE_SHARED="$shared" "$python_bin
 "$cmake_bin" --build "$out/package-build" --parallel 2
 "$cmake_bin" --install "$out/package-build"
 install_manifest=$out/package-build/install_manifest.txt
-"$python_bin" fixtures/guard.py "$out/install" "$install_manifest"
+"$python_bin" fixtures/installed_headers.py "$out/install" "$install_manifest"
+"$python_bin" "$repo/conformance/children/privacy.py" --prefix "$out/install" --manifest "$install_manifest"
 "$python_bin" fixtures/result_construction.py "$out/install"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
  smoke_guard

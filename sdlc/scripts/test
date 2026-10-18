@@ -69,6 +69,7 @@ python3 conformance/library-surface-test.py
 python3 conformance/library-surface-size-test.py
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
+python3 -m unittest conformance.children.test_privacy
 sh conformance/children/test.sh
 sh transforms/band/test.sh
 sh transforms/compare/test.sh
