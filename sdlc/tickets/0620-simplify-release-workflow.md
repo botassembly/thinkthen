@@ -27,3 +27,7 @@ Depends on: 0613, 0614, 0615, 0619, 0622
 `.github/workflows/release.yml` holds most of its steps behind `if: matrix.target == '...'` lines, each installing or checking one language's tools for one target. The release logic is split between this YAML and `sdlc/scripts/release-workflow` (1,062 lines), and each new tool or target adds branches to both. The hosted Linux jobs also install their own tools, which the 0619 image now covers.
 
 The rehearsal takes the candidate name as free text. Run 39117319342 failed on a `candidate_tag` dispatch error.
+
+## Amendment, 2026-10-18
+
+The hosted acquisition in `sdlc/scripts/release-workflow` drifts from the declared tool manifest: it installs maturin 1.15.0 where `tools.json` pins 1.9.4, and uv 0.9.17 where it pins 0.8.22. This ticket deletes those acquisition steps and takes every hosted tool version from the manifest. Its proof shows the hosted jobs resolve each tool at the manifest's version.

@@ -1,5 +1,5 @@
 ---
-// Goal: show how ThinkThen asks a decision model that Ollama serves on your own machine, with no key and no hosted service.
+// Goal: show how ThinkThen asks a System One model that Ollama serves on your own machine, with no key and no hosted service.
 import SidePage from '../../layouts/SidePage.astro';
 import Terminal from '../../components/Terminal.astro';
 import BackendFacts from '../../components/BackendFacts.astro';
@@ -17,9 +17,9 @@ const by = (name) => runs.find((r) => r.name.endsWith(name));
 const [plan, one, lines, tev1] = ['check-plan', 'one', 'lines', 'tev1'].map(by);
 const checks = checkLines('ollama');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Ollama serves decision models such as nimble and tev1 on your own machine. ThinkThen asks them with --backend ollama.' }} name="Models">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Ollama serves System One models such as nimble and tev1 on your own machine. ThinkThen asks them with --backend ollama.' }} name="Models">
   <h1>Ollama</h1>
-  <p class="lede">Ollama 0.35 and later serve decision models on your own machine. ThinkThen asks them with <code>--backend {b.name}</code>, with no key and no hosted service.</p>
+  <p class="lede">Ollama 0.35 and later serve System One models on your own machine. ThinkThen asks them with <code>--backend {b.name}</code>, with no key and no hosted service.</p>
 
   <BackendFacts name="ollama" notes={{ key: 'not needed on this machine', model: 'Name <code>tev1</code> with <code>--model tev1</code>.' }} />
 

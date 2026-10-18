@@ -29,6 +29,7 @@ ROW = re.compile(r'\(\s*"([a-z]+)",\s*include_bytes!\("\.\./\.\./transforms/([a-
 
 def repository(root):
     """The development sources, one folder per transform."""
+    root = root.resolve()
     found = {}
     for path in tracked_files(root / "transforms"):
         if (len(path.relative_to(root / "transforms").parts) != 2
@@ -64,6 +65,7 @@ def archive(crate, expected):
 
 def tree(root):
     """Compare the shipped copies and the Rust table with the sources."""
+    root = root.resolve()
     expected = repository(root)
     packaged = {stem(path.name): path.read_bytes() for path in tracked_files(root / PACKAGED)
                 if path.parent == root / PACKAGED}

@@ -1,6 +1,6 @@
 # ThinkThen for DuckDB
 
-ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
+ThinkThen is ten functions on top of Jev, TypeSafe's System One model, or any model like it. System One models return probabilities. Your code decides what to do with them. ThinkThen makes these models simple to call from any language or database. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 Use DuckDB 1.5.6 and 2.0 with the matching source host and archive from the [release downloads](https://github.com/botassembly/thinkthen/releases). Unpack `thinkthen-duckdb-0.2.0-x86_64-unknown-linux-gnu.tar.gz` and start `duckdb -unsigned`. Load the member for your host and platform; Linux x86_64 on 1.5.6 uses:
 
