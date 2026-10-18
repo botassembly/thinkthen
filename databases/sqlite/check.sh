@@ -4,6 +4,8 @@
 # one counts sends, so the check leaves the shared port unused. Exit 77 means
 # "not run": a missing toolchain never reports a pass.
 set -eu
+tools_group=sqlite
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"

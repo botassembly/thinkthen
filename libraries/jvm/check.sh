@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+tools_group=jvm
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 . "$root/sdlc/scripts/scratch.sh"

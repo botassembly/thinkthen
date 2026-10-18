@@ -2,6 +2,8 @@
 # Check the package callers install. Full shared parity waits for a candidate.
 unset THINKTHEN_API_KEY
 set -eu
+tools_group=python
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"

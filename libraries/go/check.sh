@@ -1,6 +1,8 @@
 #!/bin/sh
 # Stage the Go module and run its installed consumers offline.
 set -eu
+tools_group=go
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
@@ -11,8 +13,8 @@ esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo 'go: not run: this package gate is proven on Linux x86_64'; exit 77
 fi
-go_bin=${THINKTHEN_GO_BIN:-$(command -v go || true)}
-python_bin=${THINKTHEN_PYTHON_BIN:-$(command -v python3 || true)}
+go_bin=$(command -v go || true)
+python_bin=$(command -v python3 || true)
 for named in "$go_bin" "$python_bin"; do
     case "$named" in /*) ;; *) echo "go: not run: tool path is not absolute: $named" >&2; exit 77 ;; esac
     [ -x "$named" ] || { echo "go: not run: tool is unavailable: $named" >&2; exit 77; }

@@ -1,12 +1,14 @@
 #!/bin/sh
 set -eu
+tools_group=dart
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
   [ "${THINKTHEN_TEST_PROFILE:-}" = full ] || exit 2
   exec python3 "$ROOT/checks/installed_native_assets.py" --prepared
 fi
-TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
-TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
+TT_DART=$(command -v dart || true)
+TT_FLUTTER=$(command -v flutter || true)
 [ -x "$TT_DART" ] || exit 77
 case ${THINKTHEN_ARTIFACT:-} in
   *thinkthen-dart-*.tar.gz) ;;

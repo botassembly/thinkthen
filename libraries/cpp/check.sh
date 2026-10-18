@@ -1,6 +1,8 @@
 #!/bin/sh
 # Exercise the installed owned API; complete shared parity is release-only.
 set -eu
+tools_group=cpp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
@@ -10,8 +12,8 @@ esac
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-cmake_bin=${THINKTHEN_CMAKE_BIN:-$(command -v cmake || true)}
-python_bin=${THINKTHEN_PYTHON_BIN:-$(command -v python3 || true)}
+cmake_bin=$(command -v cmake || true)
+python_bin=$(command -v python3 || true)
 for tool in "$cmake_bin" "$python_bin"; do
  case "$tool" in /*) ;; *) echo 'cpp: tool path must be absolute' >&2; exit 77 ;; esac
  [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 77; }

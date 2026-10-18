@@ -18,6 +18,8 @@ if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
+tools_group=postgresql
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Retained one-record listener fixtures keep their historical wire identity.
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.

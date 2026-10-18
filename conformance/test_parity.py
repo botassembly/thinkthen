@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_files, stage_generated_source
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -337,6 +337,7 @@ class PublicAssertions(unittest.TestCase):
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -448,6 +449,7 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -471,6 +473,7 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -520,6 +523,7 @@ class PublicAssertions(unittest.TestCase):
         prepared, homes = {}, {}
         def command(args, **kwargs):
             env = kwargs['env']
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                 prepared[destination] = args[-2]
                 Path(destination, 'installed-package').write_text('immutable')
@@ -576,6 +580,7 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -667,6 +672,7 @@ class PublicAssertions(unittest.TestCase):
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -735,6 +741,7 @@ class PublicAssertions(unittest.TestCase):
                             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
@@ -773,20 +780,18 @@ class PublicAssertions(unittest.TestCase):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
-            stage_generated_source(parity.ROOT, root, 'python')
+            stage_checkout(parity.ROOT, root)
             library = root / 'libraries/python'
             library.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
+            scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
             venv.EnvBuilder(with_pip=False).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
-            site.mkdir()
+            site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
-            (assets / 'tests').mkdir()
+            (assets / 'tests').mkdir(exist_ok=True)
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
             children.mkdir(parents=True, exist_ok=True)
@@ -800,13 +805,14 @@ class PublicAssertions(unittest.TestCase):
                 ' print("private fixture: " + consumer)\n'
                 ' return False\n')
             tools = root / 'tools'
-            tools.mkdir()
+            tools.mkdir(exist_ok=True)
             for tool in ('uv', 'maturin'):
                 (tools / tool).write_text('#!/bin/sh\nexit 99\n')
                 (tools / tool).chmod(0o755)
             for member in ('python', 'pandas', 'python-polars'):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -820,16 +826,14 @@ class PublicAssertions(unittest.TestCase):
                     'required_cases': list(self.cases.values())}
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
+            stage_checkout(parity.ROOT, root)
             scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/time-limit', scripts / 'time-limit')
-            shutil.copyfile(parity.ROOT / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
+            scripts.mkdir(parents=True, exist_ok=True)
             (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
             library = root / 'libraries/rust'
-            library.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'libraries/rust/check.sh', library / 'check.sh')
+            library.mkdir(parents=True, exist_ok=True)
             tools = root / 'bin'
-            tools.mkdir()
+            tools.mkdir(exist_ok=True)
             runner = tools / 'python3'
             runner.write_text('#!/bin/sh\nset -eu\n'
                               'test "$THINKTHEN_TEST_PROFILE" = full\n'
@@ -838,7 +842,7 @@ class PublicAssertions(unittest.TestCase):
                               'cat > "$2/invoked-driver"\n'
                               'exec ' + shlex.quote(sys.executable) + ' "$2/invoked-driver" "$2" "$3"\n')
             children = root / 'conformance/children'
-            children.mkdir(parents=True)
+            children.mkdir(parents=True, exist_ok=True)
             (children / 'native_fixture.py').write_text(
                 'from pathlib import Path\nimport tomllib\n'
                 'def run(consumer, command, root, rust_manifest, extra_env):\n'
@@ -876,10 +880,9 @@ class PublicAssertions(unittest.TestCase):
         ]:
             with self.subTest(baseline=baseline), tempfile.TemporaryDirectory() as scratch:
                 root = Path(scratch)
+                stage_checkout(parity.ROOT, root)
                 scripts = root / 'sdlc/scripts'
-                scripts.mkdir(parents=True)
-                for filename in ['time-limit', 'scratch.sh']:
-                    shutil.copyfile(parity.ROOT / 'sdlc/scripts' / filename, scripts / filename)
+                scripts.mkdir(parents=True, exist_ok=True)
                 contract = {'functions': ['decide'], 'consumers': [
                     {'id': 'rust', 'owner': '0431', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
@@ -1124,6 +1127,7 @@ class InstalledInputs(unittest.TestCase):
                 def command(args, **kwargs):
                     major = args[-1]
                     env = kwargs['env']
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     self.assertEqual(args[2], '900')
                     if destination := env.get('THINKTHEN_PARITY_PREPARE'):
                         preparations.append(major)
@@ -1216,20 +1220,17 @@ class FullCheckpoint(unittest.TestCase):
     def test_binding_builds_run_only_in_release_and_fail_the_release_on_error(self):
         with tempfile.TemporaryDirectory(prefix="thinkthen-suite-routing-") as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             scripts = root / "sdlc/scripts"
-            scripts.mkdir(parents=True)
-            stage_files(parity.ROOT, root, (
-                "libraries/ruby/toolchain.env",
-                *("sdlc/scripts/" + name
-                  for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"))))
+            scripts.mkdir(parents=True, exist_ok=True)
             # Routing probes retain their control variables across the shell boundary.
-            for name in ("heavy-lock", "allow-list"):
+            for name in ("allow-list",):
                 (scripts / name).write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
             with (scripts / "scratch.sh").open("a") as stream:
                 stream.write("\nusage_guard() { :; }\nconfig_home() { :; }\n")
             fake = root / "bin"
-            fake.mkdir()
+            fake.mkdir(exist_ok=True)
             log = root / "calls"
             command = '''#!/bin/sh
 printf '%s %s\\n' "${0##*/}" "$*" >> "$ROUTING_LOG"
@@ -1244,11 +1245,12 @@ esac
                 path.write_text(command)
                 path.chmod(0o755)
             demo = root / "demos/16-triage-pipeline/self-test"
-            demo.parent.mkdir(parents=True)
+            demo.parent.mkdir(parents=True, exist_ok=True)
             demo.write_text("#!/bin/sh\nexit 0\n")
             demo.chmod(0o755)
             env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
 
             def run(entry, *args):
                 log.write_text("")
@@ -1289,11 +1291,9 @@ esac
             for failed in failures:
                 with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
                     root = Path(folder)
+                    stage_checkout(parity.ROOT, root)
                     scripts = root / 'sdlc/scripts'
-                    scripts.mkdir(parents=True)
-                    stage_files(parity.ROOT, root, (
-                        'sdlc/scripts/' + name
-                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler')))
+                    scripts.mkdir(parents=True, exist_ok=True)
                     files = {
                         # Environment filtering is covered by the real nested campaign fixture.
                         'sdlc/scripts/allow-list': '',
@@ -1357,6 +1357,7 @@ esac
                            'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']

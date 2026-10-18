@@ -12,6 +12,7 @@ self-test plants four changes in the real listing and proves each one fails.
 from __future__ import annotations
 
 import pathlib
+import json
 import re
 import subprocess
 import sys
@@ -286,7 +287,7 @@ def problems(listing: list[str], wanted: set[str]) -> list[str]:
 
 
 def main() -> int:
-    command = ["cargo", "+nightly-2026-08-24", "public-api", "--package", "thinkthen", "--no-default-features", "--features", "bundled-sqlite", "-ss"]
+    command = ["cargo", '+' + json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['rust-nightly']['version'], "public-api", "--package", "thinkthen", "--no-default-features", "--features", "bundled-sqlite", "-ss"]
     run = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
     if run.returncode != 0:
         print(run.stderr, file=sys.stderr)

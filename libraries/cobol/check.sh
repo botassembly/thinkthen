@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+tools_group=cobol
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'COBOL gate unavailable on this host' >&2; exit 77 ;; esac

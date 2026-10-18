@@ -12,3 +12,6 @@ libraries/swift/Sources/ThinkThen/Native/*/libthinkthen.so
 
 # Assembled from the two reviewed Apple C packages at the candidate.
 libraries/swift/CThinkThen.xcframework/
+
+# The gate resolver installs tools only inside its job checkout.
+/.tools/

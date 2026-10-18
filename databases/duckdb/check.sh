@@ -3,6 +3,8 @@
 # loopback port as $1. Each suite also starts its own backend, so counts
 # never mix. A missing toolchain reports "not run" (exit 77), never "pass".
 set -eu
+tools_group=duckdb
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
