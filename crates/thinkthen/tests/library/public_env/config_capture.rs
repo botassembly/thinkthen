@@ -46,7 +46,7 @@ fn configuration_capture_ignores_irrelevant_environment_and_allows_an_effective_
     assert!(written.starts_with("Usage: THINKTHEN_BASE_URL:"));
     assert!(written.contains("\"api_key_set\":false"));
     assert!(written.contains("\"keys\":[\"THINKTHEN_API_KEY\"]"));
-    assert!(written.contains("sent 1 cached 0"));
+    assert!(written.contains("sent 1 cached false"));
     assert!(!written.contains("unselected-private-key-marker"));
     assert_eq!(listener.count(), 1);
 }

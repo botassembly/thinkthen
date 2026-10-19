@@ -350,17 +350,19 @@ fn find_preview_reads_the_owned_feed_without_sending() {
                 controls: CallOptions::new(),
                 feed: Some(RequestFeed::new(
                     "input",
-                    [Ok(item("one candidate"))].into_iter().inspect(|_| {
+                    [Ok(item("first candidate")), Ok(item("second candidate"))].into_iter().inspect(|_| {
                         advanced += 1;
                     }),
                 )),
             },
         )
         .unwrap();
-    assert_eq!(plan.records(), 1);
+    assert_eq!(plan.records(), 2);
     assert_eq!(plan.requests(), 1);
-    assert!(std::str::from_utf8(plan.first_body().unwrap()).unwrap().contains("one candidate"));
-    assert_eq!(advanced, 1);
+    let body = std::str::from_utf8(plan.first_body().unwrap()).unwrap();
+    assert!(body.contains("first candidate"));
+    assert!(body.contains("second candidate"));
+    assert_eq!(advanced, 2);
     assert_eq!(listener.count(), 0);
 }
 

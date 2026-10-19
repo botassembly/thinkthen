@@ -49,7 +49,8 @@ fn provider_identifiers_exclude_secrets_originals_and_raw_parser_bodies() {
             }
         }
         assert!(std::error::Error::source(&error).is_none());
-        assert_eq!(listener.count(), 1);
+        assert_eq!(listener.connections(), 1);
+        assert_eq!(listener.requests().len(), 1);
     }
 }
 

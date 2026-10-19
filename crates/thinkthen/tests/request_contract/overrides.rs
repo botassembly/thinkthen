@@ -39,7 +39,17 @@ fn whole_lists_replace_saved_lists_preserving_order_and_description_content() {
         let body = preview(&engine, function, question, &options);
         assert!(!body.contains("saved_a_marker"));
         assert!(!body.contains("saved_b_marker"));
-        assert!(body.find("replacement_z_marker").unwrap() < body.find("replacement_a_marker").unwrap());
+        let authored_key = if function == "choose" { "options" } else { key };
+        let authored = format!(r#"{{"{function}":"Which?","{authored_key}":{{"replacement_z_marker":{{"detail":"description_z_marker"}},"replacement_a_marker":["description_a_marker"]}}}}"#);
+        let LoadedQuestion::Question(expected) = Question::from_json(&authored).unwrap() else {
+            panic!("ordinary native question")
+        };
+        let expected = engine.plan(&expected, ["evidence"]).unwrap();
+        assert_eq!(body.as_bytes(), expected.first_body().unwrap());
+        if function != "score" {
+            assert!(body.find("replacement_z_marker").unwrap() < body.find("replacement_a_marker").unwrap());
+        }
+        assert!(body.find("description_z_marker").unwrap() < body.find("description_a_marker").unwrap());
         assert!(body.contains("description_z_marker"));
         assert!(body.contains("description_a_marker"));
         for list in ["[]", r#"[{"name":"duplicate"},{"name":"duplicate"}]"#, r#"[{"name":" "},{"name":"valid"}]"#] {
