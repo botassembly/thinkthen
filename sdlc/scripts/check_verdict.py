@@ -55,10 +55,21 @@ def main():
     if profile not in ('routine', 'full', 'smoke', 'stress'):
         print(f'{args.surface}: unknown test profile: {profile}')
         return 2
-    for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND'):
+    files = ['THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND']
+    files += {'libraries/dart': ['THINKTHEN_DART_ARTIFACT'],
+              'libraries/cobol': ['THINKTHEN_C_HEADER', 'THINKTHEN_C_LIBRARY'],
+              'libraries/php': ['THINKTHEN_COMPLETE_LIBRARY']}.get(args.surface, [])
+    # Ada's native library paths are build destinations, not optional inputs.
+    for name in files:
         value = os.environ.get(name)
         if value and not Path(value).is_file():
             print(f'{args.surface}: missing input {name}: {value}')
+            return 1
+    if args.surface in ('libraries/python', 'libraries/jvm', 'libraries/typescript', 'libraries/dart'):
+        name = 'THINKTHEN_PARITY_PREPARED'
+        value = os.environ.get(name)
+        if value and not Path(value).is_dir():
+            print(f'{args.surface}: missing input directory {name}: {value}')
             return 1
     entry = unsupported(args.surface)
     if entry:

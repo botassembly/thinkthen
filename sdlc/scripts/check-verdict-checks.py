@@ -27,6 +27,27 @@ def main():
     assert unknown.returncode == 2 and 'unknown test profile' in unknown.stdout, unknown
     missing = run(['sh', 'libraries/go/check.sh'], dict(os.environ, THINKTHEN_ARTIFACT='/absent/package'))
     assert missing.returncode == 1 and 'missing input THINKTHEN_ARTIFACT' in missing.stdout, missing
+    with tempfile.TemporaryDirectory(prefix='thinkthen-check-inputs-') as temporary:
+        directory = Path(temporary)
+        package = directory / 'package'
+        package.touch()
+        inputs = [('libraries/go', name, False) for name in
+                  ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND')]
+        inputs += [('libraries/dart', 'THINKTHEN_DART_ARTIFACT', False),
+                   ('libraries/cobol', 'THINKTHEN_C_HEADER', False),
+                   ('libraries/cobol', 'THINKTHEN_C_LIBRARY', False),
+                   ('libraries/php', 'THINKTHEN_COMPLETE_LIBRARY', False)]
+        inputs += [(f'libraries/{name}', 'THINKTHEN_PARITY_PREPARED', True)
+                   for name in ('python', 'jvm', 'typescript', 'dart')]
+        for surface, name, is_directory in inputs:
+            baseline = run([*helper, 'platform', surface])
+            assert baseline.returncode in (0, 77), baseline
+            for value in (directory / 'missing', package if is_directory else directory):
+                invalid = run(['sh', f'{surface}/check.sh'], dict(os.environ, **{name: str(value)}))
+                assert invalid.returncode == 1 and f'missing input' in invalid.stdout and name in invalid.stdout, invalid
+            valid = run([*helper, 'platform', surface],
+                        dict(os.environ, **{name: str(directory if is_directory else package)}))
+            assert valid.returncode == baseline.returncode, valid
     if sys.platform == 'darwin':
         go = run(['sh', 'libraries/go/check.sh'])
         assert go.returncode == 77 and 'sdlc/tools.json libraries.go =' in go.stdout, go
