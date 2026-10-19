@@ -55,8 +55,9 @@ def workflow_command(name, doc):
 def workflow_cases():
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
-    assert workflow_command('release.yml', release)[0] == 0
-    assert workflow_command('windows.yml', windows)[0] == 0
+    for name, doc in (('release.yml', release), ('windows.yml', windows)):
+        code, output = workflow_command(name, doc)
+        assert code == 0, (name, code, output)
     # The host cache exception must not admit another release cache or a wider key.
     for job in ('build', 'smoke'):
         steps = release['jobs'][job]['steps']
@@ -82,7 +83,8 @@ def workflow_cases():
             owner = 'publish' if defect == 'publish' else job
             assert code == 1 and f'job {owner} uses a cache' in output, (job, defect, output)
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    assert workflow_command('gate.yml', gate)[0] == 0
+    code, output = workflow_command('gate.yml', gate)
+    assert code == 0, ('gate.yml', code, output)
     for defect in ('options', 'declaration', 'dynamic', 'paid', 'string', 'default'):
         doc = deepcopy(gate)
         platform = doc.get('on', doc.get(True))['workflow_dispatch']['inputs']['platform']
