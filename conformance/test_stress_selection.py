@@ -1,7 +1,5 @@
 """Select declared stress cases before running registered surface checks."""
 import os
-import json
-import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -90,12 +88,8 @@ class StressSelection(unittest.TestCase):
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
             unsupported = subprocess.run(['sh', str(php)], env=env,
                                          capture_output=True, text=True)
-            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-            host = platform.system().lower() + '-' + arch
-            manifest = json.loads((root / 'sdlc/tools.json').read_text())
-            supported = host in manifest['libraries']['php']['check_platforms']
-            self.assertEqual(unsupported.returncode, 1 if supported else 77, unsupported.stdout + unsupported.stderr)
-            self.assertIn('no stress gate' if supported else 'not run', unsupported.stdout)
+            self.assertEqual(unsupported.returncode, 1, unsupported.stdout + unsupported.stderr)
+            self.assertEqual(unsupported.stdout.strip(), 'php: not run: no stress gate')
             for failed in ('', 'libraries/typescript'):
                 with self.subTest(failed=failed):
                     calls = root / 'calls'
