@@ -226,6 +226,7 @@ fi
 backend_start
 
 failed=0 seen= selected_seen=
+set --
 for file in "$DIR"/*; do
 	name=${file##*/}
 	case $name in
@@ -273,6 +274,21 @@ for file in "$DIR"/*; do
 	databases/postgresql) family=postgresql$major ;;
 	*) family=${surface##*/} ;;
 	esac
+	set -- "$@" "$surface" "$file" "$family" "${major:-}"
+done
+# Every file the release holds for this target is here.
+pg_families='postgresql16 postgresql17 postgresql18'
+[ "${THINKTHEN_TEST_PROFILE:-}" != routine ] || pg_families='postgresql16 postgresql18'
+for want in $pg_families command libraries/c databases/sqlite databases/duckdb databases/postgresql \
+	libraries/python libraries/typescript libraries/ruby first-run; do
+	case " $seen " in *" $want "*) ;; *) echo "release-smoke: FAIL $want (DIR holds no file for it)"; failed=1 ;; esac
+done
+# No selected consumer runs until the whole bundle passes validation.
+[ "$failed" = 0 ] || exit "$failed"
+while [ "$#" -gt 0 ]; do
+	surface=$1 file=$2 family=$3 major=$4
+	shift 4
+	name=${file##*/}
 	[ "$selected_family" = all ] || [ "$selected_family" = "$family" ] || continue
 	selected_seen=1
 	set +e
@@ -299,13 +315,6 @@ for file in "$DIR"/*; do
 	fi
 	set -e
 	verdict "$surface $name" "$code" || failed=1
-done
-# Every file the release holds for this target is here.
-pg_families='postgresql16 postgresql17 postgresql18'
-[ "${THINKTHEN_TEST_PROFILE:-}" != routine ] || pg_families='postgresql16 postgresql18'
-for want in $pg_families command libraries/c databases/sqlite databases/duckdb databases/postgresql \
-	libraries/python libraries/typescript libraries/ruby first-run; do
-	case " $seen " in *" $want "*) ;; *) echo "release-smoke: FAIL $want (DIR holds no file for it)"; failed=1 ;; esac
 done
 if [ "$selected_family" != all ]; then
 	[ -n "$selected_seen" ] || { echo "release-smoke: FAIL selected family $selected_family has no consumer"; failed=1; }

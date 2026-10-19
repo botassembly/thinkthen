@@ -209,6 +209,8 @@ jobs:
           - {target: x86_64-apple-darwin, runner: macos-15-intel}
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
+    # Current job has no applicable passing duration in bounded history.
+    # Retain 60m pending 0691; step timeout leaves an upload reserve.
     timeout-minutes: 60
     permissions: {contents: read, actions: read}
     env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
@@ -219,7 +221,10 @@ jobs:
         with: {pattern: 'platform-*-apple-darwin', path: target/apple-inputs}
       - name: Assemble Swift and Foundation from both captured C packages
         env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
+        timeout-minutes: 55
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/apple-packages.log") 2>&1
           set -eu
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
           for arch in x86_64 aarch64; do
@@ -241,7 +246,10 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with: {node-version: '22.22.3'}
       - name: Prepare the installed Apple consumer dependencies
+        timeout-minutes: 55
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/apple-packages.log") 2>&1
           set -eu
           rustup toolchain install 1.95.0 --profile minimal
           cargo fetch --locked
@@ -249,7 +257,10 @@ jobs:
           CARGO_NET_OFFLINE=true python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline -p conformance-backend
       - name: Qualify installed Swift and Objective-C Foundation
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}", THINKTHEN_TEST_PROFILE: full}
+        timeout-minutes: 55
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/apple-packages.log") 2>&1
           set -eu
           sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages swift "$SHA"
           sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages objective-c "$SHA"
@@ -257,6 +268,16 @@ jobs:
         with: {name: 'apple-packages-${{ matrix.target }}', path: target/apple-packages/, if-no-files-found: error, retention-days: 7}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: 'apple-framework-${{ matrix.target }}', path: libraries/swift/CThinkThen.xcframework/, if-no-files-found: error, retention-days: 7}
+      # Available logs survive a step timeout; runner/setup or whole-job
+      # cancellation can still prevent this upload.
+      - name: Retain available long-job logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: apple-packages-${{ matrix.target }}-logs
+          path: ${{ runner.temp }}/apple-packages.log
+          if-no-files-found: warn
+          retention-days: 7
 
   wheels:
     needs: [resolve, build]
@@ -308,6 +329,8 @@ jobs:
   crate:
     needs: resolve
     runs-on: ubuntu-24.04
+    # Current job has no applicable passing duration in bounded history.
+    # Retain 60m pending 0691; step timeout leaves an upload reserve.
     timeout-minutes: 60
     permissions: {contents: read}
     steps:
@@ -317,24 +340,77 @@ jobs:
         with: {node-version: '22.22.3'}
       - name: Check binding samples on the resolved tagged commit
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        timeout-minutes: 55
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
           test "$(git rev-parse HEAD)" = "$SHA"
           node site/scripts/check-binding-samples.mjs
-      - run: rustup toolchain install 1.95.0 --profile minimal
-      - run: cargo fetch --locked
-      - run: cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
-      - run: cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
-      - run: cargo fetch --locked --manifest-path libraries/python/Cargo.toml
-      - run: python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
-      - run: sh sdlc/scripts/package
-      - run: cargo publish --dry-run --locked --package thinkthen
-      - run: cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          rustup toolchain install 1.95.0 --profile minimal
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo fetch --locked
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          sh sdlc/scripts/package
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo publish --dry-run --locked --package thinkthen
+      - timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml
       - name: Build the R source package from the published crate
-        run: CARGO_NET_OFFLINE=true sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu r-dist r
+        timeout-minutes: 55
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/crate.log") 2>&1
+          CARGO_NET_OFFLINE=true sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu r-dist r
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: {name: r-package, path: r-dist/, if-no-files-found: error, retention-days: 7}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
+      # Available logs survive a step timeout; runner/setup or whole-job
+      # cancellation can still prevent this upload.
+      - name: Retain available long-job logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: crate-logs
+          path: ${{ runner.temp }}/crate.log
+          if-no-files-found: warn
+          retention-days: 7
 
   registries:
     needs: [resolve, build]
@@ -360,12 +436,18 @@ jobs:
   windows-sdks:
     needs: [resolve, npm-pack, registries]
     runs-on: windows-2025
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     defaults: {run: {shell: bash}}
     permissions: {contents: read, actions: read}
     steps:
       - name: Keep line endings as committed
-        run: git config --global core.autocrlf false
+        timeout-minutes: 355
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/windows-sdks.log") 2>&1
+          git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
@@ -376,7 +458,10 @@ jobs:
         with: {dotnet-version: '8.0.131'}
       - name: Read the stable JVM runtime floor
         id: jvm-contract
+        timeout-minutes: 355
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/windows-sdks.log") 2>&1
           jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
           echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
@@ -386,13 +471,27 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: registry-packages, path: registry}
       - name: Install the final Windows Node, C#, Java, Kotlin and Scala SDK packages
-        run: python3 sdlc/scripts/release-windows-sdk-smoke.py npm-dist registry
+        timeout-minutes: 355
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/windows-sdks.log") 2>&1
+          python3 sdlc/scripts/release-windows-sdk-smoke.py npm-dist registry
+      # Available logs survive a step timeout; runner/setup or whole-job
+      # cancellation can still prevent this upload.
+      - name: Retain available long-job logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: windows-sdks-logs
+          path: ${{ runner.temp }}/windows-sdks.log
+          if-no-files-found: warn
+          retention-days: 7
 
   smoke:
     needs: [resolve, build, apple-packages, wheels, npm-pack, gems, crate]
     # Historic setup includes DuckDB compilation removed by 0613. These bounds
     # deliberately retain that measured cost; they are not new setup timings.
-    # Source jobs: https://github.com/botassembly/thinkthen/actions/jobs/JOB_ID
+    # The component comments below identify actual source job IDs.
     # 0691 measures each complete new job before replacing these provisional bounds.
     strategy:
       fail-fast: false
@@ -671,6 +770,8 @@ jobs:
   draft:
     needs: [resolve, smoke, registries, windows-sdks]
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: write, actions: read}
     steps:
@@ -691,14 +792,25 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: crate-package, path: crate-dist}
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
-        run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
-      - run: ruby -c thinkthen.rb
+        timeout-minutes: 355
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/draft.log") 2>&1
+          sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
+      - timeout-minutes: 355
+        shell: bash
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/draft.log") 2>&1
+          ruby -c thinkthen.rb
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}
           NAME: ${{ needs.resolve.outputs.name }}
           SHA: ${{ needs.resolve.outputs.sha }}
+        timeout-minutes: 355
+        shell: bash
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/draft.log") 2>&1
           for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
             # Stage 2 bindings and Unix-only families have no Windows release.
             [ "$target" != x86_64-pc-windows-msvc ] || continue
@@ -711,12 +823,24 @@ jobs:
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           cp r-dist/* crate-dist/*.crate all-files/
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
+      # Available logs survive a step timeout; runner/setup or whole-job
+      # cancellation can still prevent this upload.
+      - name: Retain available long-job logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: draft-logs
+          path: ${{ runner.temp }}/draft.log
+          if-no-files-found: warn
+          retention-days: 7
 
   crates:
     needs: [resolve, draft]
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: read, id-token: write}
     steps:
@@ -734,6 +858,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {actions: read, id-token: write}
     steps:
@@ -752,6 +878,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {actions: read, id-token: write}
     steps:
@@ -772,6 +900,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {actions: read, id-token: write}
     steps:
@@ -792,6 +922,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: read, actions: read}
     steps:
@@ -809,6 +941,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: read, actions: read, id-token: write}
     steps:
@@ -830,6 +964,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: read, actions: read}
     steps:
@@ -853,6 +989,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: read, actions: read, id-token: write}
     steps:
@@ -873,6 +1011,8 @@ jobs:
     if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
+    # No applicable current passing duration in the bounded release history.
+    # Retain the existing cap; measure at the next authorized checkpoint.
     timeout-minutes: 360
     permissions: {contents: write, actions: write}
     steps:
