@@ -29,10 +29,33 @@ class NativeFixtureEnvironment(unittest.TestCase):
         def compiler(args, **kwargs):
             probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'; assert os.environ['CARGO_PROFILE_DEV_OPT_LEVEL'] == '2'; assert os.environ['RUSTFLAGS'] == '--remap-path-prefix=/checkout=/build'; assert os.environ['RUSTC_WRAPPER'] == ''"
             return launch([sys.executable, '-c', probe], **kwargs)
-        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller) | {'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+
+    def test_explicit_dependency_homes_do_not_require_a_host_account(self):
+        sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import parity as native_parity
+        import native_fixture
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            tools = {name: str(root / name) for name in (
+                'CARGO_HOME', 'RUSTUP_HOME', 'THINKTHEN_TOOLCHAINS', 'PUB_CACHE',
+                'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')}
+            with patch.object(os, 'environ', tools), patch.object(Path, 'home', side_effect=RuntimeError('no host account')):
+                env = parity.consumer_environment(root, '12345')
+                for name, value in tools.items():
+                    self.assertEqual(env[name], value)
+                self.assertEqual(env['R_LIBS_USER'], str(Path(tools['THINKTHEN_TOOLCHAINS']) / 'r-library'))
+                with patch.object(os, 'environ', {}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run') as compiler:
+                    native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
+                                       extra_env={name: tools[name] for name in ('CARGO_HOME', 'RUSTUP_HOME')},
+                                       rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+                compiled = compiler.call_args.kwargs['env']
+                for name in ('CARGO_HOME', 'RUSTUP_HOME'):
+                    self.assertEqual(compiled[name], tools[name])
+                self.assertNotEqual(compiled['HOME'], env['HOME'])
 
     def test_shared_routine_selects_call_result_once_without_followup(self):
         sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
@@ -507,7 +530,7 @@ class PublicAssertions(unittest.TestCase):
             with lock:
                 active -= 1
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(peak, 1)
@@ -832,7 +855,7 @@ class PublicAssertions(unittest.TestCase):
                     kwargs['stdout'].write(output)
                     self.assertEqual(kwargs['env']['THINKTHEN_TEST_PROFILE'], 'full')
                     return subprocess.CompletedProcess(args, code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
@@ -850,7 +873,7 @@ class PublicAssertions(unittest.TestCase):
                 contract = {'functions': ['decide'], 'consumers': [
                     {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', child_env(home=root / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 row = json.loads((root / 'target/parity/matrix.json').read_text())[0]
                 if expected_exit is not None:
@@ -991,7 +1014,7 @@ class CliApplicability(unittest.TestCase):
             cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
             def command(args, **kwargs):
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
@@ -1073,7 +1096,7 @@ class InstalledInputs(unittest.TestCase):
             def command(args, **kwargs):
                 self.assertIn('libraries/objective-c/check.sh', args)
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_unsupported', row)
@@ -1128,7 +1151,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):

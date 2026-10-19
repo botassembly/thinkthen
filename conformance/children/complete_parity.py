@@ -57,7 +57,7 @@ def main():
                           PATH=os.environ['PATH'],
                           LANG='C.UTF-8',
                           TT_REPO=str(ROOT),
-                          PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
+                          PUB_CACHE=os.environ['PUB_CACHE'] if 'PUB_CACHE' in os.environ else str(Path.home()/'.pub-cache'),
                           FLUTTER_SUPPRESS_ANALYTICS='true',
                           CI='true')
                     backend=Backend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend',child)
