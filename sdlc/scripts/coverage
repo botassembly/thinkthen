@@ -370,7 +370,7 @@ def main():
     home_destination = '/build/users' if Path.home().is_relative_to('/Users') else '/build/host'
     remaps = [(Path('/home'), '/build/host'), (Path('/Users'), '/build/users'),
               (Path.home(), home_destination), (ROOT, '/build/source'),
-              (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
+              (Path((os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
              '-C', f'link-arg={initializer}']

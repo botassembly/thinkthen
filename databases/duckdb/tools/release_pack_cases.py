@@ -147,7 +147,7 @@ def main(target: str) -> None:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(contents)
         env = child_env(CARGO, RUSTC_WRAPPER='', CARGO_NET_OFFLINE='true',
-                        THINKTHEN_TOOLCHAINS=os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains')))
+                        THINKTHEN_TOOLCHAINS=(os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ else str(Path.home() / '.cache/thinkthen-toolchains')))
         for name, index, value in (('platform', 6, WRONG_PLATFORM[target]), ('DuckDB version', 5, versions()[1]),
                                     ('extension version', 4, '9.9.9'), ('ABI', 3, 'C'), ('ABI version', 7, '9')):
             at = len(data) - 534 + 22 + 32 * index

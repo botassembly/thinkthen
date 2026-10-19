@@ -220,8 +220,9 @@ def main():
         root = Path(temporary)
         env = {key: value for key, value in os.environ.items()
                if not key.upper().startswith(("THINKTHEN_", "XDG_")) and not key.upper().endswith("_API_KEY")}
-        env.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
-        env.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
+        for name, folder in (("CARGO_HOME", ".cargo"), ("RUSTUP_HOME", ".rustup")):
+            if name not in env:
+                env[name] = str(Path.home() / folder)
         host = shutil.which("powershell")
         if host is None:
             raise RuntimeError("installer smoke requires Windows PowerShell 5.1")

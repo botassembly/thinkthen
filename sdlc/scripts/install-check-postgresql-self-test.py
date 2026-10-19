@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import select
+import signal
 import shutil
 import subprocess
 import sys
@@ -14,11 +15,10 @@ import unittest
 from unittest.mock import patch
 from install_check import Check, Failure, check_result, clean_environment, main
 from install_check_channels import postgresql
-from install_check_postgresql import stop_postgres
+from install_check_postgresql import libc_pidfd, stop_postgres
 
 
-@unittest.skipUnless(sys.platform.startswith('linux'), 'PostgreSQL install cell runs only on Linux')
-class PostgresLifecycle(unittest.TestCase):
+class PostgresLifecycle:
     @classmethod
     def setUpClass(cls):
         cls.seed = tempfile.TemporaryDirectory(prefix='thinkthen-pg-fixture-')
@@ -105,10 +105,41 @@ class PostgresLifecycle(unittest.TestCase):
                 check.tools(check, check.runtime)
                 check.start()
                 check.child.terminate(); check.child.wait()
-                with patch('install_check_postgresql.signal.pidfd_send_signal') as send:
+                with patch('install_check_postgresql.signal_pidfd') as send:
                     stop_postgres(check, check.data, check.socket, check.binary)
                 send.assert_not_called()
             finally: check.close()
+
+
+@unittest.skipUnless(sys.platform.startswith('linux'), 'PostgreSQL install cell runs only on Linux')
+class LibcPidfdLifecycle(PostgresLifecycle, unittest.TestCase):
+    def setUp(self):
+        for module, name in ((os, 'pidfd_open'), (signal, 'pidfd_send_signal')):
+            patcher = patch.object(module, name, None, create=True)
+            patcher.start(); self.addCleanup(patcher.stop)
+
+    def test_missing_libc_support_retains_unverified_child(self):
+        with tempfile.TemporaryDirectory() as own:
+            check = PgFixture(Path(own), self.server)
+            try:
+                with patch('install_check_postgresql.ctypes.CDLL', return_value=object()):
+                    with self.assertRaisesRegex(Failure, 'requires Linux pidfd support'):
+                        self.run_fixture(check)
+                self.assertTrue(check.retain_scratch)
+                self.assertIsNone(check.child.poll())
+            finally: check.close()
+
+
+@unittest.skipUnless(sys.platform.startswith('linux'), 'PostgreSQL install cell runs only on Linux')
+class PythonPidfdLifecycle(PostgresLifecycle, unittest.TestCase):
+    def setUp(self):
+        # Exercise Python API dispatch on builds that omit the wrappers too;
+        # the replacements use the real libc ABI, so identity and exit remain real.
+        open_api = getattr(os, 'pidfd_open', None) or (lambda pid: libc_pidfd('pidfd_open', pid, 0))
+        send_api = getattr(signal, 'pidfd_send_signal', None) or (lambda fd, number: libc_pidfd('pidfd_send_signal', fd, number, None, 0))
+        for module, name, function in ((os, 'pidfd_open', open_api), (signal, 'pidfd_send_signal', send_api)):
+            patcher = patch.object(module, name, function, create=True)
+            patcher.start(); self.addCleanup(patcher.stop)
 
 
 class ScratchRetention(unittest.TestCase):

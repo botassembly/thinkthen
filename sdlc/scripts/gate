@@ -1,0 +1,8 @@
+#!/bin/sh
+# Linux owns routine proof; native macOS also checks Apple-only behavior.
+set -eu
+cd -- "$(dirname -- "$0")/../.."
+python3 sdlc/scripts/linux-check lint test
+if [ "$(uname -s)" = Darwin ]; then
+    exec /usr/bin/python3 sdlc/scripts/tools.py test -- sh sdlc/scripts/test
+fi

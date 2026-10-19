@@ -20,6 +20,8 @@ from unittest.mock import patch
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import child_env
 
 
 def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
@@ -368,7 +370,7 @@ def linux_failed_phase_evidence_case():
                           "(p/'matrix.json').write_text('[{\"exit\": %d}]\\n')\n" % code) if evidence else ''
                 return subprocess.run([sys.executable, '-c', script + f'raise SystemExit({code})'], env=env).returncode
             namespace = dict(root=root, out=out, sha=sha, tag='rc/fixture', stage='functional',
-                             env={}, admission=SimpleNamespace(run_owned=child, child_pids=lambda: []),
+                             env=child_env(home=root / 'home'), admission=SimpleNamespace(run_owned=child, child_pids=lambda: []),
                              Path=Path, os=os, subprocess=subprocess, signal=signal, time=time,
                              shutil=shutil, json=json, hashlib=hashlib)
             previous = Path.cwd()
@@ -616,7 +618,7 @@ def linux_coverage_destination_case():
                 tool = root / name
                 tool.write_text('#!/bin/sh\n' + body + '\n')
                 tool.chmod(0o755)
-            env = {'PATH': f'{root}:{os.defpath}', 'STAGE': 'coverage',
+            env = child_env(home=root / 'home') | {'PATH': f'{root}:{os.defpath}', 'STAGE': 'coverage',
                    'RUNNER_TEMP': '/home/runner/work/_temp'}
             result = subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
                                     capture_output=True, text=True, timeout=5)

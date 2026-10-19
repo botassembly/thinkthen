@@ -247,10 +247,11 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
             env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS','RUSTFLAGS','CARGO_ENCODED_RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
                                 'CARGO_PROFILE_DEV_OPT_LEVEL','CARGO_PROFILE_DEV_DEBUG'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
-            env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
-            env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
             env['CARGO_NET_OFFLINE']='true'
             env.update(extra_env or {})
+            for name, folder in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
+                if name not in env:
+                    env[name] = str(Path.home() / folder)
             subprocess.run(compiler,cwd=source.parent,env=env,check=True)
     failures=[]
     for row in rows:
