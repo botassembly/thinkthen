@@ -570,7 +570,7 @@ class PackageText(unittest.TestCase):
                     executable.chmod(0o755)
                     if binary == 'ruby' and folder != wrong:
                         (folder.parent / 'thinkthen-toolchain.stamp').touch()
-            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True)
+            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True, exist_ok=True)
             host.write_text('#!/bin/sh\nprintf "%s\\n" ' + readmes.json.dumps(str(sqlite)) + '\n')
             checker = root / 'sdlc/scripts/registry-readmes.py'
             checker.write_text('import subprocess\nfor name in ("ruby", "sqlite3", "duckdb"):\n'

@@ -41,6 +41,11 @@ def workflow_cases():
     with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
         root = Path(temporary)
         stage_checkout(REPO, root)
+        # Nested package checks archive HEAD from this isolated checkout.
+        subprocess.run(['git', '-C', str(root), '-c', 'user.name=fixture',
+                        '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
+                        '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'Stage workflow fixture'],
+                       check=True)
         workflow_cases_at(root)
 
 
