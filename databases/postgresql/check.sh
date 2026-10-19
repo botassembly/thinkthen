@@ -8,6 +8,10 @@
 # The surfaces rung runs `sh check.sh`, and the steps need bash 5 outside POSIX mode:
 # EPOCHREALTIME, `exec {fd}>` and process substitution. macOS's sh is bash 3.2 in
 # POSIX mode, so a set BASH_VERSION is not enough (ticket 0375).
+set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/postgresql
 if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 	if [ -n "${THINKTHEN_PG_CHECK_REEXEC:-}" ]; then
 		echo "not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found ${BASH_VERSION:-no bash}"
@@ -18,9 +22,6 @@ if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
-python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/postgresql
 tools_group=postgresql
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
