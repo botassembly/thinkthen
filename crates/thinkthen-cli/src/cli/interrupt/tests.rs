@@ -202,7 +202,7 @@ mod unix {
     #[test]
     fn carrier_masks_workers_and_cleanup_restores_the_mask() {
         let before = SigSet::thread_get_mask().expect("mask");
-        let routing = UnixRouting::start(crate::engine::Cancel::default(), None).expect("routing");
+        let routing = UnixRouting::start(super::super::Signal::default(), None).expect("routing");
         assert!(
             SigSet::thread_get_mask()
                 .expect("blocked")
@@ -235,7 +235,7 @@ mod unix {
     fn acknowledgment_precedes_queued_stop_and_refuses_existing_paths() {
         let created = Scratch::new("ack");
         let acknowledgment = Acknowledgment::new(Some(created.0.clone()));
-        let cancel = crate::engine::Cancel::default();
+        let cancel = super::super::Signal::default();
         cancel.fire();
         let signal = sigint_set();
         let original = signal
@@ -372,7 +372,7 @@ mod unix {
         let mut environment = Environment::default();
         let _guard = state
             .activate_with(&mut environment, || {
-                Routing::start(crate::engine::Cancel::default(), None)
+                Routing::start(super::super::Signal::default(), None)
             })
             .expect("active");
         announce("ready");

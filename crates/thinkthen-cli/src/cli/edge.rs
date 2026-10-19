@@ -71,7 +71,7 @@ pub(crate) struct Environment {
     retry_wait_ms: Option<u64>,
     input_pause_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
-    pub(super) cancel: crate::engine::Cancel<'static>,
+    pub(super) cancel: crate::cli::interrupt::Signal,
     usage: std::sync::Arc<Counters>,
     native_facts: std::sync::Mutex<Option<crate::Facts>>,
     usage_path: Option<PathBuf>,
@@ -134,7 +134,7 @@ impl Environment {
             input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")
                 .and_then(|text| text.parse().ok()),
             sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
-            cancel: crate::engine::Cancel::default().with_surface(crate::core::Surface::Cli),
+            cancel: crate::cli::interrupt::Signal::default(),
             usage,
             usage_path,
             key: KeySnapshot::default(),
@@ -236,7 +236,7 @@ impl Environment {
         self.input_pause_ms.map(Duration::from_millis)
     }
 
-    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
+    pub(crate) const fn cancel(&self) -> &crate::cli::interrupt::Signal {
         &self.cancel
     }
 }

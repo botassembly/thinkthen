@@ -5,7 +5,7 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 
 use super::{Acknowledgment, StartError};
-use crate::engine::Cancel;
+use super::Signal as Cancel;
 
 pub(super) struct Carrier {
     stop: Sender<()>,
@@ -13,7 +13,7 @@ pub(super) struct Carrier {
 }
 
 impl Carrier {
-    pub(super) fn start(cancel: Cancel<'static>, path: PathBuf) -> Result<Self, StartError> {
+    pub(super) fn start(cancel: Cancel, path: PathBuf) -> Result<Self, StartError> {
         let (stop, stopped) = mpsc::channel();
         let acknowledgment = Acknowledgment::new(Some(path));
         let thread = thread::Builder::new()
@@ -35,7 +35,7 @@ impl Carrier {
 }
 
 fn poll(
-    cancel: Cancel<'static>,
+    cancel: Cancel,
     stopped: Receiver<()>,
     acknowledgment: Acknowledgment,
 ) -> Result<(), ()> {

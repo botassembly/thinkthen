@@ -5,7 +5,9 @@ use std::sync::{Arc, OnceLock};
 
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
-use crate::engine::Cancel;
+mod signal;
+pub(crate) use signal::Signal;
+use Signal as Cancel;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Action {
@@ -22,7 +24,7 @@ const ACTIONS: [Action; 4] = [
 ];
 
 struct State {
-    cancel: Cancel<'static>,
+    cancel: Cancel,
     signal: Arc<AtomicUsize>,
     default_armed: Arc<AtomicBool>,
     active: Arc<AtomicBool>,
@@ -70,7 +72,7 @@ impl State {
             .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .map_err(|_| Failure::Defect("another command entry is already active"))?;
         self.cancel.reset();
-        environment.cancel = self.cancel.with_surface(crate::core::Surface::Cli);
+        environment.cancel = self.cancel.clone();
         let routing = route().map_err(|error| {
             self.active.store(false, Ordering::SeqCst);
             error.failure()
@@ -177,12 +179,12 @@ enum Routing {
 
 impl Routing {
     #[cfg(unix)]
-    fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
         UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
     }
 
     #[cfg(windows)]
-    fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
         match acknowledgment {
             Some(path) => windows::Carrier::start(cancel, path).map(Self::Windows),
             None => Ok(Self::Idle),
@@ -191,7 +193,7 @@ impl Routing {
 
     #[cfg(not(any(unix, windows)))]
     fn start(
-        _cancel: Cancel<'static>,
+        _cancel: Cancel,
         _acknowledgment: Option<PathBuf>,
     ) -> Result<Self, StartError> {
         Ok(Self::Idle)
@@ -220,7 +222,7 @@ struct UnixRouting {
 
 #[cfg(unix)]
 impl UnixRouting {
-    fn start(cancel: Cancel<'static>, path: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel, path: Option<PathBuf>) -> Result<Self, StartError> {
         use std::sync::mpsc;
 
         let signal = sigint_set();
@@ -328,7 +330,7 @@ fn carrier(
     signal: nix::sys::signal::SigSet,
     stopped: std::sync::mpsc::Receiver<()>,
     ready: std::sync::mpsc::SyncSender<Result<(), ()>>,
-    cancel: Cancel<'static>,
+    cancel: Cancel,
     acknowledgment: Acknowledgment,
 ) -> Result<(), ()> {
     use std::sync::mpsc::RecvTimeoutError;
