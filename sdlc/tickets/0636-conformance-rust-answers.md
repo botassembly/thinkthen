@@ -27,3 +27,4 @@ The conformance suite is strong. `conformance/cases.json` lists 29 consumers wit
 
 - 2026-10-19 started
 - 2026-10-19 next: PM accepts closed-engine proof as a session safely outliving its original engine with owned result and error lifetimes; shared conformance adds no freed-pointer test or close API, and disposed-wrapper errors remain each language phase3 idiom checks.
+- 2026-10-19 next: PM accepts the existing installed CLI, Rust and C entrypoints with routine case selection from one fresh production artifact set as this ticket proof, without claiming the all-host surfaces command; the routine C source-path Darwin suffix defect belongs to0641.
