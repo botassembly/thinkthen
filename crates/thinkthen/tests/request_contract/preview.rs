@@ -453,3 +453,28 @@ fn release_only_canonical_source_preview_bounds_originals_before_projection_and_
     assert_eq!(listener.count(), 0);
     std::fs::remove_dir_all(folder).unwrap();
 }
+
+#[test]
+fn annotation_preview_retains_group_counts_without_adding_generic_json_fields() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = Engine::builder().base_url(listener.base()).unwrap().no_cache().build().unwrap();
+    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Urgent?"}}}"#).unwrap();
+    for rows in [vec![], vec![item("Alpha."), item("Beta.")]] {
+        let records = rows.len();
+        let mut arguments = args(set.clone().into(), RequestInput::Records { items: rows });
+        arguments.options.batch = Some(RequestBatch::Count(1));
+        let request = Request::named("annotate", arguments).unwrap().admit().unwrap();
+        let plan = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        assert_eq!(plan.records(), records);
+        assert_eq!(plan.question_requests(), Some((records, [records, records].as_slice())));
+        assert!(!plan.drops_detail());
+        let json = serde_json::to_value(&plan).unwrap();
+        assert!(json.get("question_requests").is_none());
+        assert!(json.get("dropped_detail").is_none());
+        assert_eq!(json["largest_request_bytes"], plan.largest_request_bytes());
+        assert_eq!(json["largest_request_estimated_input_tokens"], plan.largest_request_estimated_input_tokens());
+        assert_eq!(json["token_estimate_method"], plan.token_estimate_method());
+        assert_eq!(listener.count(), 0);
+        assert_eq!(engine.usage().requests_sent(), 0);
+    }
+}

@@ -6,7 +6,7 @@ use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 type Preview = (crate::core::PlanSummary, bool, usize, Vec<usize>);
 
 impl Engine {
-    /// Preview an admitted atomic or single-question rank request without sending.
+    /// Preview an admitted atomic, annotation or rank request without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
     /// No key, cache or answer is read. Unsupported functions refuse before input advances.
     /// # Errors
@@ -16,7 +16,11 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
-        crate::public::plan::from_summary(self.plan_request_summary(request, environment)?.0)
+        let annotation = request.request.call.function() == RequestFunction::Annotate;
+        let (summary, dropped, count, groups) = self.preview_request(request, environment, annotation)?;
+        crate::public::plan::from_summary(summary).map(|plan| {
+            plan.with_request_details(dropped, annotation.then_some((count, groups)))
+        })
     }
 
     pub(crate) fn plan_request_summary<'a>(
@@ -91,6 +95,11 @@ impl Engine {
             super::inline::validate_composed(&reading_definition, options, &row)
                 .map_err(|error| error.at_record(at))?;
             if annotation && let RequestDefinition::Annotate(set) = &definition {
+                dropped |= set.0.questions().iter().any(|question| {
+                    crate::core::adapters::built_in::drops_detail_of(
+                        engine.backend().descriptions(), question.question(),
+                    )
+                });
                 return crate::public::complete::annotation_preview_asks(
                     &engine,
                     set,
