@@ -23,9 +23,12 @@ pub use details::{PlannedRelation, PreparedRequest, RecognitionPlan, RelationPla
 /// A request admission bound before cache answers, refusal splits or retries.
 /// Bytes and the token band describe the uncoalesced uninterrupted preview, not a bill.
 /// It serializes as the `plan` definition of the result schema.
-#[derive(Clone, Eq, PartialEq, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "plan"))]
 pub struct PlanEstimate {
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    summary: PlanSummary,
     records: usize,
     requests: usize,
     estimated_bytes: usize,
@@ -50,6 +53,23 @@ pub struct PlanEstimate {
     details: details::Details,
 }
 
+// Retaining unrounded counters does not change the existing equality contract.
+impl PartialEq for PlanEstimate {
+    fn eq(&self, other: &Self) -> bool {
+        self.records == other.records && self.requests == other.requests
+            && self.estimated_bytes == other.estimated_bytes
+            && self.largest_request_bytes == other.largest_request_bytes
+            && self.largest_request_estimated_input_tokens == other.largest_request_estimated_input_tokens
+            && self.token_estimate_method == other.token_estimate_method
+            && self.token_estimate_note == other.token_estimate_note
+            && self.estimated_input_tokens == other.estimated_input_tokens
+            && self.upper_bound == other.upper_bound && self.first_body == other.first_body
+            && self.dropped_detail == other.dropped_detail && self.question_requests == other.question_requests
+            && self.details == other.details
+    }
+}
+impl Eq for PlanEstimate {}
+
 /// The low and high input-token estimates of a plan.
 #[derive(Clone, Copy, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "tokenBand"))]
@@ -72,6 +92,25 @@ impl fmt::Debug for PlanEstimate {
 }
 
 impl PlanEstimate {
+    /// Combine ordered preview totals with native unrounded input accounting.
+    /// Sums and maxima retain their existing meanings, including request bounds.
+    /// The first nonempty body survives in order; all function-specific detail,
+    /// group-count and prepared-request views are cleared. Description loss is
+    /// retained when either constituent reports it. This opens and sends nothing.
+    /// # Errors
+    /// Refuses differing accounting modes or adapter caveats and checked overflow.
+    pub fn combine(&self, other: &Self) -> Result<Self, super::Error> {
+        if self.token_estimate_note != other.token_estimate_note {
+            return Err(super::Error::usage("plans use different input accounting"));
+        }
+        let summary = self.summary.combine(&other.summary)
+            .map_err(|error| super::Error::usage(error.to_string()))?;
+        let mut combined = from_summary_with_note(summary, self.token_estimate_note)?;
+        combined.first_body = self.first_body.clone().or_else(|| other.first_body.clone());
+        combined.dropped_detail = self.dropped_detail || other.dropped_detail;
+        Ok(combined)
+    }
+
     /// Number of validated input records.
     #[must_use]
     pub const fn records(&self) -> usize {
@@ -399,6 +438,9 @@ pub(in crate::public) fn estimate_tagged_summary<T>(
 }
 
 pub(in crate::public) fn from_summary(summary: PlanSummary, adapter: crate::core::adapters::ApiType) -> Result<PlanEstimate, Error> {
+    from_summary_with_note(summary, adapter.plan_estimate_note())
+}
+fn from_summary_with_note(summary: PlanSummary, token_estimate_note: &'static str) -> Result<PlanEstimate, Error> {
     let counts = summary
         .counts()
         .map_err(|_| Error::usage("the planned input is too large to count"))?;
@@ -408,13 +450,14 @@ pub(in crate::public) fn from_summary(summary: PlanSummary, adapter: crate::core
         .transpose()
         .map_err(|_| Error::defect("a planned body was not UTF-8"))?;
     Ok(PlanEstimate {
+        summary: summary.without_body(),
         records: counts.records,
         requests: counts.requests,
         estimated_bytes: counts.estimated_bytes,
         largest_request_bytes: counts.largest_request_bytes,
         largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
         token_estimate_method: counts.token_estimate_method,
-        token_estimate_note: adapter.plan_estimate_note(),
+        token_estimate_note,
         estimated_input_tokens: TokenBand {
             lower: counts.estimated_input_tokens.lower,
             upper: counts.estimated_input_tokens.upper,

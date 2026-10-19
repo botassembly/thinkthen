@@ -13,6 +13,14 @@ use thiserror::Error;
 #[error("the planned input is too large to count")]
 pub(crate) struct PlanTooLarge;
 
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub(crate) enum PlanCombineError {
+    #[error("plans use different input accounting")]
+    Accounting,
+    #[error(transparent)]
+    TooLarge(#[from] PlanTooLarge),
+}
+
 /// One pure full-input summary. Callers add validated records and the exact
 /// request bodies from the production batcher or splitter in input order.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -29,6 +37,25 @@ pub(crate) struct PlanSummary {
 }
 
 impl PlanSummary {
+    /// Combine native counters before rounding, with no encoding or input access.
+    pub(crate) fn combine(&self, other: &Self) -> Result<Self, PlanCombineError> {
+        if self.accounting != other.accounting { return Err(PlanCombineError::Accounting); }
+        let add = |left: usize, right: usize| left.checked_add(right).ok_or(PlanTooLarge);
+        Ok(Self {
+            records: add(self.records, other.records)?,
+            requests: add(self.requests, other.requests)?,
+            estimated_bytes: add(self.estimated_bytes, other.estimated_bytes)?,
+            token_bytes: add(self.token_bytes, other.token_bytes)?,
+            largest_token_bytes: self.largest_token_bytes.max(other.largest_token_bytes),
+            accounting: self.accounting,
+            largest_request_bytes: self.largest_request_bytes.max(other.largest_request_bytes),
+            first_body: self.first_body.clone().or_else(|| other.first_body.clone()),
+            upper_bound: self.upper_bound || other.upper_bound,
+        })
+    }
+    /// Public plans already retain their explicit first body; hidden counters do not.
+    pub(crate) fn without_body(mut self) -> Self { self.first_body = None; self }
+
     pub(crate) const TOKEN_ESTIMATE_METHOD: &str = "encoded-body-bytes-908-v1";
     /// Version-one measured high rate, shared by preview and per-attempt admission.
     /// Callers choose whether to round a whole planned sum or each final body.
@@ -188,6 +215,31 @@ pub(crate) struct TokenBand {
 mod tests {
     //! Stays: conservative token and byte arithmetic needs an independent exact-body accounting vector.
     use super::PlanSummary;
+
+    #[test]
+    fn combination_rounds_once_and_rejects_overflow_or_mixed_accounting() {
+        use super::{InputAccounting, PlanCombineError};
+        let mut first = PlanSummary::new(false);
+        first.record().unwrap();
+        first.request(b"123456").unwrap();
+        let combined = first.combine(&first).unwrap();
+        assert_eq!(first.estimated_input_tokens().unwrap(), (3, 6));
+        assert_eq!(combined.estimated_input_tokens().unwrap(), (6, 11));
+        assert_eq!(combined.counts().unwrap().records, 2);
+        assert_eq!(combined.first_body(), Some(&b"123456"[..]));
+        let other = PlanSummary::new(false).with_accounting(InputAccounting::RepeatedState);
+        assert_eq!(first.combine(&other), Err(PlanCombineError::Accounting));
+        for field in 0..4 {
+            let mut limit = PlanSummary::new(false);
+            match field {
+                0 => limit.records = usize::MAX,
+                1 => limit.requests = usize::MAX,
+                2 => limit.estimated_bytes = usize::MAX,
+                _ => limit.token_bytes = usize::MAX,
+            }
+            assert!(matches!(limit.combine(&first), Err(PlanCombineError::TooLarge(_))));
+        }
+    }
 
     #[test]
     fn one_independent_body_pins_bytes_and_conservative_band() {

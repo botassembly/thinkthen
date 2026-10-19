@@ -925,3 +925,12 @@ The implementation and ownership stay unchanged; no alternate submission path is
 native complete-set count policy. Native find validation uses that same range.
 The command uses its endpoint before framing another candidate, keeps its separate
 empty-input success, and retains the native minimum/count refusal before sends.
+
+`PlanEstimate::combine(&self, &PlanEstimate) -> Result<PlanEstimate, Error>` combines
+ordered previews through checked native unrounded accounting. Sum fields, maxima and
+request upper-bound semantics remain native. Accounting modes and adapter caveats must
+match. The first nonempty disclosed body survives in order; prepared-request, recognition,
+relation and annotation-group detail views are cleared because no single constituent
+represents the combined invocation. Description-loss disclosure is ORed. Hidden counters
+contain no additional body, stay out of Debug/schema/serde, and do not change equality.
+The backend check retains its command-owned closed four-probe request count separately.

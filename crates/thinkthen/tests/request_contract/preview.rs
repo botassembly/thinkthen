@@ -601,3 +601,54 @@ fn recognition_wording_overrides_saved_values_independently_before_preview() {
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_details() {
+    let listener = Listener::answering(response).unwrap();
+    let mut modes = Vec::new();
+    for backend in ["typesafe", "perplexity"] {
+        let engine = Engine::builder().backend(backend).unwrap().base_url(listener.base()).unwrap()
+            .model("fixed").unwrap().no_cache().build().unwrap();
+        let mut parts = Vec::new();
+        let mut token_bytes = 0usize;
+        for text in ["combine-private-evidence", "second evidence"] {
+            let question = QuestionSet::from_json(r#"{"version":1,"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#).unwrap();
+            let request = Request::named("annotate", args(question.into(), RequestInput::Text { text: text.to_owned(), images: Vec::new() })).unwrap().admit().unwrap();
+            let plan = engine.plan_request(&request, RequestEnvironment {
+                controls: CallOptions::new().shared_state_groups().batch(BatchSetting::Max), feed: None,
+            }).unwrap();
+            let body = plan.first_body().unwrap();
+            let wire: Value = serde_json::from_slice(body).unwrap();
+            token_bytes += body.len() + if backend == "perplexity" {
+                serde_json::to_string(&wire["state"]).unwrap().len() * 2
+            } else { 0 };
+            parts.push(plan);
+        }
+        let combined = parts[0].combine(&parts[1]).unwrap();
+        assert_eq!(combined.records(), 2);
+        assert_eq!(combined.requests(), parts[0].requests() + parts[1].requests());
+        assert_eq!(combined.estimated_bytes(), parts[0].estimated_bytes() + parts[1].estimated_bytes());
+        assert_eq!(combined.estimated_input_tokens(), (token_bytes * 516 / 1000, (token_bytes * 908).div_ceil(1000)));
+        assert_eq!(combined.largest_request_bytes(), parts.iter().map(PlanEstimate::largest_request_bytes).max().unwrap());
+        assert_eq!(combined.first_body(), parts[0].first_body());
+        assert!(combined.prepared_requests().next().is_none());
+        assert!(combined.question_requests().is_none() && combined.recognition().is_none() && combined.relations().is_none());
+        assert!(!format!("{combined:?}").contains("combine-private-evidence"));
+        let encoded = serde_json::to_value(&combined).unwrap();
+        assert_eq!(encoded.as_object().unwrap().len(), serde_json::to_value(&parts[0]).unwrap().as_object().unwrap().len());
+        assert!(encoded.get("summary").is_none());
+        let mut growing = combined.clone();
+        let mut overflow = false;
+        for _ in 0..usize::BITS {
+            match growing.combine(&growing) {
+                Ok(next) => growing = next,
+                Err(error) => { assert_eq!(error.kind(), ErrorKind::Usage); overflow = true; break; }
+            }
+        }
+        assert!(overflow);
+        modes.push(combined);
+    }
+    assert_eq!(modes[0].combine(&modes[1]).unwrap_err().kind(), ErrorKind::Usage);
+    assert!(listener.requests().is_empty());
+    assert_eq!(listener.count(), 0);
+}
