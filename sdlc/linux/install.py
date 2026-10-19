@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Fill the Linux image prefix from the shared tool manifest."""
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -12,11 +11,10 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import rust_components
+from sdlc.scripts.tools import download, rust_components
 
 manifest = json.loads(Path(sys.argv[1]).read_text())
 root = Path(manifest['linux_prefix'])
@@ -25,10 +23,7 @@ arch = {'aarch64': 'arm64', 'x86_64': 'x64'}[platform.machine()]
 pin = manifest['bootstrap']
 archive = root / 'mise.tar.gz'
 url = 'https://github.com/jdx/mise/releases/download/v{0}/mise-v{0}-linux-{1}.tar.gz'.format(pin['version'], arch)
-with urllib.request.urlopen(url, timeout=60) as response, archive.open('wb') as output:
-    shutil.copyfileobj(response, output)
-if hashlib.sha256(archive.read_bytes()).hexdigest() != pin['linux_sha256'][arch]:
-    raise SystemExit('Linux mise checksum differs from tools.json')
+download(url, archive, pin['linux_sha256'][arch])
 with tarfile.open(archive) as packed:
     for member in packed.getmembers():
         if Path(member.name).is_absolute() or '..' in Path(member.name).parts or member.issym() or member.islnk():
@@ -64,10 +59,7 @@ def swift_sdk(tool, env):
     with tempfile.TemporaryDirectory(prefix='thinkthen-swift-') as temporary:
         temporary = Path(temporary)
         for target, source in (('sdk.tar.gz', url), ('sdk.sig', url + '.sig'), ('keys.asc', keys['url'])):
-            with urllib.request.urlopen(source, timeout=60) as response, (temporary / target).open('wb') as output:
-                shutil.copyfileobj(response, output)
-        if hashlib.sha256((temporary / 'keys.asc').read_bytes()).hexdigest() != keys['sha256']:
-            raise SystemExit('Swift signing keys differ from tools.json')
+            download(source, temporary / target, keys['sha256'] if target == 'keys.asc' else None)
         keyring = temporary / 'keyring'
         keyring.mkdir(mode=0o700)
         gpg = ['gpg', '--batch', '--homedir', str(keyring)]

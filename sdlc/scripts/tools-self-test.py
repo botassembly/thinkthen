@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Exercise missing-tool refusal and PATH isolation through the resolver command."""
+import gzip
+import hashlib
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 import platform
@@ -9,12 +12,59 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'sdlc/scripts/tools.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import download
+
+
+class PinnedDownloads(unittest.TestCase):
+    def test_identity_and_gzip_preserve_key_bytes_and_refuse_tampering(self):
+        keys = b'-----BEGIN PGP PUBLIC KEY BLOCK-----\nfixture keys\n'
+        pin = hashlib.sha256(keys).hexdigest()
+        requests = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                requests.append(self.headers.get('Accept-Encoding'))
+                encoding, tampered = self.path.strip('/').split('/')
+                body = keys + (b'tampered' if tampered == 'yes' else b'')
+                if encoding == 'gzip':
+                    body = gzip.compress(body)
+                self.send_response(200)
+                self.send_header('Content-Encoding', encoding)
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_):
+                pass
+
+        with HTTPServer(('127.0.0.1', 0), Handler) as server:
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            try:
+                with tempfile.TemporaryDirectory(prefix='pinned-download-') as folder:
+                    output = Path(folder) / 'keys.asc'
+                    for encoding in ('identity', 'gzip'):
+                        url = f'http://127.0.0.1:{server.server_port}/{encoding}/'
+                        with self.subTest(encoding=encoding):
+                            download(url + 'no', output, pin)
+                            self.assertEqual(output.read_bytes(), keys)
+                            with self.assertRaisesRegex(RuntimeError, 'checksum'):
+                                download(url + 'yes', output, pin)
+                            with self.assertRaisesRegex(RuntimeError, 'checksum'):
+                                download(url + 'no', output, '0' * 64)
+                    with self.assertRaisesRegex(RuntimeError, 'unsupported.*encoding'):
+                        download(f'http://127.0.0.1:{server.server_port}/unknown/no', output, pin)
+            finally:
+                server.shutdown()
+                thread.join()
+        self.assertEqual(requests, ['identity'] * 7)
 
 
 class ToolResolution(unittest.TestCase):
