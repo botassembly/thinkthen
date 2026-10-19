@@ -11,6 +11,7 @@ use crate::{
 use std::path::PathBuf;
 
 mod atomic;
+mod relations;
 
 #[expect(
     clippy::too_many_lines,
@@ -143,8 +144,11 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 .mode
                 .as_deref()
                 .map(|mode| {
-                    crate::RecognitionMode::parse(mode)
-                        .ok_or(Failure::Usage(crate::RecognitionMode::USAGE))
+                    match mode {
+                        "whole" => Ok(crate::RecognitionMode::Whole),
+                        "boundary_only" => Ok(crate::RecognitionMode::BoundaryOnly),
+                        _ => Err(Failure::Usage("recognize mode is whole or boundary_only")),
+                    }
                 })
                 .transpose()?;
             options.threshold = a
@@ -178,18 +182,8 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                     reference: reference.clone(),
                 }
             } else {
-                let mut spec = crate::core::RelateSpec::inline(&a.relations, a.either)
-                    .map_err(relate_config)?;
-                if let Some(threshold) = &a.threshold {
-                    spec.override_threshold(threshold).map_err(relate_config)?;
-                }
-                spec.override_fields(
-                    a.common.field.first().map(String::as_str),
-                    a.kind_field.as_deref(),
-                )
-                .map_err(relate_config)?;
                 RequestQuestion::Definition {
-                    value: crate::Relate(spec).into(),
+                    value: relations::inline(a)?.into(),
                 }
             };
             let mut options = options(&a.common, None, None);
@@ -334,10 +328,6 @@ fn arguments(
 }
 fn native(error: crate::Error) -> Failure {
     error.into()
-}
-
-fn relate_config(error: crate::core::RelateConfigError) -> Failure {
-    Failure::Relate(crate::failure::relate::Error::Config { file: false, error })
 }
 
 impl crate::Engine {
