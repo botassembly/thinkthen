@@ -33,6 +33,9 @@ def main():
         package.touch()
         inputs = [('libraries/go', name, False) for name in
                   ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND')]
+        inputs += [(f'databases/{surface}', name, False)
+                   for surface in ('duckdb', 'sqlite', 'postgresql')
+                   for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND')]
         inputs += [('libraries/dart', 'THINKTHEN_DART_ARTIFACT', False),
                    ('libraries/cobol', 'THINKTHEN_C_HEADER', False),
                    ('libraries/cobol', 'THINKTHEN_C_LIBRARY', False),

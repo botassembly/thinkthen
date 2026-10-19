@@ -58,18 +58,28 @@ class Cases(unittest.TestCase):
         env = {**self.env, 'PATH': f'{self.root}/shim:{self.env["PATH"]}',
                'THINKTHEN_TOOLCHAINS': str(self.root / 'missing-tools')}
         entry = ['/bin/sh', str(HERE.parent / 'check.sh'), '9000']
-        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid'})
+        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid',
+                             'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertEqual(result.stdout, '', 'an invalid profile started tool setup')
         self.assertEqual(result.stderr, 'duckdb: unknown THINKTHEN_TEST_PROFILE: invalid\n')
         for profile in ('routine', 'full', 'stress', 'smoke'):
+            with self.subTest(profile=profile, input='missing artifact'):
+                artifact = self.root / 'selected.tar.gz'
+                result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                     'THINKTHEN_ARTIFACT': str(artifact)})
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout,
+                                 f'databases/duckdb: missing input THINKTHEN_ARTIFACT: {artifact}\n')
+                self.assertEqual(result.stderr, '')
             # The prepared PATH and compiler sentinel belong to this missing-host
             # fixture. It exercises host refusal, without provisioning gate tools.
             result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
-                                 'THINKTHEN_RESOLVED_TOOLS': 'duckdb',
-                                 'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
-            self.assertEqual(result.returncode, 77, result.stderr)
-            self.assertIn('toolchain is missing', result.stdout)
+                                 'THINKTHEN_RESOLVED_TOOLS': 'duckdb'})
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertEqual(result.stdout, 'not run: the DuckDB v1.5.6 toolchain is missing; '
+                             'run databases/duckdb/tools/setup.sh --fetch\n')
+            self.assertEqual(result.stderr, '')
         self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
         result = run([sys.executable, str(HERE / 'source_hosts.py')],
                      {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
