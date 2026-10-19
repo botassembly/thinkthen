@@ -338,12 +338,7 @@ fn single(
 }
 
 /// Check complete values from the written question, independently of typed values.
-fn complete(
-    question: &str,
-    full: &Value,
-    expected: &Value,
-    base: &str,
-) -> Checked {
+fn complete(question: &str, full: &Value, expected: &Value, base: &str) -> Checked {
     let authored: Value = serde_json::from_str(question).map_err(|error| error.to_string())?;
     let meaning = expected["bare"].as_bool().and_then(|yes| {
         authored
