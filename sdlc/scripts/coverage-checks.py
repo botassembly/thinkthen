@@ -121,15 +121,19 @@ class InstalledScriptInvocation(unittest.TestCase):
                 (tools / name).symlink_to('/bin/true')
             library = run / 'libthinkthen.so'
             library.touch()
-            script_dir = run / 'ada'
-            script_dir.mkdir()
+            script_dir = run / 'libraries/ada'
+            script_dir.mkdir(parents=True)
+            helpers = run / 'sdlc/scripts'
+            helpers.mkdir(parents=True)
+            shutil.copy2(checkout / 'sdlc/scripts/resolved-tools', helpers / 'resolved-tools')
             # Keep the real gate through its host and tool checks.
             source = (checkout / 'libraries/ada/check.sh').read_text()
             prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
             script = script_dir / 'check.sh'
             script.write_text(prefix + 'exit 23\n')
             script.chmod(0o700)
-            env = {'PATH': fixture_path(tools)}
+            # The fixture supplies resolved commands; do not invoke a tool installer.
+            env = {'PATH': fixture_path(tools), 'THINKTHEN_RESOLVED_TOOLS': 'ada'}
             invoked = []
             def command(args, cwd, settings, log, **kwargs):
                 if 'package_owned.py' in ' '.join(args):
