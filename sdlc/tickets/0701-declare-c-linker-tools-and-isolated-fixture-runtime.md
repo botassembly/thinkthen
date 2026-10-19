@@ -32,3 +32,7 @@ Milestone: 0.2.1
 
 - 0636 job 1792434815438-79593 built production archives and passed installed Rust checks, but installed C stopped before its matrix because `installed_cases.static_flags` could not find `pkg-config`; both 0636 and 0637 verified that the manifest has no declaration for it.
 - 0619 job 1792435252854-29497 passed Linux lint and the core and consumer tests, then `release-python-self-test.py` failed because its isolated PATH omitted `sh`. The preceding Swift registry failure had the same missing-fixture-runtime cause and was repaired separately.
+
+## Progress
+
+- 2026-10-19 started
