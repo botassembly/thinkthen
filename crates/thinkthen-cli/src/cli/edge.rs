@@ -8,8 +8,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::Backend;
-use crate::engine::usage::open_read;
 
 mod backend;
 mod key;
@@ -47,210 +45,156 @@ impl Downstream {
     }
 }
 
-use crate::config::{self, Config};
-use crate::engine::{backoff::per_minute, estimated_total, usage::Counters};
+use crate::{CacheSettings, Engine, EngineBuilder, Facts, ResolvedSettings, Tally};
 use crate::failure::Failure;
+use std::sync::{Mutex, OnceLock};
 
-/// The wait before the first retry, which only a test shortens.
-const RETRY_WAIT: Duration = Duration::from_secs(1);
-
-/// The environment the command reads, read once. Only a debug build reads the
-/// `THINKTHEN_TEST_` variables. The key is captured once after the final
-/// address resolves, and that value governs every later check and request.
-#[derive(Default)]
+/// The process observation and the one captured builder transferred to its engine.
 pub(crate) struct Environment {
     base_url: Option<String>,
     backend: Option<String>,
     batch: Option<String>,
     max_request_bytes: Option<String>,
-    named_cache: bool,
-    cache: Option<PathBuf>,
-    cache_is_platform_default: bool,
-    config: Config,
-    config_path: Option<PathBuf>,
+    cache: CacheSettings,
+    builder: Mutex<Option<EngineBuilder>>,
+    resolved: OnceLock<ResolvedSettings>,
+    engine: Mutex<Option<Engine>>,
+    tally: Tally,
+    native_facts: Mutex<Option<Facts>>,
+    key: KeySnapshot,
+    ca_bundle: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
     input_pause_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
     pub(super) cancel: crate::cli::interrupt::Signal,
-    usage: std::sync::Arc<Counters>,
-    native_facts: std::sync::Mutex<Option<crate::Facts>>,
-    usage_path: Option<PathBuf>,
-    key: KeySnapshot,
-    ca_bundle: Option<PathBuf>,
-    pub(crate) per_minute: Option<std::num::NonZeroU32>,
-    pub(crate) estimated_total: Option<u64>,
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        let builder = Engine::builder();
+        Self {
+            base_url: None, backend: None, batch: None, max_request_bytes: None,
+            cache: builder.cache_settings(), builder: Mutex::new(Some(builder)),
+            resolved: OnceLock::new(), engine: Mutex::new(None), tally: Tally::new(),
+            native_facts: Mutex::new(None), key: KeySnapshot::default(),
+            ca_bundle: None, retry_wait_ms: None, input_pause_ms: None, sigint_ack: None,
+            cancel: crate::cli::interrupt::Signal::default(),
+        }
+    }
 }
 
 impl std::fmt::Debug for Environment {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("Environment")
+        formatter.debug_struct("Environment")
             .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
             .field("backend", &self.backend.as_ref().map(|_| "<withheld>"))
-            .field("config", &self.config)
-            .field("key", &self.key)
-            .finish_non_exhaustive()
+            .field("key", &self.key).finish_non_exhaustive()
     }
 }
 
 impl Environment {
-    pub(crate) fn settle_native(&self, facts: &crate::Facts) {
-        if let Ok(mut settled) = self.native_facts.lock() {
-            *settled = Some(facts.clone());
-        }
+    pub(crate) fn settle_native(&self, facts: &Facts) {
+        if let Ok(mut settled) = self.native_facts.lock() { *settled = Some(facts.clone()); }
     }
-
-    pub(crate) fn native_call_id(&self) -> Option<crate::core::CallId> {
-        self.native_facts
-            .lock()
-            .ok()
+    pub(crate) fn native_call_id(&self) -> Option<crate::CallId> {
+        self.native_facts.lock().ok()
             .and_then(|facts| facts.as_ref().and_then(|facts| facts.call_id().cloned()))
     }
-
-    /// Read the base address and the hidden test wait, which help never shows.
     pub(crate) fn read() -> Result<Self, Failure> {
-        let named_cache = read("THINKTHEN_CACHE");
-        let config_path = config::path();
-        let config = Config::read(config_path.as_deref())?;
-        let usage_path = config::usage_path();
-        let usage = std::sync::Arc::new(Counters::new(usage_path.clone()));
-        usage.set_prices(config.prices());
+        let mut builder = EngineBuilder::from_config()?;
+        let mut cache = builder.cache_settings();
+        if let Some(path) = read("THINKTHEN_CACHE") {
+            builder = builder.cache_at(&path)?;
+            cache = builder.cache_settings();
+            cache.cache_enabled_source = "environment";
+            cache.cache_path_source = "environment";
+        }
+        if let Some(rate) = read("THINKTHEN_REQUESTS_PER_MINUTE") {
+            let invalid = || Failure::Usage("THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000");
+            let value = rate.parse::<u32>().ok()
+                .filter(|_| rate.bytes().all(|byte| byte.is_ascii_digit())).ok_or_else(invalid)?;
+            builder = builder.requests_per_minute(value).map_err(|_| invalid())?;
+        }
+        if let Some(total) = read("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL") {
+            let value = total.parse::<u64>().ok()
+                .filter(|_| total.bytes().all(|byte| byte.is_ascii_digit()))
+                .ok_or(Failure::Usage("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more"))?;
+            builder = builder.max_estimated_input_tokens_total(Some(value));
+        }
         Ok(Self {
-            base_url: read("THINKTHEN_BASE_URL"),
-            backend: read("THINKTHEN_BACKEND"),
-            batch: read("THINKTHEN_BATCH"),
-            max_request_bytes: read("THINKTHEN_MAX_REQUEST_BYTES"),
-            cache: named_cache
-                .as_ref()
-                .map(PathBuf::from)
-                .or_else(config::cache_path),
-            cache_is_platform_default: named_cache.is_none(),
-            named_cache: named_cache.is_some(),
-            config,
-            config_path,
-            native_facts: std::sync::Mutex::new(None),
-            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
-                .and_then(|text| text.parse().ok()),
-            input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")
-                .and_then(|text| text.parse().ok()),
-            sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
-            cancel: crate::cli::interrupt::Signal::default(),
-            usage,
-            usage_path,
-            key: KeySnapshot::default(),
+            base_url: read("THINKTHEN_BASE_URL"), backend: read("THINKTHEN_BACKEND"),
+            batch: read("THINKTHEN_BATCH"), max_request_bytes: read("THINKTHEN_MAX_REQUEST_BYTES"),
+            cache, builder: Mutex::new(Some(builder)),
             ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
-            per_minute: per_minute(read("THINKTHEN_REQUESTS_PER_MINUTE").as_deref())
-                .map_err(Failure::Usage)?,
-            estimated_total: estimated_total(read("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL"))
-                .map_err(Failure::Usage)?,
+            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
+            input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS").and_then(|text| text.parse().ok()),
+            sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
+            ..Self::default()
         })
     }
-
-    /// The answer-cache folder selected by the environment or platform.
-    pub(crate) fn cache(&self) -> Option<&Path> {
-        self.cache.as_deref()
-    }
-
-    pub(crate) const fn cache_is_platform_default(&self) -> bool {
-        self.cache_is_platform_default
-    }
-
-    pub(crate) fn model(&self) -> Option<&str> {
-        self.config.model()
-    }
-
-    pub(crate) fn default_cache_enabled(&self) -> bool {
-        self.config.cache_enabled()
-    }
-
-    pub(crate) fn cache_bytes(&self) -> u64 {
-        self.config.cache_bytes()
-    }
-
-    pub(crate) const fn config(&self) -> &Config {
-        &self.config
-    }
-    pub(crate) fn config_path(&self) -> Option<&Path> {
-        self.config_path.as_deref()
-    }
-    pub(crate) const fn named_cache(&self) -> bool {
-        self.named_cache
-    }
-    pub(crate) fn usage_path(&self) -> Option<&Path> {
-        self.usage_path.as_deref()
-    }
-    pub(crate) fn usage(&self) -> &Counters {
-        &self.usage
-    }
-    /// The process counters, shared with the engine a command builds.
-    pub(crate) fn counters(&self) -> std::sync::Arc<Counters> {
-        std::sync::Arc::clone(&self.usage)
-    }
-    /// `THINKTHEN_BATCH`, read by record-batching judging commands.
-    pub(crate) fn batch(&self) -> Option<&str> {
-        self.batch.as_deref()
-    }
-
+    pub(crate) fn cache(&self) -> Option<&Path> { self.cache.cache_path.as_deref() }
+    pub(crate) const fn cache_is_platform_default(&self) -> bool { self.cache.cache_is_platform_default }
+    pub(crate) const fn default_cache_enabled(&self) -> bool { self.cache.cache_enabled }
+    pub(crate) const fn cache_bytes(&self) -> u64 { self.cache.cache_target_bytes }
+    pub(crate) const fn configuration_shared(&self) -> bool { self.cache.configuration_shared }
+    pub(crate) fn named_cache(&self) -> bool { self.cache.cache_path_source == "environment" }
+    pub(crate) fn batch(&self) -> Option<&str> { self.batch.as_deref() }
     pub(crate) fn request_size_selected(&self, flag: Option<&str>) -> bool {
         flag.is_some() || self.max_request_bytes.is_some()
     }
-
-    /// Resolve the byte limit only for a command where the setting acts.
     pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
-        let chosen = flag.or(self.max_request_bytes.as_deref());
-        let Some(value) = chosen else {
-            return Ok(Backend::DEFAULT_REQUEST_SIZE);
-        };
-        let number = value
-            .parse::<usize>()
-            .ok()
-            .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()));
-        number.ok_or(Failure::Usage(if flag.is_some() {
-            "--max-request-bytes takes a whole number of at least 1"
-        } else {
-            "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1"
-        }))
+        let Some(value) = flag.or(self.max_request_bytes.as_deref()) else { return Ok(96_000); };
+        value.parse::<usize>().ok()
+            .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()))
+            .ok_or(Failure::Usage(if flag.is_some() {
+                "--max-request-bytes takes a whole number of at least 1"
+            } else { "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1" }))
     }
-
-    /// Warn before planning or sending a request above the built-in default.
-    pub(crate) fn warn_request_size(&self, backend: &Backend) -> Result<(), Failure> {
-        let size = backend.ceiling();
-        if backend.is_built_in() && size > Backend::DEFAULT_REQUEST_SIZE {
-            writeln!(
-                io::stderr().lock(),
-                "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens"
-            )
-            .map_err(Failure::Output)?;
+    pub(crate) fn set_request_size(&self, size: usize) -> Result<(), Failure> {
+        self.update_builder(|builder| builder.max_request_bytes(size))
+    }
+    pub(crate) fn warn_request_size(&self, engine: &Engine, size: usize) -> Result<(), Failure> {
+        if engine.is_built_in() && size > 96_000 {
+            writeln!(io::stderr().lock(),
+                "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens")
+                .map_err(Failure::Output)?;
         }
         Ok(())
     }
-
-    /// How long the first retry waits before the wait doubles.
     pub(crate) fn retry_wait(&self) -> Duration {
-        self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
+        self.retry_wait_ms.map_or(Duration::from_secs(1), Duration::from_millis)
     }
-
-    /// How long piped input may pause before the open request goes out, when
-    /// a test sets it; `None` keeps the engine's pause (Debt 030).
-    pub(crate) fn input_pause(&self) -> Option<Duration> {
-        self.input_pause_ms.map(Duration::from_millis)
+    pub(crate) fn input_pause(&self) -> Option<Duration> { self.input_pause_ms.map(Duration::from_millis) }
+    pub(crate) const fn cancel(&self) -> &crate::cli::interrupt::Signal { &self.cancel }
+    pub(crate) fn take_builder(&self) -> Result<EngineBuilder, Failure> {
+        self.builder.lock().map_err(|_| Failure::Defect("command settings lock failed"))?
+            .take().ok_or(Failure::Defect("command settings were already consumed"))
     }
-
-    pub(crate) const fn cancel(&self) -> &crate::cli::interrupt::Signal {
-        &self.cancel
+    pub(crate) fn update_builder(&self, update: impl FnOnce(EngineBuilder) -> Result<EngineBuilder, crate::Error>) -> Result<(), Failure> {
+        let builder = update(self.take_builder()?)?;
+        self.restore_builder(builder)
     }
-}
-
-/// Take `--model` on the commands that build their own specification.
-pub(crate) fn model_flag(text: &str) -> Result<crate::core::ModelName, Failure> {
-    crate::core::ModelName::new(text).map_err(|error| {
-        Failure::Usage(match error {
-            crate::core::BlankTextError::ModelControl => {
-                "--model holds no control character or white space but a plain space"
-            }
-            _ => "--model is text, not white space",
-        })
-    })
+    pub(crate) fn restore_builder(&self, builder: EngineBuilder) -> Result<(), Failure> {
+        *self.builder.lock().map_err(|_| Failure::Defect("command settings lock failed"))? = Some(builder);
+        Ok(())
+    }
+    pub(crate) fn observe_engine(&self, engine: &Engine) {
+        if let Ok(mut observed) = self.engine.lock() { *observed = Some(engine.clone()); }
+    }
+    pub(crate) fn tally(&self) -> &Tally { &self.tally }
+    pub(crate) fn snapshot(&self) -> crate::cli::facts::Snapshot {
+        let engine = self.engine.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let facts = engine.as_ref().map_or_else(|| self.tally.facts(), |engine| self.tally.facts_with_engine(engine));
+        crate::cli::facts::Snapshot { facts,
+            counts: engine.as_ref().map_or(crate::Counters::ZERO, Engine::usage),
+            http_time: engine.as_ref().and_then(Engine::http_time) }
+    }
+    pub(crate) fn finish_usage(&self) -> Option<crate::UsageFailure> {
+        let engine = self.engine.lock().ok()?;
+        let engine = engine.as_ref()?;
+        engine.finish_usage_status();
+        engine.usage_failure()
+    }
 }
 
 /// Read a `THINKTHEN_TEST_` variable in a build with debug assertions, which
@@ -286,39 +230,21 @@ pub(crate) fn source<'a>(
     }
 }
 
+#[cfg(not(windows))]
+fn open_read(path: &Path) -> io::Result<File> { File::open(path) }
+
+#[cfg(windows)]
+fn open_read(path: &Path) -> io::Result<File> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+    std::fs::OpenOptions::new().read(true).custom_flags(0x0200_0000).open(path)
+}
+
 /// Classify and buffer the handle that `source` opened.
 fn opened<'a>(file: File) -> Result<Box<dyn BufRead + Send + 'a>, Failure> {
     if file.metadata().map_err(Failure::OpenInput)?.is_dir() {
         Err(Failure::InputDirectory)
     } else {
         Ok(Box::new(BufReader::new(file)))
-    }
-}
-
-/// Command error mapping over the shared bounded reader.
-#[derive(Debug)]
-pub(crate) struct Chunks<R>(crate::chunks::Chunks<R>);
-
-impl<R: BufRead> Chunks<R> {
-    pub(crate) const fn new(reader: R, streams: bool) -> Self {
-        Self(crate::chunks::Chunks::new(reader, streams))
-    }
-
-    pub(crate) fn next_unit(
-        &mut self,
-        window: usize,
-    ) -> Option<Result<crate::chunks::UnitBytes, Failure>> {
-        self.0
-            .next_unit(window)
-            .map(|unit| unit.map_err(Failure::Input))
-    }
-}
-
-impl<R: BufRead> Iterator for Chunks<R> {
-    type Item = Result<Vec<u8>, Failure>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|bytes| bytes.map_err(Failure::Input))
     }
 }
 
@@ -372,7 +298,8 @@ mod deadline_tests;
 #[cfg(test)]
 mod tests {
     //! Stays: direct I/O fault and secrecy checks cover replaced handles, broken pipes and bounded incremental reads.
-    use super::{Chunks, Environment, open_read, opened, write_line};
+    use super::{Environment, open_read, opened, write_line};
+    use crate::{FileReader, ReaderOptions, SourceUnit};
     use crate::failure::Failure;
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
@@ -475,42 +402,40 @@ mod tests {
     #[test]
     #[ignore = "large-input boundary runs in the release suite"]
     fn release_only_a_record_is_read_no_further_than_two_bytes_past_the_limit() {
-        let endless = crate::core::MAX_RECORD_BYTES * 4;
-        for streams in [true, false] {
-            let reader = std::io::BufReader::new(std::io::repeat(b'x').take(endless as u64));
-            let mut chunks = Chunks::new(reader, streams);
-            let first = chunks.next().expect("one record").expect("bytes");
-
-            assert_eq!(first.len(), crate::core::MAX_RECORD_BYTES + 2);
+        let limit = crate::RawRecord::max_bytes();
+        for unit in [SourceUnit::Line, SourceUnit::File] {
+            let mut source = std::io::BufReader::with_capacity(1, std::io::repeat(b'x').take((limit * 4) as u64));
+            {
+                let mut reader = FileReader::new("input", &mut source, ReaderOptions { unit, window: None }).expect("reader");
+                assert!(reader.next().expect("refused record").is_err());
+            }
+            assert_eq!(source.get_ref().limit(), (limit * 4 - limit - 2) as u64);
         }
     }
 
-    /// A record of exactly the limit still arrives whole, however it was ended.
     #[test]
     #[ignore = "large-input boundary runs in the release suite"]
     fn release_only_a_record_of_exactly_the_limit_arrives_whole_with_its_ending() {
-        let limit = crate::core::MAX_RECORD_BYTES;
-        for (ending, expected) in [("", limit), ("\n", limit + 1), ("\r\n", limit + 2)] {
+        let limit = crate::RawRecord::max_bytes();
+        for ending in ["", "\n", "\r\n"] {
             let mut bytes = vec![b'x'; limit];
             bytes.extend_from_slice(ending.as_bytes());
-            let mut chunks = Chunks::new(bytes.as_slice(), true);
-            let first = chunks.next().expect("one record").expect("bytes");
-
-            assert_eq!(first.len(), expected, "{ending:?}");
+            let mut reader = FileReader::new("input", bytes.as_slice(), ReaderOptions::default()).expect("reader");
+            let first = reader.next().expect("one record").expect("text");
+            assert_eq!(first.record.len(), limit, "{ending:?}");
         }
     }
 
     #[test]
     fn a_stream_yields_one_line_at_a_time_and_a_document_yields_every_byte_once() {
-        let read = |bytes: &[u8], streams: bool| {
-            Chunks::new(bytes, streams)
-                .map(|chunk| String::from_utf8_lossy(&chunk.expect("bytes")).into_owned())
-                .collect::<Vec<_>>()
+        let read = |bytes: &[u8], unit| {
+            FileReader::new("input", bytes, ReaderOptions { unit, window: None }).expect("reader")
+                .map(|record| record.expect("text").record).collect::<Vec<_>>()
         };
-        assert_eq!(read(b"a\nb\n", true), ["a\n", "b\n"]);
-        assert_eq!(read(b"a\nb", true), ["a\n", "b"]);
-        assert_eq!(read(b"", true), [""; 0]);
-        assert_eq!(read(b"a\nb\n", false), ["a\nb\n"]);
-        assert_eq!(read(b"", false), [""]);
+        assert_eq!(read(b"a\nb\n", SourceUnit::Line), ["a", "b"]);
+        assert_eq!(read(b"a\nb", SourceUnit::Line), ["a", "b"]);
+        assert!(read(b"", SourceUnit::Line).is_empty());
+        assert_eq!(read(b"a\nb\n", SourceUnit::File), ["a\nb\n"]);
+        assert_eq!(read(b"", SourceUnit::File), [""]);
     }
 }

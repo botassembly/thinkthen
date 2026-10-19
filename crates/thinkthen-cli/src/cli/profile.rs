@@ -6,28 +6,37 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::args::Common;
-use crate::core::{BackendProfile, BatchWarning, ProfileName, ProfileWarning, Setting};
+use crate::BatchSetting;
 use crate::failure::Failure;
 
 /// Read the profile file a run explicitly selected.
-pub(crate) fn read(
-    common: &Common,
-    environment: &crate::edge::Environment,
-    backend: &crate::core::Backend,
-) -> Result<Option<BackendProfile>, Failure> {
-    let Some(path) = common.profile.as_deref() else {
-        return environment.setup_profile(common, backend);
-    };
+pub(crate) fn read(common: &Common, environment: &crate::edge::Environment) -> Result<(), Failure> {
+    let Some(path) = common.profile.as_deref() else { return Ok(()); };
     let text = fs::read_to_string(path).map_err(|error| Failure::OpenProfile {
-        path: path.to_path_buf(),
-        error,
+        path: path.to_path_buf(), error,
     })?;
-    BackendProfile::parse(&text)
-        .map(Some)
-        .map_err(|error| Failure::Profile {
-            path: path.to_path_buf(),
-            error,
-        })
+    let builder = environment.take_builder()?;
+    let builder = builder.profile_json(&text).map_err(|error| Failure::Profile {
+        path: path.to_path_buf(), error,
+    })?;
+    environment.restore_builder(builder)
+}
+
+/// A caller-owned notice, without private library profile representations.
+#[derive(Clone, Debug)]
+pub(crate) struct ProfileWarning { tuned_for: String, running: String }
+impl ProfileWarning {
+    pub(crate) fn tuned_for(&self) -> &str { &self.tuned_for }
+    pub(crate) fn running(&self) -> &str { &self.running }
+}
+#[derive(Clone, Debug)]
+pub(crate) struct BatchWarning { tuned_for: BatchSetting, running: BatchSetting }
+impl BatchWarning {
+    pub(crate) const fn tuned_for(&self) -> BatchSetting { self.tuned_for }
+    pub(crate) const fn running(&self) -> BatchSetting { self.running }
+}
+fn batch_text(setting: BatchSetting) -> String {
+    match setting { BatchSetting::Max => "max".to_owned(), BatchSetting::Records(n) => n.to_string() }
 }
 
 /// One run's mismatch, printed once and copied into every detailed row.
@@ -40,18 +49,19 @@ pub(crate) struct Mismatch {
 }
 
 impl Mismatch {
-    pub(crate) fn new(tuned_for: Option<&ProfileName>, profile: Option<&BackendProfile>) -> Self {
+    pub(crate) fn new(tuned_for: Option<&str>, running: Option<&str>) -> Self {
         Self {
-            warning: ProfileWarning::between(tuned_for, profile.map(BackendProfile::name)),
+            warning: tuned_for.zip(running).filter(|(tuned, running)| tuned != running)
+                .map(|(tuned_for, running)| ProfileWarning { tuned_for: tuned_for.to_owned(), running: running.to_owned() }),
             printed: Arc::new(AtomicBool::new(false)),
             batch_warning: None,
             batch_printed: Arc::new(AtomicBool::new(false)),
         }
     }
 
-    pub(crate) fn with_batch(mut self, tuned_for: Option<Setting>, running: Setting) -> Self {
+    pub(crate) fn with_batch(mut self, tuned_for: Option<BatchSetting>, running: BatchSetting) -> Self {
         self.batch_warning =
-            tuned_for.and_then(|tuned_for| BatchWarning::between(tuned_for, running));
+            tuned_for.filter(|&tuned| tuned != running).map(|tuned_for| BatchWarning { tuned_for, running });
         self
     }
 
@@ -77,8 +87,7 @@ impl Mismatch {
         {
             writeln!(
                 writer,
-                "{}: warning: threshold tuned for profile {} is running under profile {}",
-                crate::core::NAME,
+                "thinkthen: warning: threshold tuned for profile {} is running under profile {}",
                 warning.tuned_for(),
                 warning.running()
             )
@@ -91,10 +100,9 @@ impl Mismatch {
         {
             writeln!(
                 writer,
-                "{}: warning: threshold tuned at batch {} is running at batch {}",
-                crate::core::NAME,
-                warning.tuned_for(),
-                warning.running()
+                "thinkthen: warning: threshold tuned at batch {} is running at batch {}",
+                batch_text(warning.tuned_for()),
+                batch_text(warning.running())
             )
             .and_then(|()| writer.flush())
             .map_err(Failure::Output)?;
@@ -110,7 +118,6 @@ mod tests {
     use std::io::{self, Write};
 
     use super::Mismatch;
-    use crate::core::{BackendProfile, ProfileName};
     use crate::failure::Failure;
 
     struct Failing;
@@ -126,12 +133,7 @@ mod tests {
     }
 
     fn mismatch() -> Mismatch {
-        let tuned_for = ProfileName::new("old").expect("safe name");
-        let running = BackendProfile::parse(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_questions":1}"#,
-        )
-        .expect("profile");
-        Mismatch::new(Some(&tuned_for), Some(&running))
+        Mismatch::new(Some("old"), Some("new"))
     }
 
     #[test]
