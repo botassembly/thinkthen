@@ -19,7 +19,7 @@ pub mod carriers;
 #[path = "ffi/values.rs"]
 pub mod values;
 
-#[path = "ffi/runtime_version.rs"]
+#[path = "ffi/runtime_version/ffi.rs"]
 mod runtime_version;
 pub use runtime_version::thinkthen_version;
 
