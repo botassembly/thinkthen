@@ -5,7 +5,9 @@ use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
-use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut, rule_side};
+#[cfg(any(feature = "cli", test))]
+use crate::core::recognize_file::parse_typed_cut;
+use crate::core::recognize_file::{parse_json_cut, parse_relations, rule_side};
 use crate::core::{
     ModelName, Pointer, ProfileName, QuestionFile, RecognizeConfigError, RecognizeSpec,
     RelationEntity, RelationEntityView, RelationRule, RenderError, Threshold, json_line,
@@ -139,6 +141,7 @@ struct FieldsShape {
 }
 
 impl RelateSpec {
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn inline(relations: &[String], either: bool) -> Result<Self, RelateConfigError> {
         let relations = relations
             .iter()
@@ -218,6 +221,7 @@ impl RelateSpec {
         })
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn override_threshold(&mut self, value: &str) -> Result<(), RelateConfigError> {
         self.threshold = parse_typed_cut(Some(value)).map_err(|_| RelateConfigError::Threshold)?;
         Ok(())
@@ -287,6 +291,7 @@ impl RelateSpec {
         }
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn fields(&self) -> &RelateFields {
         &self.fields
     }
@@ -310,6 +315,7 @@ impl RelateSpec {
         &self.fields.kind
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn presence(&self) -> RelatePresence {
         self.presence
     }

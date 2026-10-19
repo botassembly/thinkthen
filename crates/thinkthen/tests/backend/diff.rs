@@ -6,17 +6,16 @@ use crate::measure_support;
 
 use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported};
 
-/// Older saved rows name their setting in `meta.batch.setting`; the command's
-/// own rows are read in `batching/audited.rs`.
+/// Saved result/2 rows report their resolved batch setting.
 #[test]
 fn diff_warns_at_different_batch_settings_and_not_at_an_unknown_one() {
     let unknown = fixture("small/decide.jsonl");
     let at = |setting: &str| {
         let run = unknown.replace(
             "\"failed_questions\":0}",
-            &format!("\"failed_questions\":0,\"batch\":{{\"setting\":{setting}}}}}"),
+            &format!("\"failed_questions\":0,\"batch_setting\":{setting}}}"),
         );
-        assert_ne!(run, unknown, "the fixture must add nested batch settings");
+        assert_ne!(run, unknown, "the fixture must add batch settings");
         let place = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
             "diff-batch-{}-{}.jsonl",
             setting.trim_matches('"'),

@@ -5,6 +5,7 @@
 //! address, model, state and question, as the record functions' are.
 
 use crate::core::pack::{self, Ask, Entry, PackError, PackLimits, Packer};
+#[cfg(any(feature = "cli", test))]
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{Backend, BackendProfile, ModelName, Plan, Question};
 use crate::engine::Cancel;
@@ -70,6 +71,7 @@ pub(crate) struct Asks {
 /// nothing cached.
 pub(crate) struct Request {
     pub(crate) body: Vec<u8>,
+    #[cfg(any(feature = "cli", test))]
     pub(crate) digest: Digest,
     /// The place of each logical question it holds, once per wire question.
     pub(crate) places: Vec<usize>,
@@ -96,6 +98,7 @@ impl Asks {
         Ok(self)
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_context(self, backend: &Backend, context: &str) -> Result<Self, Error> {
         self.with_context_value(backend, &crate::core::Json::String(context.to_owned()))
     }
@@ -190,6 +193,7 @@ impl Asks {
         Ok(closed
             .into_iter()
             .map(|request| Request {
+                #[cfg(any(feature = "cli", test))]
                 digest: Recorded::new(backend.url(), &request.body).digest(),
                 body: request.body,
                 places: request.items,
@@ -269,6 +273,7 @@ impl Asker for Each<'_> {
 impl Engine {
     /// Admit one fixed request without splitting it, before keys or transport.
     /// `check` validates all its probes this way before sending the first.
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn check_plan(&self, plan: &Plan) -> Result<(), Error> {
         let Some(profile) = self.profile() else {
             return Ok(());

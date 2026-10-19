@@ -43,7 +43,7 @@ impl Engine {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "one annotation pipeline retains private compatibility and recovery projections"
+        reason = "one annotation pipeline retains private reading and recovery projections"
     )]
     pub(crate) fn annotate_stream_project<'a, I, T, R: 'a>(
         &self,
@@ -58,7 +58,6 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        let legacy = options.legacy_annotation;
         let strict_preflight = options.eager_inputs && recover.is_none();
         let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
         let engine = Arc::clone(&self.inner);
@@ -67,7 +66,7 @@ impl Engine {
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
             recover_missing: false,
-            require_usable_groups: !legacy,
+            require_usable_groups: true,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -86,7 +85,7 @@ impl Engine {
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
             recover_missing: recover.is_some(),
-            require_usable_groups: !legacy,
+            require_usable_groups: true,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -131,15 +130,8 @@ impl Engine {
                 {
                     return Ok(None);
                 }
-                let result = complete_row(
-                    &engine,
-                    &questions.0,
-                    stop,
-                    &original.held,
-                    (at, legacy),
-                    row,
-                )
-                .map_err(|error| error.at_record(at))?;
+                let result = complete_row(&engine, &questions.0, stop, &original.held, at, row)
+                    .map_err(|error| error.at_record(at))?;
                 project(original.held.original, at, result)
             }),
         ))

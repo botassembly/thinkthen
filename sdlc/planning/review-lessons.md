@@ -65,8 +65,8 @@ The binary is `thinkthen`. The crates are `thinkthen-core` and `thinkthen`. Read
 - Red-green test-driven development. Write the failing test, watch it fail for the stated reason, make it pass, then clean up.
 - Build the simplest thing that works. YAGNI, DRY, locality of behavior, separation of concerns. A command or an option enters only when a demo cannot be written without it.
 - The gate ladder is `sdlc/scripts/{install,lint,test,spec}`. Run the cheapest rung first and the whole ladder before handing back.
-- `sdlc/ratchet.json` holds the source size ceiling, equal to the measured total. The commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
-- A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency, and names what it checked.
+- Code review judges source size. Remove duplicated logic and set no line ceilings.
+- A second agent reviews any change that widens a public surface or adds a dependency, and names what it checked.
 - A ticket that turns a demo green writes the page in the how-to form of ADR 0011. `sdlc/scripts/demos` checks it.
 - Commit as soon as a change is whole and push right away. Commit messages are imperative and active.
 - Never add agent attribution to a commit or a pull request: no trailer, no co-author line, no "generated with".
