@@ -96,6 +96,7 @@ pub(super) fn read(
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 struct Occurrence {
     ordinal: usize,
+    #[cfg_attr(test, schemars(with = "serde_json::Value"))]
     record: Record,
     file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
