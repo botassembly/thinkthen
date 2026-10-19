@@ -6,7 +6,8 @@ use serde::Serialize;
 
 use crate::args::Common;
 use crate::cli::intake::{Data, Intake};
-use crate::core::{Framing, Reading, Record, RelateSpec};
+use crate::{RequestFraming as Framing, RawRecord as Record};
+use crate::cli::reading::Reading;
 use crate::failure::Failure;
 
 pub(super) struct Sources {
@@ -33,7 +34,7 @@ pub(super) fn selection(
     common: &Common,
     input: impl Read + Send + 'static,
     framing: Framing,
-    spec: &RelateSpec,
+    fields: &super::config::Fields,
 ) -> Result<Selection, Failure> {
     if common.located() || common.input.len() > 1 {
         let sources = read(common, input, framing)?;
@@ -46,7 +47,7 @@ pub(super) fn selection(
     } else {
         let source =
             crate::edge::source(common.input.first().map(std::path::PathBuf::as_path), input)?;
-        let inputs = super::input::read(source, framing, spec)?;
+        let inputs = super::input::read(source, framing, fields)?;
         Ok((None, inputs))
     }
 }
@@ -68,14 +69,14 @@ pub(super) fn read(
             ));
         };
         let original = reading.as_it_arrived(&bytes)?;
-        if occurrences.len() == 255 {
+        if occurrences.len() == crate::Relate::max_record_count() {
             return Err(Failure::Usage(
                 "source relate takes at most 255 source records",
             ));
         }
         evidence_bytes = evidence_bytes
             .checked_add(original.len())
-            .filter(|&bytes| bytes <= crate::core::MAX_RECORD_BYTES)
+            .filter(|&bytes| bytes <= crate::RawRecord::max_bytes())
             .ok_or(Failure::Usage("source relate input exceeds 16 MiB"))?;
         let record = reading.record(&bytes).map_err(Failure::from)?;
         let position = item
@@ -134,13 +135,10 @@ pub(super) fn write(
     result: &crate::CompleteRelated,
     sources: &Sources,
 ) -> Result<(), Failure> {
-    let canonical = &result.canonical;
     let edges = result
         .source_edges()
         .ok_or(Failure::Defect("relate lost its source edges"))?;
-    let mut budget = crate::result_json::bounded::OutputBudget(
-        crate::core::MAX_RECORD_BYTES - usize::from(details) * 2,
-    );
+    let mut budget = crate::Relate::max_source_output_bytes() - usize::from(details) * 2;
     let edges = edges
         .iter()
         .enumerate()
@@ -153,19 +151,13 @@ pub(super) fn write(
                 either: edge.edge().either(),
             };
             // The CLI spells an absent filename as null, so measure its rendered shape.
-            budget
-                .admit(&located, !details || at > 0)
-                .map_err(|()| Failure::Usage("source relate output exceeds 16 MiB"))?;
+            budget = budget.checked_sub(crate::render::json_line(&located)?.len() + usize::from(!details || at > 0))
+                .ok_or(Failure::Usage("source relate output exceeds 16 MiB"))?;
             Ok(located)
         })
         .collect::<Result<Vec<_>, Failure>>()?;
     if details {
-        let located = Complete {
-            canonical,
-            value: &edges,
-            originals: sources.occurrences.iter().collect(),
-        };
-        crate::edge::write_line(writer, &crate::render::json_line(&located)?)?;
+        super::result::details(writer, result, &sources.occurrences, Some(&edges))?;
     } else {
         for edge in edges {
             if !crate::edge::write_line(&mut *writer, &crate::render::json_line(&edge)?)? {
@@ -188,16 +180,4 @@ fn endpoint<'a>(
             .get(endpoint.ordinal())
             .ok_or(Failure::Defect("relate lost an occurrence"))?,
     })
-}
-
-struct Complete<'a> {
-    canonical: &'a crate::core::CompleteRelation,
-    value: &'a Vec<Edge<'a>>,
-    originals: Vec<&'a Occurrence>,
-}
-impl Serialize for Complete<'_> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical
-            .serialize_occurrence(Some(&self.originals), self.value, Some(0), serializer)
-    }
 }
