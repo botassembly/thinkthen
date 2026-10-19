@@ -3,7 +3,11 @@ use super::{
     JudgingInput,
     judged::{Held, Records},
 };
-use crate::core::{Outcome, Reading, RecordValue, Setting, Value};
+use crate::core::Setting;
+use crate::cli::reading::Reading;
+use crate::schedule::Outcome;
+mod presentation;
+use presentation::Atomic;
 use crate::render::json_line;
 use crate::failure::Failure;
 use crate::schedule::{Judged, Output};
@@ -128,7 +132,6 @@ pub(super) fn run(
         documents: configuration.documents,
         text_view: configuration.text_view,
         mismatch: configuration.mismatch,
-        declarations: configuration.declarations,
     };
     let ended = RefCell::new(Ended::default());
     let output = RefCell::new(output);
@@ -391,7 +394,6 @@ struct Renderer {
     documents: bool,
     text_view: bool,
     mismatch: crate::profile::Mismatch,
-    declarations: crate::core::declaration::QuestionMetadata,
 }
 
 fn take(
@@ -403,7 +405,7 @@ fn take(
     ended: &mut Ended,
 ) -> Result<(), Failure> {
     macro_rules! rows {
-        ($rows:expr) => {
+        ($rows:expr, $variant:ident) => {
             for row in $rows {
                 let unit = held
                     .borrow_mut()
@@ -411,7 +413,7 @@ fn take(
                     .ok_or(Failure::Defect(
                         "native atomic row lost its host occurrence",
                     ))?;
-                let judged = rendering.row(reading, unit, row.result().canonical.clone())?;
+                let judged = rendering.row(reading, unit, Atomic::$variant(row.result()))?;
                 let replayed = judged.replayed;
                 let outcome = judged.outcome;
                 if output.take(judged)? {
@@ -426,25 +428,21 @@ fn take(
         };
     }
     match value {
-        crate::RequestValue::Decisions(v) => rows!(v),
-        crate::RequestValue::Choices(v) => rows!(v),
-        crate::RequestValue::Tags(v) => rows!(v),
-        crate::RequestValue::Scores(v) => rows!(v),
-        crate::RequestValue::Filtered(v) => rows!(v),
+        crate::RequestValue::Decisions(v) => rows!(v, Decision),
+        crate::RequestValue::Choices(v) => rows!(v, Choice),
+        crate::RequestValue::Tags(v) => rows!(v, Tags),
+        crate::RequestValue::Scores(v) => rows!(v, Score),
+        crate::RequestValue::Filtered(v) => rows!(v, Filter),
         crate::RequestValue::Ranked(v) => {
-            for mut row in v {
-                if rendering.view.details && !rendering.streams {
-                    row.result.canonical.clear_batch_metadata();
-                }
+            for row in v {
                 let unit = held.borrow_mut().remove(&row.ordinal());
                 let judged = if rendering.view.details {
-                    row.result.canonical.declarations = rendering.declarations.clone();
                     rendering.rank_details(&row, unit.and_then(|unit| unit.position))?
                 } else {
                     rendering.row(
                         reading,
                         unit.ok_or(Failure::Defect("native rank lost its host occurrence"))?,
-                        row.result().canonical.clone(),
+                        Atomic::Rank(row.result()),
                     )?
                 };
                 if !output.print(judged)? {
@@ -462,7 +460,7 @@ fn take(
                     rendering.row(
                         reading,
                         unit.ok_or(Failure::Defect("native set rank lost its host occurrence"))?,
-                        row.result().result().canonical.clone(),
+                        Atomic::Rank(row.result().result()),
                     )?
                 };
                 if !output.print(judged)? {
@@ -481,7 +479,7 @@ impl Renderer {
         row: &impl serde::Serialize,
         position: Option<crate::cli::intake::Position>,
     ) -> Result<Judged, Failure> {
-        let mut printed = Some(json_line(row)?);
+        let mut printed = Some(if self.streams { json_line(row)? } else { presentation::without_batch(row)? });
         crate::cli::intake::locate(&mut printed, position.as_ref())?;
         crate::cli::intake::source_members(&mut printed, position.as_ref())?;
         Ok(Judged {
@@ -501,43 +499,24 @@ impl Renderer {
         &self,
         reading: &Reading,
         unit: Held,
-        mut canonical: crate::core::CompleteAtomic,
+        value: Atomic<'_>,
     ) -> Result<Judged, Failure> {
-        canonical.declarations = self.declarations.clone();
-        if !self.streams {
-            canonical.clear_batch_metadata();
-        }
-        let value = canonical.value();
-        let outcome = match value {
-            Value::YesNo(Some(true)) => Outcome::Yes,
-            Value::YesNo(Some(false)) => Outcome::No,
-            Value::YesNo(None) | Value::Choice(None) => Outcome::Unresolved,
-            _ => Outcome::Yes,
-        };
-        let replayed = canonical
-            .identity
-            .question_sources()
-            .iter()
-            .all(|s| s.origin() != crate::core::Origin::Live);
-        let model = canonical
-            .identity
-            .question_sources()
-            .iter()
-            .find(|source| source.origin() == crate::core::Origin::Live)
-            .map(|source| source.model().clone());
+        let outcome = value.outcome();
+        let metadata = value.meta();
+        let replayed = metadata.identity().question_sources().iter()
+            .all(|source| source.origin() != crate::Origin::Live);
+        let model = metadata.identity().question_sources().iter()
+            .find(|source| source.origin() == crate::Origin::Live)
+            .map(|source| source.answered_by().to_owned());
         let passing = self.keeping == crate::judge::Keeping::Passing;
         let mut printed = if passing && outcome != Outcome::Yes {
             None
         } else if self.view.details {
-            Some(json_line(&Details {
-                canonical: &canonical,
-                original: (self.streams
-                    || passing
-                    || self.keeping == crate::judge::Keeping::Ordered)
-                    .then_some(&unit.record),
-                index: (passing || self.keeping == crate::judge::Keeping::Ordered)
-                    .then_some(unit.ordinal),
-            })?)
+            Some(value.details(
+                (self.streams || passing || self.keeping == crate::judge::Keeping::Ordered).then_some(&unit.record),
+                (passing || self.keeping == crate::judge::Keeping::Ordered).then_some(unit.ordinal),
+                self.streams,
+            )?)
         } else if self.keeping.streams_only() {
             Some(match &unit.arrived {
                 Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
@@ -552,12 +531,11 @@ impl Renderer {
         } else if self.view.quiet {
             None
         } else if self.streams {
-            Some(json_line(&RecordValue::new(
-                unit.record.clone(),
-                value.clone(),
-            ))?)
+            #[derive(serde::Serialize)]
+            struct RecordValue<'a> { input: &'a crate::RawRecord, value: crate::saved_json::Json }
+            Some(json_line(&RecordValue { input: &unit.record, value: value.value()? })?)
         } else {
-            Some(json_line(value)?)
+            Some(json_line(&value.value()?)?)
         };
         if self.view.details {
             crate::cli::intake::locate(&mut printed, unit.position.as_ref())?;
@@ -569,10 +547,7 @@ impl Renderer {
             position: unit.position,
             outcome,
             replayed,
-            order_value: match canonical.value() {
-                Value::Score(value) => Some(*value),
-                _ => canonical.answer().yes(),
-            },
+            order_value: value.order_value(),
             partial_failure: false,
             profile_mismatch: self.mismatch.notice(),
         })
@@ -621,17 +596,6 @@ impl Renderer {
         };
         *line = crate::cli::intake::source_value(&unit.record, shown, position)?;
         Ok(())
-    }
-}
-struct Details<'a> {
-    canonical: &'a crate::core::CompleteAtomic,
-    original: Option<&'a crate::core::Record>,
-    index: Option<usize>,
-}
-impl serde::Serialize for Details<'_> {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical
-            .serialize_occurrence(self.original, None, self.index, serializer)
     }
 }
 
