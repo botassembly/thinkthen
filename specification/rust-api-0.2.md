@@ -36,6 +36,8 @@ The command's final facts use the existing count-only `Facts` request-size gette
 
 The annotation command uses `Engine::plan_request` through the same native grouped preview packer. `PlanEstimate::question_requests` exposes the uninterrupted wire count and per-group counts in authored order. `drops_detail` retains the selected adapter's description warning. These observations and the existing size getters let command rendering keep its plan and count lines without exposing the native backend or summary. Added detail storage stays out of generic plan JSON and Debug output.
 
+`RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation.
+
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
 
 The command applies its captured request rate with `EngineBuilder::requests_per_minute` and its existing debug retry-delay input with `retry_wait`. These setters retain the shared posting-address pacer, native retry policy and default one-second wait. They introduce no extra environment reads or execution owner.
@@ -230,6 +232,7 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+RequestOptions::max_text_bytes: Option<usize>
 fn EngineBuilder::requests_per_minute(self, u32) -> Result<EngineBuilder, Error>
 fn EngineBuilder::retry_wait(self, Duration) -> EngineBuilder
 const fn PlanEstimate::largest_request_bytes(&self) -> usize

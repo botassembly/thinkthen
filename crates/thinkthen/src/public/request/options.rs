@@ -81,6 +81,10 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "u32", range(max = u32::MAX)))]
     pub snippet_pieces: Option<u32>,
+    /// Positive original text-byte ceiling for recognition; omission retains its native limit.
+    #[serde(default, deserialize_with = "present", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "usize", range(min = 1)))]
+    pub max_text_bytes: Option<usize>,
     /// Authored relation cut, applicable only to whole recognition.
     #[serde(
         default,

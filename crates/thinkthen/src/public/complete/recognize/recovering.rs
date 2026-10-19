@@ -14,7 +14,7 @@ impl Engine {
         ask.0.validate_mode().map_err(Error::refused)?;
         let engine = super::super::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let limit = options
-            .cli_text_limit
+            .recognition_text_limit
             .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
         let (admitted, rejected) = super::super::recovering::prepare(records, |_, record| {
             let unit = prepare(&engine, ask, record, options.context_text())?;
@@ -52,7 +52,7 @@ impl Engine {
         ask.0.validate_mode().map_err(Error::refused)?;
         let engine = super::super::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let limit = options
-            .cli_text_limit
+            .recognition_text_limit
             .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let mut records = records.into_iter();

@@ -44,6 +44,7 @@ impl Engine {
         ask.0.validate_mode().map_err(Error::refused)?;
         let options = options.started()?;
         options.admission()?;
+        let limit = options.recognition_text_limit.unwrap_or(facade::MAX_TEXT_BYTES);
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let units = self.try_within_admission(
@@ -58,7 +59,7 @@ impl Engine {
         stop.run_call(0, |cancel| {
             for (at, unit) in units.as_slice().iter().enumerate() {
                 unit.prepared
-                    .admit(facade::MAX_TEXT_BYTES)
+                    .admit(limit)
                     .map_err(|error| locate(error, at, options.scalar_input))?;
             }
             let cancel = cancel.with_storage_scope();

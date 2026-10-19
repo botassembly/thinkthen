@@ -638,3 +638,23 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
     assert_eq!(listener.count(), 0);
     std::fs::remove_dir_all(folder).unwrap();
 }
+
+#[test]
+fn recognition_text_limits_apply_before_sending_and_belong_to_recognition() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    for limit in [1, 2] {
+        let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"recognize","question":{{"kind":"definition","value":{{"version":1,"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
+        let arguments = request.call.arguments().clone();
+        let error = engine.call("recognize", arguments, RequestEnvironment::default()).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::TextTooLong { bytes: 3, limit: actual }) if actual == limit));
+        assert_eq!(listener.count(), 0);
+    }
+    let mut arguments = args(Question::decide("Fits?").unwrap().cut().into(), RequestInput::Text { text: "Ada".into(), images: vec![] });
+    arguments.options.max_text_bytes = Some(3);
+    let error = engine.call("decide", arguments, RequestEnvironment::default()).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(error.detail().message(), "max text bytes belongs to recognize");
+    assert_eq!(listener.count(), 0);
+}

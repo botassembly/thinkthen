@@ -116,7 +116,7 @@ enum Due {
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
     pub(in crate::public) attachment_limit: Option<super::request::transport::TransportAttachmentLimit>,
-    pub(in crate::public) cli_text_limit: Option<usize>,
+    pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
@@ -175,7 +175,7 @@ impl<'a> CallOptions<'a> {
     pub const fn new() -> Self {
         Self {
             attachment_limit: None,
-            cli_text_limit: None,
+            recognition_text_limit: None,
             eager_inputs: false,
             pending_inputs: false,
             scalar_input: false,
@@ -203,9 +203,8 @@ impl<'a> CallOptions<'a> {
         self
     }
 
-    #[cfg(test)]
-    pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
-        self.cli_text_limit = Some(limit);
+    pub(crate) const fn recognition_text_limit(mut self, limit: usize) -> Self {
+        self.recognition_text_limit = Some(limit);
         self
     }
 

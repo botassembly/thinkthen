@@ -307,6 +307,14 @@ fn admit_options(
             Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
         })?;
     }
+    if let Some(limit) = options.max_text_bytes {
+        if function != Function::Recognize {
+            return Err(Error::usage("max text bytes belongs to recognize"));
+        }
+        if limit == 0 {
+            return Err(Error::usage("max text bytes must be positive"));
+        }
+    }
     if options.mode.is_some() && function != Function::Recognize {
         return Err(Error::usage("mode belongs to recognize"));
     }

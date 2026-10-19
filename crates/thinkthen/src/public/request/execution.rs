@@ -604,6 +604,9 @@ fn scalar_controls<'a>(
     options: &RequestOptions,
     mut controls: CallOptions<'a>,
 ) -> Result<CallOptions<'a>, Error> {
+    if let Some(limit) = options.max_text_bytes {
+        controls = controls.recognition_text_limit(limit);
+    }
     if options.attempts {
         controls = controls.attempts(true);
     }
