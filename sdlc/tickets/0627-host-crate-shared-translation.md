@@ -31,3 +31,7 @@ Its dead-code exceptions are tied to particular hosts:
 - `crates/thinkthen-host/src/complete_native/file_format.rs:21`: "only PostgreSQL and DuckDB transport native reader descriptors".
 
 The crate keeps its own workspace and lock file (`crates/thinkthen-host/Cargo.toml`, `crates/thinkthen-host/Cargo.lock`), and it pins serde versions apart from the core.
+
+## Progress
+
+- 2026-10-19 started
