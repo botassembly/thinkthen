@@ -565,9 +565,8 @@ def main():
         command = [sys.executable, str(Path(__file__).parent / 'templates/postgresql.py')]
         if args.check:
             command.append('--check')
-        with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-generator-') as home:
-            return subprocess.run(command, env=child_env(
-                keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).returncode
+        return subprocess.run(command, env=child_env(
+            keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).returncode
     if args.operations:
         if args.target != 'c' or args.inputs or args.bridge:
             parser.error('operation transport is a separate C producer')

@@ -375,24 +375,22 @@ def sql_schema(schema):
 def main():
     import argparse
     from pathlib import Path
-    import subprocess
     import sys
-    import tempfile
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[3]
     sys.path.insert(0, str(root / 'conformance/children'))
+    sys.path.insert(0, str(root / 'build-tools/results'))
     from children import CARGO, child_env
+    from formatting import format_source
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
     schema = sql_schema(schema)
     outputs = {'results_generated.rs': render(schema), 'functions_generated.rs': render_functions()}
     for name, source in outputs.items():
         target = root / 'databases/postgresql/src/native' / name
-        with tempfile.TemporaryDirectory(prefix='thinkthen-postgresql-rustfmt-') as home:
-            result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'], input=source,
-                                    text=True, capture_output=True, check=True, env=child_env(
-                                        keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'), home=home)).stdout
+        result = format_source(name, source, child_env(
+            keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
         if args.check:
             if target.read_text() != result:
                 raise SystemExit('PostgreSQL result generation is stale: ' + name)

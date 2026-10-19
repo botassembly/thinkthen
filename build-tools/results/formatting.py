@@ -41,6 +41,6 @@ def format_source(path, text, env=None):
     elif suffix in ('cs', 'java', 'h', 'hpp', 'c', 'm'):
         return native(text)
     if command:
-        return subprocess.run(command, input=text, text=True, capture_output=True,
+        return subprocess.run(command, input=text, text=True, stdout=subprocess.PIPE,
                               check=True, env=env).stdout
     return text
