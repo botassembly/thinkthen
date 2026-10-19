@@ -49,6 +49,8 @@ npm) case $* in "ci --no-audit --no-fund --silent --prefix $FAKE_ROOT/"*) echo n
   "install --no-audit --no-fund --no-package-lock --prefix $FAKE_ROOT/runner/thinkthen-generators prettier@3.6.2") ;;
   *) echo "unexpected npm call: $*" >&2; exit 94 ;; esac ;;
 python3) [ "$1" != databases/duckdb/tools/source_hosts.py ] || echo duckdb-source-hosts >> "$FAKE_LOG"
+  # Keep the real manifest reader while other Python commands remain host stubs.
+  if [ "$1" = - ] && [ "${2:-}" = "$FAKE_MANIFEST" ]; then exec "$FAKE_PYTHON" "$@"; fi
   case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
   case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
 python3.14) exit 1 ;;
@@ -81,7 +83,7 @@ uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
-brew) case "$*" in "install pkgconf jq openssl@3.6") touch "$FAKE_ROOT/openssl-ready" ;;
+brew) case "$*" in "install pkgconf jq openssl@$RUBY_OPENSSL_SERIES") touch "$FAKE_ROOT/openssl-ready" ;;
   "--prefix openssl@3") echo "$FAKE_ROOT/openssl-default"; exit 0 ;; esac
   case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
 shasum) PG_MAJOR=${3##*postgresql@}; . databases/postgresql/runtime-darwin.env
@@ -99,7 +101,7 @@ esac
         route.chmod(0o755)
         openssl = root / "openssl3/bin/openssl"
         openssl.parent.mkdir(parents=True)
-        openssl.write_text("#!/bin/sh\n[ -f \"$FAKE_ROOT/openssl-ready\" ] || exit 91\necho 'OpenSSL 3.6.3 27 Jan 2026'\n")
+        openssl.write_text('#!/bin/sh\n[ -f "$FAKE_ROOT/openssl-ready" ] || exit 91\necho "OpenSSL $FAKE_OPENSSL_VERSION"\n')
         openssl.chmod(0o755)
         for name, line in (("openssl-default/bin/openssl", "OpenSSL 3.5.9"),
                            ("bin/openssl", "OpenSSL 4.0.3")):
@@ -115,6 +117,14 @@ esac
             (bin_dir / name).symlink_to(route.name)
         (root / "pinned").mkdir()
         (root / "pinned/uv").symlink_to(route)
+        sdk = root / 'sdk'
+        sdk.mkdir()
+        # Apple's git launcher reads the selected SDK even though all host work is stubbed.
+        (sdk / 'SDKSettings.plist').write_text(
+            '<?xml version="1.0"?><plist version="1.0"><dict>'
+            '<key>Version</key><string>15.0</string></dict></plist>')
+        manifest = REPO / 'sdlc/tools.json'
+        openssl_version = json.loads(manifest.read_text())['tools']['ruby']['openssl_version']
         log = root / "calls"
         env = os.environ.copy()
         env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
@@ -122,6 +132,10 @@ esac
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
                    GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
+                   FAKE_PYTHON=sys.executable, FAKE_MANIFEST=str(manifest),
+                   FAKE_OPENSSL_VERSION=openssl_version,
+                   # The hosted reader is replaced by 0620; supply its old variable only in this routing fixture.
+                   RUBY_OPENSSL_SERIES=openssl_version.rsplit('.', 1)[0],
                    RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
