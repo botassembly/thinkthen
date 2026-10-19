@@ -10,6 +10,8 @@ Depends on: 0612, 0638
 
 Reviews: revision 788fda3, accept
 
+Reviews: revision f4accf9, accept
+
 ## Outcome
 
 - Changes: `conformance/c_parity.py`, `conformance/cases.json`, `conformance/children/native_fixture.py`, `conformance/children/session_cases.py`, `conformance/parity.py`, `conformance/session_projection.py`, `libraries/c/tests/c/run_call.c`, `libraries/c/tests/installed_call.py`, `libraries/rust/check.py`, `libraries/rust/check.sh`, `libraries/rust/consumer/tests/call.rs`, `libraries/rust/consumer/tests/settled.rs`.
