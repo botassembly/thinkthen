@@ -914,3 +914,9 @@ reuses native record decoding with already admitted fields. Table framing requir
 existing table reader. `read_annotation_document(&self, &[u8]) -> Result<RawRecord, Error>`
 retains exact native syntax-only text fallback. Both retain blank originals for later
 preflight; neither bypasses size, UTF-8, JSON, selection or execution admission.
+
+`RecordReading::compose_images(&self, ImageEvidence) -> Result<RecordInput<QuestionInput>, Error>`
+exposes the existing native image-source composition operation for the command preview.
+It refuses incompatible record pointers before composing, preserves the complete validated
+set and its order, and leaves route, declaration, budget and execution admission intact.
+The implementation and ownership stay unchanged; no alternate submission path is added.

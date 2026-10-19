@@ -414,7 +414,13 @@ impl RecordReading {
         }
         Ok(())
     }
-    pub(crate) fn compose_images(
+    /// Compose one complete already validated image set without copying or reordering it.
+    /// The native image-source boundary rejects field, context, shortlist, seed and
+    /// example pointers before composition. Normal route, declaration, image budget
+    /// and execution admission still apply when the resulting record is used.
+    /// # Errors
+    /// Returns Usage for incompatible record projections or controls.
+    pub fn compose_images(
         &self,
         images: ImageEvidence,
     ) -> Result<RecordInput<QuestionInput>, Error> {
