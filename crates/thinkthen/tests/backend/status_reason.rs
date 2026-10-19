@@ -442,7 +442,11 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
         let said = crate::harness::said(&output);
         assert_eq!(output.status.code(), Some(4), "{arguments:?}: {said}");
         assert!(output.stdout.is_empty(), "{arguments:?}");
-        assert_eq!(listener.requests().len(), expected_requests, "{arguments:?}");
+        assert_eq!(
+            listener.requests().len(),
+            expected_requests,
+            "{arguments:?}"
+        );
         let provider = if status == 400 {
             "; provider type: max_tokens_exceeded"
         } else {
