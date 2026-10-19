@@ -1,9 +1,9 @@
 //! Plain aggregate arguments retain the ordinary call's admitted request.
 use crate::call;
 use crate::complete_native::defect;
+use pgrx::prelude::*;
 use serde_json::Value;
 use thinkthen::RequestOutcome;
-use pgrx::prelude::*;
 use thinkthen::{
     Error, Request, RequestArguments, RequestDefinition, RequestEnvironment, RequestFunction,
     RequestInput, RequestItem, RequestQuestion,
@@ -238,7 +238,11 @@ fn project_outcome(
     };
     let mut carrier = serde_json::json!({"native":{"value":serde_json::to_value(&result).map_err(|_| defect())?,"facts":facts},"observations":observations});
     if let Some(failure) = failure {
-        crate::complete_native::put(carrier.get_mut("native").ok_or_else(defect)?, "error", failure)?;
+        crate::complete_native::put(
+            carrier.get_mut("native").ok_or_else(defect)?,
+            "error",
+            failure,
+        )?;
     }
     let mut rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
     thinkthen_host::sql_request::typed_values(&result, &mut rows)?;

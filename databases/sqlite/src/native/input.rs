@@ -1,6 +1,6 @@
 //! Named typed fields compose native collection data before shared admission.
 use super::{Arguments, inputs::Inputs};
-use crate::{Failure, complete_native, named, question};
+use crate::{Failure, named, question};
 use rusqlite::types::ValueRef;
 
 pub(super) fn identity(verb: &str, args: &Arguments) -> Result<String, Failure> {
@@ -303,10 +303,7 @@ fn source_reading(args: &Arguments, fields: &mut Vec<String>) -> Result<(), Fail
     Ok(())
 }
 
-pub(super) fn ordinary_find(
-    args: &Arguments,
-    inputs: &mut Inputs,
-) -> Result<(), thinkthen::Error> {
+pub(super) fn ordinary_find(args: &Arguments, inputs: &mut Inputs) -> Result<(), thinkthen::Error> {
     if args.supplied("request_records") {
         return Ok(());
     }

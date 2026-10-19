@@ -1,9 +1,12 @@
 //! SQLite owns input controls, cancellation and ordinary complete envelopes.
 use super::inputs::Inputs;
-use complete_native::{self, Prepared, defect};
+use crate::complete_native::{self, Prepared, defect};
 use serde_json::{Value, json};
 use std::sync::Mutex;
-use thinkthen::{AdmittedRequest, CallOptions, Engine, Error, RecordObservation, Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestOutcome, RequestValue, Surface};
+use thinkthen::{
+    AdmittedRequest, CallOptions, Engine, Error, RecordObservation, Request, RequestEnvironment,
+    RequestFeed, RequestInput, RequestOptions, RequestOutcome, RequestValue, Surface,
+};
 use thinkthen_host::sql_request::{observation, recover, run_feed_recovering};
 
 pub(super) fn run(
@@ -186,4 +189,3 @@ pub(super) fn run_recovering(
     };
     run_feed_recovering(engine, prepared, request, feed, controls, surface)
 }
-

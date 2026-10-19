@@ -1,5 +1,4 @@
 //! SQL output rows preserve canonical records and native aggregate membership.
-use crate::complete_native::defect;
 use serde_json::{Value, json};
 use thinkthen::{Error, RequestFunction as F};
 
