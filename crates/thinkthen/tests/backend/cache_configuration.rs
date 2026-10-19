@@ -51,7 +51,11 @@ fn families(set: &Path) -> [Vec<String>; 8] {
 fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     let root = folder("configuration");
     fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
-    fs::write(root.join("thinkthen/config.json"), r#"{"url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#).expect("configuration");
+    fs::write(
+        root.join("thinkthen/config.json"),
+        r#"{"url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#,
+    )
+    .expect("configuration");
     let output = run(
         &["decide", "asks for a refund", "--plan"],
         &[

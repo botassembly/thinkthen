@@ -180,11 +180,7 @@ fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_l
         let scratch = Scratch::new();
         fs::create_dir_all(scratch.config().parent().expect("config parent"))
             .expect("config parent");
-        fs::write(
-            scratch.config(),
-            r#"{"model":"local-1"}"#,
-        )
-        .expect("config");
+        fs::write(scratch.config(), r#"{"model":"local-1"}"#).expect("config");
         support::plant(&scratch.config(), grant, foreign_owner);
         let output = scratch.run(&["status", "--json"]);
         assert_eq!(output.status.code(), Some(0));

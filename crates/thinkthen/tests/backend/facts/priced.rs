@@ -91,10 +91,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
 
 #[test]
 fn caller_price_config_rejects_invalid_pair_without_a_send() {
-    let root = configuration(
-        "facts-price-refusal",
-        r#"{"usd_per_million_input":"0.25"}"#,
-    );
+    let root = configuration("facts-price-refusal", r#"{"usd_per_million_input":"0.25"}"#);
     let listener = Listener::answering(answered).expect("listener");
     let refused = run(&root, &listener, b"Refund me.", &[]);
     assert_eq!(refused.status.code(), Some(2));

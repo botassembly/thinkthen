@@ -95,9 +95,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         json!({"model":"m"}),
         json!({"both_sides":false}),
     ] {
-        home.config(
-            &json!({"backends":{"typesafe":&fields}}).to_string(),
-        );
+        home.config(&json!({"backends":{"typesafe":&fields}}).to_string());
         let out = ask(&home, target.base(), &[]);
         assert_eq!(out.status.code(), Some(5));
         let field = ["url", "path", "key_env", "model", "both_sides"]

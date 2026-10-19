@@ -303,9 +303,7 @@ mod tests {
             assert!(!refused.message.contains(marker));
         }
         for backend in ["liquid", "typesafe", "local-d1"] {
-            let text = format!(
-                r#"{{"backend":"{backend}","backends":{{"local-d1":{good}}}}}"#
-            );
+            let text = format!(r#"{{"backend":"{backend}","backends":{{"local-d1":{good}}}}}"#);
             assert!(Config::parse(text.as_bytes()).is_ok(), "{backend}");
         }
     }
@@ -319,9 +317,7 @@ mod tests {
             )
         };
         let built_in = |value: &str| {
-            format!(
-                r#"{{"backends":{{"liquid":{{"requests_per_minute":{value}}}}}}}"#
-            )
+            format!(r#"{{"backends":{{"liquid":{{"requests_per_minute":{value}}}}}}}"#)
         };
         for value in [
             "0",
@@ -385,10 +381,7 @@ mod tests {
                 r#"{"backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
                 true,
             ),
-            (
-                r#"{"backend":"liquid"}"#,
-                false,
-            ),
+            (r#"{"backend":"liquid"}"#, false),
         ] {
             std::fs::write(&path, text).expect("a configuration file");
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o646))

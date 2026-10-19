@@ -371,7 +371,9 @@ fn legacy_builtin_entries_offer_safe_repairs_before_commands_and_plans_send() {
                 assert_eq!(target.count(), 0);
             }
         }
-        home.config(&serde_json::json!({"backend":name,"backends":{name:{marker:marker}}}).to_string());
+        home.config(
+            &serde_json::json!({"backend":name,"backends":{name:{marker:marker}}}).to_string(),
+        );
         let output = decide(&home, &["--url", target.base(), "--plan"], &[]);
         assert_eq!(output.status.code(), Some(5));
         assert_eq!(said(&output), (String::new(), "thinkthen: a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned()));

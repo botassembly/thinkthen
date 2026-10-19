@@ -38,10 +38,7 @@ fn each_refusal_names_its_field_and_never_its_value() {
     for (text, sentence) in [
         (r#"{"cache":true"#, not_closed),
         (r#"["schema"]"#, not_closed),
-        (
-            r#"{"cache":true,"cache":false}"#,
-            not_closed,
-        ),
+        (r#"{"cache":true,"cache":false}"#, not_closed),
         (r#"{"schema":"thinkthen.config/1"}"#, schema),
         (r#"{"schema":"wrong"}"#, schema),
         (r#"{"schema":1}"#, schema),
@@ -53,10 +50,7 @@ fn each_refusal_names_its_field_and_never_its_value() {
             r#"{"cache":"/folder"}"#,
             "configuration field `cache` must be true or false",
         ),
-        (
-            r#"{"url":7}"#,
-            "configuration field `url` must be a string",
-        ),
+        (r#"{"url":7}"#, "configuration field `url` must be a string"),
         (
             r#"{"model":["m"]}"#,
             "configuration field `model` must be a string",

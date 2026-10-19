@@ -464,7 +464,8 @@ fn tag_fills_each_described_label_and_choice_and_score_keep_authored_bytes() {
 fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
     let home = Home::new("names-0399");
     for name in ["perplexity", "openrouter"] {
-        let custom = json!({"backends":{name:{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}});
+        let custom =
+            json!({"backends":{name:{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}});
         home.config(&custom.to_string());
         let out = home.run(&["backends", "check", "--backend", name, "--plan"], &[]);
         assert_eq!(out.status.code(), Some(5));
@@ -474,8 +475,7 @@ fn new_builtin_names_preserve_the_rate_only_configuration_contract() {
                 "thinkthen: configuration entry for built-in backend `{name}` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`\n"
             )
         );
-        let rated =
-            json!({"backends":{name:{"requests_per_minute":60}}});
+        let rated = json!({"backends":{name:{"requests_per_minute":60}}});
         home.config(&rated.to_string());
         let out = home.run(&["backends", "check", "--backend", name, "--plan"], &[]);
         assert_eq!(out.status.code(), Some(0), "{}", said(&out).1);
