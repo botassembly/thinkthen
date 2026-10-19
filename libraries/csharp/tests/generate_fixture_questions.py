@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import sys
 ROOT = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(ROOT / 'sdlc/generators/results'), str(ROOT / 'sdlc/generators/results/templates')]
+sys.path[:0] = [str(ROOT / 'build-tools/results'), str(ROOT / 'build-tools/results/templates')]
 import generate
 import csharp
 import json

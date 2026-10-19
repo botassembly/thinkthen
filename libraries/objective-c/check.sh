@@ -10,5 +10,5 @@ case "$(uname -s)" in
   *) echo 'Objective-C Foundation execution requires macOS; GNU Objective-C support has ended' >&2; exit 1 ;;
 esac
 python3 "$REPO/conformance/children/privacy.py" --sources "$ROOT" --public --artifact-env
-python3 "$REPO/sdlc/generators/results/generate.py" --target objc --check
+python3 "$REPO/build-tools/results/generate.py" --target objc --check
 exec python3 "$ROOT/checks/foundation_installed.py"

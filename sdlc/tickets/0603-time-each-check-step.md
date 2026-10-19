@@ -2,7 +2,7 @@
 
 Status: OPEN.
 
-Milestone: 0.3
+Milestone: 0.2.1
 
 ## Outcome
 
@@ -23,3 +23,7 @@ Milestone: 0.3
 ## Proof
 
 One run of each prints step times that add up to within 5% of the total. After landing, measure again and record the result here.
+
+## Amendment, 2026-10-19
+
+Moved to 0.2.1. Every landing runs the full M5 gate, about 15 minutes per pass and 32 runs in the last day, and nobody can say which steps cost the time. Step timings let the next ticket cut or move the slowest self-tests to the checkpoint suite. It is small, touches only the two entrypoints, and lands on its own.

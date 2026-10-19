@@ -19,7 +19,7 @@ def contracts(root, authority):
 
 
 def generated_sources(root, target, request, result):
-    generator_folder = root / 'sdlc/generators/results'
+    generator_folder = root / 'build-tools/results'
     sys.path[:0] = [str(generator_folder), str(generator_folder / 'templates')]
     generator = importlib.import_module('generate')
     module_name = {'objc': 'objc', 'jvm': 'jvm'}.get(target, target)

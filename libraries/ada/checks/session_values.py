@@ -4,10 +4,10 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-spec = importlib.util.spec_from_file_location('ada_result_generator', ROOT / 'sdlc/generators/results/generate.py')
+spec = importlib.util.spec_from_file_location('ada_result_generator', ROOT / 'build-tools/results/generate.py')
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
-spec = importlib.util.spec_from_file_location('ada_template', ROOT / 'sdlc/generators/results/templates/ada.py')
+spec = importlib.util.spec_from_file_location('ada_template', ROOT / 'build-tools/results/templates/ada.py')
 template = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(template)
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())

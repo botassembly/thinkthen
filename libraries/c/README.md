@@ -4,6 +4,8 @@
 
 ## Recommended development 0.2 API
 
+At library load, call `thinkthen_version` once with a writable `uint32_t`. Compare its output exactly with `THINKTHEN_INTERFACE_NUMBER` from the installed header before creating an engine or using any other operation. Refuse a mismatch and report the expected number, loaded number and returned library version. A dynamic loader also refuses a library missing this bootstrap symbol. Its signature remains stable across interface changes; the borrowed version string remains valid until unload and must never be freed. Package versions can differ while their interface numbers match. [The C consumer](tests/c/runtime_version.c) shows the check.
+
 C call input uses counted canonical JSON. The [input decision](../../sdlc/decisions/2026-10-19-c-input-json.md) records the choice and the migration boundary for existing typed and component-based entry points.
 
 Use `thinkthen_run_call` for all ten judgments. Supply a `thinkthen_named_request_v1` containing counted canonical function name, question, input and options JSON. The [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The call blocks until Rust settles execution and transfers an independent result or error owner. The [result decision](../../sdlc/decisions/2026-10-19-c-call-owned-json.md) records the representation and its cost.

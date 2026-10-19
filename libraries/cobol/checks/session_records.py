@@ -13,8 +13,8 @@ def module(name, path):
     spec.loader.exec_module(result)
     return result
 
-generator = module('cobol_generator', ROOT / 'sdlc/generators/results/generate.py')
-template = module('cobol_template', ROOT / 'sdlc/generators/results/templates/cobol.py')
+generator = module('cobol_generator', ROOT / 'build-tools/results/generate.py')
+template = module('cobol_template', ROOT / 'build-tools/results/templates/cobol.py')
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
 schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
 definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))

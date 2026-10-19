@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
 from generate import graph, prepare
 from native import immediate_schema
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
+sys.path.insert(0, str(ROOT / 'build-tools/results/templates'))
 import dart
 
 

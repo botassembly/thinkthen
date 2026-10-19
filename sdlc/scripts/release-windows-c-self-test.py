@@ -4,6 +4,7 @@ import copy
 import contextlib
 import io
 import os
+from tools import fixture_path
 import shutil
 from pathlib import Path
 import runpy
@@ -223,7 +224,7 @@ def pack_routing(root):
     scratch.mkdir()
     home = root / 'home'
     home.mkdir()
-    env = {'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'HOME': str(home),
+    env = {'PATH': fixture_path(tools), 'HOME': str(home),
            'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8', 'TMPDIR': str(scratch), 'CARGO_NET_OFFLINE': 'true',
            'CARGO_TARGET_DIR': str(root / 'build')}
     for reuse in (False, True):

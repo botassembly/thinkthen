@@ -22,10 +22,6 @@ The extension registers its functions with `SQLITE_DIRECTONLY` (`databases/sqlit
 
 PostgreSQL and DuckDB get the same check once their own trigger behavior is measured.
 
-## Progress
-
-- 2026-10-19 started
-
 ## Amendment, 2026-10-19
 
 PostgreSQL 16 already allows the functions in triggers: a `BEFORE INSERT` plpgsql trigger calling `thinkthen_choose` and `thinkthen_tag` labeled five rows matching the SQLite answers, and later filters made no requests. PostgreSQL needs no code change. This ticket adds one short "Label rows as they arrive" example to both the SQLite and PostgreSQL guides, replayed like other documentation examples. The PostgreSQL example shows what a reader otherwise trips on:

@@ -31,6 +31,7 @@ mod authored;
 mod child;
 mod errors;
 mod plan;
+mod runtime_version;
 mod session;
 
 use crate::child::ChildEnvironment as _;
@@ -56,7 +57,9 @@ const ASAN_OPTIONS: &str = if cfg!(target_os = "macos") {
 };
 
 fn consumer_name(source: &Path) -> String {
-    let relative = source.strip_prefix(crate_dir()).expect("a crate fixture");
+    let relative = source
+        .strip_prefix(crate_dir())
+        .unwrap_or_else(|_| source.file_name().map_or(source, Path::new));
     relative.to_string_lossy().replace(['/', '\\'], "-")
 }
 

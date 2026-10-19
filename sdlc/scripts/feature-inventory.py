@@ -5,7 +5,7 @@ import re
 import sys
 import tomllib
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'generators/results'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'build-tools/results'))
 from sources import tracked_files
 
 

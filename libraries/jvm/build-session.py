@@ -54,7 +54,7 @@ def main():
     jdk, kotlin, scala = JDK, KOTLIN, SCALA
     env = child_env(keep=('LANG','LC_ALL'), JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'), JAVA_OPTS='-Xmx1g -XX:ActiveProcessorCount=2')
     inventory = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm'], env=env))
-    subprocess.run([sys.executable, str(ROOT / 'sdlc/generators/results/generate.py'), '--target', 'jvm', '--check'], check=True, env=env)
+    subprocess.run([sys.executable, str(ROOT / 'build-tools/results/generate.py'), '--target', 'jvm', '--check'], check=True, env=env)
     jars = out / 'jars'
     jars.mkdir(exist_ok=True)
     for kind, filename in inventory['jars'].items():

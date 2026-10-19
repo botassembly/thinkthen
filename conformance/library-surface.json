@@ -871,7 +871,7 @@
       "naming": "pascal",
       "declarations": [
         "libraries/csharp/src/*.cs",
-        "sdlc/generators/results/csharp/CompleteFacts.g.cs"
+        "build-tools/results/csharp/CompleteFacts.g.cs"
       ],
       "option_containers": [
         "RequestOptions",
