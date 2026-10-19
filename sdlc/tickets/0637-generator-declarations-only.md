@@ -28,3 +28,7 @@ The generator under `sdlc/generators/results/` holds product rules. `templates/h
 Rule 2 of the 0.2.1 ruling also needs a check that refuses answer rules in templates or language code, and no check exists.
 
 The generator lives under `sdlc/`, the project-records folder, even though release packages depend on it.
+
+## Progress
+
+- 2026-10-19 started
