@@ -9,6 +9,7 @@ import unittest
 
 from conformance import parity
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
@@ -34,7 +35,7 @@ class StressSelection(unittest.TestCase):
             (surface / 'check.sh').write_text(
                 'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
                 'case $1 in 16) exit "$CODE16" ;; 17) exit "$CODE17" ;; 18) exit "$CODE18" ;; esac\n')
-            env = child_env(home=root / 'home', PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'], FIXTURE_ROOT=str(root))
+            env = child_env(home=root / 'home', PATH=fixture_path(root / 'bin'), FIXTURE_ROOT=str(root))
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for first, middle, last in ((1, 0, 77), (77, 0, 1), (77, 77, 77), (0, 0, 77), (0, 77, 0)):
                 with self.subTest(first=first, middle=middle, last=last):
@@ -53,7 +54,7 @@ class StressSelection(unittest.TestCase):
             root = Path(folder)
             stage_checkout(parity.ROOT, root)
             subprocess.run(['git', 'init', '-q', str(root)],
-                           env=child_env(home=root / 'home', PATH=os.defpath), check=True)
+                           env=child_env(home=root / 'home', PATH=os.environ['PATH']), check=True)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True, exist_ok=True)
             (scripts / 'allow-list').write_text('')
@@ -81,7 +82,7 @@ class StressSelection(unittest.TestCase):
             tools.mkdir(exist_ok=True)
             # Shell helpers must use the supported Python running this fixture.
             (tools / 'python3').symlink_to(sys.executable)
-            env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home'),
+            env = {'PATH': fixture_path(tools), 'HOME': str(root / 'home'),
                    'FIXTURE_ROOT': str(root), 'FAILED_SURFACE': '',
                    'THINKTHEN_TEST_PROFILE': 'stress'}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)

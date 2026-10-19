@@ -61,23 +61,35 @@ def commands(groups=(), host=None):
                                for command in tool['commands']))
 
 
-def fixture_tools(directory, exclude=()):
-    """Keep declared system runtime commands in an isolated fixture PATH.
+def fixture_path(directory, exclude=(), *, path=None):
+    """Overlay fixture commands on the caller's resolved tool PATH.
 
-    Existing fixture commands win. No host directory or provider tool leaks
-    into the PATH, so a fixture can still remove a tool to prove its refusal.
+    Missing-tool cases mirror that PATH while removing only the named tools.
+    Fake commands stay first without hiding unrelated runtime dependencies.
     """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
-    for tool in selected(manifest, (), platform.system().lower()).values():
-        if 'provider' in tool:
-            continue
-        for command in tool['commands']:
-            target = directory / command
-            executable = shutil.which(command)
-            if command not in exclude and not target.exists() and not target.is_symlink() and executable:
-                target.symlink_to(executable)
+    runtime = os.environ['PATH'] if path is None else path
+    if exclude:
+        declared = set(commands())
+        excluded_targets = {Path(found).resolve() for name in exclude
+                            if (found := shutil.which(name, path=runtime))}
+        mirrored = directory / '.runtime'
+        mirrored.mkdir(exist_ok=True)
+        for folder in runtime.split(os.pathsep):
+            if not Path(folder).is_dir():
+                continue
+            for source in Path(folder).iterdir():
+                target = mirrored / source.name
+                # Multicall launchers also back separate commands such as
+                # cargo and rustc. Preserve those independently declared tools.
+                alias = source.name not in declared and source.resolve() in excluded_targets
+                if (source.name not in exclude and not alias
+                        and source.is_file() and os.access(source, os.X_OK)
+                        and not target.exists() and not target.is_symlink()):
+                    target.symlink_to(source.resolve())
+        runtime = str(mirrored)
+    return str(directory) + os.pathsep + runtime
 
 
 def bootstrap(manifest, root, env):

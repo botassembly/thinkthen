@@ -25,7 +25,7 @@ spec.loader.exec_module(readmes)
 sys.path.insert(0, str(readmes.REPO))
 from conformance.source_fixtures import stage_checkout
 from conformance.children.children import child_env
-from sdlc.scripts.tools import fixture_tools
+from sdlc.scripts.tools import fixture_path
 
 
 REAL_RUN_BUILD = readmes.run_build
@@ -570,7 +570,7 @@ class PackageText(unittest.TestCase):
             runner.chmod(0o755)
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
-                               env=child_env(home=root / 'home', PATH='/usr/bin:/bin', TARGET=target), check=True)
+                               env=child_env(home=root / 'home', PATH=os.environ['PATH'], TARGET=target), check=True)
             stage_checkout(readmes.REPO, root)
             home = root / 'home'
             prepared = [root / 'resolved/ruby/bin']
@@ -597,7 +597,7 @@ class PackageText(unittest.TestCase):
                                '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
             done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
                                    'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
-                                  env={'PATH': os.pathsep.join((str(prepared[0]), str(wrong), os.environ['PATH'])),
+                                  env={'PATH': fixture_path(prepared[0], path=fixture_path(wrong)),
                                        'HOME': str(home)},
                                   capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
@@ -645,10 +645,9 @@ class PackageText(unittest.TestCase):
                     '    out.write_text(' + repr('#!' + sys.executable + '\nimport fcntl\nwith open(' + repr(str(lock)) + ', "a") as lock: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\nprint("fixture")\n') + ')\n' +
                     '    out.chmod(0o755)\n')
                 tool.chmod(0o755)
-                fixture_tools(tools)
                 work = tree / family; work.mkdir()
                 with self.subTest(family=family), patch.object(readmes, 'run_build', side_effect=fixture_build), \
-                        patch.dict(os.environ, child_env(home=tree / 'home') | {'PATH': str(tools), 'PUB_CACHE': str(cache),
+                        patch.dict(os.environ, child_env(home=tree / 'home') | {'PATH': fixture_path(tools, exclude=('flock',)), 'PUB_CACHE': str(cache),
                                                'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
                     readmes.run_example(family, packages, work, root)
 
@@ -765,9 +764,9 @@ class PackageText(unittest.TestCase):
                 return popen(command, *args, **kwargs)
             def bounded_communicate(process, input=None, timeout=None):
                 return communicate(process, input, .4 if timeout == 300 else timeout)
-            cases = [(str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')]
+            cases = [(fixture_path(tools, exclude=('flock',)), 'first'), (fixture_path(tools), 'first-hard')]
             if sys.platform == 'linux':
-                cases.append((str(tools), 'first-detached'))
+                cases.append((fixture_path(tools, exclude=('flock',)), 'first-detached'))
             for search_path, first_name in cases:
                 with self.subTest(path=search_path), patch.object(readmes, 'run_build', side_effect=fixture_build), \
                         patch.dict(os.environ, child_env(home=tree / 'home') | {
@@ -823,12 +822,12 @@ class PackageText(unittest.TestCase):
                     return popen(command, *args, **kwargs)
                 def bounded_communicate(process, input=None, timeout=None):
                     return communicate(process, input, 2 if timeout == 300 else timeout)
-                with patch.dict(os.environ, child_env(home=tree / 'home', PATH=os.defpath) | {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
+                with patch.dict(os.environ, child_env(home=tree / 'home', PATH=os.environ['PATH']) | {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):
                     try:
                         done = readmes.run_build([sys.executable, str(compiler), '35', str(marker)],
-                                                tree, {'PATH': '/usr/bin:/bin', 'GITHUB_ACTIONS': 'true',
+                                                tree, {'PATH': os.environ['PATH'], 'GITHUB_ACTIONS': 'true',
                                                        'RUNNER_ENVIRONMENT': 'github-hosted'}, None)
                     except subprocess.TimeoutExpired:
                         done = None

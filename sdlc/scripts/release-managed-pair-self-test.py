@@ -2,6 +2,7 @@
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
 import os
+from tools import fixture_path
 import platform
 import re
 import shutil
@@ -190,7 +191,7 @@ def before_extraction(base):
         tool.chmod(0o755)
     env = os.environ.copy()
     env.pop("THINKTHEN_API_KEY", None)
-    env.update(PATH=str(observer) + os.pathsep + env["PATH"], TT_OBSERVER=str(marker),
+    env.update(PATH=fixture_path(observer, path=env["PATH"]), TT_OBSERVER=str(marker),
                THINKTHEN_RELEASE_EXPECTED_SHA=COMMIT,
                THINKTHEN_RELEASE_SOURCE_TAR=str(base / "source.tar"),
                THINKTHEN_RELEASE_SOURCE_RECEIPT=str(base / "source.json"))

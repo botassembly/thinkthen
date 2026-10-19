@@ -11,7 +11,7 @@ import tempfile
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import fixture_tools
+from sdlc.scripts.tools import commands, fixture_path
 
 
 def community():
@@ -45,7 +45,6 @@ if pathlib.Path(sys.argv[0]).name == 'cargo' and 'rustc' in sys.argv:
         for name in ('rustup', 'rustc', 'cargo'):
             (tools / name).symlink_to(probe)
         (tools / 'python3.13').symlink_to(sys.executable)
-        fixture_tools(tools)
         driver = root / 'older.py'
         driver.write_text('''import runpy, shutil, sys
 if sys.version_info >= (3, 11): sys.version_info = (3, 10)
@@ -66,7 +65,9 @@ sys.argv = sys.argv[3:]
 sys.path.insert(0, sys.argv[0].rsplit('/', 1)[0])
 runpy.run_path(sys.argv[0], run_name='__main__')
 ''')
-        env = child_env(home=root / 'home') | {'PATH': str(tools),
+        env = child_env(home=root / 'home') | {'PATH': fixture_path(tools,
+            exclude=(*[name for name in commands() if name.startswith('python')],
+                     'python3.11', 'python3.12', 'python3.13')),
             'RUSTUP_TOOLCHAIN': 'ambient-wrong-pin', 'CARGO_NET_OFFLINE': 'true'}
         caller = [older or sys.executable, str(driver)]
         changed_sources = []
@@ -121,8 +122,8 @@ def container_build_tools():
         root = Path(temporary)
         tools = root / 'bin'
         tools.mkdir()
-        fixture_tools(tools)
-        (tools / 'cmake').symlink_to(shutil.which('cmake'))
+        for name in ('cmake', 'make', 'cc', 'c++'):
+            (tools / name).symlink_to(shutil.which(name))
         requirements = REPO / 'databases/duckdb/tools/requirements.txt'
         install = tools / 'python3'
         install.write_text(f'''#!{sys.executable}
@@ -137,7 +138,8 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
         container = (REPO / 'sdlc/scripts/release-container').read_text()
         bootstrap = container.split('\tINPUTS_HERE=', 1)[1].split('\tpython3 "$INPUTS_HERE/source_hosts.py" --fetch', 1)[0]
         bootstrap = 'INPUTS_HERE=' + bootstrap.replace('/work/src/databases/duckdb/tools', str(requirements.parent))
-        env = child_env(home=root / 'home') | {'PATH': str(tools), 'TARGET': 'aarch64-unknown-linux-gnu'}
+        env = child_env(home=root / 'home') | {'PATH': fixture_path(tools,
+            exclude=('ninja', 'make', 'cmake', 'cc', 'c++')), 'TARGET': 'aarch64-unknown-linux-gnu'}
         command = bootstrap + '\ncmake -G Ninja -S "' + str(source) + '" -B "' + str(root / 'build') + '"\n'
         result = subprocess.run(['/bin/sh', '-eu', '-c', command], env=env,
                                 capture_output=True, text=True, timeout=30)
@@ -172,7 +174,7 @@ sys.exit(97)
 ''')
         maturin.chmod(0o755)
         floor = str(root / 'Python 3.10/python')
-        env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + '/usr/bin:/bin',
+        env = child_env(home=root / 'home') | {'PATH': fixture_path(tools),
                                              'PYO3_PYTHON': floor}
         result = subprocess.run(['sh', str(REPO / 'libraries/python/build-wheel.sh')],
                                 env=env, capture_output=True, text=True, timeout=15)

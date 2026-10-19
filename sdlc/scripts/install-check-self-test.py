@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
-from tools import commands
+from tools import fixture_path
 import subprocess
 import sys
 import tarfile
@@ -107,8 +107,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
                             'exit 0; fi\nexec "$NATIVE_CARGO" "$@"\n')
                         (tools / 'cargo').chmod(0o755)
-                        env = {'PATH': str(tools) + os.pathsep + os.pathsep.join(dict.fromkeys(
-                                   str(Path(shutil.which(tool)).parent) for tool in commands() if shutil.which(tool))),
+                        env = {'PATH': fixture_path(tools),
                                'HOME': str(root / 'home'), 'CARGO_HOME': str(root / 'home/.cargo'),
                                'RUSTC': rustc, 'NATIVE_CARGO': cargo, 'CARGO_NET_OFFLINE': 'true', 'LC_ALL': 'C.UTF-8',
                                'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1', 'CXXFLAGS': '-O2'}

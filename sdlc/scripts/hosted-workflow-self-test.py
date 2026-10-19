@@ -22,7 +22,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import fixture_tools
+from sdlc.scripts.tools import fixture_path
 
 
 def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
@@ -130,7 +130,7 @@ esac
         openssl_version = json.loads(manifest.read_text())['tools']['ruby']['openssl_version']
         log = root / "calls"
         env = os.environ.copy()
-        env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
+        env.update(PATH=fixture_path(bin_dir), HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
@@ -211,7 +211,7 @@ def linux_work_destination_cases():
                 path.chmod(0o755)
             result = subprocess.run(['/bin/sh', str(REPO / 'sdlc/scripts/release-workflow'),
                                      'linux-work', 'FALLBACK'],
-                                    env={**os.environ, 'PATH': f'{root}:/usr/bin:/bin',
+                                    env={**os.environ, 'PATH': fixture_path(root),
                                          'FAKE_LOG': str(log)}, capture_output=True, text=True, timeout=20)
             calls = log.read_text().splitlines() if log.exists() else []
             sudo_calls = [call for call in calls if call.startswith('sudo ')]
@@ -528,7 +528,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         uname.write_text('#!/bin/sh\ncase $1 in -s) echo Linux ;; *) echo x86_64 ;; esac\n')
         uname.chmod(0o755)
         (database / 'pgrx-package-locked.sh').chmod(0o755)
-        env = {'PATH': str(tools) + os.pathsep + os.environ['PATH'], 'HOME': str(root / 'empty-home'),
+        env = {'PATH': fixture_path(tools), 'HOME': str(root / 'empty-home'),
                'PG_CONFIG': str(pg_config), 'TMPDIR': str(root)}
         result = subprocess.run(['/bin/sh', str(database / 'package.sh'), '16', str(root / 'out')],
                                 env=env, capture_output=True, text=True, timeout=5)
@@ -619,7 +619,7 @@ def linux_coverage_destination_case():
                 tool = root / name
                 tool.write_text('#!/bin/sh\n' + body + '\n')
                 tool.chmod(0o755)
-            env = child_env(home=root / 'home') | {'PATH': f'{root}:{os.defpath}', 'STAGE': 'coverage',
+            env = child_env(home=root / 'home') | {'PATH': fixture_path(root), 'STAGE': 'coverage',
                    'RUNNER_TEMP': '/home/runner/work/_temp'}
             result = subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
                                     capture_output=True, text=True, timeout=5)
@@ -896,10 +896,10 @@ def preflight_cases():
         required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
         for tool in required:
             (tools / tool).symlink_to(probe)
-        fixture_tools(tools)
         # Compiler fixtures stand at the process boundary; no digest check is bypassed.
         command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
-        env = {'PATH': str(tools), 'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
+        env = {'PATH': fixture_path(tools, exclude=('node', 'cl.exe', 'lib.exe')),
+               'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
         ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
@@ -1070,7 +1070,7 @@ def parameter_cases():
             path.chmod(0o755)
         # Run the real candidate guard with the prepared interpreter, not the host launcher.
         (root / 'bin/python3').symlink_to(sys.executable)
-        env = {'PATH': f'{root}/bin:{os.defpath}', 'HOME': str(root), 'LANG': 'C.UTF-8'}
+        env = {'PATH': fixture_path(root / 'bin'), 'HOME': str(root), 'LANG': 'C.UTF-8'}
         # Exercise the workflow caller with the real archived, non-executable helper.
         archived = subprocess.check_output(['git', 'archive', 'HEAD',
                                             'libraries/swift/build-xcframework.sh'], cwd=REPO)

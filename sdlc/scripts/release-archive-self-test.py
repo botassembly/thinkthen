@@ -21,6 +21,7 @@ import zipfile
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
@@ -67,7 +68,7 @@ if args[0] == 'api':
         files = root / "files"
         files.mkdir()
         (files / "fixture.sha256").write_text("checksum\n")
-        env = {"PATH": str(binary) + ":/usr/bin:/bin", "HOME": str(root),
+        env = {"PATH": fixture_path(binary), "HOME": str(root),
                "LC_ALL": "C.UTF-8", "GH_TEST_RECEIPT": str(receipt),
                "GITHUB_REPOSITORY": "botassembly/thinkthen", "GITHUB_REF": "refs/tags/v0.2.0"}
         expected = ((root / "release-notes/0.2.0.md").read_text() + "\n" +
@@ -142,7 +143,7 @@ sys.stderr.write('must not expose API diagnostics')
 sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 """)
         gh.chmod(0o755)
-        env = {"PATH": f"{root}:{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+        env = {"PATH": fixture_path(root), "HOME": str(root), "LC_ALL": "C",
                "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
                "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
         endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
@@ -436,7 +437,7 @@ def c_pack_exit(host, version):
         cargo = binary / "cargo"
         cargo.write_text("#!/bin/sh\nexit 0\n")
         cargo.chmod(0o755)
-        env = os.environ | {"PATH": str(binary) + os.pathsep + os.environ["PATH"],
+        env = os.environ | {"PATH": fixture_path(binary),
                             "CARGO_TARGET_DIR": str(native.parent), "THINKTHEN_FULL_COMPILER": "1"}
         env.pop("CFLAGS", None)
         archive = f"thinkthen-c-{version}-{host}.tar.gz"
@@ -542,7 +543,7 @@ def main():
             private_members.write_text(str(private_cpp / "libthinkthen.a") + "\n")
             expect(run(sys.executable, cpp_guard, "--prefix", str(private_cpp), "--manifest", str(private_members)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
-        env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
+        env.update(PATH=fixture_path(fake_bin, path=env["PATH"]),
                    CARGO_TARGET_DIR=str(native.parent),
                    THINKTHEN_CARGO_CALLS=str(base / "cargo-calls"),
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
@@ -575,7 +576,7 @@ def main():
                                        f"cp '{native}'/* \"$CARGO_TARGET_DIR/release/\"\n")
         (own_bin / "cargo").chmod(0o755)
         own_env = {key: value for key, value in env.items() if key != "CARGO_TARGET_DIR"}
-        own_env.update(PATH=str(own_bin) + os.pathsep + os.environ["PATH"], TMPDIR=str(own_tmp),
+        own_env.update(PATH=fixture_path(own_bin), TMPDIR=str(own_tmp),
                        THINKTHEN_CARGO_CALLS=str(own_calls))
         result = run("sh", str(source / "sdlc/scripts/release-pack"), host, str(base / "own"), "c", "first-run",
                      cwd=source, env=own_env)
@@ -964,7 +965,7 @@ def main():
         github_path.touch()
         github_env = base / "github-env"
         github_env.touch()
-        tool_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+        tool_env = os.environ | {"PATH": fixture_path(fake_bin),
                                  "GITHUB_PATH": str(github_path), "GITHUB_ENV": str(github_env)}
         expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
                "Go/C++ installed tools require Linux x86-64")
@@ -1079,7 +1080,7 @@ def main():
         docker.chmod(0o755)
         launcher_env = os.environ.copy()
         launcher_env.pop("PYTHONDONTWRITEBYTECODE", None)
-        launcher_env["PATH"] = str(fake_bin) + os.pathsep + launcher_env["PATH"]
+        launcher_env["PATH"] = fixture_path(fake_bin, path=launcher_env["PATH"])
         launcher_env["THINKTHEN_RELEASE_EXPECTED_SHA"] = "0" * 40
         expect(run("sh", str(REPO / "sdlc/scripts/release-container"), str(base / "container-work"),
                    str(base / "container-out"), env=launcher_env), "checkout differs from resolved release SHA")
@@ -1108,11 +1109,11 @@ def main():
             ("go version go1.22.12 linux/amd64", "Python jsonschema is unavailable"),
             ("go version go1.27.1 linux/amd64", "Python jsonschema is unavailable"),
         ):
-            version_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+            version_env = os.environ | {"PATH": fixture_path(fake_bin),
                                         "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
                                         "FAKE_GO_VERSION": version}
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
-        installed_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+        installed_env = os.environ | {"PATH": fixture_path(fake_bin),
                                       "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
                                       "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
                                       "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}

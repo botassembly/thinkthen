@@ -14,12 +14,13 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'sdlc/scripts/tools.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import download
+from sdlc.scripts.tools import download, fixture_path
 
 
 class PinnedDownloads(unittest.TestCase):
@@ -85,6 +86,37 @@ class PinnedDownloads(unittest.TestCase):
                 thread.join()
         expected_requests = len(contents) * 2 + len(failures) * 2
         self.assertEqual(requests, ['identity'] * expected_requests)
+
+
+class FixtureToolPaths(unittest.TestCase):
+    def test_fakes_win_and_missing_tools_keep_runtime_and_independent_multicall_commands(self):
+        with tempfile.TemporaryDirectory(prefix='fixture-tool-path-') as temporary:
+            root = Path(temporary)
+            runtime = root / 'runtime'; runtime.mkdir()
+            fake = root / 'fake'; fake.mkdir()
+            (runtime / 'sh').symlink_to(shutil.which('sh'))
+            for name in ('node-core', 'python-core', 'rustup'):
+                executable = runtime / name
+                executable.write_text('#!/bin/sh\nprintf runtime\n')
+                executable.chmod(0o755)
+            for name, target in (('node', 'node-core'), ('nodejs', 'node-core'),
+                                 ('python3.13', 'python-core'), ('python3', 'python-core'),
+                                 ('python', 'python-core'), ('cargo', 'rustup'), ('rustc', 'rustup')):
+                (runtime / name).symlink_to(target)
+            node = fake / 'node'
+            node.write_text('#!/bin/sh\nprintf fake\n'); node.chmod(0o755)
+            with patch.dict(os.environ, {'PATH': str(runtime)}):
+                positive = child_env(home=root / 'home', PATH=fixture_path(fake))
+                self.assertEqual(subprocess.check_output(['node'], env=positive, text=True), 'fake')
+                node.unlink()
+                absent = ('node', 'python', 'python3', 'python3.13', 'cargo')
+                negative = child_env(home=root / 'home', PATH=fixture_path(fake, exclude=absent))
+                for name in (*absent, 'nodejs'):
+                    self.assertIsNone(shutil.which(name, path=negative['PATH']), name)
+                for name in ('rustup', 'rustc'):
+                    self.assertEqual(subprocess.check_output([name], env=negative, text=True), 'runtime')
+                self.assertEqual(subprocess.check_output(['sh', '-c', 'printf runtime'],
+                                                        env=negative, text=True), 'runtime')
 
 
 class ToolResolution(unittest.TestCase):

@@ -27,6 +27,7 @@ from unittest.mock import patch
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
@@ -211,7 +212,7 @@ def signing_cases(root, base, layout, artifacts, stem):
             command.write_text(f'#!{sys.executable}\n' + GPG)
             command.chmod(0o755)
         log = tools / 'calls'
-        env = {'PATH': f"{tools}:{os.environ['PATH']}", 'FAKE_GPG_LOG': str(log)}
+        env = {'PATH': fixture_path(tools), 'FAKE_GPG_LOG': str(log)}
         before = {p.name: p.read_bytes() for p in base.iterdir()}
         signed = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
         calls = [json.loads(line) for line in log.read_text().splitlines()]
@@ -256,7 +257,7 @@ def go_tag_cases():
             for tool in ("gh", "curl"):
                 (bin_dir / tool).chmod(0o755)
             env = {k: v for k, v in os.environ.items() if k not in SECRETS}
-            env.update(PATH=f"{bin_dir}:{env['PATH']}", FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
+            env.update(PATH=fixture_path(bin_dir, path=env['PATH']), FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
                        FAKE_GO_SHA=sha, GITHUB_REPOSITORY="o/r")
             result = subprocess.run(["sh", str(REPO / "sdlc/scripts/release-workflow"), "publish", "v0", head],
                                     env=env, capture_output=True, text=True)
@@ -366,7 +367,7 @@ def jvm_contract_cases():
         for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
             (root / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, root / name)
-        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        env = {"PATH": os.environ["PATH"], "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
         for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
@@ -446,7 +447,7 @@ def apple_package_cases():
             package.add(native / 'include', arcname='./include')
         digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
-        env = child_env(home=root / 'target/home', PATH=str(tools) + os.pathsep + os.defpath,
+        env = child_env(home=root / 'target/home', PATH=fixture_path(tools),
                         THINKTHEN_RELEASE_EXPECTED_SHA=commit)
         # Own the platform and every compiler prerequisite, including Swift's
         # availability check. Reaching a compiler must fail on every host.
