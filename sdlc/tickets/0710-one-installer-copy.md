@@ -8,6 +8,8 @@ Phase: 2
 
 Reviews: revision bd47e44, accept
 
+Reviews: revision 3209f5b, accept
+
 ## Outcome
 
 - Changes: `site/public/install.sh`, `site/public/install.ps1`, `site/package.json`, `site/scripts/copy-installers.mjs`, `sdlc/scripts/versions`, `sdlc/scripts/windows-installer-test.py`, `sdlc/planning/release-process.md`, `sdlc/scripts/scratch.sh`.
