@@ -1070,10 +1070,26 @@ def main():
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
+                          "TARGET=*) target=${arg#*=} ;; "
                           "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
                           "python3 \"$root/src/databases/duckdb/tools/cache_lock.py\" \"$root/cache.lock\" "
                           "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
                           "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
+                          "cd \"$root/src\"\n"
+                          "export THINKTHEN_TOOLCHAINS=\"$root/cache/toolchains\"\n"
+                          "python3 - <<'PYHOST'\n"
+                          "import os, sys\nfrom pathlib import Path\n"
+                          "sys.path.insert(0, 'databases/duckdb/tools')\n"
+                          "from inputs import versions\n"
+                          "for version in versions():\n"
+                          "    runtime = Path('databases/duckdb/build/community') / version / 'build/release'\n"
+                          "    runtime.mkdir(parents=True)\n"
+                          "    (runtime / 'duckdb').write_bytes(b'fixture DuckDB host')\n"
+                          "    wheels = Path(os.environ['THINKTHEN_TOOLCHAINS']) / 'duckdb/community' / version / 'wheels'\n"
+                          "    wheels.mkdir(parents=True)\n"
+                          "    (wheels / 'fixture.whl').write_bytes(b'fixture DuckDB wheel')\n"
+                          "PYHOST\n"
+                          "sh sdlc/scripts/release-workflow duckdb-host-pack \"$root/duckdb-hosts\" \"$target\" \"$selected\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
                           "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
                           "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
@@ -1092,6 +1108,11 @@ def main():
             raise AssertionError("launcher passed another selected commit")
         if (output / "selected-tar").read_text().strip() != "/work/source.tar":
             raise AssertionError("launcher passed another tar path")
+        duckdb_versions = runpy.run_path(str(REPO / "databases/duckdb/tools/inputs.py"))["versions"]()
+        host_archives = output.parent / "duckdb-hosts"
+        expected_hosts = {f"duckdb-hosts-{version}-{host}-{commit}.tar.gz" for version in duckdb_versions}
+        if {path.name for path in host_archives.iterdir()} != expected_hosts:
+            raise AssertionError("launcher omitted or added a DuckDB host archive")
         with (output / "source.tar").open("rb") as packed:
             actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
         if actual != commit:
