@@ -2,7 +2,7 @@
 //! A spent deadline on every command request path sends nothing.
 //!
 //! The command exposes no deadline, so these tests give the in-process
-//! environment one and count each boundary: key lookups, request accounting,
+//! request one and count each boundary: request accounting,
 //! and connections on the loopback listener.
 
 use std::fs;
@@ -10,15 +10,32 @@ use std::io::{Cursor, ErrorKind};
 use std::net::TcpListener;
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::time::Duration;
 
 use clap::Parser as _;
 
 use super::Environment;
 use crate::cli::args::{Cli, Command};
 use crate::cli::failure::{Failure, report};
-use crate::engine::usage::{self, Counters, month_now};
-use crate::engine::{Cancel, Deadline};
+#[path = "../../../../thinkthen/src/test_deadline/child.rs"]
+mod child;
+use child::{ChildEnvironment as _, Folder};
+
+const CHILD_HOME: &str = "THINKTHEN_TEST_COMMAND_DEADLINE_HOME";
+
+/// Reuse the shared cleared-environment fixture for native captured usage paths.
+fn isolated(name: &str) -> bool {
+    if std::env::var_os(CHILD_HOME).is_some() { return true; }
+    let home = scratch(name);
+    let path = format!("cli::edge::deadline_tests::{name}");
+    let mut command = std::process::Command::new(std::env::current_exe().expect("test binary"));
+    command.args(["--exact", &path, "--nocapture", "--test-threads=1"])
+        .clear_environment().isolated_home(&home).env(CHILD_HOME, &home);
+    let output = child::run::output(&mut command).expect("isolated deadline test");
+    fs::remove_dir_all(home).expect("child home removed");
+    assert!(output.status.success(), "{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+    assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed"), "the child ran its test");
+    false
+}
 
 /// A label, the command's arguments, and its standard input.
 type Case<'a> = (&'a str, Vec<&'a str>, &'a [u8]);
@@ -45,12 +62,7 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
     line.extend_from_slice(arguments);
     line.extend_from_slice(&["--url", &base, "--model", "local-1", "--no-cache"]);
     let cli = Cli::try_parse_from(line).expect("command line");
-    let totals = folder.join("usage");
-    let environment = Environment {
-        cancel: Cancel::default().with_deadline(Deadline::after(Duration::ZERO)),
-        usage: std::sync::Arc::new(Counters::new(Some(totals.clone()))),
-        ..Environment::default()
-    };
+    let environment = Environment::read().expect("isolated captured configuration");
     let input = Cursor::new(input.to_vec());
     let mut output = Vec::new();
 
@@ -58,51 +70,44 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
         Some(Command::Decide(held)) => crate::cli::judge::decide(
             held,
             &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("decide request"),
+            admitted(cli.command.as_ref().expect("command")),
             input,
             &mut output,
         ),
         Some(Command::Find(held)) => {
-            let admitted = crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("find request");
+            let admitted = admitted(cli.command.as_ref().expect("command"));
             crate::cli::find::run(held, &environment, admitted, input, &mut output)
         }
         Some(Command::Annotate(held)) => crate::cli::annotate::run(
             held,
             &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("annotate request"),
+            admitted(cli.command.as_ref().expect("command")),
             input,
             &mut output,
         ),
         Some(Command::Recognize(held)) => crate::cli::recognize::run(
             held,
             &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("recognize request"),
+            admitted(cli.command.as_ref().expect("command")),
             input,
             &mut output,
         ),
         Some(Command::Relate(held)) => crate::cli::relate::run(
             held,
             &environment,
-            crate::cli::request::admit(cli.command.as_ref().expect("command"))
-                .expect("native header")
-                .expect("relate request"),
+            admitted(cli.command.as_ref().expect("command")),
             input,
             &mut output,
         ),
         _ => panic!("no runner arm for {label}"),
     };
 
-    assert_eq!(environment.cancel.keys(), 0, "{label} key lookups");
-    let counted = usage::read(&totals, &month_now()).expect("usage totals");
-    assert_eq!(counted.total.requests_sent, 0, "{label} requests counted");
+    assert_eq!(environment.snapshot().counts.requests_sent(), 0, "{label} requests counted");
+    assert!(environment.finish_usage().is_none(), "{label} persisted usage safely");
+    let home = std::env::var_os(CHILD_HOME).expect("isolated child home");
+    let totals = crate::read_usage(&Folder::Usage.under(std::path::Path::new(&home)), &crate::current_usage_month())
+        .expect("persisted usage totals");
+    assert_eq!(totals.total.requests_sent(), 0, "{label} persisted requests counted");
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock),
         "{label} opened a connection"
@@ -113,6 +118,16 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
     let code = report(&failure, &mut written);
     fs::remove_dir_all(folder).expect("scratch removed");
     (code, String::from_utf8(written).expect("diagnostic text"))
+}
+
+/// Use the public deadline control on the actual admitted command header.
+/// Private key-reader admission counts remain owned by the library tests.
+fn admitted(command: &Command) -> crate::AdmittedRequest {
+    let admitted = crate::cli::request::admit(command)
+        .expect("native header").expect("judging request");
+    let mut request = admitted.request().clone();
+    request.call.arguments.options.deadline_ms = Some(0);
+    request.admit().expect("spent deadline is an admitted control")
 }
 
 fn questions(label: &str) -> String {
@@ -136,6 +151,7 @@ fn file(label: &str, name: &str, text: &str) -> String {
 
 #[test]
 fn a_spent_deadline_on_every_direct_path_sends_nothing() {
+    if !isolated("a_spent_deadline_on_every_direct_path_sends_nothing") { return; }
     let annotate = questions("annotate-questions");
     let split = file(
         "split-profile",
@@ -175,6 +191,7 @@ fn a_spent_deadline_on_every_direct_path_sends_nothing() {
 
 #[test]
 fn a_spent_deadline_over_records_stops_before_the_first_request() {
+    if !isolated("a_spent_deadline_over_records_stops_before_the_first_request") { return; }
     let stopped = format!("{DEADLINE}thinkthen: stopped at record 1; 0 records finished\n");
     let annotate = questions("annotate-records-questions");
     let cases: [Case<'_>; 4] = [

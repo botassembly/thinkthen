@@ -7,13 +7,18 @@ use serde::Serialize;
 
 use crate::cli::args::Command;
 use crate::cli::failure::facts::Stopped;
-use crate::engine::usage::RunSnapshot;
+/// Public observations needed for the command's existing compact run line.
+pub(crate) struct Snapshot {
+    pub(crate) facts: crate::Facts,
+    pub(crate) counts: crate::Counters,
+    pub(crate) http_time: Option<Duration>,
+}
 
 #[derive(Serialize)]
 struct Line {
     schema: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    call_id: Option<crate::core::CallId>,
+    call_id: Option<crate::CallId>,
     records: u64,
     requests_sent: u64,
     largest_request_bytes: usize,
@@ -59,36 +64,32 @@ pub(crate) fn enabled(command: &Command) -> bool {
 
 pub(crate) fn write(
     mut writer: impl Write,
-    snapshot: RunSnapshot,
+    snapshot: Snapshot,
     elapsed: Duration,
     command_elapsed: Duration,
     stopped: Option<Stopped>,
-    call_id: Option<crate::core::CallId>,
+    call_id: Option<crate::CallId>,
 ) {
     let line = Line {
         schema: "thinkthen.run/1",
         call_id,
-        records: snapshot.records,
-        requests_sent: snapshot.counts.requests_sent,
-        largest_request_bytes: snapshot.largest_request_bytes,
-        largest_request_estimated_input_tokens: snapshot.largest_request_estimated_input_tokens,
-        token_estimate_method: crate::core::PlanSummary::TOKEN_ESTIMATE_METHOD,
-        retries: snapshot.counts.retries,
-        cache_answers: snapshot.counts.cache_answers,
-        input_tokens: snapshot
-            .reported
-            .and_then(crate::core::ReportedUsage::input_tokens),
-        output_tokens: snapshot
-            .reported
-            .and_then(crate::core::ReportedUsage::output_tokens),
-        estimated_cost_usd: snapshot.estimated_cost_usd,
+        records: snapshot.facts.records(),
+        requests_sent: snapshot.counts.requests_sent(),
+        largest_request_bytes: snapshot.facts.largest_request_bytes(),
+        largest_request_estimated_input_tokens: snapshot.facts.largest_request_estimated_input_tokens(),
+        token_estimate_method: snapshot.facts.token_estimate_method(),
+        retries: snapshot.counts.retries(),
+        cache_answers: snapshot.counts.cache_answers(),
+        input_tokens: snapshot.facts.input_tokens(),
+        output_tokens: snapshot.facts.output_tokens(),
+        estimated_cost_usd: snapshot.facts.estimated_cost_usd().map(str::to_owned),
         seconds: (elapsed.as_secs_f64() * 1000.0).round() / 1000.0,
         command_ms: snapshot.http_time.and_then(|http| {
             command_elapsed
                 .checked_sub(http)
                 .and_then(|duration| u64::try_from(duration.as_nanos().div_ceil(1_000_000)).ok())
         }),
-        model: snapshot.model,
+        model: snapshot.facts.model().map(str::to_owned),
         stopped,
     };
     if let Ok(json) = serde_json::to_string(&line) {

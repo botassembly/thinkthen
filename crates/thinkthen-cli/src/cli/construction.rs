@@ -1,10 +1,6 @@
-//! Shared resolved CLI construction for private maintenance and native judgments.
+//! Build the command's engine from its one captured public builder.
 use crate::cli::{args::Common, asking::Folders, edge::Environment, failure::Failure};
-use crate::core::{Backend, BackendProfile};
-use crate::engine::{
-    Width,
-    facade::{Engine, Settings, Storage},
-};
+use crate::Engine;
 use std::io::{self, Write as _};
 use std::time::Duration;
 
@@ -12,58 +8,43 @@ pub(crate) fn engine(
     common: &Common,
     environment: &Environment,
     folders: Folders,
-    route: (Backend, Option<BackendProfile>),
     width: Option<u8>,
-    count_invocation: bool,
 ) -> Result<Engine, Failure> {
-    let (backend, profile) = route;
-    let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
-    let roots = environment.roots()?;
-    if count_invocation && !common.dry_run {
-        environment.cancel().invocation()?;
-    }
+    environment.roots()?;
     if !common.dry_run && folders.writable_by_another() {
-        writeln!(
-            io::stderr().lock(),
-            "thinkthen: warning: another user may change this named cache or recording folder; its writers decide the answers read from it"
-        )
-        .map_err(Failure::Output)?;
+        writeln!(io::stderr().lock(),
+            "thinkthen: warning: another user may change this named cache or recording folder; its writers decide the answers read from it")
+            .map_err(Failure::Output)?;
     }
-    if folders.record.is_some()
-        && folders.replay.is_some()
-        && (folders.refresh_cache || backend.api_type().is_mutable_alias(backend.model()))
-    {
-        writeln!(
-            io::stderr().lock(),
-            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge"
-        )
-        .map_err(Failure::Output)?;
+    let route = environment.inspect_builder(crate::EngineBuilder::resolved_settings)?;
+    if folders.record.is_some() && folders.replay.is_some()
+        && (folders.refresh_cache || route.model_is_mutable_alias) {
+        writeln!(io::stderr().lock(),
+            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge")
+            .map_err(Failure::Output)?;
     }
-    Ok(Engine::with_roots(
-        Settings {
-            backend,
-            profile,
-            timeout: Duration::from_secs(common.timeout),
-            max_retries: common.max_retries,
-            retry_wait: environment.retry_wait(),
-            per_minute: environment.per_minute,
-            width,
-            storage: Storage {
-                record: folders.record,
-                replay: folders.replay,
-                private_default: folders.private_default,
-                cache_answers: folders.cache_answers,
-                refresh_cache: folders.refresh_cache,
-            },
-            key: environment.key_reader(),
-            usage: environment.counters(),
-        },
-        roots,
-    )?
-    .with_process_budget(
-        common.max_requests_total,
-        common
-            .max_estimated_input_tokens_total
-            .or(environment.estimated_total),
-    ))
+    let mut builder = environment.take_builder()?
+        .timeout(Duration::from_secs(common.timeout))?
+        .max_retries(common.max_retries)
+        .retry_wait(environment.retry_wait())
+        .max_requests_total(common.max_requests_total);
+    if common.max_estimated_input_tokens_total.is_some() {
+        builder = builder.max_estimated_input_tokens_total(common.max_estimated_input_tokens_total);
+    }
+    if let Some(width) = width { builder = builder.throttle(width)?; }
+    if folders.cache_answers {
+        if folders.private_default {
+            builder = builder.default_cache();
+        } else {
+            let path = folders.record.as_deref().ok_or(Failure::Defect("an answer cache has no folder"))?;
+            builder = builder.cache_at(path)?;
+        }
+    } else {
+        builder = builder.no_cache();
+        if let Some(path) = &folders.record { builder = builder.record(path)?; }
+        if let Some(path) = &folders.replay { builder = builder.replay(path)?; }
+    }
+    let engine = builder.refresh_cache(folders.refresh_cache).build()?;
+    environment.observe_engine(&engine);
+    Ok(engine)
 }

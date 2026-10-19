@@ -1,20 +1,11 @@
-//! One command's selected replacement trust roots.
-
-use crate::engine::facade::{Roots, RootsError};
-use crate::failure::Failure;
-
+//! Apply the captured replacement trust roots through the public builder.
 use super::Environment;
-
+use crate::failure::Failure;
 impl Environment {
-    /// Read selected roots before the transport key reader or any send.
-    pub(crate) fn roots(&self) -> Result<Option<Roots>, Failure> {
-        self.ca_bundle
-            .as_deref()
-            .map(Roots::load)
-            .transpose()
-            .map_err(|error| match error {
-                RootsError::Usage(message) => Failure::Usage(message),
-                RootsError::Local(message) => Failure::Configuration(message.to_owned()),
-            })
+    pub(crate) fn roots(&self) -> Result<(), Failure> {
+        if let Some(path) = &self.ca_bundle {
+            self.update_builder(|builder| builder.ca_bundle(path)?.preload_ca_bundle())?;
+        }
+        Ok(())
     }
 }

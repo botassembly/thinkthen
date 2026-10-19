@@ -74,14 +74,14 @@ struct StatusCounts {
     cache_answers: u64,
 }
 
-impl From<crate::engine::usage::Counts> for StatusCounts {
-    fn from(value: crate::engine::usage::Counts) -> Self {
+impl From<crate::Counters> for StatusCounts {
+    fn from(value: crate::Counters) -> Self {
         Self {
-            requests_sent: value.requests_sent,
-            retries: value.retries,
-            input_tokens: value.input_tokens,
-            output_tokens: value.output_tokens,
-            cache_answers: value.cache_answers,
+            requests_sent: value.requests_sent(),
+            retries: value.retries(),
+            input_tokens: value.input_tokens(),
+            output_tokens: value.output_tokens(),
+            cache_answers: value.cache_answers(),
         }
     }
 }
@@ -110,52 +110,34 @@ pub(crate) fn run(
 }
 
 fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Failure> {
-    let config = environment.config();
-    let choice = environment.choose(backend, None)?;
-    // A tier that named a backend and no address took the backend's base.
-    let url_source = match (choice.tier, choice.url.is_some()) {
-        (None, _) => "built_in",
-        (Some(1), true) => "environment",
-        (Some(2), true) => "configuration",
-        (Some(_), _) => "backend",
-    };
-    let model_source = if choice.named.is_some() {
-        "backend"
-    } else if config.has_model() {
-        "configuration"
-    } else {
-        "built_in"
-    };
-    let resolved_backend = environment.settle(&choice, None)?;
-    let cache = cache_status(environment)?;
-    let month = crate::engine::usage::month_now();
-    let (usage, problem) = match environment
-        .usage_path()
-        .map(|path| (path, crate::engine::usage::read(path, &month)))
-    {
+    let resolved = environment.resolve(backend, None, None)?;
+    let cache = cache_status(&resolved)?;
+    let month = crate::current_usage_month();
+    let (usage, problem) = match resolved.usage_path.as_deref()
+        .map(|path| crate::read_usage(path, &month)) {
         None => (None, None),
-        Some((_, Ok(totals))) => (Some(totals), None),
-        Some((path, Err(failure))) => (None, Some(failure.sentence(Some(path)))),
+        Some(Ok(totals)) => (Some(totals), None),
+        Some(Err(failure)) => (None, Some(failure.to_string())),
     };
     Ok(Status {
         schema: "thinkthen.status/2",
         version: env!("CARGO_PKG_VERSION"),
         configuration: Configuration {
-            path: environment.config_path().map(display),
-            present: config.present(),
+            path: resolved.configuration_path.as_deref().map(display),
+            present: resolved.configuration_present,
         },
         backend: Backend {
-            name: environment.named().map(str::to_owned),
-            url: resolved_backend.url().as_str().to_owned(),
-            url_source,
-            model: resolved_backend.model().as_str().to_owned(),
-            model_source,
-            key_variable: environment.key_variable().to_owned(),
-            api_key_set: environment.api_key_set(),
+            name: resolved.backend_name,
+            url: resolved.url,
+            url_source: resolved.url_source,
+            model: resolved.model,
+            model_source: resolved.model_source,
+            key_variable: resolved.key_variable,
+            api_key_set: resolved.api_key_set,
         },
         cache,
         usage: UsageStatus {
-            path: environment.usage_path().map(display),
+            path: resolved.usage_path.as_deref().map(display),
             month,
             this_month: usage.as_ref().map(|totals| totals.month.into()),
             total: usage.map(|totals| totals.total.into()),
@@ -164,40 +146,23 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
     })
 }
 
-fn cache_status(environment: &Environment) -> Result<Cache, Failure> {
-    let enabled = environment.named_cache() || environment.default_cache_enabled();
-    let counts = environment
-        .cache()
-        .map(|path| crate::engine::store::counts(path, environment.cache_is_platform_default()))
-        .transpose()
-        .map_err(|error| match error {
-            crate::engine::error::Error::StoreVersion(file) => Failure::StoreVersion(file),
+fn cache_status(settings: &crate::ResolvedSettings) -> Result<Cache, Failure> {
+    let counts = settings.cache_path.as_deref()
+        .map(|path| crate::cache_counts(path, settings.cache_is_platform_default))
+        .transpose().map_err(|error| match error.diagnostic() {
+            Some(crate::ErrorDiagnostic::StoreVersion(file)) => Failure::StoreVersion(file.to_owned()),
             _ => Failure::StatusState,
         })?;
     Ok(Cache {
-        enabled,
-        enabled_source: if environment.named_cache() {
-            "environment"
-        } else if environment.config().has_cache() {
-            "configuration"
-        } else {
-            "built_in"
-        },
-        path: environment.cache().map(display),
-        path_source: if environment.named_cache() {
-            "environment"
-        } else {
-            "platform"
-        },
+        enabled: settings.cache_enabled,
+        enabled_source: settings.cache_enabled_source,
+        path: settings.cache_path.as_deref().map(display),
+        path_source: settings.cache_path_source,
         entries: counts.as_ref().map(|counts| counts.answers),
         bytes: counts.as_ref().map(|counts| counts.bytes),
         old_entries: counts.as_ref().map(|counts| counts.old_entries),
-        target_bytes: environment.cache_bytes(),
-        target_source: if environment.config().has_cache_bytes() {
-            "configuration"
-        } else {
-            "built_in"
-        },
+        target_bytes: settings.cache_target_bytes,
+        target_source: settings.cache_target_source,
     })
 }
 

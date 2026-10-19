@@ -1,88 +1,54 @@
-//! The backend a command uses, chosen once from the typed, environment, and
-//! configuration tiers (ADR 0114 section 3).
-
-use super::{Environment, key};
-use crate::core::named::{self, Choice};
-use crate::core::{Backend, BackendProfile, DEFAULT_MODEL};
+//! Select one route through the captured public builder, then capture its key.
+use super::Environment;
+use crate::{EngineBuilder, ResolvedSettings};
 use crate::failure::Failure;
 
 impl Environment {
-    /// Decide which tier names the backend or the address. The typed tier is
-    /// `--backend` and `--url`, then `THINKTHEN_BACKEND` and
-    /// `THINKTHEN_BASE_URL`, then the configuration's `backend` and `url`.
-    pub(crate) fn choose<'a>(
-        &'a self,
-        backend: Option<&'a str>,
-        url: Option<&'a str>,
-    ) -> Result<Choice<'a>, Failure> {
-        let tiers = [
-            (backend, url),
-            (self.backend.as_deref(), self.base_url.as_deref()),
-            (self.config.backend(), self.config.url()),
-        ];
-        Ok(named::choose(&tiers, self.config.named())?)
-    }
-
-    /// Choose and settle the backend for a command. `asked` is the model the
-    /// flag or the question file names.
     pub(crate) fn resolve(
         &self,
         backend: Option<&str>,
         url: Option<&str>,
-        asked: Option<&str>,
-    ) -> Result<Backend, Failure> {
-        let choice = self.choose(backend, url)?;
-        self.settle(&choice, asked)
+        model: Option<&str>,
+    ) -> Result<ResolvedSettings, Failure> {
+        if let Some(resolved) = self.resolved.get() {
+            return Ok(resolved.clone());
+        }
+        let environment_tier = backend.is_none() && url.is_none();
+        let (backend, url) = if environment_tier {
+            (self.backend.as_deref(), self.base_url.as_deref())
+        } else { (backend, url) };
+        self.update_builder(|mut builder| {
+            if let Some(backend) = backend { builder = builder.backend(backend)?; }
+            if let Some(url) = url { builder = builder.base_url(url)?; }
+            if let Some(model) = model { builder = builder.model(model)?; }
+            // Selection runs host guards before reading any selected key variable.
+            let route = builder.resolved_settings()?;
+            self.key.capture(&route);
+            if let Some(key) = self.key.value() { builder = builder.api_key(key)?; }
+            Ok(builder)
+        })?;
+        let mut resolved = self.inspect_builder(EngineBuilder::resolved_settings)?;
+        if environment_tier && resolved.url_source == "command_line" {
+            resolved.url_source = "environment";
+        }
+        if self.named_cache() {
+            resolved.cache_enabled_source = "environment";
+            resolved.cache_path_source = "environment";
+        }
+        let _settled = self.resolved.set(resolved.clone());
+        Ok(resolved)
     }
 
-    /// Resolve the address and model, refuse a built-in key at another
-    /// built-in's host before any key is read, then read the key once.
-    pub(crate) fn settle(
+    pub(crate) fn inspect_builder<T>(
         &self,
-        choice: &Choice<'_>,
-        asked: Option<&str>,
-    ) -> Result<Backend, Failure> {
-        let backend = choice.backend(asked, self.model().unwrap_or(DEFAULT_MODEL))?;
-        self.usage
-            .set_prices(choice.setup(&backend).0.or(self.config.prices()));
-        choice.guard(&backend)?;
-        self.key.check(
-            &backend,
-            &choice.keys(),
-            choice.named.as_ref().map(named::Named::name),
-        )?;
-        Ok(backend)
+        inspect: impl FnOnce(&EngineBuilder) -> Result<T, crate::Error>,
+    ) -> Result<T, Failure> {
+        let held = self.builder.lock().map_err(|_| Failure::Defect("command settings lock failed"))?;
+        let builder = held.as_ref().ok_or(Failure::Defect("command settings were already consumed"))?;
+        inspect(builder).map_err(Failure::from)
     }
 
-    /// Select local setup limits after the final posting URL is resolved.
-    pub(crate) fn setup_profile(
-        &self,
-        common: &crate::args::Common,
-        backend: &Backend,
-    ) -> Result<Option<BackendProfile>, Failure> {
-        Ok(self
-            .choose(common.backend.as_deref(), common.url.as_deref())?
-            .setup(backend)
-            .1)
-    }
-
-    /// Whether the settled backend is a named one.
     pub(crate) fn named(&self) -> Option<&str> {
-        self.key.name()
-    }
-
-    /// The first key variable of the settled backend.
-    pub(crate) fn key_variable(&self) -> &str {
-        self.key.variable()
-    }
-
-    /// Report the checked snapshot, without rereading the process environment.
-    pub(crate) fn api_key_set(&self) -> bool {
-        self.key.is_set()
-    }
-
-    /// The already checked snapshot that every request from this command uses.
-    pub(crate) fn key_reader(&self) -> key::Reader {
-        self.key.reader()
+        self.resolved.get().and_then(|settings| settings.backend_name.as_deref())
     }
 }
