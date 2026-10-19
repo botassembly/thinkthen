@@ -138,8 +138,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	for tool in make cmake ninja cc c++; do
 		command -v "$tool" >/dev/null || { echo "release-container: missing DuckDB build tool: $tool" >&2; exit 1; }
 	done
-	python3 "$INPUTS_HERE/source_hosts.py" --fetch
-	python3 /work/src/databases/duckdb/community/prepare.py
+	sh "$INPUTS_HERE/setup.sh" --fetch
 	# The image carries OpenSSL 1.1.1k runtime libraries but no headers. Its
 	# matching AlmaLinux development RPM supplies the build-only headers and
 	# linker names without changing the pinned image or installed runtime.
@@ -166,5 +165,8 @@ docker run "$@" "$IMAGE" sh -euc '
 	else
 		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby
 	fi
+	sh sdlc/scripts/release-workflow duckdb-host-pack /work/duckdb-hosts "$TARGET" "$THINKTHEN_ARCHIVED_SOURCE_COMMIT"
 '
+mkdir -p "$OUT/../duckdb-hosts"
+cp -- "$RUN"/duckdb-hosts/*.tar.gz "$OUT/../duckdb-hosts/"
 cp -- "$RUN"/out/* "$OUT/"

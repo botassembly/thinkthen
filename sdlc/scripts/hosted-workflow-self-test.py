@@ -24,6 +24,173 @@ sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
 
 
+def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
+    """Run the real setup branch while a temporary PATH records its host calls.
+
+    A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
+    The pinned uv lives where pip put it and prints uv_line.
+    """
+    with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
+        root = Path(tmp).resolve()
+        bin_dir = root / "bin"
+        bin_dir.mkdir()
+        route = bin_dir / "route"
+        route.write_text("""#!/bin/sh
+case ${0##*/} in
+rustc) case $1 in
+  -vV) printf 'host: %s\\n' "$FAKE_TARGET" ;;
+  --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
+  --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
+  esac ;;
+mktemp) exec /usr/bin/mktemp -d "$FAKE_ROOT/tmp.XXXXXXXX" ;;
+sha256sum) echo 'unexpected sha256sum call' >&2; exit 94 ;;
+cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
+rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
+maturin) echo 'maturin 1.15.0' ;;
+npm) case $* in "ci --no-audit --no-fund --silent --prefix $FAKE_ROOT/"*) echo npm-seed >> "$FAKE_LOG" ;;
+  "install --no-audit --no-fund --no-package-lock --prefix $FAKE_ROOT/runner/thinkthen-generators prettier@3.6.2") ;;
+  *) echo "unexpected npm call: $*" >&2; exit 94 ;; esac ;;
+python3) [ "$1" != databases/duckdb/tools/source_hosts.py ] || echo duckdb-source-hosts >> "$FAKE_LOG"
+  # Keep the real manifest reader while other Python commands remain host stubs.
+  if [ "$1" = - ] && [ "${2:-}" = "$FAKE_MANIFEST" ]; then exec "$FAKE_PYTHON" "$@"; fi
+  case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
+  case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
+python3.14) exit 1 ;;
+sudo) case "$*" in
+  'apt-get update') echo pg-index >> "$FAKE_LOG" ;;
+  'apt-get install -y postgresql-server-dev-16') echo pg-host >> "$FAKE_LOG" ;;
+  'apt-get install -y r-base-dev libgtk-3-dev') touch "$FAKE_ROOT/r-ready"; echo r-host >> "$FAKE_LOG" ;;
+  *) echo "unexpected sudo call: $*" >&2; exit 94 ;; esac ;;
+bash) if [ "$1" = libraries/r/tools/setup.sh ]; then
+    [ -f "$FAKE_ROOT/r-ready" ] || { echo 'R dependency setup preceded R host readiness' >&2; exit 92; }
+    echo r-dependencies >> "$FAKE_LOG"
+  else
+    echo bash-check >> "$FAKE_LOG"; [ -z "$FAKE_OLD_BASH" ]
+  fi ;;
+python3.13) [ "$1" != --version ] || {
+  touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
+} ;;
+uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 ;; esac
+  [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
+  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; }
+  if [ "$1" = venv ]; then
+    case $4 in */python3.14)
+      echo sqlite-venv >> "$FAKE_LOG"
+      mkdir -p "$5/bin"
+      ln -s "$FAKE_ROOT/openssl3/bin/python3.14" "$5/bin/python" ;;
+    *) echo "seed $4" >> "$FAKE_LOG" ;; esac
+  fi
+  case $* in "pip install --quiet --python $FAKE_ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python jsonschema==4.25.1")
+    echo sqlite-jsonschema >> "$FAKE_LOG" ;; esac ;;
+uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
+  -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
+xcrun) echo "$FAKE_ROOT/sdk" ;;
+brew) case "$*" in "install pkgconf jq openssl@$RUBY_OPENSSL_SERIES") touch "$FAKE_ROOT/openssl-ready" ;;
+  "--prefix openssl@3") echo "$FAKE_ROOT/openssl-default"; exit 0 ;; esac
+  case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
+shasum) PG_MAJOR=${3##*postgresql@}; . databases/postgresql/runtime-darwin.env
+  case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
+    *) pin=${PG_BOTTLE_X86_64_SONOMA:-$PG_SOURCE_SHA256} ;; esac
+  printf '%s  %s\\n' "$pin" "$3" ;;
+sh) case $1 in databases/duckdb/tools/setup.sh)
+      [ -f "$FAKE_UV_READY" ] && [ -f "$FAKE_PY313_READY" ] || {
+        echo 'DuckDB setup preceded uv or Python 3.13 readiness' >&2; exit 92;
+      } ;;
+    esac
+    printf '%s %s\\n' "$1" "$2${3:+ $3}" >> "$FAKE_LOG" ;;
+esac
+""")
+        route.chmod(0o755)
+        openssl = root / "openssl3/bin/openssl"
+        openssl.parent.mkdir(parents=True)
+        openssl.write_text('#!/bin/sh\n[ -f "$FAKE_ROOT/openssl-ready" ] || exit 91\necho "OpenSSL $FAKE_OPENSSL_VERSION"\n')
+        openssl.chmod(0o755)
+        for name, line in (("openssl-default/bin/openssl", "OpenSSL 3.5.9"),
+                           ("bin/openssl", "OpenSSL 4.0.3")):
+            other = root / name
+            other.parent.mkdir(parents=True, exist_ok=True)
+            other.write_text(f"#!/bin/sh\necho '{line}'\n")
+            other.chmod(0o755)
+        sqlite_python = root / "openssl3/bin/python3.14"
+        sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
+        sqlite_python.chmod(0o755)
+        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum",
+                     "python3", "python3.12", "python3.13", "python3.14", "bash", "sudo", "mktemp", "sha256sum"):
+            (bin_dir / name).symlink_to(route.name)
+        (root / "pinned").mkdir()
+        (root / "pinned/uv").symlink_to(route)
+        sdk = root / 'sdk'
+        sdk.mkdir()
+        # Apple's git launcher reads the selected SDK even though all host work is stubbed.
+        (sdk / 'SDKSettings.plist').write_text(
+            '<?xml version="1.0"?><plist version="1.0"><dict>'
+            '<key>Version</key><string>15.0</string></dict></plist>')
+        manifest = REPO / 'sdlc/tools.json'
+        openssl_version = json.loads(manifest.read_text())['tools']['ruby']['openssl_version']
+        log = root / "calls"
+        env = os.environ.copy()
+        env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
+                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
+                   FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
+                   FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
+                   GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
+                   FAKE_PYTHON=sys.executable, FAKE_MANIFEST=str(manifest),
+                   FAKE_OPENSSL_VERSION=openssl_version,
+                   # The hosted reader is replaced by 0620; supply its old variable only in this routing fixture.
+                   RUBY_OPENSSL_SERIES=openssl_version.rsplit('.', 1)[0],
+                   RELEASE_SMOKE="1" if smoke else "0")
+        result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
+                                env=env, capture_output=True, text=True, timeout=20, check=False)
+        calls = [line.replace(str(root), "$ROOT").replace(str(REPO), "$REPO") for line in log.read_text().splitlines()] if log.exists() else []
+        pgrx = root / ".pgrx/config.toml"
+        if pgrx.exists():
+            calls.append("pgrx " + pgrx.read_text().replace(str(root), "$ROOT").replace("\n", " ").strip())
+        handoff = root / "github-path"
+        if handoff.exists():
+            calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
+        handoff = root / "github-env"
+        if handoff.exists():
+            calls.append(f"env {handoff.read_text().strip().replace(str(root), '$ROOT')}")
+        return result, calls
+
+
+def shared_host_routing_cases():
+    for target in ('x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu',
+                   'aarch64-apple-darwin', 'x86_64-apple-darwin'):
+        for smoke in (False, True):
+            result, calls = host_setup_calls(target, smoke)
+            assert result.returncode == 0, (target, smoke, calls, result.stderr)
+            duckdb = [call for call in calls if call.startswith('databases/duckdb/tools/setup.sh ')]
+            expected = (['databases/duckdb/tools/setup.sh --fetch $REPO/duckdb-hosts'] if smoke else
+                        ['databases/duckdb/tools/setup.sh --fetch'] if 'apple' in target else [])
+            assert duckdb == expected, (target, smoke, duckdb)
+            assert 'duckdb-source-hosts' not in calls, (target, smoke, calls)
+
+
+def cache_refusal_cases():
+    checker = runpy.run_path(str(REPO / 'sdlc/scripts/workflows'))
+    folder = REPO / '.github/workflows'
+    # Exercise the entire tracked workflow set: approved dependency caches in
+    # other workflows must not inherit the release-only cache ban.
+    assert checker['check'](folder) == []
+    release = yaml.safe_load((folder / 'release.yml').read_text())
+    assert checker['release']('release.yml', release) == []
+    for job in release['jobs']:
+        for cache in ({'uses': 'actions/cache@' + 'a' * 40,
+                       'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}},
+                      {'uses': 'actions/setup-node@' + 'a' * 40, 'with': {'cache': 'npm'}}):
+            document = deepcopy(release)
+            document['jobs'][job].setdefault('steps', []).insert(1, cache)
+            assert checker['release']('release.yml', document) == [f'release.yml: job {job} uses a cache']
+    for name in ('gate.yml', 'pages.yml', 'windows.yml'):
+        document = yaml.safe_load((folder / name).read_text())
+        assert checker['every'](name, document, '', folder) == []
+        job = next(iter(document['jobs']))
+        document['jobs'][job].setdefault('steps', []).append({'uses': 'actions/cache@v5'})
+        assert checker['every'](name, document, '', folder) == [
+            f'{name}: job {job} uses actions/cache@v5, which is not pinned to a commit']
+
+
 def linux_work_destination_cases():
     for name, sudo, free, destination in (
             ('roomy', 0, 900, '/mnt/thinkthen-container'),
@@ -89,7 +256,6 @@ def linux_nested_tools_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
     host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
-    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
     assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
         line for line in installed.splitlines() if "ruff==" in line)
     assert '--prefix "$generator_tools" ' in next(
@@ -855,6 +1021,24 @@ def preflight_cases():
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 
+def parameter_run(case, command, **kwargs):
+    print(f'hosted parameter: {case}', file=sys.stderr, flush=True)
+    started = time.monotonic()
+    try:
+        result = subprocess.run(command, **kwargs)
+    except subprocess.TimeoutExpired as error:
+        print(f'hosted parameter: {case}: timeout after {error.timeout}s', file=sys.stderr)
+        for name, output in (('stdout', error.stdout), ('stderr', error.stderr)):
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', errors='replace')
+            if output:
+                print(f'{name} (last 4096 characters):\n{output[-4096:]}', file=sys.stderr)
+        raise
+    print(f'hosted parameter: {case}: exit {result.returncode} in '
+          f'{time.monotonic() - started:.3f}s', file=sys.stderr, flush=True)
+    return result
+
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -862,7 +1046,8 @@ def parameter_cases():
     cases += [(value, head, 1) for value in ('', '--help', head.upper(), head[:39],
                                            head + '\n', '$(touch /tmp/hosted-plant)', 'x; exit 0')]
     for candidate, dispatch, wanted in cases:
-        result = subprocess.run([sys.executable, str(guard), 'checkout', candidate, dispatch],
+        result = parameter_run(f'candidate={candidate!r} dispatch={dispatch!r}',
+                               [sys.executable, str(guard), 'checkout', candidate, dispatch],
                                 cwd=REPO, capture_output=True, text=True, timeout=5)
         assert result.returncode == wanted, (candidate, result.stderr)
         if wanted:
@@ -896,7 +1081,8 @@ def parameter_cases():
         command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
         (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
         for cell in apple['strategy']['matrix']['include']:
-            result = subprocess.run(['/bin/sh', '-c', command], cwd=root,
+            result = parameter_run(f'Apple assembly target={cell["target"]}',
+                                   ['/bin/sh', '-x', '-c', command], cwd=root,
                                     env={**env, 'TARGET': cell['target']},
                                     capture_output=True, text=True, timeout=5)
             assert result.returncode == 2 and 'Apple native tools are required' in result.stderr, (
@@ -905,14 +1091,16 @@ def parameter_cases():
         for status in (0, 77, 1):
             (root / 'libraries/swift/check.sh').write_text(f'echo selected-swift\nexit {status}\n')
             (root / 'libraries/objective-c/check.sh').write_text('echo WRONG_LANGUAGE\nexit 1\n')
-            result = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
+            result = parameter_run(f'Apple swift exit={status}',
+                                   ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), 'swift', head],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == (0 if status == 0 else 1), result.stderr
             assert 'selected-swift' in result.stdout and 'WRONG_LANGUAGE' not in result.stdout
             assert ('surfaces: pass' if status == 0 else 'surfaces: FAIL') in result.stdout
         for language in ('all', 'swift objective-c', '../swift', 'swift; exit 0'):
-            result = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
+            result = parameter_run(f'Apple language={language!r}',
+                                   ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), language, head],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == 1 and 'select exactly one Apple language' in result.stderr
@@ -921,6 +1109,8 @@ def parameter_cases():
 
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
+shared_host_routing_cases()
+cache_refusal_cases()
 linux_work_destination_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
