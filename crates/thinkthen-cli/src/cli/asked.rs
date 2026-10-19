@@ -156,3 +156,6 @@ fn mismatch(function: crate::RequestFunction, definition: &RequestDefinition) ->
     }
     Err(Failure::Question { message: format!("the command is `{caller}` and the question file holds a `{held}` question"), from_file: false })
 }
+
+#[cfg(test)]
+mod tests;
