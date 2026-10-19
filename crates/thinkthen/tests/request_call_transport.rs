@@ -247,3 +247,16 @@ fn failed_feed_originals_require_explicit_prefix_access() {
     assert!(!cause.to_string().contains(marker));
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn adapter_owned_sources_are_exposed_only_by_standard_source_access() {
+    let marker = "private-reader-cause-0639";
+    let error = thinkthen::Error::new(ErrorKind::Local, "the reader failed")
+        .with_source(std::io::Error::other(marker))
+        .with_source(std::io::Error::other("later cause must not replace the first"));
+    assert!(!format!("{error:?}").contains(marker));
+    assert!(!error.to_string().contains(marker));
+    assert!(!serde_json::to_string(&error.complete()).unwrap().contains(marker));
+    let source = std::error::Error::source(&error).unwrap();
+    assert_eq!(source.downcast_ref::<std::io::Error>().unwrap().to_string(), marker);
+}

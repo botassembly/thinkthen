@@ -84,7 +84,7 @@ pub struct ErrorDetail {
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
     diagnostic: Option<Box<diagnostic::Diagnostic>>,
-    producer: Option<Box<Error>>,
+    producer: Option<Box<dyn std::error::Error + Send + Sync>>,
     completed: Option<Box<crate::RequestValue>>,
 }
 
@@ -120,6 +120,22 @@ impl Error {
         self.detail_mut().completed = Some(Box::new(completed));
         self
     }
+    /// Retain a caller-owned typed cause for explicit standard source access.
+    /// The caller owns the cause's disclosure policy. Debug, Display and complete
+    /// error serialization omit it; only [`std::error::Error::source`] exposes it.
+    /// Reader adapters use this to retain their own errors without library coupling.
+    /// An existing source is preserved; the first attached cause owns the chain.
+    #[must_use]
+    pub fn with_source(
+        mut self,
+        source: impl std::error::Error + Send + Sync + 'static,
+    ) -> Self {
+        if self.detail().producer.is_none() {
+            self.detail_mut().producer = Some(Box::new(source));
+        }
+        self
+    }
+
     /// The typed admission reason when canonical request decoding failed.
     #[must_use]
     pub fn request_decode_cause(&self) -> Option<crate::public::request::RequestDecodeCause> {

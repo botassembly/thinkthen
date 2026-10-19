@@ -34,6 +34,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
 
+`Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -210,6 +212,7 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+fn Error::with_source(self, impl std::error::Error + Send + Sync + 'static) -> Self
 struct ResolvedSettings
 impl Debug for ResolvedSettings
 impl Clone for ResolvedSettings
