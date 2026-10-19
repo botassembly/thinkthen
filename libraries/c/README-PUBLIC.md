@@ -18,15 +18,16 @@ int main(void) {
     thinkthen_named_request_v1 team = {.function = {"choose",6},
         .question_json = text("{\"kind\":\"definition\",\"value\":{\"choose\":\"Which team owns this?\",\"options\":{\"billing\":\"Invoices, fees, and refunds.\",\"shipping\":\"Parcels and delivery.\",\"account\":\"Logins and passwords.\"}}}"),
         .input_json = text("{\"kind\":\"text\",\"text\":\"My parcel went to the wrong address.\"}"), .options_json = text("{}")};
-    thinkthen_call_result *result = NULL; thinkthen_call_error *error = NULL;
-    int code = thinkthen_run_call(engine, &refund, NULL, NULL, NULL, &result, &error);
+    thinkthen_call_result *refund_call = NULL; thinkthen_call_error *error = NULL;
+    int code = thinkthen_run_call(engine, &refund, NULL, NULL, NULL, &refund_call, &error);
     if (code) { thinkthen_call_error_free(error); thinkthen_engine_free(engine); return 1; }
-    thinkthen_complete_utf8_v1 json = thinkthen_call_result_json(result);
-    fwrite(json.data,1,json.len,stdout); putchar('\n'); thinkthen_call_result_free(result);
-    code = thinkthen_run_call(engine, &team, NULL, NULL, NULL, &result, &error);
+    thinkthen_complete_utf8_v1 json = thinkthen_call_result_json(refund_call);
+    fwrite(json.data,1,json.len,stdout); putchar('\n'); thinkthen_call_result_free(refund_call);
+    thinkthen_call_result *team_call = NULL;
+    code = thinkthen_run_call(engine, &team, NULL, NULL, NULL, &team_call, &error);
     thinkthen_engine_free(engine); if (code) { thinkthen_call_error_free(error); return 1; }
-    json = thinkthen_call_result_json(result); fwrite(json.data,1,json.len,stdout); putchar('\n');
-    thinkthen_call_result_free(result); return 0;
+    json = thinkthen_call_result_json(team_call); fwrite(json.data,1,json.len,stdout); putchar('\n');
+    thinkthen_call_result_free(team_call); return 0;
 }
 ```
 
