@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Cursor, Read};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::core::MAX_RECORD_BYTES;
+use crate::RawRecord;
 use crate::failure::Failure;
 
 type Opened = Vec<(Option<PathBuf>, Box<dyn BufRead + Send>)>;
@@ -15,7 +15,7 @@ pub(crate) struct Snapshot {
 
 impl Snapshot {
     pub(crate) fn prepare(opened: Opened) -> Result<(Opened, Option<Self>), Failure> {
-        let mut remaining = MAX_RECORD_BYTES;
+        let mut remaining = RawRecord::max_bytes();
         let mut sources = Vec::new();
         let mut readers: Opened = Vec::new();
         for (path, mut reader) in opened {

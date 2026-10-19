@@ -1,9 +1,9 @@
 //! Explicit image inputs on the ordinary intake and question pipeline.
 use super::{Data, Intake, Item, Piece, Position, Source};
 use crate::args::Common;
-use crate::core::Reading;
+use crate::cli::reading::Reading;
 use crate::failure::Failure;
-use crate::public::{
+use crate::{
     ImageEvidence, InputFileReader, InputReaderOptions, ReaderMedia, ReaderOptions, SourceItem,
     SourceItems, SourceUnit,
 };
@@ -19,8 +19,8 @@ fn options() -> InputReaderOptions {
         },
     }
 }
-fn refused(error: crate::public::Error) -> Failure {
-    if error.kind() == crate::public::ErrorKind::Local {
+fn refused(error: crate::Error) -> Failure {
+    if error.kind() == crate::ErrorKind::Local {
         Failure::OpenInput(std::io::Error::other(error.to_string()))
     } else {
         Failure::Image(error.to_string())
@@ -36,13 +36,13 @@ pub(super) fn prepare(
         return Err(Failure::Usage("images cannot accompany saved on pointers"));
     }
     let source = if common.image.is_empty() {
-        Source::Images(crate::public::read_inputs(&common.input, options()).map_err(refused)?)
+        Source::Images(crate::read_inputs(&common.input, options()).map_err(refused)?)
     } else {
         Source::Attached(Attachment {
             paths: common.image.clone(),
             media: common.image_media.as_deref().map(|media| match media {
-                "image/jpeg" => crate::public::ImageMedia::Jpeg,
-                _ => crate::public::ImageMedia::Png,
+                "image/jpeg" => crate::ImageMedia::Jpeg,
+                _ => crate::ImageMedia::Png,
             }),
             source: Box::new(Intake::text(common, reading, input, has_on, false)?.0),
             loaded: None,
@@ -60,7 +60,7 @@ pub(super) fn prepare(
 /// cancellation can end the command even while the input handle waits for EOF.
 pub(super) struct Attachment {
     paths: Vec<std::path::PathBuf>,
-    media: Option<crate::public::ImageMedia>,
+    media: Option<crate::ImageMedia>,
     source: Box<Intake>,
     loaded: Option<Loaded>,
 }
@@ -110,7 +110,7 @@ impl Attachment {
                 .record(bytes)
                 .map_err(|error| Placed::at(Failure::record(error, false), item.at))?;
             return Ok(record
-                .text()
+                .literal()
                 .filter(|text| !text.is_empty())
                 .map(str::to_owned));
         }
@@ -138,12 +138,7 @@ impl Attachment {
                     )
                 };
                 let evidence = text.map_err(refused)?;
-                Some(
-                    evidence
-                        .as_text()
-                        .map(|text| text.into_owned())
-                        .map_err(|error| Placed::at(Failure::from(error), item.at))?,
-                )
+                Some(evidence)
             }
         };
         Ok(text)
@@ -170,13 +165,13 @@ impl Attachment {
             };
             let record = match self.media {
                 Some(media) => {
-                    crate::public::ImageInput::new(media, image.record.bytes()).map_err(refused)?
+                    crate::ImageInput::new(media, image.record.bytes()).map_err(refused)?
                 }
                 None => image.record,
             };
             compressed = compressed
                 .checked_add(record.bytes().len())
-                .filter(|&bytes| bytes <= crate::public::MAX_IMAGE_BYTES)
+                .filter(|&bytes| bytes <= crate::MAX_IMAGE_BYTES)
                 .ok_or(Failure::Usage(
                     "image evidence exceeds the 25165824 compressed byte SDK limit",
                 ))?;
@@ -207,4 +202,4 @@ pub(super) fn next(items: &mut SourceItems) -> Option<Result<Piece, Failure>> {
     }))
 }
 
-type Loaded = (Vec<crate::public::ImageInput>, Vec<String>);
+type Loaded = (Vec<crate::ImageInput>, Vec<String>);

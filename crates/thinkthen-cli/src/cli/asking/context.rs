@@ -25,10 +25,8 @@ pub(super) fn for_run(
 }
 
 pub(crate) fn shared(path: Option<&Path>) -> Result<Option<String>, Failure> {
-    path.map(|path| {
-        Ok(Context::read(path)?.evidence)
-    })
-    .transpose()
+    path.map(|path| Context::read(path).map(|context| context.evidence))
+        .transpose()
 }
 
 pub(crate) fn record(
