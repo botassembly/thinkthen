@@ -241,7 +241,13 @@ fn loaded(
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(answer.value()), bare)?;
-            return detailed(
+            same(
+                "result primitive",
+                &json!(decision(answer.results()[0].value())),
+                bare,
+            )?;
+            return complete(
+                question,
                 &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &success["answers"][0],
                 base,
@@ -289,16 +295,23 @@ fn loaded(
                 &expected.map(|answer| answer["bare"].clone()).collect(),
             )
         }
-        _ => single(engine, &asked, texts[0], success, base),
+        _ => single(engine, &asked, texts[0], success, base, question),
     }
 }
 
 /// One judgment and its complete result, then twice through a cache for a counters case.
-fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
+fn single(
+    engine: &Engine,
+    asked: &Question,
+    text: &str,
+    success: &Value,
+    base: &str,
+    question: &str,
+) -> Checked {
     let expected = &success["answers"][0];
-    let (typed, details) = atomic(engine, asked, text)?;
-    same("bare", &details["value"], &expected["bare"])?;
-    detailed(&details, expected, base)?;
+    let (typed, primitive, full) = atomic(engine, asked, text)?;
+    same("result primitive", &primitive, &expected["bare"])?;
+    complete(question, &full, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
@@ -322,6 +335,22 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
         "cache_answers": after.cache_answers() - before.cache_answers(),
     });
     same("counters", &moved, counters)
+}
+
+/// Check complete values from the written question, independently of typed values.
+fn complete(question: &str, full: &Value, expected: &Value, base: &str) -> Checked {
+    let authored: Value = serde_json::from_str(question).map_err(|error| error.to_string())?;
+    let meaning = expected["bare"].as_bool().and_then(|yes| {
+        authored
+            .get("decide")
+            .and_then(|_| authored.get(if yes { "true" } else { "false" }))
+    });
+    same(
+        "complete value",
+        &full["value"],
+        meaning.unwrap_or(&expected["bare"]),
+    )?;
+    detailed(full, expected, base)
 }
 
 /// With `one`, the case names one record, and every answer reads it.
@@ -463,13 +492,14 @@ fn scalar(written: &str) -> Checked<Value> {
     serde_json::from_str(written).map_err(|error| error.to_string())
 }
 
-/// Read the primitive and result/2 JSON from the same completed call.
-fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value)> {
-    let (value, written) = match asked.kind() {
+/// Read both primitive accessors and result/2 JSON from the same completed call.
+fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value, Value)> {
+    let (value, primitive, written) = match asked.kind() {
         QuestionKind::Decide => {
             let call = engine.decide(asked, text).map_err(said)?;
             (
                 json!(call.value()),
+                json!(decision(call.results()[0].value())),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -477,6 +507,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.score(asked, text).map_err(said)?;
             (
                 json!(call.value()),
+                json!(call.results()[0].value()),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -485,6 +516,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.choose(&typed, text).map_err(said)?;
             (
                 json!(call.value().map(|team| team.label())),
+                json!(call.results()[0].value()),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -492,18 +524,20 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             Ok(typed) => {
                 let call = engine.tag(&typed, text).map_err(said)?;
                 let written = call.results()[0].to_json().map_err(said)?;
-                (tags(call.into_value()), written)
+                let primitive = json!(call.results()[0].value());
+                (tags(call.into_value()), primitive, written)
             }
             Err(_) => {
                 let typed = asked.clone().into_tag::<Word>().map_err(said)?;
                 let call = engine.tag(&typed, text).map_err(said)?;
                 let written = call.results()[0].to_json().map_err(said)?;
-                (tags(call.into_value()), written)
+                let primitive = json!(call.results()[0].value());
+                (tags(call.into_value()), primitive, written)
             }
         },
         _ => return Err("one atomic question required".to_owned()),
     };
-    Ok((value, scalar(&written)?))
+    Ok((value, primitive, scalar(&written)?))
 }
 
 /// Typed tags as the shared cases spell them.

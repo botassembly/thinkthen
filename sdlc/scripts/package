@@ -62,36 +62,22 @@ python3 sdlc/scripts/registry-readmes.py crate "$crate"
 python3 sdlc/scripts/catalog.py --crate "$crate"
 scratch_dir isolated && scratch_dir source && scratch_dir built
 mkdir "$isolated/empty" "$isolated/out"
-tar -xzf "$crate" -C "$source" --strip-components=1
+mkdir "$source/crate"
+tar -xzf "$crate" -C "$source/crate" --strip-components=1
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
-    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --lib --no-default-features --features bundled-sqlite
+    cargo build --quiet --locked --offline --manifest-path "$source/crate/Cargo.toml" --lib --no-default-features --features bundled-sqlite
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
-    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --bin thinkthen
+    cargo build --quiet --locked --offline --manifest-path "$source/crate/Cargo.toml" --bin thinkthen
 # 0431: the actual complete Rust consumer also links the unpacked crate.
 # Keep its caller framing and the ten concrete native APIs, then execute the
 # unchanged shared matrix against that archive-built executable.
-cp -R libraries/rust/consumer "$isolated/consumer"
-python3 - "$source" "$isolated/consumer/Cargo.toml" <<'RUSTPACKAGE'
-import sys
-from pathlib import Path
-source,manifest=map(Path,sys.argv[1:])
-manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(source)))
-RUSTPACKAGE
-RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
-CARGO_TARGET_DIR="$built" \
-    cargo build --quiet --locked --offline --manifest-path "$isolated/consumer/Cargo.toml"
 # The shared native fixture starts the test backend from the repository target,
-# while the unpacked consumer above stays in its separate build folder.
+# while the unpacked consumer stays in its separate build folder.
 CARGO_TARGET_DIR="$REPO/target" cargo build --quiet --locked --offline --package conformance-backend
-python3 - "$REPO" "$built/debug/thinkthen-rust-consumer" "$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml)" >"$isolated/native-source.log" <<'RUSTPACKAGE'
-import sys
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
-from native_fixture import run
-sys.exit(bool(run('rust',[sys.argv[2]],root,extra_env={'RUSTUP_TOOLCHAIN':sys.argv[3]})))
-RUSTPACKAGE
+CARGO_TARGET_DIR="$built" THINKTHEN_TEST_BACKEND="$REPO/target/debug/conformance-backend" \
+    python3 libraries/rust/check.py "$REPO" "$source" >"$isolated/native-source.log"
 cp "$built/debug/thinkthen" "$isolated/thinkthen"
 scratch_remove "$source" && scratch_remove "$built"
 names='band calibration compare cost counts monitor score sweep triage trials'
