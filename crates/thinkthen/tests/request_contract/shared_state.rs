@@ -18,7 +18,8 @@ fn shared_state_preview_and_execution_keep_original_questions_descriptions_and_e
         }).unwrap();
         assert_eq!(listener.count(), 0);
         assert_eq!(preview.records(), 1);
-        assert_eq!(preview.requests(), 1);
+        assert_eq!(preview.requests(), 2); // Existing wire-occurrence upper bound.
+        assert_eq!(preview.question_requests(), Some((1, &[1][..])));
         let body = preview.first_body().unwrap();
         let wire: Value = serde_json::from_slice(body).unwrap();
         assert_eq!(wire["state"], "shared evidence");
@@ -155,6 +156,7 @@ fn shared_state_admits_the_full_group_before_packing_or_sending() {
         controls: CallOptions::new().batch(BatchSetting::Max), feed: None,
     }).unwrap();
     assert_eq!(ordinary.requests(), 2);
+    assert_eq!(ordinary.question_requests(), Some((2, &[2][..])));
     assert_eq!(listener.count(), 0);
 }
 

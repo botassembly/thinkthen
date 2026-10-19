@@ -134,7 +134,7 @@ pub(super) fn cache_capture(named: &str) -> Vec<String> {
 #[test]
 fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_target() {
     for (tag, route) in [("unknown", r#""backend":"typesafe""#),
-        ("url", r#""url":"invalid-relative-address""#)] {
+        ("url", r#""url":"https://cache-metadata.example/v1""#)] {
         let home = folder(&format!("cache-route-{tag}"));
         let config = if cfg!(target_os = "macos") {
             home.join("Library/Application Support/thinkthen/config.json")
@@ -148,6 +148,7 @@ fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_tar
             ("XDG_CONFIG_HOME", home.to_str().unwrap()), ("HOME", home.to_str().unwrap()),
             ("APPDATA", home.to_str().unwrap()), ("THINKTHEN_API_KEY", "private-unread-key"),
             ("THINKTHEN_BACKEND", "unknown-private-route"),
+            ("THINKTHEN_BASE_URL", if tag == "url" { "invalid-relative-address" } else { "" }),
             (ARGUMENT, named.to_str().unwrap()),
         ]);
         for fact in ["\"enabled\":false", "\"platform\":true", "\"path_present\":true",
