@@ -1,6 +1,8 @@
 # 0654: Replace the C++ fixture consumer and tool shims in its gate
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-19, 0615 and 0618 already did its gate work, and its packet dumper lands with 0655..
 
 Milestone: 0.2.1
 

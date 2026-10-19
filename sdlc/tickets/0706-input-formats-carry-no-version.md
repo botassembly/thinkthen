@@ -1,12 +1,16 @@
 # 0706: Question, recognize and relate files carry no version
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-19, superseded by 0719.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0704
+
+Superseded by: 0719
 
 ## Outcome
 

@@ -1,12 +1,16 @@
 # 0646: Take the DuckDB bridge's function numbers from the generated C header
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-19, superseded by 0693.
 
 Milestone: 0.2.1
 
 Phase: 3
 
 Depends on: 0688, 0693
+
+Superseded by: 0693
 
 ## Outcome
 
