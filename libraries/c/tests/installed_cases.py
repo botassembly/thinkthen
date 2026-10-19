@@ -1,5 +1,6 @@
 """Run canonical cases through the installed C session packet graph."""
 import json
+import os
 from pathlib import Path
 import shlex
 import subprocess
@@ -71,6 +72,23 @@ def run(native, scratch, *, header=None, library=None):
         finally:
             backend.process.stdin.write('release\n'); backend.process.stdin.flush()
             if process.poll() is None: process.kill(); process.wait()
+    expected = json.loads((ROOT / 'conformance/settings-errors.json').read_text())
+    refusal = scratch / 'refused-settings.json'
+    refusal.write_text('{}')
+    backend_path = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))) / 'debug/conformance-backend'
+    backend = shared_cases.shared.Backend(backend_path, env)
+    try:
+        refused_env = {**env, 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{backend.port}/generic/v1',
+                       'THINKTHEN_API_KEY': 'sk-settings-loopback'}
+        output = subprocess.run([str(binary), str(refusal), '{"throttle":33}', '-', '-'],
+                                env=refused_env, capture_output=True, text=True, check=True)
+        assert not output.stderr, output.stderr
+        admission = json.loads(output.stdout)['admission']
+        assert admission['code'] == 1, admission
+        assert f"thinkthen usage: {admission['message']} (retryable: no)" == expected['throttle'], admission
+        assert int(backend.read('count')) == 0, 'invalid C settings sent a request'
+    finally:
+        backend.close()
     shared_cases.native_cases(binary, consumer='c', invoke=invoke)
 
 

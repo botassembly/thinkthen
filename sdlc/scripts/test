@@ -62,6 +62,17 @@ cargo test --locked --offline --workspace --doc
 cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
     --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
+python3 sdlc/scripts/hosted-workflow-self-test.py
+python3 sdlc/scripts/release-archive-self-test.py
+python3 sdlc/scripts/release-managed-pair-self-test.py
+python3 sdlc/scripts/release-language-tools-self-test.py
+python3 sdlc/scripts/release-registry-self-test.py
+python3 sdlc/scripts/release-windows-command-self-test.py
+python3 sdlc/scripts/windows-installer-integration-self-test.py
+python3 sdlc/scripts/install-check-self-test.py
+python3 sdlc/scripts/install-check-postgresql-self-test.py
+python3 sdlc/scripts/install-check-r-binary-test.py
+python3 sdlc/scripts/release-windows-c-self-test.py
 python3 sdlc/scripts/release-python-self-test.py
 python3 conformance/parity.py --validate
 python3 -m unittest conformance.test_parity conformance.test_campaign_env conformance.test_candidate_campaign conformance.test_stress_selection

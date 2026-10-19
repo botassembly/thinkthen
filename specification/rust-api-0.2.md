@@ -22,6 +22,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0628](../sdlc/tickets/0628-one-session-queue.md) makes recovery a mode of the shared session queue. `RequestRecoveringSession` delegates ownership to its inner `RequestSession`, whose destructor cancels without joining the worker. The worker retains the shared queue until it settles. The recovering wrapper no longer implements `Drop` itself.
 
+[0643](../sdlc/tickets/0643-database-settings-in-rust.md), accepted at revision `2478857b6`, adds `EngineBuilder::setting` to apply a setting name and raw JSON value through the shared settings parser. The method retains the reviewed settings validation and SQL profile handling.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -293,6 +295,7 @@ fn Engine::score_with(&self, &Question, &str, CallOptions<'_>) -> Result<ScoreCa
 fn Engine::start_request_recovering_session(&self, Request, Surface) -> Result<RequestRecoveringSession, Error>
 fn Engine::tag<C: Choice>(&self, &TagQuestion<C>, &str) -> Result<TagCall<C>, Error>
 fn Engine::tag_with<C: Choice>(&self, &TagQuestion<C>, &str, CallOptions<'_>) -> Result<TagCall<C>, Error>
+fn EngineBuilder::setting(self, &str, &str) -> Result<EngineBuilder, Error>
 fn Error::request_decode_cause(&self) -> Option<RequestDecodeCause>
 fn Error::source_budget_exceeded(&self) -> Option<SourceBudgetExceeded>
 fn Request::filter(RequestArguments) -> Request

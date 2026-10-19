@@ -25,7 +25,8 @@ ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme (retryable: no)"
 MISSING_PART = "thinkthen usage: the record holds nothing at `/body` (retryable: no)"
-THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+EXPECTED = json.loads((Path(__file__).resolve().parents[3] / "conformance/settings-errors.json").read_text())
+THROTTLE = EXPECTED["throttle"]
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
 
 case(shared_settings_corpus)
@@ -33,14 +34,14 @@ case(shared_settings_corpus)
 
 @case
 def session_batch_keeps_digit_grammar_and_exact_refusal():
-    error = "thinkthen usage: batch takes max or a whole number of at least 1 (retryable: no)"
+    error = EXPECTED["batch"]
     with Backend() as backend:
         for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
             got = run([f"SET thinkthen_batch = '{value}'", ASK,
                        "SELECT thinkthen_decide_details('Is it a refund?', 'refund now')"], backend.base())
             expect(said(got[1]), error, "ordinary session batch refusal")
             failure = rows(got[2])[0][0]["failure"]
-            expect((failure["kind"],failure["message"]), ("usage","batch takes max or a whole number of at least 1"), "typed session batch refusal")
+            expect((failure["kind"],failure["message"]), ("usage", EXPECTED["batch"].removeprefix("thinkthen usage: ").removesuffix(" (retryable: no)")), "typed session batch refusal")
         expect(backend.count(), 0, 'invalid session batches send nothing')
     for value, count in (('max', 1), ('1', 2), ('01', 2)):
         with Backend() as backend:

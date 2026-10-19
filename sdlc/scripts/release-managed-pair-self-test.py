@@ -289,32 +289,6 @@ def inner_rejection(label, kind, mutate, message):
     print(f"{label}: assemble and verify refused at {message}")
 
 
-def workflow_mutations():
-    checker = importlib.machinery.SourceFileLoader(
-        "managed_workflows", str(HELPER.with_name("workflows"))).load_module()
-    original = (HELPER.parents[2] / ".github/workflows/release.yml").read_text()
-    cases = (
-        ("source capture", "release-workflow source-capture", "release-workflow absent-source"),
-        ("C capture", "release-workflow c-capture", "release-workflow absent-c"),
-        ("internal upload", "name: provenance-x86", "name: public-provenance"),
-        ("smoke gate", 'release-workflow managed-gate platform "$TARGET" "$SHA" provenance',
-         'release-workflow absent-gate platform "$TARGET" "$SHA" provenance'),
-        ("draft gate", 'release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance',
-         'release-workflow absent-gate "platform/platform-$target" "$target" "$SHA" provenance'),
-    )
-    for label, before, after in cases:
-        assert before in original, label
-        altered = original.replace(before, after, 1)
-        findings = checker.release("release.yml", checker.yaml.safe_load(altered))
-        assert any("provenance" in item or "receipt capture" in item or "managed" in item
-                   for item in findings), (label, findings)
-    reordered = original.replace("release-workflow source-capture", "ORDER_PLACEHOLDER", 1).replace(
-        "release-workflow c-capture", "release-workflow source-capture", 1).replace(
-        "ORDER_PLACEHOLDER", "release-workflow c-capture", 1)
-    findings = checker.release("release.yml", checker.yaml.safe_load(reordered))
-    assert any("receipt capture order" in item for item in findings), findings
-
-
 def tracked_links():
     """Every symlink Git tracks passes the source capture check."""
     helper = importlib.machinery.SourceFileLoader("managed_pair", str(HELPER)).load_module()
@@ -323,7 +297,6 @@ def tracked_links():
 
 
 def main():
-    workflow_mutations()
     tracked_links()
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)

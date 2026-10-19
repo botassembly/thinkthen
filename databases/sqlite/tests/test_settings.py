@@ -16,6 +16,7 @@ import time
 from helper import Backend, Child, child, environment, expect, main
 
 AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine (retryable: no)"
+EXPECTED = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance/settings-errors.json").read_text())
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/settings.json"
 
 
@@ -175,6 +176,7 @@ after = run(db, "SELECT thinkthen_configure('{}')")
 say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
 """, environment(backend))
     expect(json.loads(held["zero"][0][0])["requests_sent"], 0, "usage builds no engine")
+    expect(held["invalid"][1], EXPECTED["throttle"], "throttle refusal matches every surface")
     expect(all(value.startswith("thinkthen usage:") for value in held["invalid"]), True, "seven invalid objects")
     expect(held["invalid"][-1],
            "thinkthen usage: settings prices require both input and output fields (retryable: no)", "paired host prices")
@@ -197,7 +199,7 @@ details = run(db, "SELECT question_detail_model FROM thinkthen_decide_details('I
 say(valid=valid, zero=zero, details=details)
 """, environment(backend))
     expect(held["valid"], [['{"model":"judge-b","max_requests_total":null}']], "null resets the total")
-    expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more (retryable: no)", "zero refused")
+    expect(held["zero"], EXPECTED["sqlite_request_total"], "zero refused")
     expect(held["details"][0][0], "judge-b", "prior model survived")
     expect(backend.close(), 1, "only the valid configuration sent")
 
