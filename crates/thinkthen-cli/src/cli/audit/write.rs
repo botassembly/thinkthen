@@ -19,10 +19,7 @@ use crate::statistics::audit::{Kind, Row};
 use crate::statistics::optimize::Bar;
 use crate::statistics::rows::number;
 use crate::statistics::splice::{remove, splice};
-use crate::core::{
-    BlankTextError, ModelName, QuestionFile, QuestionSet, RecognizeSpec,
-    RelateSpec, Setting, Typed, question_sha256_with_profile, recognize_sha256, resolve,
-};
+use thinkthen::{Engine, ErrorDiagnostic, RelationIdentityMode, RequestDefinition};
 
 /// What `--write` does with one question's bar.
 enum Choice {
@@ -52,27 +49,20 @@ pub(super) fn bars(
     let text = String::from_utf8(bytes).map_err(|_| Cause::NotQuestions)?;
     let json = Json::parse(&text).map_err(|_| Cause::NotQuestions)?;
     let set = json.member("questions").is_some();
-    let digests: Vec<String> = if set {
-        let parsed = QuestionSet::parse(&text).map_err(|_| Cause::NotQuestions)?;
-        parsed.sha256().ok().into_iter().collect()
-    } else if json.member("recognize").is_some() {
-        let spec = RecognizeSpec::parse(&text).map_err(|_| Cause::NotQuestions)?;
-        recognize_sha256(&spec).ok().into_iter().collect()
-    } else if json.member("relate").is_some() {
-        // A `--lines` run nulls the fields, so either digest names this file.
-        let spec = RelateSpec::parse(&text).map_err(|_| Cause::NotQuestions)?;
-        [false, true]
-            .into_iter()
-            .filter_map(|lines| spec.question(lines).sha256().ok())
-            .collect()
+    // Saved rank/find spellings were never audit's source grammar. Their
+    // existing result exemption still permits an ordinary decide source below.
+    if json.member("rank").is_some() || json.member("find").is_some() {
+        return Err(Cause::NotQuestions);
+    }
+    let definition = RequestDefinition::from_authored_json(&text).map_err(|_| Cause::NotQuestions)?;
+    if matches!(definition, RequestDefinition::DynamicChoose(_)) {
+        return Err(Cause::NotQuestions);
+    }
+    let digests: Vec<String> = if matches!(definition, RequestDefinition::Relate(_)) {
+        [RelationIdentityMode::Records, RelationIdentityMode::Lines]
+            .into_iter().filter_map(|mode| definition.relation_sha256(mode).ok()).collect()
     } else {
-        let (file, _batch) = QuestionFile::parse_top(&text).map_err(|_| Cause::NotQuestions)?;
-        let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
-            .map_err(|_| Cause::NotQuestions)?;
-        let digest = resolved.question().and_then(|question| {
-            question_sha256_with_profile(question, resolved.threshold(), resolved.profile()).ok()
-        });
-        digest.into_iter().collect()
+        definition.question_sha256().ok().into_iter().collect()
     };
     let checked = answers
         .iter()
@@ -105,7 +95,7 @@ pub(super) fn bars(
                 format!("wrote threshold {value} for {target}; it was {old}")
             }
         };
-        report.push_str(&format!("{}: audit: {line}\n", crate::core::NAME));
+        report.push_str(&format!("{}: audit: {line}\n", "thinkthen"));
     }
     let wrote_threshold = new != text;
     if wrote_threshold && !set {
@@ -119,7 +109,7 @@ pub(super) fn bars(
             }
             Err(reason) => report.push_str(&format!(
                 "{}: audit: kept the model for the question; {reason}\n",
-                crate::core::NAME
+                "thinkthen"
             )),
         }
     }
@@ -147,7 +137,7 @@ fn store(
         if publish_new(output, new.as_bytes())? {
             report.push_str(&format!(
                 "{}: audit: wrote the --write-to output but could not remove its temporary file\n",
-                crate::core::NAME
+                "thinkthen"
             ));
         }
     } else if new != old {
@@ -211,14 +201,14 @@ fn update_batch(
                 let old = BatchSetting::of_json(old)
                     .ok_or(Cause::NotQuestions)?;
                 *text = remove(text, &["batch"]).ok_or(Cause::NotQuestions)?.0;
-                report.push_str(&format!("{}: audit: removed batch {old} for the question; the results ran one record a request\n", crate::core::NAME));
+                report.push_str(&format!("{}: audit: removed batch {old} for the question; the results ran one record a request\n", "thinkthen"));
             }
         }
         [setting] if wrote_threshold => {
             let value = serde_json::to_string(setting).map_err(|_| Cause::NotQuestions)?;
             *text = splice(text, &["batch"], &value).ok_or(Cause::NotQuestions)?.0;
         }
-        [_, _, ..] => report.push_str(&format!("{}: audit: kept the batch setting for the question; the results ran at more than one batch setting\n", crate::core::NAME)),
+        [_, _, ..] => report.push_str(&format!("{}: audit: kept the batch setting for the question; the results ran at more than one batch setting\n", "thinkthen")),
         _ => {}
     }
     Ok(())
@@ -226,7 +216,7 @@ fn update_batch(
 
 /// The one model every results line names in `meta.model`, trimmed as a
 /// later run reads it, or why no model is written.
-fn model(results: &[Line]) -> Result<ModelName, &'static str> {
+fn model(results: &[Line]) -> Result<String, &'static str> {
     let named = results
         .iter()
         .map(|(_, line)| line.member("meta")?.member("model")?.as_str())
@@ -234,8 +224,8 @@ fn model(results: &[Line]) -> Result<ModelName, &'static str> {
         .ok_or("a result names no model")?;
     let mut named = named.into_iter();
     match (named.next(), named.next()) {
-        (Some(model), None) => ModelName::new(model).map_err(|error| match error {
-            BlankTextError::ModelControl => {
+        (Some(model), None) => Engine::builder().model(model).map(|_| model.trim().to_owned()).map_err(|error| match error.diagnostic() {
+            Some(ErrorDiagnostic::ModelControl) => {
                 "a result names a model with a control character or white space but a plain space"
             }
             _ => "a result names a blank model",

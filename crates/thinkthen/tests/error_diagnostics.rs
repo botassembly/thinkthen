@@ -106,3 +106,13 @@ fn profile_grammar_has_closed_safe_classifications() {
         assert_private(&error, marker);
     }
 }
+
+#[test]
+fn model_validation_projects_closed_admission_without_authored_values() {
+    for (model, control) in [(" ", false), ("private_model_marker\nembedded", true), ("private_model_marker\tembedded", true)] {
+        let error = Engine::builder().model(model).err().unwrap();
+        assert!(matches!((error.diagnostic(), control),
+            (Some(ErrorDiagnostic::ModelControl), true) | (Some(ErrorDiagnostic::ModelBlank), false)));
+        assert_private(&error, "private_model_marker");
+    }
+}

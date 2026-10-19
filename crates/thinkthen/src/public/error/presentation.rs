@@ -342,6 +342,13 @@ fn engine(error: &Native) -> ErrorDiagnostic<'_> {
 
 fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option<ErrorDiagnostic<'_>> {
     use ErrorDiagnostic as D;
+    if let Some(error) = cause.downcast_ref::<crate::core::BlankTextError>() {
+        match error {
+            crate::core::BlankTextError::ModelControl => return Some(D::ModelControl),
+            crate::core::BlankTextError::ModelName => return Some(D::ModelBlank),
+            _ => {}
+        }
+    }
     if let Some(error) = cause.downcast_ref::<crate::core::JsonError>() {
         return Some(D::Json(classification::json(error)));
     }
