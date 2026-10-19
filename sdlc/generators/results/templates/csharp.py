@@ -107,7 +107,7 @@ def conversion(schema, definitions, expression='member', depth=0):
         value = schema['additionalProperties']
         entry = f'entry{depth}'
         element, decode = conversion(value, definitions, entry + '.Value', depth + 1)
-        if nullable(value, definitions) and shape(value) != {}:
+        if nullable(value) and shape(value) != {}:
             decode = (f'{entry}.Value.ValueKind == JsonValueKind.Null ? Presence<{element}>.Null : '
                       f'Presence<{element}>.Present({decode})')
             element = f'Presence<{element}>'
@@ -117,7 +117,7 @@ def conversion(schema, definitions, expression='member', depth=0):
     if kind == 'array':
         item = f'item{depth}'
         element, decode = conversion(schema['items'], definitions, item, depth + 1)
-        if nullable(schema['items'], definitions) and shape(schema['items']) != {}:
+        if nullable(schema['items']) and shape(schema['items']) != {}:
             decode = (f'{item}.ValueKind == JsonValueKind.Null ? Presence<{element}>.Null : '
                       f'Presence<{element}>.Present({decode})')
             element = f'Presence<{element}>'

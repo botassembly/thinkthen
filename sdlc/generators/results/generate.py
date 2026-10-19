@@ -268,6 +268,8 @@ def declaration_union(schema, definitions):
         kinds[tag] = kind
     if len(selected) < 2:
         return None
+    if set(kinds.values()) == {'integer', 'string'}:
+        return None
     return {'primitive_variants': list(selected), 'primitive_schemas': selected,
             'primitive_kinds': kinds, 'nullable_json': 'null' in kinds.values()}
 
@@ -285,18 +287,32 @@ def normalize(value):
     return result
 
 
-def lift_inline(definitions):
+def answer_definitions(definitions):
+    """Find native answer declarations through their Rust-owned probability tags."""
+    pending = [key for key, source in definitions.items()
+               if any('x-probability-mode' in item
+                      for item in source.get('oneOf', []))]
+    selected = set()
+    while pending:
+        key = pending.pop()
+        if key not in selected:
+            selected.add(key)
+            pending.extend(references(definitions[key]))
+    return selected
+
+
+def lift_inline(definitions, answers):
     """Name titled objects and nested alternatives from their schema source."""
     definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
-    def visit(value, path):
+    def visit(value, path, answer):
         if isinstance(value, list):
-            return [visit(child, path + '_' + str(index)) for index, child in enumerate(value)]
+            return [visit(child, path + '_' + str(index), answer) for index, child in enumerate(value)]
         if not isinstance(value, dict):
             return value
         kinds = value.get('type')
-        nullable_item = (path.endswith(('_items', '_additionalProperties')) and
+        nullable_item = (answer and path.endswith(('_items', '_additionalProperties')) and
                          ((isinstance(kinds, list) and 'null' in kinds) or
                           any(item.get('type') == 'null' for item in value.get('anyOf', []))))
         if (object_variants(value, definitions) or nullable_item or
@@ -310,19 +326,22 @@ def lift_inline(definitions):
                 if key not in definitions:
                     definitions[key] = value
                     pending.append(key)
+            if answer:
+                answers.add(seen[identity])
             return {'$ref': '#/$defs/' + seen[identity]}
-        return {key: visit(child, path + '_' + key) for key, child in value.items()}
+        return {key: visit(child, path + '_' + key, answer) for key, child in value.items()}
     while pending:
         key = pending.pop()
         source = definitions[key]
-        definitions[key] = {member: visit(value, key + '_' + member)
+        definitions[key] = {member: visit(value, key + '_' + member, key in answers)
                             for member, value in source.items()}
     return definitions
 
 
 def prepare(definitions):
     """Derive reusable tagged object definitions without a target member inventory."""
-    definitions = lift_inline(definitions)
+    answers = answer_definitions(definitions)
+    definitions = lift_inline(definitions, answers)
     result = {}
     for key, source in definitions.items():
         if 'allOf' in source:
@@ -330,7 +349,7 @@ def prepare(definitions):
                 raise ValueError('object intersections need an explicit typed representation')
             source = {key: value for key, value in source.items() if key != 'allOf'}
         native = native_value_union(source, definitions) or enum_map_union(source, definitions)
-        if native is None:
+        if native is None and key in answers:
             native = declaration_union(source, definitions)
         if native is not None:
             result[key] = native
