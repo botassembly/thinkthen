@@ -7,7 +7,7 @@ Thank you for helping. Read `README.md`, then `specification/README.md`. The spe
 Build the command and put it on your `PATH`:
 
 ```sh
-cargo build --locked --release -p thinkthen --bin thinkthen
+cargo build --locked --release -p thinkthen-cli --bin thinkthen
 mkdir -p "$HOME/.local/bin"
 install -m 755 target/release/thinkthen "$HOME/.local/bin/thinkthen"
 ```

@@ -65,14 +65,21 @@ mod tests {
         worker.join().unwrap();
     }
 
+    fn invoke(callback: Callback) -> (std::thread::JoinHandle<()>, Receiver<bool>) {
+        let (sender, result) = mpsc::sync_channel(1);
+        let worker = std::thread::spawn(move || { sender.send(callback(0, "/missing")).unwrap(); });
+        (worker, result)
+    }
+
     #[test]
     fn failed_or_dropped_output_acknowledgement_releases_the_worker() {
         for explicit_refusal in [false, true] {
             let (continuation, callback) = Continuation::new(Signal::default());
-            let worker = std::thread::spawn(move || callback(0, "/missing"));
+            let (worker, result) = invoke(callback);
             let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
             if explicit_refusal { missing.acknowledge(false); } else { drop(missing); }
-            assert!(!worker.join().unwrap());
+            assert!(!result.recv_timeout(Duration::from_secs(5)).unwrap());
+            worker.join().unwrap();
         }
     }
 
@@ -80,12 +87,13 @@ mod tests {
     fn shutdown_and_dropped_receiver_release_an_outstanding_acknowledgement() {
         for drop_receiver in [false, true] {
             let (continuation, callback) = Continuation::new(Signal::default());
-            let worker = std::thread::spawn(move || callback(0, "/missing"));
+            let (worker, result) = invoke(callback);
             let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
             if drop_receiver { drop(continuation); } else { continuation.close(); }
             // Keep the sender alive: closure must release the callback even
             // when command output has stalled while holding this event.
-            assert!(!worker.join().unwrap());
+            assert!(!result.recv_timeout(Duration::from_secs(5)).unwrap());
+            worker.join().unwrap();
             drop(missing);
         }
     }
@@ -93,10 +101,11 @@ mod tests {
     #[test]
     fn rendered_closed_pipe_acknowledgement_wins_before_shutdown() {
         let (continuation, callback) = Continuation::new(Signal::default());
-        let worker = std::thread::spawn(move || callback(0, "/missing"));
+        let (worker, result) = invoke(callback);
         let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
         missing.acknowledge(true);
         continuation.close();
-        assert!(worker.join().unwrap());
+        assert!(result.recv_timeout(Duration::from_secs(5)).unwrap());
+        worker.join().unwrap();
     }
 }
