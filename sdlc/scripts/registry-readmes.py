@@ -582,7 +582,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         env['PATH'] = str(package) + os.pathsep + env['PATH']
         output = run(['bash', '-euo', 'pipefail', str(sample)])
     elif family == 'python':
-        run(['uv', 'venv', '--offline', '--python', '3.12', str(work / 'venv')])
+        run(['uv', 'venv', '--offline', '--python', sys.executable, str(work / 'venv')])
         wheel = next(path for path in packages.iterdir() if path.suffix == '.whl')
         run(['uv', 'pip', 'install', '--offline', '--no-deps', '--python', str(work / 'venv/bin/python'), str(wheel)])
         output = run([str(work / 'venv/bin/python'), str(sample)])

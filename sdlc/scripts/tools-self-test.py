@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / 'sdlc/scripts/tools.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
+from conformance.source_fixtures import fixture_tool_groups
 from sdlc.scripts.tools import download, fixture_path
 
 
@@ -105,18 +106,39 @@ class FixtureToolPaths(unittest.TestCase):
                 (runtime / name).symlink_to(target)
             node = fake / 'node'
             node.write_text('#!/bin/sh\nprintf fake\n'); node.chmod(0o755)
+            unavailable = {runtime / 'protected': PermissionError, runtime / 'vanished': FileNotFoundError}
+            for path in unavailable:
+                path.write_text('#!/bin/sh\nexit 0\n'); path.chmod(0o755)
+            is_file = Path.is_file
+            def available(path, *args, **kwargs):
+                if path in unavailable:
+                    raise unavailable[path]('unavailable fixture entry')
+                return is_file(path, *args, **kwargs)
             with patch.dict(os.environ, {'PATH': str(runtime)}):
                 positive = child_env(home=root / 'home', PATH=fixture_path(fake))
                 self.assertEqual(subprocess.check_output(['node'], env=positive, text=True), 'fake')
                 node.unlink()
                 absent = ('node', 'python', 'python3', 'python3.13', 'cargo')
-                negative = child_env(home=root / 'home', PATH=fixture_path(fake, exclude=absent))
-                for name in (*absent, 'nodejs'):
+                with patch.object(Path, 'is_file', available):
+                    negative = child_env(home=root / 'home', PATH=fixture_path(fake, exclude=absent))
+                for name in (*absent, 'nodejs', 'protected', 'vanished'):
                     self.assertIsNone(shutil.which(name, path=negative['PATH']), name)
                 for name in ('rustup', 'rustc'):
                     self.assertEqual(subprocess.check_output([name], env=negative, text=True), 'runtime')
                 self.assertEqual(subprocess.check_output(['sh', '-c', 'printf runtime'],
                                                         env=negative, text=True), 'runtime')
+
+    def test_fixture_groups_include_every_declared_rung_without_bootstrapping_providers(self):
+        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+        manifest['tools']['system']['groups'].append('fixture-extra-group')
+        with tempfile.TemporaryDirectory(prefix='fixture-tool-groups-') as temporary:
+            root = Path(temporary)
+            (root / 'sdlc').mkdir()
+            (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
+            groups = set(fixture_tool_groups(root).split(','))
+        expected = {group for tool in manifest['tools'].values() for group in tool['groups']}
+        self.assertTrue(expected <= groups)
+        self.assertIn('lint', groups)
 
 
 class ToolResolution(unittest.TestCase):

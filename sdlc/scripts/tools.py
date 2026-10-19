@@ -77,17 +77,25 @@ def fixture_path(directory, exclude=(), *, path=None):
         mirrored = directory / '.runtime'
         mirrored.mkdir(exist_ok=True)
         for folder in runtime.split(os.pathsep):
-            if not Path(folder).is_dir():
+            try:
+                sources = tuple(Path(folder).iterdir())
+            except OSError:
                 continue
-            for source in Path(folder).iterdir():
+            for source in sources:
                 target = mirrored / source.name
+                try:
+                    if not source.is_file() or not os.access(source, os.X_OK):
+                        continue
+                    resolved = source.resolve()
+                except OSError:
+                    # Protected and disappearing entries are unavailable to
+                    # executable lookup, not missing fixture runtime tools.
+                    continue
                 # Multicall launchers also back separate commands such as
                 # cargo and rustc. Preserve those independently declared tools.
-                alias = source.name not in declared and source.resolve() in excluded_targets
-                if (source.name not in exclude and not alias
-                        and source.is_file() and os.access(source, os.X_OK)
-                        and not target.exists() and not target.is_symlink()):
-                    target.symlink_to(source.resolve())
+                alias = source.name not in declared and resolved in excluded_targets
+                if source.name not in exclude and not alias and not target.exists() and not target.is_symlink():
+                    target.symlink_to(resolved)
         runtime = str(mirrored)
     return str(directory) + os.pathsep + runtime
 
