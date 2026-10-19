@@ -153,13 +153,26 @@ def shared_host_routing_cases():
 
 def cache_refusal_cases():
     checker = runpy.run_path(str(REPO / 'sdlc/scripts/workflows'))
-    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    assert checker['every']('release.yml', release, '') == []
-    for job in ('build', 'smoke', 'publish'):
-        document = deepcopy(release)
-        document['jobs'][job]['steps'].append({'uses': 'actions/cache@' + 'a' * 40,
-                                               'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}})
-        assert checker['every']('release.yml', document, '') == [f'release.yml: job {job} uses a cache']
+    folder = REPO / '.github/workflows'
+    # Exercise the entire tracked workflow set: approved dependency caches in
+    # other workflows must not inherit the release-only cache ban.
+    assert checker['check'](folder) == []
+    release = yaml.safe_load((folder / 'release.yml').read_text())
+    assert checker['release']('release.yml', release) == []
+    for job in release['jobs']:
+        for cache in ({'uses': 'actions/cache@' + 'a' * 40,
+                       'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}},
+                      {'uses': 'actions/setup-node@' + 'a' * 40, 'with': {'cache': 'npm'}}):
+            document = deepcopy(release)
+            document['jobs'][job].setdefault('steps', []).append(cache)
+            assert checker['release']('release.yml', document) == [f'release.yml: job {job} uses a cache']
+    for name in ('gate.yml', 'pages.yml', 'windows.yml'):
+        document = yaml.safe_load((folder / name).read_text())
+        assert checker['every'](name, document, '', folder) == []
+        job = next(iter(document['jobs']))
+        document['jobs'][job].setdefault('steps', []).append({'uses': 'actions/cache@v5'})
+        assert checker['every'](name, document, '', folder) == [
+            f'{name}: job {job} uses actions/cache@v5, which is not pinned to a commit']
 
 
 def linux_work_destination_cases():
