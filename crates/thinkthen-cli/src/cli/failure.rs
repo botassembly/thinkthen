@@ -44,7 +44,7 @@ pub(crate) enum Failure {
     },
     Profile {
         path: PathBuf,
-        error: thinkthen::Error,
+        error: Box<thinkthen::Error>,
     },
     ProfileLimit {
         profile: String,

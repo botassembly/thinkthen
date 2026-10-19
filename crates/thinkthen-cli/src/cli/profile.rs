@@ -23,7 +23,7 @@ pub(crate) fn read(common: &Common, environment: &crate::edge::Environment) -> R
         .profile_json(&text)
         .map_err(|error| Failure::Profile {
             path: path.to_path_buf(),
-            error,
+            error: Box::new(error),
         })?;
     environment.restore_builder(builder)
 }
