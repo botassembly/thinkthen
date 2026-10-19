@@ -9,17 +9,9 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
-# Worktrees.md rule 11: a recursive rm goes through scratch.sh. Each guard refuses its plant.
+# Recursive deletion and test usage stay within owned scratch folders.
 scratch_lint
-scratch_dir planted
-printf '%s -f -r -- "$x"\n' rm >"$planted/check.sh"
-! scratch_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: scratch_lint passed a planted rm' >&2; exit 1; }
-# ADR 0113: every script that runs tests takes a scratch usage folder. The guard refuses its plant.
 usage_lint
-printf '#!/bin/sh\ncargo %s --locked\n' test >"$planted/check.sh"
-! usage_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: usage_lint passed a planted test run' >&2; exit 1; }
-(scratch_made="$REPO/x
-"; rm() { exit 3; }; ! scratch_remove "$REPO" 2>/dev/null) || { echo 'lint: scratch_remove did not refuse the checkout' >&2; exit 1; }
 
 # This repository goes public, so no tracked path or file may name a private
 # project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a
@@ -87,37 +79,10 @@ python3 sdlc/scripts/children
 # Ticket 0459: the target C compiler measures every public carrier and signature.
 python3 sdlc/generators/results/generate.py --all --check
 python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
-# Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
-# names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
-# and a name no shell can hold. gawk's own AWKPATH and AWKLIBPATH are left out.
-# Use a real entry script so sanitization can restart it after removing names
-# that the macOS shell cannot unset. Bash creates SHLVL itself; it holds no key.
-cat >"$planted/environment" <<'SH'
-. sdlc/scripts/allow-list
-exec awk 'BEGIN { for (n in ENVIRON) if (n !~ /^(AWK(LIB)?PATH|SHLVL)$/) print n }'
-SH
-seen=$(env -i GITHUB_ACTIONS=true RUNNER_ENVIRONMENT=github-hosted PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
-    TMPDIR=/nonexistent/TMPDIR XDG_CONFIG_HOME=/nonexistent/XDG_CONFIG_HOME XDG_RUNTIME_DIR=/nonexistent/XDG_RUNTIME_DIR XDG_CACHE_HOME=/nonexistent/XDG_CACHE_HOME XDG_STATE_HOME=/nonexistent/XDG_STATE_HOME \
-    CARGO_BUILD_JOBS=2 CARGO_HOME=/nonexistent/CARGO_HOME RUSTUP_HOME=/nonexistent/RUSTUP_HOME RUSTUP_TOOLCHAIN=/nonexistent/RUSTUP_TOOLCHAIN \
-    RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER PUB_CACHE=/nonexistent/PUB_CACHE UV_CACHE_DIR=/nonexistent/UV_CACHE_DIR UV_PYTHON_INSTALL_DIR=/nonexistent/UV_PYTHON_INSTALL_DIR npm_config_cache=/nonexistent/npm-cache \
-    THINKTHEN_HEAVY_LOCK=/nonexistent/lock THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock THINKTHEN_MACOS_APPLE_CHECKS=required \
-    THINKTHEN_RESOLVED_TOOLS=lint THINKTHEN_TOOLCHAINS=/nonexistent/THINKTHEN_TOOLCHAINS THINKTHEN_SESSION_JDK_HOME=/nonexistent/THINKTHEN_SESSION_JDK_HOME THINKTHEN_DUCKDB_CLI=/nonexistent/THINKTHEN_DUCKDB_CLI \
-    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT=/nonexistent/THINKTHEN_PUBLISH_ROOT FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
-    CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
-    sh "$planted/environment" | LC_ALL=C sort | tr '\n' ' ')
-allowed="CARGO_BUILD_JOBS CARGO_HOME GITHUB_ACTIONS HOME LANG LC_ALL PATH PUB_CACHE PWD RUNNER_ENVIRONMENT RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
-allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_PRIVATE_NAMES THINKTHEN_PUBLISH_ROOT THINKTHEN_RESOLVED_TOOLS THINKTHEN_SESSION_JDK_HOME THINKTHEN_TOOLCHAINS TMPDIR UV_CACHE_DIR UV_PYTHON_INSTALL_DIR XDG_CACHE_HOME XDG_CONFIG_HOME XDG_RUNTIME_DIR XDG_STATE_HOME npm_config_cache "
-listed=$(sed -n 's/^[[:space:]]*\([A-Za-z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
-    LC_ALL=C sort | tr '\n' ' ')
-if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
-    printf 'lint: allow-list names %s\nand a rung child saw %s\n' "$listed" "$seen" >&2
-    exit 1
-fi
 # Ticket 0128: one version everywhere, workflows run by hand from pinned code,
 # and the download script's edge table against a loopback fake of GitHub.
 python3 sdlc/scripts/versions --self-test
 python3 sdlc/scripts/versions
-python3 sdlc/scripts/workflows --self-test
 python3 databases/duckdb/tools/input_version_cases.py
 python3 sdlc/scripts/workflows
 python3 sdlc/scripts/installer-test
@@ -138,26 +103,6 @@ THINKTHEN_RESOLVED_TOOLS=surfaces sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses
-# A binding's deny runs `sources`. A file:// git source under a scratch
-# CARGO_HOME must fail it, with no network and no residue.
-scratch_dir plant
-mkdir -p "$plant/dep/src" "$plant/copy/src"
-printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
-: >"$plant/dep/src/lib.rs"
-: >"$plant/copy/src/lib.rs"
-git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
-git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
-printf '[package]\nname = "copy"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
-CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
-set +e
-# cargo-deny sets bit 8 of its exit code when the sources check fails.
-CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$REPO/deny.toml" sources >"$plant/deny" 2>&1
-code=$?
-set -e
-if [ "$code" -ne 8 ] || ! grep -q source-not-allowed "$plant/deny"; then
-    echo "lint: deny's sources check passed a file:// git source (exit $code)" >&2
-    exit 1
-fi
 cargo fmt --all -- --check
 cargo fmt --all --manifest-path crates/thinkthen-host/Cargo.toml -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings

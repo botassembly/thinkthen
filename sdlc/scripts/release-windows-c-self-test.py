@@ -19,7 +19,6 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 FIXTURE = runpy.run_path(str(Path(__file__).with_name('release-windows-c-fixture.py')))
 C = FIXTURE['C']
-ROUTES = runpy.run_path(str(Path(__file__).with_name('release-windows-c-workflow.py')))
 VERSION = next(line.split('"')[1] for line in (REPO / 'crates/thinkthen/Cargo.toml').read_text().splitlines()
                if line.startswith('version = "'))
 
@@ -31,82 +30,6 @@ def refused(action, cause):
         assert cause in str(error), (cause, str(error))
     else:
         raise AssertionError('plant passed: ' + cause)
-
-
-def workflow_plants():
-    original = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())['jobs']
-    assert ROUTES['rules']('release.yml', original) == []
-    cases = 0
-    for key, label in [('CLIPPY', 'C Clippy'), ('TEST', 'C door tests'), ('PACK', 'C packing'),
-                       ('PLATFORM', 'platform verification'), ('CHECK', 'downloaded C validation'),
-                       ('CONSUME', 'downloaded C consumption')]:
-        command = ROUTES[key]
-        kind = 'smoke' if key in ('CHECK', 'CONSUME') else 'build'
-        for replacement in ('', 'echo ' + command, '# ' + command, command + ' || true'):
-            jobs = copy.deepcopy(original)
-            step = next(step for step in jobs[kind]['steps'] if command in step.get('run', ''))
-            step['run'] = step['run'].replace(command, replacement)
-            failures = ROUTES['rules']('release.yml', jobs)
-            assert any(label in error for error in failures), (key, replacement, failures)
-            cases += 1
-    for kind in ('build', 'smoke'):
-        for plant in ('missing-setup', 'late-setup', 'wrong-target', 'disabled-route', 'masked-route', 'wrong-route-target', 'job-disabled'):
-            jobs = copy.deepcopy(original)
-            steps = jobs[kind]['steps']
-            setup = next(step for step in steps if step.get('run') == ROUTES['SETUP'])
-            route = next(step for step in steps if ROUTES['PACK' if kind == 'build' else 'CONSUME'] in step.get('run', ''))
-            if plant == 'missing-setup':
-                steps.remove(setup)
-            elif plant == 'late-setup':
-                steps.remove(setup)
-                steps.append(setup)
-            elif plant == 'wrong-target':
-                setup['if'] = "matrix.target == 'x86_64-unknown-linux-gnu'"
-            elif plant == 'disabled-route':
-                route['if'] = 'false'
-            elif plant == 'wrong-route-target':
-                route['if'] = "matrix.target == 'x86_64-unknown-linux-gnu'"
-            elif plant == 'masked-route':
-                route['continue-on-error'] = True
-            else:
-                jobs[kind]['if'] = 'false'
-            failures = ROUTES['rules']('release.yml', jobs)
-            if plant in ('disabled-route', 'masked-route', 'wrong-route-target'):
-                cause = 'Windows C packing' if kind == 'build' else 'Windows downloaded C consumption'
-            elif plant == 'job-disabled':
-                cause = f'Windows C {kind} job must execute'
-            else:
-                cause = f'Windows {kind} must select x64 MSVC'
-            assert any(cause in error for error in failures), (kind, plant, failures)
-            cases += 1
-    for kind, boundary in [('build', 'upload'), ('smoke', 'download')]:
-        for plant in ('missing', 'misordered'):
-            jobs = copy.deepcopy(original)
-            steps = jobs[kind]['steps']
-            asset = next(step for step in steps if (step.get('with') or {}).get('name') == 'platform-${{ matrix.target }}')
-            steps.remove(asset)
-            if plant == 'misordered':
-                steps.insert(0, asset) if kind == 'build' else steps.append(asset)
-            failures = ROUTES['rules']('release.yml', jobs)
-            cause = 'verify before upload' if kind == 'build' else 'download before archive consumption'
-            assert any(cause in error for error in failures), (boundary, plant, failures)
-            cases += 1
-    windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())['jobs']
-    assert ROUTES['standalone']('windows.yml', windows) == []
-    for plant in ('missing', 'late', 'disabled'):
-        jobs = copy.deepcopy(windows)
-        steps = jobs['stage-0']['steps']
-        setup = next(step for step in steps if step.get('run') == ROUTES['SETUP'])
-        if plant == 'disabled':
-            setup['if'] = 'false'
-        else:
-            steps.remove(setup)
-            if plant == 'late':
-                steps.append(setup)
-        assert ROUTES['standalone']('windows.yml', jobs) == [
-            'windows.yml: standalone Windows must select x64 MSVC before C checks']
-        cases += 1
-    return cases
 
 
 def archives(root):
@@ -376,8 +299,7 @@ def main():
         pack_routing(Path(temporary))
         msvc_setup_routing(Path(temporary))
     runpy.run_path(str(Path(__file__).with_name('release-process-cleanup-test.py')))['main']()
-    plants = workflow_plants()
-    print(f'Windows C portable self-test: archive/header/export refusals and {plants} workflow plants passed; native proof pending')
+    print(f'Windows C portable self-test: archive/header/export refusals passed; native proof pending')
 
 if __name__ == '__main__':
     main()

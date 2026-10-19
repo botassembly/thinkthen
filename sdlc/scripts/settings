@@ -58,7 +58,7 @@ ENGINE_SOURCES = {
     "SQLite": "databases/sqlite/src/settings.rs",
 }
 SHARED_SETTINGS = "crates/thinkthen/src/public/settings/json.rs"
-SETTINGS_DELEGATION = re.compile(r"\bEngineBuilder\s*::\s*from_settings_json\s*\(")
+SETTINGS_DELEGATION = re.compile(r"\bEngineBuilder\s*::\s*from_settings_json\s*\(|\bbuilder\s*\.\s*setting\s*\(")
 
 
 def prose(text):
@@ -327,8 +327,11 @@ def self_test(flags, names, keys):
     for surface in delegated:
         expected = [f"settings.md: {surface} {name} source has no setter: {setter}"
                     for name, setters in ENGINE_CELLS.items() for setter in setters]
-        source_cases.append((surface + " delegation", ENGINE_SOURCES[surface],
-                             "::from_settings_json(", "::missing_settings(", expected))
+        path = ENGINE_SOURCES[surface]
+        paired = "builder.setting(" in (REPO / path).read_text(encoding="utf-8")
+        source_cases.append((surface + " delegation", path,
+                             "builder.setting(" if paired else "::from_settings_json(",
+                             "builder.missing_settings(" if paired else "::missing_settings(", expected))
     for name, path, old, new, expected in source_cases:
         source = (REPO / path).read_text(encoding="utf-8")
         if old not in source:

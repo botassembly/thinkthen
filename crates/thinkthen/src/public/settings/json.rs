@@ -27,7 +27,7 @@ engine_fields! {
     backend: String => "backend", "String";
     base_url: String => "base_url", "String";
     model: String => "model", "String";
-    throttle: u8 => "throttle", "u8";
+    throttle: i128 => "throttle", "u8";
     max_requests: Option<usize> => "max_requests", "Option<usize>";
     max_requests_total: Option<u64> => "max_requests_total", "Option<u64>";
     max_estimated_input_tokens_total: Option<u64> => "max_estimated_input_tokens_total", "Option<u64>";
@@ -48,20 +48,35 @@ engine_fields! {
 // Serde structs also accept positional arrays. This map-only entry preserves
 // the engine constructor's object boundary while deriving all fields once.
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(with = "Fields"))]
-pub(in crate::public) struct Document(Fields);
+pub(in crate::public) struct Document(Fields, Vec<(String, Box<serde_json::value::RawValue>)>);
 impl<'de> Deserialize<'de> for Document {
     fn deserialize<D: Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
-        struct Object;
-        impl<'de> serde::de::Visitor<'de> for Object {
-            type Value = Document;
-            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("one settings object")
-            }
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
-                Fields::deserialize(serde::de::value::MapAccessDeserializer::new(map)).map(Document)
-            }
-        }
         de.deserialize_map(Object)
+    }
+}
+
+struct Object;
+impl<'de> serde::de::Visitor<'de> for Object {
+    type Value = Document;
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("one settings object")
+    }
+    fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
+        let mut map = map;
+        let mut pairs = Vec::<(String, Box<serde_json::value::RawValue>)>::new();
+        while let Some((name, value)) = map.next_entry()? {
+            if pairs.iter().any(|(held, _)| held == &name) {
+                return Err(serde::de::Error::custom("duplicate field"));
+            }
+            pairs.push((name, value));
+        }
+        let raw = pairs
+            .iter()
+            .map(|(name, value)| (name, value))
+            .collect::<std::collections::BTreeMap<_, _>>();
+        let source = serde_json::to_string(&raw).map_err(serde::de::Error::custom)?;
+        let fields = serde_json::from_str(&source).map_err(serde::de::Error::custom)?;
+        Ok(Document(fields, pairs))
     }
 }
 
@@ -120,26 +135,38 @@ impl Document {
         mut builder: EngineBuilder,
         captured: bool,
     ) -> Result<EngineBuilder, Error> {
+        // Reserved activation refuses before every other setting.
+        if self.0.proxy.is_some() {
+            builder = builder.proxy(&crate::public::ProxyActivation::Null);
+            builder.check_proxy()?;
+        }
+        if let Some(batch) = &self.0.batch {
+            batch.native()?;
+        }
+        for (name, value) in &self.1 {
+            // Native documents name profile files; SQL pairs carry inline profiles.
+            // Both sources use the same field parser and builder application.
+            builder = builder.apply_setting(name, value.get(), captured, false)?;
+        }
+        builder.check_setting_prices()?;
+        Ok(builder)
+    }
+    fn apply_fields(
+        &self,
+        mut builder: EngineBuilder,
+        captured: bool,
+        inline_profile: bool,
+    ) -> Result<EngineBuilder, Error> {
         let values = &self.0;
         // Reserved activation has no executable protocol; presence alone refuses.
         if values.proxy.is_some() {
             builder = builder.proxy(&crate::public::ProxyActivation::Null);
         }
         builder.check_proxy()?;
-        match (
-            &values.usd_per_million_input,
-            &values.usd_per_million_output,
-        ) {
-            (Some(input), Some(output)) => {
-                builder = builder.prices_usd_per_million(input, output)?
-            }
-            (None, None) => {}
-            _ => {
-                return Err(Error::usage(
-                    "settings prices require both input and output fields",
-                ));
-            }
-        }
+        builder = builder.apply_setting_prices(
+            values.usd_per_million_input.as_deref(),
+            values.usd_per_million_output.as_deref(),
+        )?;
         // Configured backend names belong to the captured configuration. All
         // other owner checks run before capture against a bare builder too.
         if captured && let Some(value) = &values.backend {
@@ -176,7 +203,11 @@ impl Document {
             builder = builder.model(value)?;
         }
         if let Some(value) = &values.profile {
-            builder = builder.profile(value)?;
+            builder = if inline_profile {
+                builder.profile_json(value)?
+            } else {
+                builder.profile(value)?
+            };
         }
         if let Some(value) = &values.record {
             builder = builder.record(value)?;
@@ -188,7 +219,7 @@ impl Document {
             builder = builder.replay(value)?;
         }
         if let Some(value) = values.throttle {
-            builder = builder.throttle(value)?;
+            builder = builder.throttle(u8::try_from(value).unwrap_or_default())?;
         }
         if let Some(value) = values.timeout {
             builder = builder.timeout(Duration::from_secs(value))?;
@@ -197,6 +228,28 @@ impl Document {
     }
 }
 impl EngineBuilder {
+    pub(super) fn apply_setting(
+        self,
+        name: &str,
+        raw: &str,
+        captured: bool,
+        inline_profile: bool,
+    ) -> Result<Self, Error> {
+        let value: &serde_json::value::RawValue = serde_json::from_str(raw).map_err(|_| {
+            Error::usage(format!(
+                "settings {} has an invalid value",
+                crate::core::safe_key(name)
+            ))
+        })?;
+        let name =
+            serde_json::to_string(name).map_err(|_| Error::usage("settings JSON is one object"))?;
+        Document::parse(&format!("{{{name}:{}}}", value.get()))?.apply_fields(
+            self,
+            captured,
+            inline_profile,
+        )
+    }
+
     /// Admit engine settings before capturing the environment and configuration.
     /// Configured backend names resolve against that captured configuration.
     /// # Errors

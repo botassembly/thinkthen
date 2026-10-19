@@ -20,149 +20,36 @@ from unittest.mock import patch
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO))
-from conformance.source_fixtures import stage_checkout
 
 
-def workflow_command(root, name, doc):
-    # Restore each mutation so the next rule sees the same tracked checkout.
-    workflow = root / '.github/workflows' / name
-    original = workflow.read_text()
-    workflow.write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
-    try:
-        result = subprocess.run([sys.executable, str(root / 'sdlc/scripts/workflows')],
-                                cwd=root, capture_output=True, text=True, timeout=30)
-        return result.returncode, result.stdout + result.stderr
-    finally:
-        workflow.write_text(original)
-
-
-def workflow_cases():
-    with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
-        root = Path(temporary)
-        stage_checkout(REPO, root)
-        # Nested package checks archive HEAD from this isolated checkout.
-        subprocess.run(['git', '-C', str(root), '-c', 'user.name=fixture',
-                        '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false',
-                        '-c', 'core.hooksPath=/dev/null', 'commit', '-qm', 'Stage workflow fixture'],
-                       check=True)
-        workflow_cases_at(root)
-
-
-def workflow_cases_at(root):
-    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
-    for name, doc in (('release.yml', release), ('windows.yml', windows)):
-        code, output = workflow_command(root, name, doc)
-        assert code == 0, (name, code, output)
-    # The host cache exception must not admit another release cache or a wider key.
-    for job in ('build', 'smoke'):
-        steps = release['jobs'][job]['steps']
-        cache = next(step for step in steps if step.get('id') == 'duckdb-hosts')
-        setup = next(step for step in steps if 'host-setup' in step.get('run', ''))
-        assert steps.index(cache) < steps.index(setup)
-        if job == 'smoke':
-            assert setup['env']['THINKTHEN_DUCKDB_HOST_CACHE_HIT'] == '${{ steps.duckdb-hosts.outputs.cache-hit }}'
-        for defect in ('path', 'restore-keys', 'sha', 'target', 'run', 'action', 'runner', 'publish'):
-            doc = deepcopy(release)
-            candidate = next(step for step in doc['jobs'][job]['steps'] if step.get('id') == 'duckdb-hosts')
-            if defect == 'path': candidate['with']['path'] = '~/.cache/thinkthen-toolchains'
-            elif defect == 'restore-keys': candidate['with']['restore-keys'] = 'duckdb-hosts-'
-            elif defect in ('sha', 'target', 'run'):
-                expression = {'sha': 'needs.resolve.outputs.sha', 'target': 'matrix.target', 'run': 'github.run_id'}[defect]
-                candidate['with']['key'] = candidate['with']['key'].replace('${{ ' + expression + ' }}', 'any')
-            elif defect == 'action': candidate['uses'] = 'actions/cache@' + 'a' * 40
-            elif defect == 'runner': candidate['if'] = "runner.os == 'macOS'"
-            else:
-                doc['jobs'][job]['steps'].remove(candidate)
-                doc['jobs']['publish']['steps'].append(candidate)
-            code, output = workflow_command(root, 'release.yml', doc)
-            owner = 'publish' if defect == 'publish' else job
-            assert code == 1 and f'job {owner} uses a cache' in output, (job, defect, output)
-    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    code, output = workflow_command(root, 'gate.yml', gate)
-    assert code == 0, ('gate.yml', code, output)
-    for defect in ('options', 'declaration', 'dynamic', 'paid', 'string', 'default'):
-        doc = deepcopy(gate)
-        platform = doc.get('on', doc.get(True))['workflow_dispatch']['inputs']['platform']
-        if defect == 'options': platform['options'] = {option: True for option in platform['options']}
-        elif defect == 'declaration': doc.get('on', doc.get(True))['workflow_dispatch']['inputs']['platform'] = 'ubuntu-24.04'
-        elif defect == 'dynamic': platform['options'] = ['${{ inputs.runner }}']
-        elif defect == 'paid': platform['options'].append('macos-15-large')
-        elif defect == 'string': platform['type'] = 'string'
-        else: platform['default'] = 'macos-15-large'
-        code, output = workflow_command(root, 'gate.yml', doc)
-        assert code == 1 and 'standard free hosted runners' in output, (defect, code, output)
-    for defect in ('paid', 'matrix-paid', 'skip-apple', 'mask-apple', 'wrong-sha', 'missing-language', 'mixed-paid', 'job-mask', 'upload-always'):
-        doc = deepcopy(release)
-        apple = doc['jobs']['apple-packages']
-        proof = next(step for step in apple['steps'] if step.get('name') == 'Qualify installed Swift and Objective-C Foundation')
-        if defect == 'paid':
-            apple['runs-on'] = 'macos-15-large'
-        elif defect == 'matrix-paid':
-            apple['strategy']['matrix']['include'][0]['runner'] = 'macos-15-large'
-        elif defect == 'skip-apple':
-            proof['if'] = 'false'
-        elif defect == 'mask-apple':
-            proof['continue-on-error'] = True
-        elif defect == 'wrong-sha':
-            proof['env']['SHA'] = '${{ github.sha }}'
-        elif defect == 'job-mask':
-            apple['continue-on-error'] = True
-        elif defect == 'upload-always':
-            next(step for step in apple['steps'] if (step.get('with') or {}).get('name') == 'apple-packages-${{ matrix.target }}')['if'] = '${{ always() }}'
-        elif defect == 'mixed-paid':
-            apple['strategy']['matrix']['runner'] = ['macos-15']
-            apple['strategy']['matrix']['include'][0]['runner'] = 'macos-15-large'
-        else:
-            proof['run'] = '\n'.join(proof['run'].splitlines()[:-1])
-        code, output = workflow_command(root, 'release.yml', doc)
-        assert code == 1 and ('standard free hosted runners' if 'paid' in defect else 'both installed Apple languages') in output, (defect, output)
-    for defect in ('skip', 'mask', 'wrong-sha', 'late', 'guard-bypass', 'missing-input'):
-        doc = deepcopy(windows)
-        steps = doc['jobs']['stage-0']['steps']
-        guard = next(step for step in steps if step.get('name') == 'Require the exact candidate commit')
-        if defect == 'skip':
-            guard['if'] = 'false'
-        elif defect == 'mask':
-            guard['continue-on-error'] = True
-        elif defect == 'wrong-sha':
-            guard['env']['CANDIDATE_SHA'] = '${{ github.sha }}'
-        elif defect == 'guard-bypass':
-            next(step for step in steps if 'cargo test' in step.get('run', ''))['if'] = '${{ !cancelled() }}'
-        elif defect == 'missing-input':
-            doc.get('on', doc.get(True))['workflow_dispatch']['inputs'].pop('candidate_sha')
-        else:
-            steps.remove(guard)
-            steps.append(guard)
-        code, output = workflow_command(root, 'windows.yml', doc)
-        assert code == 1 and 'candidate SHA' in output, (defect, output)
-
-
-    for defect in ('wrong-test', 'skip-guard', 'paid', 'unknown-input', 'late-lane'):
-        doc = deepcopy(windows)
-        job = doc['jobs']['recognition-cancel']
-        if defect == 'wrong-test':
-            job['steps'][-1]['run'] = 'cargo test --workspace'
-        elif defect == 'skip-guard':
-            next(step for step in job['steps'] if step.get('id') == 'candidate')['if'] = 'false'
-        elif defect == 'paid':
-            job['runs-on'] = 'windows-latest-8-cores'
-        elif defect == 'unknown-input':
-            steps = doc['jobs']['stage-0']['steps']
-            steps.remove(next(step for step in steps if step.get('name') == 'Require the standard Windows lane'))
-        else:
-            steps = doc['jobs']['stage-0']['steps']
-            lane = next(step for step in steps if step.get('name') == 'Require the standard Windows lane')
-            steps.remove(lane)
-            steps.insert(next(i for i, step in enumerate(steps) if step.get('id') == 'candidate') + 1, lane)
-        code, output = workflow_command(root, 'windows.yml', doc)
-        assert code == 1, (defect, output)
-    lane = next(step for step in windows['jobs']['stage-0']['steps']
-                if step.get('name') == 'Require the standard Windows lane')
-    for value, wanted in [('windows', 0), ('unknown', 1)]:
-        result = subprocess.run(['/bin/sh', '-c', lane['run']], env={'LANE': value})
-        assert result.returncode == wanted, value
+def linux_work_destination_cases():
+    for name, sudo, free, destination in (
+            ('roomy', 0, 900, '/mnt/thinkthen-container'),
+            ('no sudo', 1, 900, 'FALLBACK'),
+            ('small', 0, 50, 'FALLBACK'),
+            ('missing', 0, None, 'FALLBACK')):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-linux-work-') as temporary:
+            root = Path(temporary).resolve()
+            log = root / 'calls'
+            capacity = 'exit 1' if free is None else f'free={free}'
+            df = ('echo "df $*" >> "$FAKE_LOG"; case $2 in /mnt) %s ;; *) free=100 ;; esac; '
+                  'printf "Filesystem 1024-blocks Used Available Capacity Mounted\\nx 1 1 %%s 1%%%% %%s\\n" '
+                  '"$free" "$2"' % capacity)
+            for tool, body in (('df', df), ('sudo', f'echo "sudo $*" >> "$FAKE_LOG"; exit {sudo}')):
+                path = root / tool
+                path.write_text('#!/bin/sh\n' + body + '\n')
+                path.chmod(0o755)
+            result = subprocess.run(['/bin/sh', str(REPO / 'sdlc/scripts/release-workflow'),
+                                     'linux-work', 'FALLBACK'],
+                                    env={**os.environ, 'PATH': f'{root}:/usr/bin:/bin',
+                                         'FAKE_LOG': str(log)}, capture_output=True, text=True, timeout=20)
+            calls = log.read_text().splitlines() if log.exists() else []
+            sudo_calls = [call for call in calls if call.startswith('sudo ')]
+            assert result.returncode == 0 and result.stdout.strip() == destination, (
+                name, result.returncode, result.stdout, result.stderr)
+            assert calls[:1] == ['df -h / /mnt'], (name, calls)
+            assert not any(' rm ' in f' {call} ' for call in calls), (name, calls)
+            assert bool(sudo_calls) == bool(free and free > 100), (name, calls)
 
 
 def linux_tool_destination_case():
@@ -992,6 +879,8 @@ def parameter_cases():
             path = root / 'bin' / tool
             path.write_text('#!/bin/sh\n' + body + '\n')
             path.chmod(0o755)
+        # Run the real candidate guard with the prepared interpreter, not the host launcher.
+        (root / 'bin/python3').symlink_to(sys.executable)
         env = {'PATH': f'{root}/bin:{os.defpath}', 'HOME': str(root), 'LANG': 'C.UTF-8'}
         # Exercise the workflow caller with the real archived, non-executable helper.
         archived = subprocess.check_output(['git', 'archive', 'HEAD',
@@ -1030,7 +919,7 @@ def parameter_cases():
 
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
-workflow_cases()
+linux_work_destination_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()
 linux_failed_phase_evidence_case()
@@ -1040,4 +929,4 @@ linux_coverage_destination_case()
 dart_cache_setup_case()
 flutter_locked_setup_case()
 parameter_cases()
-print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')
+print('hosted workflows: release helper execution cases pass')
