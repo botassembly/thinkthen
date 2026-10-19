@@ -419,3 +419,11 @@ impl fmt::Debug for RecordReading {
         f.debug_struct("RecordReading").finish_non_exhaustive()
     }
 }
+
+/// Validate a selector through the shared RFC 6901 grammar without reading input.
+/// Hosts can report invalid selectors before opening their selected files.
+/// # Errors
+/// Returns the existing safe pointer grammar refusal.
+pub fn validate_pointer(selector: &str) -> Result<(), Error> {
+    core::Pointer::new(selector).map(|_| ()).map_err(Error::refused)
+}

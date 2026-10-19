@@ -3,7 +3,7 @@
 
 use crate::core::json::Json;
 use crate::statistics::MeasureError;
-use crate::core::probability::Probability;
+use crate::Probability;
 
 use super::{Answer, Printed, Top, Verb, verb_named};
 

@@ -11,7 +11,7 @@ use crate::statistics::key::{Key, Outcome, Want, outcome};
 use crate::statistics::optimize::suggest;
 use crate::statistics::pairs::{curve, pairs, tie_share};
 use crate::statistics::{MeasureError, auc, calibration, python_float_text, python_sum, wilson};
-use crate::core::threshold::Threshold;
+use crate::Threshold;
 
 /// A labeled answer and its key value.
 pub(crate) type Graded<'a> = (&'a Answer, Want);

@@ -56,6 +56,7 @@ pub(crate) use question::Kind as NativeQuestionKind;
 mod question_file;
 mod record_choose;
 mod record_composition;
+pub use record_composition::validate_pointer;
 pub use record_choose::RecordChooseQuestion;
 mod record_context;
 mod record_input;
@@ -169,3 +170,6 @@ pub use results::{
     AnnotationCall, ChoiceCall, DecisionCall, FilterCall, FindCall, RankCall, RecognitionCall,
     RelationCall, ScoreCall, SetRankCall, TagCall,
 };
+
+pub use crate::core::probability::{Probability, ProbabilityError};
+pub use crate::core::threshold::{Threshold, ThresholdError};

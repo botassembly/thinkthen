@@ -3,7 +3,7 @@
 use crate::core::json::Json;
 use crate::statistics::MeasureError;
 use crate::statistics::answer::{Rule, Verb};
-use crate::core::probability::Probability;
+use crate::Probability;
 use crate::core::recognize::{ENTITY, RecognitionMode};
 
 /// How a said name matches a key name.

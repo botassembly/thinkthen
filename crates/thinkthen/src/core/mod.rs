@@ -34,7 +34,7 @@ mod plan;
 mod plan_summary;
 mod pointer;
 mod price;
-mod probability;
+pub(crate) mod probability;
 mod question;
 mod question_file;
 mod question_set;
@@ -65,7 +65,7 @@ mod reply;
 mod result;
 pub(crate) mod settings;
 mod text;
-mod threshold;
+pub(crate) mod threshold;
 
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};

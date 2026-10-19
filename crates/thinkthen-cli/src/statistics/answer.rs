@@ -9,8 +9,8 @@ use crate::statistics::items::{self, Item, Items};
 use crate::statistics::levels::{LevelCuts, level_at};
 use crate::statistics::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
-use crate::core::probability::Probability;
-use crate::core::threshold::{Outcome as Judged, Threshold};
+use crate::Probability;
+use crate::Threshold;
 
 #[path = "verbs.rs"]
 mod verbs;
@@ -427,7 +427,7 @@ impl Answer {
         let probability = self
             .probability
             .ok_or(MeasureError::Probability(self.line))?;
-        self.value = threshold.judge(probability).value().map(Printed::Bool);
+        self.value = threshold.apply(probability).map(Printed::Bool);
         Ok(())
     }
 
@@ -476,9 +476,9 @@ impl Answer {
                 })
             }
             Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
-                Rule::Threshold(threshold) => match self.probability.map(|p| threshold.judge(p)) {
-                    Some(Judged::Yes) => Said::Yes,
-                    Some(Judged::No) => Said::No,
+                Rule::Threshold(threshold) => match self.probability.and_then(|p| threshold.apply(p)) {
+                    Some(true) => Said::Yes,
+                    Some(false) => Said::No,
                     _ => Said::Unresolved,
                 },
                 Rule::AsRun | Rule::Levels(_) => match self.value {
