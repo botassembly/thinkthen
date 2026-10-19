@@ -2,9 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use crate::core::json::Json;
+use crate::saved_json::Json;
 use crate::statistics::{MeasureError, record_id};
-use crate::core::pointer::Pointer;
+use crate::saved_json::Pointer;
 
 /// The group value of each numbered line: the string or integer at the pointer inside its input.
 ///

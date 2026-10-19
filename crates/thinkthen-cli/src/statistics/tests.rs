@@ -10,7 +10,7 @@ use super::{
     SplitMix64, calibration, calibration_error, json_lines, mcnemar, places, python_float_text,
     rounded,
 };
-use crate::core::pointer::Pointer;
+use crate::saved_json::Pointer;
 
 /// The six decide answers of `small/decide.jsonl` as `(p(yes), key is yes)`.
 const DECIDE: [(f64, bool); 6] = [

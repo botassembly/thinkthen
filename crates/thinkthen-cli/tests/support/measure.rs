@@ -210,7 +210,7 @@ pub(crate) fn fixtures() -> PathBuf {
 
 /// Run the binary from the fixture folder with a clear environment and these bytes on standard input.
 pub(crate) fn run(arguments: &[&str], input: &[u8]) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+    let mut child = Command::new(crate::command::binary())
         .args(arguments)
         .clear_environment()
         .current_dir(fixtures())
@@ -363,7 +363,7 @@ pub(crate) fn repository() -> PathBuf {
 
 /// Run the binary in a folder with a clear environment; standard output of a run that exits 0.
 pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+    let mut child = Command::new(crate::command::binary())
         .args(arguments)
         .clear_environment()
         .env("THINKTHEN_BATCH", "1")

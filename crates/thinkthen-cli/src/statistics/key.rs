@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::core::json::Json;
+use crate::saved_json::{Json, Kind, NULL};
 use crate::statistics::answer::{Answer, Said, Verb};
 use crate::statistics::items::{self, Matching, What};
 use crate::statistics::{MeasureError, record_id};
@@ -82,8 +82,8 @@ impl Entry {
     fn value_for(&self, answer: &Answer) -> Option<&Json> {
         match &answer.name {
             None => Some(&self.value),
-            Some(name) => match &self.value {
-                Json::Object(_) => Some(self.value.member(name).unwrap_or(&Json::Null)),
+            Some(name) => match self.value.kind() {
+                Kind::Object(_) => Some(self.value.member(name).unwrap_or(&NULL)),
                 _ => None,
             },
         }
@@ -107,13 +107,14 @@ impl Key {
             let refused = MeasureError::KeyLine(*line);
             let id = row.member("id").and_then(record_id).ok_or(refused)?;
             let value = row.member("value").ok_or(refused)?.clone();
-            let part = match row.member("part") {
-                None | Some(Json::Null) => None,
-                Some(held) => match held.as_str() {
-                    Some("tune") => Some(Part::Tune),
-                    Some("held") => Some(Part::Held),
+            let part = match row.member("part").map(Json::kind) {
+                None | Some(Kind::Null) => None,
+                Some(Kind::String(held)) => match held.as_str() {
+                    "tune" => Some(Part::Tune),
+                    "held" => Some(Part::Held),
                     _ => return Err(refused),
                 },
+                Some(_) => return Err(refused),
             };
             let entry = Entry {
                 line: *line,
@@ -155,8 +156,8 @@ impl Key {
             return Ok(None);
         };
         let unknown = MeasureError::KeyUnknown(entry.line);
-        Ok(match (answer.verb, value) {
-            (_, Json::Null) => None,
+        Ok(match (answer.verb, value.kind()) {
+            (_, Kind::Null) => None,
             (Verb::Recognize | Verb::Relate, _) => Some(Want::Items(
                 items::key(
                     entry.line,
@@ -166,11 +167,11 @@ impl Key {
                     answer
                         .items
                         .as_ref()
-                        .map_or(crate::core::RecognitionMode::Whole, |items| items.mode),
+                        .map_or(thinkthen::RecognitionMode::Whole, |items| items.mode),
                 )?,
                 self.1,
             )),
-            (Verb::Tag, Json::Array(items)) => {
+            (Verb::Tag, Kind::Array(items)) => {
                 let mut listed = Vec::new();
                 for item in items {
                     let label = item
@@ -186,14 +187,14 @@ impl Key {
                 })
             }
             (Verb::Tag, _) => None,
-            (Verb::Decide | Verb::Rank, Json::Bool(true)) => Some(Want::Yes),
-            (Verb::Decide | Verb::Rank, Json::Bool(false)) => Some(Want::No),
-            (Verb::Decide | Verb::Rank, Json::String(text)) if text == "yes" => Some(Want::Yes),
-            (Verb::Decide | Verb::Rank, Json::String(text)) if text == "no" => Some(Want::No),
+            (Verb::Decide | Verb::Rank, Kind::Bool(true)) => Some(Want::Yes),
+            (Verb::Decide | Verb::Rank, Kind::Bool(false)) => Some(Want::No),
+            (Verb::Decide | Verb::Rank, Kind::String(text)) if text == "yes" => Some(Want::Yes),
+            (Verb::Decide | Verb::Rank, Kind::String(text)) if text == "no" => Some(Want::No),
             (Verb::Decide | Verb::Rank, _) => None,
-            (Verb::Choose, Json::String(option)) => Some(Want::Option(option.clone())),
+            (Verb::Choose, Kind::String(option)) => Some(Want::Option(option.clone())),
             (Verb::Choose, _) => return Err(MeasureError::ChooseKey(entry.line)),
-            (Verb::Score | Verb::Find, Json::String(option))
+            (Verb::Score | Verb::Find, Kind::String(option))
                 if answer.options.iter().any(|held| held == option) =>
             {
                 Some(Want::Option(option.clone()))

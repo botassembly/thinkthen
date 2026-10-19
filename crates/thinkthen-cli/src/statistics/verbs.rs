@@ -1,7 +1,7 @@
 //! How the answer of each verb reads from a saved line: a `tag` answer's
 //! labels, a question's names, a probability, and a distribution's top.
 
-use crate::core::json::Json;
+use crate::saved_json::{Json, Kind, NULL};
 use crate::statistics::MeasureError;
 use crate::Probability;
 
@@ -16,19 +16,19 @@ impl Answer {
         distribution: Option<&Json>,
     ) -> Result<Vec<Self>, MeasureError> {
         let line = self.line;
-        let said: Option<Vec<String>> = match value {
-            Some(Json::Array(items)) => Some(
+        let said: Option<Vec<String>> = match value.map(Json::kind) {
+            Some(Kind::Array(items)) => Some(
                 items
                     .iter()
                     .map(|item| item.as_str().map(str::to_owned))
                     .collect::<Option<_>>()
                     .ok_or(MeasureError::Ungradable(line))?,
             ),
-            None | Some(Json::Null) => None,
+            None | Some(Kind::Null) => None,
             Some(_) => return Err(MeasureError::Ungradable(line)),
         };
-        let pairs: Vec<(String, Option<Probability>)> = match distribution {
-            Some(Json::Object(members)) => members
+        let pairs: Vec<(String, Option<Probability>)> = match distribution.map(Json::kind) {
+            Some(Kind::Object(members)) => members
                 .iter()
                 .map(|(label, p)| Ok((label.clone(), Some(probability(line, p)?))))
                 .collect::<Result<_, MeasureError>>()?,
@@ -57,18 +57,18 @@ impl Answer {
 
 /// A list of names, or the member names of a map, as a question lists its labels or levels.
 pub(super) fn names(value: Option<&Json>) -> Option<Vec<String>> {
-    match value? {
-        Json::Array(items) => items
+    match value?.kind() {
+        Kind::Array(items) => items
             .iter()
             .map(|item| item.as_str().map(str::to_owned))
             .collect(),
-        Json::Object(members) => Some(members.iter().map(|(name, _)| name.clone()).collect()),
+        Kind::Object(members) => Some(members.iter().map(|(name, _)| name.clone()).collect()),
         _ => None,
     }
 }
 
 pub(super) fn probability(line: usize, value: &Json) -> Result<Probability, MeasureError> {
-    let Json::Number(number) = value else {
+    let Kind::Number(number) = value.kind() else {
         return Err(MeasureError::Probability(line));
     };
     number
@@ -78,7 +78,7 @@ pub(super) fn probability(line: usize, value: &Json) -> Result<Probability, Meas
 }
 
 pub(super) fn top(line: usize, value: &Json) -> Result<Top, MeasureError> {
-    let Json::Object(members) = value else {
+    let Kind::Object(members) = value.kind() else {
         return Err(MeasureError::Probability(line));
     };
     let mut found: Option<Top> = None;
@@ -114,12 +114,12 @@ pub(super) fn verb(
     Ok(match verb_named(entry) {
         Some("decide")
             if audit
-                && entry.member("threshold") == Some(&Json::Null)
-                && (matches!(value, Some(Json::Null))
+                && entry.member("threshold") == Some(&NULL)
+                && (matches!(value.map(Json::kind), Some(Kind::Null))
                     || (entry.member("schema").and_then(Json::as_str)
                         == Some("thinkthen.result/2")
                         && entry.member("input").is_some()
-                        && matches!(value, Some(Json::Number(number))
+                        && matches!(value.map(Json::kind), Some(Kind::Number(number))
                             if number.as_u64().is_some_and(|position| position > 0)))) =>
         {
             Verb::Rank
@@ -132,8 +132,8 @@ pub(super) fn verb(
         Some("recognize") => Verb::Recognize,
         Some("relate") => Verb::Relate,
         Some(other) if !other.is_empty() => return Err(MeasureError::Ungradable(line)),
-        _ if matches!(value, None | Some(Json::Null | Json::Bool(_))) => Verb::Decide,
-        _ if audit && !matches!(value, Some(Json::String(_))) && !failed => {
+        _ if matches!(value.map(Json::kind), None | Some(Kind::Null | Kind::Bool(_))) => Verb::Decide,
+        _ if audit && !matches!(value.map(Json::kind), Some(Kind::String(_))) && !failed => {
             return Err(MeasureError::NoQuestion(line));
         }
         _ => Verb::Choose,

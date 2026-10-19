@@ -1,14 +1,10 @@
 //! The saved batch setting that differs from this run's setting.
 
-#[cfg(test)]
-use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::Serialize;
 
 use crate::core::batch::Setting;
-#[cfg(test)]
-use crate::core::json::Json;
 
 /// One batch setting in the documented number-or-`max` JSON form.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -24,39 +20,6 @@ impl From<Setting> for BatchSetting {
         match setting {
             Setting::Max => Self::Max("max"),
             Setting::Records(number) => Self::Records(number.get()),
-        }
-    }
-}
-
-impl BatchSetting {
-    /// The settings named by result metadata: `meta.batch_setting`. A line naming none adds
-    /// none, so an empty set means the setting is unknown. An invalid setting
-    /// gives back its line and the member that named it.
-    #[cfg(test)]
-    pub(crate) fn in_results(
-        lines: &[(usize, Json)],
-    ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
-        let mut settings = BTreeSet::new();
-        for (line, row) in lines {
-            let Some(meta) = row.member("meta") else {
-                continue;
-            };
-            let Some(named) = meta.member("batch_setting") else {
-                continue;
-            };
-            let setting = Setting::of_json(named).ok_or((*line, "meta.batch_setting"))?;
-            settings.insert(setting.into());
-        }
-        Ok(settings)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn listed(settings: &BTreeSet<Self>) -> String {
-        let mut names: Vec<String> = settings.iter().map(ToString::to_string).collect();
-        match names.pop() {
-            None => String::new(),
-            Some(last) if names.is_empty() => last,
-            Some(last) => format!("{} and {last}", names.join(", ")),
         }
     }
 }

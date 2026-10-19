@@ -1,10 +1,10 @@
 //! Said and keyed `recognize` names and `relate` edges, and the greedy match between them.
 
-use crate::core::json::Json;
+use crate::saved_json::{Json, Kind};
 use crate::statistics::MeasureError;
 use crate::statistics::answer::{Rule, Verb};
 use crate::Probability;
-use crate::core::recognize::{ENTITY, RecognitionMode};
+use thinkthen::RecognitionMode;
 
 /// How a said name matches a key name.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -69,8 +69,8 @@ impl Items {
 
 /// A JSON number as a float, or nothing.
 pub(crate) fn number(value: Option<&Json>) -> Option<f64> {
-    match value? {
-        Json::Number(number) => number.as_f64(),
+    match value?.kind() {
+        Kind::Number(number) => number.as_f64(),
         _ => None,
     }
 }
@@ -100,8 +100,8 @@ pub(crate) fn read(
         return Err(ungradable);
     }
     let (names, either): (Vec<String>, Vec<&Json>) =
-        match question.member(if relate { "relations" } else { "kinds" }) {
-            Some(Json::Array(rules)) if relate => (
+        match question.member(if relate { "relations" } else { "kinds" }).map(Json::kind) {
+            Some(Kind::Array(rules)) if relate => (
                 rules
                     .iter()
                     .map(|rule| text(rule.member("name")))
@@ -109,11 +109,11 @@ pub(crate) fn read(
                     .ok_or(ungradable)?,
                 rules
                     .iter()
-                    .filter(|rule| rule.member("either") == Some(&Json::Bool(true)))
+                    .filter(|rule| matches!(rule.member("either").map(Json::kind), Some(Kind::Bool(true))))
                     .filter_map(|rule| rule.member("name"))
                     .collect(),
             ),
-            Some(Json::Object(kinds)) if !relate => (
+            Some(Kind::Object(kinds)) if !relate => (
                 kinds.iter().map(|(kind, _)| kind.clone()).collect(),
                 Vec::new(),
             ),
@@ -160,8 +160,8 @@ pub(crate) fn read(
 
 /// The list of edges a `relate` value is, or of names under a `recognize` value's `entities`.
 fn list(verb: Verb, mode: RecognitionMode, value: &Json) -> Option<&Vec<Json>> {
-    match (verb, value) {
-        (Verb::Relate, Json::Array(list)) => Some(list),
+    match (verb, value.kind()) {
+        (Verb::Relate, Kind::Array(list)) => Some(list),
         (Verb::Relate, _) => None,
         _ => list(
             Verb::Relate,
@@ -176,9 +176,9 @@ fn list(verb: Verb, mode: RecognitionMode, value: &Json) -> Option<&Vec<Json>> {
 }
 
 fn mode(value: &Json) -> Option<RecognitionMode> {
-    match value.member("mode") {
+    match value.member("mode").map(Json::kind) {
         None => Some(RecognitionMode::Whole),
-        Some(Json::String(mode)) => RecognitionMode::parse(mode),
+        Some(Kind::String(mode)) => serde_json::from_value(serde_json::Value::String(mode.clone())).ok(),
         _ => None,
     }
 }
@@ -194,8 +194,8 @@ fn what(verb: Verb, mode: RecognitionMode, held: &Json) -> Option<What> {
         let ends = [end(held.member("source")?)?, end(held.member("target")?)?];
         return Some(What::Edge(text(held.member("relation"))?, ends));
     }
-    let place = |name: &str| match held.member(name)? {
-        Json::Number(number) => number.as_u64(),
+    let place = |name: &str| match held.member(name)?.kind() {
+        Kind::Number(number) => number.as_u64(),
         _ => None,
     };
     if mode == RecognitionMode::BoundaryOnly {
@@ -245,7 +245,7 @@ pub(crate) fn key(
 fn entity_rule(verb: Verb, names: &[String], what: What) -> What {
     match what {
         What::Name(_, start, end) if verb == Verb::Recognize && names.is_empty() => {
-            What::Name(ENTITY.to_owned(), start, end)
+            What::Name("ENTITY".to_owned(), start, end)
         }
         held => held,
     }

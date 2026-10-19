@@ -5,6 +5,7 @@
 //! follow Python's own arithmetic.
 
 pub(crate) mod answer;
+pub(crate) mod batch;
 pub(crate) mod audit;
 pub(crate) mod diff;
 pub(crate) mod group;
@@ -19,7 +20,7 @@ pub(crate) mod splice;
 use serde::Serialize;
 use serde_json::Number;
 
-use crate::core::json::Json;
+use crate::saved_json::{Json, Kind};
 use crate::render::{RenderError, json_line};
 
 /// The two-sided 95% normal quantile.
@@ -98,7 +99,7 @@ pub(crate) fn json_lines(bytes: &[u8]) -> Result<Vec<(usize, Json)>, MeasureErro
             continue;
         }
         match Json::parse(text) {
-            Ok(row @ Json::Object(_)) => lines.push((place + 1, row)),
+            Ok(row) if matches!(row.kind(), Kind::Object(_)) => lines.push((place + 1, row)),
             _ => return Err(refused),
         }
     }
@@ -107,9 +108,9 @@ pub(crate) fn json_lines(bytes: &[u8]) -> Result<Vec<(usize, Json)>, MeasureErro
 
 /// The record id a JSON value names: a string as is, an integer as its decimal text.
 pub(crate) fn record_id(value: &Json) -> Option<String> {
-    match value {
-        Json::String(text) => Some(text.clone()),
-        Json::Number(number) if number.is_i64() || number.is_u64() => Some(number.to_string()),
+    match value.kind() {
+        Kind::String(text) => Some(text.clone()),
+        Kind::Number(number) if number.is_i64() || number.is_u64() => Some(number.to_string()),
         _ => None,
     }
 }
@@ -371,19 +372,15 @@ pub(crate) fn rounded_line<T: Serialize>(value: &T) -> Result<String, RenderErro
 }
 
 fn round(value: Json) -> Json {
-    match value {
-        Json::Number(number) if number.is_f64() => number
+    match value.kind() {
+        Kind::Number(number) if number.is_f64() => Json::made(number
             .as_f64()
             .and_then(|held| Number::from_f64(rounded(held)))
-            .map_or(Json::Null, Json::Number),
-        Json::Array(items) => Json::Array(items.into_iter().map(round).collect()),
-        Json::Object(members) => Json::Object(
-            members
-                .into_iter()
-                .map(|(name, held)| (name, round(held)))
-                .collect(),
-        ),
-        other => other,
+            .map_or(Kind::Null, Kind::Number)),
+        Kind::Array(items) => Json::made(Kind::Array(items.iter().cloned().map(round).collect())),
+        Kind::Object(members) => Json::made(Kind::Object(members.iter()
+            .map(|(name, held)| (name.clone(), round(held.clone()))).collect())),
+        _ => value,
     }
 }
 

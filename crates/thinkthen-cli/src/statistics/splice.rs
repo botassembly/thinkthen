@@ -1,6 +1,6 @@
 //! Put one member's value into JSON text the parser accepted, and keep every other byte.
 
-use thinkthen::RawRecord;
+use thinkthen::ParsedJson;
 
 /// One object member: its decoded key and the byte places around it.
 struct Member {
@@ -141,7 +141,7 @@ fn string(bytes: &[u8], at: usize) -> Option<(String, usize)> {
         end += if bytes.get(end) == Some(&b'\\') { 2 } else { 1 };
     }
     let raw = std::str::from_utf8(bytes.get(at..=end)?).ok()?;
-    Some((RawRecord::json(raw).ok()?.content()?.text()?.to_owned(), end + 1))
+    Some((ParsedJson::from_json(raw).ok()?.content().text()?.to_owned(), end + 1))
 }
 
 #[cfg(test)]

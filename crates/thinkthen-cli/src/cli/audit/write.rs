@@ -12,13 +12,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::cli::measure::Cause;
 use crate::statistics::Line;
+use crate::statistics::batch::SavedBatch as BatchSetting;
+use crate::saved_json::Json;
 use crate::statistics::answer::{Answer, Verb};
 use crate::statistics::audit::{Kind, Row};
 use crate::statistics::optimize::Bar;
 use crate::statistics::rows::number;
 use crate::statistics::splice::{remove, splice};
 use crate::core::{
-    BatchSetting, BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec,
+    BlankTextError, ModelName, QuestionFile, QuestionSet, RecognizeSpec,
     RelateSpec, Setting, Typed, question_sha256_with_profile, recognize_sha256, resolve,
 };
 
@@ -206,8 +208,7 @@ fn update_batch(
     match settings.iter().copied().collect::<Vec<_>>().as_slice() {
         [BatchSetting::Records(1)] => {
             if let Some(old) = file.member("batch") {
-                let old = Setting::of_json(old)
-                    .map(BatchSetting::from)
+                let old = BatchSetting::of_json(old)
                     .ok_or(Cause::NotQuestions)?;
                 *text = remove(text, &["batch"]).ok_or(Cause::NotQuestions)?.0;
                 report.push_str(&format!("{}: audit: removed batch {old} for the question; the results ran one record a request\n", crate::core::NAME));

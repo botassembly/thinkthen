@@ -5,7 +5,7 @@ use super::{Row, Side, diff};
 use crate::statistics::answer::{self, Identity, Rule, Shown};
 use crate::statistics::items::Matching;
 use crate::statistics::json_lines;
-use crate::core::pointer::Pointer;
+use crate::saved_json::Pointer;
 use crate::render::json_line;
 
 /// `MATCH CUT_A CUT_B | A | B | EXPECTED`. `-` reads a side as run, at its run cut of 0.5. A name

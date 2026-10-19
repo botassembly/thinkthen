@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use clap::Args;
 
 use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
-use crate::core::Pointer;
+use crate::saved_json::Pointer;
 use crate::statistics::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
 use crate::statistics::answer::{self, Identity};
 use crate::statistics::diff::{
@@ -20,7 +20,8 @@ use crate::statistics::diff::{
 use crate::statistics::items::number;
 use crate::statistics::key::Key;
 use crate::statistics::{places, rounded, rounded_line};
-use crate::core::{BatchSetting, Json};
+use crate::statistics::batch::SavedBatch as BatchSetting;
+use crate::saved_json::{Json, Kind, NULL};
 use crate::failure::Failure;
 
 /// The command line of `runs diff`.
@@ -306,7 +307,7 @@ fn item_rows(out: &mut String, change: &ItemChange, name: &str) {
 /// A name as `TEXT [START,END) KIND`, or an edge as `RELATION SOURCE (KIND) -> TARGET (KIND)`.
 fn item_text(item: &Json) -> String {
     let end = |side| {
-        let side = item.member(side).unwrap_or(&Json::Null);
+        let side = item.member(side).unwrap_or(&NULL);
         format!("{} ({})", text(side, "name"), text(side, "kind"))
     };
     let [words, start, end_at, kind] =
@@ -327,9 +328,9 @@ fn item_text(item: &Json) -> String {
 
 /// A member as a table writes it: a string as is, a number as its JSON text.
 fn text(item: &Json, name: &str) -> String {
-    match item.member(name) {
-        Some(Json::String(held)) => held.clone(),
-        Some(Json::Number(number)) => number.to_string(),
+    match item.member(name).map(Json::kind) {
+        Some(Kind::String(held)) => held.clone(),
+        Some(Kind::Number(number)) => number.to_string(),
         _ => "-".to_owned(),
     }
 }

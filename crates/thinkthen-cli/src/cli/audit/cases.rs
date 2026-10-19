@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use crate::core::Json;
+use crate::saved_json::{Json, Kind};
 use crate::statistics::MeasureError;
 use crate::statistics::answer::{Answer, Rule, Said, Verb};
 use crate::statistics::items::{self, Item};
@@ -167,31 +167,31 @@ fn graded(answer: &Answer, key: &Key, rule: Rule) -> Result<Grade, MeasureError>
 
 fn shown(said: Said<'_>) -> Option<Json> {
     match said {
-        Said::Yes => Some(Json::Bool(true)),
-        Said::No => Some(Json::Bool(false)),
-        Said::Option(text) => Some(Json::String(text.to_owned())),
+        Said::Yes => Some(Json::made(Kind::Bool(true))),
+        Said::No => Some(Json::made(Kind::Bool(false))),
+        Said::Option(text) => Some(Json::made(Kind::String(text.to_owned()))),
         Said::Unresolved | Said::Tied | Said::Items(_) => None,
     }
 }
 
 fn truth(want: Want) -> Option<Json> {
     match want {
-        Want::Yes => Some(Json::Bool(true)),
-        Want::No => Some(Json::Bool(false)),
-        Want::Option(text) => Some(Json::String(text)),
+        Want::Yes => Some(Json::made(Kind::Bool(true))),
+        Want::No => Some(Json::made(Kind::Bool(false))),
+        Want::Option(text) => Some(Json::made(Kind::String(text))),
         Want::Items(..) => None,
     }
 }
 
-fn item_shape(verb: Verb, mode: crate::core::RecognitionMode, kept: &[Item]) -> Json {
-    let items = Json::Array(kept.iter().map(|item| item.printed.clone()).collect());
-    if verb == Verb::Recognize && mode == crate::core::RecognitionMode::BoundaryOnly {
-        Json::Object(vec![
-            ("mode".to_owned(), Json::String("boundary_only".to_owned())),
+fn item_shape(verb: Verb, mode: thinkthen::RecognitionMode, kept: &[Item]) -> Json {
+    let items = Json::made(Kind::Array(kept.iter().map(|item| item.printed.clone()).collect()));
+    if verb == Verb::Recognize && mode == thinkthen::RecognitionMode::BoundaryOnly {
+        Json::made(Kind::Object(vec![
+            ("mode".to_owned(), Json::made(Kind::String("boundary_only".to_owned()))),
             ("proposals".to_owned(), items),
-        ])
+        ]))
     } else if verb == Verb::Recognize {
-        Json::Object(vec![("entities".to_owned(), items)])
+        Json::made(Kind::Object(vec![("entities".to_owned(), items)]))
     } else {
         items
     }
@@ -204,29 +204,29 @@ fn options(verb: Verb, entry: &Json) -> Option<Vec<String>> {
         Verb::Score => "levels",
         _ => return None,
     };
-    match entry.member("question")?.member(field)? {
-        Json::Array(items) => items
+    match entry.member("question")?.member(field)?.kind() {
+        Kind::Array(items) => items
             .iter()
             .map(|item| item.as_str().map(str::to_owned))
             .collect(),
-        Json::Object(members) => Some(members.iter().map(|(name, _)| name.clone()).collect()),
+        Kind::Object(members) => Some(members.iter().map(|(name, _)| name.clone()).collect()),
         _ => None,
     }
 }
 
 fn valid_probabilities(saved: &Json) -> bool {
-    let Json::Object(members) = saved else {
+    let Kind::Object(members) = saved.kind() else {
         return false;
     };
     !members.is_empty()
         && members.iter().all(|(_, value)| {
-            matches!(value, Json::Number(number) if number.as_f64().is_some_and(|p| (0.0..=1.0).contains(&p)))
+            matches!(value.kind(), Kind::Number(number) if number.as_f64().is_some_and(|p| (0.0..=1.0).contains(&p)))
         })
 }
 
 fn top_two(options: Option<&[String]>, distribution: Option<&Json>) -> Option<Vec<Choice>> {
     let options = options?;
-    let Json::Object(members) = distribution? else {
+    let Kind::Object(members) = distribution?.kind() else {
         return None;
     };
     if options.len() < 2 || options.len() != members.len() {
@@ -234,10 +234,10 @@ fn top_two(options: Option<&[String]>, distribution: Option<&Json>) -> Option<Ve
     }
     let mut ranked = Vec::with_capacity(options.len());
     for option in options {
-        let Json::Number(number) = members
+        let Kind::Number(number) = members
             .iter()
             .find(|(name, _)| name == option)
-            .map(|(_, value)| value)?
+            .map(|(_, value)| value.kind())?
         else {
             return None;
         };
@@ -256,8 +256,8 @@ fn top_two(options: Option<&[String]>, distribution: Option<&Json>) -> Option<Ve
 
 fn usage(row: &Json) -> Option<Usage> {
     let saved = row.member("meta")?.member("usage")?;
-    let count = |name| match saved.member(name)? {
-        Json::Number(number) => number.as_u64(),
+    let count = |name| match saved.member(name)?.kind() {
+        Kind::Number(number) => number.as_u64(),
         _ => None,
     };
     Some(Usage {

@@ -4,11 +4,11 @@ use std::collections::BTreeSet;
 
 use serde::{Serialize, Serializer};
 
-use crate::core::json::Json;
+use crate::saved_json::{Json, Kind};
 use crate::statistics::items::{self, Item, Items};
 use crate::statistics::levels::{LevelCuts, level_at};
 use crate::statistics::{MeasureError, python_float_text, record_id, rounded};
-use crate::core::pointer::Pointer;
+use crate::saved_json::Pointer;
 use crate::Probability;
 use crate::Threshold;
 
@@ -227,7 +227,7 @@ pub(crate) fn read(
             }
             None if verb_named(row) == Some("relate")
                 && id.as_str() == "/id"
-                && matches!(row.member("input"), Some(Json::Array(_))) =>
+                && matches!(row.member("input").map(Json::kind), Some(Kind::Array(_))) =>
             {
                 line.to_string()
             }
@@ -266,8 +266,8 @@ fn answers(
     let read = |name: Option<&str>, entry: &Json| {
         Answer::read(line, id, name, entry, identity, digest.clone())
     };
-    match row.member("answers") {
-        Some(Json::Object(members)) => {
+    match row.member("answers").map(Json::kind) {
+        Some(Kind::Object(members)) => {
             let mut all = Vec::new();
             for (name, entry) in members {
                 all.extend(read(Some(name), entry)?);
@@ -330,7 +330,7 @@ impl Answer {
         let answer = entry.member("answer");
         let distribution = answer
             .and_then(|held| held.member("probabilities"))
-            .filter(|held| **held != Json::Null);
+            .filter(|held| !held.is_null());
         let mut read = Self {
             line,
             id: id.to_owned(),
@@ -348,7 +348,7 @@ impl Answer {
             options: Vec::new(),
             number: None,
             digest,
-            band: matches!(entry.member("threshold"), Some(Json::String(_))),
+            band: matches!(entry.member("threshold").map(Json::kind), Some(Kind::String(_))),
             items: None,
         };
         match verb {
@@ -357,22 +357,22 @@ impl Answer {
                 read.options = names(question.and_then(|held| held.member("levels")))
                     .filter(|levels| levels.len() >= 2)
                     .ok_or(MeasureError::Ungradable(line))?;
-                read.number = match value {
-                    Some(Json::Number(number)) => number.as_f64(),
+                read.number = match value.map(Json::kind) {
+                    Some(Kind::Number(number)) => number.as_f64(),
                     _ => None,
                 };
             }
             Verb::Find if !failed => {
                 read.top = distribution.map(|held| top(line, held)).transpose()?;
                 read.options = distribution
-                    .and_then(|held| match held {
-                        Json::Object(members) => {
+                    .and_then(|held| match held.kind() {
+                        Kind::Object(members) => {
                             Some(members.iter().map(|(unit, _)| unit.clone()).collect())
                         }
                         _ => None,
                     })
                     .unwrap_or_default();
-                if !matches!(value, None | Some(Json::Null)) {
+                if !matches!(value.map(Json::kind), None | Some(Kind::Null)) {
                     read.value = Some(Printed::Found);
                 }
             }
@@ -382,19 +382,19 @@ impl Answer {
             }
             Verb::Tag | Verb::Score | Verb::Find | Verb::Recognize | Verb::Relate => {}
             Verb::Decide | Verb::Choose | Verb::Rank => {
-                read.value = match value {
-                    Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
+                read.value = match value.map(Json::kind) {
+                    Some(Kind::Bool(_)) if verb == Verb::Choose && !failed => {
                         return Err(MeasureError::Ungradable(line));
                     }
-                    Some(Json::Bool(held)) => Some(Printed::Bool(*held)),
-                    Some(Json::String(text)) => Some(Printed::Option(text.clone())),
-                    None | Some(Json::Null) => None,
+                    Some(Kind::Bool(held)) => Some(Printed::Bool(*held)),
+                    Some(Kind::String(text)) => Some(Printed::Option(text.clone())),
+                    None | Some(Kind::Null) => None,
                     Some(_) if failed || verb != Verb::Choose => None,
                     Some(_) => return Err(MeasureError::Ungradable(line)),
                 };
                 read.probability = answer
                     .and_then(|held| held.member("probability"))
-                    .filter(|held| **held != Json::Null)
+                    .filter(|held| !held.is_null())
                     .map(|held| probability(line, held))
                     .transpose()?;
                 read.top = distribution.map(|held| top(line, held)).transpose()?;
@@ -411,13 +411,13 @@ impl Answer {
         }
         let Some(threshold) = entry
             .member("threshold")
-            .filter(|held| **held != Json::Null)
+            .filter(|held| !held.is_null())
         else {
             return Ok(());
         };
-        let threshold = match threshold {
-            Json::Number(number) => number.as_f64().and_then(|cut| Threshold::cut(cut).ok()),
-            Json::String(band) => band.parse::<Threshold>().ok(),
+        let threshold = match threshold.kind() {
+            Kind::Number(number) => number.as_f64().and_then(|cut| Threshold::cut(cut).ok()),
+            Kind::String(band) => band.parse::<Threshold>().ok(),
             _ => None,
         }
         .ok_or(MeasureError::Ungradable(self.line))?;

@@ -9,6 +9,7 @@ use thinkthen::*;
 mod cli;
 mod mcp;
 mod statistics;
+mod saved_json;
 mod probes;
 mod plan_document;
 mod render;
