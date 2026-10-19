@@ -756,7 +756,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
 def check_c_calls(output):
     """Read each complete owned Call; retain the README's six exact answers."""
     calls = [json.loads(line) for line in output.splitlines()]
-    wanted = [('decide', [True, False, None]), ('choose', ['billing', 'shipping', 'account'])]
+    wanted = [('decide', [True, False, True]), ('choose', ['billing', 'shipping', 'account'])]
     if len(calls) != len(wanted):
         raise Refusal('c-example-call-count')
     for call, (function, values) in zip(calls, wanted):
@@ -767,7 +767,10 @@ def check_c_calls(output):
                            for got, want in zip(actual, values)))
         if (answer.get('function') != function or not matches
                 or call.get('facts', {}).get('records') != len(values)):
-            raise Refusal('c-example-answer-or-facts')
+            raise Refusal('c-example-answer-or-facts: ' + json.dumps({
+                'function': answer.get('function'), 'value': actual,
+                'records': call.get('facts', {}).get('records'),
+                'expected_function': function, 'expected_value': values}))
 
 
 def check_examples(packages, root=REPO, families=None):

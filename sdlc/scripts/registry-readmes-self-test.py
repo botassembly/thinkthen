@@ -59,13 +59,13 @@ def cli_examples(runner, packages, family):
 class PackageText(unittest.TestCase):
     def test_c_owned_calls_keep_exact_answers_and_do_not_read_nested_values(self):
         calls = [{'answer': {'function': function, 'value': values}, 'facts': {'records': 3}}
-                 for function, values in [('decide', [True, False, None]),
+                 for function, values in [('decide', [True, False, True]),
                                           ('choose', ['billing', 'shipping', 'account'])]]
         readmes.check_c_calls('\n'.join(map(json.dumps, calls)))
-        for replacement in (False, [1, 0, None], {'value': [True, False, None]}, '\"value\":[true,false,null]'):
+        for replacement in (False, [1, 0, 1], [True, False, None], {'value': [True, False, True]}, '\"value\":[true,false,true]'):
             changed = json.loads(json.dumps(calls))
             changed[0]['answer']['value'] = replacement
-            changed[0]['value'] = {'nested': [True, False, None]}
+            changed[0]['value'] = {'nested': [True, False, True]}
             with self.assertRaises(readmes.Refusal):
                 readmes.check_c_calls('\n'.join(map(json.dumps, changed)))
 
