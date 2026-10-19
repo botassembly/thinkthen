@@ -284,7 +284,7 @@ fn current(connection: &Connection, cancel: &Cancel) -> Result<(), Error> {
     let version: i64 = waiting(BUSY, cancel, || {
         connection.query_row("PRAGMA user_version", [], |row| row.get(0))
     })?;
-    if version != 2 {
+    if version != super::STORE_VERSION {
         return Err(Error::StoreVersion(SQLITE.to_owned()));
     }
     Ok(())
