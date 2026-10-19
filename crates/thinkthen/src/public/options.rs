@@ -65,6 +65,7 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn from_flag(flag: Arc<AtomicBool>) -> Self {
         Self(flag)
     }
@@ -117,11 +118,10 @@ pub struct CallOptions<'a> {
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
-    // entity admission and legacy annotation group failures without wire controls.
+    // entity admission without wire controls.
     pub(in crate::public) scalar_input: bool,
     pub(in crate::public) recovery_rows: bool,
     pub(in crate::public) entity_rows: bool,
-    pub(in crate::public) legacy_annotation: bool,
     pub(in crate::public) readiness: Option<&'a readiness::Readiness<'a>>,
     // Keep local call stops separate from actual process signals.
     cancel: [Option<&'a CancelToken>; 2],
@@ -178,7 +178,6 @@ impl<'a> CallOptions<'a> {
             scalar_input: false,
             recovery_rows: false,
             entity_rows: false,
-            legacy_annotation: false,
             readiness: None,
             cancel: [None, None],
             due: None,
@@ -202,6 +201,7 @@ impl<'a> CallOptions<'a> {
         self
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn readiness(mut self, reader: &'a readiness::Readiness<'a>) -> Self {
         self.readiness = Some(reader);
         self
@@ -216,6 +216,7 @@ impl<'a> CallOptions<'a> {
 
     // CLI signals retain an earned whole-set answer before the process exits.
     // Public caller cancellation remains dominant unless this private bridge is selected.
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn cli_cancel(
         mut self,
         value: &'a CancelToken,
@@ -360,7 +361,7 @@ impl<'a> CallOptions<'a> {
     }
 
     /// Seconds since call start; `-1` clears and `0` sends nothing.
-    /// Retained for host source migration to `deadline_ms`.
+    /// Accept fractional seconds from caller-owned duration settings.
     ///
     /// # Errors
     /// Refuses another negative value, NaN, infinity, or an excessive budget.
@@ -401,7 +402,7 @@ impl<'a> CallOptions<'a> {
         self.deadline_after(budget)
     }
 
-    /// Milliseconds retained for host source migration to `deadline_ms`.
+    /// An explicitly named millisecond deadline.
     ///
     /// # Errors
     /// As [`CallOptions::deadline_ms`].

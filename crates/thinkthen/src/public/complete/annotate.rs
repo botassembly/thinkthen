@@ -126,7 +126,7 @@ fn complete_row<T>(
     set: &core::QuestionSet,
     stop: &Stop<'_>,
     held: &Held<T>,
-    (at, legacy): (usize, bool),
+    at: usize,
     row: pull::Row<Annotations>,
 ) -> Result<CompleteAnnotated, Error> {
     let annotation = row.map_err(failed)?;
@@ -141,11 +141,7 @@ fn complete_row<T>(
     }
     let all_failed =
         annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty();
-    if all_failed && legacy {
-        crate::public::bulk::observe_annotated_questions(&observed, at, stop)?;
-    } else {
-        crate::public::bulk::observe_annotated(&observed, at, stop)?;
-    }
+    crate::public::bulk::observe_annotated(&observed, at, stop)?;
     if all_failed {
         return Err(crate::public::asking::backend_failed());
     }
