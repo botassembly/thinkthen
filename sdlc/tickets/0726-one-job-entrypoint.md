@@ -25,3 +25,7 @@ The coordinator reported on 2026-10-19 that several targeted M5 launches omitted
 ## Amendment, 2026-10-19
 
 `ticketsGate` keeps the existing gate routing, with lint in the 0619 Linux container and native tests on the M5, as ruled for 0615. `sdlc/scripts/job` wraps each existing gate step; it does not demand native all-language lint, substitute compilers or manifest entries, or add image inputs. The proof's gate run uses that routing.
+
+## Progress
+
+- 2026-10-19 started
