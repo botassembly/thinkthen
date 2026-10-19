@@ -134,6 +134,14 @@ impl Engine {
     pub fn provider_name(&self) -> &'static str {
         self.inner.backend().api_type().provider_name()
     }
+    /// Whether the resolved posting endpoint names the default built-in service.
+    ///
+    /// This uses the native backend's exact endpoint comparison after URL resolution.
+    /// It reads nothing and sends nothing; alternate paths and custom services return false.
+    #[must_use]
+    pub fn is_built_in(&self) -> bool {
+        self.inner.backend().is_built_in()
+    }
     /// Whether the actual adapter treats this engine's selected model as a mutable alias.
     #[must_use]
     pub fn model_is_mutable_alias(&self) -> bool {

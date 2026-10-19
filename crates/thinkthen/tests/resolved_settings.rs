@@ -67,3 +67,23 @@ fn built_engine_observations_use_actual_adapter_model_and_profile_without_sendin
     }
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn built_in_observation_uses_the_resolved_endpoint_without_sending() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
+    for (base, expected) in [
+        (None, true),
+        (Some("https://api.typesafe.ai/v1"), true),
+        (Some("https://api.typesafe.ai/v1/"), true),
+        (Some("https://api.typesafe.ai/v1/alternate"), false),
+        (Some(listener.base()), false),
+    ] {
+        let mut builder = Engine::builder().no_cache();
+        if let Some(base) = base {
+            builder = builder.base_url(base).unwrap();
+        }
+        let engine = builder.build().unwrap();
+        assert_eq!(engine.is_built_in(), expected);
+    }
+    assert_eq!(listener.count(), 0);
+}
