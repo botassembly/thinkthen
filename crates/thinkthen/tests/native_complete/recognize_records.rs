@@ -36,6 +36,8 @@ fn an_external_cache_change_between_records_refuses_before_the_next_send() {
     assert_eq!(failure.kind(), ErrorKind::Local);
     assert_eq!(failure.facts().unwrap().records(), 1);
     assert_eq!(listener.count(), 2);
+    drop(engine);
+    std::fs::remove_dir_all(folder).unwrap();
 }
 
 #[cfg(test)]

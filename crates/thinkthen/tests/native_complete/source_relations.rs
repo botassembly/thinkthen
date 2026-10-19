@@ -59,6 +59,7 @@ fn equal_source_entities_share_wire_questions_and_expand_original_occurrences_af
             .first_line(),
         Some(3)
     );
+    std::fs::remove_dir_all(root).unwrap();
 }
 #[test]
 fn source_inventory_survives_rejected_edges_and_zero_relation_questions() {
