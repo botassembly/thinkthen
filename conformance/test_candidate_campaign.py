@@ -15,6 +15,7 @@ from conformance import parity
 from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+from sdlc.scripts.tools import load_manifest
 
 from conformance.children.children import fixture_communicate
 
@@ -27,14 +28,19 @@ class CandidatePlatforms(unittest.TestCase):
             document = json.loads((root / 'conformance/cases.json').read_text())
             contract = document['parity']
             host = platform.system().lower() + '-' + {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            manifest = load_manifest(root / 'sdlc/tools.json')
             for entry in manifest['libraries'].values():
                 entry['check_platforms'] = [host]
             for name in manifest['databases']:
                 manifest['databases'][name] = [host]
             for name in ('go', 'jvm'):
                 manifest['libraries'][name]['check_platforms'] = ['unsupported-fixture-host']
-            (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
+            for fragment in (root / 'sdlc/tools').glob('*.json'):
+                data = json.loads(fragment.read_text())
+                for family in ('libraries', 'databases'):
+                    for name in data.get(family, {}):
+                        data[family][name] = manifest[family][name]
+                fragment.write_text(json.dumps(data))
             fixture = root / 'fixtures'
             fixture.mkdir(exist_ok=True)
             for row in parity.all_consumers(contract):
@@ -65,7 +71,7 @@ class CandidatePlatforms(unittest.TestCase):
                     result = subprocess.run([sys.executable, 'conformance/parity.py', '12345'],
                                             cwd=root, env=env, capture_output=True, text=True, timeout=90)
                     self.assertEqual(result.returncode, int(bool(failure)), result.stdout + result.stderr)
-                    self.assertIn('sdlc/tools.json libraries.go =', result.stdout)
+                    self.assertIn('sdlc/tools/go.json libraries.go =', result.stdout)
                     self.assertFalse((fixture / 'go.called').exists())
                     self.assertFalse((fixture / 'java.called').exists())
                     self.assertTrue((fixture / 'swift.called').exists())
@@ -158,7 +164,7 @@ class CandidateSmokes(unittest.TestCase):
                 (library / 'check.sh').write_text('exit 77\n')
             env = {'PATH': fixture_path(tools), 'HOME': str(root / 'home')}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            manifest = json.loads((root / 'sdlc/tools.json').read_text())
+            manifest = load_manifest(root / 'sdlc/tools.json')
             arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
             host = platform.system().lower() + '-' + arch
             for member in ('c', 'go', 'swift', 'objective-c'):
@@ -171,7 +177,7 @@ class CandidateSmokes(unittest.TestCase):
                     expected = f'FAIL libraries/{member} (not run)' if supported else f'unsupported libraries/{member}'
                     self.assertIn(expected, result.stdout)
                     if not supported:
-                        self.assertIn(f'sdlc/tools.json libraries.{member} =', result.stdout)
+                        self.assertIn(f'sdlc/tools/{member}.json libraries.{member} =', result.stdout)
                     self.assertNotIn('smoke: pass', result.stdout)
 
 

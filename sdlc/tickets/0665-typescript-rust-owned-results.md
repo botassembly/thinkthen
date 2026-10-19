@@ -10,7 +10,7 @@ Depends on: 0629, 0664, 0688, 0689, 0727, 0728
 
 ## Outcome
 
-- Changes: `libraries/typescript/src/`, `libraries/typescript/native.js`, `libraries/typescript/native.d.ts`, `libraries/typescript/results_generated.js`, `libraries/typescript/results_generated.d.ts`, `libraries/typescript/tests/`, `build-tools/results/templates/typescript.py`, `build-tools/results/generate.py`, `build-tools/results/registry/typescript.py`, `build-tools/results/legacy/typescript.txt`.
+- Changes: `libraries/typescript/src/`, `libraries/typescript/native.js`, `libraries/typescript/native.d.ts`, `libraries/typescript/results_generated.js`, `libraries/typescript/results_generated.d.ts`, `libraries/typescript/tests/`, `build-tools/results/templates/typescript.py`, `build-tools/results/generate.py`, `build-tools/results/registry/typescript.json`, `build-tools/results/legacy/typescript.txt`.
 - The addon takes JavaScript values and calls `Engine::call`, the Rust run function from 0629. It builds results by mapping the 0689 value tree, so answer fields come from the core.
 - The JavaScript polling loop in `Operation` around `poll` and its private closed, reader and producer error text are deleted. Async calls run the run function on a napi worker and cancel through its handle.
 - `callResult`, `callResolution`, the JSON parsers in `results_generated.js` and the `dump` input serializer in `native.js` are deleted. The generator stops emitting the JavaScript readers; the generated `.d.ts` declarations remain.

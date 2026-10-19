@@ -1,0 +1,27 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/zig/src/plan_generated.zig",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/zig/src/results_generated.zig",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/zig/src/request_generated.zig",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/zig/src/calls_generated.zig",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/zig/src/request_codec_generated.zig",
+    "producer": "results"
+  }
+]

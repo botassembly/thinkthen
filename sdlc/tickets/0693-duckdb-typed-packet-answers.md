@@ -10,7 +10,7 @@ Depends on: 0688, 0728
 
 ## Outcome
 
-- Changes: `databases/duckdb/bridge/src/`, `databases/duckdb/cpp/src/`, `databases/duckdb/tools/receipt_types.py`, `databases/duckdb/tools/receipt_adapter.py`, `databases/duckdb/tools/source_checks.py`, `databases/duckdb/check.sh`, `databases/duckdb/NOTES.md`, `build-tools/results/registry/duckdb.py`.
+- Changes: `databases/duckdb/bridge/src/`, `databases/duckdb/cpp/src/`, `databases/duckdb/tools/receipt_types.py`, `databases/duckdb/tools/receipt_adapter.py`, `databases/duckdb/tools/source_checks.py`, `databases/duckdb/check.sh`, `databases/duckdb/NOTES.md`, `build-tools/results/registry/duckdb.json`.
 - The Rust bridge returns typed values built from the settled answer that 0612 puts in the packet: the answer, probability, pick and resolution, and typed rows for the `_many` tables and rank.
 - The C++ JSON parsing of bridge results and the generated receipt parsers are deleted: `cpp/src/receipt.hpp`, `cpp/src/receipt_types_generated.hpp` and its four numbered parts, their generator `tools/receipt_types.py` and its `receipt_adapter.py`, the receipt entries in `build-tools/results/registry.py`, and the `receipt_types.py --check` steps in `check.sh` and `tools/source_checks.py`.
 - The details column still returns DuckDB `JSON`, written by Rust.

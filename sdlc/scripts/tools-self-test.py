@@ -17,7 +17,7 @@ SCRIPT = ROOT / 'sdlc/scripts/tools.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
 from conformance.source_fixtures import fixture_tool_groups
-from sdlc.scripts.tools import fixture_path
+from sdlc.scripts.tools import fixture_path, load_manifest
 
 
 class FixtureToolPaths(unittest.TestCase):
@@ -60,7 +60,7 @@ class FixtureToolPaths(unittest.TestCase):
                                                         env=negative, text=True), 'runtime')
 
     def test_fixture_groups_include_every_declared_rung_without_bootstrapping_providers(self):
-        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+        manifest = load_manifest()
         manifest['tools']['system']['groups'].append('fixture-extra-group')
         with tempfile.TemporaryDirectory(prefix='fixture-tool-groups-') as temporary:
             root = Path(temporary)
@@ -73,6 +73,31 @@ class FixtureToolPaths(unittest.TestCase):
 
 
 class ToolResolution(unittest.TestCase):
+    def test_lists_language_tools_with_shared_requirements_and_rejects_duplicate_pins(self):
+        with tempfile.TemporaryDirectory(prefix='resolver-language-data-') as folder:
+            root = Path(folder)
+            source = root / 'tools.json'
+            shared = {'commands': ['sh'], 'platforms': ['darwin', 'linux'], 'groups': ['common']}
+            language = {'commands': ['fixture-compiler'], 'platforms': ['darwin', 'linux'],
+                        'groups': ['fixture-language']}
+            source.write_text(json.dumps({'tools': {'shared': shared},
+                                          'libraries': {}, 'databases': {}}))
+            fragments = root / 'tools'
+            fragments.mkdir()
+            fragment = fragments / 'fixture-language.json'
+            fragment.write_text(json.dumps({'tools': {'compiler': language}}))
+            command = [sys.executable, str(SCRIPT), '--manifest', str(source),
+                       '--list', 'fixture-language']
+            env = child_env(home=root / 'home')
+            result = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), {'shared': shared, 'compiler': language})
+            fragment.write_text(json.dumps({'tools': {'shared': language}}))
+            result = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("duplicate tools: ['shared']", result.stderr)
+            self.assertEqual(result.stdout, '')
+
     def test_reports_every_missing_tool_before_starting_the_command(self):
         self.check(['thinkthen-absent-first', 'thinkthen-absent-second'], False)
 
@@ -83,7 +108,7 @@ class ToolResolution(unittest.TestCase):
         self.check(['sh'], True)
 
     def test_reports_a_missing_dated_rust_toolchain_before_starting_work(self):
-        pin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['rust-nightly']
+        pin = load_manifest()['tools']['rust-nightly']
         self.check([], False, requirement={**pin, 'version': 'nightly-1900-01-01',
                                          'groups': ['test']}, diagnostic='selected')
 

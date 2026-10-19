@@ -21,6 +21,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout
 from sdlc.scripts.tools import fixture_path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -846,6 +847,134 @@ def preflight_cases():
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 
+def smoke_family_cases():
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    smoke = release['jobs']['smoke']
+    cells = smoke['strategy']['matrix']['include']
+    base = set('command c python typescript ruby sqlite duckdb postgresql16 postgresql17 postgresql18 installers'.split())
+    expected = {
+        'x86_64-unknown-linux-gnu': base | set('go-cpp swift-zig php-dart ada-objective-c-cobol managed examples'.split()),
+        'aarch64-unknown-linux-gnu': base,
+        'aarch64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-pc-windows-msvc': {'windows-c', 'windows-command'},
+    }
+    assert len(cells) == len({(cell['target'], cell['family']) for cell in cells})
+    assert {target: {cell['family'] for cell in cells if cell['target'] == target}
+            for target in expected} == expected
+    assert smoke['timeout-minutes'] == '${{ matrix.job_minutes }}'
+    assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
+    assert 'smoke' in release['jobs']['draft']['needs']
+    selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
+    assert selected['env']['THINKTHEN_RELEASE_SMOKE_FAMILY'] == '${{ matrix.family }}'
+    assert selected['env']['THINKTHEN_TEST_PROFILE'] == 'full'
+    assert selected['timeout-minutes'] == '${{ matrix.consumer_minutes }}'
+    logs = next(step for step in smoke['steps'] if step.get('name') == 'Retain available smoke logs')
+    assert logs['if'] == 'always()' and '${{ matrix.family }}' in logs['with']['name']
+    for cell in cells:
+        assert 0 < cell['consumer_minutes'] < cell['minutes'] < cell['job_minutes'] <= 360
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    for workflow, names in ((release, ('apple-packages', 'crate', 'windows-sdks', 'draft')),
+                            (gate, ('ladder', 'language', 'linux-release'))):
+        for name in names:
+            job = workflow['jobs'][name]
+            for step in job['steps']:
+                if 'run' in step:
+                    assert 0 < step['timeout-minutes'] < job['timeout-minutes'] <= 360
+                    assert 'tee -a "$RUNNER_TEMP/' in step['run']
+            retained = next(step for step in job['steps'] if step.get('name') == 'Retain available long-job logs')
+            assert retained['if'].startswith('always()') and 'actions/upload-artifact@' in retained['uses']
+    # Use real archive/checksum/scan/completeness code with local consumer exits.
+    # This keeps the installed execution outside-in while avoiding tool builds.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-family-') as temporary:
+        root = Path(temporary).resolve()
+        stage_checkout(REPO, root)
+        scripts = root / 'sdlc/scripts'
+        # Only the isolated consumer leaf and external compiler/backend processes
+        # are controlled. All release scripts and their dependencies stay real.
+        (root / 'libraries/c/check.sh').write_text('[ -x "${THINKTHEN_COMMAND:-}" ] || exit 95\n'
+                                                   'echo selected-c\nexit "${FAKE_EXIT:-0}"\n')
+        tools = root / 'fixture-tools'
+        tools.mkdir()
+        cargo = tools / 'cargo'
+        cargo.write_text('#!/bin/sh\n[ "$*" = "build --locked --offline --quiet --package conformance-backend" ]\n')
+        cargo.chmod(0o755)
+        backend = root / 'fixture-target/debug/conformance-backend'
+        backend.parent.mkdir(parents=True)
+        backend.write_text(f'#!{sys.executable}\nimport sys\nprint(12345, flush=True)\n'
+                           'for line in sys.stdin:\n    pass\n')
+        backend.chmod(0o755)
+        import tomllib
+        version = tomllib.loads((root / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
+        bundle = root / 'bundle'
+        bundle.mkdir()
+        import zipfile
+        archive_names = ['thinkthen-' + family + '-' + version + '-fixture.tar.gz' for family in
+                         ('c', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18')]
+        archive_names += [f'thinkthen-{version}-fixture.tar.gz', 'thinkthen-first-run.tar.gz', f'thinkthen-{version}.tgz']
+        for name in archive_names:
+            with tarfile.open(bundle / name, 'w:gz') as archive:
+                command_archive = name == f'thinkthen-{version}-fixture.tar.gz'
+                data = f'#!/bin/sh\necho thinkthen {version}\n'.encode() if command_archive else b'fixture'
+                info = tarfile.TarInfo('thinkthen' if command_archive else 'payload')
+                info.mode = 0o755 if command_archive else 0o644
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        with zipfile.ZipFile(bundle / f'thinkthen-{version}.whl', 'w') as archive:
+            archive.writestr('payload', 'fixture')
+        with tarfile.open(bundle / f'thinkthen-{version}.gem', 'w') as archive:
+            payload = io.BytesIO()
+            with tarfile.open(fileobj=payload, mode='w:gz') as data:
+                info = tarfile.TarInfo('payload')
+                info.size = 7
+                data.addfile(info, io.BytesIO(b'fixture'))
+            info = tarfile.TarInfo('data.tar.gz')
+            info.size = len(payload.getvalue())
+            archive.addfile(info, io.BytesIO(payload.getvalue()))
+        for archive in list(bundle.iterdir()):
+            (bundle / (archive.name + '.sha256')).write_text(
+                hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+        home = root / 'home'
+        home.mkdir()
+        env = child_env(home=home, PATH=f'{tools}:{os.environ["PATH"]}', TMPDIR=str(root),
+                        CARGO_TARGET_DIR=str(backend.parents[1]),
+                        THINKTHEN_RELEASE_SMOKE_FAMILY='c', LANG='C.UTF-8')
+        command = ['/bin/sh', str(scripts / 'release-smoke'), str(bundle)]
+        def run(extra=None):
+            return fixture_run(command, cwd=root, env={**env, **(extra or {})},
+                               capture_output=True, text=True)
+        good = run()
+        assert good.returncode == 0 and good.stdout.count('selected-c') == 1, good
+        assert 'selected family c only' in good.stdout and 'surfaces: pass command' not in good.stdout
+        for status in ('1', '77'):
+            bad = run({'FAKE_EXIT': status})
+            assert bad.returncode == 1 and 'surfaces: FAIL libraries/c' in bad.stdout, bad
+        unknown = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'c; exit 0'})
+        assert unknown.returncode == 2 and 'unknown family' in unknown.stderr, unknown
+        absent = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'managed'})
+        assert absent.returncode == 1 and 'selected family managed has no consumer' in absent.stdout, absent
+        archive = bundle / f'thinkthen-sqlite-{version}-fixture.tar.gz'
+        archive.write_bytes(b'corrupt unselected archive')
+        corrupt = run()
+        assert corrupt.returncode == 1 and 'its .sha256 is missing or does not match' in corrupt.stdout, corrupt
+        assert 'selected-c' not in corrupt.stdout, corrupt
+        with tarfile.open(archive, 'w:gz') as packed:
+            data = str(home).encode()
+            info = tarfile.TarInfo('builder-path')
+            info.size = len(data)
+            packed.addfile(info, io.BytesIO(data))
+        checksum = bundle / (archive.name + '.sha256')
+        checksum.write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+        leaked = run()
+        assert leaked.returncode == 1 and "builder's home or the test probe" in leaked.stdout, leaked
+        assert 'selected-c' not in leaked.stdout, leaked
+        archive.unlink()
+        (bundle / (archive.name + '.sha256')).unlink()
+        missing = run()
+        assert missing.returncode == 1 and 'FAIL databases/sqlite (DIR holds no file for it)' in missing.stdout, missing
+        assert 'selected-c' not in missing.stdout, missing
+
+
 def parameter_run(case, command, **kwargs):
     print(f'hosted parameter: {case}', file=sys.stderr, flush=True)
     started = time.monotonic()
@@ -879,12 +1008,9 @@ def parameter_cases():
             assert result.stderr.startswith('hosted-candidate: '), result.stderr
     with tempfile.TemporaryDirectory(prefix='thinkthen-apple-workflow-') as temporary:
         root = Path(temporary)
-        for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
-            (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'hosted-candidate.py'):
-            (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
-        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
-        (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
+        stage_checkout(REPO, root)
+        for name in ('bin', 'packages'):
+            (root / name).mkdir()
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),
                            ('tar', f'echo source_commit={head}')]:
@@ -894,11 +1020,7 @@ def parameter_cases():
         # Run the real candidate guard with the prepared interpreter, not the host launcher.
         (root / 'bin/python3').symlink_to(sys.executable)
         env = {'PATH': fixture_path(root / 'bin'), 'HOME': str(root), 'LANG': 'C.UTF-8'}
-        # Exercise the workflow caller with the real archived, non-executable helper.
-        archived = subprocess.check_output(['git', 'archive', 'HEAD',
-                                            'libraries/swift/build-xcframework.sh'], cwd=REPO)
-        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
-            source.extractall(root, filter='data')
+        # stage_checkout preserves the tracked helper's non-executable mode.
         release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
         apple = release['jobs']['apple-packages']
         assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
@@ -932,6 +1054,7 @@ def parameter_cases():
             assert 'selected-swift' not in result.stdout
 
 
+smoke_family_cases()
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
 linux_work_destination_cases()

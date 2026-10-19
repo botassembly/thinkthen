@@ -32,7 +32,7 @@ sdlc/scripts/spec
 sdlc/scripts/surfaces
 ```
 
-The tool resolver installs the versions in `sdlc/tools.json` into the job checkout on macOS. Linux gates consume that manifest from the pinned tool image. Builds and tests run offline after preparation. Tests replay recorded responses, so you need no key. Maintainers can run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` by hand.
+The tool resolver installs the versions in `sdlc/tools.json` and `sdlc/tools/<language>.json` into the job checkout on macOS. Linux gates consume that manifest from the pinned tool image. Builds and tests run offline after preparation. Tests replay recorded responses, so you need no key. Maintainers can run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` by hand.
 
 ## The four names
 

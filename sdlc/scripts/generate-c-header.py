@@ -2,7 +2,6 @@
 """Generate or check the committed C interface with the reviewed external tool."""
 import argparse
 import difflib
-import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -10,10 +9,12 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from sdlc.scripts.tools import load_manifest
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import CARGO, child_env
 
-VERSION = 'cbindgen ' + json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['cbindgen']['version']
+VERSION = 'cbindgen ' + load_manifest()['tools']['cbindgen']['version']
 
 
 def tool_environment():
