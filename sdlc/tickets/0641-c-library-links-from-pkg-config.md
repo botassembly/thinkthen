@@ -26,3 +26,7 @@ Depends on: 0619
 - The release archive is made by libraries/c/localize.sh. That script hides symbols by partial linking, with a separate macOS path that removes LLVM bitcode using rust-objcopy (localize.sh:24-40) and coverage special cases (localize.sh:25-27, 42-45).
 - The README says only Linux static linking is proven, and the C gate checks Linux only (check.sh:52-55 copies `libthinkthen_c.so`).
 - Recent repairs for MSVC and Windows output show the other platforms are untested until late: 0abd01a6f, 1b250072f, dc155aec2.
+
+## Progress
+
+- 2026-10-19 PM assigned the routine C source-check Darwin linking defect here: libraries/c/check.sh copies target/debug/libthinkthen_c.so and links libthinkthen.so despite declaring Darwin support; 0636 proves the installed CLI, Rust and C entrypoints and makes no source-linking repair.
