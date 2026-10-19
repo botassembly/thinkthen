@@ -52,6 +52,7 @@ pub(super) fn records<T: InputEvidence>(values: impl IntoIterator<Item = T>) -> 
 pub(super) fn original(value: &QuestionInput) -> Result<&str, Box<dyn std::error::Error>> {
     match value {
         QuestionInput::Text(text) => Ok(text),
+        QuestionInput::Record(record) => record.original().literal().ok_or_else(|| "expected text original".into()),
         _ => Err("expected text original".into()),
     }
 }
