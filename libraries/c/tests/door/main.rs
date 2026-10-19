@@ -7,8 +7,8 @@
 //!
 //! Every program here links the built door the way a host does: through
 //! `include/thinkthen.h`, `-lthinkthen`, and the soname, under
-//! AddressSanitizer with leak checking. Each runs in its own process with a
-//! cleared environment, a loopback address, a fake key, and a fresh cache.
+//! AddressSanitizer, with leak checking on supported hosts. Each runs in its own
+//! process with a cleared environment, a loopback address, a fake key, and a fresh cache.
 //!
 //! Unix consumers run under ASan; Windows consumers use MSVC and the public DLL.
 
@@ -46,6 +46,14 @@ use std::time::{Duration, Instant};
 use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
+
+// Apple's AddressSanitizer has no LeakSanitizer. Keep address checks there
+// and retain leak checking on the Linux consumer.
+const ASAN_OPTIONS: &str = if cfg!(target_os = "macos") {
+    "detect_leaks=0:abort_on_error=0"
+} else {
+    "detect_leaks=1:abort_on_error=0"
+};
 
 fn consumer_name(source: &Path) -> String {
     let relative = source.strip_prefix(crate_dir()).expect("a crate fixture");
@@ -146,7 +154,7 @@ fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     #[cfg(unix)]
-    command.env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0");
+    command.env("ASAN_OPTIONS", ASAN_OPTIONS);
     #[cfg(windows)]
     if let Some(path) = std::env::var_os("PATH") {
         command.env("PATH", path);

@@ -4,6 +4,8 @@
 
 ## Recommended development 0.2 API
 
+C call input uses counted canonical JSON. The [input decision](../../sdlc/decisions/2026-10-19-c-input-json.md) records the choice and the migration boundary for existing typed and component-based entry points.
+
 Use the owned `thinkthen_session_*` interface for all ten judgments. Pass length-delimited canonical Request JSON to `thinkthen_session_new`; the shared [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The [session contract](../../sdlc/planning/adr/0129-owned-json-sessions.md) owns streaming, packet ordering and terminal results. These development interfaces do not describe a published 0.2 package.
 
 `thinkthen_session_new` identifies the caller as C. Language bindings over this interface use `thinkthen_session_new_with_surface` with their length-delimited native `Surface` token, so the engine identifies the outer wrapper accurately. The token describes the caller; it grants no authority and changes no answer or cache identity. The generated header defines both constructors with the same ownership and diagnostic rules.
@@ -28,7 +30,7 @@ PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
 ./consumer
 ```
 
-[examples/session.c](examples/session.c) is a complete caller using the recommended typed packet views and terminal failure facts. Supply the backend environment before a live call. The focused local package check runs that caller and the existing typed owner case against an extracted archive with a synthetic loopback backend:
+[examples/session.c](examples/session.c) is a complete caller using the recommended typed packet views and terminal failure facts. Supply the backend environment before a live call. The focused local package check runs that caller and the JSON session and plan cases against an extracted archive with a synthetic loopback backend:
 
 ```sh
 python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE
