@@ -50,6 +50,7 @@ The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select 
 - 2026-10-18 next: The independent native-test and library-tool extraction is fresh-accepted at bfcfac412 after nine resolver checks and the repaired preparation fixtures; native lint keeps the PM-approved old setup until 0619, and landing now waits only for the shared main repair and its own rebased main gate, with no container dependency.
 - 2026-10-19 next: Fresh review accepts native integration c1bfa7a98 after the complete focused fixture batch passed; the main closing gate remains, while0620 owns the removed Ruby variable/cache readers in release-workflow, gate.yml and hosted-preflight plus the empty-RUBY_MINORS fixture bypass, and native lint keeps its temporary setup until0619.
 - 2026-10-19 next: The full closing gate at b49a61103 reached the workflow self-test and failed nine of133 cases; a fresh developer is classifying every saved failure against approved0614 test deletion and0620 hosted deferrals before any further repair or gate.
+- 2026-10-19 next: Fresh review accepts ecf5f01d4 after profile admission, local refusal-fixture isolation and registry tool-fixture repairs passed focused M5 checks; retain every earlier failed gate receipt, merge the next landed main pair, then run one closing gate on that revision.
 
 ## Amendment, 2026-10-18
 
