@@ -10,10 +10,10 @@ Depends on: 0615
 
 ## Outcome
 
-- The existing `manylinux_2_28` base from `release-container`, one image per architecture referenced by digest, holds every Linux tool in the manifest. Building and testing share this one environment. The separate image list in `release-container` is deleted in favor of the one image reference.
-- One entrypoint runs `lint`, `test`, `test-full-cases`, `package` and `test-stress` in that image with CPU and memory capped to the hosted Linux runner's size. Containers start with `docker run --rm --label pm.repo=thinkthen --label pm.ticket=NNNN`, and pm jobs that run them pass `--memory 16`.
+- Each architecture builds its Linux check environment from the digest-pinned Ubuntu 24.04 base in `linux.images` in `sdlc/tools.json`, the tracked image recipe and the shared tool manifest. That environment holds every declared Linux tool and serves building and testing. Receipts record the actual constructed image ID on each machine; matching base digests and recipes do not claim a shared tools-image digest. The manifest owns `linux.distribution_images` for the separate `manylinux_2_28` distribution build at the old glibc floor; installed-artifact checks run in Ubuntu. No image publication or source-built compiler is authorized.
+- One entrypoint runs `lint`, `test`, `test-full-cases`, `package` and `test-stress` in that environment. The manifest owns the CPU cap in `linux.cpus`, the M5 and hosted memory cap in `linux.memory_gib`, and the smaller-host Yellow exception in `linux.yellow_memory_gib`. Containers start with `docker run --rm --label pm.repo=thinkthen --label pm.ticket=NNNN`; pm jobs reserve the matching memory value with `--memory`. Yellow runs one heavy job at a time.
 - Linux arm64 runs in the container on the M5 through pm job. Linux x86_64 runs in the container on Yellow through pm job. Everyday Linux proofs use the M5 container. Proofs specific to x86_64 use the Yellow container.
-- The hosted Linux jobs run the same image and install no Linux tools of their own. Deleting the hosted install steps is 0620's work.
+- The hosted Linux jobs build the same tracked recipe and tool manifest on the corresponding digest-pinned Ubuntu base and record their actual constructed image IDs. They install no Linux tools outside that environment. Hosted routing and deletion of hosted install steps are 0620's work.
 - The pm.json tickets gate runs `lint` and `test` in the M5 container, plus a native macOS `test` for Apple-only cases.
 - The routine nextest time limit is set from timings measured in the capped container, with the reason written beside the setting.
 - `machines.json` records Yellow's container role for ThinkThen. The PM requests that change; this ticket does not edit `machines.json`.
@@ -21,12 +21,15 @@ Depends on: 0615
 
 ### Proof
 
-- On the M5 through pm job with `--memory 16`, the tickets gate passes: `lint` and `test` in the arm64 container and the native macOS `test`.
+- On the M5 through pm job with `--memory` matching `linux.memory_gib`, the tickets gate passes: `lint` and `test` in the arm64 container and the native macOS `test`.
 - On the M5 through pm job, the capped arm64 container runs `test-full-cases`, `package` and `test-stress`.
-- On Yellow through pm job with `--memory 16`, the capped x86_64 container reproduces the failing cases of hosted run 39102240049 on main before 0621's fix, or records that they pass.
+- On Yellow through pm job with `--memory` matching `linux.yellow_memory_gib`, the capped x86_64 container reproduces the failing cases of hosted run 39102240049 on main before 0621's fix, or records that they pass.
+- Image preparation verifies the declared Linux tools and records the actual constructed image ID and pinned base for each architecture; receipts identify the tracked recipe and manifest revision. Resource receipts show the manifest CPU and memory caps on each machine.
 - A grep finds no `push:` or `pull_request:` trigger in `.github/workflows/`, and no instruction claims one.
 
 ## Evidence
+
+The PM answers in `2026-10-18-thinkthen-0619-container-prerequisites-need-a-ruling.md` supply the existing authority: answer 2 approves Ubuntu 24.04 checks with manylinux only for distribution artifacts and forbids source-built compilers; answer 3 accepts digest-pinned bases plus the tracked recipe and manifest with actual per-machine image IDs, without publication or a shared tools-image digest claim; answer 4 approves the Yellow-only memory exception while preserving M5 and hosted limits. Commit `52f852a15` implements that exception in `linux.yellow_memory_gib`; review `3ee1ea3cf` accepts that revision. This reconciliation applies those answers without changing the remaining proof obligations.
 
 Qualification has moved between machines: the Linux mini PC (load cap only there, `535653f6c`), the M5 (`c53055095`, `cb3473396`, both 2026-10-16) and the hosted runners. Each move brought its own run of fixes, such as the Mac path aliases in `fd8744a30` and the Mac shebang delay in `42cbde2e2`. Linux is now exercised only on hosted runners, so Linux-only failures appear late and cannot be reproduced locally. Release record 0543 (its final entry, 2026-10-18) says the C image groups pass on the M5 in 16.10 seconds at about 4.06 GB peak, and the Linux timeouts remain unexplained.
 
@@ -42,4 +45,4 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 
 ## Amendment, 2026-10-18
 
-All Linux checks run in one pinned Ubuntu 24.04 image per architecture, which the hosted Linux jobs also use. The existing manylinux_2_28 step stays only to build distribution artifacts at the old glibc floor; the installed-artifact checks then run in the Ubuntu image. Yellow books 14 GiB through pm job with a 14 GiB container cap and one heavy job at a time, because it has 15 GiB of physical memory. The M5 container waits until its Docker runtime is running again; ThinkThen changes no host configuration.
+All Linux checks use the digest-pinned Ubuntu 24.04 bases, tracked recipe and shared tool manifest for each architecture, including hosted Linux jobs. Receipts record each constructed image ID. The existing manylinux_2_28 step stays only to build distribution artifacts at the old glibc floor; installed-artifact checks run in Ubuntu. The later PM answer 4 supersedes the initial Yellow reservation: Yellow books and caps the `linux.yellow_memory_gib` value with one heavy job at a time; M5 and hosted retain `linux.memory_gib`. The M5 container waits until its Docker runtime is running again; ThinkThen changes no host configuration.
