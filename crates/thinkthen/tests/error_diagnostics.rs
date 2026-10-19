@@ -256,7 +256,7 @@ fn public_document_reading_preserves_numeric_syntax_and_literal_input() {
     let missing = reading.read_document(br#"{"other":null}"#).unwrap_err();
     assert!(matches!(
         missing.diagnostic(),
-        Some(ErrorDiagnostic::Record(_))
+        Some(ErrorDiagnostic::MissingPointer { pointer: "/evidence" })
     ));
     let utf8 = reading.read_document(&[0xff]).unwrap_err();
     assert!(matches!(
