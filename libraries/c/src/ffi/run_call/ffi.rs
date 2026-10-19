@@ -42,35 +42,13 @@ unsafe fn read<'a>(text: thinkthen_complete_utf8_v1) -> Result<&'a str, Failure>
     // SAFETY: the foreign caller retains the counted readable extent.
     unsafe { super::text(text.data, text.len) }
 }
-unsafe fn execute(
-    engine: *const EngineHandle,
-    request: *const super::session::NamedRequestV1,
+unsafe fn feed<'a>(
     producer: CallProducerV1,
     context: *mut c_void,
-    cancel: *const CallCancelHandle,
-) -> Result<CallResultHandle, Failure> {
-    // SAFETY: every owner and counted view remains alive throughout the call.
-    let engine = unsafe { engine.as_ref() }.ok_or(thinkthen::ErrorKind::Usage)?;
-    // SAFETY: shared canonical component decoding copies the foreign input.
-    let decoded = unsafe { super::session::named_request(request) }?;
-    // SAFETY: the caller retains the component record and function bytes.
-    let function = unsafe {
-        read(
-            request
-                .as_ref()
-                .ok_or(thinkthen::ErrorKind::Usage)?
-                .function,
-        )
-    }?;
-    let request = decoded;
-    let arguments = request.call.arguments().clone();
-    let mut controls = CallOptions::new().surface(Surface::C);
-    // SAFETY: the optional token outlives this blocking invocation.
-    if let Some(cancel) = unsafe { cancel.as_ref() } {
-        controls = controls.cancel(&cancel.0);
-    }
-    let feed = producer.map(|callback| {
-        let name = match &arguments.input {
+    input: &RequestInput,
+) -> Option<RequestFeed<'a>> {
+    producer.map(|callback| {
+        let name = match input {
             RequestInput::Feed { name, .. } => name.clone(),
             _ => String::new(),
         };
@@ -114,7 +92,38 @@ unsafe fn execute(
                 }
             }),
         )
-    });
+    })
+}
+
+unsafe fn execute(
+    engine: *const EngineHandle,
+    request: *const super::session::NamedRequestV1,
+    producer: CallProducerV1,
+    context: *mut c_void,
+    cancel: *const CallCancelHandle,
+) -> Result<CallResultHandle, Failure> {
+    // SAFETY: every owner and counted view remains alive throughout the call.
+    let engine = unsafe { engine.as_ref() }.ok_or(thinkthen::ErrorKind::Usage)?;
+    // SAFETY: shared canonical component decoding copies the foreign input.
+    let decoded = unsafe { super::session::named_request(request) }?;
+    // SAFETY: the caller retains the component record and function bytes.
+    let function = unsafe {
+        read(
+            request
+                .as_ref()
+                .ok_or(thinkthen::ErrorKind::Usage)?
+                .function,
+        )
+    }?;
+    let request = decoded;
+    let arguments = request.call.arguments().clone();
+    let mut controls = CallOptions::new().surface(Surface::C);
+    // SAFETY: the optional token outlives this blocking invocation.
+    if let Some(cancel) = unsafe { cancel.as_ref() } {
+        controls = controls.cancel(&cancel.0);
+    }
+    // SAFETY: the producer and its context remain alive until the native call returns.
+    let feed = unsafe { feed(producer, context, &arguments.input) };
     let result =
         engine
             .0

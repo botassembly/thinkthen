@@ -114,5 +114,5 @@ unsafe fn settings_json(settings_json: *const c_char) -> Result<thinkthen::Engin
 unsafe impl Send for crate::failures::Last {}
 
 /// Blocking named calls with independent owned results and failures.
-#[path = "ffi/run_call.rs"]
+#[path = "ffi/run_call/ffi.rs"]
 pub mod run_call;
