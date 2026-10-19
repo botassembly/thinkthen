@@ -341,7 +341,7 @@ fn too_large_remedies_fit_each_commands_request_shape() {
     .unwrap();
     let set = set.to_str().unwrap();
     for (arguments, evidence, advice) in size_advice_cases(set) {
-        assert_size_advice(&arguments, evidence, advice);
+        assert_size_advice(&arguments, evidence, advice).unwrap();
     }
     std::fs::remove_dir_all(folder).unwrap();
 }
@@ -378,7 +378,7 @@ fn size_advice_cases(set: &str) -> Vec<(Vec<&str>, &str, &str)> {
         vec!["tag", "Which fit?", "yes", "no"],
         vec!["score", "How useful?", "low", "high"],
     ] {
-        if !matches!(arguments[0], "filter" | "rank") {
+        if !matches!(arguments.first().copied(), Some("filter" | "rank")) {
             cases.push((arguments.clone(), "first", "shorten the text"));
         }
         let mut records = arguments;
@@ -392,8 +392,13 @@ fn size_advice_cases(set: &str) -> Vec<(Vec<&str>, &str, &str)> {
     cases
 }
 
-fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
-    let help = crate::harness::spawn(&[arguments[0], "--help"], &[], b"").unwrap();
+fn assert_size_advice(
+    arguments: &[&str],
+    evidence: &str,
+    advice: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let command = arguments.first().copied().ok_or("a command is required")?;
+    let help = crate::harness::spawn(&[command, "--help"], &[], b"")?;
     assert_eq!(help.status.code(), Some(0));
     for flag in advice
         .split_whitespace()
@@ -402,7 +407,7 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
         assert!(
             String::from_utf8_lossy(&help.stdout).contains(flag),
             "{} {flag}",
-            arguments[0]
+            command
         );
     }
     for (status, body, reason) in [
@@ -417,13 +422,13 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
             "the backend answered with status 413: the backend refused the request as too large",
         ),
     ] {
-        let expected_requests = if arguments[0] == "tag" { 2 } else { 1 };
+        let expected_requests = if command == "tag" { 2 } else { 1 };
         let listener = Listener::serving(
             (0..expected_requests)
                 .map(|_| Canned::status(status, body))
                 .collect(),
         )
-        .unwrap();
+        ?;
         let mut arguments = arguments.to_vec();
         arguments.extend([
             "--url",
@@ -438,7 +443,7 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
             &[("THINKTHEN_API_KEY", "fixture-key")],
             evidence.as_bytes(),
         )
-        .unwrap();
+        ?;
         let said = crate::harness::said(&output);
         assert_eq!(output.status.code(), Some(4), "{arguments:?}: {said}");
         assert!(output.stdout.is_empty(), "{arguments:?}");
@@ -454,7 +459,7 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
         };
         let sentence = format!("{reason}; {advice}{provider}");
         let expected = if status == 413
-            && arguments[0] == "annotate"
+            && command == "annotate"
             && arguments.contains(&"--lines")
         {
             format!(
@@ -463,16 +468,16 @@ fn assert_size_advice(arguments: &[&str], evidence: &str, advice: &str) {
         } else {
             format!("thinkthen: {sentence}")
         };
-        assert_eq!(said.lines().next().unwrap(), expected, "{arguments:?}");
-        let facts: serde_json::Value = serde_json::from_str(said.lines().last().unwrap()).unwrap();
+        assert_eq!(said.lines().next(), Some(expected.as_str()), "{arguments:?}");
+        let facts: serde_json::Value = serde_json::from_str(said.lines().last().ok_or("failure facts are required")?)?;
         assert_eq!(
-            facts["stopped"],
-            serde_json::json!({"at":1,"cause":"too_large","retryable":false}),
+            facts.get("stopped"),
+            Some(&serde_json::json!({"at":1,"cause":"too_large","retryable":false})),
             "{arguments:?}: {said}"
         );
     }
+    Ok(())
 }
-
 #[test]
 fn too_large_backend_probes_suggest_a_backend_with_a_larger_input_limit() {
     let listener = Listener::answering(|_| Canned::status(400, NAMED)).unwrap();
