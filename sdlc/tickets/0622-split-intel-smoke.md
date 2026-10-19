@@ -14,6 +14,8 @@ Reviews: revision cc87266, accept
 
 ## Outcome
 
+- Changes: `.github/workflows/gate.yml`, `.github/workflows/release.yml`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/release-registry-self-test.py`, `sdlc/scripts/release-smoke`, `sdlc/scripts/release-smoke-command-test`.
+
 - The smoke for each target is split by family into separate jobs that run in parallel. Each job downloads the shared build outputs it needs.
 - Each long job's time limit is set at about twice its measured passing time on its hosted runner (for example, the Intel build measured 3h28m22s), with the figure in a comment.
 - A job that times out keeps its logs as a build output, so the cause can be read.
