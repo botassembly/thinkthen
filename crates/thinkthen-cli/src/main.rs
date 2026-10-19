@@ -4,6 +4,7 @@
 #![cfg_attr(windows, deny(unsafe_code))]
 
 use std::process::ExitCode;
+use thinkthen::RelationIdentityMode;
 use thinkthen::{
     AdmittedRequest, Answer, AttemptOutcome, BatchSetting, CachePruneOptions, CacheSettings, Call,
     CallId, CallOptions, CancelToken, Candidate, CompleteAnnotated, CompleteChoice,
