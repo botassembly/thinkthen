@@ -11,6 +11,13 @@ use crate::core::{Backend, DEFAULT_MODEL, KEY_VAR, ModelName, named};
 use crate::public::error::Error;
 
 impl EngineBuilder {
+    /// Whether another user may change the configuration captured by this builder.
+    /// This observation reads nothing and does not resolve a backend or credential.
+    #[must_use]
+    pub fn configuration_shared(&self) -> bool {
+        self.captured.metadata.shared
+    }
+
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
     /// `THINKTHEN_BACKEND`, `THINKTHEN_API_KEY`, each key variable a built-in
     /// backend or a configuration entry names, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
@@ -31,11 +38,6 @@ impl EngineBuilder {
     /// field, and [`Error::Local`] when the configuration file exists but
     /// cannot be read.
     pub fn from_env() -> Result<Self, Error> {
-        Self::from_env_with_config_status().map(|(builder, _)| builder)
-    }
-
-    /// Return the permission status of the configuration captured by this builder.
-    pub(crate) fn from_env_with_config_status() -> Result<(Self, bool), Error> {
         let config_path = config::path();
         let config = Config::read(config_path.as_deref()).map_err(|refused| {
             if refused.unreadable {
@@ -44,7 +46,6 @@ impl EngineBuilder {
                 Error::usage(refused.message.into_owned())
             }
         })?;
-        let config_shared = config.shared();
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
         let mut builder = Self::new();
         builder.seeded = Some(Seeded {
@@ -100,7 +101,7 @@ impl EngineBuilder {
                 })?;
             builder = builder.max_request_bytes(value)?;
         }
-        Ok((builder, config_shared))
+        Ok(builder)
     }
 }
 

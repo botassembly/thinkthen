@@ -32,7 +32,7 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `current_usage_month` and `read_usage` expose the existing count-only store for offline status. The caller owns the explicit directory and selected month. `UsageTotals` projects the existing public `Counters` for that month and all recorded months. Reads retain shared locking, permissions and safe path-specific failure messages and never change persisted state.
 
-`EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
+`EngineBuilder::configuration_shared` retains the existing early permission warning without resolving a route. `EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
 
 `Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
 
@@ -214,6 +214,7 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+fn EngineBuilder::configuration_shared(&self) -> bool
 enum ErrorDiagnostic<'a>
 impl Debug for ErrorDiagnostic
 fn Error::diagnostic(&self) -> Option<ErrorDiagnostic<'_>>
