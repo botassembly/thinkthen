@@ -31,3 +31,4 @@ The run call in 0638 should be built once, on the chosen input path, so this cho
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: Fresh review accepts a2534b192 after installed JSON session-plan and42sharedcases passed in job1792423832892-47604 and nativeMac plus pinnedLinux C door suites each passed17of17 in job1792424217812-10173, preserving legacy ABI assertions and Linux leak detection; the accepted change awaits a closing gate with the nearly ready0629 lane.
