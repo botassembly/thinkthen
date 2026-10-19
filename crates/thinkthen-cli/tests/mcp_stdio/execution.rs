@@ -217,7 +217,8 @@ fn source_failure_preserves_the_completed_prefix_and_observed_facts() {
     }));
     assert_eq!(result["isError"], true);
     let content = &result["structuredContent"];
-    assert_eq!(content["error"]["kind"], "local");
+    assert_eq!(content["error"]["kind"], "usage");
+    assert_eq!(content["error"]["message"], "the record is not valid UTF-8");
     assert!(content.get("value").is_none());
     let completed = content["completed"].as_array().unwrap();
     assert_eq!(completed.len(), 1);
