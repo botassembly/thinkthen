@@ -24,6 +24,7 @@ spec.loader.exec_module(readmes)
 
 sys.path.insert(0, str(readmes.REPO))
 from conformance.source_fixtures import stage_checkout
+from conformance.children.children import child_env
 
 
 REAL_RUN_BUILD = readmes.run_build
@@ -550,7 +551,7 @@ class PackageText(unittest.TestCase):
             runner.chmod(0o755)
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
-                               env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
+                               env=child_env(home=root / 'home', PATH='/usr/bin:/bin', TARGET=target), check=True)
             stage_checkout(readmes.REPO, root)
             home = root / 'home'
             prepared = [root / 'resolved/ruby/bin']
@@ -627,7 +628,7 @@ class PackageText(unittest.TestCase):
                 tool.chmod(0o755)
                 work = tree / family; work.mkdir()
                 with self.subTest(family=family), patch.object(readmes, 'run_build', side_effect=fixture_build), \
-                        patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache),
+                        patch.dict(os.environ, child_env(home=tree / 'home') | {'PATH': str(tools), 'PUB_CACHE': str(cache),
                                                'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
                     readmes.run_example(family, packages, work, root)
 
@@ -749,7 +750,7 @@ class PackageText(unittest.TestCase):
                 cases.append((str(tools), 'first-detached'))
             for search_path, first_name in cases:
                 with self.subTest(path=search_path), patch.object(readmes, 'run_build', side_effect=fixture_build), \
-                        patch.dict(os.environ, {
+                        patch.dict(os.environ, child_env(home=tree / 'home') | {
                     'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):
@@ -802,7 +803,7 @@ class PackageText(unittest.TestCase):
                     return popen(command, *args, **kwargs)
                 def bounded_communicate(process, input=None, timeout=None):
                     return communicate(process, input, 2 if timeout == 300 else timeout)
-                with patch.dict(os.environ, {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
+                with patch.dict(os.environ, child_env(home=tree / 'home', PATH=os.defpath) | {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):
                     try:
