@@ -55,7 +55,9 @@ fn behavior(
     );
     assert_eq!(
         Some(requests_sent as u64),
-        expected.get("requests_sent").and_then(serde_json::Value::as_u64)
+        expected
+            .get("requests_sent")
+            .and_then(serde_json::Value::as_u64)
     );
     if let Some(sent) = expected
         .get("facts_requests_sent")

@@ -67,6 +67,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              0.99
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              true
+            ]
+          }
         }
       }
     },
@@ -126,6 +146,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              0.12
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              false
+            ]
+          }
         }
       }
     },
@@ -185,6 +225,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "unresolved"
+            ],
+            "value": [
+              null
+            ]
+          }
         }
       }
     },
@@ -256,20 +316,20 @@
           },
           "collection": {
             "function": "decide",
-            "value": [
-              true
-            ],
-            "probability": [
-              0.8
+            "index": [
+              null
             ],
             "pick": [
               null
             ],
-            "index": [
-              null
+            "probability": [
+              0.8
             ],
             "resolution": [
               "resolved"
+            ],
+            "value": [
+              true
             ]
           }
         }
@@ -333,6 +393,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              0.8
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              "Prompt action is needed."
+            ]
+          }
         }
       }
     },
@@ -420,20 +500,20 @@
           },
           "collection": {
             "function": "choose",
-            "value": [
+            "index": [
+              null
+            ],
+            "pick": [
               "billing"
             ],
             "probability": [
               0.7
             ],
-            "pick": [
-              "billing"
-            ],
-            "index": [
-              null
-            ],
             "resolution": [
               "resolved"
+            ],
+            "value": [
+              "billing"
             ]
           }
         }
@@ -521,20 +601,20 @@
           },
           "collection": {
             "function": "choose",
-            "value": [
-              null
-            ],
-            "probability": [
+            "index": [
               null
             ],
             "pick": [
               "billing"
             ],
-            "index": [
+            "probability": [
               null
             ],
             "resolution": [
               "unresolved"
+            ],
+            "value": [
+              null
             ]
           }
         }
@@ -610,6 +690,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "choose",
+            "index": [
+              null
+            ],
+            "pick": [
+              "billing"
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "unresolved"
+            ],
+            "value": [
+              null
+            ]
+          }
         }
       }
     },
@@ -704,23 +804,23 @@
           },
           "collection": {
             "function": "tag",
-            "value": [
-              [
-                "billing",
-                "urgent"
-              ]
-            ],
-            "probability": [
+            "index": [
               null
             ],
             "pick": [
               null
             ],
-            "index": [
+            "probability": [
               null
             ],
             "resolution": [
               "resolved"
+            ],
+            "value": [
+              [
+                "billing",
+                "urgent"
+              ]
             ]
           }
         }
@@ -799,6 +899,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "tag",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              []
+            ]
+          }
         }
       }
     },
@@ -885,20 +1005,20 @@
           },
           "collection": {
             "function": "score",
-            "value": [
-              1.0
-            ],
-            "probability": [
+            "index": [
               null
             ],
             "pick": [
               "medium"
             ],
-            "index": [
+            "probability": [
               null
             ],
             "resolution": [
               "resolved"
+            ],
+            "value": [
+              1.0
             ]
           }
         }
@@ -965,6 +1085,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "score",
+            "index": [
+              null
+            ],
+            "pick": [
+              "high"
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              1.6
+            ]
+          }
         }
       }
     },
@@ -1112,17 +1252,17 @@
           },
           "collection": {
             "function": "filter",
-            "value": [
-              "row 0",
-              "row 2"
-            ],
+            "index": null,
+            "pick": null,
             "probability": [
               0.9,
               0.6
             ],
-            "pick": null,
-            "index": null,
-            "resolution": "resolved"
+            "resolution": "resolved",
+            "value": [
+              "row 0",
+              "row 2"
+            ]
           }
         }
       }
@@ -1215,6 +1355,16 @@
           ],
           "operation": {
             "indexes": []
+          }
+        },
+        "settled": {
+          "collection": {
+            "function": "filter",
+            "index": null,
+            "pick": null,
+            "probability": [],
+            "resolution": "resolved",
+            "value": []
           }
         }
       }
@@ -1372,19 +1522,19 @@
           },
           "collection": {
             "function": "rank",
-            "value": [
-              1,
-              2,
-              0
-            ],
+            "index": null,
+            "pick": null,
             "probability": [
               0.9,
               0.5,
               0.2
             ],
-            "pick": null,
-            "index": null,
-            "resolution": "resolved"
+            "resolution": "resolved",
+            "value": [
+              1,
+              2,
+              0
+            ]
           }
         }
       }
@@ -1524,6 +1674,24 @@
                 "index": 2,
                 "probability": 0.1
               }
+            ]
+          }
+        },
+        "settled": {
+          "collection": {
+            "function": "rank",
+            "index": null,
+            "pick": null,
+            "probability": [
+              0.7,
+              0.7,
+              0.1
+            ],
+            "resolution": "resolved",
+            "value": [
+              0,
+              1,
+              2
             ]
           }
         }
@@ -1719,32 +1887,32 @@
           },
           "collection": {
             "function": "annotate",
-            "value": [
-              {
-                "refund": true,
-                "team": "billing",
-                "severity": 1.2,
-                "topics": [
-                  "billing",
-                  "urgent"
-                ]
-              }
-            ],
-            "probability": [
+            "index": [
               null
             ],
             "pick": [
               null
             ],
-            "index": [
+            "probability": [
               null
             ],
             "resolution": [
               {
                 "refund": "resolved",
-                "team": "resolved",
                 "severity": "resolved",
+                "team": "resolved",
                 "topics": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "refund": true,
+                "severity": 1.2,
+                "team": "billing",
+                "topics": [
+                  "billing",
+                  "urgent"
+                ]
               }
             ]
           }
@@ -1941,6 +2109,23 @@
           },
           "collection": {
             "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "refund": "unresolved",
+                "severity": "resolved",
+                "team": "failed",
+                "topics": "resolved"
+              }
+            ],
             "value": [
               {
                 "refund": null,
@@ -1949,23 +2134,6 @@
                   "billing",
                   "urgent"
                 ]
-              }
-            ],
-            "probability": [
-              null
-            ],
-            "pick": [
-              null
-            ],
-            "index": [
-              null
-            ],
-            "resolution": [
-              {
-                "refund": "unresolved",
-                "team": "failed",
-                "severity": "resolved",
-                "topics": "resolved"
               }
             ]
           }
@@ -2073,6 +2241,32 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "body": "resolved",
+                "summary": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "body": true,
+                "summary": true
+              }
+            ]
+          }
         }
       },
       "runtime_exchanges": [
@@ -2204,11 +2398,11 @@
           },
           "collection": {
             "function": "find",
-            "value": "Second passage.",
-            "probability": 0.8,
-            "pick": "u002",
             "index": 1,
-            "resolution": "resolved"
+            "pick": "u002",
+            "probability": 0.8,
+            "resolution": "resolved",
+            "value": "Second passage."
           }
         }
       }
@@ -2305,11 +2499,11 @@
           },
           "collection": {
             "function": "find",
-            "value": null,
-            "probability": null,
-            "pick": "none",
             "index": null,
-            "resolution": "resolved"
+            "pick": "none",
+            "probability": null,
+            "resolution": "resolved",
+            "value": null
           }
         }
       }
@@ -2427,6 +2621,16 @@
           "answers": [],
           "operation": {
             "indexes": []
+          }
+        },
+        "settled": {
+          "collection": {
+            "function": "filter",
+            "index": null,
+            "pick": null,
+            "probability": [],
+            "resolution": "resolved",
+            "value": []
           }
         }
       }
@@ -2628,6 +2832,46 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "pick": [
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "probability": [
+              0.97,
+              0.03,
+              0.55,
+              0.97,
+              0.03
+            ],
+            "resolution": [
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved"
+            ],
+            "value": [
+              true,
+              false,
+              true,
+              true,
+              false
+            ]
+          }
         }
       }
     },
@@ -3008,6 +3252,71 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "pick": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "probability": [
+              0.97,
+              0.03,
+              0.97,
+              0.03,
+              0.97,
+              0.03,
+              0.97,
+              0.03,
+              0.97,
+              0.03
+            ],
+            "resolution": [
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved",
+              "resolved"
+            ],
+            "value": [
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false,
+              true,
+              false
+            ]
+          }
         }
       }
     },
@@ -3138,6 +3447,26 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "score",
+            "index": [
+              null
+            ],
+            "pick": [
+              "weak"
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              0.99
+            ]
+          }
         }
       }
     },
@@ -3213,6 +3542,28 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "tag",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              [
+                "the refund word"
+              ]
+            ]
+          }
         }
       }
     },
@@ -3346,6 +3697,48 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null,
+              null,
+              null
+            ],
+            "pick": [
+              null,
+              null,
+              null
+            ],
+            "probability": [
+              null,
+              null,
+              null
+            ],
+            "resolution": [
+              {
+                "spam": "resolved"
+              },
+              {
+                "spam": "resolved"
+              },
+              {
+                "spam": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "spam": true
+              },
+              {
+                "spam": false
+              },
+              {
+                "spam": true
+              }
+            ]
+          }
         }
       }
     },
@@ -3510,6 +3903,48 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null,
+              null,
+              null
+            ],
+            "pick": [
+              null,
+              null,
+              null
+            ],
+            "probability": [
+              null,
+              null,
+              null
+            ],
+            "resolution": [
+              {
+                "strength": "resolved"
+              },
+              {
+                "strength": "resolved"
+              },
+              {
+                "strength": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "strength": 1.7
+              },
+              {
+                "strength": 1.05
+              },
+              {
+                "strength": 1.7
+              }
+            ]
+          }
         }
       }
     },
@@ -3608,6 +4043,32 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "spam": "resolved",
+                "strength": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "spam": true,
+                "strength": 1.7
+              }
+            ]
+          }
         }
       }
     },
@@ -3684,6 +4145,30 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "team": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "team": "billing"
+              }
+            ]
+          }
         }
       }
     },
@@ -3759,6 +4244,30 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "severity": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "severity": 1.0
+              }
+            ]
+          }
         }
       }
     },
@@ -3841,6 +4350,33 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "annotate",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "resolution": [
+              {
+                "topics": "resolved"
+              }
+            ],
+            "value": [
+              {
+                "topics": [
+                  "billing",
+                  "urgent"
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -3907,6 +4443,26 @@
             "calls": 2,
             "requests": 1,
             "cache_answers": 1
+          }
+        },
+        "settled": {
+          "collection": {
+            "function": "decide",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              0.97
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              true
+            ]
           }
         }
       }
@@ -4115,33 +4671,33 @@
           },
           "collection": {
             "function": "recognize",
-            "value": [
-              {
-                "entities": [
-                  {
-                    "text": "Maria Chen",
-                    "start": 10,
-                    "end": 20,
-                    "length": 10,
-                    "kind": "person",
-                    "strength": 0.9877
-                  }
-                ]
-              }
+            "index": [
+              null
+            ],
+            "pick": [
+              null
             ],
             "probability": [
               [
                 0.9976489290347367
               ]
             ],
-            "pick": [
-              null
-            ],
-            "index": [
-              null
-            ],
             "resolution": [
               "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 20,
+                    "kind": "person",
+                    "length": 10,
+                    "start": 10,
+                    "strength": 0.9877,
+                    "text": "Maria Chen"
+                  }
+                ]
+              }
             ]
           }
         }
@@ -4469,6 +5025,79 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9997917437803756,
+                0.9985833993159939,
+                0.9899999999979646
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 10,
+                    "kind": "person",
+                    "length": 10,
+                    "start": 0,
+                    "strength": 0.9998,
+                    "text": "Maria Chen"
+                  },
+                  {
+                    "end": 35,
+                    "kind": "organization",
+                    "length": 17,
+                    "start": 18,
+                    "strength": 0.9986,
+                    "text": "Northwind Freight"
+                  },
+                  {
+                    "end": 46,
+                    "kind": "place",
+                    "length": 7,
+                    "start": 39,
+                    "strength": 0.99,
+                    "text": "Chicago"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.84,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 10,
+                      "kind": "person",
+                      "length": 10,
+                      "start": 0,
+                      "strength": 0.9998,
+                      "text": "Maria Chen"
+                    },
+                    "target": {
+                      "end": 35,
+                      "kind": "organization",
+                      "length": 17,
+                      "start": 18,
+                      "strength": 0.9986,
+                      "text": "Northwind Freight"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -4743,6 +5372,70 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9984495126494325,
+                0.9995469177181864
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 12,
+                    "kind": "person",
+                    "length": 12,
+                    "start": 0,
+                    "strength": 0.9984,
+                    "text": "Amara Okafor"
+                  },
+                  {
+                    "end": 33,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 21,
+                    "strength": 0.9995,
+                    "text": "Kestrel Labs"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.98,
+                    "relation": "founded",
+                    "source": {
+                      "end": 12,
+                      "kind": "person",
+                      "length": 12,
+                      "start": 0,
+                      "strength": 0.9984,
+                      "text": "Amara Okafor"
+                    },
+                    "target": {
+                      "end": 33,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 21,
+                      "strength": 0.9995,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -5003,6 +5696,70 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9999990000000002,
+                0.9972322920247857
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 5,
+                    "kind": "person",
+                    "length": 5,
+                    "start": 0,
+                    "strength": 1.0,
+                    "text": "Amara"
+                  },
+                  {
+                    "end": 27,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 15,
+                    "strength": 0.9972,
+                    "text": "Kestrel Labs"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.97,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 5,
+                      "kind": "person",
+                      "length": 5,
+                      "start": 0,
+                      "strength": 1.0,
+                      "text": "Amara"
+                    },
+                    "target": {
+                      "end": 27,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 15,
+                      "strength": 0.9972,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -5336,6 +6093,99 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9995314656619507,
+                0.9898989797980203,
+                0.989898926612909
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 17,
+                    "kind": "organization",
+                    "length": 17,
+                    "start": 0,
+                    "strength": 0.9995,
+                    "text": "Northwind Freight"
+                  },
+                  {
+                    "end": 37,
+                    "kind": "place",
+                    "length": 7,
+                    "start": 30,
+                    "strength": 0.9899,
+                    "text": "Chicago"
+                  },
+                  {
+                    "end": 48,
+                    "kind": "place",
+                    "length": 6,
+                    "start": 42,
+                    "strength": 0.9899,
+                    "text": "Denver"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.96,
+                    "relation": "based_in",
+                    "source": {
+                      "end": 17,
+                      "kind": "organization",
+                      "length": 17,
+                      "start": 0,
+                      "strength": 0.9995,
+                      "text": "Northwind Freight"
+                    },
+                    "target": {
+                      "end": 37,
+                      "kind": "place",
+                      "length": 7,
+                      "start": 30,
+                      "strength": 0.9899,
+                      "text": "Chicago"
+                    }
+                  },
+                  {
+                    "probability": 0.96,
+                    "relation": "based_in",
+                    "source": {
+                      "end": 17,
+                      "kind": "organization",
+                      "length": 17,
+                      "start": 0,
+                      "strength": 0.9995,
+                      "text": "Northwind Freight"
+                    },
+                    "target": {
+                      "end": 48,
+                      "kind": "place",
+                      "length": 6,
+                      "start": 42,
+                      "strength": 0.9899,
+                      "text": "Denver"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -5709,6 +6559,88 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9879712205094552,
+                0.9561997813202012,
+                0.9847707598421859,
+                0.9898989152109546
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 10,
+                    "kind": "person",
+                    "length": 10,
+                    "start": 0,
+                    "strength": 0.988,
+                    "text": "Elif Demir"
+                  },
+                  {
+                    "end": 32,
+                    "kind": "organization",
+                    "length": 18,
+                    "start": 14,
+                    "strength": 0.9562,
+                    "text": "Brookline Shipping"
+                  },
+                  {
+                    "end": 48,
+                    "kind": "person",
+                    "length": 11,
+                    "start": 37,
+                    "strength": 0.9848,
+                    "text": "Tomas Reyes"
+                  },
+                  {
+                    "end": 58,
+                    "kind": "place",
+                    "length": 6,
+                    "start": 52,
+                    "strength": 0.9899,
+                    "text": "Boston"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.72,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 10,
+                      "kind": "person",
+                      "length": 10,
+                      "start": 0,
+                      "strength": 0.988,
+                      "text": "Elif Demir"
+                    },
+                    "target": {
+                      "end": 32,
+                      "kind": "organization",
+                      "length": 18,
+                      "start": 14,
+                      "strength": 0.9562,
+                      "text": "Brookline Shipping"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -6042,6 +6974,99 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9952334244562031,
+                0.9764890357349407,
+                0.9928209703400472
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 14,
+                    "kind": "person",
+                    "length": 14,
+                    "start": 0,
+                    "strength": 0.9952,
+                    "text": "Dana Whitfield"
+                  },
+                  {
+                    "end": 30,
+                    "kind": "person",
+                    "length": 11,
+                    "start": 19,
+                    "strength": 0.9765,
+                    "text": "Marcus Bell"
+                  },
+                  {
+                    "end": 50,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 38,
+                    "strength": 0.9928,
+                    "text": "Kestrel Labs"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.83,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 14,
+                      "kind": "person",
+                      "length": 14,
+                      "start": 0,
+                      "strength": 0.9952,
+                      "text": "Dana Whitfield"
+                    },
+                    "target": {
+                      "end": 50,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 38,
+                      "strength": 0.9928,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.86,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 30,
+                      "kind": "person",
+                      "length": 11,
+                      "start": 19,
+                      "strength": 0.9765,
+                      "text": "Marcus Bell"
+                    },
+                    "target": {
+                      "end": 50,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 38,
+                      "strength": 0.9928,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -6401,6 +7426,99 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9966497490601407,
+                0.9555695228933907,
+                0.9984339640061883
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 11,
+                    "kind": "person",
+                    "length": 11,
+                    "start": 0,
+                    "strength": 0.9966,
+                    "text": "Marcus Bell"
+                  },
+                  {
+                    "end": 30,
+                    "kind": "person",
+                    "length": 14,
+                    "start": 16,
+                    "strength": 0.9556,
+                    "text": "Dana Whitfield"
+                  },
+                  {
+                    "end": 57,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 45,
+                    "strength": 0.9984,
+                    "text": "Kestrel Labs"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.98,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 11,
+                      "kind": "person",
+                      "length": 11,
+                      "start": 0,
+                      "strength": 0.9966,
+                      "text": "Marcus Bell"
+                    },
+                    "target": {
+                      "end": 57,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 45,
+                      "strength": 0.9984,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.98,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 30,
+                      "kind": "person",
+                      "length": 14,
+                      "start": 16,
+                      "strength": 0.9556,
+                      "text": "Dana Whitfield"
+                    },
+                    "target": {
+                      "end": 57,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 45,
+                      "strength": 0.9984,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -6863,6 +7981,128 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9904369580685726,
+                0.9865105713440299,
+                0.9293751688580856,
+                0.9976656112630619
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 12,
+                    "kind": "person",
+                    "length": 12,
+                    "start": 0,
+                    "strength": 0.9904,
+                    "text": "Amara Okafor"
+                  },
+                  {
+                    "end": 28,
+                    "kind": "person",
+                    "length": 14,
+                    "start": 14,
+                    "strength": 0.9865,
+                    "text": "Dana Whitfield"
+                  },
+                  {
+                    "end": 45,
+                    "kind": "person",
+                    "length": 11,
+                    "start": 34,
+                    "strength": 0.9294,
+                    "text": "Marcus Bell"
+                  },
+                  {
+                    "end": 69,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 57,
+                    "strength": 0.9977,
+                    "text": "Kestrel Labs"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.68,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 12,
+                      "kind": "person",
+                      "length": 12,
+                      "start": 0,
+                      "strength": 0.9904,
+                      "text": "Amara Okafor"
+                    },
+                    "target": {
+                      "end": 69,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 57,
+                      "strength": 0.9977,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.67,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 28,
+                      "kind": "person",
+                      "length": 14,
+                      "start": 14,
+                      "strength": 0.9865,
+                      "text": "Dana Whitfield"
+                    },
+                    "target": {
+                      "end": 69,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 57,
+                      "strength": 0.9977,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.7,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 45,
+                      "kind": "person",
+                      "length": 11,
+                      "start": 34,
+                      "strength": 0.9294,
+                      "text": "Marcus Bell"
+                    },
+                    "target": {
+                      "end": 69,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 57,
+                      "strength": 0.9977,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -7677,6 +8917,195 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9981891236089292,
+                0.9993279863637773,
+                0.9899999795865932,
+                0.9838043936810129,
+                0.9878312733496746,
+                0.9925308185009317,
+                0.9899999578713099
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 12,
+                    "kind": "person",
+                    "length": 12,
+                    "start": 0,
+                    "strength": 0.9982,
+                    "text": "Amara Okafor"
+                  },
+                  {
+                    "end": 33,
+                    "kind": "organization",
+                    "length": 12,
+                    "start": 21,
+                    "strength": 0.9993,
+                    "text": "Kestrel Labs"
+                  },
+                  {
+                    "end": 46,
+                    "kind": "place",
+                    "length": 9,
+                    "start": 37,
+                    "strength": 0.99,
+                    "text": "Rotterdam"
+                  },
+                  {
+                    "end": 62,
+                    "kind": "person",
+                    "length": 14,
+                    "start": 48,
+                    "strength": 0.9838,
+                    "text": "Dana Whitfield"
+                  },
+                  {
+                    "end": 107,
+                    "kind": "person",
+                    "length": 11,
+                    "start": 96,
+                    "strength": 0.9878,
+                    "text": "Marcus Bell"
+                  },
+                  {
+                    "end": 129,
+                    "kind": "organization",
+                    "length": 18,
+                    "start": 111,
+                    "strength": 0.9925,
+                    "text": "Brookline Shipping"
+                  },
+                  {
+                    "end": 158,
+                    "kind": "place",
+                    "length": 6,
+                    "start": 152,
+                    "strength": 0.99,
+                    "text": "Boston"
+                  }
+                ],
+                "relations": [
+                  {
+                    "probability": 0.64,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 12,
+                      "kind": "person",
+                      "length": 12,
+                      "start": 0,
+                      "strength": 0.9982,
+                      "text": "Amara Okafor"
+                    },
+                    "target": {
+                      "end": 33,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 21,
+                      "strength": 0.9993,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.69,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 62,
+                      "kind": "person",
+                      "length": 14,
+                      "start": 48,
+                      "strength": 0.9838,
+                      "text": "Dana Whitfield"
+                    },
+                    "target": {
+                      "end": 33,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 21,
+                      "strength": 0.9993,
+                      "text": "Kestrel Labs"
+                    }
+                  },
+                  {
+                    "probability": 0.7,
+                    "relation": "works_for",
+                    "source": {
+                      "end": 107,
+                      "kind": "person",
+                      "length": 11,
+                      "start": 96,
+                      "strength": 0.9878,
+                      "text": "Marcus Bell"
+                    },
+                    "target": {
+                      "end": 129,
+                      "kind": "organization",
+                      "length": 18,
+                      "start": 111,
+                      "strength": 0.9925,
+                      "text": "Brookline Shipping"
+                    }
+                  },
+                  {
+                    "probability": 0.76,
+                    "relation": "based_in",
+                    "source": {
+                      "end": 33,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 21,
+                      "strength": 0.9993,
+                      "text": "Kestrel Labs"
+                    },
+                    "target": {
+                      "end": 46,
+                      "kind": "place",
+                      "length": 9,
+                      "start": 37,
+                      "strength": 0.99,
+                      "text": "Rotterdam"
+                    }
+                  },
+                  {
+                    "probability": 0.99,
+                    "relation": "founded",
+                    "source": {
+                      "end": 12,
+                      "kind": "person",
+                      "length": 12,
+                      "start": 0,
+                      "strength": 0.9982,
+                      "text": "Amara Okafor"
+                    },
+                    "target": {
+                      "end": 33,
+                      "kind": "organization",
+                      "length": 12,
+                      "start": 21,
+                      "strength": 0.9993,
+                      "text": "Kestrel Labs"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -7972,69 +9401,8 @@
           },
           "collection": {
             "function": "relate",
-            "value": [
-              {
-                "relation": "caused_by",
-                "source": {
-                  "name": "Checkout returns 500 at the payment step.",
-                  "kind": "alert"
-                },
-                "target": {
-                  "name": "The payments database ran out of disk space.",
-                  "kind": "alert"
-                },
-                "probability": 0.71
-              },
-              {
-                "relation": "caused_by",
-                "source": {
-                  "name": "Card charges are failing for every customer.",
-                  "kind": "alert"
-                },
-                "target": {
-                  "name": "Checkout returns 500 at the payment step.",
-                  "kind": "alert"
-                },
-                "probability": 0.65
-              },
-              {
-                "relation": "caused_by",
-                "source": {
-                  "name": "Card charges are failing for every customer.",
-                  "kind": "alert"
-                },
-                "target": {
-                  "name": "The payments database ran out of disk space.",
-                  "kind": "alert"
-                },
-                "probability": 0.73
-              },
-              {
-                "relation": "caused_by",
-                "source": {
-                  "name": "The nightly export ran two hours late.",
-                  "kind": "alert"
-                },
-                "target": {
-                  "name": "The payments database ran out of disk space.",
-                  "kind": "alert"
-                },
-                "probability": 0.55
-              },
-              {
-                "relation": "same_as",
-                "source": {
-                  "name": "Checkout returns 500 at the payment step.",
-                  "kind": "alert"
-                },
-                "target": {
-                  "name": "Card charges are failing for every customer.",
-                  "kind": "alert"
-                },
-                "probability": 0.61,
-                "either": true
-              }
-            ],
+            "index": null,
+            "pick": null,
             "probability": [
               0.71,
               0.65,
@@ -8042,9 +9410,70 @@
               0.55,
               0.61
             ],
-            "pick": null,
-            "index": null,
-            "resolution": "resolved"
+            "resolution": "resolved",
+            "value": [
+              {
+                "probability": 0.71,
+                "relation": "caused_by",
+                "source": {
+                  "kind": "alert",
+                  "name": "Checkout returns 500 at the payment step."
+                },
+                "target": {
+                  "kind": "alert",
+                  "name": "The payments database ran out of disk space."
+                }
+              },
+              {
+                "probability": 0.65,
+                "relation": "caused_by",
+                "source": {
+                  "kind": "alert",
+                  "name": "Card charges are failing for every customer."
+                },
+                "target": {
+                  "kind": "alert",
+                  "name": "Checkout returns 500 at the payment step."
+                }
+              },
+              {
+                "probability": 0.73,
+                "relation": "caused_by",
+                "source": {
+                  "kind": "alert",
+                  "name": "Card charges are failing for every customer."
+                },
+                "target": {
+                  "kind": "alert",
+                  "name": "The payments database ran out of disk space."
+                }
+              },
+              {
+                "probability": 0.55,
+                "relation": "caused_by",
+                "source": {
+                  "kind": "alert",
+                  "name": "The nightly export ran two hours late."
+                },
+                "target": {
+                  "kind": "alert",
+                  "name": "The payments database ran out of disk space."
+                }
+              },
+              {
+                "either": true,
+                "probability": 0.61,
+                "relation": "same_as",
+                "source": {
+                  "kind": "alert",
+                  "name": "Checkout returns 500 at the payment step."
+                },
+                "target": {
+                  "kind": "alert",
+                  "name": "Card charges are failing for every customer."
+                }
+              }
+            ]
           }
         }
       }
@@ -8306,6 +9735,83 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "relate",
+            "index": null,
+            "pick": null,
+            "probability": [
+              0.99,
+              0.98,
+              0.96,
+              0.95,
+              0.96
+            ],
+            "resolution": "resolved",
+            "value": [
+              {
+                "probability": 0.99,
+                "relation": "works_for",
+                "source": {
+                  "kind": "person",
+                  "name": "Iris Vangelis works for Kestrel Logistics, handling regional accounts."
+                },
+                "target": {
+                  "kind": "organization",
+                  "name": "Kestrel Logistics, a freight and logistics firm."
+                }
+              },
+              {
+                "probability": 0.98,
+                "relation": "works_for",
+                "source": {
+                  "kind": "person",
+                  "name": "Noor Haddad works for Brookline Freight, handling regional accounts."
+                },
+                "target": {
+                  "kind": "organization",
+                  "name": "Brookline Freight, a freight and logistics firm."
+                }
+              },
+              {
+                "probability": 0.96,
+                "relation": "works_for",
+                "source": {
+                  "kind": "person",
+                  "name": "Petr Novak works for Grayline Foundation, handling regional accounts."
+                },
+                "target": {
+                  "kind": "organization",
+                  "name": "Grayline Foundation, a freight and logistics firm."
+                }
+              },
+              {
+                "probability": 0.95,
+                "relation": "works_for",
+                "source": {
+                  "kind": "person",
+                  "name": "Rosa Iglesias works for Fenwick Press, handling regional accounts."
+                },
+                "target": {
+                  "kind": "organization",
+                  "name": "Fenwick Press, a freight and logistics firm."
+                }
+              },
+              {
+                "probability": 0.96,
+                "relation": "works_for",
+                "source": {
+                  "kind": "person",
+                  "name": "Tariq Mensah works for Hull Analytics, handling regional accounts."
+                },
+                "target": {
+                  "kind": "organization",
+                  "name": "Hull Analytics, a freight and logistics firm."
+                }
+              }
+            ]
+          }
         }
       }
     },
@@ -8623,6 +10129,80 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9997917437803756,
+                0.9985833993159939,
+                0.9899999999979646
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 10,
+                    "kind": "person",
+                    "length": 10,
+                    "start": 0,
+                    "strength": 0.9998,
+                    "text": "Maria Chen"
+                  },
+                  {
+                    "end": 35,
+                    "kind": "organization",
+                    "length": 17,
+                    "start": 18,
+                    "strength": 0.9986,
+                    "text": "Northwind Freight"
+                  },
+                  {
+                    "end": 46,
+                    "kind": "place",
+                    "length": 7,
+                    "start": 39,
+                    "strength": 0.99,
+                    "text": "Chicago"
+                  }
+                ],
+                "relations": [
+                  {
+                    "either": true,
+                    "probability": 0.84,
+                    "relation": "works_with",
+                    "source": {
+                      "end": 10,
+                      "kind": "person",
+                      "length": 10,
+                      "start": 0,
+                      "strength": 0.9998,
+                      "text": "Maria Chen"
+                    },
+                    "target": {
+                      "end": 35,
+                      "kind": "organization",
+                      "length": 17,
+                      "start": 18,
+                      "strength": 0.9986,
+                      "text": "Northwind Freight"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
         }
       }
     },
@@ -8782,6 +10362,39 @@
               }
             }
           ]
+        },
+        "settled": {
+          "collection": {
+            "function": "recognize",
+            "index": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "probability": [
+              [
+                0.9999999999939997
+              ]
+            ],
+            "resolution": [
+              "resolved"
+            ],
+            "value": [
+              {
+                "entities": [
+                  {
+                    "end": 13,
+                    "kind": "amount",
+                    "length": 5,
+                    "start": 8,
+                    "strength": 1.0,
+                    "text": "42.75"
+                  }
+                ]
+              }
+            ]
+          }
         }
       },
       "provenance": {
