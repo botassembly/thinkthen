@@ -325,9 +325,9 @@ fn preview_retains_json_context_shortlists_and_matches_execution() {
 }
 
 #[test]
-fn unsupported_preview_refuses_before_advancing_the_feed() {
+fn find_preview_reads_the_owned_feed_without_sending() {
     let listener = Listener::answering(response).unwrap();
-    let mut advanced = false;
+    let mut advanced = 0;
     let request = Request::named(
         "find",
         args(
@@ -343,23 +343,24 @@ fn unsupported_preview_refuses_before_advancing_the_feed() {
     .unwrap()
     .admit()
     .unwrap();
-    let error = engine(&listener)
+    let plan = engine(&listener)
         .plan_request(
             &request,
             RequestEnvironment {
                 controls: CallOptions::new(),
                 feed: Some(RequestFeed::new(
                     "input",
-                    std::iter::from_fn(|| {
-                        advanced = true;
-                        Some(Ok(item("must not read")))
+                    [Ok(item("one candidate"))].into_iter().inspect(|_| {
+                        advanced += 1;
                     }),
                 )),
             },
         )
-        .unwrap_err();
-    assert_eq!(error.kind(), ErrorKind::Usage);
-    assert!(!advanced);
+        .unwrap();
+    assert_eq!(plan.records(), 1);
+    assert_eq!(plan.requests(), 1);
+    assert!(std::str::from_utf8(plan.first_body().unwrap()).unwrap().contains("one candidate"));
+    assert_eq!(advanced, 1);
     assert_eq!(listener.count(), 0);
 }
 

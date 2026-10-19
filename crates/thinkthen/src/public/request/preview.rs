@@ -6,7 +6,7 @@ use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 type Preview = (crate::core::PlanSummary, bool, usize, Vec<usize>);
 
 impl Engine {
-    /// Preview an admitted atomic, annotation or rank request without sending.
+    /// Preview an admitted atomic, annotation, find or rank request without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
     /// No key, cache or answer is read. Unsupported functions refuse before input advances.
     /// # Errors
@@ -16,6 +16,10 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
+        if request.request.call.function() == RequestFunction::Find {
+            let (_, summary) = request.plan_find(self, environment)?;
+            return crate::public::plan::from_summary(summary);
+        }
         let annotation = request.request.call.function() == RequestFunction::Annotate;
         let (summary, dropped, count, groups) = self.preview_request(request, environment, annotation)?;
         crate::public::plan::from_summary(summary).map(|plan| {
@@ -203,7 +207,6 @@ fn annotation_groups(
 }
 
 impl AdmittedRequest {
-    #[cfg(test)]
     pub(crate) fn plan_find<'a>(
         &'a self,
         engine: &Engine,
@@ -259,7 +262,6 @@ impl AdmittedRequest {
     }
 }
 
-#[cfg(test)]
 fn route_preview<'a>(
     request: &'a AdmittedRequest,
     environment: RequestEnvironment<'a>,
