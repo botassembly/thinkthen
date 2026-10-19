@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0615
 
+Reviews: revision f10d64c, accept
+
 ## Outcome
 
 - Each architecture builds its Linux check environment from the digest-pinned Ubuntu 24.04 base in `linux.images` in `sdlc/tools.json`, the tracked image recipe and the shared tool manifest. That environment holds every declared Linux tool and serves building and testing. Receipts record the actual constructed image ID on each machine; matching base digests and recipes do not claim a shared tools-image digest. The manifest owns `linux.distribution_images` for the separate `manylinux_2_28` distribution build at the old glibc floor; installed-artifact checks run in Ubuntu. No image publication or source-built compiler is authorized.
