@@ -7,8 +7,8 @@ use std::fmt;
 use std::io::{Read as _, Write};
 use std::path::Path;
 
-use crate::core::measure::answer::{Rule, Shown};
-use crate::core::measure::{Line, MeasureError, json_lines};
+use crate::statistics::answer::{Rule, Shown};
+use crate::statistics::{Line, MeasureError, json_lines};
 use crate::core::{Threshold, ThresholdError};
 use crate::failure::Failure;
 
@@ -311,7 +311,7 @@ pub(crate) enum Match {
     Overlap,
 }
 
-impl From<Match> for crate::core::measure::items::Matching {
+impl From<Match> for crate::statistics::items::Matching {
     fn from(held: Match) -> Self {
         match held {
             Match::Strict => Self::Strict,

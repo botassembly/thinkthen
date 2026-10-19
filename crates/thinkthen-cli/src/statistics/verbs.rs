@@ -2,7 +2,7 @@
 //! labels, a question's names, a probability, and a distribution's top.
 
 use crate::core::json::Json;
-use crate::core::measure::MeasureError;
+use crate::statistics::MeasureError;
 use crate::core::probability::Probability;
 
 use super::{Answer, Printed, Top, Verb, verb_named};

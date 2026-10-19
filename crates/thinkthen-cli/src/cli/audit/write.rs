@@ -11,12 +11,12 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::cli::measure::Cause;
-use crate::core::measure::Line;
-use crate::core::measure::answer::{Answer, Verb};
-use crate::core::measure::audit::{Kind, Row};
-use crate::core::measure::optimize::Bar;
-use crate::core::measure::rows::number;
-use crate::core::measure::splice::{remove, splice};
+use crate::statistics::Line;
+use crate::statistics::answer::{Answer, Verb};
+use crate::statistics::audit::{Kind, Row};
+use crate::statistics::optimize::Bar;
+use crate::statistics::rows::number;
+use crate::statistics::splice::{remove, splice};
 use crate::core::{
     BatchSetting, BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec,
     RelateSpec, Setting, Typed, question_sha256_with_profile, recognize_sha256, resolve,

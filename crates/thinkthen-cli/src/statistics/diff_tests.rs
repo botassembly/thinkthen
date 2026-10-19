@@ -2,9 +2,9 @@
 //! Ticket 0165's edge rows: what one record's names or edges do between two sides.
 
 use super::{Row, Side, diff};
-use crate::core::measure::answer::{self, Identity, Rule, Shown};
-use crate::core::measure::items::Matching;
-use crate::core::measure::json_lines;
+use crate::statistics::answer::{self, Identity, Rule, Shown};
+use crate::statistics::items::Matching;
+use crate::statistics::json_lines;
 use crate::core::pointer::Pointer;
 use crate::core::render::json_line;
 

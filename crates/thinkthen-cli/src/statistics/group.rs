@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use crate::core::json::Json;
-use crate::core::measure::{MeasureError, record_id};
+use crate::statistics::{MeasureError, record_id};
 use crate::core::pointer::Pointer;
 
 /// The group value of each numbered line: the string or integer at the pointer inside its input.

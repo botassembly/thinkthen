@@ -1,13 +1,14 @@
 //! The annotate dry run: every record's questions packed as a run would
 //! pack them, with nothing looked up.
 
+use crate::plan_document::PlanDocument;
 use std::io::Write;
 use std::process::ExitCode;
 
 use super::Judging;
 use super::asker::{self, Framed};
 use crate::core::adapters::built_in;
-use crate::core::{PlanDocument, PlanSummary, Reading, Setting, json_line};
+use crate::core::{PlanSummary, Reading, Setting, json_line};
 use crate::edge;
 use crate::failure::Failure;
 use crate::schedule::Placed;

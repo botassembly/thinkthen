@@ -1,12 +1,13 @@
 //! The plan `--plan` prints in place of a request.
 
+use crate::plan_document::PlanDocument;
 use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
 
 use super::JudgingInput;
 use super::judged::Records;
 use crate::core::{
-    Backend, Evidence, PlanDocument, PlanSummary, Reading, Setting, Sources, json_line,
+    Backend, Evidence, PlanSummary, Reading, Setting, Sources, json_line,
 };
 use crate::edge;
 use crate::failure::Failure;

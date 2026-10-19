@@ -14,12 +14,12 @@ use std::path::{Path, PathBuf};
 use clap::{Args, ValueEnum};
 
 use crate::cli::measure::{BY, Cause, Match, Refusal, lines, rule, write};
-use crate::core::measure::answer::{self, Identity};
-use crate::core::measure::audit::{self as grade, By, Pooled, Row, Settings};
-use crate::core::measure::group;
-use crate::core::measure::key::Key;
-use crate::core::measure::optimize::Measure;
-use crate::core::measure::rounded_line;
+use crate::statistics::answer::{self, Identity};
+use crate::statistics::audit::{self as grade, By, Pooled, Row, Settings};
+use crate::statistics::group;
+use crate::statistics::key::Key;
+use crate::statistics::optimize::Measure;
+use crate::statistics::rounded_line;
 use crate::core::{BatchSetting, Pointer};
 use crate::failure::Failure;
 
@@ -173,7 +173,7 @@ fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
     Ok(())
 }
 
-fn saved_results(path: &Path) -> Result<Vec<crate::core::measure::Line>, Cause> {
+fn saved_results(path: &Path) -> Result<Vec<crate::statistics::Line>, Cause> {
     let results = lines(path)?;
     for (line, row) in &results {
         if row.member("schema").and_then(crate::core::Json::as_str) == Some("thinkthen.result/1") {

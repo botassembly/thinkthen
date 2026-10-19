@@ -12,14 +12,14 @@ use clap::Args;
 
 use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
 use crate::core::Pointer;
-use crate::core::measure::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
-use crate::core::measure::answer::{self, Identity};
-use crate::core::measure::diff::{
+use crate::statistics::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
+use crate::statistics::answer::{self, Identity};
+use crate::statistics::diff::{
     self as compare, Change, Effect, ItemChange, KindChange, Last, Row, Side, Summary,
 };
-use crate::core::measure::items::number;
-use crate::core::measure::key::Key;
-use crate::core::measure::{places, rounded, rounded_line};
+use crate::statistics::items::number;
+use crate::statistics::key::Key;
+use crate::statistics::{places, rounded, rounded_line};
 use crate::core::{BatchSetting, Json};
 use crate::failure::Failure;
 

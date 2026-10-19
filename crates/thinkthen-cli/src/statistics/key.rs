@@ -3,9 +3,9 @@
 use std::collections::BTreeMap;
 
 use crate::core::json::Json;
-use crate::core::measure::answer::{Answer, Said, Verb};
-use crate::core::measure::items::{self, Matching, What};
-use crate::core::measure::{MeasureError, record_id};
+use crate::statistics::answer::{Answer, Said, Verb};
+use crate::statistics::items::{self, Matching, What};
+use crate::statistics::{MeasureError, record_id};
 
 /// The part of the split a key line names.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

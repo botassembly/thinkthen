@@ -5,9 +5,9 @@ use std::collections::BTreeSet;
 use serde::{Serialize, Serializer};
 
 use crate::core::json::Json;
-use crate::core::measure::items::{self, Item, Items};
-use crate::core::measure::levels::{LevelCuts, level_at};
-use crate::core::measure::{MeasureError, python_float_text, record_id, rounded};
+use crate::statistics::items::{self, Item, Items};
+use crate::statistics::levels::{LevelCuts, level_at};
+use crate::statistics::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
 use crate::core::probability::Probability;
 use crate::core::threshold::{Outcome as Judged, Threshold};

@@ -6,12 +6,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Serialize, Serializer};
 
-use crate::core::measure::answer::{Rule, Verb};
-use crate::core::measure::audit::{Checked, Counts, Crossed, Settings, Suggested};
-use crate::core::measure::key::{Key, Part};
-use crate::core::measure::levels::{LevelCuts, search};
-use crate::core::measure::rows::{Graded, added, count, cut, share};
-use crate::core::measure::{MeasureError, SplitMix64, python_float_text, shuffle};
+use crate::statistics::answer::{Rule, Verb};
+use crate::statistics::audit::{Checked, Counts, Crossed, Settings, Suggested};
+use crate::statistics::key::{Key, Part};
+use crate::statistics::levels::{LevelCuts, search};
+use crate::statistics::rows::{Graded, added, count, cut, share};
+use crate::statistics::{MeasureError, SplitMix64, python_float_text, shuffle};
 
 /// How many seeded splits `steady` reads.
 const SPLITS: u64 = 20;

@@ -143,7 +143,7 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
         questions.to_vec(),
     )
     .expect("a plan");
-    let document = crate::core::PlanDocument::of(&backend, &plan).expect("a plan document");
+    let document = crate::plan_document::PlanDocument::of(&backend, &plan).expect("a plan document");
     let mut shown = format!("{plan:?} {plan:#?} {document:?} {document:#?}");
     let mut judged = Vec::new();
     for question in questions {

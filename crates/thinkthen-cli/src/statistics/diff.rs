@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 
 use crate::core::json::Json;
-use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
-use crate::core::measure::items::{Item, Matching, What, kind_changed, matches, pair};
-use crate::core::measure::key::{Key, Outcome, Want, outcome};
-use crate::core::measure::{MeasureError, mcnemar};
+use crate::statistics::answer::{Answer, Rule, Said, Shown, Verb};
+use crate::statistics::items::{Item, Matching, What, kind_changed, matches, pair};
+use crate::statistics::key::{Key, Outcome, Want, outcome};
+use crate::statistics::{MeasureError, mcnemar};
 
 /// Which McNemar count a pair of outcomes adds to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

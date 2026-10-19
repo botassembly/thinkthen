@@ -3,10 +3,10 @@
 
 use serde::Serialize;
 
-use crate::core::measure::answer::{Answer, Rule, Said, Verb};
-use crate::core::measure::key::{Outcome, Want, outcome};
-use crate::core::measure::rows::Graded;
-use crate::core::measure::{MeasureError, Pair, python_sum};
+use crate::statistics::answer::{Answer, Rule, Said, Verb};
+use crate::statistics::key::{Outcome, Want, outcome};
+use crate::statistics::rows::Graded;
+use crate::statistics::{MeasureError, Pair, python_sum};
 
 /// One point of the curve: the answers whose confidence reaches the cut, and their summed right.
 #[derive(Clone, Debug, PartialEq, Serialize)]

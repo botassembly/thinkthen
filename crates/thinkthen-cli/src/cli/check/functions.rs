@@ -23,7 +23,7 @@ pub(super) const ROWS: [(&str, &str); 10] = [
 pub(super) fn check(
     inner: &crate::engine::facade::Engine,
     environment: &crate::cli::edge::Environment,
-    report: &mut crate::core::check::Report,
+    report: &mut crate::probes::Report,
 ) -> Result<(), crate::failure::Failure> {
     use crate::public::AttemptObservation;
     use std::sync::atomic::{AtomicBool, Ordering};

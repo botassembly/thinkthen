@@ -22,21 +22,15 @@ mod backend_profile;
 pub(crate) mod batch;
 mod budget;
 pub(crate) mod cache_control;
-#[cfg(any(feature = "cli", test))]
-pub(crate) mod check;
 mod digest;
 mod find;
 mod identity;
 pub(crate) use identity::answer::{AtomicReading, RecordScope};
 pub(crate) mod image;
 mod json;
-#[cfg(any(feature = "cli", test))]
-pub(crate) mod measure;
 mod order;
 pub(crate) mod pack;
 mod plan;
-#[cfg(any(feature = "cli", test))]
-mod plan_document;
 mod plan_summary;
 mod pointer;
 mod price;
@@ -96,8 +90,6 @@ pub(crate) use crate::core::json::Json;
 pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::{ranking, ranking_under, turns};
 pub(crate) use crate::core::plan::{Descriptions, Plan};
-#[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;

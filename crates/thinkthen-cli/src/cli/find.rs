@@ -1,10 +1,11 @@
 //! The one aggregate request behind the public `find` command.
 
+use crate::plan_document::PlanDocument;
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, Framing, MAX_RECORD_BYTES, PlanDocument, Pointer, Reading, Record, json_line,
+    Backend, Framing, MAX_RECORD_BYTES, Pointer, Reading, Record, json_line,
 };
 
 use crate::args::{Common, FindArguments};

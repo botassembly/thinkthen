@@ -8,6 +8,11 @@ use thinkthen::*;
 
 mod cli;
 mod mcp;
+mod statistics;
+mod probes;
+mod plan_document;
+#[cfg(windows)]
+mod windows;
 
 use cli::{args, asking, edge, failure, judge, profile, schedule};
 

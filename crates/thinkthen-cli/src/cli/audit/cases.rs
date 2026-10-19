@@ -5,10 +5,10 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 
 use crate::core::Json;
-use crate::core::measure::MeasureError;
-use crate::core::measure::answer::{Answer, Rule, Said, Verb};
-use crate::core::measure::items::{self, Item};
-use crate::core::measure::key::{Key, Outcome, Want, outcome};
+use crate::statistics::MeasureError;
+use crate::statistics::answer::{Answer, Rule, Said, Verb};
+use crate::statistics::items::{self, Item};
+use crate::statistics::key::{Key, Outcome, Want, outcome};
 
 #[derive(Serialize)]
 pub(super) struct Case {

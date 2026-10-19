@@ -1,8 +1,8 @@
 //! `audit --table`: the prototype's table, word for word, and the lines later tickets added.
 
-use crate::core::measure::audit::{Counts, Pooled, Row, Suggested};
-use crate::core::measure::optimize::{Bar, Measure, Steady};
-use crate::core::measure::{places, python_float_text, rounded};
+use crate::statistics::audit::{Counts, Pooled, Row, Suggested};
+use crate::statistics::optimize::{Bar, Measure, Steady};
+use crate::statistics::{places, python_float_text, rounded};
 
 /// A float as the table writes a number: three places, or `-` for none.
 fn three(value: Option<f64>) -> String {

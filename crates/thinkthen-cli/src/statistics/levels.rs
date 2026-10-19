@@ -7,7 +7,7 @@ use std::cmp::Reverse;
 
 use serde::{Serialize, Serializer};
 
-use crate::core::measure::MeasureError;
+use crate::statistics::MeasureError;
 
 /// The most cuts a question of ten levels has.
 const MOST: usize = 9;

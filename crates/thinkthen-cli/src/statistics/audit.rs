@@ -5,13 +5,13 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 
-use crate::core::measure::answer::{Answer, Rule, Shown, Verb};
-use crate::core::measure::key::Key;
-use crate::core::measure::levels::LevelCuts;
-use crate::core::measure::optimize::{Measure, Steady};
-use crate::core::measure::pairs::{Step, curve, pairs};
-use crate::core::measure::rows::{Graded, row};
-use crate::core::measure::{Calibration, MeasureError, calibration};
+use crate::statistics::answer::{Answer, Rule, Shown, Verb};
+use crate::statistics::key::Key;
+use crate::statistics::levels::LevelCuts;
+use crate::statistics::optimize::{Measure, Steady};
+use crate::statistics::pairs::{Step, curve, pairs};
+use crate::statistics::rows::{Graded, row};
+use crate::statistics::{Calibration, MeasureError, calibration};
 
 /// A group's name, and its verb when `--by POINTER` splits a value by verb.
 type Name = (String, Option<Verb>);

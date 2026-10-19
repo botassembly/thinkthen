@@ -4,13 +4,13 @@
 use std::cmp::Reverse;
 use std::collections::BTreeMap;
 
-use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
-use crate::core::measure::audit::{Counts, Disagreement, Kind, Point, Row, Settings};
-use crate::core::measure::items::tally;
-use crate::core::measure::key::{Key, Outcome, Want, outcome};
-use crate::core::measure::optimize::suggest;
-use crate::core::measure::pairs::{curve, pairs, tie_share};
-use crate::core::measure::{MeasureError, auc, calibration, python_float_text, python_sum, wilson};
+use crate::statistics::answer::{Answer, Rule, Said, Shown, Verb};
+use crate::statistics::audit::{Counts, Disagreement, Kind, Point, Row, Settings};
+use crate::statistics::items::tally;
+use crate::statistics::key::{Key, Outcome, Want, outcome};
+use crate::statistics::optimize::suggest;
+use crate::statistics::pairs::{curve, pairs, tie_share};
+use crate::statistics::{MeasureError, auc, calibration, python_float_text, python_sum, wilson};
 use crate::core::threshold::Threshold;
 
 /// A labeled answer and its key value.

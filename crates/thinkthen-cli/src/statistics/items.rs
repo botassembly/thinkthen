@@ -1,8 +1,8 @@
 //! Said and keyed `recognize` names and `relate` edges, and the greedy match between them.
 
 use crate::core::json::Json;
-use crate::core::measure::MeasureError;
-use crate::core::measure::answer::{Rule, Verb};
+use crate::statistics::MeasureError;
+use crate::statistics::answer::{Rule, Verb};
 use crate::core::probability::Probability;
 use crate::core::recognize::{ENTITY, RecognitionMode};
 
