@@ -28,6 +28,7 @@ mod question_text;
 pub(crate) mod recognize;
 pub(crate) mod relate;
 mod request;
+pub(crate) mod reading;
 pub(crate) mod schedule;
 pub(crate) mod status;
 mod transform;

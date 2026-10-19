@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use serde::Serialize;
 
 use crate::args::Common;
-use crate::core::{Reading, Record};
-use crate::edge::{self, Chunks};
+use crate::cli::reading::Reading;
+use crate::{FileReader, RawRecord, ReaderOptions, SourceUnit, TableFormat, TableReader};
+use crate::edge;
 use crate::failure::Failure;
 use crate::schedule::Placed;
-use crate::table::{Kind, Rows};
 
 /// A display location, independent of the pipeline's global label.
 #[derive(Clone, Serialize)]
@@ -36,36 +36,35 @@ pub(crate) struct Position {
 
 pub(crate) enum Data {
     Bytes(Vec<u8>),
-    Record(Record),
-    Images(crate::public::ImageEvidence),
+    Record(RawRecord),
+    Images(crate::ImageEvidence),
 }
 
 pub(crate) struct Item {
     pub(crate) at: usize,
     pub(crate) position: Option<Position>,
     pub(crate) data: Data,
-    pub(crate) images: Option<crate::public::ImageEvidence>,
+    pub(crate) images: Option<crate::ImageEvidence>,
 }
 
 struct TextSource {
     source: usize,
     file: Option<PathBuf>,
-    chunks: Chunks<Box<dyn BufRead + Send>>,
-    line: usize,
+    reader: FileReader<Box<dyn BufRead + Send>>,
     located: bool,
 }
 
 enum Source {
-    Images(crate::public::SourceItems),
+    Images(crate::SourceItems),
     Attached(images::Attachment),
     Text(TextSource),
     Pending {
         file: PathBuf,
         source: usize,
-        kind: Option<Kind>,
+        kind: Option<TableFormat>,
         located: bool,
     },
-    Table(Box<Rows<Box<dyn BufRead + Send>>>),
+    Table(Box<TableReader<Box<dyn BufRead + Send>>>),
 }
 
 struct Piece {
@@ -74,31 +73,57 @@ struct Piece {
     advance: usize,
 }
 
-impl TextSource {
-    fn next(&mut self, streams: bool, window: usize) -> Option<Result<Piece, Failure>> {
-        let unit = self.chunks.next_unit(window)?;
-        Some(unit.map(|(bytes, count)| self.piece(bytes, count, streams)))
+fn options(streams: bool, window: usize) -> ReaderOptions {
+    ReaderOptions {
+        unit: if !streams { SourceUnit::File } else if window > 1 { SourceUnit::Window } else { SourceUnit::Line },
+        window: (streams && window > 1).then_some(window),
     }
+}
 
-    fn piece(&mut self, bytes: Vec<u8>, count: usize, streams: bool) -> Piece {
-        let first = self.line + 1;
-        self.line += count;
-        Piece {
+impl TextSource {
+    fn next(&mut self, streams: bool) -> Option<Result<Piece, Failure>> {
+        Some(self.reader.next_bytes()?.map_err(input_failure).map(|unit| Piece {
             position: Some(Position {
                 source: self.source,
                 located: self.located,
-                file: self
-                    .file
-                    .as_ref()
-                    .map(|path| path.to_string_lossy().into_owned()),
-                first: Some(first),
-                last: Some(self.line.max(first)),
+                file: self.file.as_ref().map(|path| path.to_string_lossy().into_owned()),
+                first: Some(unit.first_line),
+                last: Some(unit.last_line),
                 images: None,
             }),
-            data: Data::Bytes(bytes),
-            advance: if streams { count } else { 1 },
+            data: Data::Bytes(unit.record),
+            advance: if streams { unit.last_line - unit.first_line + 1 } else { 1 },
+        }))
+    }
+}
+
+/// The command may disclose the caller-owned I/O cause, as its original reader did.
+/// Native error formatting continues to withhold it for every other consumer.
+#[derive(Debug)]
+struct ReaderFailure(crate::Error);
+
+impl std::fmt::Display for ReaderFailure {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match std::error::Error::source(&self.0) {
+            Some(cause) => std::fmt::Display::fmt(cause, formatter),
+            None => std::fmt::Display::fmt(&self.0, formatter),
         }
     }
+}
+
+impl std::error::Error for ReaderFailure {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+fn input_failure(error: crate::Error) -> Failure {
+    if let Some(cause) = std::error::Error::source(&error)
+        .and_then(|cause| cause.downcast_ref::<std::io::Error>())
+    {
+        return Failure::Input(std::io::Error::new(cause.kind(), ReaderFailure(error)));
+    }
+    Failure::from(error)
 }
 
 impl Source {
@@ -115,15 +140,17 @@ impl Source {
                 Err(error) => return Some(Err(error)),
             };
             *self = match kind {
-                Some(kind) => match Rows::new(reader, *kind) {
+                Some(kind) => match TableReader::new(file.to_string_lossy(), reader, *kind) {
                     Ok(rows) => Self::Table(Box::new(rows)),
-                    Err(error) => return Some(Err(error.into())),
+                    Err(error) => return Some(Err(input_failure(error))),
                 },
                 None => Self::Text(TextSource {
                     source: *source,
                     file: Some(file.clone()),
-                    chunks: Chunks::new(reader, streams),
-                    line: 0,
+                    reader: match FileReader::new(file.to_string_lossy(), reader, options(streams, window)) {
+                        Ok(reader) => reader,
+                        Err(error) => return Some(Err(input_failure(error))),
+                    },
                     located: *located,
                 }),
             };
@@ -133,13 +160,13 @@ impl Source {
             Self::Attached(_) => None,
             Self::Pending { .. } => None,
             Self::Table(rows) => rows.next().map(|row| {
-                row.map_err(Failure::from).map(|record| Piece {
+                row.map_err(input_failure).map(|record| Piece {
                     position: None,
-                    data: Data::Record(record),
+                    data: Data::Record(record.record),
                     advance: 1,
                 })
             }),
-            Self::Text(text) => text.next(streams, window),
+            Self::Text(text) => text.next(streams),
         }
     }
 }
@@ -206,8 +233,8 @@ impl Intake {
             .map_err(|error| Failure::OpenInput(std::io::Error::other(error.to_string())))?;
         let kind = common
             .csv
-            .then_some(Kind::Csv)
-            .or(common.tsv.then_some(Kind::Tsv));
+            .then_some(TableFormat::Csv)
+            .or(common.tsv.then_some(TableFormat::Tsv));
         if !common.input.is_empty() && !snapshot && kind.is_none() {
             let sources = paths
                 .into_iter()
@@ -247,20 +274,20 @@ impl Intake {
         };
         let kind = common
             .csv
-            .then_some(Kind::Csv)
-            .or(common.tsv.then_some(Kind::Tsv));
+            .then_some(TableFormat::Csv)
+            .or(common.tsv.then_some(TableFormat::Tsv));
         let sources = opened
             .into_iter()
             .enumerate()
             .map(|(source, (file, reader))| match kind {
-                Some(kind) => Rows::new(reader, kind)
+                Some(kind) => TableReader::new(file.as_ref().map_or_else(String::new, |path| path.to_string_lossy().into_owned()), reader, kind)
                     .map(|rows| Source::Table(Box::new(rows)))
-                    .map_err(Failure::from),
+                    .map_err(input_failure),
                 None => Ok(Source::Text(TextSource {
                     source,
+                    reader: FileReader::new(file.as_ref().map_or_else(String::new, |path| path.to_string_lossy().into_owned()), reader, options(reading.streams(), window))
+                        .map_err(input_failure)?,
                     file,
-                    chunks: Chunks::new(reader, reading.streams()),
-                    line: 0,
                     located: common.located(),
                 })),
             })
@@ -299,7 +326,7 @@ impl Iterator for Intake {
             // The bounded reader can cut an oversized unit and abandon its file.
             // Refuse it here, before blank skipping or worker prefetch of later files.
             if let Data::Bytes(bytes) = &piece.data
-                && bytes.len() > crate::core::MAX_RECORD_BYTES
+                && bytes.len() > RawRecord::max_bytes()
                 && let Err(error) = self.reading.record(bytes)
             {
                 self.sources.clear();
@@ -421,7 +448,7 @@ pub(crate) fn source_value(
 /// Retain explicit image evidence beside full result facts.
 pub(crate) fn image_input(
     line: &mut Option<String>,
-    input: &crate::public::ImageEvidence,
+    input: &crate::ImageEvidence,
 ) -> Result<(), Failure> {
     if let Some(line) = line {
         member(line, "input", input)?;

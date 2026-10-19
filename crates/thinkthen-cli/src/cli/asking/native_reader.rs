@@ -1,5 +1,4 @@
 //! One framed item per outstanding native input demand.
-use crate::public::readiness::Wake;
 use crate::schedule::Placed;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
@@ -9,11 +8,16 @@ struct State<T> {
     busy: bool,
     stopped: bool,
     item: Option<Option<Result<T, Placed>>>,
-    wake: Option<Wake>,
 }
 struct Shared<T> {
     state: Mutex<State<T>>,
     changed: Condvar,
+}
+/// One nonblocking demand result; no second item is requested until this one is taken.
+pub(crate) enum Read<T> {
+    Pending,
+    Item(Result<T, Placed>),
+    End,
 }
 pub(crate) struct Reader<T>(Arc<Shared<T>>);
 impl<T: Send + 'static> Reader<T> {
@@ -24,7 +28,6 @@ impl<T: Send + 'static> Reader<T> {
                 busy: false,
                 stopped: false,
                 item: None,
-                wake: None,
             }),
             changed: Condvar::new(),
         });
@@ -32,50 +35,24 @@ impl<T: Send + 'static> Reader<T> {
         thread::spawn(move || feed(records, worker));
         Self(shared)
     }
-    pub(crate) fn wake(&self, wake: Wake) {
-        if let Ok(mut state) = self.0.state.lock() {
-            state.wake = Some(wake);
-        }
-    }
-    pub(crate) fn ready(&self) -> bool {
+    /// Demand one item without blocking the command's event pump.
+    pub(crate) fn try_next(&self) -> Read<T> {
         let Ok(mut state) = self.0.state.lock() else {
-            return true;
+            return Read::Item(Err(lock_error()));
         };
-        if state.item.is_some() {
-            return true;
+        if let Some(item) = state.item.take() {
+            state.busy = false;
+            return item.map_or(Read::End, Read::Item);
         }
-        if !state.stopped && !state.busy {
+        if state.stopped {
+            return Read::End;
+        }
+        if !state.busy {
             state.demand = true;
             state.busy = true;
             self.0.changed.notify_one();
         }
-        false
-    }
-    pub(crate) fn next(&self, cancel: &crate::engine::Cancel<'_>) -> Option<Result<T, Placed>> {
-        let Ok(mut state) = self.0.state.lock() else {
-            return Some(Err(lock_error()));
-        };
-        while state.item.is_none() && !state.stopped {
-            if let Err(error) = cancel.remaining_without_check() {
-                return Some(Err(error.into()));
-            }
-            if !state.busy {
-                state.demand = true;
-                state.busy = true;
-                self.0.changed.notify_one();
-            }
-            let Ok((next, _)) = self
-                .0
-                .changed
-                .wait_timeout(state, std::time::Duration::from_millis(50))
-            else {
-                return Some(Err(lock_error()));
-            };
-            state = next;
-        }
-        let item = state.item.take()?;
-        state.busy = false;
-        item
+        Read::Pending
     }
 }
 impl<T> Drop for Reader<T> {
@@ -83,7 +60,6 @@ impl<T> Drop for Reader<T> {
         if let Ok(mut state) = self.0.state.lock() {
             state.stopped = true;
             state.item = None;
-            state.wake = None;
         }
         self.0.changed.notify_one();
     }
@@ -120,11 +96,6 @@ fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Sha
         state.item = Some(item);
         state.stopped = last;
         worker.changed.notify_all();
-        let wake = state.wake.clone();
-        drop(state);
-        if let Some(wake) = wake {
-            wake.notify();
-        }
         if last {
             return;
         }
@@ -151,14 +122,9 @@ mod tests {
             .join()
             .is_err()
         );
-        assert!(
-            reader.ready(),
-            "readiness must let the caller observe the failure"
-        );
-        let error = reader
-            .next(&crate::engine::Cancel::default())
-            .expect("an item")
-            .expect_err("a failure");
+        let super::Read::Item(Err(error)) = reader.try_next() else {
+            panic!("the poisoned reader must report failure");
+        };
         assert!(matches!(
             error.cause,
             crate::failure::Failure::Defect("the input reader lock failed")
