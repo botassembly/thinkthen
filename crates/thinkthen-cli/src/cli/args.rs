@@ -3,7 +3,10 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use crate::core::{DEFAULT_MODEL, Framing};
+use crate::RequestFraming as Framing;
+
+/// The command help's published default model name.
+pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
 use clap::{Args, Parser};
 
 /// How many times every command sends a retried status again by default: ADR 0052's
@@ -32,11 +35,11 @@ pub(crate) use runs::RunsCommand;
 /// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]
 #[command(
-    name = crate::core::NAME,
+    name = "thinkthen",
     disable_version_flag = true,
     arg_required_else_help = true
 )]
-#[cfg_attr(windows, command(bin_name = crate::core::NAME))] // Clap would print `thinkthen.exe` (ticket 0373).
+#[cfg_attr(windows, command(bin_name = "thinkthen"))] // Clap would print `thinkthen.exe` (ticket 0373).
 pub(crate) struct Cli {
     /// Print the version and exit.
     #[arg(short = 'V', long = "version")]

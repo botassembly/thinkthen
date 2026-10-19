@@ -3,7 +3,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use crate::core::DEFAULT_MODEL;
+use super::DEFAULT_MODEL;
 use clap::Args;
 
 use super::Common;
