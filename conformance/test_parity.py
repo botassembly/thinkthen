@@ -927,6 +927,14 @@ class PublicAssertions(unittest.TestCase):
 
 
 class CliApplicability(unittest.TestCase):
+    def test_cli_fixture_reports_usage_from_an_owned_directory(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-cli-fixture-') as folder:
+            result = fixture_run([sys.executable, str(parity.ROOT / 'conformance/cli_parity.py')],
+                                 cwd=folder, env=child_env(home=folder),
+                                 capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn('usage: cli_parity.py LOOPBACK_PORT [INSTALLED_BINARY]', result.stderr)
+
     def setUp(self):
         self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
         self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
