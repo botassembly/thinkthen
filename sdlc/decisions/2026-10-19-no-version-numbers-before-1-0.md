@@ -10,3 +10,5 @@ Ian, 2026-10-19: "I don't really want version numbers. There's no versioning for
 - At 1.0, Ian decides how ThinkThen keeps compatibility from then on.
 
 The removals land in 0.2.1, before the core freeze, so every language picks them up once.
+
+Ian, later the same day: the question author's `wording_version` goes too. The SDK asks the question directly; versions of a question's wording belong to the proxy's question optimization, not the core SDK.

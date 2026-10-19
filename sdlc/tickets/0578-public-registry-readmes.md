@@ -8,6 +8,7 @@ Depends on: 0574
 Depends on: 0581
 Depends on: 0582
 Depends on: 0688
+Depends on: 0690
 
 Reviews: revision 6d46fa0, reject
 
@@ -57,40 +58,30 @@ Reviews: revision ea33174, accept
 
 ## Outcome
 
-Each package registry page that ships with 0.2 shows a short README for a stranger with the shared opening, one replayed example in that language, the cost and the install line, and `sdlc/scripts/registry-readmes.py` fails the release on any page that names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version, or whose example does not run.
+- Changes: `databases/duckdb/README-PUBLIC.md`, `databases/postgresql/README-PUBLIC.md`, `databases/sqlite/README-PUBLIC.md`, `libraries/ada/README-PUBLIC.md`, `libraries/c/README-PUBLIC.md`, `libraries/cobol/README-PUBLIC.md`, `libraries/cpp/README-PUBLIC.md`, `libraries/csharp/README-PUBLIC.md`, `libraries/dart/README-PUBLIC.md`, `libraries/jvm/README-PUBLIC.md`, `libraries/objective-c/README-PUBLIC.md`, `libraries/php/README-PUBLIC.md`, `libraries/python/README-PUBLIC.md`, `libraries/r/README-PUBLIC.md`, `libraries/swift/README-PUBLIC.md`, `libraries/zig/README-PUBLIC.md`, `libraries/dart/flutter/README-PUBLIC.md`, `libraries/typescript/README.md`, `libraries/go/README.md`, `libraries/ruby/README.md`, `crates/thinkthen/README.md`, `sdlc/scripts/registry-readmes.py`, `sdlc/scripts/registry-readmes-self-test.py`.
+- Each package registry page that ships with 0.2.1 shows a short README for a stranger with the shared opening, one replayed example in that language, the cost and the install line. `sdlc/scripts/registry-readmes.py` fails the release on any page that names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version, or whose example does not run.
+- Each page's example reads the language's final call surface after phase 3, and a question set in an example carries no `version` field (`sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md`). The install line names the 0.2.1 package; package release numbers stay.
+- Ian approved the prose at 2e52b3334. The prose stays except sentences that describe a changed example. Changed prose goes back to Ian before anything publishes.
+- PM decision, 2026-10-13: every public package README, the DuckDB README page, the DuckDB descriptor's `extended_description` and the PR description open with one paragraph word for word. Its single source is the root README's first paragraph from 0575, and the check compares every page against it. Only the install line and the example differ.
+- PM decision, 2026-10-13: each page says the library is free and MIT licensed, that hosted models charge per token and that local models are free. It names Jev, SystemOne, OpenAI and local models as backends, shows the one line that sets the key, such as `export THINKTHEN_API_KEY=...`, and stays under 40 lines. Titles read "ThinkThen for Python". Say "DuckDB 1.5.6 and 2.0", never "preview".
+- PM decision, 2026-10-13: each example shows real use: at least two functions over several records, such as decide and choose over a tickets table in SQL or a list in a library. No plan-only or single-sentence examples. Pages share recordings with 0575.
+- PM decision, 2026-10-13: the root `README.md` stays the docs team's README from 0575, and Composer and Packagist render it. No public page links `sdlc/`. One DuckDB page only.
+- PM decision, 2026-10-13: this team's reviewer runs the fresh-reader test under 0575, and the PM brings passing texts to Ian. Nothing posts to the DuckDB PR or any registry before Ian approves the exact words.
+- Each library's in-repo developer README stays where it differs from the public one. The DuckDB descriptor and PR stay with 0577. The site and the fresh-reader test stay with 0575. Publication stays with 0425.
+- Work runs per language: a language whose phase 3 tickets have landed has its example rewritten on its own lane. PostgreSQL goes last. One run of `registry-readmes.py` collects every failing check before each review.
+
+### Proof
+
+- On the M5: `pm job run --machine m5 0578 SHA --memory 8 -- sh -c 'python3 sdlc/scripts/registry-readmes-self-test.py && python3 sdlc/scripts/registry-readmes.py sources'` passes. The self-test's fixture README that names an ADR fails, and its broken example fixture fails.
+- At the 0691 checkpoint, `python3 sdlc/scripts/registry-readmes.py examples DIR` over that revision's release packages replays every published package page and the DuckDB page. Families that do not build on the M5 run at the 0619 container checkpoint.
+- Each built package's rendered description matches its source page.
 
 ## Evidence
 
 - Starts from: the marketing lead's live registry check of 2026-10-13. PyPI thinkthen 0.1.2 opens its description with an ADR number and an `sdlc/` path, npm thinkthen 0.1.2 shows "No README data found!", and RubyGems holds only the 0.0.1 name placeholder.
-- `sdlc/scripts/registry-readmes.py` maps each package to its source: the root `README.md` for the command line and Packagist, `crates/thinkthen/README.md` for crates.io, `libraries/<lang>/README.md` for TypeScript, Go and Ruby, and `README-PUBLIC.md` in each other library and database. `sdlc/scripts/release-workflow` runs it, and `sdlc/scripts/registry-readmes-self-test.py` covers it.
-- 0581 makes every library call return `value`, `probability`, `results` and `facts`. 0582 gives each SQL function one `thinkthen_<function>_details` route. Both change every code example.
-
-## Decisions
-
-- PM decision, 2026-10-13: every public package README, the DuckDB README page, the DuckDB descriptor's `extended_description` and the PR description open with one paragraph word for word. Its single source is the root README's first paragraph from 0575, and the check compares every page against it. Only the install line and the example differ.
-- PM decision, 2026-10-13: each page says the library is free and MIT licensed, that hosted models charge per token and that local models are free. It names Jev, SystemOne, OpenAI and local models as backends, shows the one line that sets the key, such as `export THINKTHEN_API_KEY=...`, and stays under 40 lines. Titles read "ThinkThen for Python". Say "DuckDB 1.5.6 and 2.0", never "preview".
-- PM decision, 2026-10-13: each example shows real use: at least two functions over several records, such as decide and choose over a tickets table in SQL or a list in a library. No plan-only or single-sentence examples. The release check replays every page's example as `site/scripts/check-binding-samples.mjs` replays the site samples, and pages share recordings with 0575.
-- PM decision, 2026-10-13: the root `README.md` stays the docs team's README from 0575, and Composer and Packagist render it. No public page links `sdlc/`. One DuckDB page only.
-- PM decision, 2026-10-13, from Ian through the marketing lead: this team's own reviewer runs the fresh-reader test of these texts under 0575, and the PM brings passing texts straight to Ian. Nothing posts to the DuckDB PR or any registry before Ian approves the exact words.
-- PM decision, 2026-10-14: code example rewrites wait until 0581 and 0582 merge into `ticket/0543-final`. Then each example reads `result.value` and `result.probability` in libraries and `thinkthen_<function>_details` in SQL. Prose and openings continue now.
-
-## Scope
-
-- Changes: `libraries/*/README-PUBLIC.md`, `libraries/dart/flutter/README-PUBLIC.md`, `libraries/typescript/README.md`, `libraries/go/README.md`, `libraries/ruby/README.md`, `databases/*/README-PUBLIC.md`, `crates/thinkthen/README.md`, `sdlc/scripts/registry-readmes.py`, `sdlc/scripts/registry-readmes-self-test.py` and `sdlc/records/0578*`.
-- Rewrite each page's prose against the merged APIs on `ticket/0543-final` now. After 0581 and 0582 merge, rewrite each code example and reference, replay it against the installed package and check its length before review. Do PostgreSQL last.
-- Collect every failing check in one run of `registry-readmes.py` and fix all of them before asking for the next review.
-- Keeps: each library's in-repo developer README where it differs from the public one.
-
-## Proof
-
-- `sdlc/scripts/registry-readmes.py sources` and its self-test pass on the candidate, and the self-test's fixture README that names an ADR fails.
-- `sdlc/scripts/registry-readmes.py examples` over the candidate's release packages replays every published package page and the DuckDB page, and the self-test's broken example fixture fails.
-- Each built package's rendered description matches its approved source.
-- Ian approves the exact texts.
-
-## Defers
-
-The DuckDB descriptor and PR stay with 0577. The site and the fresh-reader test stay with 0575. Publication stays with 0425.
+- `sdlc/scripts/registry-readmes.py` maps each package to its source (`check_sources`) and replays examples from release packages (`check_examples`, `examples`): the root `README.md` for the command line and Packagist, `crates/thinkthen/README.md` for crates.io, `libraries/<lang>/README.md` for TypeScript, Go and Ruby, and `README-PUBLIC.md` in each other library and database. `sdlc/scripts/release-workflow` runs it, and `sdlc/scripts/registry-readmes-self-test.py` covers it. `site/scripts/check-binding-samples.mjs` replays the site samples the same way.
+- 0581 and 0582 landed the `value`, `probability`, `results` and `facts` reads and the `thinkthen_<function>_details` SQL route. The phase 3 language tickets change each language's calls again, so examples wait for 0690, which waits on every phase 3 call ticket.
+- 0597 rewrites the same example lines in Ian's style and depends on this ticket.
 
 ## Progress
 
