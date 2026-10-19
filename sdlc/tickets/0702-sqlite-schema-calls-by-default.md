@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Reviews: revision f2f8bbf, accept
 
+Reviews: revision f611eda, accept
+
 ## Outcome
 
 - Changes: `databases/sqlite/src/`, `databases/sqlite/README.md`, `databases/sqlite/entry-points.txt`, `databases/sqlite/tests/`, `site/src/pages/databases/`.
