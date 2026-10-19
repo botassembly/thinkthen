@@ -1,0 +1,107 @@
+{
+  "libraries": {
+    "objc": {
+      "root": "libraries/objective-c",
+      "language": "objc",
+      "naming": "camel",
+      "declarations": [
+        "libraries/objective-c/Sources/Foundation/ThinkThenFoundation.h",
+        "libraries/objective-c/Sources/Foundation/TTResult.h",
+        "libraries/objective-c/Sources/Foundation/TTResults.g.h"
+      ],
+      "option_containers": [
+        "TTControls"
+      ],
+      "setting_containers": [
+        "TTSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "checks",
+        "examples"
+      ],
+      "function_containers": [
+        "TTFoundationClient"
+      ],
+      "lifecycle_owners": [
+        "TTFoundationClient",
+        "TTSession",
+        "TTTask",
+        "TTUsagePersistenceStatus",
+        "TTCall",
+        "TTFailureError"
+      ],
+      "representation_owners": [
+        "TTPresence",
+        "TTUsagePersistenceStatus",
+        "TTFailureError"
+      ],
+      "helper_names": {
+        "plan": "plan",
+        "question_file": "TTQuestionFile",
+        "question_name": "TTQuestionName",
+        "question_reference": "TTQuestionReference",
+        "item": "TTItem",
+        "files": "TTFiles",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus"
+      },
+      "wrapper_members": {
+        "TTCall": [
+          "packets",
+          "terminal",
+          "decideAnswer",
+          "chooseAnswer",
+          "tagAnswer",
+          "scoreAnswer",
+          "filterAnswer",
+          "rankAnswer",
+          "findAnswer",
+          "annotateAnswer",
+          "recognizeAnswer",
+          "relateAnswer"
+        ],
+        "TTSession": [
+          "tryPush",
+          "finish",
+          "tryReadEnded",
+          "waitInput",
+          "cancel",
+          "close"
+        ],
+        "TTTask": [
+          "cancel"
+        ],
+        "TTFailureError": [
+          "kind",
+          "retryable",
+          "facts",
+          "failure"
+        ],
+        "TTOrderedEntry": [
+          "key",
+          "value",
+          "initWithKey"
+        ],
+        "TTOrderedMap": [
+          "entries",
+          "initWithEntries"
+        ],
+        "TTFoundationClient": [
+          "initWithSettings",
+          "init",
+          "new",
+          "startRequest"
+        ]
+      },
+      "representation_types": [
+        "TTFailureError",
+        "TTPresence",
+        "TTResultNode",
+        "TTSession",
+        "TTTask",
+        "TTUsagePersistenceStatus"
+      ]
+    }
+  }
+}

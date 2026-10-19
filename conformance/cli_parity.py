@@ -18,8 +18,9 @@ import sys
 import tempfile
 
 import c_parity
-from children import child_env
+from children import child_env, fixture_communicate
 import parity
+from signals import observe_signals
 
 ROOT = Path(__file__).resolve().parents[1]
 BATCHED = {"decide", "choose", "tag", "score", "filter", "rank", "annotate"}
@@ -298,8 +299,15 @@ def execute(binary, value, settings, home, env, backend=None):
 
 
 def drain_signal(args, stdin, home, env, backend, signum):
+    with observe_signals(home, env) as observation:
+        return drain_observed_signal(args, stdin, home, env, backend, signum, observation)
+
+
+def drain_observed_signal(args, stdin, home, env, backend, signum, observation):
     child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True, cwd=home, env=env)
+                             stderr=subprocess.PIPE, text=True, cwd=home,
+                             env=observation.env if observation else env,
+                             pass_fds=observation.pass_fds if observation else ())
     try:
         child.stdin.write(stdin)
         child.stdin.close()
@@ -307,8 +315,10 @@ def drain_signal(args, stdin, home, env, backend, signum):
         assert backend.read("wait 1") == "wait 1", "held first request was not observed"
         os.kill(child.pid, signum)
         deadline = time.monotonic() + 30
+        if observation:
+            observation.wait(child, signum, deadline)
         # Pending consumption coordinates delivery. It does not acknowledge the cancellation flag.
-        while True:
+        while not observation:
             assert child.poll() is None, "signal ended the child before the held reply drained"
             statuses = (Path(f"/proc/{child.pid}/task")).glob("*/status")
             pending = [int(line.split()[1], 16) for path in statuses
@@ -320,7 +330,7 @@ def drain_signal(args, stdin, home, env, backend, signum):
             time.sleep(0.01)
         backend.process.stdin.write("release\n")
         backend.process.stdin.flush()
-        stdout, stderr = child.communicate(timeout=30)
+        stdout, stderr = fixture_communicate(child)
         return subprocess.CompletedProcess(args, child.returncode, stdout, stderr)
     finally:
         if child.poll() is None:

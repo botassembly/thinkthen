@@ -1,0 +1,24 @@
+#!/usr/bin/python3
+"""Run a machine job through the existing manifest tool resolver."""
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+import tools
+
+
+if len(sys.argv) < 2:
+    print('usage: sdlc/scripts/job COMMAND [ARG...]', file=sys.stderr)
+    sys.exit(2)
+
+os.environ['TMPDIR'] = str(Path(tempfile.gettempdir()).resolve())
+manifest = json.loads((tools.ROOT / 'sdlc/tools.json').read_text())
+groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
+groups.update(manifest['libraries'])
+groups.update(manifest['databases'])
+command = Path(sys.argv[1]).name
+group = command if command in groups else 'common'
+sys.argv[1:] = [group, '--', *sys.argv[1:]]
+sys.exit(tools.main())

@@ -4,6 +4,10 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 8d51878, accept
+
+Reviews: revision 83a707f, accept
+
 ## Outcome
 
 - Changes: `.config/nextest.toml`, `conformance/c_parity.py`, `conformance/children/check.py`, `conformance/children/children.py`, `conformance/children/complete_parity.py`, `conformance/children/provider_diagnostics.py`, `conformance/children/signal_observer.c`, `conformance/children/signal_observer_probe.c`, `conformance/children/signals.py`, `conformance/children/test_privacy.py`, `conformance/children/usage.py`, `conformance/children/usage_installed.py`, `conformance/cli_parity.py`, `conformance/test_campaign_env.py`, `conformance/test_candidate_campaign.py`, `conformance/test_parity.py`, `libraries/cpp/fixtures/owned_calls.py`, `libraries/go/fixtures/owned_installed.py`, `libraries/zig/Tests/installed-session.py`, `sdlc/scripts/build-admission-test.py`, `sdlc/scripts/coverage-checks.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/install-check-self-test.py`, `sdlc/scripts/installer-test`, `sdlc/scripts/registry-readmes.py`, `sdlc/scripts/release-bounded.py`, `sdlc/scripts/release-process-cleanup-test.py`, `sdlc/scripts/release-python-self-test.py`, `sdlc/scripts/windows-installer-integration-self-test.py`, `sdlc/scripts/windows-installer-test.py`.

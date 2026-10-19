@@ -76,6 +76,20 @@
     "decide_many": {
       "sql": "SELECT count(*) FROM thinkthen_decide_many('{\"decide\":\"Is this a complaint?\"}', '{\"a\":\"refund now\",\"b\":\"refund again\"}'::jsonb);",
       "expected": "2"
+    },
+    "label_rows": {
+      "setup": [
+        "CREATE ROLE label_rows_app;",
+        "DO $grant$\nDECLARE signature text;\nBEGIN\n  FOR signature IN\n    SELECT p.oid::regprocedure::text\n    FROM pg_proc p\n    JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass\n    JOIN pg_extension e ON e.oid = d.refobjid\n      AND d.refclassid = 'pg_extension'::regclass\n    WHERE e.extname = 'thinkthen' AND d.deptype = 'e'\n      AND p.proname IN ('thinkthen_choose', 'thinkthen_tag')\n  LOOP\n    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO label_rows_app', signature);\n  END LOOP;\nEND\n$grant$;",
+        "CREATE TABLE messages(id integer PRIMARY KEY, body text, team text, tags text[]);",
+        "CREATE FUNCTION label_message() RETURNS trigger LANGUAGE plpgsql AS $$\nBEGIN\n  NEW.team := thinkthen_choose('Which team handles this?', NEW.body,\n    settings => '{\"options\":[\"billing\",\"shipping\"]}'::json);\n  NEW.tags := thinkthen_tag('What is in this text?', NEW.body,\n    settings => '{\"labels\":[\"refund\",\"shipping\"]}'::json);\n  RETURN NEW;\nEND\n$$;",
+        "CREATE TRIGGER label_message BEFORE INSERT ON messages\nFOR EACH ROW EXECUTE FUNCTION label_message();",
+        "GRANT INSERT, SELECT ON messages TO label_rows_app;",
+        "SET ROLE label_rows_app;",
+        "INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');"
+      ],
+      "sql": "SELECT id, team, tags FROM messages WHERE team = 'billing';",
+      "expected": "1|billing|{refund,shipping}"
     }
   }
 }
