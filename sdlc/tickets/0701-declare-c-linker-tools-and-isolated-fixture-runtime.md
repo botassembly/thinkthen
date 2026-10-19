@@ -36,3 +36,4 @@ Milestone: 0.2.1
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: PM requires every isolated fixture to start from the manifest resolved PATH and remove only the tool under test, with no hand-built PATH; convert every remaining fixture occurrence in the same repair, preserving fake-command precedence and all missing-tool negative cases before the batched source proof.
