@@ -4,6 +4,7 @@ import re
 from csharp import shape, nullable, enum_values
 from host_answers import named_object_fields
 from jvm_host import answers
+from union_shapes import predicate
 
 ROOTS = ('completesessionPacket', 'completeplan')
 
@@ -83,12 +84,13 @@ def render(definitions):
         if 'primitive_variants' in source:
             alternatives = source['primitive_variants']
             lines += [f'public sealed interface {typ} permits ' + ','.join(typ + name(kind) for kind in alternatives) + ' {', f'static {typ} read(Object value) {{']
-            tests = {'boolean': 'Boolean', 'string': 'String', 'number': 'BigDecimal', 'integer': 'BigDecimal', 'array': 'List<?>', 'object': 'Map<?,?>'}
             for kind in alternatives:
                 if kind == 'null':
                     lines.append(f'if (value == null) return new {typ}Null(null);')
                 else:
-                    lines.append(f'if (value instanceof {tests[kind]}) return {typ}{name(kind)}.read(value);')
+                    schema = source.get('primitive_schemas', {}).get(kind, {'type': kind})
+                    test = predicate(schema, definitions, 'value', 'java')
+                    lines.append(f'if ({test}) return {typ}{name(kind)}.read(value);')
             lines += ['throw new IllegalStateException("Unknown native value alternative");', '}', '}']
             for kind in alternatives:
                 trees.append(f'if (value instanceof {typ}{name(kind)} item) return Values.json(item.value());')

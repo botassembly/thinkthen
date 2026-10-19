@@ -15,3 +15,6 @@ pub use arms::{Backend, run};
 pub use lifetime::Rendezvous;
 pub use listener::{Canned, Listener, Observed, Recorded};
 pub use observations::Paths;
+
+/// The shared caller cases embedded by this offline fixture backend.
+pub const CASES: &str = include_str!("../../cases.json");

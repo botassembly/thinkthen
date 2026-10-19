@@ -22,6 +22,7 @@ if ! cargo fetch --locked --offline >/dev/null 2>&1; then
 	exit 1
 fi
 
+python3 conformance/children/privacy.py --sources libraries/polars --public --artifact-env
 # No paid backend: a fake key, a closed loopback port, and scratch folders.
 unset THINKTHEN_API_KEY
 export THINKTHEN_API_KEY=sk-polars-loopback

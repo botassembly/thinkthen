@@ -42,11 +42,13 @@ impl Engine {
                 .into_iter()
                 .map(|record| Ok(super::record_input::plain(record))),
             controls,
-            |original, ordinal, result| {
+            |original, ordinal, canonical, input| {
+                let mut result = super::complete::records::filter(canonical)?;
+                result.input = Some(Box::new(input));
                 Ok(Some(CompleteRecord {
                     original,
                     ordinal,
-                    result: super::complete::records::filter(result)?,
+                    result,
                 }))
             },
         )?

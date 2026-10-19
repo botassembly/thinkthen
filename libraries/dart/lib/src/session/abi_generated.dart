@@ -424,24 +424,40 @@ final class _NativePacketReader {
   }
 
   static Object? readSessionPacketTerminal(Pointer<Void> p) {
-    final values = _extensions(_at(p, 48));
+    final values = _extensions(_at(p, 72));
     if (_u32(_at(p, 0)) != 0)
-      values["facts"] =
-          _u32(_at(p, 0)) == 1 ? null : readFacts(_pointer(_at(_at(p, 0), 8)));
-    if (_u32(_at(p, 16)) != 0)
-      values["failure"] = _u32(_at(p, 16)) == 1
+      values["answer"] = _u32(_at(p, 0)) == 1
           ? null
-          : readCallError(_pointer(_at(_at(p, 16), 8)));
-    values["kind"] = _text(_at(p, 32));
+          : readSettledAnswer(_pointer(_at(_at(p, 0), 8)));
+    if (_u32(_at(p, 16)) != 0)
+      values["facts"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readFacts(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["failure"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readCallError(_pointer(_at(_at(p, 32), 8)));
+    values["kind"] = _text(_at(p, 48));
+    values["resolution"] = readAnswerResolution(_pointer(_at(p, 64)));
     return values;
   }
 
+  static Object? readAnswerResolution(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => "resolved",
+      2 => "unresolved",
+      3 => "failed",
+      _ => throw StateError('Invalid native enum'),
+    };
+  }
+
   static Object? readCallError(Pointer<Void> p) {
-    final values = _extensions(_at(p, 24));
+    final values = _extensions(_at(p, 32));
     values["error"] = readError(_pointer(_at(p, 0)));
     if (_u32(_at(p, 8)) != 0)
       values["facts"] =
           _u32(_at(p, 8)) == 1 ? null : readFacts(_pointer(_at(_at(p, 8), 8)));
+    values["resolution"] = readAnswerResolution(_pointer(_at(p, 24)));
     return values;
   }
 
@@ -600,6 +616,617 @@ final class _NativePacketReader {
     return values;
   }
 
+  static Object? readSettledAnswer(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledAnswerDecide(_pointer(_at(p, 8))),
+      2 => readSettledAnswerChoose(_pointer(_at(p, 8))),
+      3 => readSettledAnswerTag(_pointer(_at(p, 8))),
+      4 => readSettledAnswerScore(_pointer(_at(p, 8))),
+      5 => readSettledAnswerFilter(_pointer(_at(p, 8))),
+      6 => readSettledAnswerRank(_pointer(_at(p, 8))),
+      7 => readSettledAnswerFind(_pointer(_at(p, 8))),
+      8 => readSettledAnswerRecognize(_pointer(_at(p, 8))),
+      9 => readSettledAnswerRelate(_pointer(_at(p, 8))),
+      10 => readSettledAnswerAnnotate(_pointer(_at(p, 8))),
+      _ => throw StateError('Invalid native discriminator'),
+    };
+  }
+
+  static Object? readSettledAnswerAnnotate(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape15(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape15(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _map(_at(p, 8), 24, 16, (p) => readSettledJudgment(_pointer(p))),
+      2 => null,
+      3 =>
+        _list(_at(p, 8), 8, (p) => readAnswerShape15AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape15AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _map(_at(p, 8), 24, 16, (p) => readSettledJudgment(_pointer(p))),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledJudgment(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _u32(_at(p, 8)) != 0,
+      2 => null,
+      3 => _text(_at(p, 8)),
+      4 => _at(p, 8).cast<Double>().value,
+      5 => _list(_at(p, 8), 16, (p) => _text(p)),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape5(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readAnswerResolution(_pointer(_at(p, 8))),
+      2 => _map(_at(p, 8), 24, 16, (p) => readAnswerResolution(_pointer(p))),
+      3 => _list(_at(p, 8), 8, (p) => readAnswerResolutions(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerResolutions(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readAnswerResolution(_pointer(_at(p, 8))),
+      2 => _map(_at(p, 8), 24, 16, (p) => readAnswerResolution(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape2(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _at(p, 8).cast<Double>().value,
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape8AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape8AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _at(p, 8).cast<Double>().value,
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape3(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _text(_at(p, 8)),
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape6AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape6AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _text(_at(p, 8)),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape4(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _unsigned(_at(p, 8)),
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape4AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape4AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _unsigned(_at(p, 8)),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerRelate(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape10(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape14(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape14(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledRelations(_pointer(_at(p, 8))),
+      2 => null,
+      3 =>
+        _list(_at(p, 8), 8, (p) => readAnswerShape14AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape14AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledRelations(_pointer(_at(p, 8))),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledRelations(Pointer<Void> p) {
+    return _list(_at(p, 0), 8, (p) => readRelatedEntityEdge(_pointer(p)));
+  }
+
+  static Object? readRelatedEntityEdge(Pointer<Void> p) {
+    final values = _extensions(_at(p, 48));
+    if (_u32(_at(p, 0)) != 0)
+      values["either"] =
+          _u32(_at(p, 0)) == 1 ? null : _u32(_at(_at(p, 0), 4)) != 0;
+    values["probability"] = _at(p, 8).cast<Double>().value;
+    values["relation"] = _text(_at(p, 16));
+    values["source"] = readRelationEndpoint(_pointer(_at(p, 32)));
+    values["target"] = readRelationEndpoint(_pointer(_at(p, 40)));
+    return values;
+  }
+
+  static Object? readRelationEndpoint(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readRelationEndpointRelatedEntity(_pointer(_at(p, 8))),
+      2 => readRelationEndpointSource(_pointer(_at(p, 8))),
+      _ => throw StateError('Invalid native discriminator'),
+    };
+  }
+
+  static Object? readRelationEndpointSource(Pointer<Void> p) {
+    final values = _extensions(_at(p, 112));
+    if (_u32(_at(p, 0)) != 0)
+      values["file"] = _u32(_at(p, 0)) == 1 ? null : _text(_at(_at(p, 0), 8));
+    if (_u32(_at(p, 24)) != 0)
+      values["first_line"] =
+          _u32(_at(p, 24)) == 1 ? null : _unsigned(_at(_at(p, 24), 8));
+    values["kind"] = _text(_at(p, 40));
+    if (_u32(_at(p, 56)) != 0)
+      values["last_line"] =
+          _u32(_at(p, 56)) == 1 ? null : _unsigned(_at(_at(p, 56), 8));
+    values["name"] = _text(_at(p, 72));
+    values["ordinal"] = _unsigned(_at(p, 88));
+    if (_u32(_at(p, 96)) != 0)
+      values["record"] =
+          _u32(_at(p, 96)) == 1 ? null : _value(_pointer(_at(_at(p, 96), 8)));
+    return values;
+  }
+
+  static Object? readRelationEndpointRelatedEntity(Pointer<Void> p) {
+    final values = _extensions(_at(p, 32));
+    values["kind"] = _text(_at(p, 0));
+    values["name"] = _text(_at(p, 16));
+    return values;
+  }
+
+  static Object? readAnswerShape10(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => readAnswerShape8AnyOf1Items(_pointer(p))),
+      2 => null,
+      3 =>
+        _list(_at(p, 8), 8, (p) => readAnswerShape10AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape10AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => readAnswerShape8AnyOf1Items(_pointer(p))),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerRecognize(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape10(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape13(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape13(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledRecognition(_pointer(_at(p, 8))),
+      2 => null,
+      3 =>
+        _list(_at(p, 8), 8, (p) => readAnswerShape13AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape13AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledRecognition(_pointer(_at(p, 8))),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledRecognition(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => readSettledRecognitionEntities(_pointer(_at(p, 8))),
+      2 => readSettledRecognitionModeProposals(_pointer(_at(p, 8))),
+      _ => throw StateError('Invalid native discriminator'),
+    };
+  }
+
+  static Object? readSettledRecognitionModeProposals(Pointer<Void> p) {
+    final values = _extensions(_at(p, 24));
+    values["mode"] = readBoundaryMode(_pointer(_at(p, 0)));
+    values["proposals"] =
+        _list(_at(p, 8), 8, (p) => readBoundaryProposal(_pointer(p)));
+    return values;
+  }
+
+  static Object? readBoundaryProposal(Pointer<Void> p) {
+    final values = _extensions(_at(p, 104));
+    values["end"] = _unsigned(_at(p, 0));
+    if (_u32(_at(p, 8)) != 0)
+      values["file"] = _u32(_at(p, 8)) == 1 ? null : _text(_at(_at(p, 8), 8));
+    if (_u32(_at(p, 32)) != 0)
+      values["first_line"] =
+          _u32(_at(p, 32)) == 1 ? null : _unsigned(_at(_at(p, 32), 8));
+    if (_u32(_at(p, 48)) != 0)
+      values["last_line"] =
+          _u32(_at(p, 48)) == 1 ? null : _unsigned(_at(_at(p, 48), 8));
+    values["length"] = _unsigned(_at(p, 64));
+    values["probability"] = _at(p, 72).cast<Double>().value;
+    values["start"] = _unsigned(_at(p, 80));
+    values["text"] = _text(_at(p, 88));
+    return values;
+  }
+
+  static Object? readBoundaryMode(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => "boundary_only",
+      _ => throw StateError('Invalid native enum'),
+    };
+  }
+
+  static Object? readSettledRecognitionEntities(Pointer<Void> p) {
+    final values = _extensions(_at(p, 40));
+    values["entities"] = _list(_at(p, 0), 8, (p) => readEntity(_pointer(p)));
+    if (_u32(_at(p, 16)) != 0)
+      values["relations"] = _u32(_at(p, 16)) == 1
+          ? null
+          : _list(_at(_at(p, 16), 8), 8, (p) => readEntityEdge(_pointer(p)));
+    return values;
+  }
+
+  static Object? readEntityEdge(Pointer<Void> p) {
+    final values = _extensions(_at(p, 48));
+    if (_u32(_at(p, 0)) != 0)
+      values["either"] =
+          _u32(_at(p, 0)) == 1 ? null : _u32(_at(_at(p, 0), 4)) != 0;
+    values["probability"] = _at(p, 8).cast<Double>().value;
+    values["relation"] = _text(_at(p, 16));
+    values["source"] = readEntity(_pointer(_at(p, 32)));
+    values["target"] = readEntity(_pointer(_at(p, 40)));
+    return values;
+  }
+
+  static Object? readEntity(Pointer<Void> p) {
+    final values = _extensions(_at(p, 120));
+    values["end"] = _unsigned(_at(p, 0));
+    if (_u32(_at(p, 8)) != 0)
+      values["file"] = _u32(_at(p, 8)) == 1 ? null : _text(_at(_at(p, 8), 8));
+    if (_u32(_at(p, 32)) != 0)
+      values["first_line"] =
+          _u32(_at(p, 32)) == 1 ? null : _unsigned(_at(_at(p, 32), 8));
+    values["kind"] = _text(_at(p, 48));
+    if (_u32(_at(p, 64)) != 0)
+      values["last_line"] =
+          _u32(_at(p, 64)) == 1 ? null : _unsigned(_at(_at(p, 64), 8));
+    values["length"] = _unsigned(_at(p, 80));
+    values["start"] = _unsigned(_at(p, 88));
+    values["strength"] = _at(p, 96).cast<Double>().value;
+    values["text"] = _text(_at(p, 104));
+    return values;
+  }
+
+  static Object? readSettledAnswerFind(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape12(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape12(Pointer<Void> p) {
+    return _value(_pointer(_at(p, 0)));
+  }
+
+  static Object? readSettledAnswerRank(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape10(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape11(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape11(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => _unsigned(p)),
+      2 => null,
+      3 =>
+        _list(_at(p, 8), 8, (p) => readAnswerShape11AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape11AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => _unsigned(p)),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerFilter(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape10(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape9(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape9(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => readSettledOriginal(_pointer(p))),
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape9AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape9AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 8, (p) => readSettledOriginal(_pointer(p))),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledOriginal(Pointer<Void> p) {
+    return _value(_pointer(_at(p, 0)));
+  }
+
+  static Object? readSettledAnswerScore(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape8(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape8(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _at(p, 8).cast<Double>().value,
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape8AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerTag(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape7(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape7(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 16, (p) => _text(p)),
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape7AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readAnswerShape7AnyOf1Items(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _list(_at(p, 8), 16, (p) => _text(p)),
+      2 => null,
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerChoose(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape6(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape6(Pointer<Void> p) {
+    return switch (_u32(_at(p, 0))) {
+      1 => _text(_at(p, 8)),
+      2 => null,
+      3 => _list(_at(p, 8), 8, (p) => readAnswerShape6AnyOf1Items(_pointer(p))),
+      _ => throw StateError('Invalid native value'),
+    };
+  }
+
+  static Object? readSettledAnswerDecide(Pointer<Void> p) {
+    final values = _extensions(_at(p, 88));
+    values["function"] = _text(_at(p, 0));
+    if (_u32(_at(p, 16)) != 0)
+      values["index"] = _u32(_at(p, 16)) == 1
+          ? null
+          : readAnswerShape4(_pointer(_at(_at(p, 16), 8)));
+    if (_u32(_at(p, 32)) != 0)
+      values["pick"] = _u32(_at(p, 32)) == 1
+          ? null
+          : readAnswerShape3(_pointer(_at(_at(p, 32), 8)));
+    if (_u32(_at(p, 48)) != 0)
+      values["probability"] = _u32(_at(p, 48)) == 1
+          ? null
+          : readAnswerShape2(_pointer(_at(_at(p, 48), 8)));
+    values["resolution"] = readAnswerShape5(_pointer(_at(p, 64)));
+    if (_u32(_at(p, 72)) != 0)
+      values["value"] = _u32(_at(p, 72)) == 1
+          ? null
+          : readAnswerShape(_pointer(_at(_at(p, 72), 8)));
+    return values;
+  }
+
+  static Object? readAnswerShape(Pointer<Void> p) {
+    return _value(_pointer(_at(p, 0)));
+  }
+
   static Object? readSessionPacketObservation(Pointer<Void> p) {
     final values = _extensions(_at(p, 32));
     values["function"] = readRequestFunction(_pointer(_at(p, 0)));
@@ -700,35 +1327,6 @@ final class _NativePacketReader {
     values["relation"] = _text(_at(p, 16));
     values["source"] = readEntity(_pointer(_at(p, 32)));
     values["target"] = readEntity(_pointer(_at(p, 40)));
-    return values;
-  }
-
-  static Object? readEntity(Pointer<Void> p) {
-    final values = _extensions(_at(p, 120));
-    values["end"] = _unsigned(_at(p, 0));
-    if (_u32(_at(p, 8)) != 0)
-      values["file"] = _u32(_at(p, 8)) == 1 ? null : _text(_at(_at(p, 8), 8));
-    if (_u32(_at(p, 32)) != 0)
-      values["first_line"] =
-          _u32(_at(p, 32)) == 1 ? null : _unsigned(_at(_at(p, 32), 8));
-    values["kind"] = _text(_at(p, 48));
-    if (_u32(_at(p, 64)) != 0)
-      values["last_line"] =
-          _u32(_at(p, 64)) == 1 ? null : _unsigned(_at(_at(p, 64), 8));
-    values["length"] = _unsigned(_at(p, 80));
-    values["start"] = _unsigned(_at(p, 88));
-    values["strength"] = _at(p, 96).cast<Double>().value;
-    values["text"] = _text(_at(p, 104));
-    return values;
-  }
-
-  static Object? readBoundaryProposal(Pointer<Void> p) {
-    final values = _extensions(_at(p, 48));
-    values["end"] = _unsigned(_at(p, 0));
-    values["length"] = _unsigned(_at(p, 8));
-    values["probability"] = _at(p, 16).cast<Double>().value;
-    values["start"] = _unsigned(_at(p, 24));
-    values["text"] = _text(_at(p, 32));
     return values;
   }
 
@@ -1445,52 +2043,6 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readRelatedEntityEdge(Pointer<Void> p) {
-    final values = _extensions(_at(p, 48));
-    if (_u32(_at(p, 0)) != 0)
-      values["either"] =
-          _u32(_at(p, 0)) == 1 ? null : _u32(_at(_at(p, 0), 4)) != 0;
-    values["probability"] = _at(p, 8).cast<Double>().value;
-    values["relation"] = _text(_at(p, 16));
-    values["source"] = readRelationEndpoint(_pointer(_at(p, 32)));
-    values["target"] = readRelationEndpoint(_pointer(_at(p, 40)));
-    return values;
-  }
-
-  static Object? readRelationEndpoint(Pointer<Void> p) {
-    return switch (_u32(_at(p, 0))) {
-      1 => readRelationEndpointRelatedEntity(_pointer(_at(p, 8))),
-      2 => readRelationEndpointSource(_pointer(_at(p, 8))),
-      _ => throw StateError('Invalid native discriminator'),
-    };
-  }
-
-  static Object? readRelationEndpointSource(Pointer<Void> p) {
-    final values = _extensions(_at(p, 112));
-    if (_u32(_at(p, 0)) != 0)
-      values["file"] = _u32(_at(p, 0)) == 1 ? null : _text(_at(_at(p, 0), 8));
-    if (_u32(_at(p, 24)) != 0)
-      values["first_line"] =
-          _u32(_at(p, 24)) == 1 ? null : _unsigned(_at(_at(p, 24), 8));
-    values["kind"] = _text(_at(p, 40));
-    if (_u32(_at(p, 56)) != 0)
-      values["last_line"] =
-          _u32(_at(p, 56)) == 1 ? null : _unsigned(_at(_at(p, 56), 8));
-    values["name"] = _text(_at(p, 72));
-    values["ordinal"] = _unsigned(_at(p, 88));
-    if (_u32(_at(p, 96)) != 0)
-      values["record"] =
-          _u32(_at(p, 96)) == 1 ? null : _value(_pointer(_at(_at(p, 96), 8)));
-    return values;
-  }
-
-  static Object? readRelationEndpointRelatedEntity(Pointer<Void> p) {
-    final values = _extensions(_at(p, 32));
-    values["kind"] = _text(_at(p, 0));
-    values["name"] = _text(_at(p, 16));
-    return values;
-  }
-
   static Object? readVersion(Pointer<Void> p) {
     return switch (_u32(_at(p, 0))) {
       1 => "thinkthen.result/2",
@@ -1855,13 +2407,6 @@ final class _NativePacketReader {
     return values;
   }
 
-  static Object? readBoundaryMode(Pointer<Void> p) {
-    return switch (_u32(_at(p, 0))) {
-      1 => "boundary_only",
-      _ => throw StateError('Invalid native enum'),
-    };
-  }
-
   static Object? readRecognizeEntities(Pointer<Void> p) {
     final values = _extensions(_at(p, 40));
     values["entities"] = _list(_at(p, 0), 8, (p) => readEntity(_pointer(p)));
@@ -1869,18 +2414,6 @@ final class _NativePacketReader {
       values["relations"] = _u32(_at(p, 16)) == 1
           ? null
           : _list(_at(_at(p, 16), 8), 8, (p) => readEntityEdge(_pointer(p)));
-    return values;
-  }
-
-  static Object? readEntityEdge(Pointer<Void> p) {
-    final values = _extensions(_at(p, 48));
-    if (_u32(_at(p, 0)) != 0)
-      values["either"] =
-          _u32(_at(p, 0)) == 1 ? null : _u32(_at(_at(p, 0), 4)) != 0;
-    values["probability"] = _at(p, 8).cast<Double>().value;
-    values["relation"] = _text(_at(p, 16));
-    values["source"] = readEntity(_pointer(_at(p, 32)));
-    values["target"] = readEntity(_pointer(_at(p, 40)));
     return values;
   }
 

@@ -21,6 +21,7 @@ python3 "$repo/sdlc/generators/results/generate.py" --target python --inputs --c
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'libraries/python: not run: no supported Python'; exit 1; }
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
     [ "$profile" = routine ] || exit 2
     scratch=$THINKTHEN_COVERAGE_STAGE

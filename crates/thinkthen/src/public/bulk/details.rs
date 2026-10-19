@@ -41,7 +41,7 @@ impl Engine {
                 .into_iter()
                 .map(|row| row.map(crate::public::record_input::plain)),
             options,
-            |original, _, canonical| {
+            |original, _, canonical, _| {
                 let details = Details::of_complete(&canonical, Some(&original))?;
                 Ok(Some(Row::new(original, details, 0.0)))
             },

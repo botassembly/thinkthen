@@ -4,6 +4,15 @@
 use std::fmt;
 
 mod aggregate_reading;
+mod settled;
+mod settled_aggregates;
+mod settled_carriers;
+mod settled_rows;
+pub use settled::{
+    AnswerResolution, AnswerResolutions, AnswerShape, Settled, SettledAnswer, SettledDecision,
+    SettledJudgment, SettledOriginal,
+};
+pub use settled_aggregates::{SettledRecognition, SettledRelations};
 mod call;
 pub use crate::engine::usage::UsagePersistence;
 mod complete;

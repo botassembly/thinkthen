@@ -11,6 +11,7 @@ cd -- "$(dirname -- "$0")"
 if [ "$profile" = routine ]; then
     export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/../../conformance/routine-ids.txt}"
 fi
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
@@ -22,6 +23,7 @@ if [ "$profile" = stress ] && [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
 fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
+    python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
     scratch_dir installed
     mkdir "$installed/crate" "$installed/consumer"
     tar -xzf "$THINKTHEN_ARTIFACT" -C "$installed/crate" --strip-components=1

@@ -1,12 +1,28 @@
 # 0612: Compute each call's answer in Rust and carry it in the final packet
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0626
+
+Reviews: revision 72fb2e5, accept
+
+Reviews: revision 84e5458, accept
+
+Reviews: revision 167571c, accept
+
+Reviews: revision f3658c9, accept
+
+Reviews: revision 85768f1, accept
+
+Reviews: revision e36fd80, accept
+
+Reviews: revision f3bd352, accept
+
+Reviews: revision db9c956, accept
 
 ## Outcome
 
@@ -31,3 +47,14 @@ Rust sends rows and aggregates, and each language then works out the call's answ
 The Rust library's outside consumer (`libraries/rust/consumer/src/main.rs`, `consumer/src/fixture.rs`) also repeats per-function projection that `Call::value()` and `Call::probability()` already provide.
 
 0626 rewrites the same result schema and serializers, so this ticket follows it.
+
+## Progress
+
+- 2026-10-18 started
+- 2026-10-19 next: Fresh review accepts72fb2e5c9 with native settlement, snapshot ownership and serializer fixes plus PM-authorized all-host declaration support; regeneration, native schema equality, C and native clippy, serialization contracts and the2012-item API inventory pass, and the full main closing gate remains after the accepted pairs.
+- 2026-10-19 next: The combined0612/0696 gate retained native proofs but failed three partial-checkout fixtures missing the shared privacy helper; accepted0617 already fixes all three with real tracked checkouts, so land0615 and0617 first, then update and gate the pair without duplicating fixture code.
+- 2026-10-19 next: Review accepts f3658c982 with real generated-archive scanner regressions, all ten privacy tests, check-verdict and all fifty-seven conformance checks passing across the retained batch and one repaired DuckDB fixture check; update the pair with landed0615/0617 before its complete closing gate.
+- 2026-10-19 next: The closing gate caught a Git fixture environment inheritance violation omitted from earlier focused acceptance; fresh review accepts e36fd80c5 after the shared child helper repair passed the children checker, policy, compiler-boundary fixture and privacy suite, with failed05222d2 receipt retained before the next full gate.
+- 2026-10-19 next: Fresh review accepts f3bd35264 after all seven stale failure envelopes gained the already-required failed resolution, a missing-resolution negative and actual native failure assertions passed with all99corpus cases and the remaining routine tail, while the failed dda2b957 gate receipt and its earlier passing groups remain retained before the complete closing gate.
+- 2026-10-19 next: The closing gate on ce5348035 failed in release-smoke after114s because sccache could not create a temporary directory under a missing TMPDIR, with receipt4a1ba12025fe95e34eba591ae794df9fc2f48fc1 retained; a fresh developer is tracing fixture lifetime versus shared cache state before another run.
+- 2026-10-19 next: Fresh review accepts db9c956ab after shared routine compiler isolation cleared inherited cache wrappers and real release-smoke plus environment, children and policy checks passed in job1792421559657-28008; both earlier stale-daemon gate failures remain retained and the complete closing gate now follows with source flags unchanged.

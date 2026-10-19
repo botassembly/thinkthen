@@ -34,6 +34,7 @@ pub use source::RequestSourceReader;
 mod session;
 mod session_queue;
 mod session_result;
+mod settlement;
 #[cfg(test)]
 pub(crate) use session_result::SessionPacketDocument;
 #[cfg(test)]

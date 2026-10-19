@@ -166,6 +166,374 @@ const graph = {
     pattern: "^[0-9a-f]{64}$",
     type: "string",
   },
+  completeAnswerResolution: {
+    oneOf: [
+      { const: "resolved", type: "string" },
+      { const: "unresolved", type: "string" },
+      { const: "failed", type: "string" },
+    ],
+  },
+  completeAnswerResolutions: {
+    primitive_variants: ["string", "object"],
+    primitive_schemas: {
+      string: { $ref: "#/$defs/completeAnswerResolution" },
+      object: {
+        type: "object",
+        additionalProperties: { $ref: "#/$defs/completeAnswerResolution" },
+      },
+    },
+  },
+  completeAnswerShape: {},
+  completeAnswerShape10: {
+    primitive_variants: ["array", "null", "array2"],
+    primitive_schemas: {
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "array",
+      },
+      null: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "null",
+      },
+      array2: {
+        items: { $ref: "#/$defs/completeAnswerShape10_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null", array2: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape10_anyOf_1_items: {
+    primitive_variants: ["array", "null"],
+    primitive_schemas: {
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "array",
+      },
+      null: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "null",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape11: {
+    primitive_variants: ["array", "null", "array2"],
+    primitive_schemas: {
+      array: {
+        items: {
+          format: "uint",
+          maximum: 18446744073709551615,
+          minimum: 0,
+          type: "integer",
+        },
+        type: "array",
+      },
+      null: {
+        items: {
+          format: "uint",
+          maximum: 18446744073709551615,
+          minimum: 0,
+          type: "integer",
+        },
+        type: "null",
+      },
+      array2: {
+        items: { $ref: "#/$defs/completeAnswerShape11_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null", array2: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape11_anyOf_1_items: {
+    primitive_variants: ["array", "null"],
+    primitive_schemas: {
+      array: {
+        items: {
+          format: "uint",
+          maximum: 18446744073709551615,
+          minimum: 0,
+          type: "integer",
+        },
+        type: "array",
+      },
+      null: {
+        items: {
+          format: "uint",
+          maximum: 18446744073709551615,
+          minimum: 0,
+          type: "integer",
+        },
+        type: "null",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape12: {},
+  completeAnswerShape12_anyOf_1_items: {},
+  completeAnswerShape13: {
+    primitive_variants: ["object", "null", "array"],
+    primitive_schemas: {
+      object: { $ref: "#/$defs/completeSettledRecognition" },
+      null: { type: "null" },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape13_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { object: "object", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape13_anyOf_1_items: {
+    primitive_variants: ["object", "null"],
+    primitive_schemas: {
+      object: { $ref: "#/$defs/completeSettledRecognition" },
+      null: { type: "null" },
+    },
+    primitive_kinds: { object: "object", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape14: {
+    primitive_variants: ["array", "null", "array2"],
+    primitive_schemas: {
+      array: { $ref: "#/$defs/completeSettledRelations" },
+      null: { type: "null" },
+      array2: {
+        items: { $ref: "#/$defs/completeAnswerShape14_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null", array2: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape14_anyOf_1_items: {
+    primitive_variants: ["array", "null"],
+    primitive_schemas: {
+      array: { $ref: "#/$defs/completeSettledRelations" },
+      null: { type: "null" },
+    },
+    primitive_kinds: { array: "array", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape15: {
+    primitive_variants: ["object", "null", "array"],
+    primitive_schemas: {
+      object: {
+        additionalProperties: { $ref: "#/$defs/completeSettledJudgment" },
+        type: "object",
+      },
+      null: {
+        additionalProperties: { $ref: "#/$defs/completeSettledJudgment" },
+        type: "null",
+      },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape15_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { object: "object", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape15_anyOf_1_items: {
+    primitive_variants: ["object", "null"],
+    primitive_schemas: {
+      object: {
+        additionalProperties: { $ref: "#/$defs/completeSettledJudgment" },
+        type: "object",
+      },
+      null: {
+        additionalProperties: { $ref: "#/$defs/completeSettledJudgment" },
+        type: "null",
+      },
+    },
+    primitive_kinds: { object: "object", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape2: {
+    primitive_variants: ["number", "null", "array"],
+    primitive_schemas: {
+      number: { format: "double", type: "number" },
+      null: { format: "double", type: "null" },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { number: "number", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape3: {
+    primitive_variants: ["string", "null", "array"],
+    primitive_schemas: {
+      string: { type: "string" },
+      null: { type: "null" },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape6_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { string: "string", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape4: {
+    primitive_variants: ["integer", "null", "array"],
+    primitive_schemas: {
+      integer: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      null: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "null",
+      },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape4_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { integer: "integer", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape4_anyOf_1_items: {
+    primitive_variants: ["integer", "null"],
+    primitive_schemas: {
+      integer: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      null: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "null",
+      },
+    },
+    primitive_kinds: { integer: "integer", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape5: {
+    primitive_variants: ["string", "object", "array"],
+    primitive_schemas: {
+      string: { $ref: "#/$defs/completeAnswerResolution" },
+      object: {
+        type: "object",
+        additionalProperties: { $ref: "#/$defs/completeAnswerResolution" },
+      },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerResolutions" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { string: "string", object: "object", array: "array" },
+    nullable_json: false,
+  },
+  completeAnswerShape6: {
+    primitive_variants: ["string", "null", "array"],
+    primitive_schemas: {
+      string: { type: "string" },
+      null: { type: "null" },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape6_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { string: "string", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape6_anyOf_1_items: {
+    primitive_variants: ["string", "null"],
+    primitive_schemas: { string: { type: "string" }, null: { type: "null" } },
+    primitive_kinds: { string: "string", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape7: {
+    primitive_variants: ["array", "null", "array2"],
+    primitive_schemas: {
+      array: { items: { type: "string" }, type: "array" },
+      null: { items: { type: "string" }, type: "null" },
+      array2: {
+        items: { $ref: "#/$defs/completeAnswerShape7_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null", array2: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape7_anyOf_1_items: {
+    primitive_variants: ["array", "null"],
+    primitive_schemas: {
+      array: { items: { type: "string" }, type: "array" },
+      null: { items: { type: "string" }, type: "null" },
+    },
+    primitive_kinds: { array: "array", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape8: {
+    primitive_variants: ["number", "null", "array"],
+    primitive_schemas: {
+      number: { format: "double", type: "number" },
+      null: { format: "double", type: "null" },
+      array: {
+        items: { $ref: "#/$defs/completeAnswerShape8_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { number: "number", null: "null", array: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape8_anyOf_1_items: {
+    primitive_variants: ["number", "null"],
+    primitive_schemas: {
+      number: { format: "double", type: "number" },
+      null: { format: "double", type: "null" },
+    },
+    primitive_kinds: { number: "number", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape9: {
+    primitive_variants: ["array", "null", "array2"],
+    primitive_schemas: {
+      array: {
+        items: { $ref: "#/$defs/completeSettledOriginal" },
+        type: "array",
+      },
+      null: {
+        items: { $ref: "#/$defs/completeSettledOriginal" },
+        type: "null",
+      },
+      array2: {
+        items: { $ref: "#/$defs/completeAnswerShape9_anyOf_1_items" },
+        type: "array",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null", array2: "array" },
+    nullable_json: true,
+  },
+  completeAnswerShape9_anyOf_1_items: {
+    primitive_variants: ["array", "null"],
+    primitive_schemas: {
+      array: {
+        items: { $ref: "#/$defs/completeSettledOriginal" },
+        type: "array",
+      },
+      null: {
+        items: { $ref: "#/$defs/completeSettledOriginal" },
+        type: "null",
+      },
+    },
+    primitive_kinds: { array: "array", null: "null" },
+    nullable_json: true,
+  },
+  completeAnswerShape_anyOf_1_items: {},
   completeAnswers: {
     properties: {
       questions: {
@@ -463,6 +831,19 @@ const graph = {
         minimum: 0,
         type: "integer",
       },
+      file: { type: "string" },
+      first_line: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
+      last_line: {
+        format: "uint",
+        maximum: 18446744073709551615,
+        minimum: 0,
+        type: "integer",
+      },
       length: {
         format: "uint",
         maximum: 18446744073709551615,
@@ -486,8 +867,9 @@ const graph = {
     properties: {
       error: { $ref: "#/$defs/completeError" },
       facts: { anyOf: [{ $ref: "#/$defs/completeFacts" }] },
+      resolution: { $ref: "#/$defs/completeAnswerResolution" },
     },
-    required: ["error"],
+    required: ["resolution", "error"],
     type: "object",
     unevaluatedProperties: false,
   },
@@ -1451,6 +1833,67 @@ const graph = {
     required: ["kind", "last_status"],
     type: "object",
     unevaluatedProperties: false,
+  },
+  completeSettledDecision: {},
+  completeSettledJudgment: {
+    primitive_variants: ["boolean", "null", "string", "number", "array"],
+    primitive_schemas: {
+      boolean: { type: "boolean" },
+      null: { type: "null" },
+      string: { type: "string" },
+      number: { format: "double", type: "number" },
+      array: { items: { type: "string" }, type: "array" },
+    },
+    nullable_json: true,
+  },
+  completeSettledOriginal: {},
+  completeSettledRecognition: {
+    variants: [
+      [
+        "completeSettledRecognition_entities",
+        [
+          "structure",
+          "",
+          { required: ["entities"], excluded: ["mode", "proposals"] },
+        ],
+      ],
+      [
+        "completeSettledRecognition_mode_proposals",
+        [
+          "structure",
+          "",
+          { required: ["mode", "proposals"], excluded: ["entities"] },
+        ],
+      ],
+    ],
+  },
+  completeSettledRecognition_entities: {
+    properties: {
+      entities: { items: { $ref: "#/$defs/completeentity" }, type: "array" },
+      relations: {
+        items: { $ref: "#/$defs/completeentityEdge" },
+        type: "array",
+      },
+    },
+    required: ["entities"],
+    type: "object",
+    unevaluatedProperties: false,
+  },
+  completeSettledRecognition_mode_proposals: {
+    properties: {
+      mode: { $ref: "#/$defs/completeBoundaryMode" },
+      proposals: {
+        items: { $ref: "#/$defs/completeBoundaryProposal" },
+        type: "array",
+      },
+    },
+    required: ["mode", "proposals"],
+    type: "object",
+    unevaluatedProperties: false,
+  },
+  completeSettledRelations: {
+    items: { $ref: "#/$defs/completerelatedEntityEdge" },
+    type: "array",
   },
   completeStopCause: {
     oneOf: [
@@ -2632,11 +3075,15 @@ const graph = {
   },
   completesessionPacket_terminal: {
     properties: {
+      answer: {
+        anyOf: [{ $ref: "#/$defs/completesettledAnswer" }, { type: "null" }],
+      },
       facts: { anyOf: [{ $ref: "#/$defs/completeFacts" }] },
       failure: { anyOf: [{ $ref: "#/$defs/completeCallError" }] },
       kind: { const: "terminal", type: "string" },
+      resolution: { $ref: "#/$defs/completeAnswerResolution" },
     },
-    required: ["kind"],
+    required: ["kind", "answer", "resolution"],
     type: "object",
     unevaluatedProperties: false,
   },
@@ -2760,6 +3207,230 @@ const graph = {
     required: ["relation", "source", "target", "probability", "either"],
     type: "object",
     unevaluatedProperties: false,
+  },
+  completesettledAnswer: {
+    variants: [
+      ["completesettledAnswer_decide", ["literal", "function", "decide"]],
+      ["completesettledAnswer_choose", ["literal", "function", "choose"]],
+      ["completesettledAnswer_tag", ["literal", "function", "tag"]],
+      ["completesettledAnswer_score", ["literal", "function", "score"]],
+      ["completesettledAnswer_filter", ["literal", "function", "filter"]],
+      ["completesettledAnswer_rank", ["literal", "function", "rank"]],
+      ["completesettledAnswer_find", ["literal", "function", "find"]],
+      ["completesettledAnswer_recognize", ["literal", "function", "recognize"]],
+      ["completesettledAnswer_relate", ["literal", "function", "relate"]],
+      ["completesettledAnswer_annotate", ["literal", "function", "annotate"]],
+    ],
+  },
+  completesettledAnswer_annotate: {
+    properties: {
+      function: { const: "annotate", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape15" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "null",
+  },
+  completesettledAnswer_choose: {
+    properties: {
+      function: { const: "choose", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape6" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "picked",
+  },
+  completesettledAnswer_decide: {
+    properties: {
+      function: { const: "decide", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "yes",
+  },
+  completesettledAnswer_filter: {
+    properties: {
+      function: { const: "filter", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape10" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape9" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "yes",
+  },
+  completesettledAnswer_find: {
+    properties: {
+      function: { const: "find", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape12" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "picked",
+  },
+  completesettledAnswer_rank: {
+    properties: {
+      function: { const: "rank", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape10" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape11" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "items",
+  },
+  completesettledAnswer_recognize: {
+    properties: {
+      function: { const: "recognize", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape10" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape13" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "items",
+  },
+  completesettledAnswer_relate: {
+    properties: {
+      function: { const: "relate", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape10" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape14" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "items",
+  },
+  completesettledAnswer_score: {
+    properties: {
+      function: { const: "score", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape8" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "null",
+  },
+  completesettledAnswer_tag: {
+    properties: {
+      function: { const: "tag", type: "string" },
+      index: { $ref: "#/$defs/completeAnswerShape4" },
+      pick: { $ref: "#/$defs/completeAnswerShape3" },
+      probability: { $ref: "#/$defs/completeAnswerShape2" },
+      resolution: { $ref: "#/$defs/completeAnswerShape5" },
+      value: { $ref: "#/$defs/completeAnswerShape7" },
+    },
+    required: [
+      "function",
+      "value",
+      "probability",
+      "pick",
+      "index",
+      "resolution",
+    ],
+    type: "object",
+    unevaluatedProperties: false,
+    "x-probability-mode": "null",
   },
   completesourceRelationEndpoint: {
     properties: {
@@ -3209,6 +3880,20 @@ class NativeSendBudgetDenialBeforeRetry {
 }
 classes["completeSendBudgetDenial_before_retry"] =
   NativeSendBudgetDenialBeforeRetry;
+class NativeSettledRecognitionEntities {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completeSettledRecognition_entities"] =
+  NativeSettledRecognitionEntities;
+class NativeSettledRecognitionModeProposals {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completeSettledRecognition_mode_proposals"] =
+  NativeSettledRecognitionModeProposals;
 class NativeStopped {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3645,6 +4330,66 @@ class NativeSessionRelationEdge {
   }
 }
 classes["completesessionRelationEdge"] = NativeSessionRelationEdge;
+class NativeSettledAnswerAnnotate {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_annotate"] = NativeSettledAnswerAnnotate;
+class NativeSettledAnswerChoose {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_choose"] = NativeSettledAnswerChoose;
+class NativeSettledAnswerDecide {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_decide"] = NativeSettledAnswerDecide;
+class NativeSettledAnswerFilter {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_filter"] = NativeSettledAnswerFilter;
+class NativeSettledAnswerFind {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_find"] = NativeSettledAnswerFind;
+class NativeSettledAnswerRank {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_rank"] = NativeSettledAnswerRank;
+class NativeSettledAnswerRecognize {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_recognize"] = NativeSettledAnswerRecognize;
+class NativeSettledAnswerRelate {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_relate"] = NativeSettledAnswerRelate;
+class NativeSettledAnswerScore {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_score"] = NativeSettledAnswerScore;
+class NativeSettledAnswerTag {
+  has(key) {
+    return Object.hasOwn(this, key);
+  }
+}
+classes["completesettledAnswer_tag"] = NativeSettledAnswerTag;
 class NativeSourceRelationEndpoint {
   has(key) {
     return Object.hasOwn(this, key);
@@ -3938,6 +4683,8 @@ module.exports = {
   NativeSendBudgetDenialBeforeAdditionalSend,
   NativeSendBudgetDenialBeforeFirstSend,
   NativeSendBudgetDenialBeforeRetry,
+  NativeSettledRecognitionEntities,
+  NativeSettledRecognitionModeProposals,
   NativeStopped,
   NativeStringRoot,
   NativeUsage,
@@ -4008,6 +4755,16 @@ module.exports = {
   NativeSessionQuestionDetail,
   NativeSessionRecognition,
   NativeSessionRelationEdge,
+  NativeSettledAnswerAnnotate,
+  NativeSettledAnswerChoose,
+  NativeSettledAnswerDecide,
+  NativeSettledAnswerFilter,
+  NativeSettledAnswerFind,
+  NativeSettledAnswerRank,
+  NativeSettledAnswerRecognize,
+  NativeSettledAnswerRelate,
+  NativeSettledAnswerScore,
+  NativeSettledAnswerTag,
   NativeSourceRelationEndpoint,
   NativeTokenBand,
   NativeTokenUsage,

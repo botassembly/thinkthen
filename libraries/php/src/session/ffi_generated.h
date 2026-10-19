@@ -993,6 +993,9 @@ typedef struct thinkthen_complete_recognition_odds_recognize_answer_v1 {
 } thinkthen_complete_recognition_odds_recognize_answer_v1;
 typedef struct thinkthen_complete_boundary_proposal_v1 {
     uint64_t end;
+    struct thinkthen_complete_utf8_presence_v1 file;
+    struct thinkthen_complete_u64_presence_v1 first_line;
+    struct thinkthen_complete_u64_presence_v1 last_line;
     uint64_t length;
     double probability;
     uint64_t start;
@@ -1594,6 +1597,489 @@ typedef struct thinkthen_complete_session_packet_observation_v1 {
     const struct thinkthen_complete_session_observation_v1 *value;
     struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_observation_v1;
+typedef union thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 {
+    uint64_t integer;
+    uint32_t null;
+} thinkthen_complete_answer_shape_4_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_4_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_4_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_4_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_4_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_4_data_v1 {
+    uint64_t integer;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_4_data_v1;
+typedef struct thinkthen_complete_answer_shape_4_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_4_data_v1 data;
+} thinkthen_complete_answer_shape_4_v1;
+typedef struct thinkthen_complete_answer_shape_4_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_4_v1 *value;
+} thinkthen_complete_answer_shape_4_presence_v1;
+typedef union thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 {
+    struct thinkthen_complete_utf8_v1 string;
+    uint32_t null;
+} thinkthen_complete_answer_shape_6_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_6_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_6_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_6_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_6_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_3_data_v1 {
+    struct thinkthen_complete_utf8_v1 string;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_3_data_v1;
+typedef struct thinkthen_complete_answer_shape_3_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_3_data_v1 data;
+} thinkthen_complete_answer_shape_3_v1;
+typedef struct thinkthen_complete_answer_shape_3_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_3_v1 *value;
+} thinkthen_complete_answer_shape_3_presence_v1;
+typedef union thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 {
+    double number;
+    uint32_t null;
+} thinkthen_complete_answer_shape_8_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_8_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_8_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_8_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_2_data_v1 {
+    double number;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_2_data_v1;
+typedef struct thinkthen_complete_answer_shape_2_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_2_data_v1 data;
+} thinkthen_complete_answer_shape_2_v1;
+typedef struct thinkthen_complete_answer_shape_2_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_2_v1 *value;
+} thinkthen_complete_answer_shape_2_presence_v1;
+typedef struct thinkthen_complete_answer_resolution_v1 {
+    uint32_t kind;
+} thinkthen_complete_answer_resolution_v1;
+typedef struct thinkthen_complete_answer_resolution_map_entry_v1 {
+    struct thinkthen_complete_utf8_v1 name;
+    const struct thinkthen_complete_answer_resolution_v1 *value;
+} thinkthen_complete_answer_resolution_map_entry_v1;
+typedef struct thinkthen_complete_answer_resolution_map_v1 {
+    const struct thinkthen_complete_answer_resolution_map_entry_v1 *data;
+    size_t len;
+} thinkthen_complete_answer_resolution_map_v1;
+typedef union thinkthen_complete_answer_resolutions_data_v1 {
+    const struct thinkthen_complete_answer_resolution_v1 *string;
+    struct thinkthen_complete_answer_resolution_map_v1 object;
+} thinkthen_complete_answer_resolutions_data_v1;
+typedef struct thinkthen_complete_answer_resolutions_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_resolutions_data_v1 data;
+} thinkthen_complete_answer_resolutions_v1;
+typedef struct thinkthen_complete_answer_resolutions_list_v1 {
+    const struct thinkthen_complete_answer_resolutions_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_resolutions_list_v1;
+typedef union thinkthen_complete_answer_shape_5_data_v1 {
+    const struct thinkthen_complete_answer_resolution_v1 *string;
+    struct thinkthen_complete_answer_resolution_map_v1 object;
+    struct thinkthen_complete_answer_resolutions_list_v1 array;
+} thinkthen_complete_answer_shape_5_data_v1;
+typedef struct thinkthen_complete_answer_shape_5_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_5_data_v1 data;
+} thinkthen_complete_answer_shape_5_v1;
+typedef struct thinkthen_complete_answer_shape_v1 {
+    const struct thinkthen_complete_json_v1 *value;
+} thinkthen_complete_answer_shape_v1;
+typedef struct thinkthen_complete_answer_shape_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_v1 *value;
+} thinkthen_complete_answer_shape_presence_v1;
+typedef struct thinkthen_complete_settled_answer_decide_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_decide_v1;
+typedef union thinkthen_complete_answer_shape_6_data_v1 {
+    struct thinkthen_complete_utf8_v1 string;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_6_data_v1;
+typedef struct thinkthen_complete_answer_shape_6_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_6_data_v1 data;
+} thinkthen_complete_answer_shape_6_v1;
+typedef struct thinkthen_complete_answer_shape_6_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_6_v1 *value;
+} thinkthen_complete_answer_shape_6_presence_v1;
+typedef struct thinkthen_complete_settled_answer_choose_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_6_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_choose_v1;
+typedef union thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 {
+    struct thinkthen_complete_string_list_v1 array;
+    uint32_t null;
+} thinkthen_complete_answer_shape_7_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_7_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_7_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_7_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_7_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_7_data_v1 {
+    struct thinkthen_complete_string_list_v1 array;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 array2;
+} thinkthen_complete_answer_shape_7_data_v1;
+typedef struct thinkthen_complete_answer_shape_7_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_7_data_v1 data;
+} thinkthen_complete_answer_shape_7_v1;
+typedef struct thinkthen_complete_answer_shape_7_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_7_v1 *value;
+} thinkthen_complete_answer_shape_7_presence_v1;
+typedef struct thinkthen_complete_settled_answer_tag_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_7_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_tag_v1;
+typedef union thinkthen_complete_answer_shape_8_data_v1 {
+    double number;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_8_data_v1;
+typedef struct thinkthen_complete_answer_shape_8_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_8_data_v1 data;
+} thinkthen_complete_answer_shape_8_v1;
+typedef struct thinkthen_complete_answer_shape_8_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_8_v1 *value;
+} thinkthen_complete_answer_shape_8_presence_v1;
+typedef struct thinkthen_complete_settled_answer_score_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_8_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_score_v1;
+typedef union thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 {
+    struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 array;
+    uint32_t null;
+} thinkthen_complete_answer_shape_10_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_10_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_10_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_10_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_10_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_10_data_v1 {
+    struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 array;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 array2;
+} thinkthen_complete_answer_shape_10_data_v1;
+typedef struct thinkthen_complete_answer_shape_10_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_10_data_v1 data;
+} thinkthen_complete_answer_shape_10_v1;
+typedef struct thinkthen_complete_answer_shape_10_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_10_v1 *value;
+} thinkthen_complete_answer_shape_10_presence_v1;
+typedef struct thinkthen_complete_settled_original_v1 {
+    const struct thinkthen_complete_json_v1 *value;
+} thinkthen_complete_settled_original_v1;
+typedef struct thinkthen_complete_settled_original_list_v1 {
+    const struct thinkthen_complete_settled_original_v1 *const *data;
+    size_t len;
+} thinkthen_complete_settled_original_list_v1;
+typedef union thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 {
+    struct thinkthen_complete_settled_original_list_v1 array;
+    uint32_t null;
+} thinkthen_complete_answer_shape_9_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_9_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_9_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_9_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_9_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_9_data_v1 {
+    struct thinkthen_complete_settled_original_list_v1 array;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 array2;
+} thinkthen_complete_answer_shape_9_data_v1;
+typedef struct thinkthen_complete_answer_shape_9_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_9_data_v1 data;
+} thinkthen_complete_answer_shape_9_v1;
+typedef struct thinkthen_complete_answer_shape_9_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_9_v1 *value;
+} thinkthen_complete_answer_shape_9_presence_v1;
+typedef struct thinkthen_complete_settled_answer_filter_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_10_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_9_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_filter_v1;
+typedef struct thinkthen_complete_integer_list_v1 {
+    const uint64_t *data;
+    size_t len;
+} thinkthen_complete_integer_list_v1;
+typedef union thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 {
+    struct thinkthen_complete_integer_list_v1 array;
+    uint32_t null;
+} thinkthen_complete_answer_shape_11_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_11_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_11_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_11_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_11_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_11_data_v1 {
+    struct thinkthen_complete_integer_list_v1 array;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 array2;
+} thinkthen_complete_answer_shape_11_data_v1;
+typedef struct thinkthen_complete_answer_shape_11_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_11_data_v1 data;
+} thinkthen_complete_answer_shape_11_v1;
+typedef struct thinkthen_complete_answer_shape_11_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_11_v1 *value;
+} thinkthen_complete_answer_shape_11_presence_v1;
+typedef struct thinkthen_complete_settled_answer_rank_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_10_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_11_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_rank_v1;
+typedef struct thinkthen_complete_answer_shape_12_v1 {
+    const struct thinkthen_complete_json_v1 *value;
+} thinkthen_complete_answer_shape_12_v1;
+typedef struct thinkthen_complete_answer_shape_12_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_12_v1 *value;
+} thinkthen_complete_answer_shape_12_presence_v1;
+typedef struct thinkthen_complete_settled_answer_find_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_12_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_find_v1;
+typedef struct thinkthen_complete_settled_recognition_entities_v1 {
+    struct thinkthen_complete_entity_list_v1 entities;
+    struct thinkthen_complete_entity_edge_list_presence_v1 relations;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_recognition_entities_v1;
+typedef struct thinkthen_complete_settled_recognition_mode_proposals_v1 {
+    const struct thinkthen_complete_boundary_mode_v1 *mode;
+    struct thinkthen_complete_boundary_proposal_list_v1 proposals;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_recognition_mode_proposals_v1;
+typedef union thinkthen_complete_settled_recognition_data_v1 {
+    const struct thinkthen_complete_settled_recognition_entities_v1 *entities;
+    const struct thinkthen_complete_settled_recognition_mode_proposals_v1 *mode_proposals;
+} thinkthen_complete_settled_recognition_data_v1;
+typedef struct thinkthen_complete_settled_recognition_v1 {
+    uint32_t kind;
+    union thinkthen_complete_settled_recognition_data_v1 data;
+} thinkthen_complete_settled_recognition_v1;
+typedef union thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 {
+    const struct thinkthen_complete_settled_recognition_v1 *object;
+    uint32_t null;
+} thinkthen_complete_answer_shape_13_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_13_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_13_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_13_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_13_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_13_data_v1 {
+    const struct thinkthen_complete_settled_recognition_v1 *object;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_13_data_v1;
+typedef struct thinkthen_complete_answer_shape_13_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_13_data_v1 data;
+} thinkthen_complete_answer_shape_13_v1;
+typedef struct thinkthen_complete_answer_shape_13_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_13_v1 *value;
+} thinkthen_complete_answer_shape_13_presence_v1;
+typedef struct thinkthen_complete_settled_answer_recognize_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_10_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_13_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_recognize_v1;
+typedef struct thinkthen_complete_settled_relations_v1 {
+    struct thinkthen_complete_related_entity_edge_list_v1 value;
+} thinkthen_complete_settled_relations_v1;
+typedef union thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 {
+    const struct thinkthen_complete_settled_relations_v1 *array;
+    uint32_t null;
+} thinkthen_complete_answer_shape_14_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_14_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_14_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_14_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_14_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_14_data_v1 {
+    const struct thinkthen_complete_settled_relations_v1 *array;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 array2;
+} thinkthen_complete_answer_shape_14_data_v1;
+typedef struct thinkthen_complete_answer_shape_14_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_14_data_v1 data;
+} thinkthen_complete_answer_shape_14_v1;
+typedef struct thinkthen_complete_answer_shape_14_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_14_v1 *value;
+} thinkthen_complete_answer_shape_14_presence_v1;
+typedef struct thinkthen_complete_settled_answer_relate_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_10_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_14_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_relate_v1;
+typedef union thinkthen_complete_settled_judgment_data_v1 {
+    uint32_t boolean;
+    uint32_t null;
+    struct thinkthen_complete_utf8_v1 string;
+    double number;
+    struct thinkthen_complete_string_list_v1 array;
+} thinkthen_complete_settled_judgment_data_v1;
+typedef struct thinkthen_complete_settled_judgment_v1 {
+    uint32_t kind;
+    union thinkthen_complete_settled_judgment_data_v1 data;
+} thinkthen_complete_settled_judgment_v1;
+typedef struct thinkthen_complete_settled_judgment_map_entry_v1 {
+    struct thinkthen_complete_utf8_v1 name;
+    const struct thinkthen_complete_settled_judgment_v1 *value;
+} thinkthen_complete_settled_judgment_map_entry_v1;
+typedef struct thinkthen_complete_settled_judgment_map_v1 {
+    const struct thinkthen_complete_settled_judgment_map_entry_v1 *data;
+    size_t len;
+} thinkthen_complete_settled_judgment_map_v1;
+typedef union thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 {
+    struct thinkthen_complete_settled_judgment_map_v1 object;
+    uint32_t null;
+} thinkthen_complete_answer_shape_15_any_of_1_items_data_v1;
+typedef struct thinkthen_complete_answer_shape_15_any_of_1_items_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 data;
+} thinkthen_complete_answer_shape_15_any_of_1_items_v1;
+typedef struct thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 {
+    const struct thinkthen_complete_answer_shape_15_any_of_1_items_v1 *const *data;
+    size_t len;
+} thinkthen_complete_answer_shape_15_any_of_1_items_list_v1;
+typedef union thinkthen_complete_answer_shape_15_data_v1 {
+    struct thinkthen_complete_settled_judgment_map_v1 object;
+    uint32_t null;
+    struct thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 array;
+} thinkthen_complete_answer_shape_15_data_v1;
+typedef struct thinkthen_complete_answer_shape_15_v1 {
+    uint32_t kind;
+    union thinkthen_complete_answer_shape_15_data_v1 data;
+} thinkthen_complete_answer_shape_15_v1;
+typedef struct thinkthen_complete_answer_shape_15_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_answer_shape_15_v1 *value;
+} thinkthen_complete_answer_shape_15_presence_v1;
+typedef struct thinkthen_complete_settled_answer_annotate_v1 {
+    struct thinkthen_complete_utf8_v1 function;
+    struct thinkthen_complete_answer_shape_4_presence_v1 index;
+    struct thinkthen_complete_answer_shape_3_presence_v1 pick;
+    struct thinkthen_complete_answer_shape_2_presence_v1 probability;
+    const struct thinkthen_complete_answer_shape_5_v1 *resolution;
+    struct thinkthen_complete_answer_shape_15_presence_v1 value;
+    struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_settled_answer_annotate_v1;
+typedef union thinkthen_complete_settled_answer_data_v1 {
+    const struct thinkthen_complete_settled_answer_decide_v1 *decide;
+    const struct thinkthen_complete_settled_answer_choose_v1 *choose;
+    const struct thinkthen_complete_settled_answer_tag_v1 *tag;
+    const struct thinkthen_complete_settled_answer_score_v1 *score;
+    const struct thinkthen_complete_settled_answer_filter_v1 *filter;
+    const struct thinkthen_complete_settled_answer_rank_v1 *rank;
+    const struct thinkthen_complete_settled_answer_find_v1 *find;
+    const struct thinkthen_complete_settled_answer_recognize_v1 *recognize;
+    const struct thinkthen_complete_settled_answer_relate_v1 *relate;
+    const struct thinkthen_complete_settled_answer_annotate_v1 *annotate;
+} thinkthen_complete_settled_answer_data_v1;
+typedef struct thinkthen_complete_settled_answer_v1 {
+    uint32_t kind;
+    union thinkthen_complete_settled_answer_data_v1 data;
+} thinkthen_complete_settled_answer_v1;
+typedef struct thinkthen_complete_settled_answer_presence_v1 {
+    uint32_t presence;
+    const struct thinkthen_complete_settled_answer_v1 *value;
+} thinkthen_complete_settled_answer_presence_v1;
 typedef struct thinkthen_complete_facts_v1 {
     struct thinkthen_complete_attempt_list_presence_v1 attempts;
     uint64_t cache_answers;
@@ -1696,6 +2182,7 @@ typedef struct thinkthen_complete_error_v1 {
 typedef struct thinkthen_complete_call_error_v1 {
     const struct thinkthen_complete_error_v1 *error;
     struct thinkthen_complete_facts_presence_v1 facts;
+    const struct thinkthen_complete_answer_resolution_v1 *resolution;
     struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_call_error_v1;
 typedef struct thinkthen_complete_call_error_presence_v1 {
@@ -1703,9 +2190,11 @@ typedef struct thinkthen_complete_call_error_presence_v1 {
     const struct thinkthen_complete_call_error_v1 *value;
 } thinkthen_complete_call_error_presence_v1;
 typedef struct thinkthen_complete_session_packet_terminal_v1 {
+    struct thinkthen_complete_settled_answer_presence_v1 answer;
     struct thinkthen_complete_facts_presence_v1 facts;
     struct thinkthen_complete_call_error_presence_v1 failure;
     struct thinkthen_complete_utf8_v1 kind;
+    const struct thinkthen_complete_answer_resolution_v1 *resolution;
     struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_terminal_v1;
 typedef union thinkthen_complete_session_packet_data_v1 {

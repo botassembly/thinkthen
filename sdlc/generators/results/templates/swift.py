@@ -140,15 +140,16 @@ def render(definitions, inputs=False):
         elif 'primitive_variants' in source or source.get('anyOf', source.get('oneOf')) or isinstance(source.get('type'), list):
             alts = list(source.get('primitive_schemas', {}).values()) or source.get('anyOf', source.get('oneOf', [])) or [{**source, 'type': kind} for kind in source['type']]
             lines += [f'public indirect enum {cls}: ValueRepresentable {{']
-            arms = [literal_member(arm_name(alt)) for alt in alts]
+            tags = list(source.get('primitive_schemas', {})) or [arm_name(alt) for alt in alts]
+            arms = [literal_member(tag) for tag in tags]
             for i, alt in enumerate(alts):
-                lines += [f'    case {arms[i]}' if alt.get('type') == 'null' else f'    case {arms[i]}({typ(alt, key + "_" + arm_name(alt))})']
+                lines += [f'    case {arms[i]}' if alt.get('type') == 'null' else f'    case {arms[i]}({typ(alt, key + "_" + tags[i])})']
             lines += [f'    static func read(_ json: DataValue) throws -> {cls} {{']
             for i, alt in enumerate(alts):
                 if alt.get('type') == 'null':
                     lines += [f'        if json == .null {{ return .{arms[i]} }}']
                 else:
-                    lines += [f'        if let value = try? {typ(alt, key + "_" + arm_name(alt))}.read(json) {{ return .{arms[i]}(value) }}']
+                    lines += [f'        if let value = try? {typ(alt, key + "_" + tags[i])}.read(json) {{ return .{arms[i]}(value) }}']
             lines += [f'        throw ValueConversionError("Unknown {cls} value")', '    }', '    var json: DataValue {', '        switch self {']
             lines += [f'        case .{arms[i]}: return .null' if alt.get('type') == 'null' else f'        case .{arms[i]}(let value): return value.json' for i, alt in enumerate(alts)]
             lines += ['        }', '    }', '}']
