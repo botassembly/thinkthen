@@ -1,39 +1,37 @@
 //! CLI flags construct the native request before question or evidence reads.
 use super::{
     args::{Batching, Command, Common},
-    asked,
     failure::Failure,
 };
 use crate::RequestFunction;
 use crate::{
-    Request, RequestArguments, RequestBatch, RequestDefinition, RequestFraming, RequestImage,
+    Request, RequestArguments, RequestBatch, RequestFraming, RequestImage,
     RequestInput, RequestOptions, RequestQuestion, RequestSource,
 };
 use std::path::PathBuf;
+
+mod atomic;
 
 #[expect(
     clippy::too_many_lines,
     reason = "one ten-function adapter makes CLI transport choices reviewable together"
 )]
 pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>, Failure> {
-    let mut atomic = None;
     let (function, arguments) = match command {
         Command::Decide(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
-            let options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            let question = selector(&a.question, || {
-                atomic_definition(asked::decide(a, None)?, &mut atomic)
-            })?;
+            let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
+            atomic::meanings(&mut options, &a.meanings)?;
+            let question = selector(&a.question);
             (
                 RequestFunction::Decide,
                 arguments(&mut common, question, options)?,
             )
         }
         Command::Choose(a) => {
-            let question = selector(&a.question, || {
-                atomic_definition(asked::choose(a, None)?, &mut atomic)
-            })?;
             let mut options = options(&a.common, Some(&a.batching), a.threshold.as_ref());
+            options.labels = atomic::choice_options(a)?;
+            let question = atomic::choose_selector(a)?;
             options.options_field = a.options_pointer.clone();
             (
                 RequestFunction::Choose,
@@ -41,37 +39,36 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             )
         }
         Command::Tag(a) => {
-            let question = selector(&a.question, || {
-                atomic_definition(asked::tag(a, None)?, &mut atomic)
-            })?;
+            let question = selector(&a.question);
+            let mut options = options(&a.common, Some(&a.batching), a.threshold.as_ref());
+            options.labels = atomic::tag_options(a)?;
             (
                 RequestFunction::Tag,
                 arguments(
                     &mut a.common.clone(),
                     question,
-                    options(&a.common, Some(&a.batching), a.threshold.as_ref()),
+                    options,
                 )?,
             )
         }
         Command::Score(a) => {
-            let question = selector(&a.question, || {
-                atomic_definition(asked::score(a, None)?, &mut atomic)
-            })?;
+            let question = selector(&a.question);
+            let mut options = options(&a.common, Some(&a.batching), a.threshold.as_ref());
+            options.levels = (!a.levels.is_empty()).then(|| atomic::bare(&a.levels));
             (
                 RequestFunction::Score,
                 arguments(
                     &mut a.common.clone(),
                     question,
-                    options(&a.common, Some(&a.batching), a.threshold.as_ref()),
+                    options,
                 )?,
             )
         }
         Command::Filter(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
-            let question = selector(&a.question, || {
-                atomic_definition(asked::filter(a, None)?, &mut atomic)
-            })?;
+            let question = selector(&a.question);
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
+            atomic::meanings(&mut options, &a.meanings)?;
             options.files_only = a.files_only;
             (
                 RequestFunction::Filter,
@@ -80,19 +77,9 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
         }
         Command::Rank(a) => {
             let mut common = source_common(&a.common, &a.extra)?;
-            let question = selector(&a.question, || {
-                let (resolved, tier, rank_set) = asked::rank(a, None)?;
-                let prepared = crate::cli::atomic::Prepared {
-                    resolved,
-                    batch: tier.batch,
-                    tuned: tier.tuned,
-                    rank_set,
-                };
-                let definition = crate::cli::atomic::definition(&prepared).map_err(native)?;
-                atomic = Some(prepared);
-                Ok(definition)
-            })?;
+            let question = selector(&a.question);
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
+            atomic::meanings(&mut options, &a.meanings)?;
             options.top = a
                 .top
                 .as_ref()
@@ -216,33 +203,14 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
     };
     Request::for_function(function, arguments)
         .admit()
-        .map(|admitted| Some(admitted.retain_cli_atomic(atomic)))
+        .map(Some)
         .map_err(native)
 }
-fn atomic_definition(
-    (resolved, tier): (crate::core::Resolved, asked::FileTier),
-    retained: &mut Option<crate::cli::atomic::Prepared>,
-) -> Result<RequestDefinition, Failure> {
-    let prepared = crate::cli::atomic::Prepared {
-        resolved,
-        batch: tier.batch,
-        tuned: tier.tuned,
-        rank_set: None,
-    };
-    let definition = crate::cli::atomic::definition(&prepared).map_err(native)?;
-    *retained = Some(prepared);
-    Ok(definition)
-}
-fn selector(
-    text: &str,
-    inline: impl FnOnce() -> Result<RequestDefinition, Failure>,
-) -> Result<RequestQuestion, Failure> {
+fn selector(text: &str) -> RequestQuestion {
     if text.starts_with('@') {
-        Ok(RequestQuestion::Reference {
-            reference: text.to_owned(),
-        })
+        RequestQuestion::Reference { reference: text.to_owned() }
     } else {
-        inline().map(|value| RequestQuestion::Definition { value })
+        RequestQuestion::Text { text: text.to_owned() }
     }
 }
 fn source_common(common: &Common, extra: &[std::ffi::OsString]) -> Result<Common, Failure> {
