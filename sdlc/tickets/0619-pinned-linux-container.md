@@ -46,6 +46,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: Before core freeze0688 the container checkpoint must run the deferred DuckDB and pinned PostgreSQL installed routine checks from0643 and0627, per PM mail on0627, in addition to0619 own image and capped-suite proof; native phase1 landings remain independent.
 - 2026-10-19 next: Updated-manifest image preparation at f10d64cf6 stopped before probes on Ubuntu snapshot HTTP502 in job1792415676742-53168; one unchanged infrastructure retry is authorized while native landings continue independently.
 - 2026-10-19 next: The single unchanged preparation retry job1792415714835-65984 also stopped before probes on snapshot HTTP503; retain both failed receipts, diagnose the immutable certificate-bootstrap input without edits or further retries, and keep native landings independent.
+- 2026-10-19 next: Read-only diagnosis confirms both preparation failures are remote Docker ADD of the unchanged SHA256-pinned certificate package before verification; no existing offline input route exists, so hold further preparation until endpoint recovery or a scoped recipe ruling, keep both receipts and old image, and continue native phase1 landings.
 
 ## Amendment, 2026-10-18
 
