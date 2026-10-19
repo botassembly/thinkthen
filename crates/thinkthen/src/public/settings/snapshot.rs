@@ -60,6 +60,9 @@ pub struct ResolvedSettings {
     pub backend_name: Option<String>,
     /// The validated posting address selected for this builder.
     pub url: String,
+    /// Whether the native resolved posting endpoint names the default built-in service.
+    /// Uses the same exact comparison as `Engine::is_built_in`, without building.
+    pub is_built_in: bool,
     /// The tier selecting the address: built_in, backend, environment,
     /// configuration or command_line.
     pub url_source: &'static str,
@@ -177,6 +180,7 @@ impl EngineBuilder {
             configuration_shared: metadata.shared,
             backend_name: selected.name,
             url: selected.backend.url().as_str().to_owned(),
+            is_built_in: selected.backend.is_built_in(),
             url_source: selected.url_source,
             model: selected.backend.model().as_str().to_owned(),
             model_is_mutable_alias: selected.backend.api_type().is_mutable_alias(selected.backend.model()),

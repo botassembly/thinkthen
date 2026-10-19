@@ -84,6 +84,7 @@ fn built_in_observation_uses_the_resolved_endpoint_without_sending() {
         if let Some(base) = base {
             builder = builder.base_url(base).unwrap();
         }
+        assert_eq!(builder.resolved_settings().unwrap().is_built_in, expected);
         let engine = builder.build().unwrap();
         assert_eq!(engine.is_built_in(), expected);
     }

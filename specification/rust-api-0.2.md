@@ -293,6 +293,7 @@ const fn PlanEstimate::token_estimate_method(&self) -> &'static str
 const fn PlanEstimate::token_estimate_note(&self) -> &'static str
 fn EngineBuilder::preload_ca_bundle(self) -> Result<EngineBuilder, Error>
 ResolvedSettings::model_is_mutable_alias: bool
+ResolvedSettings::is_built_in: bool
 fn Engine::is_built_in(&self) -> bool
 fn Engine::provider_name(&self) -> &'static str
 fn Engine::model_is_mutable_alias(&self) -> bool
@@ -870,3 +871,7 @@ loader and privately retains its parsed roots for build; selecting a bundle inva
 that retained state. Ordinary builders remain lazy. `ResolvedSettings::model_is_mutable_alias`
 uses the actual resolved adapter and model so the command can warn before storage opens.
 Neither operation exposes certificate bytes, provider bodies, or credentials.
+
+`ResolvedSettings::is_built_in` reuses that same native resolved-backend predicate
+without building storage or transport. The command reads it to retain its request-size
+warning before profile and certificate admission; no URL rule is copied at the edge.

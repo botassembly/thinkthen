@@ -153,8 +153,8 @@ impl Environment {
     pub(crate) fn set_request_size(&self, size: usize) -> Result<(), Failure> {
         self.update_builder(|builder| builder.max_request_bytes(size))
     }
-    pub(crate) fn warn_request_size(&self, engine: &Engine, size: usize) -> Result<(), Failure> {
-        if engine.is_built_in() && size > 96_000 {
+    pub(crate) fn warn_request_size(&self, route: &crate::ResolvedSettings, size: usize) -> Result<(), Failure> {
+        if route.is_built_in && size > 96_000 {
             writeln!(io::stderr().lock(),
                 "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens")
                 .map_err(Failure::Output)?;
