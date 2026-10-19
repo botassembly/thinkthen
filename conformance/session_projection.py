@@ -3,7 +3,7 @@ from cli_parity import project_row
 from c_parity import ERRORS
 
 
-def project_session(payload, fixture):
+def project_session(payload, fixture, *, settled=False):
     if 'admission' in payload:
         return payload['admission']
     # Native packets already retain the original input; only CLI callers wrap it.
@@ -34,6 +34,8 @@ def project_session(payload, fixture):
     else:
         output = {'code': 0, 'schema': 'thinkthen.result/2', 'rows': rows,
                   'observations': sum(packet['kind'] == 'observation' for packet in packets)}
+    if settled:
+        output['settled'] = terminal.get('answer')
     output.update({key: facts[key] for key in ('requests_sent', 'records', 'cache_answers',
                   'call_id', 'input_tokens', 'output_tokens') if key in facts})
     # Installed drivers read these fields from the public result object. Do not

@@ -241,6 +241,14 @@ def assertions(row, value, got, count):
         assert isinstance(result['results'], list) and len(result['results']) == expected['results_count'], result
         assert isinstance(result['facts'], dict) and result['facts']['requests_sent'] == expected['requests_sent'], result
         assert count == expected['requests_sent'], (count, result)
+    if row['kind'] == 'behavior' and 'settled' in expect:
+        settled = expect['settled']['collection']
+        if 'settled' in got:
+            assert equivalent(got['settled'], settled), (got['settled'], settled)
+        # Host detail rows expose these values directly. Their native owners
+        # prove probability, pick and resolution without host reconstruction.
+        if value['verb'] in ('decide', 'choose', 'tag', 'score', 'recognize'):
+            assert equivalent([answer['value'] for answer in got['rows']], settled['value']), (got, settled)
     error = expect.get('error')
     if error is not None:
         error = error.get('kind') if isinstance(error, dict) else error
