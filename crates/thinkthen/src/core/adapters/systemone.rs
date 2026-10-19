@@ -8,7 +8,6 @@
 //! model a request carries when nothing else names one, and the path the
 //! endpoint sits under. Nothing outside this module names any of the four.
 
-#[cfg(test)]
 pub(crate) const PLAN_ESTIMATE_NOTE: &str = "token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and the provider reported 5131, about 22% above the estimate";
 
 pub(crate) mod backends;
@@ -24,8 +23,9 @@ use crate::core::text::ModelName;
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::request::encode;
+pub(crate) use crate::core::adapters::systemone::request::drops_any;
 #[cfg(test)]
-pub(crate) use crate::core::adapters::systemone::request::{drops_any, drops_detail};
+pub(crate) use crate::core::adapters::systemone::request::drops_detail;
 pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;

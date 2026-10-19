@@ -56,7 +56,6 @@ impl ApiType {
             Self::Decisions => openai::validate_exchange(request, response),
         }
     }
-    #[cfg(test)]
     pub(crate) const fn plan_estimate_note(self) -> &'static str {
         match self {
             Self::Primary => systemone::PLAN_ESTIMATE_NOTE,
