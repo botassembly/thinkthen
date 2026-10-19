@@ -13,33 +13,7 @@ fn current_store_without_lookup_index_replays_unchanged_and_writer_indexes_retai
     let db = Connection::open(&database).unwrap();
     db.execute_batch("DROP INDEX IF EXISTS answers_route_question_state")
         .unwrap();
-    let answer_columns: Vec<String> = db
-        .prepare("PRAGMA table_info(answers)")
-        .unwrap()
-        .query_map([], |row| row.get(1))
-        .unwrap()
-        .collect::<Result<_, _>>()
-        .unwrap();
-    assert_eq!(
-        answer_columns,
-        [
-            "id",
-            "key",
-            "url",
-            "model",
-            "state",
-            "question",
-            "answer",
-            "answered_by",
-            "input_tokens",
-            "output_tokens",
-            "taken_at",
-            "origin",
-            "adapter",
-            "observation_id",
-            "batch_size",
-        ]
-    );
+    assert_answer_columns(&db).unwrap();
     let retained = stored_metadata(&db);
     let saved_answer: String = db
         .query_row("SELECT answer FROM answers", [], |row| row.get(0))
@@ -297,4 +271,35 @@ fn an_unrepresentable_reported_count_refuses_storage_without_erasing_the_known_l
     drop(database);
     drop(engine);
     std::fs::remove_dir_all(place).unwrap();
+}
+
+fn assert_answer_columns(db: &Connection) -> rusqlite::Result<()> {
+    let answer_columns: Vec<String> = db
+        .prepare("PRAGMA table_info(answers)")
+        ?
+        .query_map([], |row| row.get(1))
+        ?
+        .collect::<Result<_, _>>()
+        ?;
+    assert_eq!(
+        answer_columns,
+        [
+            "id",
+            "key",
+            "url",
+            "model",
+            "state",
+            "question",
+            "answer",
+            "answered_by",
+            "input_tokens",
+            "output_tokens",
+            "taken_at",
+            "origin",
+            "adapter",
+            "observation_id",
+            "batch_size",
+        ]
+    );
+    Ok(())
 }
