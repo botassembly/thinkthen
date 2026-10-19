@@ -1,8 +1,10 @@
 """Privacy checks follow indexed source and explicit shipping membership."""
 import gzip
 import io
+import json
 import os
 from pathlib import Path
+import platform
 import shutil
 import subprocess
 import struct
@@ -116,6 +118,12 @@ class PrivacyTests(unittest.TestCase):
                     env['ROUTE_ROOT'] = str(root)
                     (root / 'libraries/rust/check.py').write_text('raise SystemExit("installed consumer reached")\n')
                 else:
+                    # The package-only route needs no Linux compiler on the build host.
+                    manifest = root / 'sdlc/tools.json'
+                    tools_manifest = json.loads(manifest.read_text())
+                    arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
+                    tools_manifest['libraries']['zig']['check_platforms'].append(platform.system().lower() + '-' + arch)
+                    manifest.write_text(json.dumps(tools_manifest))
                     # The real Zig packager copies the selected native installation.
                     with (root / 'sdlc/scripts/installed.sh').open('a') as script:
                         script.write('\nnative_install() {\n'
