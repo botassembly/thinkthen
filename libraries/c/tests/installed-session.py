@@ -33,7 +33,9 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(root / 'cache'))
         flags = static_flags(native, env)
         for source in ('tests/c/session.c', 'examples/session.c', 'tests/c/request_preview.c'):
-            binary = root / (Path(source).stem + '-' + Path(source).parent.name)
+            binary = root / {'tests/c/session.c': 'owner-session',
+                             'examples/session.c': 'example-session',
+                             'tests/c/request_preview.c': 'request-preview'}[source]
             subprocess.run([shutil.which('cc'), '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
                             '-pthread', '-I', str(REPO / 'libraries/c/tests/c'),
                             str(REPO / 'libraries/c' / source), *flags, '-o', str(binary)],
