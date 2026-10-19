@@ -150,14 +150,36 @@ impl<R: BufRead> FileReader<R> {
         })
     }
 
-    fn read_record(&mut self) -> Result<Option<SourceRecord<String>>, Error> {
+    /// Transfer the next bounded physical unit before decoding or blank filtering.
+    /// Original endings, blank units and empty documents retain their coordinates.
+    /// This shares the ordinary iterator's cursor and bounded chunk reader; callers
+    /// may interleave the two operations. Oversized prefixes and invalid UTF-8 are
+    /// bytes, not admitted evidence. The caller must use native record admission.
+    /// IO failures retain only the caller-supplied reader's error through explicit
+    /// standard source access; normal error output withholds its text.
+    pub fn next_bytes(&mut self) -> Option<Result<SourceRecord<Vec<u8>>, Error>> {
+        if self.stopped { return None; }
         let Some(unit) = self.chunks.next_unit(self.options.window.unwrap_or(1)) else {
-            return Ok(None);
+            self.stopped = true;
+            return None;
         };
-        let (bytes, count) = unit.map_err(|_| Error::local("source file could not be read"))?;
-        let streams = self.options.unit != SourceUnit::File;
+        let (record, count) = match unit {
+            Ok(unit) => unit,
+            Err(error) => {
+                self.stopped = true;
+                return Some(Err(Error::local("source file could not be read").with_source(error)));
+            }
+        };
         let first_line = self.line + 1;
         self.line += count;
+        Some(Ok(SourceRecord { record, file: self.file.clone(), first_line,
+            last_line: self.line.max(first_line) }))
+    }
+
+    fn read_record(&mut self) -> Result<Option<SourceRecord<String>>, Error> {
+        let Some(unit) = self.next_bytes().transpose()? else { return Ok(None); };
+        let bytes = unit.record;
+        let streams = self.options.unit != SourceUnit::File;
         let reading = Reading::new(
             if streams {
                 Framing::Lines
@@ -173,9 +195,9 @@ impl<R: BufRead> FileReader<R> {
         }
         Ok(Some(SourceRecord {
             record: text.to_owned(),
-            file: self.file.clone(),
-            first_line,
-            last_line: self.line.max(first_line),
+            file: unit.file,
+            first_line: unit.first_line,
+            last_line: unit.last_line,
         }))
     }
 }

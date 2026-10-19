@@ -303,10 +303,36 @@ impl RecordReading {
     /// # Errors
     /// Returns native record admission or composition refusals with safe diagnostics.
     pub fn read_document(&self, bytes: &[u8]) -> Result<RecordInput<RecordEvidence>, Error> {
+        self.compose(self.read_original(bytes, crate::RequestFraming::Document)?)
+    }
+
+    /// Decode one original through the native admitted fields and logical framing.
+    /// Retains blank originals for later preflight, without granting execution permission.
+    /// Native size, UTF-8, line endings and JSON diagnostics keep their existing order.
+    /// # Errors
+    /// Returns native record refusals; CSV/TSV require [`crate::TableReader`].
+    pub fn read_original(&self, bytes: &[u8], framing: crate::RequestFraming) -> Result<RawRecord, Error> {
+        let framing = match framing {
+            crate::RequestFraming::Document => core::Framing::Document,
+            crate::RequestFraming::Lines => core::Framing::Lines,
+            crate::RequestFraming::Jsonl => core::Framing::Jsonl,
+            crate::RequestFraming::Csv | crate::RequestFraming::Tsv =>
+                return Err(Error::usage("table originals require TableReader")),
+        };
+        let reading = core::Reading::new(framing, self.reading.fields().to_vec()).map_err(Error::refused)?;
+        reading.record(bytes).map(|record| RawRecord(Arc::new(record))).map_err(Error::refused)
+    }
+
+    /// Decode the native annotation-document original without composing evidence.
+    /// Valid JSON retains all shapes; syntax alone falls back to literal text.
+    /// Duplicate, nonfinite and excessive-depth JSON stay refused. Existing fields
+    /// select ordinary native document reading rather than annotation fallback.
+    /// # Errors
+    /// Returns native size, UTF-8 or annotation JSON admission failures.
+    pub fn read_annotation_document(&self, bytes: &[u8]) -> Result<RawRecord, Error> {
         let reading = core::Reading::new(core::Framing::Document, self.reading.fields().to_vec())
             .map_err(Error::refused)?;
-        let original = reading.record(bytes).map_err(Error::refused)?;
-        self.compose(RawRecord(Arc::new(original)))
+        reading.annotation_record(bytes).map(|record| RawRecord(Arc::new(record))).map_err(Error::refused)
     }
 
     /// Compose one original without inserting context, candidates or provenance into evidence.

@@ -9,17 +9,14 @@ use csv_core::{ReadFieldResult, Reader, ReaderBuilder};
 /// Shared reader failures retain typed CLI diagnostics without a CLI dependency.
 #[derive(Debug)]
 pub(crate) enum ReadError {
-    Input(
-        #[expect(dead_code, reason = "native table failures retain the reader IO cause without printing caller text")]
-        std::io::Error,
-    ),
+    Input(std::io::Error),
     Table(Error),
 }
 
 impl ReadError {
     pub(crate) fn native(self) -> crate::Error {
         match self {
-            Self::Input(_) => crate::Error::local("table input could not be read"),
+            Self::Input(error) => crate::Error::local("table input could not be read").with_source(error),
             Self::Table(error) if error.input_failure() => crate::Error::local(error.to_string()),
             Self::Table(error) => crate::Error::usage(error.to_string()),
         }

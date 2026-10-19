@@ -902,3 +902,15 @@ retain their separate contracts.
 `CompleteRank::score(&self) -> Option<f64>` borrows the retained native weighted score
 for score ranks, separate from final position and raw leader. Decision ranks return None.
 Set ranks use their existing `result()` projection. No probability weighting is copied.
+
+`FileReader::next_bytes` transfers the next `SourceRecord<Vec<u8>>` from the same bounded
+physical cursor as its ordinary iterator. It retains blank units, empty documents, original
+endings and coordinates without admitting UTF-8 or execution. Cut-record abandonment and
+bounded overread stay native. Caller-supplied text and table reader IO errors survive only
+through explicit standard source access; safe ordinary error output stays unchanged.
+
+`RecordReading::read_original(&self, &[u8], RequestFraming) -> Result<RawRecord, Error>`
+reuses native record decoding with already admitted fields. Table framing requires the
+existing table reader. `read_annotation_document(&self, &[u8]) -> Result<RawRecord, Error>`
+retains exact native syntax-only text fallback. Both retain blank originals for later
+preflight; neither bypasses size, UTF-8, JSON, selection or execution admission.
