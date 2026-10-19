@@ -54,7 +54,8 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
                 assert plans[0]['records'] == 1 and plans[0]['requests'] == 1, plans
                 assert len(backend.arrivals) == 4, 'JSON preview sent a request'
             if source.startswith('examples/'):
-                assert result.stdout == 'records=1 requests=1\n', result.stdout
+                call = json.loads(result.stdout)
+                assert call['facts']['records'] == 1 and call['facts']['requests_sent'] == 1, call
         assert len(backend.arrivals) == 4, backend.arrivals
         print('installed C: JSON session, plan and documented caller PASS')
     finally:
@@ -63,3 +64,6 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
     run(native, root)
     from session_wait import run as session_wait
     session_wait(native, root)
+
+    from installed_call import run as blocking_call
+    blocking_call(native, root)

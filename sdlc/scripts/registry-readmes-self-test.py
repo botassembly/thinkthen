@@ -58,6 +58,18 @@ def cli_examples(runner, packages, family):
 
 
 class PackageText(unittest.TestCase):
+    def test_c_owned_calls_keep_exact_answers_and_do_not_read_nested_values(self):
+        calls = [{'answer': {'function': function, 'value': values}, 'facts': {'records': 3}}
+                 for function, values in [('decide', [True, False, True]),
+                                          ('choose', ['billing', 'shipping', 'account'])]]
+        readmes.check_c_calls('\n'.join(map(json.dumps, calls)))
+        for replacement in (False, [1, 0, 1], [True, False, None], {'value': [True, False, True]}, '\"value\":[true,false,true]'):
+            changed = json.loads(json.dumps(calls))
+            changed[0]['answer']['value'] = replacement
+            changed[0]['value'] = {'nested': [True, False, True]}
+            with self.assertRaises(readmes.Refusal):
+                readmes.check_c_calls('\n'.join(map(json.dumps, changed)))
+
     def test_public_package_uses_reviewed_text(self):
         with tempfile.TemporaryDirectory() as scratch:
             package = Path(scratch) / 'thinkthen.tgz'
@@ -325,6 +337,12 @@ class PackageText(unittest.TestCase):
                               '"' + decoy.replace('"', '\\"') + '"') if family == 'c' else (
                                   '*> ' + decoy, 'DISPLAY \'CALL "TT_CHOOSE" USING q input.\'.'):
                     cases.append((family, current + '\n' + prose, False))
+            named = 'thinkthen_named_request_v1 chosen = {.function = {"choose",6}};'
+            called = 'thinkthen_run_call(engine,&chosen,0,0,0,&result,&error);'
+            cases.append(('c', 'thinkthen_decide(q,input);' + named + called, True))
+            for decoy in (named, named + '/* ' + called + ' */', named + '// ' + called,
+                          named + '"' + called + '"', named + called.replace('&chosen', '&other')):
+                cases.append(('c', 'thinkthen_decide(q,input);' + decoy, False))
             for family, code, admitted in cases:
                 with self.subTest(family=family, code=code):
                     page = readmes.source(family, root); page.parent.mkdir(parents=True, exist_ok=True)

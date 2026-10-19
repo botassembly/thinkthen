@@ -1,9 +1,9 @@
       *> Generated from measured canonical C declarations; do not edit.
-01 tt-n-complete-usage-persistence-v1 based.
- 02 v-kind usage binary-long unsigned.
 01 tt-n-complete-utf8-v1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-complete-usage-persistence-v1 based.
+ 02 v-kind usage binary-long unsigned.
 01 tt-n-complete-json-array-v1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -8637,6 +8637,9 @@
  03 v-facts-extensions.
  04 v-facts-extensions-data usage pointer.
  04 v-facts-extensions-len usage binary-double unsigned.
+78 tt-n-call-producer-end-v1-k value 1.
+78 tt-n-call-producer-failure-v1-k value 2.
+78 tt-n-call-producer-item-v1-k value 0.
 78 tt-n-cobol-annotatequestionchoose-kind-k value 2.
 78 tt-n-cobol-annotatequestiondecide-kind-k value 1.
 78 tt-n-cobol-annotatequestionscore-kind-k value 4.

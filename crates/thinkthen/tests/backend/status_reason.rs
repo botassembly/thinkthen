@@ -20,8 +20,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
     );
     let too_long = concat!(
         "thinkthen: the backend answered with status 400 (max_tokens_exceeded): the request has ",
-        "more input tokens than the backend takes; shorten the text, or set a lower ",
-        "--max-request-bytes or max_request_bytes with --profile; provider type: max_tokens_exceeded\n"
+        "more input tokens than the backend takes; shorten the text; provider type: max_tokens_exceeded\n"
     );
     let retried = [500, 502, 503, 504, 520, 521, 522, 523, 524, 529].map(|status| {
         let said = format!("thinkthen: the backend answered with status {status}: {RETRIED_OUT}");
@@ -45,7 +44,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
         (
             413,
             "{}",
-            "thinkthen: the backend answered with status 413: the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile\n",
+            "thinkthen: the backend answered with status 413: the backend refused the request as too large; shorten the text\n",
         ),
         (
             422,
@@ -326,5 +325,221 @@ fn only_known_error_identifier_fields_cross_the_boundary() {
             serde_json::json!({"at":1,"cause":"status","status":400,"retryable":false})
         );
         assert!(lines.next().is_none());
+    }
+}
+
+#[test]
+fn too_large_remedies_fit_each_commands_request_shape() {
+    let folder = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("size-advice-{}", std::process::id()));
+    std::fs::create_dir_all(&folder).unwrap();
+    let set = folder.join("questions.json");
+    std::fs::write(
+        &set,
+        r#"{"version":1,"questions":{"yes":{"decide":"Is this useful?"}}}"#,
+    )
+    .unwrap();
+    let set = set.to_str().unwrap();
+    for (arguments, evidence, advice) in size_advice_cases(set) {
+        assert_size_advice(&arguments, evidence, advice).unwrap();
+    }
+    std::fs::remove_dir_all(folder).unwrap();
+}
+
+fn size_advice_cases(set: &str) -> Vec<(Vec<&str>, &str, &str)> {
+    let mut cases = vec![
+        (
+            vec!["find", "Which fits?"],
+            "first\nsecond\n",
+            "shorten the text or use fewer candidates",
+        ),
+        (vec!["annotate", set], "first", "shorten the text"),
+        (
+            vec!["annotate", set, "--lines"],
+            "first\n",
+            "shorten the text or set a lower --max-request-bytes",
+        ),
+        (
+            vec!["relate", "works_for=person:organization"],
+            r#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#,
+            "shorten the text or set a lower --max-request-bytes",
+        ),
+        (
+            vec!["recognize"],
+            "Ada",
+            "shorten the text or set a lower --max-request-bytes",
+        ),
+    ];
+    for arguments in [
+        vec!["decide", "Is this useful?"],
+        vec!["filter", "Is this useful?"],
+        vec!["rank", "Is this useful?"],
+        vec!["choose", "Which fits?", "yes", "no"],
+        vec!["tag", "Which fit?", "yes", "no"],
+        vec!["score", "How useful?", "low", "high"],
+    ] {
+        if !matches!(arguments.first().copied(), Some("filter" | "rank")) {
+            cases.push((arguments.clone(), "first", "shorten the text"));
+        }
+        let mut records = arguments;
+        records.push("--lines");
+        cases.push((
+            records,
+            "first\n",
+            "shorten the text or set a lower --max-request-bytes",
+        ));
+    }
+    cases
+}
+
+fn assert_size_advice(
+    arguments: &[&str],
+    evidence: &str,
+    advice: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let command = arguments.first().copied().ok_or("a command is required")?;
+    let help = crate::harness::spawn(&[command, "--help"], &[], b"")?;
+    assert_eq!(help.status.code(), Some(0));
+    for flag in advice
+        .split_whitespace()
+        .filter(|word| word.starts_with("--"))
+    {
+        assert!(
+            String::from_utf8_lossy(&help.stdout).contains(flag),
+            "{} {flag}",
+            command
+        );
+    }
+    for (status, body, reason) in [
+        (
+            400,
+            NAMED,
+            "the backend answered with status 400 (max_tokens_exceeded): the request has more input tokens than the backend takes",
+        ),
+        (
+            413,
+            "{}",
+            "the backend answered with status 413: the backend refused the request as too large",
+        ),
+    ] {
+        let expected_requests = if command == "tag" { 2 } else { 1 };
+        let listener = Listener::serving(
+            (0..expected_requests)
+                .map(|_| Canned::status(status, body))
+                .collect(),
+        )?;
+        let mut arguments = arguments.to_vec();
+        arguments.extend([
+            "--url",
+            listener.base(),
+            "--no-cache",
+            "--max-retries",
+            "0",
+            "--facts",
+        ]);
+        let output = crate::harness::spawn(
+            &arguments,
+            &[("THINKTHEN_API_KEY", "fixture-key")],
+            evidence.as_bytes(),
+        )?;
+        let said = crate::harness::said(&output);
+        assert_eq!(output.status.code(), Some(4), "{arguments:?}: {said}");
+        assert!(output.stdout.is_empty(), "{arguments:?}");
+        assert_eq!(
+            listener.requests().len(),
+            expected_requests,
+            "{arguments:?}"
+        );
+        let provider = if status == 400 {
+            "; provider type: max_tokens_exceeded"
+        } else {
+            ""
+        };
+        let sentence = format!("{reason}; {advice}{provider}");
+        let expected = if status == 413 && command == "annotate" && arguments.contains(&"--lines") {
+            format!(
+                "thinkthen: stopped at record 1; the request for records 1 to 1 failed: {sentence}; 0 records finished"
+            )
+        } else {
+            format!("thinkthen: {sentence}")
+        };
+        assert_eq!(
+            said.lines().next(),
+            Some(expected.as_str()),
+            "{arguments:?}"
+        );
+        let facts: serde_json::Value =
+            serde_json::from_str(said.lines().last().ok_or("failure facts are required")?)?;
+        assert_eq!(
+            facts.get("stopped"),
+            Some(&serde_json::json!({"at":1,"cause":"too_large","retryable":false})),
+            "{arguments:?}: {said}"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn too_large_backend_probes_suggest_a_backend_with_a_larger_input_limit() {
+    let listener = Listener::answering(|_| Canned::status(400, NAMED)).unwrap();
+    let output = crate::harness::spawn(
+        &["backends", "check", "--url", listener.base()],
+        &[("THINKTHEN_API_KEY", "fixture-key")],
+        b"",
+    )
+    .unwrap();
+    let shown = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(output.status.code(), Some(4), "{shown}");
+    assert!(!listener.requests().is_empty());
+    assert!(shown.contains("the backend answered with status 400 (max_tokens_exceeded): the request has more input tokens than the backend takes; use a backend with a larger input limit; provider type: max_tokens_exceeded"), "{shown}");
+    assert!(!shown.contains("--max-request-bytes"), "{shown}");
+}
+
+#[test]
+fn image_only_refusals_suggest_a_backend_with_a_larger_input_limit() {
+    let image = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../specification/fixtures/images/red.png");
+    for input in [
+        vec!["--image", image.to_str().unwrap()],
+        vec![
+            "--input",
+            image.to_str().unwrap(),
+            "--unit",
+            "file",
+            "--media",
+            "image",
+        ],
+    ] {
+        let listener = Listener::serving(vec![Canned::status(400, NAMED)]).unwrap();
+        let mut arguments = vec![
+            "decide",
+            "Is red visible?",
+            "--backend",
+            "liquid",
+            "--model",
+            "d1",
+            "--url",
+            listener.base(),
+            "--no-cache",
+            "--max-retries",
+            "0",
+            "--facts",
+        ];
+        arguments.extend(input);
+        let output =
+            crate::harness::spawn(&arguments, &[("THINKTHEN_API_KEY", "fixture-key")], b"")
+                .unwrap();
+        let said = crate::harness::said(&output);
+        assert_eq!(output.status.code(), Some(4), "{arguments:?}: {said}");
+        assert!(output.stdout.is_empty());
+        assert_eq!(listener.requests().len(), 1);
+        assert_eq!(
+            said.lines().next().unwrap(),
+            "thinkthen: the backend answered with status 400 (max_tokens_exceeded): the request has more input tokens than the backend takes; use a backend with a larger input limit; provider type: max_tokens_exceeded"
+        );
+        let facts: serde_json::Value = serde_json::from_str(said.lines().last().unwrap()).unwrap();
+        assert_eq!(
+            facts["stopped"],
+            serde_json::json!({"at":1,"cause":"too_large","retryable":false})
+        );
     }
 }

@@ -112,3 +112,7 @@ unsafe fn settings_json(settings_json: *const c_char) -> Result<thinkthen::Engin
 // SAFETY: Last::of owns immutable native backing, CString bytes and a boxed root.
 // It stores only copied carrier records; no caller pointer or thread-affine value survives.
 unsafe impl Send for crate::failures::Last {}
+
+/// Blocking named calls with independent owned results and failures.
+#[path = "ffi/run_call/ffi.rs"]
+pub mod run_call;
