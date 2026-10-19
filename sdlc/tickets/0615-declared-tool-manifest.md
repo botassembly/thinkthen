@@ -1,6 +1,6 @@
 # 0615: Declare each check's tools in one manifest and drop hand PATHs
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

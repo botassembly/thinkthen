@@ -146,6 +146,9 @@ def validate_consumer_contracts(parity):
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
+from check_verdict import unsupported
+
 DOCUMENT = ROOT / 'conformance/cases.json'
 PREFIX = 'parity: '
 
@@ -340,17 +343,6 @@ def consumer_environment(scratch, port):
     return env
 
 
-def apple_pending(consumer):
-    # 0518 ends GNU Objective-C support; every Foundation case still runs on Apple.
-    return (consumer == 'objective-c' and sys.platform != 'darwin'
-            or consumer == 'swift' and apple_delegated())
-
-
-def apple_delegated():
-    return (sys.platform == 'linux'
-            and os.environ.get('THINKTHEN_MACOS_APPLE_CHECKS') == 'required')
-
-
 def installed_artifacts(directory, consumers):
     """Select the actual release inputs before any public consumer starts."""
     directory = Path(directory).resolve(strict=True)
@@ -373,10 +365,12 @@ def installed_artifacts(directory, consumers):
         command_targets.append(target.removesuffix('-gnu') + '-musl')
     command = select([f'thinkthen-{version}-{host}.tar.gz' for host in command_targets])
     native = select([f'thinkthen-c-{version}-{target}.tar.gz'])
-    dart = select([f'thinkthen-dart-{version}-{target}.tar.gz'])
+    dart = (select([f'thinkthen-dart-{version}-{target}.tar.gz'])
+            if any(row['surface'] == 'libraries/dart' and not unsupported(row['surface'])
+                   for row in consumers.values()) else None)
     found = {}
     for consumer, row in consumers.items():
-        if apple_pending(consumer):
+        if unsupported(row['surface']):
             continue
         surface = row['surface']
         if consumer in ('cli', 'mcp'):
@@ -395,7 +389,9 @@ def installed_artifacts(directory, consumers):
             family = 'postgresql16' if consumer == 'postgresql' else 'flutter' if consumer in ('dart', 'flutter') else surface.split('/')[-1]
             artifact = select([f'thinkthen-{family}-{version}-{target}.tar.gz'])
         found[consumer] = dict(THINKTHEN_ARTIFACT=artifact,
-                               THINKTHEN_C_ARTIFACT=native, THINKTHEN_DART_ARTIFACT=dart)
+                               THINKTHEN_C_ARTIFACT=native)
+        if dart:
+            found[consumer]['THINKTHEN_DART_ARTIFACT'] = dart
         if consumer == 'postgresql':
             for major in (16, 17, 18):
                 found[consumer][f'THINKTHEN_PG{major}_ARTIFACT'] = select([f'thinkthen-postgresql{major}-{version}-{target}.tar.gz'])
@@ -442,9 +438,9 @@ def support_table(parity, matrix):
         images = capability({'images', 'image-location', 'image-admission', 'refusal'})
         # Written limits describe the public contract, never pass an assertion.
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
-        if row.get('platform_pending'):
-            count = files = images = 'Apple qualification pending'
-            remaining = f'{len(gaps)} required assertions pending on macOS; no local pass'
+        if row.get('platform_unsupported'):
+            count = files = images = 'unsupported on this host'
+            remaining = row['platform_unsupported'] + '; no local pass'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
@@ -499,7 +495,8 @@ def run(port, baseline=False, artifact_dir=None):
 
 def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
     def run_command(command, ids, preparation=None, pg_major=None):
-        if ids == ['postgresql'] and pg_major is None:
+        platform_entry = unsupported(consumers[ids[0]]['surface'])
+        if not platform_entry and ids == ['postgresql'] and pg_major is None:
             versions = []
             for major in (16, 17, 18):
                 source_preparation = prepare(command, major)[1] if not artifacts and not baseline else preparation
@@ -523,8 +520,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
         code, seen, error = None, {}, None
         setup_seconds = preparation[1] if preparation else 0
         remaining = 900 if pg_major else 900 - setup_seconds
-        platform_pending = len(ids) == 1 and apple_pending(ids[0])
-        execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
+        execute = not platform_entry and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
             args = list(command) + ([str(pg_major)] if pg_major else [] if command[0] == 'cargo' else [port])
@@ -563,9 +559,10 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             dependency = parity.get('unavailable_dependencies', {}).get(consumer)
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
-            if platform_pending:
-                row['platform_pending'] = 'Apple qualification requires matching macOS checks; no local pass'
-                row['cells'] = dict.fromkeys(row['cells'], 'platform-pending')
+            if platform_entry:
+                print(f'parity: unsupported {consumer} ({platform_entry})', flush=True)
+                row['platform_unsupported'] = platform_entry
+                row['cells'] = dict.fromkeys(row['cells'], 'platform-unsupported')
             row['case_rulings'] = consumers[consumer].get('case_rulings', {})
             row['setup_duration_seconds'] = round(setup_seconds, 2) if execute else 0
             row['runtime_duration_seconds'] = round(time.monotonic() - started, 2) if execute else 0
@@ -575,12 +572,13 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
 
     # Preparation owns shared immutable assets until every isolated consumer exits.
     families = {command: ids for command, ids in commands.items() if len(ids) > 1
-                and not baseline}
+                and not baseline and not unsupported(consumers[ids[0]]['surface'])}
     with ExitStack() as assets:
         paths = {command: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
                  for command in families}
-        pg_paths = {major: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
-                    for major in (16, 17, 18)} if not artifacts and not baseline and 'postgresql' in consumers else {}
+        pg_paths = ({major: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
+                     for major in (16, 17, 18)} if not artifacts and not baseline and 'postgresql' in consumers
+                    and not unsupported(consumers['postgresql']['surface']) else {})
         def prepare(command, pg_major=None):
             ids = ['postgresql'] if pg_major else families[command]
             destination = pg_paths[pg_major] if pg_major else paths[command]
@@ -620,10 +618,8 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    executed = [row for row in matrix if not row.get('platform_pending')]
-    pending = [row for row in matrix if row.get('platform_pending')]
-    excluded = apple_delegated() and all(row['consumer'] in {'objective-c', 'swift'} for row in pending)
-    return int(not executed or bool(pending) and not excluded
+    executed = [row for row in matrix if not row.get('platform_unsupported')]
+    return int(not executed
                or any(row['baseline_exit'] != 0 or row['baseline_error']
                       or not row['cells'] or any(state != 'pass' for state in row['cells'].values())
                       for row in executed))

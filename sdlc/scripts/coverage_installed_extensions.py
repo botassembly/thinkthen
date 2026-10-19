@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from tools import commands
 import tarfile
 
 COLLECTIONS = ('installed-javascript', 'installed-typescript', 'installed-ruby',
@@ -20,7 +21,7 @@ def prepare(context):
     if not (node / 'node').is_file() or not (ruby / 'thinkthen-toolchain.stamp').is_file():
         raise missing('installed extensions need the cached pinned Node and stamped Ruby toolchains')
     env['PATH'] = str(node) + os.pathsep + env['PATH']
-    for tool in ('node', 'npm', 'R', 'Rscript', 'cargo', 'rustc', 'cc', 'nm'):
+    for tool in commands(['javascript', 'typescript', 'ruby', 'r', 'rust', 'polars']):
         if not shutil.which(tool, path=env['PATH']):
             raise missing('installed extensions need ' + tool)
     clang = sorted(Path('/usr/lib').glob('llvm-*/lib/libclang.so.1'))

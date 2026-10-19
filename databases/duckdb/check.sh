@@ -1,10 +1,11 @@
 #!/bin/sh
 # The DuckDB surface (tickets 0110, 0118, and 0201). The surfaces rung passes its
 # loopback port as $1. Each suite also starts its own backend, so counts
-# never mix. A missing toolchain reports "not run" (exit 77), never "pass".
+# never mix. A missing toolchain reports "not run" (exit 1), never "pass".
 set -eu
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/duckdb
 tools_group=duckdb
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
@@ -27,7 +28,7 @@ select_host() {
 	PY=$TOOLS/venv/bin/python
 	if [ ! -x "$CLI" ] || [ ! -x "$PY" ]; then
 		echo "not run: the DuckDB $DUCKDB_VERSION toolchain is missing; run databases/duckdb/tools/setup.sh --fetch"
-		exit 77
+		exit 1
 	fi
 	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchall()[0][1])')
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the Python DuckDB source differs from its pin' >&2; exit 1; }

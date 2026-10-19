@@ -1,7 +1,7 @@
 #!/bin/sh
 # Rung 4, after `spec`: each landed surface's check.sh, given the port of one
-# loopback backend (ticket 0092). A check that exits 77 found no host
-# toolchain, and the rung reports it as not run, never as a pass.
+# loopback backend (ticket 0092). Required checks fail when they do not run.
+# The manifest declares unsupported platforms.
 #
 # `surfaces --registry` is the cheap check `lint` runs. Every landed
 # surface has a check.sh. Cargo surfaces also pass
@@ -10,11 +10,10 @@ set -eu
 tools_group=surfaces
 . "$(dirname -- "$0")/resolved-tools"
 
-# `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
+# Required checks fail whenever they do not run.
 . "$(dirname -- "$0")/verdict.sh"
 # Sanitize the environment before starting build tools.
-[ "$*" = --registry ] || . "$(dirname -- "$0")/heavy-lock"
-mode=plain
+[ "$*" = --registry ] || . "$(dirname -- "$0")/allow-list"
 profile=routine
 registry_only=0
 fetch_only=0
@@ -26,13 +25,12 @@ artifact_dir=
 publish_tag= publish_root=
 while [ "$#" -gt 0 ]; do
     case $1 in
-    --release) mode=release ;;
     --full-functional) profile=full ;;
-    --stress) profile=stress; mode=release ;;
+    --stress) profile=stress ;;
     --registry) registry_only=1 ;;
     --fetch) fetch_only=1 ;;
-    --parity) parity=1; profile=full; mode=release ;;
-    --parity-baseline) parity=1; parity_baseline=--baseline; profile=full; mode=release ;;
+    --parity) parity=1; profile=full ;;
+    --parity-baseline) parity=1; parity_baseline=--baseline; profile=full ;;
     --artifacts) [ "$#" -ge 2 ] && [ -d "$2" ] || { echo 'surfaces: --artifacts needs a directory' >&2; exit 2; }; artifact_dir=$(CDPATH= cd -- "$2" && pwd); shift ;;
     --publish) [ "$#" -ge 2 ] && [ "${2#-}" = "$2" ] || { echo 'surfaces: --publish needs a tag' >&2; exit 2; }; publish_tag=$2; shift ;;
     --publish-root) [ "$#" -ge 2 ] || { echo 'surfaces: --publish-root needs a folder' >&2; exit 2; }; publish_root=$2; shift ;;
@@ -205,15 +203,6 @@ if [ "$registry_only" -eq 1 ]; then
 				advisories bans licenses sources
 		fi
 	done
-	# The release rule over 0, 77, and 1 in both modes, with the exact lines.
-	got=$(for m in plain release; do for c in 0 77 1; do if verdict "$m" planted "$c"; then echo '-> 0'; else echo '-> 1'; fi; done; done)
-	pass='surfaces: pass planted' fail='surfaces: FAIL planted (exit 1)'
-	want=$(printf '%s\n' "$pass" '-> 0' 'surfaces: not run planted (no host toolchain)' '-> 0' "$fail" '-> 1' \
-		"$pass" '-> 0' 'surfaces: FAIL planted (not run)' '-> 1' "$fail" '-> 1')
-	if [ "$got" != "$want" ]; then
-		printf 'surfaces: the release rule printed\n%s\n' "$got" >&2
-		exit 1
-	fi
 	# time-limit returns the command's code, or 124 with nothing it started left alive.
 	limit=$(dirname -- "$0")/time-limit
 	fast=0 slow=0
@@ -262,11 +251,10 @@ backend_start
 
 failed=0 skipped= selected_checks=0
 if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
-    mode=release
     # The public C projection does not run the C crate's private safety tests.
     code=0
     sh libraries/c/check.sh "$port" 3>&- || code=$?
-    verdict "$mode" libraries/c "$code" || exit 1
+    verdict libraries/c "$code" || exit 1
     unset THINKTHEN_CONFORMANCE_IDS
     export THINKTHEN_TEST_PROFILE=full
     if [ -n "$artifact_dir" ]; then
@@ -285,22 +273,16 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
         esac
         selected_checks=$((selected_checks + 1))
     fi
-	if [ "$mode" = release ] && apple_delegated "$surface"; then
-		echo "surfaces: pending $surface (matching macOS qualification required)"
-		continue
-	fi
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
     if [ "$surface" = databases/postgresql ]; then
-        majors='16 18'
-        [ "$mode" != release ] || majors='16 17 18'
+        majors='16 17 18'
         code=0
         for major in $majors; do
             major_code=0
             sh "$surface/check.sh" "$major" 3>&- || major_code=$?
             case $major_code in
             0) ;;
-            77) [ "$code" -ne 0 ] || code=77 ;;
             *) code=1 ;;
             esac
         done
@@ -309,8 +291,8 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
         code=$?
     fi
 	set -e
-	[ "$code" -ne 77 ] || skipped="$skipped $surface"
-	verdict "$mode" "$surface" "$code" || failed=1
+	[ "$code" -eq 0 ] || skipped="$skipped $surface"
+	verdict "$surface" "$code" || failed=1
 done
 fi
 [ "$failed" -eq 0 ] || exit 1
@@ -326,7 +308,7 @@ if [ -n "$publish_tag" ] && [ -n "$skipped" ]; then
 fi
 # The host's release files, packed from the builds above and each smoked from its install
 # (ticket 0128). release-pack rebuilds only the C library.
-# A surface that did not run built nothing to pack. --release failed it above.
+# An unsupported surface built nothing to pack.
 # Only the surfaces the default release-pack parts read gate the pack; Dart's feeds none of them.
 unpacked=
 for surface in $skipped; do
@@ -345,10 +327,10 @@ host=$(rustc -vV | sed -n 's/^host: //p')
 parts=
 [ -z "$publish_tag" ] || parts='command c sqlite duckdb postgresql python typescript ruby first-run go cpp csharp jvm swift zig php dart ada cobol'
 case $host in *-apple-darwin) [ -z "$publish_tag" ] || parts="$parts objective-c" ;; esac
-[ "$mode" != release ] || export THINKTHEN_TEST_PROFILE=full
+[ "$profile" != full ] || export THINKTHEN_TEST_PROFILE=full
 { sh sdlc/scripts/release-pack --reuse "$host" "$packed" $parts &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
-verdict "$mode" "release smoke" "$code"
+verdict "release smoke" "$code"
 if [ -n "$publish_tag" ]; then
 	[ "$code" -eq 0 ] || { echo 'surfaces: FAIL publish (the release smoke did not pass)'; exit 1; }
 	# release-smoke refuses a file no surface packs, so the crate and the R package join after it.
