@@ -1,4 +1,4 @@
-# 0650: Replace COBOL fixture drivers and cover its supported platforms
+# 0650: Package and check COBOL on darwin-arm64 and both Linux targets
 
 Status: OPEN.
 
@@ -10,15 +10,22 @@ Depends on: 0615, 0618, 0619, 0688
 
 ## Outcome
 
-- One COBOL packet dumper program over the public copybooks, following the 0642 contract, replaces the per-case drivers, which are deleted. Python only feeds cases and compares dumps.
-- COBOL adds darwin-arm64 and linux-arm64 to its supported targets, beside linux-x86_64, in the 0615 manifest. The archive carries the native library for each, and the gate runs on each.
+- Changes: `libraries/cobol/check.sh`, `libraries/cobol/checks/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`, `site/src/data/catalog.mjs`.
+- COBOL adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools.json`, beside linux-x86_64. The release archive for each carries that target's native library.
+- The gate and its drivers find the native library by the platform's file name, not a fixed `libthinkthen.so.0`, and `checks/exports.py` confirms the generated copybook layout on each target.
+- The README states the platforms the archive supports. It no longer says the declarations fit only Linux x86_64.
+- The per-case fixture drivers stay; 0651 replaces them with one packet dumper when it deletes the session family they use.
 
 ### Proof
 
-Through pm job: natively on the M5 (darwin-arm64), in the pinned arm64 container on the M5 (linux-arm64), and in the pinned x86_64 container on Yellow (linux-x86_64). On each, the gate unpacks the archive, compiles the dumper outside the repository, and matches the 0642 oracle for every shared case.
+- On the M5 through `pm job run --machine m5 0650 SHA --memory 8 -- sh libraries/cobol/check.sh`, the gate passes on darwin-arm64. Before the change the same command exits 77 because the manifest lists COBOL as unsupported there.
+- At the 0619 container checkpoint, the release suite passes the COBOL gate in the arm64 container on the M5 and in the x86_64 container on Yellow.
 
 ## Evidence
 
-- libraries/cobol/check.sh:5 exits 77 off Linux x86-64, and :7-9 exits 77 when cobc, cc, clang, nm, python3, tar or node is missing.
-- Conformance runs through Python drivers that compile and run COBOL per case: checks/blocking.py 445 lines, session.py 227, session_records.py 162, native_parity.py 120, owned_reader.py 133.
-- Fixture repairs recur: 62ce94b1a, 89c57312f, fb1aff74f.
+- `sdlc/tools.json` lists only `linux-x86_64` for COBOL under `libraries`, and its `cobol` tool (`cobc` at `4.0-early-dev.0`) only for Linux. `sdlc/scripts/check_verdict.py platform` returns 77 off those platforms, and `libraries/cobol/check.sh` exits with it.
+- `check.sh`, `checks/session.py`, `checks/smoke.py` and `checks/native_parity.py` copy the native library to `libthinkthen.so.0` or default to `libthinkthen_c.so`.
+- `libraries/cobol/README.md` says the generated declarations support the Linux x86_64 layout and must be regenerated for another platform. All three targets are LP64; `checks/exports.py` compares the generated storage with the installed C compiler's layout, so it shows whether one copybook serves all three.
+- The `cobol` case of `sdlc/scripts/release-pack` unpacks one target's C archive into `native/`.
+- 0652 chooses the supported GnuCOBOL range. Until then the macOS gate uses the GnuCOBOL release the M5 provides, and the developer records that version in the manifest.
+- After 0620, the release workflow reads supported targets from the manifest, so no workflow file changes here.

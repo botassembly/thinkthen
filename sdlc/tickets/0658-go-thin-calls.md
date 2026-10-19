@@ -6,24 +6,33 @@ Milestone: 0.2.1
 
 Phase: 3
 
+Depends on: 0657
 Depends on: 0688
 
 ## Outcome
 
-- Calls go through the run-call entry point. Each named call returns a generic typed result (for example `Call[bool]` for Decide) whose value and probability come from the packet's answer fields.
-- The generated `receiptChance`, `callChance` and call-rule tables are deleted from the Go template.
-- The Go session loop (`session.go:86-280`), `nilProducer`, and the `runtime.LockOSThread` calls (`session.go:132`, `:198`, `:297`, `thinkthen.go:66`, `producer.go:90` and `:99`) are deleted, with their private closed, reader and producer error text. A goroutine runs the call and cancels through the handle.
-- Every native error code maps to `ErrorKind` through one function with a range check.
+- Changes: `libraries/go/session.go`, `libraries/go/producer.go`, `libraries/go/thinkthen.go`, `libraries/go/plan.go`, `libraries/go/owned_results_generated.go`, `libraries/go/authored_json_legacy.go`, `libraries/go/authored_json_skip_v2.go`, `libraries/go/authored_json_skip_v27.go`, `libraries/go/authored_json_v2.go`, `libraries/go/README.md`, `libraries/go/examples/`, `libraries/go/fixtures/owned_consumer.go`, `libraries/go/fixtures/full_consumer.go`, `libraries/go/fixtures/shared_consumer.go`, `libraries/go/fixtures/consumer_bridge.go`, `build-tools/results/templates/go.py`, `build-tools/results/answer_rules.py`, `conformance/library-surface.json`, `site/examples/functions/*/go.go`.
+- Calls go through `thinkthen_run_call`. Each named call returns a generic typed result (for example `Call[bool]` for Decide) whose value and probability come from the answer fields of the canonical Call JSON that `thinkthen_call_result_json` returns.
+- The generated `callRules`, `callChance` and `receiptChance` code is deleted from the Go template and from `owned_results_generated.go`.
+- The Go session loop in `Client.call`, `startProducer`, `finishSession`, `pushDescriptor` and `nilProducer` is deleted, with the private closed, reader and producer error text and the `runtime.LockOSThread` calls that guarded the per-thread session error. A goroutine runs the call and cancels through a `thinkthen_call_cancel` token.
+- Every native error code maps to `ErrorKind` through one function with a range check, used for both `thinkthen_call_error_code` and the engine error path.
 - The JSON v2 build-tag files are deleted. Go marshals with encoding/json, and Rust rejects invalid input.
-- Its files leave the 0637 answer-rule check's list of exceptions.
+- `libraries/go/session.go` and `build-tools/results/templates/go.py` leave `LEGACY_FILES` in `build-tools/results/answer_rules.py`.
+- The public surface change updates the Go entry in `conformance/library-surface.json` (`Call`, `OwnedSession`, `SessionError`) in the same change. The README, `examples/decide` and the ten site function samples drop their type assertions in the same change.
 
 ### Proof
 
-On the M5 through pm job, the README example compiles against the installed module with no type assertions. The Go packet dump matches the 0642 oracle, including an out-of-range error code case.
+- On the M5 through `pm job run --machine m5 0658 SHA --memory 8 -- sh libraries/go/check.sh`, the gate builds the installed module, compiles `examples/decide`, and the existing installed consumers pass. Before the change the README example needs `refund.Value.(bool)`; after it, the example compiles with no type assertion.
+- A Go test in the installed module's `go test` run feeds an out-of-range native code and gets `KindDefect`. It fails before the change through `sessionFailure`.
+- `python3 build-tools/results/answer_rules.py` passes with the two Go exceptions removed. Before the change it fails on those files.
+- Go's packet dumper and the 0642 oracle comparison belong to 0656.
+- The Go gate runs on the M5 only after 0657 adds darwin-arm64 to Go's `check_platforms`, and both tickets edit `thinkthen.go` and the README, so this ticket follows 0657. The Linux arm64 and x86_64 runs happen at the 0619 container checkpoint.
 
 ## Evidence
 
-- `Call.Value` is `any` and `Probability` is an interface, so every caller type-asserts: `refund.Value.(bool)` and `refund.Probability.(tt.ProbabilityScalar)` in libraries/go/README.md.
-- Value and probability come from a generated Go copy of the projection rules (`receiptChance` and `callChance`, owned_results_generated.go:4682-4710).
-- `sessionFailure` converts the native code to `ErrorKind` without the range check that `failure` applies (session.go:75 versus thinkthen.go:46-49).
-- Three build-tag files track the experimental JSON v2 encoder across Go versions: authored_json_skip_v2.go, authored_json_skip_v27.go and authored_json_v2.go, plus authored_json_legacy.go. They exist only to guard cycles that the core admission can reject.
+- `Call.Value` is `any` and `Probability` is an interface, so every caller type-asserts: `refund.Value.(bool)` and `refund.Probability.(tt.ProbabilityScalar)` in `libraries/go/README.md`, and the same pattern in `site/examples/functions/*/go.go`.
+- Value and probability come from a generated Go copy of the projection rules: `callRules`, `callChance` and `receiptChance` in `owned_results_generated.go`, generated by `build-tools/results/templates/go.py`.
+- `sessionFailure` in `session.go` converts the native code to `ErrorKind` without the range check that `failure` in `thinkthen.go` applies.
+- `Client.call` in `session.go` builds a `thinkthen_named_request_v1` and drives `thinkthen_session_new_named_with_surface`, `thinkthen_session_next_packet` and `thinkthen_session_result_json` itself. 0638 landed `thinkthen_run_call` with independent `thinkthen_call_result` and `thinkthen_call_error` owners, so no per-thread error slot needs a locked OS thread.
+- Four build-tag files track the experimental JSON v2 encoder: `authored_json_skip_v2.go`, `authored_json_skip_v27.go`, `authored_json_v2.go` and `authored_json_legacy.go`. They exist only to guard cycles that core admission can reject.
+- The 0637 answer-rule check lists `libraries/go/session.go` and `build-tools/results/templates/go.py` as exceptions in `build-tools/results/answer_rules.py`.

@@ -10,18 +10,23 @@ Depends on: 0615, 0618, 0619, 0688
 
 ## Outcome
 
-- Zig adds darwin-arm64 and linux-arm64 to its supported targets in the 0615 manifest. The package carries native archives for each supported target. build.zig selects one by target and links its system libraries per target.
-- The ABI version check uses a generated Zig constant compared with `thinkthen_version()` at first call. The header-parsing code is deleted.
-- The supported Zig version range is stated. Its lowest and newest versions are both in the tool manifest and the pinned image, and both are tested.
-- Tests/request_fixture.zig and Tests/session_consumer.zig are replaced by one packet dumper following the 0642 contract.
+- Changes: `libraries/zig/build.zig`, `libraries/zig/build.zig.zon`, `libraries/zig/src/thinkthen.zig`, `libraries/zig/check.sh`, `libraries/zig/Tests/package_local.py`, `libraries/zig/README.md`, `libraries/zig/README-PUBLIC.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`, `sdlc/scripts/coverage_installed_c_hosts.py`.
+- Zig adds darwin-arm64 and linux-arm64 to its `platforms` and `check_platforms` in `sdlc/tools.json`. The package carries the native archive for each supported target. `linkNative` in build.zig selects it by target and links that target's system libraries.
+- Engine construction calls `thinkthen_version` once and compares the number it writes with the header's `THINKTHEN_INTERFACE_NUMBER`, as 0692's contract says. `headerVersionMatches` and the header symbol search in build.zig are deleted.
+- The supported Zig version range is stated in the README. Its lowest and newest versions are both in the tool manifest, and the gate tests both.
+- The smoke profile in check.sh links through `zig build` instead of a hand-written list of system libraries.
 
 ### Proof
 
-Through pm job: natively on the M5 (darwin-arm64), in the pinned arm64 container on the M5 (linux-arm64), and in the pinned x86_64 container on Yellow (linux-x86_64). On each, an outside Zig project builds and runs the example with `zig build`, and its dump matches the 0642 oracle.
+- On the M5 through `pm job run --machine m5 0666 SHA --memory 8 -- sh libraries/zig/check.sh`, an outside Zig project builds and runs `examples/decide.zig` with `zig build` against the packed darwin-arm64 package, with each manifest Zig version. Before the change the check refuses darwin-arm64 and `linkNative` panics off x86_64-linux-gnu.
+- A Zig test that loads a library whose interface number differs fails construction with the 0692 mismatch message.
+- linux-arm64 runs at the 0619 container checkpoint on the M5, and linux-x86_64 in the 0619 x86_64 container on Yellow.
 
 ## Evidence
 
-- `linkNative` panics on anything but x86_64-linux-gnu, "in this rehearsal" (libraries/zig/build.zig:44-45).
-- build.zig checks the ABI by parsing `#define` lines out of the C header by hand (:5-37) and by searching the header text for three symbol names (:51-53).
-- The package requires Zig 0.15.2 (build.zig.zon, README.md:3). The gate exits 77 silently when zig, python3, node or cc is missing (check.sh:11-13); 0618 makes that a failure.
-- The smoke links with a hand-written list of system libraries (check.sh:42-44).
+- `linkNative` in `libraries/zig/build.zig` panics on anything but x86_64-linux-gnu, "in this rehearsal", and links a fixed list of system libraries for the static mode.
+- `headerVersionMatches` in build.zig parses `#define THINKTHEN_VERSION_*` lines out of the C header by hand, and `linkNative` searches the header text for three symbol names. 0692 landed `thinkthen_version` and `THINKTHEN_INTERFACE_NUMBER` in `libraries/c/include/thinkthen.h`, which `src/native.zig` already imports. No Zig code calls `thinkthen_version` yet. The 2026-10-19 no-version ruling keeps this check as a build identity.
+- `sdlc/tools.json` lists Zig 0.15.2 only, and Zig's `platforms` and `check_platforms` list only linux-x86_64. `build.zig.zon` sets `minimum_zig_version` to 0.15.2.
+- `part_source_wrapper` in `sdlc/scripts/release-pack` packs Zig with the one native archive of the running target. `sdlc/scripts/coverage_installed_c_hosts.py` copies the Zig package with a fixed `native/x86_64-unknown-linux-gnu` folder.
+- The smoke profile in `libraries/zig/check.sh` runs `zig build-exe` with `-lgcc_s -lutil -lrt -lpthread -lm -ldl`.
+- The Zig packet dumper is 0716's work. Assembling one package from several runners' archives, if the design needs it, uses the 0620 per-target release entrypoint.
