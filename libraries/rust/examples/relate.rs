@@ -13,7 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .relation(RelationRule::both_ways("contradicts", "*", "*")?)?
         .build()?;
     let rules = [
-        QuestionInput::annotation_document(r#"{"name":"Book economy class for every flight.","kind":"rule"}"#)?,
+        QuestionInput::annotation_document(
+            r#"{"name":"Book economy class for every flight.","kind":"rule"}"#,
+        )?,
         QuestionInput::annotation_document(
             r#"{"name":"Employees may book business class on any flight.","kind":"rule"}"#,
         )?,
