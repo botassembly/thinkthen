@@ -14,9 +14,9 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import download, rust_components
+from sdlc.scripts.tools import download, load_manifest, rust_components
 
-manifest = json.loads(Path(sys.argv[1]).read_text())
+manifest = load_manifest(sys.argv[1])
 root = Path(manifest['linux_prefix'])
 root.mkdir(parents=True, exist_ok=True)
 arch = {'aarch64': 'arm64', 'x86_64': 'x64'}[platform.machine()]

@@ -19,6 +19,8 @@ from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout
 
+from conformance.children.children import fixture_run
+
 
 class PrivacyTests(unittest.TestCase):
     def test_profiles_refuse_before_reading_an_artifact(self):
@@ -31,8 +33,8 @@ class PrivacyTests(unittest.TestCase):
                             'libraries/typescript', 'libraries/python', 'libraries/php', 'libraries/go',
                             'libraries/zig', 'libraries/r', 'databases/duckdb', 'databases/sqlite'):
                 with self.subTest(surface=surface):
-                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
-                                            capture_output=True, text=True, timeout=30)
+                    result = fixture_run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2, result.stderr)
                     self.assertIn('profile', result.stderr.lower())
                     self.assertNotIn('missing.tar.gz', result.stderr)
@@ -47,8 +49,8 @@ class PrivacyTests(unittest.TestCase):
                             'libraries/objective-c', 'libraries/ada', 'libraries/cobol',
                             'libraries/typescript', 'libraries/swift'):
                 with self.subTest(surface=surface):
-                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
-                                            capture_output=True, text=True, timeout=30)
+                    result = fixture_run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                     self.assertEqual(result.stdout,
                                      f'{surface}: missing input THINKTHEN_ARTIFACT: {artifact}\n')
@@ -68,7 +70,7 @@ class PrivacyTests(unittest.TestCase):
                     self.assertIn('distribution.txt', result.stderr)
                     if name == 'THINKTHEN_ARTIFACT':
                         gate = ['sh', str(Path(privacy.__file__).resolve().parents[2] / 'libraries/c/check.sh')]
-                        result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
+                        result = fixture_run(gate, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 1)
                         self.assertIn('missing input THINKTHEN_ARTIFACT', result.stdout)
                         self.assertIn('distribution.txt', result.stdout)
@@ -77,7 +79,7 @@ class PrivacyTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 1)
                     self.assertIn('private pattern in distribution.txt', result.stderr)
                     if name == 'THINKTHEN_ARTIFACT':
-                        result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
+                        result = fixture_run(gate, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 1)
                         self.assertIn('private pattern in distribution.txt', result.stderr)
                     path.unlink()
@@ -121,7 +123,7 @@ class PrivacyTests(unittest.TestCase):
                     (root / 'libraries/rust/check.py').write_text('raise SystemExit("installed consumer reached")\n')
                 else:
                     # The package-only route needs no Linux compiler on the build host.
-                    manifest = root / 'sdlc/tools.json'
+                    manifest = root / 'sdlc/tools/zig.json'
                     tools_manifest = json.loads(manifest.read_text())
                     arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
                     tools_manifest['libraries']['zig']['check_platforms'].append(platform.system().lower() + '-' + arch)

@@ -1,4 +1,4 @@
-//! A direct-only, demand-driven cursor over the shared native reader.
+//! A demand-driven cursor over the shared native reader.
 
 use std::borrow::Cow;
 use std::ffi::{CStr, c_int};
@@ -7,8 +7,7 @@ use crate::catalog::Catalog;
 use rusqlite::ffi;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::{
-    Context, Filters, IndexConstraintOp, IndexInfo, Module, VTab, VTabConfig, VTabConnection,
-    VTabCursor,
+    Context, Filters, IndexConstraintOp, IndexInfo, Module, VTab, VTabConnection, VTabCursor,
 };
 use thinkthen::SourceRecords;
 
@@ -47,15 +46,13 @@ unsafe impl<'vtab> VTab<'vtab> for ReaderTable {
     type Cursor = ReaderCursor;
 
     fn connect(
-        db: &mut VTabConnection,
+        _: &mut VTabConnection,
         _: Option<&()>,
         _: &[u8],
         _: &[u8],
         _: &[u8],
         _: &[&[u8]],
     ) -> rusqlite::Result<(Cow<'static, CStr>, Self)> {
-        // File access remains direct-only even when judgments use trusted loading.
-        db.config(VTabConfig::DirectOnly)?;
         Ok((Cow::Borrowed(c"CREATE TABLE x(ordinal INTEGER, record TEXT, file TEXT, first_line INTEGER, last_line INTEGER, path HIDDEN, reader_options HIDDEN)"),
             Self { base: ffi::sqlite3_vtab::default() }))
     }

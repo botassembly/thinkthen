@@ -13,6 +13,9 @@ sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
 from sdlc.scripts.tools import commands, fixture_path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import fixture_run
+
 
 def community():
     older = sys.argv[1] if len(sys.argv) > 1 else None
@@ -79,11 +82,11 @@ runpy.run_path(sys.argv[0], run_name='__main__')
                 with tarfile.open(archive_path) as archive:
                     archive.extractall(source_root, filter='data')
                 command = ([sys.executable] if mode == 'modern' else caller + [mode, sys.executable])
-                result = subprocess.run(command + [str(community / helper), *args],
-                    cwd=root.parent, env=env, capture_output=True, text=True, timeout=15)
+                result = fixture_run(command + [str(community / helper), *args],
+                    cwd=root.parent, env=env, capture_output=True, text=True)
                 assert result.returncode == 0, (helper, mode, result.stderr)
-                checked = subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/release-archive-tree.py'),
-                    str(archive_path), str(source_root)], env=env, capture_output=True, text=True, timeout=15)
+                checked = fixture_run([sys.executable, str(REPO / 'sdlc/scripts/release-archive-tree.py'),
+                    str(archive_path), str(source_root)], env=env, capture_output=True, text=True)
                 if checked.returncode:
                     changed_sources.append((helper, mode, checked.stderr))
         assert not changed_sources, changed_sources
@@ -107,8 +110,8 @@ runpy.run_path(sys.argv[0], run_name='__main__')
         if older:
             (tools / 'python3.13').symlink_to(older)
         for helper in ('prepare.py', 'build_rust.py'):
-            result = subprocess.run(caller + ['path', sys.executable, str(community / helper)],
-                cwd=root.parent, env=env, capture_output=True, text=True, timeout=15)
+            result = fixture_run(caller + ['path', sys.executable, str(community / helper)],
+                cwd=root.parent, env=env, capture_output=True, text=True)
             assert result.returncode != 0 and 'install Python 3.11 or later' in result.stderr, result.stderr
         print('community Python: modern and older callers preserve archived sources, preparation pins and offline inputs; missing modern host refuses')
 
@@ -141,8 +144,8 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
         env = child_env(home=root / 'home') | {'PATH': fixture_path(tools,
             exclude=('ninja', 'make', 'cmake', 'cc', 'c++')), 'TARGET': 'aarch64-unknown-linux-gnu'}
         command = bootstrap + '\ncmake -G Ninja -S "' + str(source) + '" -B "' + str(root / 'build') + '"\n'
-        result = subprocess.run(['/bin/sh', '-eu', '-c', command], env=env,
-                                capture_output=True, text=True, timeout=30)
+        result = fixture_run(['/bin/sh', '-eu', '-c', command], env=env,
+                                capture_output=True, text=True)
         assert result.returncode == 0, result.stdout + result.stderr
         cache = (root / 'build/CMakeCache.txt').read_text()
         assert 'CMAKE_MAKE_PROGRAM:FILEPATH=' + str(tools / 'ninja') in cache, cache
@@ -151,8 +154,8 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
         for missing in ('make', 'cmake', 'cc', 'c++'):
             (tools / 'ninja').unlink()
             (tools / missing).unlink()
-            refused = subprocess.run(['/bin/sh', '-eu', '-c', bootstrap], env=env,
-                                     capture_output=True, text=True, timeout=5)
+            refused = fixture_run(['/bin/sh', '-eu', '-c', bootstrap], env=env,
+                                     capture_output=True, text=True)
             assert refused.returncode == 1, refused.stderr
             assert f'missing DuckDB build tool: {missing}' in refused.stderr, refused.stderr
             (tools / missing).symlink_to(shutil.which(missing))
@@ -176,8 +179,8 @@ sys.exit(97)
         floor = str(root / 'Python 3.10/python')
         env = child_env(home=root / 'home') | {'PATH': fixture_path(tools),
                                              'PYO3_PYTHON': floor}
-        result = subprocess.run(['sh', str(REPO / 'libraries/python/build-wheel.sh')],
-                                env=env, capture_output=True, text=True, timeout=15)
+        result = fixture_run(['sh', str(REPO / 'libraries/python/build-wheel.sh')],
+                                env=env, capture_output=True, text=True)
         assert result.returncode == 97, result.stderr
         args, selected = json.loads(result_path.read_text())
         assert args[args.index('--interpreter') + 1] == floor and selected == floor, args

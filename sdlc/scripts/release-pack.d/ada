@@ -1,0 +1,10 @@
+wrapper_ada() {
+	mkdir -p "$folder/src" "$folder/examples" "$folder/native"
+	tar -xzf "$OUT/$c_name" -C "$folder/native" ./include/thinkthen.h ./lib/libthinkthen.a
+	cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
+	cp libraries/ada/src/*.ads libraries/ada/src/*.adb "$folder/src/"
+	cp libraries/ada/examples/session_demo.adb "$folder/examples/"
+	cp libraries/ada/README-PUBLIC.md "$folder/README.md"
+}
+
+part_ada() { part_source_wrapper ada; }

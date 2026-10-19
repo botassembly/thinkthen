@@ -1,5 +1,5 @@
 //! The judgment functions: volatile scalars, `thinkthen_usage`, and the
-//! removed spellings. Configuration and controls remain direct-only.
+//! removed spellings. All registrations follow SQLite's schema trust setting.
 
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use thinkthen::{
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
-use crate::{Failure, Registration, ffi, guard, recognize_document, settings, worker};
+use crate::{Failure, ffi, guard, recognize_document, settings, worker};
 
 /// One scalar call's checked question, evidence and portable controls.
 type Inputs = Option<(Arc<LoadedQuestion>, String, Settings, Option<String>)>;
@@ -409,24 +409,20 @@ fn register_judgments(connection: &Catalog<'_>, judgment: FunctionFlags) -> rusq
     Ok(())
 }
 
-/// Register judgments under the initial connection policy, without harmless flags.
-pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite::Result<()> {
-    let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
-    let judgment = match mode {
-        Registration::DirectOnly => volatile,
-        Registration::Trusted => FunctionFlags::SQLITE_UTF8,
-    };
+/// Register every scalar for schema use without harmless or deterministic flags.
+pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
+    let flags = FunctionFlags::SQLITE_UTF8;
     connection.create_scalar_function(
         "thinkthen_relations",
         2,
-        judgment,
+        flags,
         "Recognize entities and relations in one document as JSON.",
         recognize_document::recognize_document,
     )?;
     connection.create_scalar_function(
         "thinkthen_recognize_document",
         -1,
-        volatile,
+        flags,
         "Refuse the removed name and explain its replacement by thinkthen_relations.",
         |_| -> rusqlite::Result<String> {
             Err(Failure::plain_usage(
@@ -435,18 +431,18 @@ pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite
             .into())
         },
     )?;
-    register_judgments(connection, judgment)?;
+    register_judgments(connection, flags)?;
     connection.create_scalar_function(
         "thinkthen_usage",
         -1,
-        volatile,
+        flags,
         "Read count-only usage totals.",
         usage,
     )?;
     connection.create_scalar_function(
         "thinkthen_usage_status",
         -1,
-        volatile,
+        flags,
         "Return count-only usage reporting status as JSON.",
         usage_status,
     )?;
@@ -454,7 +450,7 @@ pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite
         connection.create_scalar_function(
             "thinkthen_plan",
             arity,
-            judgment,
+            flags,
             "Prepare a judgment plan as JSON without sending requests.",
             plan::plan,
         )?;
@@ -462,11 +458,11 @@ pub(crate) fn register(connection: &Catalog<'_>, mode: Registration) -> rusqlite
     connection.create_scalar_function(
         "thinkthen_configure",
         1,
-        volatile,
+        flags,
         "Configure process settings from a JSON object.",
         settings::configure,
     )?;
-    crate::images::register(connection, volatile)?;
-    register_removed(connection, volatile)?;
+    crate::images::register(connection, flags)?;
+    register_removed(connection, flags)?;
     Ok(())
 }

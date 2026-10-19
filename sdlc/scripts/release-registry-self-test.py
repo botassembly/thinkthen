@@ -26,6 +26,7 @@ from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
 from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 
@@ -364,10 +365,8 @@ def jvm_contract_cases():
     """Read scalar fields and propagate inventory failures through the workflow steps."""
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
-        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, root / name)
-        env = {"PATH": os.environ["PATH"], "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        stage_checkout(REPO, root)
+        env = {"PATH": fixture_path(root / "bin"), "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output"), "RUNNER_TEMP": str(root)}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
         for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
@@ -389,7 +388,7 @@ def jvm_contract_cases():
                 result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
                                         cwd=root, env=env, capture_output=True, text=True)
                 if broken:
-                    assert result.returncode != 0 and "invalid literal for int()" in result.stderr, result
+                    assert result.returncode != 0 and "invalid literal for int()" in result.stdout + result.stderr, result
                     assert output.read_text() == "", output.read_text()
                 else:
                     assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
@@ -421,6 +420,7 @@ def apple_package_cases():
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, destination)
+        shutil.copytree(REPO / 'sdlc/scripts/release-pack.d', root / 'sdlc/scripts/release-pack.d')
         (root / '.gitignore').write_text('target/\nlibraries/swift/CThinkThen.xcframework/\n')
         subprocess.run(['git', 'init', '-q', str(root)], check=True)
         subprocess.run(['git', 'add', '.'], cwd=root, check=True)

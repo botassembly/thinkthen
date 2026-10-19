@@ -21,7 +21,7 @@ SCRIPT = ROOT / 'sdlc/scripts/tools.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
 from conformance.source_fixtures import fixture_tool_groups
-from sdlc.scripts.tools import download, fixture_path
+from sdlc.scripts.tools import download, fixture_path, load_manifest
 
 
 class PinnedDownloads(unittest.TestCase):
@@ -129,7 +129,7 @@ class FixtureToolPaths(unittest.TestCase):
                                                         env=negative, text=True), 'runtime')
 
     def test_fixture_groups_include_every_declared_rung_without_bootstrapping_providers(self):
-        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+        manifest = load_manifest()
         manifest['tools']['system']['groups'].append('fixture-extra-group')
         with tempfile.TemporaryDirectory(prefix='fixture-tool-groups-') as temporary:
             root = Path(temporary)
@@ -142,6 +142,31 @@ class FixtureToolPaths(unittest.TestCase):
 
 
 class ToolResolution(unittest.TestCase):
+    def test_lists_language_tools_with_shared_requirements_and_rejects_duplicate_pins(self):
+        with tempfile.TemporaryDirectory(prefix='resolver-language-data-') as folder:
+            root = Path(folder)
+            source = root / 'tools.json'
+            shared = {'commands': ['sh'], 'platforms': ['darwin', 'linux'], 'groups': ['common']}
+            language = {'commands': ['fixture-compiler'], 'platforms': ['darwin', 'linux'],
+                        'groups': ['fixture-language']}
+            source.write_text(json.dumps({'tools': {'shared': shared},
+                                          'libraries': {}, 'databases': {}}))
+            fragments = root / 'tools'
+            fragments.mkdir()
+            fragment = fragments / 'fixture-language.json'
+            fragment.write_text(json.dumps({'tools': {'compiler': language}}))
+            command = [sys.executable, str(SCRIPT), '--manifest', str(source),
+                       '--list', 'fixture-language']
+            env = child_env(home=root / 'home')
+            result = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), {'shared': shared, 'compiler': language})
+            fragment.write_text(json.dumps({'tools': {'shared': language}}))
+            result = subprocess.run(command, env=env, text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("duplicate tools: ['shared']", result.stderr)
+            self.assertEqual(result.stdout, '')
+
     def test_reports_every_missing_tool_before_starting_the_command(self):
         self.check(['thinkthen-absent-first', 'thinkthen-absent-second'], False)
 
@@ -152,7 +177,7 @@ class ToolResolution(unittest.TestCase):
         self.check(['sh'], True)
 
     def test_reports_a_missing_dated_rust_toolchain_before_starting_work(self):
-        pin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['rust-nightly']
+        pin = load_manifest()['tools']['rust-nightly']
         self.check([], False, requirement={**pin, 'version': 'nightly-1900-01-01',
                                          'groups': ['test']}, diagnostic='selected')
 
@@ -321,7 +346,8 @@ class LinuxSourceIdentity(unittest.TestCase):
             for relative in ('rust-toolchain.toml', 'sdlc/scripts/linux-check', 'sdlc/tools.json',
                              'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
                              'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
-                             'conformance/children/children.py'):
+                             'conformance/children/children.py',
+                             *[str(path.relative_to(ROOT)) for path in sorted((ROOT / 'sdlc/tools').glob('*.json'))]):
                 destination = root / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / relative, destination)
@@ -336,7 +362,11 @@ class LinuxSourceIdentity(unittest.TestCase):
             binary.mkdir()
             docker = binary / 'docker'
             calls = root / 'docker-calls.jsonl'
-            docker.write_text('#!' + sys.executable + '\nimport json,sys\n'
+            docker.write_text('#!' + sys.executable + '\nimport json,sys\nfrom pathlib import Path\n'
+                              + 'if sys.argv[1] == "build":\n'
+                              + '    context = Path(sys.argv[-1])\n'
+                              + '    expected = json.loads((context / "sdlc/tools/ruby.json").read_text())\n'
+                              + '    assert "ruby" in expected["tools"]\n'
                               + 'with open(' + repr(str(calls)) + ', "a") as log:\n'
                               + '    log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
                               + 'if sys.argv[1] == "image": print("sha256:test")\n')
@@ -369,6 +399,17 @@ class LinuxSourceIdentity(unittest.TestCase):
             self.assertEqual((source / 'source.txt').read_text(), 'committed\n')
             self.assertFalse((source / 'stray.txt').exists())
             self.assertEqual((source / 'target/cached').read_text(), 'build output\n')
+            builds = [json.loads(line) for line in calls.read_text().splitlines()
+                      if json.loads(line)[0] == 'build']
+            first_tag = builds[0][builds[0].index('-t') + 1]
+            self.assertEqual(first_tag, builds[1][builds[1].index('-t') + 1])
+            fragment = root / 'sdlc/tools/ruby.json'
+            fragment.write_text(fragment.read_text() + '\n')
+            third = subprocess.run([*command[:-1], 'prepare'], env=env, capture_output=True, text=True)
+            self.assertEqual(third.returncode, 0, third.stderr)
+            last_build = [json.loads(line) for line in calls.read_text().splitlines()
+                          if json.loads(line)[0] == 'build'][-1]
+            self.assertNotEqual(first_tag, last_build[last_build.index('-t') + 1])
 
 
 if __name__ == '__main__':

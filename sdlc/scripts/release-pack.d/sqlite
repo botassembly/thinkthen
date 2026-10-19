@@ -1,0 +1,7 @@
+part_sqlite() {
+	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
+	folder=$(fresh sqlite)
+	cp -- "$(built databases/sqlite)/release/libthinkthen0.$dl" "$folder/"
+	cp databases/sqlite/README-PUBLIC.md "$folder/README.md"
+	pack "thinkthen-sqlite-$V-$TARGET.tar.gz" "$folder"
+}

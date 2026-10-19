@@ -8,14 +8,10 @@ from helper import Backend, child, environment, expect, main
 
 def test_discovery_describes_every_registered_function_without_sends():
     backend = Backend()
-    for mode in ("direct", "trusted"):
-        held = child("""
+    held = child("""
 connection = sqlite3.connect(":memory:")
 connection.enable_load_extension(True)
-if os.environ['MODE'] == 'trusted':
-        connection.execute("SELECT load_extension(?, 'sqlite3_thinkthen_trusted_init')", (LIB,))
-else:
-        connection.load_extension(LIB)
+connection.load_extension(LIB)
 rows = connection.execute('SELECT value FROM json_each(thinkthen_functions())').fetchall()
 catalog = [json.loads(row[0]) for row in rows]
 scalars = {(row['name'], row['arity']) for row in catalog if row['kind'] == 'scalar'}
@@ -34,10 +30,10 @@ for name, row in tables.items():
         assert 0 <= row['min_arity'] <= row['max_arity']
 assert json.loads(connection.execute('SELECT thinkthen_functions()').fetchone()[0]) == catalog
 connection.execute('CREATE VIEW discovery AS SELECT thinkthen_functions()')
-assert run(connection, 'SELECT * FROM discovery') == 'unsafe use of thinkthen_functions()'
+assert json.loads(connection.execute('SELECT * FROM discovery').fetchone()[0]) == catalog
 say(count=len(catalog), described=True)
-""", environment(backend, MODE=mode, THINKTHEN_MAX_REQUESTS_TOTAL="0"))
-        expect(held['described'], True, 'registered descriptions')
+""", environment(backend, THINKTHEN_MAX_REQUESTS_TOTAL="0"))
+    expect(held['described'], True, 'registered descriptions')
     expect(backend.close(), 0, 'loading and discovery sends')
 
 

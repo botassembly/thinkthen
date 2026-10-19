@@ -2,16 +2,18 @@
 """Run Linux checks in the manifest's capped Ubuntu environment."""
 import argparse
 import hashlib
-import json
 import os
 from pathlib import Path
 import platform
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from sdlc.scripts.tools import load_manifest
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--docker', default='docker', help='host Docker executable captured before tool PATH isolation')
 parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
@@ -22,7 +24,7 @@ job = os.environ.get('PM_JOB', '').split()
 ticket = job[0] if job else os.environ.get('PM_TICKET', '0619')
 if len(ticket) != 4 or not ticket.isdigit():
     parser.error('container label requires a four-digit ticket')
-manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+manifest = load_manifest()
 pin = manifest['linux']
 arch = {'aarch64': 'arm64', 'arm64': 'arm64', 'x86_64': 'x86_64'}[platform.machine()]
 base = pin['images'][arch]
@@ -32,7 +34,8 @@ memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 digest = hashlib.sha256()
 inputs = ('rust-toolchain.toml', 'sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
           'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
-          'conformance/children/children.py')
+          'conformance/children/children.py',
+          *[str(path.relative_to(ROOT)) for path in sorted((ROOT / 'sdlc/tools').glob('*.json'))])
 for path in inputs:
     digest.update((ROOT / path).read_bytes())
 tag = 'thinkthen-check:' + arch + '-' + digest.hexdigest()[:20]

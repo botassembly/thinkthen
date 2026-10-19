@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "php": {
+      "commands": [
+        "php",
+        "composer"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "php"
+      ],
+      "version": "8.3"
+    }
+  },
+  "libraries": {
+    "php": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    }
+  }
+}
