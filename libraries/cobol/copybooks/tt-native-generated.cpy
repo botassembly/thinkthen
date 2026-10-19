@@ -1835,6 +1835,20 @@
  03 v-extensions-len usage binary-double unsigned.
 01 tt-n-complete-boundary-proposal-v1 based.
  02 v-end usage binary-double unsigned.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-data usage pointer.
+ 04 v-file-value-len usage binary-double unsigned.
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
  02 v-length usage binary-double unsigned.
  02 v-probability usage float-long.
  02 v-start usage binary-double unsigned.
@@ -2915,6 +2929,667 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-4-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-integer redefines v-data-union-storage usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-4-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-4-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-integer redefines v-data-union-storage usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-4-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-shape-6-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-string redefines v-data-union-storage.
+ 04 v-data-string-data usage pointer.
+ 04 v-data-string-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-6-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-3-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-string redefines v-data-union-storage.
+ 04 v-data-string-data usage pointer.
+ 04 v-data-string-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-3-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-shape-8-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-number redefines v-data-union-storage usage float-long.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-8-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-2-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-number redefines v-data-union-storage usage float-long.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-2-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-resolution-v1 based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-complete-answer-resolution-map-entry-v1 based.
+ 02 v-name.
+ 03 v-name-data usage pointer.
+ 03 v-name-len usage binary-double unsigned.
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-resolution-map-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-resolutions-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-string redefines v-data-union-storage usage pointer.
+ 03 v-data-object redefines v-data-union-storage.
+ 04 v-data-object-data usage pointer.
+ 04 v-data-object-len usage binary-double unsigned.
+01 tt-n-complete-answer-resolutions-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-5-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-string redefines v-data-union-storage usage pointer.
+ 03 v-data-object redefines v-data-union-storage.
+ 04 v-data-object-data usage pointer.
+ 04 v-data-object-len usage binary-double unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-v1 based.
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-shape-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-decide-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-6-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-string redefines v-data-union-storage.
+ 04 v-data-string-data usage pointer.
+ 04 v-data-string-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-6-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-choose-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-7-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-7-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-7-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array2 redefines v-data-union-storage.
+ 04 v-data-array2-data usage pointer.
+ 04 v-data-array2-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-7-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-tag-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-8-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-number redefines v-data-union-storage usage float-long.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-8-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-score-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-10-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-10-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-10-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array2 redefines v-data-union-storage.
+ 04 v-data-array2-data usage pointer.
+ 04 v-data-array2-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-10-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-original-v1 based.
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-original-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-9-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-9-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-9-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array2 redefines v-data-union-storage.
+ 04 v-data-array2-data usage pointer.
+ 04 v-data-array2-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-9-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-filter-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-integer-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-11-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-11-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-11-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array2 redefines v-data-union-storage.
+ 04 v-data-array2-data usage pointer.
+ 04 v-data-array2-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-11-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-rank-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-12-v1 based.
+ 02 v-value usage pointer.
+01 tt-n-complete-answer-shape-12-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-find-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-recognition-entities-v1 based.
+ 02 v-entities.
+ 03 v-entities-data usage pointer.
+ 03 v-entities-len usage binary-double unsigned.
+ 02 v-relations.
+ 03 v-relations-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-relations-value.
+ 04 v-relations-value-data usage pointer.
+ 04 v-relations-value-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-recognition-mode-proposals-v1 based.
+ 02 v-mode usage pointer.
+ 02 v-proposals.
+ 03 v-proposals-data usage pointer.
+ 03 v-proposals-len usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-recognition-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-entities redefines v-data-union-storage usage pointer.
+ 03 v-data-mode-proposals redefines v-data-union-storage usage pointer.
+01 tt-n-complete-answer-shape-13-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-object redefines v-data-union-storage usage pointer.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-13-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-13-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-object redefines v-data-union-storage usage pointer.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-13-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-recognize-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-relations-v1 based.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-14-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-array redefines v-data-union-storage usage pointer.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-14-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-14-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-array redefines v-data-union-storage usage pointer.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array2 redefines v-data-union-storage.
+ 04 v-data-array2-data usage pointer.
+ 04 v-data-array2-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-14-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-relate-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-judgment-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-boolean redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-string redefines v-data-union-storage.
+ 04 v-data-string-data usage pointer.
+ 04 v-data-string-len usage binary-double unsigned.
+ 03 v-data-number redefines v-data-union-storage usage float-long.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-settled-judgment-map-entry-v1 based.
+ 02 v-name.
+ 03 v-name-data usage pointer.
+ 03 v-name-len usage binary-double unsigned.
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-judgment-map-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-15-any-of-1-items-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-object redefines v-data-union-storage.
+ 04 v-data-object-data usage pointer.
+ 04 v-data-object-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+01 tt-n-complete-answer-shape-15-any-of-1-items-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-15-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-object redefines v-data-union-storage.
+ 04 v-data-object-data usage pointer.
+ 04 v-data-object-len usage binary-double unsigned.
+ 03 v-data-null redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+01 tt-n-complete-answer-shape-15-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-settled-answer-annotate-v1 based.
+ 02 v-function.
+ 03 v-function-data usage pointer.
+ 03 v-function-len usage binary-double unsigned.
+ 02 v-index.
+ 03 v-index-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-index-value usage pointer.
+ 02 v-pick.
+ 03 v-pick-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-pick-value usage pointer.
+ 02 v-probability.
+ 03 v-probability-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-probability-value usage pointer.
+ 02 v-resolution usage pointer.
+ 02 v-value.
+ 03 v-value-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-value-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-settled-answer-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(8).
+ 03 v-data-decide redefines v-data-union-storage usage pointer.
+ 03 v-data-choose redefines v-data-union-storage usage pointer.
+ 03 v-data-tag redefines v-data-union-storage usage pointer.
+ 03 v-data-score redefines v-data-union-storage usage pointer.
+ 03 v-data-filter redefines v-data-union-storage usage pointer.
+ 03 v-data-rank redefines v-data-union-storage usage pointer.
+ 03 v-data-find redefines v-data-union-storage usage pointer.
+ 03 v-data-recognize redefines v-data-union-storage usage pointer.
+ 03 v-data-relate redefines v-data-union-storage usage pointer.
+ 03 v-data-annotate redefines v-data-union-storage usage pointer.
+01 tt-n-complete-settled-answer-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
 01 tt-n-complete-facts-v1 based.
  02 v-attempts.
  03 v-attempts-presence usage binary-long unsigned.
@@ -3084,6 +3759,7 @@
  03 v-facts-presence usage binary-long unsigned.
  03 filler pic x(4).
  03 v-facts-value usage pointer.
+ 02 v-resolution usage pointer.
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
@@ -3092,6 +3768,10 @@
  02 filler pic x(4).
  02 v-value usage pointer.
 01 tt-n-complete-session-packet-terminal-v1 based.
+ 02 v-answer.
+ 03 v-answer-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-answer-value usage pointer.
  02 v-facts.
  03 v-facts-presence usage binary-long unsigned.
  03 filler pic x(4).
@@ -3103,6 +3783,7 @@
  02 v-kind.
  03 v-kind-data usage pointer.
  03 v-kind-len usage binary-double unsigned.
+ 02 v-resolution usage pointer.
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
@@ -5991,6 +6672,20 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-ReceiptBoundaryProposal based.
  02 v-end usage binary-double unsigned.
+ 02 v-file.
+ 03 v-file-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-file-value.
+ 04 v-file-value-length usage binary-double unsigned.
+ 04 v-file-value-text pic x(8192).
+ 02 v-first-line.
+ 03 v-first-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-first-line-value usage binary-double unsigned.
+ 02 v-last-line.
+ 03 v-last-line-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-last-line-value usage binary-double unsigned.
  02 v-length usage binary-double unsigned.
  02 v-probability usage float-long.
  02 v-start usage binary-double unsigned.
@@ -8062,7 +8757,71 @@
 78 tt-n-complete-annotation-value-score-v1-k value 3.
 78 tt-n-complete-annotation-value-tags-v1-k value 4.
 78 tt-n-complete-answer-choice-v1-k value 2.
+78 tt-n-complete-answer-resolutions-object-v1-k value 2.
+78 tt-n-complete-answer-resolutions-string-v1-k value 1.
+78 tt-n-complete-answer-resolution-failed-v1-k value 3.
+78 tt-n-complete-answer-resolution-resolved-v1-k value 1.
+78 tt-n-complete-answer-resolution-unresolved-v1-k value 2.
 78 tt-n-complete-answer-score-v1-k value 4.
+78 tt-n-complete-answer-shape-10-any-of-1-items-array-v1-k value 1.
+78 tt-n-complete-answer-shape-10-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-10-array2-v1-k value 3.
+78 tt-n-complete-answer-shape-10-array-v1-k value 1.
+78 tt-n-complete-answer-shape-10-null-v1-k value 2.
+78 tt-n-complete-answer-shape-11-any-of-1-items-array-v1-k value 1.
+78 tt-n-complete-answer-shape-11-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-11-array2-v1-k value 3.
+78 tt-n-complete-answer-shape-11-array-v1-k value 1.
+78 tt-n-complete-answer-shape-11-null-v1-k value 2.
+78 tt-n-complete-answer-shape-13-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-13-any-of-1-items-object-v1-k value 1.
+78 tt-n-complete-answer-shape-13-array-v1-k value 3.
+78 tt-n-complete-answer-shape-13-null-v1-k value 2.
+78 tt-n-complete-answer-shape-13-object-v1-k value 1.
+78 tt-n-complete-answer-shape-14-any-of-1-items-array-v1-k value 1.
+78 tt-n-complete-answer-shape-14-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-14-array2-v1-k value 3.
+78 tt-n-complete-answer-shape-14-array-v1-k value 1.
+78 tt-n-complete-answer-shape-14-null-v1-k value 2.
+78 tt-n-complete-answer-shape-15-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-15-any-of-1-items-object-v1-k value 1.
+78 tt-n-complete-answer-shape-15-array-v1-k value 3.
+78 tt-n-complete-answer-shape-15-null-v1-k value 2.
+78 tt-n-complete-answer-shape-15-object-v1-k value 1.
+78 tt-n-complete-answer-shape-2-array-v1-k value 3.
+78 tt-n-complete-answer-shape-2-null-v1-k value 2.
+78 tt-n-complete-answer-shape-2-number-v1-k value 1.
+78 tt-n-complete-answer-shape-3-array-v1-k value 3.
+78 tt-n-complete-answer-shape-3-null-v1-k value 2.
+78 tt-n-complete-answer-shape-3-string-v1-k value 1.
+78 tt-n-complete-answer-shape-4-any-of-1-items-integer-v1-k value 1.
+78 tt-n-complete-answer-shape-4-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-4-array-v1-k value 3.
+78 tt-n-complete-answer-shape-4-integer-v1-k value 1.
+78 tt-n-complete-answer-shape-4-null-v1-k value 2.
+78 tt-n-complete-answer-shape-5-array-v1-k value 3.
+78 tt-n-complete-answer-shape-5-object-v1-k value 2.
+78 tt-n-complete-answer-shape-5-string-v1-k value 1.
+78 tt-n-complete-answer-shape-6-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-6-any-of-1-items-string-v1-k value 1.
+78 tt-n-complete-answer-shape-6-array-v1-k value 3.
+78 tt-n-complete-answer-shape-6-null-v1-k value 2.
+78 tt-n-complete-answer-shape-6-string-v1-k value 1.
+78 tt-n-complete-answer-shape-7-any-of-1-items-array-v1-k value 1.
+78 tt-n-complete-answer-shape-7-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-7-array2-v1-k value 3.
+78 tt-n-complete-answer-shape-7-array-v1-k value 1.
+78 tt-n-complete-answer-shape-7-null-v1-k value 2.
+78 tt-n-complete-answer-shape-8-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-8-any-of-1-items-number-v1-k value 1.
+78 tt-n-complete-answer-shape-8-array-v1-k value 3.
+78 tt-n-complete-answer-shape-8-null-v1-k value 2.
+78 tt-n-complete-answer-shape-8-number-v1-k value 1.
+78 tt-n-complete-answer-shape-9-any-of-1-items-array-v1-k value 1.
+78 tt-n-complete-answer-shape-9-any-of-1-items-null-v1-k value 2.
+78 tt-n-complete-answer-shape-9-array2-v1-k value 3.
+78 tt-n-complete-answer-shape-9-array-v1-k value 1.
+78 tt-n-complete-answer-shape-9-null-v1-k value 2.
 78 tt-n-complete-answer-tag-v1-k value 3.
 78 tt-n-complete-answer-yes-no-v1-k value 1.
 78 tt-n-complete-attempt-outcome-ok-v1-k value 1.
@@ -8177,6 +8936,23 @@
 78 tt-n-complete-session-packet-terminal-v1-k value 18.
 78 tt-n-complete-session-probabilities-named-v1-k value 2.
 78 tt-n-complete-session-probabilities-yes-no-v1-k value 1.
+78 tt-n-complete-settled-answer-annotate-v1-k value 10.
+78 tt-n-complete-settled-answer-choose-v1-k value 2.
+78 tt-n-complete-settled-answer-decide-v1-k value 1.
+78 tt-n-complete-settled-answer-filter-v1-k value 5.
+78 tt-n-complete-settled-answer-find-v1-k value 7.
+78 tt-n-complete-settled-answer-rank-v1-k value 6.
+78 tt-n-complete-settled-answer-recognize-v1-k value 8.
+78 tt-n-complete-settled-answer-relate-v1-k value 9.
+78 tt-n-complete-settled-answer-score-v1-k value 4.
+78 tt-n-complete-settled-answer-tag-v1-k value 3.
+78 tt-n-complete-settled-judgment-array-v1-k value 5.
+78 tt-n-complete-settled-judgment-boolean-v1-k value 1.
+78 tt-n-complete-settled-judgment-null-v1-k value 2.
+78 tt-n-complete-settled-judgment-number-v1-k value 4.
+78 tt-n-complete-settled-judgment-string-v1-k value 3.
+78 tt-n-complete-settled-recognition-entities-v1-k value 1.
+78 tt-n-complete-settled-recognition-mode-proposals-v1-k value 2.
 78 tt-n-complete-stop-cause-backend-v1-k value 8.
 78 tt-n-complete-stop-cause-cancelled-v1-k value 9.
 78 tt-n-complete-stop-cause-deadline-v1-k value 10.

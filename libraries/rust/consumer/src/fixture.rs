@@ -7,7 +7,6 @@ use thinkthen::{
     SourceItem,
 };
 
-pub(super) type Original = QuestionInput;
 #[allow(
     dead_code,
     reason = "Rust and Polars callers use different fixture controls"
@@ -84,9 +83,15 @@ pub(super) fn packet<T: serde::Serialize>(
     })
     .map_err(|_| usage("invalid native results"))
 }
-pub(super) fn written<T: serde::Serialize>(call: Call<T>) -> Result<(String, Facts), Error> {
+pub(super) fn written(call: Call<thinkthen::RequestValue>) -> Result<(String, Facts), Error> {
     Ok((
-        packet(call.value(), call.facts().complete())?,
+        serde_json::to_string(&serde_json::json!({
+            "native": true,
+            "results": call.value(),
+            "facts": call.facts().complete(),
+            "answer": call.answer(),
+        }))
+        .map_err(|_| usage("invalid native settled call"))?,
         call.facts().clone(),
     ))
 }

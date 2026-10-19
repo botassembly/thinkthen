@@ -93,6 +93,87 @@ export class NativeAnnotationValueTags {
   readonly [key: string]: unknown;
 }
 export type NativeAnswerId = string;
+export type NativeAnswerResolution = "resolved" | "unresolved" | "failed";
+export type NativeAnswerResolutions =
+  | NativeAnswerResolution
+  | Readonly<Record<string, NativeAnswerResolution>>;
+export type NativeAnswerShape = JsonValue;
+export type NativeAnswerShape10 =
+  | readonly NativeAnswerShape8AnyOf1Items[]
+  | null
+  | readonly NativeAnswerShape10AnyOf1Items[];
+export type NativeAnswerShape10AnyOf1Items =
+  | readonly NativeAnswerShape8AnyOf1Items[]
+  | null;
+export type NativeAnswerShape11 =
+  | readonly (number | NativeNumber)[]
+  | null
+  | readonly NativeAnswerShape11AnyOf1Items[];
+export type NativeAnswerShape11AnyOf1Items =
+  | readonly (number | NativeNumber)[]
+  | null;
+export type NativeAnswerShape12 = JsonValue;
+export type NativeAnswerShape12AnyOf1Items = JsonValue;
+export type NativeAnswerShape13 =
+  | NativeSettledRecognition
+  | null
+  | readonly NativeAnswerShape13AnyOf1Items[];
+export type NativeAnswerShape13AnyOf1Items = NativeSettledRecognition | null;
+export type NativeAnswerShape14 =
+  | NativeSettledRelations
+  | null
+  | readonly NativeAnswerShape14AnyOf1Items[];
+export type NativeAnswerShape14AnyOf1Items = NativeSettledRelations | null;
+export type NativeAnswerShape15 =
+  | Readonly<Record<string, NativeSettledJudgment>>
+  | null
+  | readonly NativeAnswerShape15AnyOf1Items[];
+export type NativeAnswerShape15AnyOf1Items = Readonly<
+  Record<string, NativeSettledJudgment>
+> | null;
+export type NativeAnswerShape2 =
+  | number
+  | NativeNumber
+  | null
+  | readonly NativeAnswerShape8AnyOf1Items[];
+export type NativeAnswerShape3 =
+  | string
+  | null
+  | readonly NativeAnswerShape6AnyOf1Items[];
+export type NativeAnswerShape4 =
+  | number
+  | NativeNumber
+  | null
+  | readonly NativeAnswerShape4AnyOf1Items[];
+export type NativeAnswerShape4AnyOf1Items = number | NativeNumber | null;
+export type NativeAnswerShape5 =
+  | NativeAnswerResolution
+  | Readonly<Record<string, NativeAnswerResolution>>
+  | readonly NativeAnswerResolutions[];
+export type NativeAnswerShape6 =
+  | string
+  | null
+  | readonly NativeAnswerShape6AnyOf1Items[];
+export type NativeAnswerShape6AnyOf1Items = string | null;
+export type NativeAnswerShape7 =
+  | readonly string[]
+  | null
+  | readonly NativeAnswerShape7AnyOf1Items[];
+export type NativeAnswerShape7AnyOf1Items = readonly string[] | null;
+export type NativeAnswerShape8 =
+  | number
+  | NativeNumber
+  | null
+  | readonly NativeAnswerShape8AnyOf1Items[];
+export type NativeAnswerShape8AnyOf1Items = number | NativeNumber | null;
+export type NativeAnswerShape9 =
+  | readonly NativeSettledOriginal[]
+  | null
+  | readonly NativeAnswerShape9AnyOf1Items[];
+export type NativeAnswerShape9AnyOf1Items =
+  | readonly NativeSettledOriginal[]
+  | null;
+export type NativeAnswerShapeAnyOf1Items = JsonValue;
 export class NativeAnswers {
   readonly "questions": readonly NativeRelationMember[];
   has(key: string): boolean;
@@ -222,6 +303,9 @@ export class NativeBoundaryOdds {
 }
 export class NativeBoundaryProposal {
   readonly "end": number | NativeNumber;
+  readonly "file"?: string;
+  readonly "first_line"?: number | NativeNumber;
+  readonly "last_line"?: number | NativeNumber;
   readonly "length": number | NativeNumber;
   readonly "probability": number | NativeNumber;
   readonly "start": number | NativeNumber;
@@ -232,6 +316,7 @@ export class NativeBoundaryProposal {
 export class NativeCallError {
   readonly "error": NativeError;
   readonly "facts"?: NativeFacts;
+  readonly "resolution": NativeAnswerResolution;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -649,6 +734,31 @@ export class NativeSendBudgetDenialBeforeRetry {
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
+export type NativeSettledDecision = JsonValue;
+export type NativeSettledJudgment =
+  | boolean
+  | null
+  | string
+  | number
+  | NativeNumber
+  | readonly string[];
+export type NativeSettledOriginal = JsonValue;
+export type NativeSettledRecognition =
+  | NativeSettledRecognitionEntities
+  | NativeSettledRecognitionModeProposals;
+export class NativeSettledRecognitionEntities {
+  readonly "entities": readonly NativeEntity[];
+  readonly "relations"?: readonly NativeEntityEdge[];
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledRecognitionModeProposals {
+  readonly "mode": NativeBoundaryMode;
+  readonly "proposals": readonly NativeBoundaryProposal[];
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export type NativeSettledRelations = readonly NativeRelatedEntityEdge[];
 export type NativeStopCause =
   | "usage"
   | "local"
@@ -1264,9 +1374,11 @@ export class NativeSessionPacketTagRow {
   readonly [key: string]: unknown;
 }
 export class NativeSessionPacketTerminal {
+  readonly "answer": NativeSettledAnswer | null;
   readonly "facts"?: NativeFacts;
   readonly "failure"?: NativeCallError;
   readonly "kind": "terminal";
+  readonly "resolution": NativeAnswerResolution;
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
@@ -1330,6 +1442,117 @@ export class NativeSessionRelationEdge {
   has(key: string): boolean;
   readonly [key: string]: unknown;
 }
+export type NativeSettledAnswer =
+  | NativeSettledAnswerDecide
+  | NativeSettledAnswerChoose
+  | NativeSettledAnswerTag
+  | NativeSettledAnswerScore
+  | NativeSettledAnswerFilter
+  | NativeSettledAnswerRank
+  | NativeSettledAnswerFind
+  | NativeSettledAnswerRecognize
+  | NativeSettledAnswerRelate
+  | NativeSettledAnswerAnnotate;
+export class NativeSettledAnswerAnnotate {
+  readonly "function": "annotate";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape15;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerChoose {
+  readonly "function": "choose";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape6;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerDecide {
+  readonly "function": "decide";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerFilter {
+  readonly "function": "filter";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape10;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape9;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerFind {
+  readonly "function": "find";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape12;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerRank {
+  readonly "function": "rank";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape10;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape11;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerRecognize {
+  readonly "function": "recognize";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape10;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape13;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerRelate {
+  readonly "function": "relate";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape10;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape14;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerScore {
+  readonly "function": "score";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape8;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
+export class NativeSettledAnswerTag {
+  readonly "function": "tag";
+  readonly "index": NativeAnswerShape4;
+  readonly "pick": NativeAnswerShape3;
+  readonly "probability": NativeAnswerShape2;
+  readonly "resolution": NativeAnswerShape5;
+  readonly "value": NativeAnswerShape7;
+  has(key: string): boolean;
+  readonly [key: string]: unknown;
+}
 export class NativeSourceRelationEndpoint {
   readonly "file": string | null;
   readonly "first_line"?: number | NativeNumber;
@@ -1361,16 +1584,18 @@ export type NativeValue =
   | readonly string[]
   | number
   | NativeNumber;
-export type NativeDecideResult = NativeAtomicDecideValue;
-export type NativeChooseResult = NativeAtomicNullableString;
-export type NativeTagResult = NativeAtomicArrayOfString;
-export type NativeScoreResult = NativeAtomicDouble;
-export type NativeFilterResult = NativeAtomicBoolean;
-export type NativeRankResult = NativeAtomicNonZeroUsize;
-export type NativeFindResult = NativeFind;
-export type NativeAnnotateResult = NativeAnnotation;
-export type NativeRecognizeResult = NativeRecognition;
-export type NativeRelateResult = NativeRelation;
+export type NativeDecideResult = NativeAtomicDecideValue | NativeAnswerShape;
+export type NativeChooseResult =
+  | NativeAtomicNullableString
+  | NativeAnswerShape6;
+export type NativeTagResult = NativeAtomicArrayOfString | NativeAnswerShape7;
+export type NativeScoreResult = NativeAtomicDouble | NativeAnswerShape8;
+export type NativeFilterResult = NativeAtomicBoolean | NativeAnswerShape9;
+export type NativeRankResult = NativeAtomicNonZeroUsize | NativeAnswerShape11;
+export type NativeFindResult = NativeFind | NativeAnswerShape12;
+export type NativeAnnotateResult = NativeAnnotation | NativeAnswerShape15;
+export type NativeRecognizeResult = NativeRecognition | NativeAnswerShape13;
+export type NativeRelateResult = NativeRelation | NativeAnswerShape14;
 export interface NamedCalls {
   decide(
     q: Question,

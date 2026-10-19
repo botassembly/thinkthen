@@ -21,7 +21,9 @@ impl Engine {
             function,
             RequestFunction::Rank | RequestFunction::Find | RequestFunction::Relate
         ) {
-            return self.recover_aggregate(request, environment);
+            return self
+                .recover_aggregate(request, environment)
+                .map(|call| super::settlement::recovered(request, call));
         }
         super::execution::feed_projection(request, environment.feed.as_ref())?;
         environment.controls.recovery_rows = true;
@@ -61,6 +63,7 @@ impl Engine {
                 )
             },
         )
+        .map(|call| super::settlement::recovered(request, call))
     }
     fn recover_aggregate<'a>(
         &self,

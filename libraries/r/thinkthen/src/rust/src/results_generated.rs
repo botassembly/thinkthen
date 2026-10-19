@@ -169,6 +169,71 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completeAnswerId" => tagged(plain(value)?, "AnswerId", "thinkthen_identity"),
+        "completeAnswerResolution" => plain(value),
+        "completeAnswerResolutions" => {
+            if value.is_object() {
+                mapping(value, |value| convert("completeAnswerResolution", value))
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape" => plain(value),
+        "completeAnswerShape10" => plain(value),
+        "completeAnswerShape10_anyOf_1_items" => plain(value),
+        "completeAnswerShape11" => plain(value),
+        "completeAnswerShape11_anyOf_1_items" => plain(value),
+        "completeAnswerShape12" => plain(value),
+        "completeAnswerShape12_anyOf_1_items" => plain(value),
+        "completeAnswerShape13" => {
+            if value.is_object() {
+                convert("completeSettledRecognition", value)
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape13_anyOf_1_items" => {
+            if value.is_object() {
+                convert("completeSettledRecognition", value)
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape14" => plain(value),
+        "completeAnswerShape14_anyOf_1_items" => plain(value),
+        "completeAnswerShape15" => {
+            if value.is_object() {
+                mapping(value, |value| convert("completeSettledJudgment", value))
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape15_anyOf_1_items" => {
+            if value.is_object() {
+                mapping(value, |value| convert("completeSettledJudgment", value))
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape2" => plain(value),
+        "completeAnswerShape3" => plain(value),
+        "completeAnswerShape4" => plain(value),
+        "completeAnswerShape4_anyOf_1_items" => plain(value),
+        "completeAnswerShape5" => {
+            if value.is_object() {
+                mapping(value, |value| convert("completeAnswerResolution", value))
+            } else {
+                plain(value)
+            }
+        }
+        "completeAnswerShape6" => plain(value),
+        "completeAnswerShape6_anyOf_1_items" => plain(value),
+        "completeAnswerShape7" => plain(value),
+        "completeAnswerShape7_anyOf_1_items" => plain(value),
+        "completeAnswerShape8" => plain(value),
+        "completeAnswerShape8_anyOf_1_items" => plain(value),
+        "completeAnswerShape9" => plain(value),
+        "completeAnswerShape9_anyOf_1_items" => plain(value),
+        "completeAnswerShape_anyOf_1_items" => plain(value),
         "completeAnswers" => object(
             value,
             "Answers",
@@ -449,6 +514,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "BoundaryProposal",
             &[
                 ("end", true, plain),
+                ("file", false, plain),
+                ("first_line", false, plain),
+                ("last_line", false, plain),
                 ("length", true, plain),
                 ("probability", true, plain),
                 ("start", true, plain),
@@ -466,6 +534,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     } else {
                         convert("completeFacts", value)
                     }
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerResolution", value)
                 }),
             ],
         ),
@@ -1186,6 +1257,49 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "SendBudgetDenial_before_retry",
             &[("kind", true, plain), ("last_status", true, plain)],
         ),
+        "completeSettledDecision" => plain(value),
+        "completeSettledJudgment" => plain(value),
+        "completeSettledOriginal" => plain(value),
+        "completeSettledRecognition" => {
+            if value.get("entities").is_some()
+                && value.get("mode").is_none()
+                && value.get("proposals").is_none()
+            {
+                return convert("completeSettledRecognition_entities", value);
+            }
+            if value.get("mode").is_some()
+                && value.get("proposals").is_some()
+                && value.get("entities").is_none()
+            {
+                return convert("completeSettledRecognition_mode_proposals", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completeSettledRecognition_entities" => object(
+            value,
+            "SettledRecognition_entities",
+            &[
+                ("entities", true, |value| {
+                    array(value, |value| convert("completeentity", value))
+                }),
+                ("relations", false, |value| {
+                    array(value, |value| convert("completeentityEdge", value))
+                }),
+            ],
+        ),
+        "completeSettledRecognition_mode_proposals" => object(
+            value,
+            "SettledRecognition_mode_proposals",
+            &[
+                ("mode", true, |value| convert("completeBoundaryMode", value)),
+                ("proposals", true, |value| {
+                    array(value, |value| convert("completeBoundaryProposal", value))
+                }),
+            ],
+        ),
+        "completeSettledRelations" => {
+            array(value, |value| convert("completerelatedEntityEdge", value))
+        }
         "completeStopCause" => plain(value),
         "completeStopped" => object(
             value,
@@ -2324,6 +2438,13 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             value,
             "SessionPacket_terminal",
             &[
+                ("answer", true, |value| {
+                    if value.is_null() {
+                        plain(value)
+                    } else {
+                        convert("completesettledAnswer", value)
+                    }
+                }),
                 ("facts", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -2339,6 +2460,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     }
                 }),
                 ("kind", true, plain),
+                ("resolution", true, |value| {
+                    convert("completeAnswerResolution", value)
+                }),
             ],
         ),
         "completesessionProbabilities" => {
@@ -2491,6 +2615,237 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("target", true, |value| {
                     convert("completeEntityDocument", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer" => {
+            if value.get("function").and_then(Value::as_str) == Some("decide") {
+                return convert("completesettledAnswer_decide", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("choose") {
+                return convert("completesettledAnswer_choose", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("tag") {
+                return convert("completesettledAnswer_tag", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("score") {
+                return convert("completesettledAnswer_score", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("filter") {
+                return convert("completesettledAnswer_filter", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("rank") {
+                return convert("completesettledAnswer_rank", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("find") {
+                return convert("completesettledAnswer_find", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("recognize") {
+                return convert("completesettledAnswer_recognize", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("relate") {
+                return convert("completesettledAnswer_relate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("annotate") {
+                return convert("completesettledAnswer_annotate", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completesettledAnswer_annotate" => object(
+            value,
+            "SettledAnswer_annotate",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape15", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_choose" => object(
+            value,
+            "SettledAnswer_choose",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape6", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_decide" => object(
+            value,
+            "SettledAnswer_decide",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| convert("completeAnswerShape", value)),
+            ],
+        ),
+        "completesettledAnswer_filter" => object(
+            value,
+            "SettledAnswer_filter",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape10", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape9", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_find" => object(
+            value,
+            "SettledAnswer_find",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape12", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_rank" => object(
+            value,
+            "SettledAnswer_rank",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape10", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape11", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_recognize" => object(
+            value,
+            "SettledAnswer_recognize",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape10", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape13", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_relate" => object(
+            value,
+            "SettledAnswer_relate",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape10", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape14", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_score" => object(
+            value,
+            "SettledAnswer_score",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape8", value)
+                }),
+            ],
+        ),
+        "completesettledAnswer_tag" => object(
+            value,
+            "SettledAnswer_tag",
+            &[
+                ("function", true, plain),
+                ("index", true, |value| {
+                    convert("completeAnswerShape4", value)
+                }),
+                ("pick", true, |value| convert("completeAnswerShape3", value)),
+                ("probability", true, |value| {
+                    convert("completeAnswerShape2", value)
+                }),
+                ("resolution", true, |value| {
+                    convert("completeAnswerShape5", value)
+                }),
+                ("value", true, |value| {
+                    convert("completeAnswerShape7", value)
                 }),
             ],
         ),

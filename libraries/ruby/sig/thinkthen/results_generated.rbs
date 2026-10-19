@@ -165,6 +165,9 @@ module ThinkThen
     end
     class NativeBoundaryProposal < Native::Result
       def end: () -> (Integer)
+      def file: () -> (String)
+      def first_line: () -> (Integer)
+      def last_line: () -> (Integer)
       def length: () -> (Integer)
       def probability: () -> (Integer | Float)
       def start: () -> (Integer)
@@ -173,6 +176,7 @@ module ThinkThen
     class NativeCallError < Native::Result
       def error: () -> (NativeError)
       def facts: () -> (NativeFacts)
+      def resolution: () -> (String)
     end
     class NativeEntityDocument < Native::Result
       def kind: () -> (String)
@@ -453,6 +457,14 @@ module ThinkThen
     class NativeSendBudgetDenialBeforeRetry < Native::Result
       def kind: () -> (String)
       def last_status: () -> (Integer)
+    end
+    class NativeSettledRecognitionEntities < Native::Result
+      def entities: () -> (Array[NativeEntity])
+      def relations: () -> (Array[NativeEntityEdge])
+    end
+    class NativeSettledRecognitionModeProposals < Native::Result
+      def mode: () -> (String)
+      def proposals: () -> (Array[NativeBoundaryProposal])
     end
     class NativeStopped < Native::Result
       def at: () -> (Integer)
@@ -850,9 +862,11 @@ module ThinkThen
       def value: () -> (NativeAtomicArrayOfString)
     end
     class NativeSessionPacketTerminal < Native::Result
+      def answer: () -> (NativeSettledAnswerDecide | NativeSettledAnswerChoose | NativeSettledAnswerTag | NativeSettledAnswerScore | NativeSettledAnswerFilter | NativeSettledAnswerRank | NativeSettledAnswerFind | NativeSettledAnswerRecognize | NativeSettledAnswerRelate | NativeSettledAnswerAnnotate | nil)
       def facts: () -> (NativeFacts)
       def failure: () -> (NativeCallError)
       def kind: () -> (String)
+      def resolution: () -> (String)
     end
     class NativeSessionProbabilitiesNamed < Native::Result
       def kind: () -> (String)
@@ -900,6 +914,86 @@ module ThinkThen
       def relation: () -> (String)
       def source: () -> (NativeEntityDocument)
       def target: () -> (NativeEntityDocument)
+    end
+    class NativeSettledAnswerAnnotate < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Hash[String, bool | nil | String | Integer | Float | Array[String]] | nil | Array[Hash[String, bool | nil | String | Integer | Float | Array[String]] | nil])
+    end
+    class NativeSettledAnswerChoose < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (String | nil | Array[String | nil])
+    end
+    class NativeSettledAnswerDecide < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (untyped)
+    end
+    class NativeSettledAnswerFilter < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Array[Integer | Float | nil] | nil | Array[Array[Integer | Float | nil] | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Array[untyped] | nil | Array[Array[untyped] | nil])
+    end
+    class NativeSettledAnswerFind < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (untyped)
+    end
+    class NativeSettledAnswerRank < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Array[Integer | Float | nil] | nil | Array[Array[Integer | Float | nil] | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Array[Integer] | nil | Array[Array[Integer] | nil])
+    end
+    class NativeSettledAnswerRecognize < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Array[Integer | Float | nil] | nil | Array[Array[Integer | Float | nil] | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (NativeSettledRecognitionEntities | NativeSettledRecognitionModeProposals | nil | Array[NativeSettledRecognitionEntities | NativeSettledRecognitionModeProposals | nil])
+    end
+    class NativeSettledAnswerRelate < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Array[Integer | Float | nil] | nil | Array[Array[Integer | Float | nil] | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Array[NativeRelatedEntityEdge] | nil | Array[Array[NativeRelatedEntityEdge] | nil])
+    end
+    class NativeSettledAnswerScore < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+    end
+    class NativeSettledAnswerTag < Native::Result
+      def function: () -> (String)
+      def index: () -> (Integer | nil | Array[Integer | nil])
+      def pick: () -> (String | nil | Array[String | nil])
+      def probability: () -> (Integer | Float | nil | Array[Integer | Float | nil])
+      def resolution: () -> (String | Hash[String, String] | Array[String | Hash[String, String]])
+      def value: () -> (Array[String] | nil | Array[Array[String] | nil])
     end
     class NativeSourceRelationEndpoint < Native::Result
       def file: () -> (String | nil)

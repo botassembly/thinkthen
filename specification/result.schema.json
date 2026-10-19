@@ -98,6 +98,405 @@
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
     },
+    "AnswerResolution": {
+      "oneOf": [
+        {
+          "const": "resolved",
+          "type": "string"
+        },
+        {
+          "const": "unresolved",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "AnswerResolutions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AnswerResolution"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/AnswerResolution"
+          },
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^\\d+$": {
+              "$ref": "#/$defs/AnswerResolution"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "AnswerShape": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SettledDecision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SettledDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape10": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape11": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape12": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SettledOriginal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SettledOriginal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape13": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SettledRecognition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SettledRecognition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape14": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SettledRelations"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SettledRelations"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape15": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/SettledJudgment"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/SettledJudgment"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape2": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape3": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape4": {
+      "anyOf": [
+        {
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "uint",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape5": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AnswerResolutions"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/AnswerResolutions"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape6": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape7": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape8": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "AnswerShape9": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/SettledOriginal"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/SettledOriginal"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
     "Answers": {
       "properties": {
         "questions": {
@@ -194,6 +593,16 @@
     },
     "CompleteCall": {
       "properties": {
+        "answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/settledAnswer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "facts": {
           "$ref": "#/$defs/CompleteFacts"
         },
@@ -221,9 +630,13 @@
               "type": "null"
             }
           ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/AnswerResolution"
         }
       },
       "required": [
+        "resolution",
         "error"
       ],
       "type": "object"
@@ -903,6 +1316,95 @@
           "type": "object"
         }
       ]
+    },
+    "SettledDecision": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {}
+      ]
+    },
+    "SettledJudgment": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "SettledOriginal": {},
+    "SettledRecognition": {
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/entity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/entityEdge"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "entities"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/BoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/BoundaryProposal"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SettledRelations": {
+      "items": {
+        "$ref": "#/$defs/relatedEntityEdge"
+      },
+      "type": "array"
     },
     "SourceFields": {
       "properties": {
@@ -1724,6 +2226,409 @@
     "completeAnswerId": {
       "pattern": "^[0-9a-f]{64}$",
       "type": "string"
+    },
+    "completeAnswerResolution": {
+      "oneOf": [
+        {
+          "const": "resolved",
+          "type": "string"
+        },
+        {
+          "const": "unresolved",
+          "type": "string"
+        },
+        {
+          "const": "failed",
+          "type": "string"
+        }
+      ]
+    },
+    "completeAnswerResolutions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeAnswerResolution"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeAnswerResolution"
+          },
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "patternProperties": {
+            "^\\d+$": {
+              "$ref": "#/$defs/completeAnswerResolution"
+            }
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "completeAnswerShape": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledDecision"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledDecision"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape10": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape11": {
+      "anyOf": [
+        {
+          "items": {
+            "format": "uint",
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "format": "uint",
+              "maximum": 18446744073709551615,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape12": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledOriginal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledOriginal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape13": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledRecognition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledRecognition"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape14": {
+      "anyOf": [
+        {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completeSettledRelations"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/completeSettledRelations"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape15": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/completeSettledJudgment"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/completeSettledJudgment"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape2": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape3": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape4": {
+      "anyOf": [
+        {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "uint",
+            "maximum": 18446744073709551615,
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape5": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/completeAnswerResolutions"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/completeAnswerResolutions"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape6": {
+      "anyOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape7": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape8": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeAnswerShape9": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/completeSettledOriginal"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/completeSettledOriginal"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "type": "array"
+        }
+      ]
     },
     "completeAnswers": {
       "properties": {
@@ -2566,10 +3471,14 @@
               "$ref": "#/$defs/completeFacts"
             }
           ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerResolution"
         }
       },
       "required": [
         "completed",
+        "resolution",
         "error"
       ],
       "type": "object",
@@ -2610,6 +3519,27 @@
           "maximum": 18446744073709551615,
           "minimum": 0,
           "type": "integer"
+        },
+        "file": {
+          "type": [
+            "string"
+          ]
+        },
+        "first_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
+        },
+        "last_line": {
+          "format": "uint",
+          "maximum": 18446744073709551615,
+          "minimum": 0,
+          "type": [
+            "integer"
+          ]
         },
         "length": {
           "format": "uint",
@@ -2665,9 +3595,13 @@
               "$ref": "#/$defs/completeFacts"
             }
           ]
+        },
+        "resolution": {
+          "$ref": "#/$defs/completeAnswerResolution"
         }
       },
       "required": [
+        "resolution",
         "error"
       ],
       "type": "object",
@@ -2679,6 +3613,13 @@
     },
     "completeCallSuccess": {
       "properties": {
+        "answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/completesettledAnswer"
+            }
+          ]
+        },
         "facts": {
           "$ref": "#/$defs/completeFacts"
         },
@@ -5540,6 +6481,96 @@
         }
       ]
     },
+    "completeSettledDecision": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {}
+      ]
+    },
+    "completeSettledJudgment": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "completeSettledOriginal": {},
+    "completeSettledRecognition": {
+      "anyOf": [
+        {
+          "properties": {
+            "entities": {
+              "items": {
+                "$ref": "#/$defs/completeentity"
+              },
+              "type": "array"
+            },
+            "relations": {
+              "items": {
+                "$ref": "#/$defs/completeentityEdge"
+              },
+              "type": [
+                "array"
+              ]
+            }
+          },
+          "required": [
+            "entities"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        },
+        {
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/completeBoundaryMode"
+            },
+            "proposals": {
+              "items": {
+                "$ref": "#/$defs/completeBoundaryProposal"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "mode",
+            "proposals"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false
+        }
+      ]
+    },
+    "completeSettledRelations": {
+      "items": {
+        "$ref": "#/$defs/completerelatedEntityEdge"
+      },
+      "type": "array"
+    },
     "completeSourceFields": {
       "properties": {
         "file": {
@@ -8010,6 +9041,16 @@
         },
         {
           "properties": {
+            "answer": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/completesettledAnswer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "facts": {
               "anyOf": [
                 {
@@ -8027,10 +9068,15 @@
             "kind": {
               "const": "terminal",
               "type": "string"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerResolution"
             }
           },
           "required": [
-            "kind"
+            "kind",
+            "answer",
+            "resolution"
           ],
           "type": "object",
           "unevaluatedProperties": false
@@ -8292,6 +9338,350 @@
       ],
       "type": "object",
       "unevaluatedProperties": false
+    },
+    "completesettledAnswer": {
+      "oneOf": [
+        {
+          "properties": {
+            "function": {
+              "const": "decide",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "yes"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "choose",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape6"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "picked"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "tag",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape7"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "score",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape8"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "filter",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape9"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "yes"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "rank",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape11"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "find",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape12"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "picked"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "recognize",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape13"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "relate",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape14"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "annotate",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/completeAnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/completeAnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/completeAnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/completeAnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/completeAnswerShape15"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "unevaluatedProperties": false,
+          "x-probability-mode": "null"
+        }
+      ]
     },
     "completesourceRelationEndpoint": {
       "properties": {
@@ -10625,6 +12015,16 @@
         },
         {
           "properties": {
+            "answer": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/settledAnswer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "facts": {
               "anyOf": [
                 {
@@ -10648,10 +12048,15 @@
             "kind": {
               "const": "terminal",
               "type": "string"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerResolution"
             }
           },
           "required": [
-            "kind"
+            "kind",
+            "answer",
+            "resolution"
           ],
           "type": "object"
         }
@@ -11034,6 +12439,340 @@
             "value"
           ],
           "type": "object"
+        }
+      ]
+    },
+    "settledAnswer": {
+      "oneOf": [
+        {
+          "properties": {
+            "function": {
+              "const": "decide",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "yes"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "choose",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape6"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "picked"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "tag",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape7"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "null"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "score",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape8"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "null"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "filter",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape9"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "yes"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "rank",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape11"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "find",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape12"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "picked"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "recognize",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape13"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "relate",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape10"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape14"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "items"
+        },
+        {
+          "properties": {
+            "function": {
+              "const": "annotate",
+              "type": "string"
+            },
+            "index": {
+              "$ref": "#/$defs/AnswerShape4"
+            },
+            "pick": {
+              "$ref": "#/$defs/AnswerShape3"
+            },
+            "probability": {
+              "$ref": "#/$defs/AnswerShape2"
+            },
+            "resolution": {
+              "$ref": "#/$defs/AnswerShape5"
+            },
+            "value": {
+              "$ref": "#/$defs/AnswerShape15"
+            }
+          },
+          "required": [
+            "function",
+            "value",
+            "probability",
+            "pick",
+            "index",
+            "resolution"
+          ],
+          "type": "object",
+          "x-probability-mode": "null"
         }
       ]
     },

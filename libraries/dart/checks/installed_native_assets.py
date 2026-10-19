@@ -148,7 +148,7 @@ def main():
     if os.environ.get('THINKTHEN_TEST_PROFILE') == 'smoke':
         env.update({name: os.environ[name] for name in ('THINKTHEN_BASE_URL', 'THINKTHEN_API_KEY',
             'THINKTHEN_CACHE', 'THINKTHEN_TEST_SMOKE_QUESTION', 'THINKTHEN_TEST_SMOKE_TEXT')})
-        run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
+        run([sys.executable, str(ROOT / 'conformance/children/privacy.py'), str(native), *map(str, archives)], scratch, env)
         run([str(dart), 'run', 'bin/main.dart', 'smoke'], consumer, env)
         return
     member = os.environ.get('THINKTHEN_INSTALLED_CONSUMER', 'both')
@@ -233,7 +233,7 @@ def main():
         (scratch / 'packages-held').rename(packages)
         (scratch / 'consumer-held').rename(consumer)
     if not has_flutter:
-        run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
+        run([sys.executable, str(ROOT / 'conformance/children/privacy.py'), str(native), *map(str, archives)], scratch, env)
         if preparing:
             save_prepared(scratch, dart, flutter, native, consumer, has_flutter)
         print('PASS: supplied Dart and native archives, standalone typed bundle; no source build')
@@ -284,7 +284,7 @@ def main():
         run(['/usr/bin/xvfb-run', '-a', sys.executable,
              str(ROOT / 'conformance/children/complete_parity.py'), 'flutter'],
             scratch, parity_env, timeout=None)
-    run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
+    run([sys.executable, str(ROOT / 'conformance/children/privacy.py'), str(native), *map(str, archives)], scratch, env)
     if preparing:
         save_prepared(scratch, dart, flutter, native, consumer, has_flutter)
     print('PASS: installed Dart bundle and Linux Flutter FFI app; supplied archives' if supplied else 'PASS: installed Dart bundle and Linux Flutter FFI app, cache miss, corrupt cache, loopback build fetch; no caller library path')

@@ -189,6 +189,855 @@ public sealed class AnnotationValueTags : AnnotationValue
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
+public readonly record struct AnswerResolution(string Value)
+{
+    public static AnswerResolution Resolved => new("resolved");
+    public static AnswerResolution Unresolved => new("unresolved");
+    public static AnswerResolution Failed => new("failed");
+}
+public abstract class AnswerResolutions
+{
+    private readonly JsonElement document;
+    private protected AnswerResolutions(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerResolutions Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.String)) return new AnswerResolutionsString(document);
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerResolutionsObject(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerResolutionsString : AnswerResolutions
+{
+    internal AnswerResolutionsString(JsonElement document) : base(document) {
+    }
+    public AnswerResolution Value => new AnswerResolution(Document.GetString()!);
+}
+public sealed class AnswerResolutionsObject : AnswerResolutions
+{
+    internal AnswerResolutionsObject(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, AnswerResolution> Value => new ReadOnlyDictionary<string,
+    AnswerResolution>(Document.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => new AnswerResolution(entry0.Value.GetString()!),
+    StringComparer.Ordinal));
+}
+public abstract class AnswerShape10
+{
+    private readonly JsonElement document;
+    private protected AnswerShape10(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape10 Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Number) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape10Array(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape10Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (((union_item_0.ValueKind == JsonValueKind.Array) && union_item_0.EnumerateArray().All(union_item_1 => ((union_item_1.ValueKind == JsonValueKind.Number) || (union_item_1.ValueKind == JsonValueKind.Null)))) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape10Array2(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape10Array : AnswerShape10
+{
+    internal AnswerShape10Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape8AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape8AnyOf1Items.Read(item0)).ToArray());
+}
+public sealed class AnswerShape10Null : AnswerShape10
+{
+    internal AnswerShape10Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape10Array2 : AnswerShape10
+{
+    internal AnswerShape10Array2(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape10AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape10AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape10AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape10AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape10AnyOf1Items Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Number) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape10AnyOf1ItemsArray(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape10AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape10AnyOf1ItemsArray : AnswerShape10AnyOf1Items
+{
+    internal AnswerShape10AnyOf1ItemsArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape8AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape8AnyOf1Items.Read(item0)).ToArray());
+}
+public sealed class AnswerShape10AnyOf1ItemsNull : AnswerShape10AnyOf1Items
+{
+    internal AnswerShape10AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape11
+{
+    private readonly JsonElement document;
+    private protected AnswerShape11(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape11 Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.Number)))) return new AnswerShape11Array(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape11Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (((union_item_0.ValueKind == JsonValueKind.Array) && union_item_0.EnumerateArray().All(union_item_1 => (union_item_1.ValueKind == JsonValueKind.Number))) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape11Array2(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape11Array : AnswerShape11
+{
+    internal AnswerShape11Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<ulong> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetUInt64()).ToArray());
+}
+public sealed class AnswerShape11Null : AnswerShape11
+{
+    internal AnswerShape11Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape11Array2 : AnswerShape11
+{
+    internal AnswerShape11Array2(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape11AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape11AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape11AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape11AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape11AnyOf1Items Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.Number)))) return new AnswerShape11AnyOf1ItemsArray(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape11AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape11AnyOf1ItemsArray : AnswerShape11AnyOf1Items
+{
+    internal AnswerShape11AnyOf1ItemsArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<ulong> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetUInt64()).ToArray());
+}
+public sealed class AnswerShape11AnyOf1ItemsNull : AnswerShape11AnyOf1Items
+{
+    internal AnswerShape11AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape13
+{
+    private readonly JsonElement document;
+    private protected AnswerShape13(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape13 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerShape13Object(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape13Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Object) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape13Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape13Object : AnswerShape13
+{
+    internal AnswerShape13Object(JsonElement document) : base(document) {
+    }
+    public SettledRecognition Value => global::ThinkThen.Results.SettledRecognition.Read(Document);
+}
+public sealed class AnswerShape13Null : AnswerShape13
+{
+    internal AnswerShape13Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape13Array : AnswerShape13
+{
+    internal AnswerShape13Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape13AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape13AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape13AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape13AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape13AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerShape13AnyOf1ItemsObject(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape13AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape13AnyOf1ItemsObject : AnswerShape13AnyOf1Items
+{
+    internal AnswerShape13AnyOf1ItemsObject(JsonElement document) : base(document) {
+    }
+    public SettledRecognition Value => global::ThinkThen.Results.SettledRecognition.Read(Document);
+}
+public sealed class AnswerShape13AnyOf1ItemsNull : AnswerShape13AnyOf1Items
+{
+    internal AnswerShape13AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape14
+{
+    private readonly JsonElement document;
+    private protected AnswerShape14(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape14 Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.Object)))) return new AnswerShape14Array(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape14Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (((union_item_0.ValueKind == JsonValueKind.Array) && union_item_0.EnumerateArray().All(union_item_1 => (union_item_1.ValueKind == JsonValueKind.Object))) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape14Array2(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape14Array : AnswerShape14
+{
+    internal AnswerShape14Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<RelatedEntityEdge> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => new RelatedEntityEdge(item0)).ToArray());
+}
+public sealed class AnswerShape14Null : AnswerShape14
+{
+    internal AnswerShape14Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape14Array2 : AnswerShape14
+{
+    internal AnswerShape14Array2(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape14AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape14AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape14AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape14AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape14AnyOf1Items Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.Object)))) return new AnswerShape14AnyOf1ItemsArray(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape14AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape14AnyOf1ItemsArray : AnswerShape14AnyOf1Items
+{
+    internal AnswerShape14AnyOf1ItemsArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<RelatedEntityEdge> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => new RelatedEntityEdge(item0)).ToArray());
+}
+public sealed class AnswerShape14AnyOf1ItemsNull : AnswerShape14AnyOf1Items
+{
+    internal AnswerShape14AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape15
+{
+    private readonly JsonElement document;
+    private protected AnswerShape15(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape15 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerShape15Object(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape15Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Object) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape15Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape15Object : AnswerShape15
+{
+    internal AnswerShape15Object(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, SettledJudgment> Value => new ReadOnlyDictionary<string,
+    SettledJudgment>(Document.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.SettledJudgment.Read(entry0.Value),
+    StringComparer.Ordinal));
+}
+public sealed class AnswerShape15Null : AnswerShape15
+{
+    internal AnswerShape15Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape15Array : AnswerShape15
+{
+    internal AnswerShape15Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape15AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape15AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape15AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape15AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape15AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerShape15AnyOf1ItemsObject(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape15AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape15AnyOf1ItemsObject : AnswerShape15AnyOf1Items
+{
+    internal AnswerShape15AnyOf1ItemsObject(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, SettledJudgment> Value => new ReadOnlyDictionary<string,
+    SettledJudgment>(Document.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.SettledJudgment.Read(entry0.Value),
+    StringComparer.Ordinal));
+}
+public sealed class AnswerShape15AnyOf1ItemsNull : AnswerShape15AnyOf1Items
+{
+    internal AnswerShape15AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape2
+{
+    private readonly JsonElement document;
+    private protected AnswerShape2(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape2 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnswerShape2Number(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape2Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Number) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape2Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape2Number : AnswerShape2
+{
+    internal AnswerShape2Number(JsonElement document) : base(document) {
+    }
+    public double Value => Document.GetDouble();
+}
+public sealed class AnswerShape2Null : AnswerShape2
+{
+    internal AnswerShape2Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape2Array : AnswerShape2
+{
+    internal AnswerShape2Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape8AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape8AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape3
+{
+    private readonly JsonElement document;
+    private protected AnswerShape3(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape3 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.String)) return new AnswerShape3String(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape3Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.String) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape3Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape3String : AnswerShape3
+{
+    internal AnswerShape3String(JsonElement document) : base(document) {
+    }
+    public string Value => Document.GetString()!;
+}
+public sealed class AnswerShape3Null : AnswerShape3
+{
+    internal AnswerShape3Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape3Array : AnswerShape3
+{
+    internal AnswerShape3Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape6AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape6AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape4
+{
+    private readonly JsonElement document;
+    private protected AnswerShape4(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape4 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnswerShape4Integer(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape4Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Number) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape4Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape4Integer : AnswerShape4
+{
+    internal AnswerShape4Integer(JsonElement document) : base(document) {
+    }
+    public ulong Value => Document.GetUInt64();
+}
+public sealed class AnswerShape4Null : AnswerShape4
+{
+    internal AnswerShape4Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape4Array : AnswerShape4
+{
+    internal AnswerShape4Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape4AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape4AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape4AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape4AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape4AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnswerShape4AnyOf1ItemsInteger(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape4AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape4AnyOf1ItemsInteger : AnswerShape4AnyOf1Items
+{
+    internal AnswerShape4AnyOf1ItemsInteger(JsonElement document) : base(document) {
+    }
+    public ulong Value => Document.GetUInt64();
+}
+public sealed class AnswerShape4AnyOf1ItemsNull : AnswerShape4AnyOf1Items
+{
+    internal AnswerShape4AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape5
+{
+    private readonly JsonElement document;
+    private protected AnswerShape5(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape5 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.String)) return new AnswerShape5String(document);
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnswerShape5Object(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.String) || (union_item_0.ValueKind == JsonValueKind.Object))))) return new AnswerShape5Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape5String : AnswerShape5
+{
+    internal AnswerShape5String(JsonElement document) : base(document) {
+    }
+    public AnswerResolution Value => new AnswerResolution(Document.GetString()!);
+}
+public sealed class AnswerShape5Object : AnswerShape5
+{
+    internal AnswerShape5Object(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, AnswerResolution> Value => new ReadOnlyDictionary<string,
+    AnswerResolution>(Document.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => new AnswerResolution(entry0.Value.GetString()!),
+    StringComparer.Ordinal));
+}
+public sealed class AnswerShape5Array : AnswerShape5
+{
+    internal AnswerShape5Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerResolutions> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerResolutions.Read(item0)).ToArray());
+}
+public abstract class AnswerShape6
+{
+    private readonly JsonElement document;
+    private protected AnswerShape6(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape6 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.String)) return new AnswerShape6String(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape6Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.String) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape6Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape6String : AnswerShape6
+{
+    internal AnswerShape6String(JsonElement document) : base(document) {
+    }
+    public string Value => Document.GetString()!;
+}
+public sealed class AnswerShape6Null : AnswerShape6
+{
+    internal AnswerShape6Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape6Array : AnswerShape6
+{
+    internal AnswerShape6Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape6AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape6AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape6AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape6AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape6AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.String)) return new AnswerShape6AnyOf1ItemsString(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape6AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape6AnyOf1ItemsString : AnswerShape6AnyOf1Items
+{
+    internal AnswerShape6AnyOf1ItemsString(JsonElement document) : base(document) {
+    }
+    public string Value => Document.GetString()!;
+}
+public sealed class AnswerShape6AnyOf1ItemsNull : AnswerShape6AnyOf1Items
+{
+    internal AnswerShape6AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape7
+{
+    private readonly JsonElement document;
+    private protected AnswerShape7(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape7 Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.String)))) return new AnswerShape7Array(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape7Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (((union_item_0.ValueKind == JsonValueKind.Array) && union_item_0.EnumerateArray().All(union_item_1 => (union_item_1.ValueKind == JsonValueKind.String))) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape7Array2(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape7Array : AnswerShape7
+{
+    internal AnswerShape7Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<string> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+}
+public sealed class AnswerShape7Null : AnswerShape7
+{
+    internal AnswerShape7Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape7Array2 : AnswerShape7
+{
+    internal AnswerShape7Array2(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape7AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape7AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape7AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape7AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape7AnyOf1Items Read(JsonElement document)
+    {
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.String)))) return new AnswerShape7AnyOf1ItemsArray(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape7AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape7AnyOf1ItemsArray : AnswerShape7AnyOf1Items
+{
+    internal AnswerShape7AnyOf1ItemsArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<string> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+}
+public sealed class AnswerShape7AnyOf1ItemsNull : AnswerShape7AnyOf1Items
+{
+    internal AnswerShape7AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape8
+{
+    private readonly JsonElement document;
+    private protected AnswerShape8(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape8 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnswerShape8Number(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape8Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Number) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape8Array(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape8Number : AnswerShape8
+{
+    internal AnswerShape8Number(JsonElement document) : base(document) {
+    }
+    public double Value => Document.GetDouble();
+}
+public sealed class AnswerShape8Null : AnswerShape8
+{
+    internal AnswerShape8Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape8Array : AnswerShape8
+{
+    internal AnswerShape8Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape8AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape8AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape8AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape8AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape8AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnswerShape8AnyOf1ItemsNumber(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape8AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape8AnyOf1ItemsNumber : AnswerShape8AnyOf1Items
+{
+    internal AnswerShape8AnyOf1ItemsNumber(JsonElement document) : base(document) {
+    }
+    public double Value => Document.GetDouble();
+}
+public sealed class AnswerShape8AnyOf1ItemsNull : AnswerShape8AnyOf1Items
+{
+    internal AnswerShape8AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public abstract class AnswerShape9
+{
+    private readonly JsonElement document;
+    private protected AnswerShape9(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape9 Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Array)) return new AnswerShape9Array(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape9Null(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => ((union_item_0.ValueKind == JsonValueKind.Array) || (union_item_0.ValueKind == JsonValueKind.Null))))) return new AnswerShape9Array2(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape9Array : AnswerShape9
+{
+    internal AnswerShape9Array(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<JsonElement> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.Clone()).ToArray());
+}
+public sealed class AnswerShape9Null : AnswerShape9
+{
+    internal AnswerShape9Null(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class AnswerShape9Array2 : AnswerShape9
+{
+    internal AnswerShape9Array2(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<AnswerShape9AnyOf1Items> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => global::ThinkThen.Results.AnswerShape9AnyOf1Items.Read(item0)).ToArray());
+}
+public abstract class AnswerShape9AnyOf1Items
+{
+    private readonly JsonElement document;
+    private protected AnswerShape9AnyOf1Items(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static AnswerShape9AnyOf1Items Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.Array)) return new AnswerShape9AnyOf1ItemsArray(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnswerShape9AnyOf1ItemsNull(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class AnswerShape9AnyOf1ItemsArray : AnswerShape9AnyOf1Items
+{
+    internal AnswerShape9AnyOf1ItemsArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<JsonElement> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.Clone()).ToArray());
+}
+public sealed class AnswerShape9AnyOf1ItemsNull : AnswerShape9AnyOf1Items
+{
+    internal AnswerShape9AnyOf1ItemsNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
 public sealed class Answers : ResultObject
 {
     internal Answers(JsonElement document) : base(document) {
@@ -340,12 +1189,12 @@ public abstract class Batch
         MaxDepth = int.MaxValue
     })!;
     internal string ToJsonString() => document.GetRawText();
-    internal static Batch Read(JsonElement document) => document.ValueKind switch
+    internal static Batch Read(JsonElement document)
     {
-        JsonValueKind.Number => new BatchInteger(document),
-        JsonValueKind.String => new BatchString(document),
-        _ => throw new JsonException("Unknown primitive result variant.")
-    };
+        if ((document.ValueKind == JsonValueKind.Number)) return new BatchInteger(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new BatchString(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
 }
 public sealed class BatchInteger : Batch
 {
@@ -375,6 +1224,9 @@ public sealed class BoundaryProposal : ResultObject
     internal BoundaryProposal(JsonElement document) : base(document) {
     }
     public ulong End => RequiredElement("end").GetUInt64();
+    public Presence<string> File => Optional<string>("file", member => member.GetString()!);
+    public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
+    public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public ulong Length => RequiredElement("length").GetUInt64();
     public double Probability => RequiredElement("probability").GetDouble();
     public ulong Start => RequiredElement("start").GetUInt64();
@@ -386,6 +1238,7 @@ public sealed class CallError : ResultObject
     }
     public Error Error => new Error(RequiredElement("error"));
     public Presence<Facts> Facts => Optional<Facts>("facts", member => new Facts(member));
+    public AnswerResolution Resolution => new AnswerResolution(RequiredElement("resolution").GetString()!);
 }
 public sealed class EntityDocument : ResultObject
 {
@@ -1047,6 +1900,96 @@ public sealed class SendBudgetDenialBeforeRetry : SendBudgetDenial
     public string Kind => RequiredElement("kind").GetString()!;
     public ushort LastStatus => RequiredElement("last_status").GetUInt16();
 }
+public abstract class SettledJudgment
+{
+    private readonly JsonElement document;
+    private protected SettledJudgment(JsonElement document) {
+        this.document = document.Clone();
+    }
+    private protected JsonElement Document => document;
+    internal JsonElement ToJson() => document.Clone();
+    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
+    internal string ToJsonString() => document.GetRawText();
+    internal static SettledJudgment Read(JsonElement document)
+    {
+        if ((document.ValueKind == JsonValueKind.True || document.ValueKind == JsonValueKind.False)) return new SettledJudgmentBoolean(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new SettledJudgmentNull(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new SettledJudgmentString(document);
+        if ((document.ValueKind == JsonValueKind.Number)) return new SettledJudgmentNumber(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.String)))) return new SettledJudgmentArray(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
+}
+public sealed class SettledJudgmentBoolean : SettledJudgment
+{
+    internal SettledJudgmentBoolean(JsonElement document) : base(document) {
+    }
+    public bool Value => Document.GetBoolean();
+}
+public sealed class SettledJudgmentNull : SettledJudgment
+{
+    internal SettledJudgmentNull(JsonElement document) : base(document) {
+    }
+    public JsonElement Value => Document.Clone();
+}
+public sealed class SettledJudgmentString : SettledJudgment
+{
+    internal SettledJudgmentString(JsonElement document) : base(document) {
+    }
+    public string Value => Document.GetString()!;
+}
+public sealed class SettledJudgmentNumber : SettledJudgment
+{
+    internal SettledJudgmentNumber(JsonElement document) : base(document) {
+    }
+    public double Value => Document.GetDouble();
+}
+public sealed class SettledJudgmentArray : SettledJudgment
+{
+    internal SettledJudgmentArray(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<string> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+}
+public abstract class SettledRecognition : ResultObject
+{
+    private protected SettledRecognition(JsonElement document) : base(document) {
+    }
+    internal static SettledRecognition Read(JsonElement document)
+    {
+        SettledRecognition? result = null;
+        if (document.TryGetProperty("entities", out var tagSettledRecognitionEntities0) && (tagSettledRecognitionEntities0.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("mode",
+        out _) && !document.TryGetProperty("proposals", out _))
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledRecognitionEntities(document);
+        }
+        if (document.TryGetProperty("mode", out var tagSettledRecognitionModeProposals0) && (tagSettledRecognitionModeProposals0.ValueKind == JsonValueKind.String) && document.TryGetProperty("proposals",
+        out var tagSettledRecognitionModeProposals1) && (tagSettledRecognitionModeProposals1.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("entities",
+        out _))
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledRecognitionModeProposals(document);
+        }
+        return result ?? throw new JsonException("Unknown result variant.");
+    }
+}
+public sealed class SettledRecognitionEntities : SettledRecognition
+{
+    internal SettledRecognitionEntities(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<Entity> Entities => Array.AsReadOnly(RequiredElement("entities").EnumerateArray().Select(item0 => new Entity(item0)).ToArray());
+    public Presence<IReadOnlyList<EntityEdge>> Relations => Optional<IReadOnlyList<EntityEdge>>("relations",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new EntityEdge(item0)).ToArray()));
+}
+public sealed class SettledRecognitionModeProposals : SettledRecognition
+{
+    internal SettledRecognitionModeProposals(JsonElement document) : base(document) {
+    }
+    public BoundaryMode Mode => new BoundaryMode(RequiredElement("mode").GetString()!);
+    public IReadOnlyList<BoundaryProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray());
+}
 public readonly record struct StopCause(string Value)
 {
     public static StopCause Usage => new("usage");
@@ -1114,17 +2057,16 @@ public abstract class AnnotatedField
         MaxDepth = int.MaxValue
     })!;
     internal string ToJsonString() => document.GetRawText();
-    internal static AnnotatedField Read(JsonElement document) => document.ValueKind switch
+    internal static AnnotatedField Read(JsonElement document)
     {
-        JsonValueKind.True => new AnnotatedFieldBoolean(document),
-        JsonValueKind.False => new AnnotatedFieldBoolean(document),
-        JsonValueKind.Null => new AnnotatedFieldNull(document),
-        JsonValueKind.String => new AnnotatedFieldString(document),
-        JsonValueKind.Array => new AnnotatedFieldArray(document),
-        JsonValueKind.Number => new AnnotatedFieldNumber(document),
-        JsonValueKind.Object => new AnnotatedFieldObject(document),
-        _ => throw new JsonException("Unknown primitive result variant.")
-    };
+        if ((document.ValueKind == JsonValueKind.True || document.ValueKind == JsonValueKind.False)) return new AnnotatedFieldBoolean(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new AnnotatedFieldNull(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new AnnotatedFieldString(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.String)))) return new AnnotatedFieldArray(document);
+        if ((document.ValueKind == JsonValueKind.Number)) return new AnnotatedFieldNumber(document);
+        if ((document.ValueKind == JsonValueKind.Object)) return new AnnotatedFieldObject(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
 }
 public sealed class AnnotatedFieldBoolean : AnnotatedField
 {
@@ -1248,12 +2190,12 @@ public abstract class BatchSetting
         MaxDepth = int.MaxValue
     })!;
     internal string ToJsonString() => document.GetRawText();
-    internal static BatchSetting Read(JsonElement document) => document.ValueKind switch
+    internal static BatchSetting Read(JsonElement document)
     {
-        JsonValueKind.Number => new BatchSettingInteger(document),
-        JsonValueKind.String => new BatchSettingString(document),
-        _ => throw new JsonException("Unknown primitive result variant.")
-    };
+        if ((document.ValueKind == JsonValueKind.Number)) return new BatchSettingInteger(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new BatchSettingString(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
 }
 public sealed class BatchSettingInteger : BatchSetting
 {
@@ -2118,9 +3060,11 @@ public sealed class SessionPacketTerminal : SessionPacket
 {
     internal SessionPacketTerminal(JsonElement document) : base(document) {
     }
+    public Presence<SettledAnswer> Answer => RequiredNullable<SettledAnswer>("answer", member => global::ThinkThen.Results.SettledAnswer.Read(member));
     public Presence<Facts> Facts => Optional<Facts>("facts", member => new Facts(member));
     public Presence<CallError> Failure => Optional<CallError>("failure", member => new CallError(member));
     public string Kind => RequiredElement("kind").GetString()!;
+    public AnswerResolution Resolution => new AnswerResolution(RequiredElement("resolution").GetString()!);
 }
 public abstract class SessionProbabilities : ResultObject
 {
@@ -2210,6 +3154,186 @@ public sealed class SessionRelationEdge : ResultObject
     public string SourceName => Source.Name;
     public string TargetName => Target.Name;
 }
+public abstract class SettledAnswer : ResultObject
+{
+    private protected SettledAnswer(JsonElement document) : base(document) {
+    }
+    internal static SettledAnswer Read(JsonElement document)
+    {
+        SettledAnswer? result = null;
+        if (document.TryGetProperty("function", out var tagSettledAnswerDecide) && tagSettledAnswerDecide.ValueKind == JsonValueKind.String && tagSettledAnswerDecide.GetString() == "decide")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerDecide(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerChoose) && tagSettledAnswerChoose.ValueKind == JsonValueKind.String && tagSettledAnswerChoose.GetString() == "choose")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerChoose(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerTag) && tagSettledAnswerTag.ValueKind == JsonValueKind.String && tagSettledAnswerTag.GetString() == "tag")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerTag(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerScore) && tagSettledAnswerScore.ValueKind == JsonValueKind.String && tagSettledAnswerScore.GetString() == "score")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerScore(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerFilter) && tagSettledAnswerFilter.ValueKind == JsonValueKind.String && tagSettledAnswerFilter.GetString() == "filter")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerFilter(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerRank) && tagSettledAnswerRank.ValueKind == JsonValueKind.String && tagSettledAnswerRank.GetString() == "rank")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerRank(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerFind) && tagSettledAnswerFind.ValueKind == JsonValueKind.String && tagSettledAnswerFind.GetString() == "find")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerFind(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerRecognize) && tagSettledAnswerRecognize.ValueKind == JsonValueKind.String && tagSettledAnswerRecognize.GetString() == "recognize")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerRecognize(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerRelate) && tagSettledAnswerRelate.ValueKind == JsonValueKind.String && tagSettledAnswerRelate.GetString() == "relate")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerRelate(document);
+        }
+        if (document.TryGetProperty("function", out var tagSettledAnswerAnnotate) && tagSettledAnswerAnnotate.ValueKind == JsonValueKind.String && tagSettledAnswerAnnotate.GetString() == "annotate")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new SettledAnswerAnnotate(document);
+        }
+        return result ?? throw new JsonException("Unknown result variant.");
+    }
+}
+public sealed class SettledAnswerAnnotate : SettledAnswer
+{
+    internal SettledAnswerAnnotate(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape15> Value => RequiredNullable<AnswerShape15>("value", member => global::ThinkThen.Results.AnswerShape15.Read(member));
+}
+public sealed class SettledAnswerChoose : SettledAnswer
+{
+    internal SettledAnswerChoose(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape6> Value => RequiredNullable<AnswerShape6>("value", member => global::ThinkThen.Results.AnswerShape6.Read(member));
+}
+public sealed class SettledAnswerDecide : SettledAnswer
+{
+    internal SettledAnswerDecide(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public JsonElement Value => RequiredElement("value").Clone();
+}
+public sealed class SettledAnswerFilter : SettledAnswer
+{
+    internal SettledAnswerFilter(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape10> Probability => RequiredNullable<AnswerShape10>("probability",
+    member => global::ThinkThen.Results.AnswerShape10.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape9> Value => RequiredNullable<AnswerShape9>("value", member => global::ThinkThen.Results.AnswerShape9.Read(member));
+}
+public sealed class SettledAnswerFind : SettledAnswer
+{
+    internal SettledAnswerFind(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public JsonElement Value => RequiredElement("value").Clone();
+}
+public sealed class SettledAnswerRank : SettledAnswer
+{
+    internal SettledAnswerRank(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape10> Probability => RequiredNullable<AnswerShape10>("probability",
+    member => global::ThinkThen.Results.AnswerShape10.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape11> Value => RequiredNullable<AnswerShape11>("value", member => global::ThinkThen.Results.AnswerShape11.Read(member));
+}
+public sealed class SettledAnswerRecognize : SettledAnswer
+{
+    internal SettledAnswerRecognize(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape10> Probability => RequiredNullable<AnswerShape10>("probability",
+    member => global::ThinkThen.Results.AnswerShape10.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape13> Value => RequiredNullable<AnswerShape13>("value", member => global::ThinkThen.Results.AnswerShape13.Read(member));
+}
+public sealed class SettledAnswerRelate : SettledAnswer
+{
+    internal SettledAnswerRelate(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape10> Probability => RequiredNullable<AnswerShape10>("probability",
+    member => global::ThinkThen.Results.AnswerShape10.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape14> Value => RequiredNullable<AnswerShape14>("value", member => global::ThinkThen.Results.AnswerShape14.Read(member));
+}
+public sealed class SettledAnswerScore : SettledAnswer
+{
+    internal SettledAnswerScore(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape8> Value => RequiredNullable<AnswerShape8>("value", member => global::ThinkThen.Results.AnswerShape8.Read(member));
+}
+public sealed class SettledAnswerTag : SettledAnswer
+{
+    internal SettledAnswerTag(JsonElement document) : base(document) {
+    }
+    public string Function => RequiredElement("function").GetString()!;
+    public Presence<AnswerShape4> Index => RequiredNullable<AnswerShape4>("index", member => global::ThinkThen.Results.AnswerShape4.Read(member));
+    public Presence<AnswerShape3> Pick => RequiredNullable<AnswerShape3>("pick", member => global::ThinkThen.Results.AnswerShape3.Read(member));
+    public Presence<AnswerShape2> Probability => RequiredNullable<AnswerShape2>("probability",
+    member => global::ThinkThen.Results.AnswerShape2.Read(member));
+    public AnswerShape5 Resolution => global::ThinkThen.Results.AnswerShape5.Read(RequiredElement("resolution"));
+    public Presence<AnswerShape7> Value => RequiredNullable<AnswerShape7>("value", member => global::ThinkThen.Results.AnswerShape7.Read(member));
+}
 public sealed class SourceRelationEndpoint : ResultObject
 {
     internal SourceRelationEndpoint(JsonElement document) : base(document) {
@@ -2234,12 +3358,12 @@ public abstract class Threshold
         MaxDepth = int.MaxValue
     })!;
     internal string ToJsonString() => document.GetRawText();
-    internal static Threshold Read(JsonElement document) => document.ValueKind switch
+    internal static Threshold Read(JsonElement document)
     {
-        JsonValueKind.Number => new ThresholdNumber(document),
-        JsonValueKind.String => new ThresholdString(document),
-        _ => throw new JsonException("Unknown primitive result variant.")
-    };
+        if ((document.ValueKind == JsonValueKind.Number)) return new ThresholdNumber(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new ThresholdString(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
 }
 public sealed class ThresholdNumber : Threshold
 {
@@ -2279,16 +3403,15 @@ public abstract class Value
         MaxDepth = int.MaxValue
     })!;
     internal string ToJsonString() => document.GetRawText();
-    internal static Value Read(JsonElement document) => document.ValueKind switch
+    internal static Value Read(JsonElement document)
     {
-        JsonValueKind.True => new ValueBoolean(document),
-        JsonValueKind.False => new ValueBoolean(document),
-        JsonValueKind.Null => new ValueNull(document),
-        JsonValueKind.String => new ValueString(document),
-        JsonValueKind.Array => new ValueArray(document),
-        JsonValueKind.Number => new ValueNumber(document),
-        _ => throw new JsonException("Unknown primitive result variant.")
-    };
+        if ((document.ValueKind == JsonValueKind.True || document.ValueKind == JsonValueKind.False)) return new ValueBoolean(document);
+        if ((document.ValueKind == JsonValueKind.Null)) return new ValueNull(document);
+        if ((document.ValueKind == JsonValueKind.String)) return new ValueString(document);
+        if (((document.ValueKind == JsonValueKind.Array) && document.EnumerateArray().All(union_item_0 => (union_item_0.ValueKind == JsonValueKind.String)))) return new ValueArray(document);
+        if ((document.ValueKind == JsonValueKind.Number)) return new ValueNumber(document);
+        throw new JsonException("Unknown primitive result variant.");
+    }
 }
 public sealed class ValueBoolean : Value
 {

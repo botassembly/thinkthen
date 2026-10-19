@@ -208,6 +208,7 @@ pub use declaration::{
 
 #[cfg(test)]
 pub(crate) use result::complete as complete_documents;
+pub(crate) use result::complete::wire::DecideValue;
 
 pub(crate) use result::complete::wire::RankMemberDocument;
 

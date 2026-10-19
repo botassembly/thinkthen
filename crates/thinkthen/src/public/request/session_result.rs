@@ -49,6 +49,10 @@ pub enum RequestSessionRow {
 pub struct RequestSessionTerminal {
     /// Actual final native facts, absent before invocation started.
     pub facts: Option<Facts>,
+    /// The settled answer, preserving the caller's input shape and completed prefix.
+    pub answer: Option<crate::SettledAnswer>,
+    /// A terminal failure stays distinct from an unresolved successful reading.
+    pub resolution: crate::AnswerResolution,
     /// Joined native failure; success has none.
     pub error: Option<Error>,
 }
@@ -57,6 +61,8 @@ impl RequestSessionTerminal {
     pub(super) fn failed(error: Error) -> Self {
         Self {
             facts: error.facts().cloned(),
+            answer: None,
+            resolution: crate::AnswerResolution::Failed,
             error: Some(error),
         }
     }
@@ -89,6 +95,8 @@ pub(crate) enum SessionPacketDocument<'a> {
         value: SessionObservationDocument<'a>,
     },
     Terminal {
+        answer: Option<&'a crate::SettledAnswer>,
+        resolution: crate::AnswerResolution,
         #[serde(skip_serializing_if = "Option::is_none")]
         facts: Option<crate::CompleteFacts<'a>>,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -107,6 +115,8 @@ impl<'a> SessionPacketDocument<'a> {
                 value: SessionObservationDocument::of(value),
             },
             RequestSessionResult::Terminal(value) => Self::Terminal {
+                answer: value.answer.as_ref(),
+                resolution: value.resolution.clone(),
                 facts: value.facts.as_ref().and_then(Facts::complete),
                 failure: value.error.as_ref().map(Error::complete),
             },

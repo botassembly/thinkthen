@@ -213,6 +213,291 @@ final class AnnotationValueTags extends AnnotationValue {
       });
 }
 
+final class AnswerResolutions implements _EncodedValue {
+  final Object? value;
+  const AnswerResolutions(this.value);
+  factory AnswerResolutions.read(Object? value) =>
+      value is AnswerResolutions ? value : AnswerResolutions(value);
+  Object? _toValue() => value;
+  String get asString => value as String;
+  Map<String, String> get asObject =>
+      (value as Map<String, Object?>).map((k, v) => MapEntry(k, v as String));
+}
+
+final class AnswerShape10 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape10(this.value);
+  factory AnswerShape10.read(Object? value) =>
+      value is AnswerShape10 ? value : AnswerShape10(value);
+  Object? _toValue() => value;
+  List<AnswerShape8AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape8AnyOf1Items.read(v))
+      .toList(growable: false);
+  List<AnswerShape10AnyOf1Items> get asArray2 => (value as List)
+      .map((v) => AnswerShape10AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape10AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape10AnyOf1Items(this.value);
+  factory AnswerShape10AnyOf1Items.read(Object? value) =>
+      value is AnswerShape10AnyOf1Items
+          ? value
+          : AnswerShape10AnyOf1Items(value);
+  Object? _toValue() => value;
+  List<AnswerShape8AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape8AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape11 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape11(this.value);
+  factory AnswerShape11.read(Object? value) =>
+      value is AnswerShape11 ? value : AnswerShape11(value);
+  Object? _toValue() => value;
+  List<BigInt> get asArray =>
+      (value as List).map((v) => _readInteger(v)).toList(growable: false);
+  List<AnswerShape11AnyOf1Items> get asArray2 => (value as List)
+      .map((v) => AnswerShape11AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape11AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape11AnyOf1Items(this.value);
+  factory AnswerShape11AnyOf1Items.read(Object? value) =>
+      value is AnswerShape11AnyOf1Items
+          ? value
+          : AnswerShape11AnyOf1Items(value);
+  Object? _toValue() => value;
+  List<BigInt> get asArray =>
+      (value as List).map((v) => _readInteger(v)).toList(growable: false);
+}
+
+final class AnswerShape13 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape13(this.value);
+  factory AnswerShape13.read(Object? value) =>
+      value is AnswerShape13 ? value : AnswerShape13(value);
+  Object? _toValue() => value;
+  SettledRecognition get asObject => SettledRecognition.read(value);
+  List<AnswerShape13AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape13AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape13AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape13AnyOf1Items(this.value);
+  factory AnswerShape13AnyOf1Items.read(Object? value) =>
+      value is AnswerShape13AnyOf1Items
+          ? value
+          : AnswerShape13AnyOf1Items(value);
+  Object? _toValue() => value;
+  SettledRecognition get asObject => SettledRecognition.read(value);
+}
+
+final class AnswerShape14 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape14(this.value);
+  factory AnswerShape14.read(Object? value) =>
+      value is AnswerShape14 ? value : AnswerShape14(value);
+  Object? _toValue() => value;
+  List<RelatedEntityEdge> get asArray => (value as List)
+      .map((v) => RelatedEntityEdge.read(v))
+      .toList(growable: false);
+  List<AnswerShape14AnyOf1Items> get asArray2 => (value as List)
+      .map((v) => AnswerShape14AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape14AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape14AnyOf1Items(this.value);
+  factory AnswerShape14AnyOf1Items.read(Object? value) =>
+      value is AnswerShape14AnyOf1Items
+          ? value
+          : AnswerShape14AnyOf1Items(value);
+  Object? _toValue() => value;
+  List<RelatedEntityEdge> get asArray => (value as List)
+      .map((v) => RelatedEntityEdge.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape15 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape15(this.value);
+  factory AnswerShape15.read(Object? value) =>
+      value is AnswerShape15 ? value : AnswerShape15(value);
+  Object? _toValue() => value;
+  Map<String, SettledJudgment> get asObject => (value as Map<String, Object?>)
+      .map((k, v) => MapEntry(k, SettledJudgment.read(v)));
+  List<AnswerShape15AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape15AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape15AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape15AnyOf1Items(this.value);
+  factory AnswerShape15AnyOf1Items.read(Object? value) =>
+      value is AnswerShape15AnyOf1Items
+          ? value
+          : AnswerShape15AnyOf1Items(value);
+  Object? _toValue() => value;
+  Map<String, SettledJudgment> get asObject => (value as Map<String, Object?>)
+      .map((k, v) => MapEntry(k, SettledJudgment.read(v)));
+}
+
+final class AnswerShape2 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape2(this.value);
+  factory AnswerShape2.read(Object? value) =>
+      value is AnswerShape2 ? value : AnswerShape2(value);
+  Object? _toValue() => value;
+  num get asNumber => value as num;
+  List<AnswerShape8AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape8AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape3 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape3(this.value);
+  factory AnswerShape3.read(Object? value) =>
+      value is AnswerShape3 ? value : AnswerShape3(value);
+  Object? _toValue() => value;
+  String get asString => value as String;
+  List<AnswerShape6AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape6AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape4 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape4(this.value);
+  factory AnswerShape4.read(Object? value) =>
+      value is AnswerShape4 ? value : AnswerShape4(value);
+  Object? _toValue() => value;
+  BigInt get asInteger => _readInteger(value);
+  List<AnswerShape4AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape4AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape4AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape4AnyOf1Items(this.value);
+  factory AnswerShape4AnyOf1Items.read(Object? value) =>
+      value is AnswerShape4AnyOf1Items ? value : AnswerShape4AnyOf1Items(value);
+  Object? _toValue() => value;
+  BigInt get asInteger => _readInteger(value);
+}
+
+final class AnswerShape5 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape5(this.value);
+  factory AnswerShape5.read(Object? value) =>
+      value is AnswerShape5 ? value : AnswerShape5(value);
+  Object? _toValue() => value;
+  String get asString => value as String;
+  Map<String, String> get asObject =>
+      (value as Map<String, Object?>).map((k, v) => MapEntry(k, v as String));
+  List<AnswerResolutions> get asArray => (value as List)
+      .map((v) => AnswerResolutions.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape6 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape6(this.value);
+  factory AnswerShape6.read(Object? value) =>
+      value is AnswerShape6 ? value : AnswerShape6(value);
+  Object? _toValue() => value;
+  String get asString => value as String;
+  List<AnswerShape6AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape6AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape6AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape6AnyOf1Items(this.value);
+  factory AnswerShape6AnyOf1Items.read(Object? value) =>
+      value is AnswerShape6AnyOf1Items ? value : AnswerShape6AnyOf1Items(value);
+  Object? _toValue() => value;
+  String get asString => value as String;
+}
+
+final class AnswerShape7 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape7(this.value);
+  factory AnswerShape7.read(Object? value) =>
+      value is AnswerShape7 ? value : AnswerShape7(value);
+  Object? _toValue() => value;
+  List<String> get asArray =>
+      (value as List).map((v) => v as String).toList(growable: false);
+  List<AnswerShape7AnyOf1Items> get asArray2 => (value as List)
+      .map((v) => AnswerShape7AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape7AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape7AnyOf1Items(this.value);
+  factory AnswerShape7AnyOf1Items.read(Object? value) =>
+      value is AnswerShape7AnyOf1Items ? value : AnswerShape7AnyOf1Items(value);
+  Object? _toValue() => value;
+  List<String> get asArray =>
+      (value as List).map((v) => v as String).toList(growable: false);
+}
+
+final class AnswerShape8 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape8(this.value);
+  factory AnswerShape8.read(Object? value) =>
+      value is AnswerShape8 ? value : AnswerShape8(value);
+  Object? _toValue() => value;
+  num get asNumber => value as num;
+  List<AnswerShape8AnyOf1Items> get asArray => (value as List)
+      .map((v) => AnswerShape8AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape8AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape8AnyOf1Items(this.value);
+  factory AnswerShape8AnyOf1Items.read(Object? value) =>
+      value is AnswerShape8AnyOf1Items ? value : AnswerShape8AnyOf1Items(value);
+  Object? _toValue() => value;
+  num get asNumber => value as num;
+}
+
+final class AnswerShape9 implements _EncodedValue {
+  final Object? value;
+  const AnswerShape9(this.value);
+  factory AnswerShape9.read(Object? value) =>
+      value is AnswerShape9 ? value : AnswerShape9(value);
+  Object? _toValue() => value;
+  List<Object?> get asArray =>
+      (value as List).map((v) => v).toList(growable: false);
+  List<AnswerShape9AnyOf1Items> get asArray2 => (value as List)
+      .map((v) => AnswerShape9AnyOf1Items.read(v))
+      .toList(growable: false);
+}
+
+final class AnswerShape9AnyOf1Items implements _EncodedValue {
+  final Object? value;
+  const AnswerShape9AnyOf1Items(this.value);
+  factory AnswerShape9AnyOf1Items.read(Object? value) =>
+      value is AnswerShape9AnyOf1Items ? value : AnswerShape9AnyOf1Items(value);
+  Object? _toValue() => value;
+  List<Object?> get asArray =>
+      (value as List).map((v) => v).toList(growable: false);
+}
+
 final class Answers extends _NativeValue {
   Answers._(super.fields);
   factory Answers.read(Object? value) => Answers._(_readObject(value));
@@ -621,14 +906,31 @@ final class BoundaryProposal extends _NativeValue {
   factory BoundaryProposal.read(Object? value) =>
       BoundaryProposal._(_readObject(value));
   BigInt get end => _readInteger(_fields["end"]);
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
+      : const Presence.absent();
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
+      : const Presence.absent();
   BigInt get length => _readInteger(_fields["length"]);
   num get probability => _fields["probability"] as num;
   BigInt get start => _readInteger(_fields["start"]);
   String get text => _fields["text"] as String;
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
-          if (!["end", "length", "probability", "start", "text"]
-              .contains(entry.key))
+          if (![
+            "end",
+            "file",
+            "first_line",
+            "last_line",
+            "length",
+            "probability",
+            "start",
+            "text"
+          ].contains(entry.key))
             entry.key: entry.value
       });
 }
@@ -640,9 +942,11 @@ final class CallError extends _NativeValue {
   Presence<Facts> get facts => _fields.containsKey("facts")
       ? Presence.present(Facts.read(_fields["facts"]))
       : const Presence.absent();
+  String get resolution => _fields["resolution"] as String;
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
-          if (!["error", "facts"].contains(entry.key)) entry.key: entry.value
+          if (!["error", "facts", "resolution"].contains(entry.key))
+            entry.key: entry.value
       });
 }
 
@@ -1789,6 +2093,68 @@ final class SendBudgetDenialBeforeRetry extends SendBudgetDenial {
         for (final entry in _fields.entries)
           if (!["kind", "last_status"].contains(entry.key))
             entry.key: entry.value
+      });
+}
+
+final class SettledJudgment implements _EncodedValue {
+  final Object? value;
+  const SettledJudgment(this.value);
+  factory SettledJudgment.read(Object? value) =>
+      value is SettledJudgment ? value : SettledJudgment(value);
+  Object? _toValue() => value;
+  bool get asBoolean => value as bool;
+  String get asString => value as String;
+  num get asNumber => value as num;
+  List<String> get asArray =>
+      (value as List).map((v) => v as String).toList(growable: false);
+}
+
+sealed class SettledRecognition extends _NativeValue {
+  SettledRecognition(super.fields);
+  factory SettledRecognition.read(Object? value) {
+    final map = _readObject(value);
+    if (map.containsKey("entities") &&
+        !map.containsKey("mode") &&
+        !map.containsKey("proposals"))
+      return SettledRecognitionEntities.read(map);
+    if (map.containsKey("mode") &&
+        map.containsKey("proposals") &&
+        !map.containsKey("entities"))
+      return SettledRecognitionModeProposals.read(map);
+    throw FormatException("Unknown SettledRecognition alternative");
+  }
+}
+
+final class SettledRecognitionEntities extends SettledRecognition {
+  SettledRecognitionEntities._(super.fields);
+  factory SettledRecognitionEntities.read(Object? value) =>
+      SettledRecognitionEntities._(_readObject(value));
+  List<Entity> get entities => (_fields["entities"] as List)
+      .map((v) => Entity.read(v))
+      .toList(growable: false);
+  Presence<List<EntityEdge>> get relations => _fields.containsKey("relations")
+      ? Presence.present((_fields["relations"] as List)
+          .map((v) => EntityEdge.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["entities", "relations"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledRecognitionModeProposals extends SettledRecognition {
+  SettledRecognitionModeProposals._(super.fields);
+  factory SettledRecognitionModeProposals.read(Object? value) =>
+      SettledRecognitionModeProposals._(_readObject(value));
+  String get mode => _fields["mode"] as String;
+  List<BoundaryProposal> get proposals => (_fields["proposals"] as List)
+      .map((v) => BoundaryProposal.read(v))
+      .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["mode", "proposals"].contains(entry.key)) entry.key: entry.value
       });
 }
 
@@ -3298,6 +3664,8 @@ final class SessionPacketTerminal extends SessionPacket {
   SessionPacketTerminal._(super.fields);
   factory SessionPacketTerminal.read(Object? value) =>
       SessionPacketTerminal._(_readObject(value));
+  SettledAnswer? get answer =>
+      _fields["answer"] == null ? null : SettledAnswer.read(_fields["answer"]);
   Presence<Facts> get facts => _fields.containsKey("facts")
       ? Presence.present(Facts.read(_fields["facts"]))
       : const Presence.absent();
@@ -3305,9 +3673,11 @@ final class SessionPacketTerminal extends SessionPacket {
       ? Presence.present(CallError.read(_fields["failure"]))
       : const Presence.absent();
   String get kind => _fields["kind"] as String;
+  String get resolution => _fields["resolution"] as String;
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
-          if (!["facts", "failure", "kind"].contains(entry.key))
+          if (!["answer", "facts", "failure", "kind", "resolution"]
+              .contains(entry.key))
             entry.key: entry.value
       });
 }
@@ -3488,6 +3858,264 @@ final class SessionRelationEdge extends _NativeValue {
         for (final entry in _fields.entries)
           if (!["either", "probability", "relation", "source", "target"]
               .contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+sealed class SettledAnswer extends _NativeValue {
+  SettledAnswer(super.fields);
+  factory SettledAnswer.read(Object? value) {
+    final map = _readObject(value);
+    if (map["function"] == "decide") return SettledAnswerDecide.read(map);
+    if (map["function"] == "choose") return SettledAnswerChoose.read(map);
+    if (map["function"] == "tag") return SettledAnswerTag.read(map);
+    if (map["function"] == "score") return SettledAnswerScore.read(map);
+    if (map["function"] == "filter") return SettledAnswerFilter.read(map);
+    if (map["function"] == "rank") return SettledAnswerRank.read(map);
+    if (map["function"] == "find") return SettledAnswerFind.read(map);
+    if (map["function"] == "recognize") return SettledAnswerRecognize.read(map);
+    if (map["function"] == "relate") return SettledAnswerRelate.read(map);
+    if (map["function"] == "annotate") return SettledAnswerAnnotate.read(map);
+    throw FormatException("Unknown SettledAnswer alternative");
+  }
+}
+
+final class SettledAnswerAnnotate extends SettledAnswer {
+  SettledAnswerAnnotate._(super.fields);
+  factory SettledAnswerAnnotate.read(Object? value) =>
+      SettledAnswerAnnotate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape15 get value => AnswerShape15.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerChoose extends SettledAnswer {
+  SettledAnswerChoose._(super.fields);
+  factory SettledAnswerChoose.read(Object? value) =>
+      SettledAnswerChoose._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape6 get value => AnswerShape6.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerDecide extends SettledAnswer {
+  SettledAnswerDecide._(super.fields);
+  factory SettledAnswerDecide.read(Object? value) =>
+      SettledAnswerDecide._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  Object? get value => _fields["value"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerFilter extends SettledAnswer {
+  SettledAnswerFilter._(super.fields);
+  factory SettledAnswerFilter.read(Object? value) =>
+      SettledAnswerFilter._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape10 get probability => AnswerShape10.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape9 get value => AnswerShape9.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerFind extends SettledAnswer {
+  SettledAnswerFind._(super.fields);
+  factory SettledAnswerFind.read(Object? value) =>
+      SettledAnswerFind._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  Object? get value => _fields["value"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerRank extends SettledAnswer {
+  SettledAnswerRank._(super.fields);
+  factory SettledAnswerRank.read(Object? value) =>
+      SettledAnswerRank._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape10 get probability => AnswerShape10.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape11 get value => AnswerShape11.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerRecognize extends SettledAnswer {
+  SettledAnswerRecognize._(super.fields);
+  factory SettledAnswerRecognize.read(Object? value) =>
+      SettledAnswerRecognize._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape10 get probability => AnswerShape10.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape13 get value => AnswerShape13.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerRelate extends SettledAnswer {
+  SettledAnswerRelate._(super.fields);
+  factory SettledAnswerRelate.read(Object? value) =>
+      SettledAnswerRelate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape10 get probability => AnswerShape10.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape14 get value => AnswerShape14.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerScore extends SettledAnswer {
+  SettledAnswerScore._(super.fields);
+  factory SettledAnswerScore.read(Object? value) =>
+      SettledAnswerScore._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape8 get value => AnswerShape8.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class SettledAnswerTag extends SettledAnswer {
+  SettledAnswerTag._(super.fields);
+  factory SettledAnswerTag.read(Object? value) =>
+      SettledAnswerTag._(_readObject(value));
+  String get function => _fields["function"] as String;
+  AnswerShape4 get index => AnswerShape4.read(_fields["index"]);
+  AnswerShape3 get pick => AnswerShape3.read(_fields["pick"]);
+  AnswerShape2 get probability => AnswerShape2.read(_fields["probability"]);
+  AnswerShape5 get resolution => AnswerShape5.read(_fields["resolution"]);
+  AnswerShape7 get value => AnswerShape7.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "function",
+            "index",
+            "pick",
+            "probability",
+            "resolution",
+            "value"
+          ].contains(entry.key))
             entry.key: entry.value
       });
 }

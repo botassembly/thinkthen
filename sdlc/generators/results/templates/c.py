@@ -1,6 +1,7 @@
 """Complete immutable C packet views from the shared Rust-derived schema IR."""
 import json
 import re
+from union_shapes import predicate, ungroup
 
 
 def ident(value):
@@ -103,6 +104,16 @@ class Target:
         self.output = []
         self.names = set()
         self.schemas = {}
+        self.shape_tests = {}
+
+    def shape_test(self, schema):
+        identity = json.dumps(schema, sort_keys=True)
+        if identity not in self.shape_tests:
+            name = 'matches_union_item_' + str(len(self.shape_tests))
+            self.shape_tests[identity] = name
+            check = predicate(schema, self.definitions, 'node', 'rust', array_item=self.shape_test)
+            self.output.append('fn ' + name + '(node: &Node) -> bool { ' + ungroup(check) + ' }')
+        return self.shape_tests[identity]
 
     def structure(self, name, members):
         if name in self.names:
@@ -197,8 +208,10 @@ class Target:
         elif 'primitive_variants' in source:
             alternatives = []
             for kind in source['primitive_variants']:
-                typ, read = ('u32', '0') if kind == 'null' else self.shape(source.get('primitive_schemas', {}).get(kind, {'type': kind}), key + '_' + kind, 'node')
-                alternatives.append((kind, 'node.kind() == ' + literal('number' if kind == 'integer' else kind), typ, read))
+                schema = source.get('primitive_schemas', {}).get(kind, {'type': kind})
+                typ, read = ('u32', '0') if kind == 'null' else self.shape(schema, key + '_' + kind, 'node')
+                check = predicate(schema, self.definitions, 'node', 'rust', array_item=self.shape_test)
+                alternatives.append((kind, ungroup(check), typ, read))
             self.union(key, alternatives)
         elif 'enum' in source:
             self.structure(name, [('kind', 'u32')])

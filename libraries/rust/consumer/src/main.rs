@@ -6,9 +6,7 @@
 mod fixture;
 use fixture::Fixture;
 use std::io::Write;
-use thinkthen::{
-    CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome, RequestValue,
-};
+use thinkthen::{CallOptions, CancelToken, Error, RequestEnvironment, RequestOutcome};
 
 fn run(f: Fixture) -> Result<String, Error> {
     let request = f.request()?;
@@ -77,93 +75,19 @@ fn run(f: Fixture) -> Result<String, Error> {
             .map_err(|_| fixture::usage("fixture cancellation failed"))?;
     }
     match outcome? {
-        RequestOutcome::Complete(call) => {
-            check(call.value());
-            Ok(fixture::written(call)?.0)
-        }
+        RequestOutcome::Complete(call) => Ok(fixture::written(call)?.0),
         RequestOutcome::Failed { completed, error } => {
-            check(&completed);
             let facts = error.facts().and_then(thinkthen::Facts::complete);
             let facts_json =
                 serde_json::to_string(&facts).map_err(|_| fixture::usage("invalid facts"))?;
             let prefix = fixture::packet(&completed, facts)?;
             Ok(format!(
-                "{{\"error\":{},\"facts\":{},\"completed\":{prefix}}}",
+                "{{\"error\":{},\"facts\":{},\"completed\":{prefix},\"resolution\":{}}}",
                 fixture::failure(&error)?,
-                facts_json
+                facts_json,
+                serde_json::to_string(error.complete().resolution())
+                    .map_err(|_| fixture::usage("invalid resolution"))?
             ))
-        }
-    }
-}
-fn check(value: &RequestValue) {
-    match value {
-        RequestValue::Decisions(rows) => {
-            for row in rows {
-                let _: &fixture::Original = row.original();
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Choices(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Tags(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Scores(rows) => {
-            for row in rows {
-                let _ = (
-                    row.original(),
-                    row.result().value(),
-                    row.result().probabilities(),
-                );
-            }
-        }
-        RequestValue::Filtered(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().value());
-            }
-        }
-        RequestValue::Ranked(rows) => {
-            for row in rows {
-                let _ = (row.ordinal(), row.original(), row.result().probabilities());
-            }
-        }
-        RequestValue::SetRanked(rows) => {
-            for row in rows {
-                let _ = (row.ordinal(), row.original(), row.result().members());
-            }
-        }
-        RequestValue::Found(found) => {
-            let _ = (found.selection(), found.candidates(), found.answer_id());
-        }
-        RequestValue::Annotations(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().members());
-            }
-        }
-        RequestValue::Recognized(rows) => {
-            for row in rows {
-                let _ = (row.original(), row.result().value().entities());
-            }
-        }
-        RequestValue::Related(row) => {
-            let _ = (row.original(), row.result().members());
         }
     }
 }
@@ -176,9 +100,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match result {
         Ok(packet) => println!("{packet}"),
         Err(error) => println!(
-            "{{\"error\":{},\"facts\":{}}}",
+            "{{\"error\":{},\"facts\":{},\"resolution\":{}}}",
             fixture::failure(&error)?,
-            serde_json::to_string(&error.facts().and_then(thinkthen::Facts::complete))?
+            serde_json::to_string(&error.facts().and_then(thinkthen::Facts::complete))?,
+            serde_json::to_string(error.complete().resolution())?
         ),
     }
     Ok(())
