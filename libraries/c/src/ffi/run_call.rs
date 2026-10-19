@@ -1,9 +1,9 @@
 //! The synchronous native call owns execution; foreign callbacks remain on its caller.
 #![allow(unsafe_code, reason = "the counted C boundary borrows foreign storage")]
 #![deny(unsafe_op_in_unsafe_fn)]
+use crate::EngineHandle;
 use crate::failures::{self, Failure};
 use crate::session::views::thinkthen_complete_utf8_v1 as Text;
-use crate::EngineHandle;
 use std::ffi::c_void;
 use thinkthen::{CallOptions, RequestEnvironment, RequestFeed, RequestInput, RequestItem, Surface};
 
@@ -32,7 +32,10 @@ pub const THINKTHEN_CALL_PRODUCER_END_V1: u32 = 1;
 pub const THINKTHEN_CALL_PRODUCER_FAILURE_V1: u32 = 2;
 
 fn view(text: &str) -> Text {
-    Text { data: text.as_ptr().cast(), len: text.len() }
+    Text {
+        data: text.as_ptr().cast(),
+        len: text.len(),
+    }
 }
 unsafe fn read<'a>(text: Text) -> Result<&'a str, Failure> {
     // SAFETY: the foreign caller retains the counted readable extent.
@@ -50,32 +53,75 @@ unsafe fn execute(
     // SAFETY: shared canonical component decoding copies the foreign input.
     let decoded = unsafe { super::session::named_request(request) }?;
     // SAFETY: the caller retains the component record and function bytes.
-    let function = unsafe { read(request.as_ref().ok_or(thinkthen::ErrorKind::Usage)?.function) }?;
+    let function = unsafe {
+        read(
+            request
+                .as_ref()
+                .ok_or(thinkthen::ErrorKind::Usage)?
+                .function,
+        )
+    }?;
     let request = decoded;
     let arguments = request.call.arguments().clone();
     let mut controls = CallOptions::new().surface(Surface::C);
     // SAFETY: the optional token outlives this blocking invocation.
-    if let Some(cancel) = unsafe { cancel.as_ref() } { controls = controls.cancel(&cancel.0); }
+    if let Some(cancel) = unsafe { cancel.as_ref() } {
+        controls = controls.cancel(&cancel.0);
+    }
     let feed = producer.map(|callback| {
-        let name = match &arguments.input { RequestInput::Feed { name } => name.clone(), _ => String::new() };
+        let name = match &arguments.input {
+            RequestInput::Feed { name, .. } => name.clone(),
+            _ => String::new(),
+        };
         let mut finished = false;
-        RequestFeed::new(name, std::iter::from_fn(move || {
-            if finished { return None; }
-            let mut item = Text { data: std::ptr::null(), len: 0 };
-            // SAFETY: callback and context belong to this caller and live through run_call.
-            match unsafe { callback(context, &mut item) } {
-                THINKTHEN_CALL_PRODUCER_END_V1 => { finished = true; None }
-                THINKTHEN_CALL_PRODUCER_ITEM_V1 => {
-                    // SAFETY: the producer retains these bytes until its next invocation.
-                    Some(unsafe { read(item) }.map_err(|_| thinkthen::Error::usage("invalid producer UTF-8"))
-                        .and_then(RequestItem::from_json))
+        RequestFeed::new(
+            name,
+            std::iter::from_fn(move || {
+                if finished {
+                    return None;
                 }
-                _ => { finished = true; Some(Err(thinkthen::Error::local("session producer raised an exception"))) }
-            }
-        }))
+                let mut item = Text {
+                    data: std::ptr::null(),
+                    len: 0,
+                };
+                // SAFETY: callback and context belong to this caller and live through run_call.
+                match unsafe { callback(context, &mut item) } {
+                    THINKTHEN_CALL_PRODUCER_END_V1 => {
+                        finished = true;
+                        None
+                    }
+                    THINKTHEN_CALL_PRODUCER_ITEM_V1 => {
+                        // SAFETY: the producer retains these bytes until its next invocation.
+                        Some(
+                            unsafe { read(item) }
+                                .map_err(|_| {
+                                    thinkthen::Error::new(
+                                        thinkthen::ErrorKind::Usage,
+                                        "invalid producer UTF-8",
+                                    )
+                                })
+                                .and_then(RequestItem::from_json),
+                        )
+                    }
+                    _ => {
+                        finished = true;
+                        Some(Err(thinkthen::Error::new(
+                            thinkthen::ErrorKind::Local,
+                            "session producer raised an exception",
+                        )))
+                    }
+                }
+            }),
+        )
     });
-    let result = engine.0.engine.call(function, arguments, RequestEnvironment { controls, feed })?;
-    serde_json::to_string(&result).map(CallResultHandle).map_err(|_| Failure::defect("a call result could not be serialized"))
+    let result =
+        engine
+            .0
+            .engine
+            .call(function, arguments, RequestEnvironment { controls, feed })?;
+    serde_json::to_string(&result)
+        .map(CallResultHandle)
+        .map_err(|_| Failure::defect("a call result could not be serialized"))
 }
 
 /// Run one named call to completion using canonical counted question/input/options JSON.
@@ -101,7 +147,9 @@ pub unsafe extern "C" fn thinkthen_run_call(
     error: *mut *mut CallErrorHandle,
 ) -> i32 {
     failures::guard(None, failures::DEFECT, || {
-        if result.is_null() || error.is_null() || result.cast::<()>() == error.cast::<()>() { return failures::USAGE; }
+        if result.is_null() || error.is_null() || result.cast::<()>() == error.cast::<()>() {
+            return failures::USAGE;
+        }
         let outcome = failures::owned_call(|| {
             // SAFETY: inputs retain the blocking export's documented lifetime.
             unsafe { execute(engine, request, producer, context, cancel) }
@@ -109,14 +157,18 @@ pub unsafe extern "C" fn thinkthen_run_call(
         match outcome {
             Ok(value) => {
                 // SAFETY: the checked slot receives one independent allocation.
-                unsafe { *result = Box::into_raw(Box::new(value)); }
+                unsafe {
+                    *result = Box::into_raw(Box::new(value));
+                }
                 failures::OK
             }
             Err(failure) => {
                 let code = failure.code();
                 let facts = failure.owned_facts();
                 // SAFETY: the checked slot receives one independent allocation.
-                unsafe { *error = Box::into_raw(Box::new(CallErrorHandle { failure, facts })); }
+                unsafe {
+                    *error = Box::into_raw(Box::new(CallErrorHandle { failure, facts }));
+                }
                 code
             }
         }
@@ -132,10 +184,12 @@ pub extern "C" fn thinkthen_call_cancel_new() -> *mut CallCancelHandle {
 /// # Safety
 /// token is NULL or live until every concurrent call/cancel returns.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call_cancel(token: *const CallCancelHandle) {
+pub unsafe extern "C" fn thinkthen_call_cancel_fire(token: *const CallCancelHandle) {
     failures::guard(None, (), || {
         // SAFETY: caller retains the nullable token.
-        if let Some(token) = unsafe { token.as_ref() } { token.0.cancel(); }
+        if let Some(token) = unsafe { token.as_ref() } {
+            token.0.cancel();
+        }
     })
 }
 /// Borrow complete canonical Call JSON until result_free. NULL returns empty text.
@@ -185,7 +239,9 @@ pub unsafe extern "C" fn thinkthen_call_error_message(owner: *const CallErrorHan
 pub unsafe extern "C" fn thinkthen_call_error_facts_json(owner: *const CallErrorHandle) -> Text {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
-        unsafe { owner.as_ref() }.and_then(|owner| owner.facts.as_deref()).map_or(view(""), view)
+        unsafe { owner.as_ref() }
+            .and_then(|owner| owner.facts.as_deref())
+            .map_or(view(""), view)
     })
 }
 
