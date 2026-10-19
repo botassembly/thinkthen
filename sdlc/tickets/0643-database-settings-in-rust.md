@@ -10,6 +10,8 @@ Depends on: 0626
 
 Reviews: revision 2478857, accept
 
+Reviews: revision d1113a7, accept
+
 ## Outcome
 
 - Changes: `conformance/settings-errors.json`, `crates/thinkthen/src/public/settings.rs`, `crates/thinkthen/src/public/settings/json.rs`, `crates/thinkthen/src/public/settings/prices.rs`, `crates/thinkthen/tests/library/public_env.rs`, `crates/thinkthen/tests/library/public_env/settings_json.rs`, `databases/duckdb/bridge/src/engines.rs`, `databases/duckdb/bridge/src/ffi.rs`, `databases/duckdb/bridge/src/ffi/find.rs`, `databases/duckdb/bridge/src/ffi/images/ffi.rs`, `databases/duckdb/bridge/src/ffi/portable_aux/ffi.rs`, `databases/duckdb/bridge/src/ffi/settings.rs`, `databases/duckdb/bridge/src/relate/ffi.rs`, `databases/duckdb/cpp/src/bridge.hpp`, `databases/duckdb/cpp/src/engine_settings.hpp`, `databases/duckdb/cpp/src/scalar_settings.cpp`, `databases/duckdb/cpp/src/scalar_settings.hpp`, `databases/duckdb/cpp/src/thinkthen.cpp`, `databases/duckdb/tools/settings_suite.py`, `databases/postgresql/check.sh`, `databases/postgresql/src/call.rs`, `databases/postgresql/src/call/settings.rs`, `databases/postgresql/src/call/settings/complete.rs`, `databases/postgresql/src/ffi.rs`, `databases/sqlite/src/settings.rs`, `databases/sqlite/tests/test_settings.py`, `libraries/c/tests/installed_cases.py`, `sdlc/scripts/settings`.
