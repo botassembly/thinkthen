@@ -34,7 +34,7 @@ OUTPUTS = (
     *group('c', 'operations', 'libraries/c/src/ffi/current/', 'operations_generated.rs'),
     *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
-    *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),
+    *group('csharp', 'results', 'build-tools/results/csharp/', 'CompleteFacts.g.cs'),
     *group('csharp', 'inputs', 'libraries/csharp/src/', 'RequestInputs.g.cs'),
     *group('csharp', 'bridge', 'libraries/csharp/src/', 'NativeBridge.g.cs', 'NamedCalls.g.cs'),
     *group('r', 'results', 'libraries/r/thinkthen/src/rust/src/', 'results_generated.rs'),

@@ -135,7 +135,7 @@ THINKTHEN_TEST_BACKEND=$backend
 export RUBY LIBCLANG_PATH THINKTHEN_TEST_BACKEND
 
 if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
-  python3 "$repo/sdlc/generators/results/generate.py" --target ruby --check
+  python3 "$repo/build-tools/results/generate.py" --target ruby --check
   ./build.sh
   cargo fmt --check
   CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$PWD/target}/ruby-$THINKTHEN_RUBY_MINOR cargo clippy --locked --offline --all-targets --quiet -- -D warnings

@@ -180,7 +180,7 @@ class RetainedNpmArtifact(unittest.TestCase):
             library = root / 'libraries/typescript'
             scripts = root / 'sdlc/scripts'
             tools = root / 'home/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
-            for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
+            for directory in (library, scripts, tools, root / 'build-tools/results'):
                 directory.mkdir(parents=True, exist_ok=True)
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
             (library / 'fixture').write_text('package')

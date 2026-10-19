@@ -38,7 +38,7 @@ def referenced_symbols(language):
     """Derive native references from production and registered generated host source."""
     from sources import production
     from registry import generated_paths
-    root = Path(__file__).resolve().parents[3]
+    root = Path(__file__).resolve().parents[2]
     manifest = json.loads((root / 'conformance/library-surface.json').read_text())
     config = manifest['libraries'][language]
     generated = generated_paths()

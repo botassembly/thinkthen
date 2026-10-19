@@ -429,7 +429,7 @@ def linux_source_staging_case():
         with tarfile.open(fileobj=io.BytesIO(archived)) as source:
             source.extractall(root, filter='data')
         (root / 'sdlc').mkdir()
-        (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators', target_is_directory=True)
+        (root / 'build-tools').symlink_to(REPO / 'build-tools', target_is_directory=True)
         flutter = root / 'libraries/dart/flutter'
         (flutter / 'linked_readme.md').symlink_to('README.md')
         (root / 'libraries/dart/lib/linked_dart.dart').symlink_to('thinkthen_dart.dart')
