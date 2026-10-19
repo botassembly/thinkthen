@@ -74,6 +74,15 @@
     "filter_source": {
       "sql": "SELECT first_line, last_line, value, probability FROM thinkthen_filter('Is this a contract?', '[\"../../specification/fixtures/files/documents/02-contract.txt\"]') WHERE unit = 'file' AND files_only = 1 AND batch = 16;",
       "expected": "1|4|1|0.9"
+    },
+    "label_rows": {
+      "setup": [
+        "CREATE TABLE messages(id INTEGER PRIMARY KEY, body TEXT, team TEXT, tags TEXT);",
+        "CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN\n  UPDATE messages SET\n    team = thinkthen_choose('Which team handles this?', NEW.body,\n      '{\"options\":[\"billing\",\"shipping\"]}'),\n    tags = thinkthen_tag('What is in this text?', NEW.body,\n      '{\"labels\":[\"refund\",\"shipping\"]}')\n  WHERE id = NEW.id;\nEND;",
+        "INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');"
+      ],
+      "sql": "SELECT id, team, tags FROM messages WHERE team = 'billing';",
+      "expected": "1|billing|[\"refund\",\"shipping\"]"
     }
   }
 }

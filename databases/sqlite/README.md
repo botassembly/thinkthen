@@ -23,15 +23,28 @@ ORDER BY name, arity;
 
 If your host opens database files it did not create, set `PRAGMA trusted_schema=OFF`. SQLite then refuses ThinkThen functions in those files' schemas before they read files or send requests.
 
-For example, a reviewed ingestion trigger can store a judgment:
+## Label rows as they arrive
+
+After `.load ./thinkthen`, an `AFTER INSERT` trigger can save a team and tags with each message. Tags are stored as JSON text.
 
 ```sql
-CREATE TABLE messages(body TEXT, is_red INTEGER);
-CREATE TRIGGER judge_message AFTER INSERT ON messages BEGIN
-  UPDATE messages SET is_red=(SELECT thinkthen_decide('Is it red?', NEW.body) AS is_red)
-  WHERE rowid=NEW.rowid;
+CREATE TABLE messages(id INTEGER PRIMARY KEY, body TEXT, team TEXT, tags TEXT);
+
+CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN
+  UPDATE messages SET
+    team = thinkthen_choose('Which team handles this?', NEW.body,
+      '{"options":["billing","shipping"]}'),
+    tags = thinkthen_tag('What is in this text?', NEW.body,
+      '{"labels":["refund","shipping"]}')
+  WHERE id = NEW.id;
 END;
+
+INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');
+
+SELECT id, team, tags FROM messages WHERE team = 'billing';
 ```
+
+The final query filters saved columns and makes no model call. A failed model call fails the `INSERT`.
 
 ## Judge a table once
 

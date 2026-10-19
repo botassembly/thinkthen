@@ -59,6 +59,65 @@ SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
 
+## Label rows as they arrive
+
+Start the PostgreSQL server with `THINKTHEN_API_KEY` in its environment; a client session cannot supply the key. After an administrator runs `CREATE EXTENSION thinkthen`, PUBLIC has no execute grant, so the administrator grants the application role the two functions it uses. Options use named `settings =>` because the third positional argument is `members`; `thinkthen_tag` returns `text[]`.
+
+```sql
+CREATE ROLE label_rows_app;
+
+DO $grant$
+DECLARE signature text;
+BEGIN
+  FOR signature IN
+    SELECT p.oid::regprocedure::text
+    FROM pg_proc p
+    JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass
+    JOIN pg_extension e ON e.oid = d.refobjid
+      AND d.refclassid = 'pg_extension'::regclass
+    WHERE e.extname = 'thinkthen' AND d.deptype = 'e'
+      AND p.proname IN ('thinkthen_choose', 'thinkthen_tag')
+  LOOP
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO label_rows_app', signature);
+  END LOOP;
+END
+$grant$;
+
+CREATE TABLE messages(id integer PRIMARY KEY, body text, team text, tags text[]);
+
+CREATE FUNCTION label_message() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.team := thinkthen_choose('Which team handles this?', NEW.body,
+    settings => '{"options":["billing","shipping"]}'::json);
+  NEW.tags := thinkthen_tag('What is in this text?', NEW.body,
+    settings => '{"labels":["refund","shipping"]}'::json);
+  RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER label_message BEFORE INSERT ON messages
+FOR EACH ROW EXECUTE FUNCTION label_message();
+
+GRANT INSERT, SELECT ON messages TO label_rows_app;
+
+SET ROLE label_rows_app;
+
+INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');
+
+SELECT id, team, tags FROM messages WHERE team = 'billing';
+```
+
+The final query filters saved columns and makes no model call. A failed model call fails the `INSERT`.
+
+Keep that failure when every row must have a label. To accept the row with empty labels after a backend failure, the administrator can add this handler before the trigger function's final `END`; other error kinds still fail the insert:
+
+```sql
+EXCEPTION WHEN SQLSTATE '38000' THEN
+  NEW.team := NULL;
+  NEW.tags := NULL;
+  RETURN NEW;
+```
+
 ## Constrain a stored answer
 
 `thinkthen_choose` returns plain `text`. A caller-owned PostgreSQL domain constrains a stored answer without changing that function:

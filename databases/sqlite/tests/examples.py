@@ -17,6 +17,11 @@ EXAMPLES = json.loads((ROOT / "examples.json").read_text())["examples"]
 
 
 def test_every_example_answers_as_written() -> None:
+    example = EXAMPLES['label_rows']
+    documented = (ROOT / 'README.md').read_text().split('## Label rows as they arrive\n', 1)[1]
+    documented = documented.split('```sql\n', 1)[1].split('\n```', 1)[0]
+    expect(documented, '\n\n'.join([*example['setup'], example['sql']]),
+           'the guide uses the replayed trigger example')
     failed = []
     for name, example in EXAMPLES.items():
         held = child(f"""
