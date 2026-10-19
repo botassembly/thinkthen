@@ -37,7 +37,7 @@ impl std::fmt::Debug for Reader {
 pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_file_plan(input: BridgeText) -> Reply {
     reply_boundary(|| {
         let source = text(input.bytes, input.len)?;
-        let inputs = crate::complete_native::Inputs::parse(source, true)
+        let inputs = crate::complete_native::Inputs::parse(source)
             .map_err(|e| crate::complete_native::failure(&e).to_string())?;
         let value: serde_json::Value = serde_json::from_str(source)
             .map_err(|_| reject(thinkthen::ErrorKind::Usage, "invalid inputs"))?;

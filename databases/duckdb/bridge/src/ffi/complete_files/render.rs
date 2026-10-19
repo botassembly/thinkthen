@@ -1,7 +1,9 @@
 //! Recovered source rows keep the existing native observer and joined facts.
 use crate::complete_native::{defect, observations, put};
 use serde_json::{Value, json};
-use thinkthen::{Error, RequestRecoveringResult as Packet, RequestSessionResult};
+use thinkthen::{
+    Error, RecordObservation, RequestRecoveringResult as Packet, RequestSessionResult,
+};
 
 pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
     match packet {
@@ -30,7 +32,7 @@ pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
             if let RequestSessionResult::Observation { value: event, .. } = ordinary {
                 super::super::native_records::observations::supplement(
                     value.get_mut("value").ok_or_else(defect)?,
-                    observations::owned_event(&event)?,
+                    owned_event(&event)?,
                 )?;
             }
             Ok(value)
@@ -129,4 +131,37 @@ pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
     let rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
     put(&mut carrier, "rows", json!(rows))?;
     Ok(carrier)
+}
+
+/// Borrow an owned native snapshot through the existing SQL event serializer.
+fn owned_event(event: &thinkthen::OwnedRecordObservation) -> Result<Value, thinkthen::Error> {
+    use thinkthen::{ObservedRow, OwnedObservedRow as Row, OwnedRecordObservation as Event};
+    match event {
+        Event::Question {
+            index,
+            member,
+            stage,
+            position,
+            detail,
+        } => observations::event(&RecordObservation::Question {
+            index: *index,
+            member: member.as_deref(),
+            stage: *stage,
+            position: *position,
+            detail: detail.detail(),
+        }),
+        Event::Row { index, value } => {
+            let borrowed = match value {
+                Row::Judgment(v) => ObservedRow::Judgment(v),
+                Row::Annotated(v) => ObservedRow::Annotated(v),
+                Row::Recognized(v) => ObservedRow::Recognized(v),
+                Row::Find(v) => ObservedRow::Find(*v),
+                Row::Relations(v) => ObservedRow::Relations(v),
+            };
+            observations::event(&RecordObservation::Row {
+                index: *index,
+                value: borrowed,
+            })
+        }
+    }
 }
