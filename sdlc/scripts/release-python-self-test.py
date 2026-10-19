@@ -136,7 +136,7 @@ pathlib.Path({str(tools / 'ninja')!r}).symlink_to({shutil.which('ninja')!r})
         source.mkdir()
         (source / 'CMakeLists.txt').write_text('cmake_minimum_required(VERSION 3.18)\nproject(probe LANGUAGES C CXX)\n')
         container = (REPO / 'sdlc/scripts/release-container').read_text()
-        bootstrap = container.split('\tINPUTS_HERE=', 1)[1].split('\tpython3 "$INPUTS_HERE/source_hosts.py" --fetch', 1)[0]
+        bootstrap = container.split('\tINPUTS_HERE=', 1)[1].split('\tsh "$INPUTS_HERE/setup.sh" --fetch', 1)[0]
         bootstrap = 'INPUTS_HERE=' + bootstrap.replace('/work/src/databases/duckdb/tools', str(requirements.parent))
         env = child_env(home=root / 'home') | {'PATH': fixture_path(tools,
             exclude=('ninja', 'make', 'cmake', 'cc', 'c++')), 'TARGET': 'aarch64-unknown-linux-gnu'}
