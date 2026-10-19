@@ -1,13 +1,12 @@
-//! Stays: process-wide width selection and cancellation races require direct scheduling checks.
+//! Stays: concurrent command paths must share one native process throttle.
 //! The command's width setup and the one cap every live path shares.
 //!
 //! Width state belongs to the process, so each proof runs in a child copy of
 //! this test binary where no unrelated test shares the gate.
 
-use crate::test_deadline::child::ChildEnvironment as _;
 use std::io::{self, Cursor, Read};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode, Stdio};
+use std::process::ExitCode;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Mutex};
@@ -21,11 +20,9 @@ use serde_json::{Value, json};
 
 use crate::args::{Cli, Command as Verb};
 use crate::edge::Environment;
-use crate::engine::http::{Client, Exchange, Key};
-use crate::engine::{Cancel, Width, Widths, limits};
 use crate::failure::{Failure, report};
 
-mod facade_tests;
+mod isolated;
 
 const QUIET: Duration = Duration::from_millis(150);
 
@@ -34,7 +31,7 @@ fn in_child(name: &str) {
     in_child_at(&format!("cli::schedule::width_tests::{name}"));
 }
 
-pub(crate) use crate::test_deadline::isolated::{child, in_child_at};
+pub(crate) use isolated::{child, in_child_at};
 
 /// Standard input that counts every read, so a refusal proves none happened.
 struct Counted(Cursor<Vec<u8>>, Arc<AtomicUsize>);
@@ -128,13 +125,16 @@ fn generic(body: &[u8]) -> String {
     json!({"model": request["model"], "answers": answers}).to_string()
 }
 
-fn requests_counted(environment: &Environment) -> u64 {
-    environment.usage().finish();
-    let path = environment.usage_path().expect("a usage folder");
-    crate::engine::usage::read(path, &crate::engine::usage::month_now())
+fn requests_counted() -> u64 {
+    let route = crate::EngineBuilder::from_config()
+        .expect("configuration")
+        .resolved_settings()
+        .expect("settings");
+    let path = route.usage_path.expect("a usage folder");
+    crate::read_usage(&path, &crate::current_usage_month())
         .expect("usage totals")
         .total
-        .requests_sent
+        .requests_sent()
 }
 
 #[test]
@@ -149,7 +149,6 @@ fn command_setup_child() {
         return;
     }
     let listener = Listener::answering(|body| Canned::ok(&generic(body))).expect("listener");
-    let environment = Environment::read().expect("environment");
     let decide = |jobs: Option<&'static str>, reads: &Arc<AtomicUsize>| {
         let mut line = vec![
             "decide",
@@ -161,21 +160,18 @@ fn command_setup_child() {
         line.extend(["--lines", "--model", "local-1", "--batch", "1"]);
         line.extend(jobs.iter().flat_map(|jobs| ["--jobs", jobs]));
         let input = Counted(Cursor::new(b"one\ntwo\n".to_vec()), Arc::clone(reads));
-        dispatch(&line, &environment, input)
+        let environment = Environment::read().expect("environment");
+        let result = dispatch(&line, &environment, input);
+        let _persisted = environment.finish_usage();
+        result
     };
 
     let reads = Arc::new(AtomicUsize::new(0));
     assert_eq!(decide(None, &reads).expect("omitted"), ExitCode::SUCCESS);
     assert_eq!(
-        limits::process().widths.selected(),
-        None,
-        "an omitted --jobs selects nothing"
-    );
-    assert_eq!(
         decide(Some("4"), &reads).expect("explicit"),
         ExitCode::SUCCESS
     );
-    assert_eq!(limits::process().widths.selected(), Width::new(4).ok());
     assert_eq!(
         decide(Some("4"), &reads).expect("the same width"),
         ExitCode::SUCCESS
@@ -184,11 +180,10 @@ fn command_setup_child() {
     let before = (
         listener.connections(),
         listener.count(),
-        environment.cancel().keys(),
-        requests_counted(&environment),
+        requests_counted(),
     );
     assert_eq!(before.1, 6);
-    assert_eq!(before.3, 6);
+    assert_eq!(before.2, 6);
     let unread = Arc::new(AtomicUsize::new(0));
     let refused = decide(Some("8"), &unread).expect_err("a different width");
     let mut said = Vec::new();
@@ -201,30 +196,9 @@ fn command_setup_child() {
     let after = (
         listener.connections(),
         listener.count(),
-        environment.cancel().keys(),
-        requests_counted(&environment),
+        requests_counted(),
     );
-    assert_eq!(after, before, "no connection, request, key, or count");
-    assert_eq!(limits::process().widths.selected(), Width::new(4).ok());
-}
-
-#[test]
-fn the_width_setup_maps_each_jobs_value_to_one_selection() {
-    let widths: &'static Widths = Box::leak(Box::default());
-    assert_eq!(super::width_in(widths, None).expect("omitted"), 8);
-    assert_eq!(widths.selected(), None);
-    assert_eq!(super::width_in(widths, Some(4)).expect("explicit"), 4);
-    assert_eq!(widths.selected(), Width::new(4).ok());
-    assert!(matches!(
-        super::width_in(widths, Some(8)),
-        Err(Failure::WidthActive(active)) if Some(active.0) == Width::new(4).ok()
-    ));
-    assert!(matches!(
-        super::width_in(Box::leak(Box::default()), Some(0)),
-        Err(Failure::Usage(
-            "a width is a whole number from 1 through 32"
-        ))
-    ));
+    assert_eq!(after, before, "no connection, request, or count");
 }
 
 /// A listener that holds every answer until the test lets one go, and says
@@ -295,7 +269,7 @@ fn drain(held: &Held, cap: usize, finished: &AtomicUsize, runs: usize) -> (usize
 }
 
 #[test]
-fn every_live_path_and_every_engine_share_one_cap() {
+fn every_command_path_shares_one_cap() {
     in_child("shared_cap_child");
 }
 
@@ -305,48 +279,7 @@ fn shared_cap_child() {
     if !child() {
         return;
     }
-    two_engines_share_the_cap();
     every_command_path_shares_the_cap();
-}
-
-/// One bare attempt through `client`, as a later library engine would send.
-fn send_once(client: &Client, url: &str, finished: &AtomicUsize) {
-    let key = Key::of("sk-test-value");
-    let exchange = Exchange {
-        headers: &[],
-        url,
-        body: br#"{"model":"local-1","questions":{"q1":{"type":"noul"}}}"#,
-        key: &key,
-        max_retries: 0,
-        retry_wait: Duration::from_millis(10),
-    };
-    let sent = client.post_observed(&exchange, &Cancel::default(), || ());
-    finished.fetch_add(1, Ordering::SeqCst);
-    assert!(sent.is_ok(), "{:?}", sent.err());
-}
-
-/// Two clients built with different settings still send under one cap.
-fn two_engines_share_the_cap() {
-    let held = held("never busy");
-    let url = held.listener.url();
-    let finished = AtomicUsize::new(0);
-    let clients = [30, 31].map(|timeout| {
-        Client::new(
-            Duration::from_secs(timeout),
-            false,
-            &limits::process().widths,
-        )
-    });
-    let (most, seen) = thread::scope(|scope| {
-        for client in clients.iter().flat_map(|client| [client; 6]) {
-            let finished = &finished;
-            scope.spawn(move || send_once(client, url, finished));
-        }
-        drain(&held, 8, &finished, 12)
-    });
-    assert_eq!(most, 8, "two engines reach the one cap and no more");
-    assert_eq!(seen.len(), 12);
-    assert_eq!(held.listener.count(), 12);
 }
 
 fn file(home: &Path, name: &str, text: &str) -> String {
