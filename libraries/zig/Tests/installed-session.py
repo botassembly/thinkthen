@@ -42,35 +42,35 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
             for name in ('session', 'example', 'public-example'):
                 shutil.copy2(project / 'zig-out/bin' / name, stage / name)
         preview_env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1')
-        preview = subprocess.run([str(project / 'zig-out/bin/session'), 'plan'], cwd=project, env=preview_env, capture_output=True, text=True, timeout=5)
+        preview = subprocess.run([str(project / 'zig-out/bin/session'), 'plan'], cwd=project, env=preview_env, capture_output=True, text=True)
         assert preview.returncode == 0, preview.stderr
         assert preview.stderr == 'installed Zig plan PASS\n', preview.stderr
         assert len(backend.arrivals) == 0, backend.arrivals
         result = subprocess.run([str(project / 'zig-out/bin/session')], cwd=project, env=env,
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         assert result.stderr == 'installed Zig session PASS\n', result.stderr
         assert len(backend.arrivals) == 1, backend.arrivals
         failed = subprocess.run([str(project / 'zig-out/bin/session'), 'failure'], cwd=project, env=env,
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True)
         assert failed.returncode == 0, failed.stderr
         assert failed.stderr == 'installed Zig failure PASS\n', failed.stderr
         assert len(backend.arrivals) == 2, backend.arrivals
         version = tomllib.loads((REPO / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
         assert backend.user_agents == [f'thinkthen/{version} (zig)'] * 2, backend.user_agents
         before = len(backend.arrivals)
-        example = subprocess.run([str(project / 'zig-out/bin/example')], cwd=project, env=env, capture_output=True, text=True, timeout=5)
+        example = subprocess.run([str(project / 'zig-out/bin/example')], cwd=project, env=env, capture_output=True, text=True)
         assert example.returncode == 0 and example.stderr == 'answer=true\nrecords=1 requests=1\n', example.stderr
         assert len(backend.arrivals) == before + 1, backend.arrivals
         before = len(backend.arrivals)
-        helpers = subprocess.run([str(project / 'zig-out/bin/session'), 'helpers'], cwd=project, env=env, capture_output=True, text=True, timeout=5)
+        helpers = subprocess.run([str(project / 'zig-out/bin/session'), 'helpers'], cwd=project, env=env, capture_output=True, text=True)
         assert helpers.returncode == 0 and helpers.stderr == 'installed Zig helpers PASS\n', helpers.stderr
         assert len(backend.arrivals) == before + 2, backend.arrivals
         before = len(backend.arrivals)
         public_cache = trial / 'public-cache'; public_cache.mkdir()
         shutil.copy2(REPO / 'site/recordings/thinkthen.jsonl', public_cache / 'thinkthen.jsonl')
         public_env = child_env(home=trial / 'public-home', THINKTHEN_CACHE=str(public_cache))
-        public = subprocess.run([str(project / 'zig-out/bin/public-example')], cwd=project, env=public_env, capture_output=True, text=True, timeout=5)
+        public = subprocess.run([str(project / 'zig-out/bin/public-example')], cwd=project, env=public_env, capture_output=True, text=True)
         assert public.returncode == 0 and not public.stdout and not public.stderr, (public.returncode, public.stdout, public.stderr)
         assert len(backend.arrivals) == before, backend.arrivals
         for mode in ('usage-written', 'usage-failed', 'usage-disabled'):
@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
             mode_env = child_env(home=mode_home, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'], THINKTHEN_API_KEY='tt-canary-273')
             if mode == 'usage-disabled': mode_env.update(HOME='relative', XDG_STATE_HOME='')
             before = len(backend.arrivals)
-            result = run_usage([str(project / 'zig-out/bin/session'), mode], cwd=project, env=mode_env, state=mode_home / 'state/thinkthen', mode=mode.removeprefix('usage-'), timeout=15)
+            result = run_usage([str(project / 'zig-out/bin/session'), mode], cwd=project, env=mode_env, state=mode_home / 'state/thinkthen', mode=mode.removeprefix('usage-'))
             assert result.returncode == 0 and result.stdout == 'USAGE_PASS\n' and not result.stderr, (mode, result.stdout, result.stderr)
             assert len(backend.arrivals) - before == 1, backend.arrivals
             print('installed Zig', mode, 'PASS retained typed row/facts/status')

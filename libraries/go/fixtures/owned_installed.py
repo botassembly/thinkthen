@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
         if feed_only:
             before = server.attempts
-            result = subprocess.run([str(home/'consumer-bin'), 'nil-feed'], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=5)
+            result = subprocess.run([str(home/'consumer-bin'), 'nil-feed'], env=run_env, cwd=consumer, text=True, capture_output=True)
             assert result.returncode == 0 and result.stdout.strip() == 'nil-feed-usage-pass requests=0', (result.stdout, result.stderr)
             assert server.attempts == before == 0 and not user_agents, server.attempts
             print('GO_NIL_FEED_INSTALLED_PASS ten calls nil interface and five typed nil kinds typed usage zero-send')
@@ -84,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
             for mode in ('usage-written', 'usage-failed'):
                 state = home / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
                 before = server.attempts
-                result = run_usage([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, state=state, mode=mode.removeprefix('usage-'), timeout=5)
+                result = run_usage([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, state=state, mode=mode.removeprefix('usage-'))
                 assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
                 assert server.attempts == before + 1, server.attempts
                 print('GO_USAGE_INSTALLED_PASS', mode, 'requests=1')

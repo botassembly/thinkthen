@@ -44,7 +44,7 @@ def main():
                 prefix = 'thinkthen: the reply was refused:' if cause == 'reply' else 'thinkthen: the backend '
                 assert lines[0].startswith(prefix), (arm, lines)
         backend.stdin.close()
-        assert fixture_wait(backend, ) == 0
+        assert fixture_wait(backend) == 0
         assert backend.stderr.read() == ''
         print(f'Installed provider diagnostic boundary: {len(arms)} fault arms passed')
     finally:

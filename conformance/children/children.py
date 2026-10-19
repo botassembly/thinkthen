@@ -71,13 +71,20 @@ def fixture_stalled(error):
         print(f'{name}:\n{output or "(empty or inherited by the gate log)"}', file=sys.stderr, flush=True)
 
 
+def fixture_capture(command, *, capture, **options):
+    """Bound fixture capture, including release tools with file-backed output."""
+    try:
+        return capture(command, timeout=FIXTURE_HANG_TIMEOUT, **options)
+    except (subprocess.TimeoutExpired, ValueError) as error:
+        timeout = error if isinstance(error, subprocess.TimeoutExpired) else error.__cause__
+        if isinstance(timeout, subprocess.TimeoutExpired):
+            fixture_stalled(timeout)
+        raise
+
+
 def fixture_run(command, **options):
     """Run an ordinary fixture with the shared hang guard."""
-    try:
-        return subprocess.run(command, timeout=FIXTURE_HANG_TIMEOUT, **options)
-    except subprocess.TimeoutExpired as error:
-        fixture_stalled(error)
-        raise
+    return fixture_capture(command, capture=subprocess.run, **options)
 
 
 def fixture_communicate(child, input=None):

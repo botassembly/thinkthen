@@ -50,7 +50,7 @@ class DarwinSignalObservation(unittest.TestCase):
                             self.assertTrue(select.select([process.stdout], [], [], 30)[0])
                             actual = read_process_line(process.stdout)
                             if not actual:
-                                _, stderr = fixture_communicate(process, )
+                                _, stderr = fixture_communicate(process)
                                 self.fail(f'probe exited {process.returncode}: {stderr}')
                             self.assertEqual(actual, expected + '\n')
                         try:
@@ -64,7 +64,7 @@ class DarwinSignalObservation(unittest.TestCase):
                             process.stdin.write('u')
                             process.stdin.flush()
                             expect_line('completed')
-                            stdout, stderr = fixture_communicate(process, )
+                            stdout, stderr = fixture_communicate(process)
                             self.assertEqual((process.returncode, stdout, stderr), (0, '', ''))
                             self.assertTrue(select.select([observation.reader], [], [], 0)[0])
                             expected = b'H' + (bytes([signum]) if mode in ('stable', 'ignored', 'failure') else b'')

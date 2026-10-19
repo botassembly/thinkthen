@@ -214,7 +214,7 @@ class Backend:
         return self.process.stdout.readline().strip()
     def close(self):
         self.process.stdin.close()
-        code = fixture_wait(self.process, )
+        code = fixture_wait(self.process)
         stderr = self.process.stderr.read()
         if code or stderr:
             raise AssertionError('owned fixture backend failed: ' + stderr)

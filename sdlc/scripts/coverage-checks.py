@@ -399,7 +399,7 @@ while True:
                 self.assertEqual(json.loads(result), sorted(map(int, previous_mask)))
                 self.assertEqual(signal.getsignal(signal.SIGCHLD), previous_handler)
                 self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), previous_mask)
-                self.assertEqual(fixture_wait(foreign, ), 23)
+                self.assertEqual(fixture_wait(foreign), 23)
             finally:
                 if foreign.poll() is None:
                     foreign.kill()

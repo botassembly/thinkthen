@@ -15,7 +15,7 @@ import time
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from conformance.children.children import fixture_wait
+from conformance.children.children import FIXTURE_HANG_TIMEOUT, fixture_capture, fixture_wait
 
 CONTROLLED_TIMEOUT = 1
 
@@ -77,15 +77,15 @@ def portable(root):
     for caller in (C, MSVC, INSTALLER, WINDOWS, SDK):
         args = [sys.executable, '-c',
             'import os; os.write(1,b"a"*524288); os.write(2,b"b"*524288)']
-        result = caller.CAPTURE(args, env=environment, timeout=10)
+        result = fixture_capture(args, capture=caller.CAPTURE, env=environment)
         assert result.returncode == 0 and result.stdout == b'a' * 524288 and result.stderr == b'b' * 524288
-        result = caller.CAPTURE([sys.executable, '-c',
+        result = fixture_capture([sys.executable, '-c',
             'import os,sys; os.write(1,b"ok\\r\\n"); os.write(2,b"bad\\n"); sys.exit(23)'],
-            env=environment, timeout=10, text=True)
+            capture=caller.CAPTURE, env=environment, text=True)
         assert (result.returncode, result.stdout, result.stderr) == (23, 'ok\n', 'bad\n')
-        result = caller.CAPTURE([sys.executable, '-c',
+        result = fixture_capture([sys.executable, '-c',
             'import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())'],
-            env=environment, timeout=10, input=b'\x00\xff\r\n')
+            capture=caller.CAPTURE, env=environment, input=b'\x00\xff\r\n')
         assert result.stdout == b'\x00\xff\r\n' and not result.stderr and result.returncode == 0
         if caller in (C, MSVC):
             invoke = (lambda command: C.run(command)) if caller is C else (lambda command: MSVC.run(command, environment))
@@ -116,7 +116,7 @@ def portable(root):
             pids = root / (caller.__name__ + '-pids')
             # Exercise each real release wrapper, shortening only its declared deadline.
             def short(args, **options):
-                expected = {C: 120, MSVC: 60, SMOKE: 60, INSTALLER: 30, WINDOWS: 180, SDK: 600}
+                expected = {C: 120, MSVC: 60, SMOKE: 60, INSTALLER: FIXTURE_HANG_TIMEOUT, WINDOWS: 180, SDK: 600}
                 assert options['timeout'] == expected[caller]
                 if caller is not SMOKE:
                     assert options['env'] == environment
@@ -151,9 +151,9 @@ def portable(root):
                     diagnostic = io.StringIO()
                     with contextlib.redirect_stdout(diagnostic), mock.patch.object(caller, 'CAPTURE', short):
                         refused(lambda: INSTALLER.run_fixture([sys.executable, str(tool), str(pids)],
-                            environment, timeout=30, label='cleanup regression'),
+                            environment, label='cleanup regression'),
                             Path(sys.executable).name + ' timed out after 1 seconds')
-                    assert 'starting cleanup regression (deadline 30s)' in diagnostic.getvalue()
+                    assert f'starting cleanup regression (deadline {FIXTURE_HANG_TIMEOUT}s)' in diagnostic.getvalue()
                     assert 'cleanup regression failed in ' in diagnostic.getvalue(), 'FIXTURE_FAILURE_PHASE_MISSING'
                     assert 'timed out after 1 seconds' in diagnostic.getvalue()
                 elif caller is WINDOWS:
@@ -191,7 +191,7 @@ def portable(root):
         pids = root / 'finished-pids'
         started = time.monotonic()
         try:
-            result = BOUNDED.capture([sys.executable, str(finished), str(pids)], env=environment, timeout=10)
+            result = fixture_capture([sys.executable, str(finished), str(pids)], capture=BOUNDED.capture, env=environment)
             assert result.returncode == 23 and result.stdout == b'ready\n' and result.stderr == b'ready-error\n'
             assert time.monotonic() - started < 8, 'FINISHED_ROOT_WAITED_FOR_INHERITED_EOF'
             root_pid, descendant_pid = map(int, pids.read_text().split())
@@ -208,7 +208,7 @@ def portable(root):
                     pass
     finally:
         unrelated.kill()
-        fixture_wait(unrelated, )
+        fixture_wait(unrelated)
 
 
 def sdk_project_locations(root):
@@ -262,11 +262,11 @@ def sdk_project_locations(root):
                 assert (project / 'InstallCheck.csproj').is_file(), 'SDK_PROJECT_OUTSIDE_WORKING_DIRECTORY'
                 if args[1] == 'add':
                     # NuGet combines these Windows tool roots while loading machine settings.
-                    probe = SDK.CAPTURE([sys.executable, '-u', '-c',
+                    probe = fixture_capture([sys.executable, '-u', '-c',
                         'import os; from pathlib import Path; '
                         'print(Path(os.environ["PROGRAMFILES(X86)"]) / "NuGet"); '
                         'print(Path(os.environ["PROGRAMFILES"]) / "NuGet")'],
-                        cwd=project, env=env, timeout=10, text=True)
+                        capture=SDK.CAPTURE, cwd=project, env=env, text=True)
                     assert probe.returncode == 0, probe.stderr
                     assert probe.stdout.splitlines() == [str(Path(os.environ[name]) / 'NuGet')
                         for name in ('PROGRAMFILES(X86)', 'PROGRAMFILES')], repr(probe.stdout)

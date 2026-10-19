@@ -309,7 +309,7 @@ while True:time.sleep(60)
                     try:
                         if cancellation is not None:
                             process.send_signal(cancellation)
-                        _, error = fixture_communicate(process, )
+                        _, error = fixture_communicate(process)
                         self.assertEqual(process.returncode, expected, error)
                         if linux:
                             reaped, status = os.waitpid(descendant, os.WNOHANG)
