@@ -775,7 +775,18 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
                 .len()
         );
         assert!(encoded.get("summary").is_none());
-        let mut growing = combined.clone();
+        assert_combined_overflow(combined.clone());
+        modes.push(combined);
+    }
+    assert_eq!(
+        modes[0].combine(&modes[1]).unwrap_err().kind(),
+        ErrorKind::Usage
+    );
+    assert!(listener.requests().is_empty());
+    assert_eq!(listener.count(), 0);
+}
+
+fn assert_combined_overflow(mut growing: PlanEstimate) {
         let mut overflow = false;
         for _ in 0..usize::BITS {
             match growing.combine(&growing) {
@@ -788,12 +799,4 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
             }
         }
         assert!(overflow);
-        modes.push(combined);
-    }
-    assert_eq!(
-        modes[0].combine(&modes[1]).unwrap_err().kind(),
-        ErrorKind::Usage
-    );
-    assert!(listener.requests().is_empty());
-    assert_eq!(listener.count(), 0);
 }

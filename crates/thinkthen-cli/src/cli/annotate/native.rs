@@ -100,73 +100,46 @@ pub(super) fn run(
         }
         // Drain preceding native rows before acknowledging a missing-pointer row.
         // The callback blocks later rows until the command has written this row.
-        match session.try_read() {
-            RequestSessionRead::Result(packet) => {
-                match packet {
-                    RequestSessionResult::Row(crate::RequestSessionRow::Annotation(row)) => {
+        let packet = session.try_read();
+        let received = matches!(&packet, crate::RequestSessionRead::Result(_));
+        match packet {
+            crate::RequestSessionRead::Result(RequestSessionResult::Row(crate::RequestSessionRow::Annotation(row))) => {
                         rendering::receive(judging, row, &mut held, output, &mut ended);
                     }
-                    RequestSessionResult::Row(_) => {
+            crate::RequestSessionRead::Result(RequestSessionResult::Row(_)) => {
                         ended
                             .failure
                             .get_or_insert(Failure::Defect("annotate returned another function"));
                     }
-                    RequestSessionResult::Aggregate(crate::RequestValue::Annotations(rows)) => {
+            crate::RequestSessionRead::Result(RequestSessionResult::Aggregate(crate::RequestValue::Annotations(rows))) => {
                         for row in rows {
                             rendering::receive(judging, row, &mut held, output, &mut ended);
                         }
                     }
-                    RequestSessionResult::Aggregate(_) => {
+            crate::RequestSessionRead::Result(RequestSessionResult::Aggregate(_)) => {
                         ended
                             .failure
                             .get_or_insert(Failure::Defect("annotate returned another function"));
                     }
-                    RequestSessionResult::Observation { .. } => {}
-                    RequestSessionResult::Terminal(value) => {
-                        if let Some(facts) = &value.facts {
-                            judging.environment.settle_native(facts);
-                            if let Some(start) = tally.take() {
-                                start.finish(facts)?;
-                            }
-                        }
+            crate::RequestSessionRead::Result(RequestSessionResult::Observation { .. }) => {}
+            crate::RequestSessionRead::Result(RequestSessionResult::Terminal(value)) => {
+                        judging.environment.settle_session(&value, &mut tally)?;
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
-                }
-                continue;
-            }
-            RequestSessionRead::End => break,
-            RequestSessionRead::Pending => {}
+
+            crate::RequestSessionRead::End => break,
+            crate::RequestSessionRead::Pending => {}
+        }
+        if received {
+            continue;
         }
         if let Some(missing) = continuation.try_next() {
             held.remove(&missing.ordinal);
-            if cancelled || ended.closed || ended.failure.is_some() {
-                missing.acknowledge(false);
-            } else {
-                match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
-                    .and_then(|row| output.take(row))
-                {
-                    Ok(true) => {
-                        ended.finished += 1;
-                        ended.skipped += 1;
-                        missing.acknowledge(true);
-                    }
-                    // Preserve the old callback's accepted closed-pipe row. Its
-                    // native accounting still settles before command success.
-                    Ok(false) => {
-                        ended.closed = true;
-                        missing.acknowledge(true);
-                    }
-                    Err(error) => {
-                        ended.failure = Some(error);
-                        missing.acknowledge(false);
-                    }
-                }
-            }
+            acknowledge_missing(missing, cancelled, output, &mut ended);
             continue;
         }
         let mut pending_reader = false;
-        if !input_done {
-            match session.try_push_with(|| match reader.try_next() {
+        let next_descriptor = || match reader.try_next() {
                 crate::asking::native_reader::Read::Pending => Err(FeedRead::Pending),
                 crate::asking::native_reader::Read::End => Err(FeedRead::End),
                 crate::asking::native_reader::Read::Item(Err(placed)) => {
@@ -181,7 +154,9 @@ pub(super) fn run(
                     held.insert(ordinal, original);
                     Ok(descriptor)
                 }
-            }) {
+            };
+        if !input_done {
+            match session.try_push_with(next_descriptor) {
                 Ok(crate::RequestSessionPushStatus::Accepted) => continue,
                 Ok(crate::RequestSessionPushStatus::Full) => {}
                 Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
@@ -277,4 +252,35 @@ pub(super) fn compose(
         judging.settings.context_schema.as_ref(),
     )?;
     Ok(record)
+}
+
+fn acknowledge_missing(
+    missing: super::continuation::Missing,
+    cancelled: bool,
+    output: &mut crate::schedule::Output<'_>,
+    ended: &mut rendering::Ended,
+) {
+if cancelled || ended.closed || ended.failure.is_some() {
+    missing.acknowledge(false);
+} else {
+    match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
+        .and_then(|row| output.take(row))
+    {
+        Ok(true) => {
+            ended.finished += 1;
+            ended.skipped += 1;
+            missing.acknowledge(true);
+        }
+        // Preserve the old callback's accepted closed-pipe row. Its
+        // native accounting still settles before command success.
+        Ok(false) => {
+            ended.closed = true;
+            missing.acknowledge(true);
+        }
+        Err(error) => {
+            ended.failure = Some(error);
+            missing.acknowledge(false);
+        }
+    }
+}
 }

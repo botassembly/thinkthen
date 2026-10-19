@@ -16,8 +16,7 @@ use clap::Parser as _;
 use super::Environment;
 use crate::cli::args::{Cli, Command};
 use crate::cli::failure::{Failure, report};
-#[path = "../../../../thinkthen/src/test_deadline/child.rs"]
-mod child;
+use crate::test_deadline::child;
 use child::{ChildEnvironment as _, Folder};
 
 const CHILD_HOME: &str = "THINKTHEN_TEST_COMMAND_DEADLINE_HOME";

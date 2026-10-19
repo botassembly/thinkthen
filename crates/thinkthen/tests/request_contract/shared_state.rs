@@ -1,9 +1,9 @@
 //! Shared-state preparation uses the same public call, native preview and decoder.
 use super::*;
 
-fn arguments() -> RequestArguments {
-    args(QuestionSet::from_json(r#"{"version":1,"questions":{"yes":{"decide":"Fits?","true":{"what":"yes detail","examples":["extra-detail"]}},"pick":{"choose":"Which?","options":{"z":{"what":"first detail","examples":["extra-option"]},"a":null}}}}"#).unwrap().into(),
-        RequestInput::Text { text: "shared evidence".into(), images: vec![] })
+fn arguments() -> Result<RequestArguments, Error> {
+    Ok(args(QuestionSet::from_json(r#"{"version":1,"questions":{"yes":{"decide":"Fits?","true":{"what":"yes detail","examples":["extra-detail"]}},"pick":{"choose":"Which?","options":{"z":{"what":"first detail","examples":["extra-option"]},"a":null}}}}"#)?.into(),
+        RequestInput::Text { text: "shared evidence".into(), images: vec![] }))
 }
 
 #[test]
@@ -22,7 +22,7 @@ fn shared_state_preview_and_execution_keep_original_questions_descriptions_and_e
             .no_cache()
             .build()
             .unwrap();
-        let request = Request::named("annotate", arguments())
+        let request = Request::named("annotate", arguments().unwrap())
             .unwrap()
             .admit()
             .unwrap();
@@ -52,7 +52,7 @@ fn shared_state_preview_and_execution_keep_original_questions_descriptions_and_e
         let call = engine
             .call(
                 "annotate",
-                arguments(),
+                arguments().unwrap(),
                 RequestEnvironment {
                     controls: CallOptions::new()
                         .shared_state_groups()
@@ -158,7 +158,7 @@ fn shared_state_retains_decoded_failed_members_and_observes_them_before_completi
         let call = engine
             .call(
                 "annotate",
-                arguments(),
+                arguments().unwrap(),
                 RequestEnvironment {
                     controls: CallOptions::new()
                         .shared_state_groups()
@@ -179,28 +179,12 @@ fn shared_state_retains_decoded_failed_members_and_observes_them_before_completi
             ["yes", "pick"]
         );
         assert_eq!(members.iter().filter(|m| m.failure().is_some()).count(), 1);
-        for member in members.iter().filter(|m| m.failure().is_some()) {
-            assert_eq!(
-                member.failure(),
-                Some(if wrong_kind {
-                    FailureCause::WrongKind
-                } else {
-                    FailureCause::MissingAnswer
-                })
-            );
-            assert!(member.value().is_none());
-            assert!(member.probabilities().is_none());
-            assert!(member.leader().is_none());
-            assert!(member.answer_id().is_none());
-            assert!(member.failure_id().is_some());
-            assert_eq!(member.observations().len(), 1);
-            assert!(member.reported_usage().is_some());
-        }
+        assert_failed_members(&members, wrong_kind);
         assert_eq!(call.facts().records(), 1);
         assert_eq!(call.facts().requests_sent(), 1);
         assert_eq!(call.facts().input_tokens(), Some(6));
         assert_eq!(call.facts().output_tokens(), Some(2));
-        let request = Request::named("annotate", arguments())
+        let request = Request::named("annotate", arguments().unwrap())
             .unwrap()
             .admit()
             .unwrap();
@@ -218,7 +202,7 @@ fn shared_state_retains_decoded_failed_members_and_observes_them_before_completi
         assert!(recovered.value()[0].outcome().is_ok());
         let ordinary = engine.call(
             "annotate",
-            arguments(),
+            arguments().unwrap(),
             RequestEnvironment {
                 controls: CallOptions::new().batch(BatchSetting::Max),
                 feed: None,
@@ -286,7 +270,7 @@ fn shared_state_admits_the_full_group_before_packing_or_sending() {
         .unwrap()
         .build()
         .unwrap();
-    let request = Request::named("annotate", arguments())
+    let request = Request::named("annotate", arguments().unwrap())
         .unwrap()
         .admit()
         .unwrap();
@@ -312,7 +296,7 @@ fn shared_state_admits_the_full_group_before_packing_or_sending() {
     let error = engine
         .call(
             "annotate",
-            arguments(),
+            arguments().unwrap(),
             RequestEnvironment {
                 controls: CallOptions::new()
                     .shared_state_groups()
@@ -360,7 +344,7 @@ fn wholly_undecodable_replies_keep_native_error_and_started_facts_in_both_modes(
         let error = engine
             .call(
                 "annotate",
-                arguments(),
+                arguments().unwrap(),
                 RequestEnvironment {
                     controls,
                     feed: None,
@@ -376,4 +360,24 @@ fn wholly_undecodable_replies_keep_native_error_and_started_facts_in_both_modes(
         assert_eq!(facts.output_tokens(), Some(2));
     }
     assert_eq!(listener.count(), 2);
+}
+
+fn assert_failed_members(members: &[CompleteAnnotationMember<'_>], wrong_kind: bool) {
+        for member in members.iter().filter(|m| m.failure().is_some()) {
+            assert_eq!(
+                member.failure(),
+                Some(if wrong_kind {
+                    FailureCause::WrongKind
+                } else {
+                    FailureCause::MissingAnswer
+                })
+            );
+            assert!(member.value().is_none());
+            assert!(member.probabilities().is_none());
+            assert!(member.leader().is_none());
+            assert!(member.answer_id().is_none());
+            assert!(member.failure_id().is_some());
+            assert_eq!(member.observations().len(), 1);
+            assert!(member.reported_usage().is_some());
+        }
 }

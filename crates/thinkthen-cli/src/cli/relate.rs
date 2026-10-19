@@ -101,23 +101,10 @@ pub(crate) fn run(
     })
 }
 
-fn execute(
-    request: crate::Request,
-    (originals, sources): (&[crate::RawRecord], Option<&source::Sources>),
-    engine: &crate::Engine,
-    environment: &Environment,
-) -> Result<crate::CompleteRelated, Failure> {
-    let tally = environment.tally().start();
-    let session = engine.request_session_with_feed_options(
-        request,
-        crate::Surface::Cli,
-        crate::RequestSessionFeedOptions {
-            retain_success_on_cancel: true,
-            eager: true,
-            ..Default::default()
-        },
-    )?;
-    let mut descriptors = originals.iter().enumerate().map(|(ordinal, original)| {
+fn descriptor(
+    original: &crate::RawRecord,
+    location: Option<crate::SourceLocation>,
+) -> Result<crate::RequestSessionDescriptor, crate::Error> {
         let original = Some(match original.literal() {
             Some(text) => crate::RequestOriginal::Text {
                 text: text.to_owned(),
@@ -135,10 +122,28 @@ fn execute(
                 examples: None,
                 seed_spans: None,
             },
-            location: sources
-                .map(|sources| sources.location(ordinal))
-                .transpose()?,
+            location,
         })
+}
+
+fn execute(
+    request: crate::Request,
+    (originals, sources): (&[crate::RawRecord], Option<&source::Sources>),
+    engine: &crate::Engine,
+    environment: &Environment,
+) -> Result<crate::CompleteRelated, Failure> {
+    let tally = environment.tally().start();
+    let session = engine.request_session_with_feed_options(
+        request,
+        crate::Surface::Cli,
+        crate::RequestSessionFeedOptions {
+            retain_success_on_cancel: true,
+            eager: true,
+            ..Default::default()
+        },
+    )?;
+    let mut descriptors = originals.iter().enumerate().map(|(ordinal, original)| {
+        descriptor(original, sources.map(|sources| sources.location(ordinal)).transpose()?)
     });
     let mut input_done = false;
     let mut cancelled = false;
@@ -151,33 +156,29 @@ fn execute(
             cancelled = true;
             input_done = true;
         }
-        match session.try_read() {
-            crate::RequestSessionRead::Result(packet) => {
-                match packet {
-                    crate::RequestSessionResult::Aggregate(crate::RequestValue::Related(row)) => {
+        let packet = session.try_read();
+        let received = matches!(&packet, crate::RequestSessionRead::Result(_));
+        match packet {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(crate::RequestValue::Related(row))) => {
                         result = Some(row.into_parts().1);
                     }
-                    crate::RequestSessionResult::Aggregate(_)
-                    | crate::RequestSessionResult::Row(_) => {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(_)
+                    | crate::RequestSessionResult::Row(_)) => {
                         session.cancel();
                         cancelled = true;
                         input_done = true;
                     }
-                    crate::RequestSessionResult::Observation { .. } => {}
-                    crate::RequestSessionResult::Terminal(value) => {
-                        if let Some(facts) = &value.facts {
-                            environment.settle_native(facts);
-                            if let Some(start) = tally.take() {
-                                start.finish(facts)?;
-                            }
-                        }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { .. }) => {}
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
+                        environment.settle_session(&value, &mut tally)?;
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
-                }
-                continue;
-            }
+
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}
+        }
+        if received {
+            continue;
         }
         if !input_done {
             match session.try_push_with(|| {

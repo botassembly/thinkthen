@@ -95,6 +95,18 @@ struct Details<'a> {
     index: Option<usize>,
     strip_batch: bool,
 }
+impl Details<'_> {
+    fn write_input<M: serde::ser::SerializeMap>(&self, map: &mut M) -> Result<(), M::Error> {
+        if let Some(input) = self.input {
+            map.serialize_entry("input", input)?;
+        }
+        if let Some(index) = self.index {
+            map.serialize_entry("index", &index)?;
+        }
+        Ok(())
+    }
+}
+
 impl Serialize for Details<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap as _;
@@ -109,12 +121,7 @@ impl Serialize for Details<'_> {
                 map.serialize_entry(name, value)?;
             }
             if name == "value" {
-                if let Some(input) = self.input {
-                    map.serialize_entry("input", input)?;
-                }
-                if let Some(index) = self.index {
-                    map.serialize_entry("index", &index)?;
-                }
+                self.write_input(&mut map)?;
             }
         }
         map.end()
@@ -145,21 +152,6 @@ pub(super) fn without_batch(value: &impl Serialize) -> Result<String, Failure> {
     let Kind::Object(fields) = document.kind() else {
         return Err(Failure::Defect("a complete result is not an object"));
     };
-    struct Document<'a>(&'a [(String, Json)]);
-    impl Serialize for Document<'_> {
-        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            use serde::ser::SerializeMap as _;
-            let mut map = serializer.serialize_map(None)?;
-            for (name, value) in self.0 {
-                if name == "meta" {
-                    map.serialize_entry(name, &WithoutBatch(value))?;
-                } else {
-                    map.serialize_entry(name, value)?;
-                }
-            }
-            map.end()
-        }
-    }
     crate::render::json_line(&Document(fields)).map_err(Failure::from)
 }
 
@@ -195,5 +187,21 @@ mod tests {
         .unwrap();
         assert_eq!(streamed, crate::render::json_line(&document).unwrap());
         assert!(!format!("{document:?}").contains("question-marker"));
+    }
+}
+
+struct Document<'a>(&'a [(String, Json)]);
+impl Serialize for Document<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap as _;
+        let mut map = serializer.serialize_map(None)?;
+        for (name, value) in self.0 {
+            if name == "meta" {
+                map.serialize_entry(name, &WithoutBatch(value))?;
+            } else {
+                map.serialize_entry(name, value)?;
+            }
+        }
+        map.end()
     }
 }

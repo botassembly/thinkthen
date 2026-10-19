@@ -116,20 +116,19 @@ pub(super) fn run(
             cancelled = true;
             input_done = true;
         }
-        match session.try_read() {
-            crate::RequestSessionRead::Result(packet) => {
-                match packet {
-                    crate::RequestSessionResult::Row(row) => match row_value(row) {
+        let packet = session.try_read();
+        let received = matches!(&packet, crate::RequestSessionRead::Result(_));
+        match packet {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Row(row)) => match row_value(row) {
                         Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
                         Err(error) => {
                             ended.failure.get_or_insert(error);
                         }
                     },
-                    crate::RequestSessionResult::Aggregate(value) => {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(value)) => {
                         rendering.receive(value, &held, reading, output, &mut ended);
                     }
-                    crate::RequestSessionResult::Observation { value, .. }
-                        if configuration.keeping == crate::judge::Keeping::Ordered =>
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { value, .. }) if configuration.keeping == crate::judge::Keeping::Ordered =>
                     {
                         progress.observe(value);
                         if progress.failure.is_some() {
@@ -138,21 +137,17 @@ pub(super) fn run(
                             input_done = true;
                         }
                     }
-                    crate::RequestSessionResult::Observation { .. } => {}
-                    crate::RequestSessionResult::Terminal(value) => {
-                        if let Some(facts) = &value.facts {
-                            environment.settle_native(facts);
-                            if let Some(start) = tally.take() {
-                                start.finish(facts)?;
-                            }
-                        }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { .. }) => {}
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
+                        environment.settle_session(&value, &mut tally)?;
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
-                }
-                continue;
-            }
+
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}
+        }
+        if received {
+            continue;
         }
         let mut pending_reader = false;
         if !input_done {

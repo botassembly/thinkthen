@@ -78,54 +78,8 @@ fn prepare(
     admitted: &mut AdmittedRequest,
 ) -> Result<(Resolved, FileTier, Option<crate::RankSet>), Failure> {
     let function = admitted.request().call.function();
-    let selected = match &admitted.request().call.arguments().question {
-        crate::RequestQuestion::Reference { reference } => {
-            Some(crate::QuestionFileReference::reference(reference)?)
-        }
-        crate::RequestQuestion::Name { name } => Some(crate::QuestionFileReference::named(name)?),
-        crate::RequestQuestion::File { path } => Some(crate::QuestionFileReference::reference(
-            &format!("@{}", path.display()),
-        )?),
-        _ => None,
-    };
-    let saved = selected.is_some();
-    let authored = if let Some(reference) = selected {
-        let text = super::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
-        // Native saved-file parsing owns all grammar errors. This tentative
-        // host selection chooses only the already explicit set role.
-        let document = Json::parse(&text).ok();
-        let role = if document
-            .as_ref()
-            .is_some_and(|value| value.member("questions").is_some())
-        {
-            crate::QuestionFileRole::Set
-        } else {
-            crate::QuestionFileRole::Atomic
-        };
-        let dynamic = function == crate::RequestFunction::Choose
-            && admitted
-                .request()
-                .call
-                .arguments()
-                .options
-                .options_field
-                .is_some();
-        let definition = reference.parse(&text, role, |text| {
-            if dynamic {
-                crate::RecordChooseQuestion::from_json(text).map(RequestDefinition::DynamicChoose)
-            } else {
-                RequestDefinition::from_authored_json(text)
-            }
-        })?;
-        mismatch(function, &definition)?;
-        let retained = admitted.clone().with_resolved_definition(definition)?;
-        *admitted = retained;
-        Some(document.ok_or(Failure::Defect(
-            "native admitted file lost its ordered JSON",
-        ))?)
-    } else {
-        None
-    };
+    let authored = authored(admitted)?;
+    let saved = authored.is_some();
     let definition = admitted.resolve_question()?;
     let rank_set = match &definition {
         RequestDefinition::RankSet(set) => Some(set.clone()),
@@ -176,18 +130,7 @@ fn prepare(
             ));
         }
     };
-    if function == crate::RequestFunction::Rank && (options.yes.is_some() || options.no.is_some()) {
-        if rank_set.is_some() {
-            return Err(Failure::Usage(
-                "`rank` with a question set takes no --true or --false; put meanings in each member",
-            ));
-        }
-        if kind == QuestionKind::Score {
-            return Err(Failure::Usage(
-                "`rank` with a `score` question file takes no --true or --false",
-            ));
-        }
-    }
+    admit_rank_meanings(function, options, rank_set.is_some(), kind)?;
     let key = match kind {
         QuestionKind::Choose => "choose",
         QuestionKind::Tag => "tag",
@@ -213,6 +156,37 @@ fn prepare(
     let selected_batch = batch(top.and_then(|value| value.member("batch")))?;
     let tuned = function != crate::RequestFunction::Rank
         && member.is_some_and(|value| value.member("threshold").is_some());
+    let mut resolved = Resolved {
+            kind,
+            dynamic,
+            model,
+            on,
+            profile,
+            literal_question,
+            context_schema,
+            sources: Sources::default(),
+            saved,
+        };
+    resolved.sources = resolved.setting_sources(function, options, member, top, tuned);
+    Ok((
+        resolved,
+        FileTier {
+            batch: selected_batch,
+            tuned,
+        },
+        rank_set,
+    ))
+}
+
+impl Resolved {
+    fn setting_sources(
+        &self,
+        function: crate::RequestFunction,
+        options: &crate::RequestOptions,
+        member: Option<&Json>,
+        top: Option<&Json>,
+        tuned: bool,
+    ) -> Sources {
     let source = |typed: bool, name: &str| {
         if typed {
             "command line"
@@ -223,11 +197,11 @@ fn prepare(
         }
     };
     let mut sources =
-        Sources::default().setting("question", if saved { "file" } else { "command line" });
-    sources = match kind {
+        Sources::default().setting("question", if self.saved { "file" } else { "command line" });
+    sources = match self.kind {
         QuestionKind::Choose => sources.setting(
             "options",
-            source(options.labels.is_some() || dynamic, "options"),
+            source(options.labels.is_some() || self.dynamic, "options"),
         ),
         QuestionKind::Tag => sources.setting("labels", source(options.labels.is_some(), "labels")),
         QuestionKind::Score => {
@@ -237,7 +211,7 @@ fn prepare(
             .setting("true", source(options.yes.is_some(), "true"))
             .setting("false", source(options.no.is_some(), "false")),
     };
-    if kind != QuestionKind::Score
+    if self.kind != QuestionKind::Score
         && (function != crate::RequestFunction::Rank || options.threshold.is_some() || tuned)
     {
         sources = sources.setting(
@@ -257,24 +231,59 @@ fn prepare(
                 "default"
             },
         );
-    Ok((
-        Resolved {
-            kind,
-            dynamic,
-            model,
-            on,
-            profile,
-            literal_question,
-            context_schema,
-            sources,
-            saved,
-        },
-        FileTier {
-            batch: selected_batch,
-            tuned,
-        },
-        rank_set,
-    ))
+        sources
+    }
+}
+
+fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
+    let function = admitted.request().call.function();
+    let selected = match &admitted.request().call.arguments().question {
+        crate::RequestQuestion::Reference { reference } => {
+            Some(crate::QuestionFileReference::reference(reference)?)
+        }
+        crate::RequestQuestion::Name { name } => Some(crate::QuestionFileReference::named(name)?),
+        crate::RequestQuestion::File { path } => Some(crate::QuestionFileReference::reference(
+            &format!("@{}", path.display()),
+        )?),
+        _ => None,
+    };
+    Ok(if let Some(reference) = selected {
+        let text = super::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
+        // Native saved-file parsing owns all grammar errors. This tentative
+        // host selection chooses only the already explicit set role.
+        let document = Json::parse(&text).ok();
+        let role = if document
+            .as_ref()
+            .is_some_and(|value| value.member("questions").is_some())
+        {
+            crate::QuestionFileRole::Set
+        } else {
+            crate::QuestionFileRole::Atomic
+        };
+        let dynamic = function == crate::RequestFunction::Choose
+            && admitted
+                .request()
+                .call
+                .arguments()
+                .options
+                .options_field
+                .is_some();
+        let definition = reference.parse(&text, role, |text| {
+            if dynamic {
+                crate::RecordChooseQuestion::from_json(text).map(RequestDefinition::DynamicChoose)
+            } else {
+                RequestDefinition::from_authored_json(text)
+            }
+        })?;
+        mismatch(function, &definition)?;
+        let retained = admitted.clone().with_resolved_definition(definition)?;
+        *admitted = retained;
+        Some(document.ok_or(Failure::Defect(
+            "native admitted file lost its ordered JSON",
+        ))?)
+    } else {
+        None
+    })
 }
 
 fn mismatch(
@@ -319,3 +328,22 @@ fn mismatch(
 
 #[cfg(test)]
 mod tests;
+
+fn admit_rank_meanings(
+    function: crate::RequestFunction, options: &crate::RequestOptions,
+    rank_set: bool, kind: QuestionKind,
+) -> Result<(), Failure> {
+    if function == crate::RequestFunction::Rank && (options.yes.is_some() || options.no.is_some()) {
+        if rank_set {
+            return Err(Failure::Usage(
+                "`rank` with a question set takes no --true or --false; put meanings in each member",
+            ));
+        }
+        if kind == QuestionKind::Score {
+            return Err(Failure::Usage(
+                "`rank` with a `score` question file takes no --true or --false",
+            ));
+        }
+    }
+    Ok(())
+}

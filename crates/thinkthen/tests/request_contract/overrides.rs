@@ -1,13 +1,13 @@
 //! Public request overlays retain native precedence, descriptions and list admission.
 use super::*;
 
-fn preview(engine: &Engine, function: &str, question: &str, options: &str) -> String {
+fn preview(engine: &Engine, function: &str, question: &str, options: &str) -> Result<String, Box<dyn std::error::Error>> {
     let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#))
-        .unwrap().admit().unwrap();
+        ?.admit()?;
     let plan = engine
         .plan_request(&request, RequestEnvironment::default())
-        .unwrap();
-    String::from_utf8(plan.first_body().unwrap().to_vec()).unwrap()
+        ?;
+    Ok(String::from_utf8(plan.first_body().ok_or("missing preview body")?.to_vec())?)
 }
 
 #[test]
@@ -33,7 +33,7 @@ fn explicit_meanings_replace_saved_content_and_absence_retains_it() {
             vec!["saved_yes_marker", "saved_no_marker"],
         ),
     ] {
-        let body = preview(&engine, "decide", question, options);
+        let body = preview(&engine, "decide", question, options).unwrap();
         for marker in present {
             assert!(body.contains(marker), "{body}");
         }
@@ -68,7 +68,7 @@ fn whole_lists_replace_saved_lists_preserving_order_and_description_content() {
         let options = format!(
             r#"{{"{key}":[{{"name":"replacement_z_marker","description":{{"detail":"description_z_marker"}}}},{{"name":"replacement_a_marker","description":["description_a_marker"]}}]}}"#
         );
-        let body = preview(&engine, function, question, &options);
+        let body = preview(&engine, function, question, &options).unwrap();
         assert!(!body.contains("saved_a_marker"));
         assert!(!body.contains("saved_b_marker"));
         let authored_key = if function == "choose" { "options" } else { key };

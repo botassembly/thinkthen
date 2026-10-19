@@ -98,7 +98,9 @@ pub(super) fn inline(arguments: &RecognizeArguments) -> Result<Recognize, Failur
     question.with_snippet_pieces(snippet).map_err(Failure::from)
 }
 
-fn kinds(arguments: &RecognizeArguments) -> Result<Vec<(String, Option<Description>)>, Failure> {
+type Kinds = Vec<(String, Option<Description>)>;
+
+fn kinds(arguments: &RecognizeArguments) -> Result<Kinds, Failure> {
     if arguments.described.is_empty() {
         return Ok(arguments
             .kinds

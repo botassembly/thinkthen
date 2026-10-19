@@ -120,37 +120,7 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     );
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.requests()[0].body, REFUND_REQUEST.as_bytes());
-    let plain = super::engine(listener.base());
-    assert_eq!(plain.estimate_reported_cost(1, 1), None);
-    assert_eq!(
-        plain
-            .decide(&asked, "Another.")
-            .expect("plain answer")
-            .facts()
-            .estimated_cost_usd(),
-        None
-    );
-    assert_eq!(listener.count(), 2);
-    assert_eq!(
-        listener.requests()[0].body,
-        REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
-    );
-    let zero = priced(listener.base(), "0", "0")
-        .no_cache()
-        .build()
-        .expect("zero engine");
-    assert_eq!(
-        zero.decide(&asked, "Zero.")
-            .expect("zero price answer")
-            .facts()
-            .estimated_cost_usd(),
-        Some("0.000000")
-    );
-    assert_eq!(listener.count(), 3);
-    assert_eq!(
-        listener.requests()[0].body,
-        REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
-    );
+    assert_plain_and_zero_prices(&listener, &asked);
     let _gone = std::fs::remove_dir_all(folder);
 }
 
@@ -504,4 +474,38 @@ fn a_failed_eager_rank_carries_its_started_call_facts() {
         (0, 1, None)
     );
     assert_eq!(listener.count(), 1);
+}
+
+fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
+    let plain = super::engine(listener.base());
+    assert_eq!(plain.estimate_reported_cost(1, 1), None);
+    assert_eq!(
+        plain
+            .decide(&asked, "Another.")
+            .expect("plain answer")
+            .facts()
+            .estimated_cost_usd(),
+        None
+    );
+    assert_eq!(listener.count(), 2);
+    assert_eq!(
+        listener.requests()[0].body,
+        REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
+    );
+    let zero = priced(listener.base(), "0", "0")
+        .no_cache()
+        .build()
+        .expect("zero engine");
+    assert_eq!(
+        zero.decide(&asked, "Zero.")
+            .expect("zero price answer")
+            .facts()
+            .estimated_cost_usd(),
+        Some("0.000000")
+    );
+    assert_eq!(listener.count(), 3);
+    assert_eq!(
+        listener.requests()[0].body,
+        REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
+    );
 }

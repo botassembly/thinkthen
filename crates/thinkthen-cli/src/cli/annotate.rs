@@ -96,16 +96,20 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?;
     let mismatch = Mismatch::new(settings.profile.as_deref(), engine.profile_name());
-    let judging = Judging::new(
-        arguments,
-        environment,
+    let judging = Judging {
+        context: asking::context::shared(arguments.batching.context.as_deref())?,
+        context_field: arguments.batching.context_field.clone(),
+        streams: !matches!(arguments.common.framing(), Framing::Document),
+        continue_missing: arguments.on_error.is_some(),
         engine,
+        common: &arguments.common,
+        environment,
         set,
-        mismatch,
         settings,
         backend,
         recording,
-    )?;
+        mismatch,
+    };
     if arguments.common.dry_run {
         return plan::dry_run(&judging, admitted, &reading, inputs, setting, &mut writer);
     }
@@ -208,33 +212,6 @@ pub(crate) struct Judging<'a> {
 }
 
 impl<'a> Judging<'a> {
-    fn new(
-        arguments: &'a AnnotateArguments,
-        environment: &'a Environment,
-        engine: Engine,
-        set: QuestionSet,
-        mismatch: Mismatch,
-        settings: settings::Settings,
-        backend: ResolvedSettings,
-        recording: bool,
-    ) -> Result<Self, Failure> {
-        let common = &arguments.common;
-        Ok(Self {
-            context: asking::context::shared(arguments.batching.context.as_deref())?,
-            context_field: arguments.batching.context_field.clone(),
-            streams: !matches!(common.framing(), Framing::Document),
-            continue_missing: arguments.on_error.is_some(),
-            engine,
-            common,
-            environment,
-            set,
-            settings,
-            backend,
-            recording,
-            mismatch,
-        })
-    }
-
     pub(crate) const fn engine(&self) -> &Engine {
         &self.engine
     }

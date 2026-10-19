@@ -177,11 +177,10 @@ pub(super) fn run(
             cancelled = true;
             input_done = true;
         }
-        match session.try_read() {
-            crate::RequestSessionRead::Result(packet) => {
-                match packet {
-                    crate::RequestSessionResult::Aggregate(value)
-                        if !ended.closed && ended.failure.is_none() =>
+        let packet = session.try_read();
+        let received = matches!(&packet, crate::RequestSessionRead::Result(_));
+        match packet {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(value)) if !ended.closed && ended.failure.is_none() =>
                     {
                         if let Err(error) =
                             receive(running, reading, value, &held, output, &mut ended)
@@ -189,25 +188,20 @@ pub(super) fn run(
                             ended.failure = Some(error);
                         }
                     }
-                    crate::RequestSessionResult::Terminal(value) => {
-                        if let Some(facts) = &value.facts {
-                            running.environment.settle_native(facts);
-                            if let Some(start) = tally.take() {
-                                start.finish(facts)?;
-                            }
-                        }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
+                        running.environment.settle_session(&value, &mut tally)?;
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
-                    _ => {}
-                }
-                continue;
-            }
+            crate::RequestSessionRead::Result(_) => {}
+
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}
         }
+        if received {
+            continue;
+        }
         let mut pending_reader = false;
-        if !input_done {
-            let pushed = session.try_push_with(|| {
+        let next_descriptor = || {
                 if let Some(finite) = &mut finite {
                     return finite.next().ok_or(FeedRead::End);
                 }
@@ -229,7 +223,9 @@ pub(super) fn run(
                     }
                     _ => Err(FeedRead::End),
                 }
-            });
+            };
+        if !input_done {
+            let pushed = session.try_push_with(next_descriptor);
             match pushed {
                 Ok(crate::RequestSessionPushStatus::Accepted) => continue,
                 Ok(crate::RequestSessionPushStatus::Full) => {}

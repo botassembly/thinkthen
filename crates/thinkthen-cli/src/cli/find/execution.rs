@@ -37,31 +37,27 @@ pub(super) fn execute(
             cancelled = true;
             input_done = true;
         }
-        match session.try_read() {
-            crate::RequestSessionRead::Result(packet) => {
-                match packet {
-                    crate::RequestSessionResult::Aggregate(crate::RequestValue::Found(value)) => {
+        let packet = session.try_read();
+        let received = matches!(&packet, crate::RequestSessionRead::Result(_));
+        match packet {
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(crate::RequestValue::Found(value))) => {
                         found = Some(value);
                     }
-                    crate::RequestSessionResult::Observation { .. } => {}
-                    crate::RequestSessionResult::Terminal(value) => {
-                        if let Some(facts) = &value.facts {
-                            environment.settle_native(facts);
-                            if let Some(start) = tally.take() {
-                                start.finish(facts)?;
-                            }
-                        }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { .. }) => {}
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
+                        environment.settle_session(&value, &mut tally)?;
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
-                    _ => {
+            crate::RequestSessionRead::Result(_) => {
                         failure
                             .get_or_insert(Failure::Defect("find returned another native result"));
                     }
-                }
-                continue;
-            }
+
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}
+        }
+        if received {
+            continue;
         }
         if !input_done {
             match session.try_push_with(|| next.next().ok_or(Input::End).and_then(descriptor)) {

@@ -18,7 +18,7 @@ pub(super) fn read_by(
         || !keeping.streams_only()
         || common.unit.as_deref() == Some("file")
     {
-        return Ok(Reading::new(asked, on)?);
+        return Reading::new(asked, on);
     }
     let framing = if on.is_empty() {
         Framing::Lines

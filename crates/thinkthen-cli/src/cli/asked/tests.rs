@@ -71,7 +71,7 @@ fn caller_setup_tiers_preserve_the_saved_definition_and_native_preview() {
         conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok("{}"))
             .unwrap();
     let engine = crate::Engine::builder()
-        .base_url(&listener.base())
+        .base_url(listener.base())
         .unwrap()
         .api_key("fixture-key")
         .unwrap()

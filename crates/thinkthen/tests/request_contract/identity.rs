@@ -2,12 +2,12 @@
 use super::*;
 use thinkthen::RelationIdentityMode;
 
-fn completed_identity(value: &Value) -> &str {
-    let value = value.as_array().map_or(value, |rows| &rows[0]);
-    value["meta"]["question_sha256"]
+fn completed_identity(value: &Value) -> Option<&str> {
+    let value = value.as_array().and_then(|rows| rows.first()).unwrap_or(value);
+    let meta = value.get("meta")?;
+    meta.get("question_sha256")
+        .or_else(|| meta.get("questions_sha256"))?
         .as_str()
-        .or_else(|| value["meta"]["questions_sha256"].as_str())
-        .unwrap()
 }
 
 #[test]
@@ -68,11 +68,15 @@ fn canonical_definitions_match_complete_result_identities() {
             .unwrap();
         let complete = serde_json::to_value(call.value()).unwrap();
         assert_eq!(
-            identity,
+            Some(identity.as_str()),
             completed_identity(&complete),
             "{function}: {complete}"
         );
     }
+}
+
+#[test]
+fn definition_identity_retains_order_and_find_none_without_stage_context() {
     let forward = RequestDefinition::from_authored_json(
         r#"{"version":1,"questions":{"z":{"decide":"Last?"},"a":{"decide":"First?"}}}"#,
     )
@@ -143,7 +147,7 @@ fn relation_modes_match_complete_readings_and_templates_have_no_invented_identit
             )
             .unwrap();
         assert_eq!(
-            expected,
+            Some(expected.as_str()),
             completed_identity(&serde_json::to_value(call.value()).unwrap())
         );
     }

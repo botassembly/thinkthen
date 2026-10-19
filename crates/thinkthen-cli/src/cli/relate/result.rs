@@ -55,6 +55,19 @@ struct Complete<'a, I: ?Sized, V: ?Sized> {
     originals: &'a I,
     value: Option<&'a V>,
 }
+impl<I: ?Sized, V: Serialize + ?Sized> Complete<'_, I, V> {
+    fn write_value<M: serde::ser::SerializeMap>(
+        &self, map: &mut M, name: &str, held: &Json,
+    ) -> Result<(), M::Error> {
+        if let Some(value) = self.value {
+            map.serialize_entry(name, value)?;
+        } else {
+            map.serialize_entry(name, held)?;
+        }
+        Ok(())
+    }
+}
+
 impl<I: Serialize + ?Sized, V: Serialize + ?Sized> Serialize for Complete<'_, I, V> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeMap as _;
@@ -64,11 +77,7 @@ impl<I: Serialize + ?Sized, V: Serialize + ?Sized> Serialize for Complete<'_, I,
                 continue;
             }
             if name == "value" {
-                if let Some(value) = self.value {
-                    map.serialize_entry(name, value)?;
-                } else {
-                    map.serialize_entry(name, held)?;
-                }
+                self.write_value(&mut map, name, held)?;
                 map.serialize_entry("input", self.originals)?;
                 map.serialize_entry("index", &0)?;
             } else {

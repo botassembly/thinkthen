@@ -157,6 +157,22 @@ pub(super) struct Complete<'a> {
     pub(super) value: Option<Located<'a>>,
     pub(super) input: Option<&'a crate::RawRecord>,
 }
+impl Complete<'_> {
+    fn write_value<M: serde::ser::SerializeMap>(
+        &self, map: &mut M, name: &str, value: &crate::saved_json::Json,
+    ) -> Result<(), M::Error> {
+        if let Some(located) = &self.value {
+            map.serialize_entry(name, located)?;
+        } else {
+            map.serialize_entry(name, value)?;
+        }
+        if let Some(input) = self.input {
+            map.serialize_entry("input", input)?;
+        }
+        Ok(())
+    }
+}
+
 impl Serialize for Complete<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::{Error as _, SerializeMap as _};
@@ -171,14 +187,7 @@ impl Serialize for Complete<'_> {
                 continue;
             }
             if name == "value" {
-                if let Some(located) = &self.value {
-                    map.serialize_entry(name, located)?;
-                } else {
-                    map.serialize_entry(name, value)?;
-                }
-                if let Some(input) = self.input {
-                    map.serialize_entry("input", input)?;
-                }
+                self.write_value(&mut map, name, value)?;
             } else {
                 map.serialize_entry(name, value)?;
             }

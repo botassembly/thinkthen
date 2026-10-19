@@ -42,19 +42,8 @@ impl Continuation {
             {
                 return false;
             }
-            loop {
-                match replies.recv_timeout(Duration::from_millis(50)) {
-                    Ok(accepted) => return accepted,
-                    Err(mpsc::RecvTimeoutError::Disconnected) => return false,
-                    Err(mpsc::RecvTimeoutError::Timeout) => {
-                        if stopped.load(Ordering::Acquire) || signal.fired() {
-                            // A rendered closed-pipe row may already have been
-                            // acknowledged before cancellation. Preserve that fact.
-                            return replies.try_recv().unwrap_or(false);
-                        }
-                    }
-                }
-            }
+            await_acknowledgement(&replies, &stopped, &signal)
+
         });
         (Self { events, closed }, callback)
     }
@@ -65,6 +54,21 @@ impl Continuation {
         self.closed.store(true, Ordering::Release);
     }
 }
+fn await_acknowledgement(replies: &Receiver<bool>, stopped: &AtomicBool, signal: &Signal) -> bool {
+    loop {
+        match replies.recv_timeout(Duration::from_millis(50)) {
+            Ok(accepted) => return accepted,
+            Err(mpsc::RecvTimeoutError::Disconnected) => return false,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if stopped.load(Ordering::Acquire) || signal.fired() {
+                    // A rendered closed-pipe row may already have been acknowledged.
+                    return replies.try_recv().unwrap_or(false);
+                }
+            }
+        }
+    }
+}
+
 impl Drop for Continuation {
     fn drop(&mut self) {
         self.close();

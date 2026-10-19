@@ -111,6 +111,19 @@ impl Environment {
             *settled = Some(facts.clone());
         }
     }
+    pub(crate) fn settle_session(
+        &self,
+        terminal: &thinkthen::RequestSessionTerminal,
+        tally: &mut Option<thinkthen::TallyStart<'_>>,
+    ) -> Result<(), Failure> {
+        if let Some(facts) = &terminal.facts {
+            self.settle_native(facts);
+            if let Some(start) = tally.take() {
+                start.finish(facts)?;
+            }
+        }
+        Ok(())
+    }
     pub(crate) fn native_call_id(&self) -> Option<crate::CallId> {
         self.native_facts
             .lock()

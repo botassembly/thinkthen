@@ -88,10 +88,12 @@ fn provider_identifiers_exclude_secrets_originals_and_raw_parser_bodies() {
 }
 
 fn assert_private(error: &thinkthen::Error, marker: &str) {
+    let encoded = serde_json::to_string(&error.complete());
+    assert!(encoded.is_ok());
     for output in [
         format!("{error:?}"),
         error.to_string(),
-        serde_json::to_string(&error.complete()).unwrap(),
+        encoded.unwrap_or_default(),
         format!("{:?}", error.diagnostic()),
     ] {
         assert!(!output.contains(marker), "private bytes in {output}");

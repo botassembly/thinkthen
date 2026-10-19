@@ -68,7 +68,9 @@ impl Json {
         }
     }
     pub(crate) fn kind(&self) -> &Kind {
-        self.kind.get_or_init(|| {
+        self.kind.get_or_init(|| self.materialize())
+    }
+    fn materialize(&self) -> Kind {
             let Some(held) = self.content() else {
                 return Kind::Null;
             };
@@ -99,7 +101,6 @@ impl Json {
                 return Kind::Bool(boolean);
             }
             Kind::Null
-        })
     }
     pub(crate) fn member(&self, name: &str) -> Option<&Self> {
         let Kind::Object(fields) = self.kind() else {

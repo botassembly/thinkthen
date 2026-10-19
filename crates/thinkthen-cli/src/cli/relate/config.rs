@@ -51,32 +51,7 @@ pub(super) fn settle(
             "`--either` applies only to inline relation rules; a question file sets either on each relation",
         ));
     }
-    let authored = if let Some(file) = file {
-        let reference = crate::QuestionFileReference::reference(&format!("@{file}"))?;
-        let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
-        let relation = reference
-            .parse(
-                &text,
-                crate::QuestionFileRole::Relate,
-                Relate::from_records_json,
-            )
-            .map_err(|error| {
-                // Reference admission reserves Usage for an unambiguous role
-                // mismatch; saved parser/name/content failures are Local.
-                if error.kind() == crate::ErrorKind::Usage {
-                    Failure::Relate(crate::failure::relate::Error::Config {
-                        file: true,
-                        error: "the question file holds another command's question".to_owned(),
-                    })
-                } else {
-                    Failure::from(error)
-                }
-            })?;
-        *admitted = admitted.clone().with_resolved_definition(relation.into())?;
-        Some(Json::parse(&text)?)
-    } else {
-        None
-    };
+    let authored = authored(file, admitted)?;
     let mut definition = admitted.resolve_question()?;
     let RequestDefinition::Relate(_) = &definition else {
         return Err(Failure::Defect("relate lost its definition"));
@@ -118,10 +93,8 @@ pub(super) fn settle(
             .unwrap_or_else(|| field("kind", "/kind")),
     };
     // The native authored parser owns override validation and its relation-specific diagnostics.
-    if file.is_some() {
-        if let RequestDefinition::Relate(relation) = &mut definition {
-            *relation = relation.clone().record_fields(&fields.name, &fields.kind)?;
-        }
+    if file.is_some() && let RequestDefinition::Relate(relation) = &mut definition {
+        *relation = relation.clone().record_fields(&fields.name, &fields.kind)?;
     }
     let framing = if arguments.common.input.len() > 1
         && arguments.common.unit.is_none()
@@ -138,7 +111,58 @@ pub(super) fn settle(
             "--lines takes neither --field nor --kind-field",
         ));
     }
-    let top = authored.as_ref();
+    let from = setting_sources(arguments, file, authored.as_ref());
+    let model = arguments.common.model.clone().or_else(|| {
+        document
+            .member("model")
+            .and_then(Json::as_str)
+            .map(str::to_owned)
+    });
+    let profile = document
+        .member("profile")
+        .and_then(Json::as_str)
+        .map(str::to_owned);
+    Ok(Settled {
+        definition,
+        framing,
+        fields,
+        model,
+        threshold,
+        profile,
+        from,
+    })
+}
+
+fn authored(file: Option<&str>, admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
+    Ok(if let Some(file) = file {
+        let reference = crate::QuestionFileReference::reference(&format!("@{file}"))?;
+        let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
+        let relation = reference
+            .parse(
+                &text,
+                crate::QuestionFileRole::Relate,
+                Relate::from_records_json,
+            )
+            .map_err(|error| {
+                // Reference admission reserves Usage for an unambiguous role
+                // mismatch; saved parser/name/content failures are Local.
+                if error.kind() == crate::ErrorKind::Usage {
+                    Failure::Relate(crate::failure::relate::Error::Config {
+                        file: true,
+                        error: "the question file holds another command's question".to_owned(),
+                    })
+                } else {
+                    Failure::from(error)
+                }
+            })?;
+        *admitted = admitted.clone().with_resolved_definition(relation.into())?;
+        Some(Json::parse(&text)?)
+    } else {
+        None
+    })
+}
+
+fn setting_sources(arguments: &RelateArguments, file: Option<&str>, top: Option<&Json>) -> Option<From> {
     let source = |supplied, name| {
         if supplied {
             "command line"
@@ -152,7 +176,7 @@ pub(super) fn settle(
         .and_then(|value| value.member("relate"))
         .and_then(|value| value.member("fields"))
         .is_some();
-    let from = file.map(|_| From {
+    file.map(|_| From {
         question: "file",
         threshold: source(arguments.threshold.is_some(), "threshold"),
         model: source(arguments.common.model.is_some(), "model"),
@@ -173,24 +197,5 @@ pub(super) fn settle(
         profile: top
             .is_some_and(|value| value.member("profile").is_some())
             .then_some("file"),
-    });
-    let model = arguments.common.model.clone().or_else(|| {
-        document
-            .member("model")
-            .and_then(Json::as_str)
-            .map(str::to_owned)
-    });
-    let profile = document
-        .member("profile")
-        .and_then(Json::as_str)
-        .map(str::to_owned);
-    Ok(Settled {
-        definition,
-        framing,
-        fields,
-        model,
-        threshold,
-        profile,
-        from,
     })
 }
