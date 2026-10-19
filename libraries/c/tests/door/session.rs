@@ -159,7 +159,7 @@ fn assert_definition_admission_refusals(backend: &Backend) {
 
 #[test]
 fn session_owns_inputs_engine_and_transferred_packets() {
-    for (surface, typed) in [("c", false), ("go", false), ("php", false), ("c", true)] {
+    for (surface, legacy) in [("c", false), ("go", false), ("php", false), ("c", true)] {
         let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
         r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":0}}"#
     )).expect("owned loopback");
@@ -172,7 +172,7 @@ fn session_owns_inputs_engine_and_transferred_packets() {
                 if surface != "c" {
                     values.push(("SESSION_SURFACE", Path::new(surface)));
                 }
-                if typed {
+                if legacy {
                     values.push(("SESSION_TYPED", Path::new("1")));
                 }
                 values

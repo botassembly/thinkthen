@@ -179,7 +179,8 @@ static THREAD_RESULT separate_error(void *unused) {
     return THREAD_DONE;
 }
 
-static int named_sessions(thinkthen_engine *engine) {
+/* Retained component ABI refusals; normal consumers use full Request JSON. */
+static int legacy_named_refusals(thinkthen_engine *engine) {
     struct thinkthen_named_request_v1 request = {
         counted("decide"), counted("{\"kind\":\"text\",\"text\":\"Does it pass?\"}"),
         counted("{\"kind\":\"records\",\"items\":[]}"), counted("{}")
@@ -205,22 +206,29 @@ static int named_sessions(thinkthen_engine *engine) {
     THREAD_TYPE thread;
     if (fixture_start(&thread, separate_error, NULL) != 0) return 1;
     check(fixture_join(thread) == 0 && message == thinkthen_session_error_message(), "named diagnostic remains local to calling thread");
-    if (getenv("SESSION_NAMED_REFUSALS")) { thinkthen_engine_free(engine); return failed; }
+    thinkthen_engine_free(engine);
+    return failed;
+}
+static int collection_sessions(thinkthen_engine *engine) {
+    check(thinkthen_session_new(NULL, NULL, 0, NULL) == THINKTHEN_EUSAGE, "prior immediate diagnostic");
+    const char *message = thinkthen_session_error_message();
     const char *names[] = {"find", "relate"};
     const uint32_t kinds[] = {THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE_V1, THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1};
     thinkthen_session *sessions[2] = {NULL, NULL};
     for (size_t i = 0; i < 2; ++i) {
-        char function[7], question[256], input[256], options[3], origin[2];
+        char function[7], question[256], input[256], request[1024];
         strcpy(function, names[i]);
         strcpy(question, i ? "{\"kind\":\"definition\",\"value\":{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"follows\",\"source\":\"*\",\"target\":\"*\",\"reads\":\"follows\"}]}}}" : "{\"kind\":\"text\",\"text\":\"Which?\"}");
-        strcpy(input, i ? "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"First\",\"kind\":\"alert\"}}},{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"Second\",\"kind\":\"alert\"}}}]}" : "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"First unit.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Second unit.\"}}]}"); strcpy(options, "{}"); strcpy(origin, "c");
-        request.function = counted(function); request.question_json = counted(question);
-        request.input_json = counted(input); request.options_json = counted(options);
-        int code = thinkthen_session_new_named_with_surface(engine, &request, counted(origin), &sessions[i]);
-        check(code == THINKTHEN_OK, "named collection constructor succeeds");
+        strcpy(input, i ? "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"First\",\"kind\":\"alert\"}}},{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"Second\",\"kind\":\"alert\"}}}]}" : "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"First unit.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Second unit.\"}}]}");
+        int length = snprintf(request, sizeof request,
+            "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"%s\",\"question\":%s,\"input\":%s,\"options\":{}}}",
+            function, question, input);
+        check(length > 0 && (size_t)length < sizeof request, "collection request fits buffer");
+        int code = thinkthen_session_new(engine, request, (size_t)length, &sessions[i]);
+        check(code == THINKTHEN_OK, "JSON collection constructor succeeds");
         if (code != THINKTHEN_OK) { thinkthen_engine_free(engine); for (size_t j = 0; j < i; ++j) thinkthen_session_free(sessions[j]); return failed; }
-        check(message == thinkthen_session_error_message(), "named success preserves immediate diagnostic");
-        memset(function, 'x', sizeof function); memset(question, 'x', sizeof question); memset(input, 'x', sizeof input); memset(options, 'x', sizeof options); memset(origin, 'x', sizeof origin);
+        check(message == thinkthen_session_error_message(), "JSON success preserves immediate diagnostic");
+        memset(function, 'x', sizeof function); memset(question, 'x', sizeof question); memset(input, 'x', sizeof input); memset(request, 'x', sizeof request);
     }
     thinkthen_engine_free(engine);
     for (size_t i = 0; i < 2; ++i) {
@@ -228,26 +236,26 @@ static int named_sessions(thinkthen_engine *engine) {
         thinkthen_session_result *kept = NULL;
         for (;;) {
             uint32_t status = 99; thinkthen_session_result *packet = NULL;
-            check(thinkthen_session_try_read(sessions[i], &status, &packet) == THINKTHEN_OK, "named read survives input and engine release");
+            check(thinkthen_session_try_read(sessions[i], &status, &packet) == THINKTHEN_OK, "JSON read survives input and engine release");
             if (status == THINKTHEN_SESSION_END_V1) break;
             if (status == THINKTHEN_SESSION_PENDING_V1) {
-                uint32_t ready; check(thinkthen_session_wait(sessions[i], THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "named wait succeeds");
+                uint32_t ready; check(thinkthen_session_wait(sessions[i], THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "JSON wait succeeds");
                 continue;
             }
             const thinkthen_complete_session_packet_v1 *view = NULL;
-            check(thinkthen_session_result_view(packet, &view) == THINKTHEN_OK, "named typed packet");
+            check(thinkthen_session_result_view(packet, &view) == THINKTHEN_OK, "JSON typed packet");
             if (view && view->kind == kinds[i]) { aggregate++; kept = packet; }
             if (view && view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
                 const thinkthen_complete_session_packet_terminal_v1 *done = view->data.terminal;
-                check(done->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1 && done->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && done->facts.value->requests_sent == 1, "named collection keeps actual send facts");
+                check(done->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1 && done->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && done->facts.value->requests_sent == 1, "JSON collection keeps actual send facts");
                 terminal++;
             }
             if (packet != kept) thinkthen_session_result_free(packet);
         }
-        check(aggregate == 1 && terminal == 1, "named records select the function collection kind");
+        check(aggregate == 1 && terminal == 1, "JSON records select the function collection kind");
         thinkthen_session_free(sessions[i]);
         const thinkthen_complete_session_packet_v1 *retained = NULL;
-        check(thinkthen_session_result_view(kept, &retained) == THINKTHEN_OK && retained && retained->kind == kinds[i], "named aggregate survives engine and session release");
+        check(thinkthen_session_result_view(kept, &retained) == THINKTHEN_OK && retained && retained->kind == kinds[i], "JSON aggregate survives engine and session release");
         thinkthen_session_result_free(kept);
     }
     return failed;
@@ -278,7 +286,8 @@ int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
     check(engine != NULL, "engine builds");
     if (!engine) return 1;
-    if (getenv("SESSION_NAMED")) return named_sessions(engine);
+    if (getenv("SESSION_NAMED_REFUSALS")) return legacy_named_refusals(engine);
+    if (getenv("SESSION_COLLECTION")) return collection_sessions(engine);
     if (getenv("SESSION_HELD")) {
         thinkthen_session *session = open_session(engine, direct);
         thinkthen_engine_free(engine);
@@ -445,12 +454,14 @@ int main(void) {
     check(thinkthen_session_finish(session, (const char *)invalid, sizeof invalid) == THINKTHEN_EUSAGE, "reader failure UTF-8 refuses");
     check(finish_owned(session, 1) == THINKTHEN_OK, "valid owned reader failure");
     check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_EUSAGE, "changed finish refuses");
+    if (getenv("SESSION_TYPED")) {
+        check(thinkthen_session_try_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed typed intake avoids descriptor conversion");
+        check(thinkthen_session_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids typed conversion");
+        check(thinkthen_session_push_typed(session, NULL, NULL) == THINKTHEN_EUSAGE, "blocking typed push requires status before conversion");
+    }
     check(thinkthen_session_try_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed intake avoids descriptor decoding");
-    check(thinkthen_session_try_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed typed intake avoids descriptor conversion");
     check(thinkthen_session_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids JSON decoding");
-    check(thinkthen_session_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids typed conversion");
     check(thinkthen_session_push(session, "malformed", 9, NULL) == THINKTHEN_EUSAGE, "blocking JSON push requires status before admission");
-    check(thinkthen_session_push_typed(session, NULL, NULL) == THINKTHEN_EUSAGE, "blocking typed push requires status before conversion");
     thinkthen_engine_free(engine);
     const char *untouched = (const char *)(uintptr_t)7;
     size_t untouched_len = 99;
