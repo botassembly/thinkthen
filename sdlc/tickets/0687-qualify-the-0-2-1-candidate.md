@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: release
 
-Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0693, 0647, 0649, 0652, 0655, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696, 0711, 0592, 0710, 0712, 0713, 0714, 0715, 0716, 0717, 0718, 0722
+Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0693, 0647, 0649, 0652, 0655, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696, 0711, 0710, 0712, 0713, 0714, 0715, 0716, 0717, 0718, 0722
 
 ## Outcome
 
@@ -16,7 +16,7 @@ Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 06
   - the hosted Linux x86_64 full-case jobs pass with no timeout (0621);
   - the hosted Windows recognition-session cases pass repeatedly, or each remaining failure is filed and ruled on before the go;
   - `install.ps1` installs the real Windows zip and runs the command (0632);
-  - the Ruby platform gem installs and runs on Ruby 3.4 and 4.0 (0592);
+  - the Ruby platform gem installs and runs on Ruby 3.4 and 4.0 (0684);
   - the Windows x64 NuGet consumer (0669), the Go windows/amd64 build (0657), and the C, C++ and Python Windows and Intel macOS installs (0641, 0653, 0660) pass.
 - The 0425 artifact QA control job (branch `ticket/0425-hosted-artifact-qa`, retargeted and reviewed) runs on the tagged candidate and measures both C++ 100000-record memory modes. Its measurement keeps test-fixture copy and serialize memory separate from native held-answer memory.
 - Package release numbers read 0.2.1, set with `sdlc/scripts/versions --set 0.2.1`. Format versions stay removed, per `sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md`. The coordinator brings the passing revision to the PM for Ian's publish go.

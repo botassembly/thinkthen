@@ -2,7 +2,7 @@
 
 Status: OPEN.
 
-Milestone: 0.2.1
+Milestone: 0.2.2
 
 Depends on: 0688
 Depends on: 0578
