@@ -85,5 +85,15 @@ fn incremental_ranking_refuses_other_functions_and_recovery_before_source_access
             "incremental ranking requires an ordinary rank session"
         );
     }
+    for input in [
+        source(),
+        RequestInput::Text { text: "first".into(), images: vec![] },
+    ] {
+        let error = engine
+            .request_session_with_feed_options(rank(input), Surface::Rust, options())
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(error.to_string(), "owned feed controls require a caller-supplied feed");
+    }
     assert_eq!(listener.count(), 0);
 }

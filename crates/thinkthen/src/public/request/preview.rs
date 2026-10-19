@@ -290,7 +290,10 @@ fn route_preview<'a>(
     Ok((definition, Box::new(rows), controls))
 }
 
-fn annotation_drops_detail(engine: &crate::engine::facade::Engine, set: &crate::QuestionSet) -> bool {
+fn annotation_drops_detail(
+    engine: &crate::engine::facade::Engine,
+    set: &crate::QuestionSet,
+) -> bool {
     set.0.questions().iter().any(|question| {
         crate::core::adapters::built_in::drops_detail_of(
             engine.backend().descriptions(),

@@ -511,9 +511,7 @@ mod input_json_tests {
         let diagnostic = error.diagnostic().expect("retained native cause");
         let (line, column) = match diagnostic {
             ErrorDiagnostic::InputJson { line, column } if document => (line, column),
-            ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column })
-                if !document =>
-            {
+            ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column }) if !document => {
                 (line, column)
             }
             other => panic!("unexpected diagnostic: {other:?}"),
@@ -530,5 +528,4 @@ mod input_json_tests {
         }
         assert!(std::error::Error::source(&error).is_none());
     }
-
 }

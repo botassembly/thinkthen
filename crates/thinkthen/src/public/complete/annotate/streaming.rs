@@ -133,9 +133,7 @@ impl Engine {
             call,
             asker,
             records,
-            Box::new(move |_, original: &Original<T>| {
-                Ok(original.prepared(&preparing_barrier))
-            }),
+            Box::new(move |_, original: &Original<T>| Ok(original.prepared(&preparing_barrier))),
             Box::new(move |stop, at, original, row| {
                 let original = match original {
                     Some(original) => original,
