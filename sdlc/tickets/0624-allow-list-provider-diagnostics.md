@@ -27,3 +27,4 @@ Reviews: revision 09c9fa4, accept
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: The combined0624/0631 gate passed Rust and consumer runs but stopped on the old bare-Rust campaign fixture in gate log34ecb520eb78bfe96f01c4abe70a8d68be9dd8d3; gate the accepted0614/0643 cleanup pair now, investigate the fixture against that cleanup, then rerun the accepted diagnostics and installed-consumer pair.
