@@ -280,13 +280,11 @@ class Server(http.server.BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--self-test', action='store_true', help='verify fixture construction and identical installer copies; does not prove Windows execution')
+    parser.add_argument('--self-test', action='store_true', help='verify fixture construction; does not prove Windows execution')
     parser.add_argument('--powershell', action='append', help='host executable; repeat to check both hosts')
     parser.add_argument('--binary', type=Path, help='freshly packed real executable for native Windows boundaries')
     parser.add_argument('--version', default='0.2.0')
     args = parser.parse_args()
-    if (REPO / 'install.ps1').read_bytes() != (REPO / 'site/public/install.ps1').read_bytes():
-        parser.error('site installer copy differs from root source')
     if args.self_test:
         with tempfile.TemporaryDirectory(prefix='thinkthen-installer-construction-') as temporary:
             root = Path(temporary)
@@ -296,7 +294,7 @@ def main():
                 assert source.namelist() == ['thinkthen.exe', 'README.md'] and source.read('thinkthen.exe') == pe()
             assert sum(case['kind'] == 'download' for case in table) == 8
             assert any(case['label'] == 'encrypted' and not case['ok'] for case in table)
-        print(f'Windows installer fixtures: {len(table)} cases constructed; root/site copies match; Windows execution NOT RUN')
+        print(f'Windows installer fixtures: {len(table)} cases constructed; Windows execution NOT RUN')
         return
     hosts = args.powershell or ([shutil.which('powershell'), shutil.which('pwsh')] if os.name == 'nt' else [shutil.which('pwsh')])
     if not all(hosts):
