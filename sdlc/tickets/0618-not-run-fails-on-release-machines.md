@@ -10,6 +10,8 @@ Depends on: 0615
 
 Reviews: revision 278af77, accept
 
+Reviews: revision 02dc706, accept
+
 ## Outcome
 
 - Every entrypoint treats exit 77 from a required check as a failure, whatever arguments it was given and on whatever machine it runs. There is no developer-machine exception. The `release` mode argument and the `campaign` switch are deleted.
