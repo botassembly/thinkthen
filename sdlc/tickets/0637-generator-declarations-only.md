@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0635, 0638
 
+Reviews: revision cc12c00, accept
+
 ## Outcome
 
 - The generator reads the Rust-derived schema and emits declarations and mechanical conversions for the new path: types, field presence, enums, constants, the packet's answer fields from 0612, the run call from 0638 and the result representation 0638 chooses. New outputs carry no call projection, settle, resolution or probability logic.
