@@ -11,7 +11,6 @@ use schemars::generate::SchemaSettings;
 use schemars::transform::RecursiveTransform;
 use serde_json::{Map, Value, json};
 
-use crate::cli::annotate::error_row::Row;
 use crate::core::{NamedValues, RecordValue, RelationEdge, RelationEntity, Value as Bare};
 use crate::engine::facade::Recognized;
 use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson};
@@ -35,7 +34,7 @@ const FILE: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../specification/result.schema.json"
 );
-const REWRITE: &str = "THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests";
+const REWRITE: &str = "THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests; THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests";
 
 /// A union of named definitions, for an output no one Rust type prints.
 fn any_of(names: &[&str]) -> Value {
@@ -64,6 +63,29 @@ fn paired(details: &mut Value) {
         })
         .collect();
     details["allOf"] = rules.into();
+}
+
+fn command_definitions(definitions: &mut Map<String, Value>) {
+    // The command crate derives and checks exactly these presentation definitions.
+    // Keep its committed definitions here so the library never compiles command code.
+    let committed = std::fs::read_to_string(FILE).expect("committed result schema");
+    let committed: Value = serde_json::from_str(&committed).expect("result schema JSON");
+    for name in [
+        "recordError",
+        "recordFailure",
+        "Position",
+        "SourceFields",
+        "sourceRelationEndpoint",
+    ] {
+        let schema = committed["$defs"][name]
+            .as_object()
+            .expect("command-owned schema definition")
+            .clone();
+        assert!(
+            definitions.insert(name.into(), schema.into()).is_none(),
+            "command schema definition {name} overlaps the library"
+        );
+    }
 }
 
 fn generated(reference: &str) -> String {
@@ -111,6 +133,7 @@ fn generated(reference: &str) -> String {
     register(&mut generator);
     complete::register(&mut generator);
     let mut definitions: Map<String, Value> = generator.take_definitions(true);
+    command_definitions(&mut definitions);
     complete::finish(&mut definitions);
     for (name, schema) in named {
         assert!(
@@ -137,7 +160,6 @@ fn register(generator: &mut schemars::SchemaGenerator) {
     let _registered = [
         generator.subschema_for::<Recognized>(),
         generator.subschema_for::<RecordValue<Bare>>(),
-        generator.subschema_for::<Row<'_>>(),
         generator.subschema_for::<Counters>(),
         generator.subschema_for::<CallReply>(),
         generator.subschema_for::<CallError>(),

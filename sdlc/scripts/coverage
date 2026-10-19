@@ -165,25 +165,29 @@ def build_c_units(run, env):
 def build(run, env):
     metadata = json.loads(command(['cargo', 'metadata', '--offline', '--no-deps', '--format-version', '1'],
                                   ROOT, env, run / 'metadata.log', capture=True))
-    package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen')
-    features = set(package['features'].get('default', []))
-    while True:
-        expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
-        if expanded == features:
-            break
-        features = expanded
-    tests = [item for item in package['targets'] if item['kind'] == ['test']]
-    excluded = [item['name'] for item in tests if not set(item.get('required-features', [])).issubset(features)]
-    (run / 'excluded-targets.json').write_text(json.dumps(excluded) + '\n')
-    targets = [item['name'] for item in tests if item['name'] not in excluded]
-    args = ['cargo', 'test', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--no-run',
-            '--message-format=json', '-j2']
-    for target in targets:
-        args += ['--test', target]
-    messages = command(args, ROOT, env, run / 'build-tests.log', capture=True)
-    artifacts = test_artifacts(messages, package)
+    artifacts = []
+    excluded_targets = {}
+    for name, unit_target in (('thinkthen', ['--lib']), ('thinkthen-cli', ['--bin', 'thinkthen'])):
+        package = next(item for item in metadata['packages'] if item['name'] == name)
+        features = set(package['features'].get('default', []))
+        while True:
+            expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
+            if expanded == features:
+                break
+            features = expanded
+        tests = [item for item in package['targets'] if item['kind'] == ['test']]
+        excluded = [item['name'] for item in tests if not set(item.get('required-features', [])).issubset(features)]
+        excluded_targets[name] = excluded
+        args = ['cargo', 'test', '--offline', '--locked', '-p', name, *unit_target, '--no-run',
+                '--message-format=json', '-j2']
+        for target in tests:
+            if target['name'] not in excluded:
+                args += ['--test', target['name']]
+        messages = command(args, ROOT, env, run / f'build-tests-{name}.log', capture=True)
+        artifacts += test_artifacts(messages, package)
+    (run / 'excluded-targets.json').write_text(json.dumps(excluded_targets) + '\n')
     artifacts += build_c_units(run, env)
-    command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'],
+    command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen-cli', '--bin', 'thinkthen', '-j2'],
             ROOT, env, run / 'build-production.log')
     # C is a separate workspace. Keep its native production mappings even before installed collection.
     command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'],
@@ -194,18 +198,18 @@ def build(run, env):
 def collect_tests(run, env, artifacts, name):
     folder = activate(run, name)
     selected = [item for item in artifacts
-                if (item[0] == ['test']) == (name == 'rust-integration')
-                and (item[3]['CARGO_PKG_NAME'] == 'thinkthen-c') == (name == 'c-source-unit')]
+                if ((item[0] == ['test'] and item[3]['CARGO_PKG_NAME'] in ('thinkthen', 'thinkthen-cli'))
+                    if name == 'rust-integration' else
+                    (item[0] != ['test'] and item[3]['CARGO_PKG_NAME'] ==
+                     {'cli-source': 'thinkthen-cli', 'source-unit': 'thinkthen',
+                      'c-source-unit': 'thinkthen-c'}[name]))]
     if not selected:
         raise RuntimeError(f'{name}: no test executables')
     for kind, target, path, launch in selected:
         args = [path, '--test-threads=2']
-        if name == 'cli-source':
-            args += ['cli::']
-        elif name == 'source-unit':
-            args += ['--skip', 'cli::']
+        log_name = f'{launch["CARGO_PKG_NAME"]}-{target}' if launch['CARGO_PKG_NAME'] == 'thinkthen-cli' else target
         command(args, Path(launch['CARGO_MANIFEST_DIR']), {**env, **launch},
-                folder / f'{target}.log', timeout=1800)
+                folder / f'{log_name}.log', timeout=1800)
 
 
 def collect(run, env, artifacts, native_tests=True):
@@ -387,7 +391,7 @@ def main():
                XDG_STATE_HOME=str(run / 'home/state'))
     if args.platform == 'apple':
         artifacts = []
-        command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'], ROOT, env, run / 'build-production.log')
+        command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen-cli', '--bin', 'thinkthen', '-j2'], ROOT, env, run / 'build-production.log')
         command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'], ROOT, {**env, 'CARGO_TARGET_DIR': str(run / 'target-c')}, run / 'build-c.log')
     else:
         artifacts = build(run, env)

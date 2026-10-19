@@ -41,6 +41,9 @@ mod test_deadline;
 mod schema_forms;
 
 #[cfg(test)]
+mod schema_tests;
+
+#[cfg(test)]
 extern crate self as thinkthen;
 #[cfg(test)]
 #[path = "../tests/support/api.rs"]

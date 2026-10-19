@@ -479,6 +479,32 @@ class ProfileCauses(unittest.TestCase):
 
 
 class CollectionClassification(unittest.TestCase):
+    def test_command_and_library_harnesses_run_in_their_own_collections(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifacts = []
+            for package, kinds in (('thinkthen', ['lib']), ('thinkthen-cli', ['bin'])):
+                package_dir = root / package
+                package_dir.mkdir()
+                harness = package_dir / 'harness'
+                harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
+                                   "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                                   "assert sys.argv[1:] == ['--test-threads=2']\n"
+                                   "print(os.environ['CARGO_PKG_NAME'])\n")
+                harness.chmod(0o700)
+                launch = {'name': package, 'manifest_path': str(package_dir / 'Cargo.toml')}
+                for kind in (kinds, ['test']):
+                    artifact = {'reason': 'compiler-artifact',
+                                'target': {'kind': kind, 'name': 'thinkthen'},
+                                'executable': str(harness), 'profile': {'test': True}}
+                    artifacts += DRIVER['test_artifacts'](json.dumps(artifact), launch)
+            for collection, expected in (('source-unit', ['thinkthen']),
+                                         ('cli-source', ['thinkthen-cli']),
+                                         ('rust-integration', ['thinkthen', 'thinkthen-cli'])):
+                DRIVER['collect_tests'](root, {}, artifacts, collection)
+                self.assertEqual(sorted(path.read_text().strip() for path in (root / collection).glob('*.log')),
+                                 expected)
+
     def test_c_library_target_launches_with_its_metadata_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

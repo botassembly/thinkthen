@@ -409,8 +409,10 @@ def check_crates() -> None:
         fail("dependencies", "tests add only the pthread feature to nix")
     command = check_member("thinkthen-cli")
     check_windows_manifest(command)
-    if manifest.get("bin") or (REPO / "crates/thinkthen/src/main.rs").exists():
-        fail("workspace", "the library crate contains no binary target")
+    if (manifest.get("bin") or (REPO / "crates/thinkthen/src/main.rs").exists()
+            or (REPO / "crates/thinkthen/src/cli").exists()
+            or (REPO / "crates/thinkthen/src/mcp").exists()):
+        fail("workspace", "the library crate contains no binary target or command/server source")
     if command.get("bin") != [{"name": "thinkthen", "path": "src/main.rs"}] or command.get("features"):
         fail("workspace", "the separate command crate keeps the thinkthen binary without a cli feature")
     if command.get("dependencies", {}).get("thinkthen") != {"version": f"={VERSION}", "path": "../thinkthen"}:
