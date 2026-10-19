@@ -1,5 +1,7 @@
 //! MCP contracts through the compiled command and its actual stdio pipes.
 #![cfg(feature = "cli")]
+#[path = "support/command.rs"]
+mod command;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 #[path = "mcp_stdio/execution.rs"]

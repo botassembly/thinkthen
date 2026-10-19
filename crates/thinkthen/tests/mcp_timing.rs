@@ -1,5 +1,7 @@
 //! Explicit local adapter measurement; run only through test-stress --run.
 #![cfg(feature = "cli")]
+#[path = "support/command.rs"]
+mod command;
 #![allow(
     clippy::unwrap_used,
     clippy::indexing_slicing,
@@ -25,7 +27,7 @@ struct Session {
 }
 impl Session {
     fn launch(base: &str, home: &std::path::Path) -> Self {
-        let mut process = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        let mut process = Command::new(crate::command::binary())
             .args(["mcp", "--url", base, "--no-cache", "--max-retries", "0"])
             .clear_environment()
             .env("PATH", "/usr/bin:/bin")

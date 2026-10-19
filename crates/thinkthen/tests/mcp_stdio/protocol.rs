@@ -8,7 +8,7 @@ fn catalog_help_command_explains_native_arguments_and_links_full_grammar() {
     let home = std::env::temp_dir().join(format!("thinkthen-mcp-help-{}", std::process::id()));
     std::fs::create_dir(&home).unwrap();
     let output = crate::child::run::output(
-        std::process::Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        std::process::Command::new(crate::command::binary())
             .args(["mcp", "--help"])
             .clear_environment()
             .isolated_home(&home)

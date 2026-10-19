@@ -25,8 +25,23 @@ if ! command -v mustmatch >/dev/null 2>&1; then
 	exit 1
 fi
 
-cargo build --locked --quiet --package thinkthen
-PATH="$REPO/target/debug:$PATH"
+# Packaging supplies its installed command; ordinary development uses the build.
+# Both paths replay these same pages and demo runners.
+case $# in
+0)
+    cargo build --locked --quiet --package thinkthen
+    command_dir="$REPO/target/debug"
+    ;;
+1)
+    test -x "$1" || { printf 'spec: command is not executable: %s\n' "$1" >&2; exit 2; }
+    command_dir=$(CDPATH= cd -- "$(dirname -- "$1")" && pwd)
+    ;;
+*)
+    printf '%s\n' 'usage: spec [INSTALLED_THINKTHEN]' >&2
+    exit 2
+    ;;
+esac
+PATH="$command_dir:$PATH"
 export PATH
 
 # Ticket 0140: every flag in the help, product THINKTHEN_ variable, and

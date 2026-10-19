@@ -195,3 +195,31 @@ fn backend_failures_preserve_actual_started_facts_and_hide_private_payloads() {
     }
     session.finish();
 }
+
+#[test]
+fn source_failure_preserves_the_completed_prefix_and_observed_facts() {
+    let listener = Listener::answering(|_| Canned::ok(
+        r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+    )).unwrap();
+    let mut session = Session::launch(listener.base());
+    session.initialize();
+    let first = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../specification/fixtures/recognize/README.md");
+    let expected = std::fs::read_to_string(&first).unwrap();
+    let missing = first.with_file_name("absent-prefix-source-0639.txt");
+    let result = session.call("decide", json!({
+        "question":"Q?",
+        "source":{"paths":[first, missing],"unit":"file"},
+        "options":{"batch":1}
+    }));
+    assert_eq!(result["isError"], true);
+    let content = &result["structuredContent"];
+    assert_eq!(content["error"]["kind"], "local");
+    assert!(content.get("value").is_none());
+    let completed = content["completed"].as_array().unwrap();
+    assert_eq!(completed.len(), 1);
+    assert_eq!(completed[0]["input"], expected);
+    assert_eq!(content["facts"]["requests_sent"], 1);
+    assert_eq!(listener.count(), 1);
+    session.finish();
+}

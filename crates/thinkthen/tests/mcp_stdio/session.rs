@@ -40,7 +40,7 @@ impl Session {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         std::fs::create_dir(&home).unwrap();
-        let mut process = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        let mut process = Command::new(crate::command::binary())
             .args(["mcp", "--url", base, "--no-cache", "--max-retries", "0"])
             .clear_environment()
             .isolated_home(&home)
