@@ -87,9 +87,8 @@ fn incremental_ranking_refuses_other_functions_and_recovery_before_source_access
     }
     for input in [
         source(),
-        RequestInput::Text {
-            text: "first".into(),
-            images: vec![],
+        RequestInput::Records {
+            items: vec![descriptor("first").item],
         },
     ] {
         let error = engine

@@ -318,6 +318,7 @@ impl RequestFunction {
                     | Self::Filter
                     | Self::Rank
                     | Self::Recognize
+                    | Self::Relate
             ),
             "options_field" => self == Self::Choose,
             "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context"
