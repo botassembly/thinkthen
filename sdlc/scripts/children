@@ -54,7 +54,7 @@ TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 # default-path and secrecy fixtures outside this family deliberately set folders;
 # toolchain/container runners also retain their own installation environments.
 OWNED_HOME_CALLERS = {
-    "crates/thinkthen/tests/mcp_timing.rs",
+    "crates/thinkthen-cli/tests/mcp_timing.rs",
     "databases/sqlite/tests/test_usage.py",
     "sdlc/scripts/install_check.py",
     "databases/sqlite/tests/complete/facts.py",
@@ -302,9 +302,9 @@ def rust_msg(path, number):
 
 
 CASES = [
-    ("crates/thinkthen/tests/mcp_timing.rs", 'Command::new("fixture").clear_environment().home(folder).env("XDG_CONFIG_HOME", folder).spawn();\n', []),
-    ("crates/thinkthen/tests/mcp_timing.rs", 'Command::new("fixture").env_clear().env("XDG_CONFIG_HOME", folder).spawn();\n',
-     [f"children: crates/thinkthen/tests/mcp_timing.rs:1: {FOLDERS}"]),
+    ("crates/thinkthen-cli/tests/mcp_timing.rs", 'Command::new("fixture").clear_environment().home(folder).env("XDG_CONFIG_HOME", folder).spawn();\n', []),
+    ("crates/thinkthen-cli/tests/mcp_timing.rs", 'Command::new("fixture").env_clear().env("XDG_CONFIG_HOME", folder).spawn();\n',
+     [f"children: crates/thinkthen-cli/tests/mcp_timing.rs:1: {FOLDERS}"]),
     ("libraries/csharp/tests/named_backends.py", 'env = child_env(home=folder, XDG_CACHE_HOME=str(folder / "custom"))\n', []),
     ("libraries/csharp/tests/named_backends.py", 'env = child_env(XDG_CACHE_HOME=folder)\n',
      [f"children: libraries/csharp/tests/named_backends.py:1: {FOLDERS}"]),
@@ -325,7 +325,7 @@ CASES = [
     ("crates/thinkthen/tests/native_cache_policy.rs", 'command.env("LOCALAPPDATA", folder);\n',
      [f"children: crates/thinkthen/tests/native_cache_policy.rs:1: {FOLDERS}"]),
     ("libraries/mcp/installed.py", 'env = child_env(home=folder)\n', []),
-    ("crates/thinkthen/tests/backend/cache_configuration.rs", 'command.env("XDG_CONFIG_HOME", folder);\n', []),
+    ("crates/thinkthen-cli/tests/backend/cache_configuration.rs", 'command.env("XDG_CONFIG_HOME", folder);\n', []),
     ("a.rs", 'fn f() { Command::new("sh").arg("-c").output(); }\n', [rust_msg("a.rs", 1)]),
     ("a.rs", 'fn f() { Command::new("sh").env_clear().arg("-c").output(); }\n', []),
     ("a.rs", "fn f() {\n    let mut c = Command::new(x);\n    c.env_clear();\n    c.spawn();\n}\n", []),

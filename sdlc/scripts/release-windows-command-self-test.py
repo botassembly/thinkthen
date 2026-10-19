@@ -97,7 +97,7 @@ def interruption_routing(smoke, base):
         smoke.run = lambda args, env, **options: calls.append((args, env, options))
         with contextlib.redirect_stdout(io.StringIO()):
             smoke.interrupt(binary, {"CARGO_NET_OFFLINE": "true"})
-        assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+        assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen-cli", "--test", "windows",
                           "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
                           {"CARGO_NET_OFFLINE": "true", "THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary.absolute())},
                           {"timeout": 600})]

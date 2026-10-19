@@ -2075,7 +2075,7 @@ WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
     "crates/thinkthen/src/windows/console/ffi.rs": "windows",
     "crates/thinkthen-cli/src/mcp/input/windows/ffi.rs": "windows",
-    "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
+    "crates/thinkthen-cli/tests/windows/ffi.rs": "all(windows, test)",
 }
 
 

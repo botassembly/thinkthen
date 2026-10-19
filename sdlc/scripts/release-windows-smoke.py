@@ -88,7 +88,7 @@ def interrupt(binary, env):
     if not binary.is_file() or binary.is_symlink():
         raise RuntimeError("release interruption requires one regular exact executable")
     supplied = env | {"THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary)}
-    run(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+    run(["cargo", "test", "--locked", "--offline", "-p", "thinkthen-cli", "--test", "windows",
          "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
         supplied, timeout=600)
     print("Windows packed command interruption: actual isolated Ctrl-C returned 130 with one request")
