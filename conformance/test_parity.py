@@ -16,6 +16,7 @@ from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
@@ -29,7 +30,7 @@ class NativeFixtureEnvironment(unittest.TestCase):
         def compiler(args, **kwargs):
             probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'; assert os.environ['CARGO_PROFILE_DEV_OPT_LEVEL'] == '2'; assert os.environ['RUSTFLAGS'] == '--remap-path-prefix=/checkout=/build'; assert os.environ['RUSTC_WRAPPER'] == ''"
             return launch([sys.executable, '-c', probe], **kwargs)
-        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller) | {'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
@@ -338,7 +339,7 @@ class PublicAssertions(unittest.TestCase):
                 'for row in cases:\n'
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
-            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            env = {'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
@@ -360,7 +361,7 @@ class PublicAssertions(unittest.TestCase):
             for portable in ('', '1'):
                 with self.subTest(profile=profile, portable=portable):
                     result = subprocess.run(['sh', '-c', fixture + script], capture_output=True, text=True,
-                                            env={'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                            env={'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': profile,
                                                  'THINKTHEN_PORTABLE_BATCH': portable})
                     self.assertEqual(result.returncode, 0, result.stderr)
                     rows = result.stdout.splitlines()
@@ -507,7 +508,7 @@ class PublicAssertions(unittest.TestCase):
             with lock:
                 active -= 1
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(peak, 1)
@@ -542,7 +543,7 @@ class PublicAssertions(unittest.TestCase):
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.environ['PATH'])):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -564,7 +565,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.environ['PATH'])):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -624,7 +625,7 @@ class PublicAssertions(unittest.TestCase):
                               + lifecycle + '\nkill -' + name + ' "$$"\n'
                               + 'touch later-case\n')
                     result = subprocess.run(['bash', '-c', script], cwd=root,
-                                            env={'PATH': os.defpath}, capture_output=True, text=True, timeout=5)
+                                            env={'PATH': os.environ['PATH']}, capture_output=True, text=True, timeout=5)
                     self.assertEqual(result.returncode, code, result.stdout + result.stderr)
                     self.assertFalse((root / 'later-case').exists())
                     self.assertFalse(Path((root / 'owned-run').read_text()).exists())
@@ -668,7 +669,7 @@ class PublicAssertions(unittest.TestCase):
                         script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
                             + '\nPG_HOST=Darwin\nPG_CONFIG=$(command -v pg_config)\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
                             + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
-                        env = {'PATH': str(root) + os.pathsep + os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                        env = {'PATH': fixture_path(root), 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
                                'FIXTURE_ROOT': str(root), 'RUN': str(root),
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
@@ -739,14 +740,14 @@ class PublicAssertions(unittest.TestCase):
                                 self.assertEqual(marker.read_text(), selected)
                                 if launcher != 'shared': raise ReachedReader()
                                 return {}
-                            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                            env = {'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
                             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
-                                build_env = {'PATH': os.defpath, 'HOME': str(root / 'home')}
+                                build_env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home')}
                                 if target_kind != 'unset':
                                     build_env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target, postgres)
                                 built = subprocess.run(['sh', '-c', ". ./runtime.sh; runtime_target; exec python3 -c 'import os,sys; sys.stdout.write(os.environ[\"CARGO_TARGET_DIR\"])'"],
@@ -814,7 +815,7 @@ class PublicAssertions(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
                     env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-                    env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
+                    env.update(PATH=fixture_path(tools), THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn('private fixture: ' + member, result.stdout)
@@ -832,7 +833,7 @@ class PublicAssertions(unittest.TestCase):
                     kwargs['stdout'].write(output)
                     self.assertEqual(kwargs['env']['THINKTHEN_TEST_PROFILE'], 'full')
                     return subprocess.CompletedProcess(args, code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
@@ -850,7 +851,7 @@ class PublicAssertions(unittest.TestCase):
                 contract = {'functions': ['decide'], 'consumers': [
                     {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', child_env(home=root / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 row = json.loads((root / 'target/parity/matrix.json').read_text())[0]
                 if expected_exit is not None:
@@ -991,7 +992,7 @@ class CliApplicability(unittest.TestCase):
             cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
             def command(args, **kwargs):
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
@@ -1073,7 +1074,7 @@ class InstalledInputs(unittest.TestCase):
             def command(args, **kwargs):
                 self.assertIn('libraries/objective-c/check.sh', args)
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertNotIn('platform_unsupported', row)
@@ -1128,7 +1129,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):
@@ -1166,9 +1167,9 @@ class InstalledInputs(unittest.TestCase):
         for inputs in [dict(THINKTHEN_ARTIFACT='/missing/archive'),
                        dict(THINKTHEN_C_HEADER='/missing/header'),
                        dict(THINKTHEN_C_HEADER='/missing/header', THINKTHEN_C_LIBRARY='/missing/library')]:
-            with self.subTest(inputs=inputs):
+            with self.subTest(inputs=inputs), tempfile.TemporaryDirectory() as scratch:
                 result = subprocess.run([sys.executable, str(parity.ROOT / 'conformance/c_parity.py')],
-                                        env={'PATH': '/nonexistent', **inputs}, capture_output=True,
+                                        env={'PATH': fixture_path(scratch, exclude=('cargo',)), **inputs}, capture_output=True,
                                         text=True, check=False)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertNotIn("'cargo'", result.stderr)
@@ -1207,7 +1208,7 @@ esac
             demo.parent.mkdir(parents=True, exist_ok=True)
             demo.write_text("#!/bin/sh\nexit 0\n")
             demo.chmod(0o755)
-            env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
+            env = {"PATH": fixture_path(fake), "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
 
@@ -1309,7 +1310,7 @@ esac
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
                     (root / 'bin/npm').chmod(0o755)
-                    env = {'PATH': str(root / 'bin') + ':' + os.defpath,
+                    env = {'PATH': fixture_path(root / 'bin'),
                            'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
                            'PARITY_CODE': '1' if failed == 'parity' else '0',
                            'SMOKE_CODE': '77' if failed == 'smoke' else '0',

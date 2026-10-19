@@ -40,6 +40,45 @@ def commands(groups=(), host=None):
                                for command in tool['commands']))
 
 
+def fixture_path(directory, exclude=(), *, path=None):
+    """Overlay fixture commands on the caller's resolved tool PATH.
+
+    Missing-tool cases mirror that PATH while removing only the named tools.
+    Fake commands stay first without hiding unrelated runtime dependencies.
+    """
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    runtime = os.environ['PATH'] if path is None else path
+    if exclude:
+        declared = set(commands())
+        excluded_targets = {Path(found).resolve() for name in exclude
+                            if (found := shutil.which(name, path=runtime))}
+        mirrored = directory / '.runtime'
+        mirrored.mkdir(exist_ok=True)
+        for folder in runtime.split(os.pathsep):
+            try:
+                sources = tuple(Path(folder).iterdir())
+            except OSError:
+                continue
+            for source in sources:
+                target = mirrored / source.name
+                try:
+                    if not source.is_file() or not os.access(source, os.X_OK):
+                        continue
+                    resolved = source.resolve()
+                except OSError:
+                    # Protected and disappearing entries are unavailable to
+                    # executable lookup, not missing fixture runtime tools.
+                    continue
+                # Multicall launchers also back separate commands such as
+                # cargo and rustc. Preserve those independently declared tools.
+                alias = source.name not in declared and resolved in excluded_targets
+                if source.name not in exclude and not alias and not target.exists() and not target.is_symlink():
+                    target.symlink_to(resolved)
+        runtime = str(mirrored)
+    return str(directory) + os.pathsep + runtime
+
+
 def bootstrap(manifest, root, env):
     binary = root / 'bootstrap/mise/bin/mise'
     if binary.is_file():
