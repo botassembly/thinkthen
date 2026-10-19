@@ -575,6 +575,7 @@ fn recognition_wording_overrides_saved_values_independently_before_preview() {
         };
         let request = Request::named("recognize", arguments).unwrap().admit().unwrap();
         let preview = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        assert!(preview.token_estimate_note().contains("token-estimate"));
         let bodies = preview.prepared_requests().map(|request| String::from_utf8_lossy(request.body).into_owned()).collect::<Vec<_>>().join("\n");
         assert!(bodies.contains(task));
         assert!(bodies.contains(entity));

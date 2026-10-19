@@ -129,6 +129,23 @@ pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
 }
 
 impl Engine {
+    /// The actual selected adapter's canonical provider label, without inference from its URL.
+    #[must_use]
+    pub fn provider_name(&self) -> &'static str {
+        self.inner.backend().api_type().provider_name()
+    }
+    /// Whether the actual adapter treats this engine's selected model as a mutable alias.
+    #[must_use]
+    pub fn model_is_mutable_alias(&self) -> bool {
+        self.inner.backend().api_type().is_mutable_alias(self.inner.backend().model())
+    }
+    /// The actual built engine's selected local profile name, including configured defaults.
+    /// This reads no file or environment variable and exposes no profile content.
+    #[must_use]
+    pub fn profile_name(&self) -> Option<&str> {
+        self.inner.profile().map(|profile| profile.name().as_str())
+    }
+
     /// Check a zero-based record ordinal against this engine's call admission cap.
     /// Composed source calls use the same `max_requests` limit as native batches.
     ///

@@ -26,6 +26,9 @@ pub(super) fn capture(override_url: &str) -> Vec<String> {
         let engine = builder.api_key("config-capture-fixture-key").unwrap()
             .no_cache().build().unwrap();
         lines.push(ask(&engine));
+    } else {
+        let engine = builder.no_cache().build().unwrap();
+        lines.push(format!("profile {:?}", engine.profile_name()));
     }
     lines
 }
@@ -80,4 +83,26 @@ fn configuration_capture_does_not_read_a_non_utf8_credential() {
     let written = String::from_utf8(output.stdout).unwrap();
     assert!(written.contains("THINKTHEN_API_KEY is not valid UTF-8"));
     assert!(written.contains("\"api_key_set\":false"));
+}
+
+#[test]
+fn configuration_profile_observation_borrows_the_actual_built_profile_without_sending() {
+    let listener = listener();
+    let home = folder("configured-profile-observation");
+    let config = if cfg!(target_os = "macos") {
+        home.join("Library/Application Support/thinkthen/config.json")
+    } else {
+        home.join("thinkthen/config.json")
+    };
+    fs::create_dir_all(config.parent().unwrap()).unwrap();
+    fs::write(&config, serde_json::json!({
+        "schema":"thinkthen.config/1", "backend":"local", "backends": {"local": {
+            "url":listener.base(), "key_env":"UNSET_CONFIGURED_PROFILE_KEY", "model":"fixed",
+            "profile":{"schema":"thinkthen.backend-profile/1","name":"configured-profile","max_questions":3}
+        }}
+    }).to_string()).unwrap();
+    let written = in_child("config-only", &[("XDG_CONFIG_HOME", home.to_str().unwrap()), ("HOME", home.to_str().unwrap()), ("APPDATA", home.to_str().unwrap())]);
+    assert!(written.contains("profile Some(\"configured-profile\")"), "{written}");
+    assert_eq!(listener.count(), 0);
+    fs::remove_dir_all(home).unwrap();
 }

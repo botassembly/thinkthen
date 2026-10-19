@@ -32,6 +32,9 @@ pub struct PlanEstimate {
     largest_request_bytes: usize,
     largest_request_estimated_input_tokens: u64,
     token_estimate_method: &'static str,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    token_estimate_note: &'static str,
     estimated_input_tokens: TokenBand,
     upper_bound: bool,
     #[serde(rename = "first_body_utf8")]
@@ -99,6 +102,12 @@ impl PlanEstimate {
     #[must_use]
     pub const fn token_estimate_method(&self) -> &'static str {
         self.token_estimate_method
+    }
+    /// The selected adapter's exact accounting caveat, including empty previews.
+    /// This explicit observation adds no field to the existing serialized plan.
+    #[must_use]
+    pub const fn token_estimate_note(&self) -> &'static str {
+        self.token_estimate_note
     }
     /// Whether the selected adapter omits authored description detail.
     #[must_use]
@@ -319,7 +328,7 @@ pub(super) fn estimate(
     context: Option<crate::core::Evidence>,
     asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
 ) -> Result<PlanEstimate, Error> {
-    from_summary(estimate_summary(engine, setting, context, asks)?)
+    from_summary(estimate_summary(engine, setting, context, asks)?, engine.backend().api_type())
 }
 
 pub(in crate::public) fn estimate_summary(
@@ -389,7 +398,7 @@ pub(in crate::public) fn estimate_tagged_summary<T>(
     Ok(summary)
 }
 
-pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstimate, Error> {
+pub(in crate::public) fn from_summary(summary: PlanSummary, adapter: crate::core::adapters::ApiType) -> Result<PlanEstimate, Error> {
     let counts = summary
         .counts()
         .map_err(|_| Error::usage("the planned input is too large to count"))?;
@@ -405,6 +414,7 @@ pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstima
         largest_request_bytes: counts.largest_request_bytes,
         largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
         token_estimate_method: counts.token_estimate_method,
+        token_estimate_note: adapter.plan_estimate_note(),
         estimated_input_tokens: TokenBand {
             lower: counts.estimated_input_tokens.lower,
             upper: counts.estimated_input_tokens.upper,

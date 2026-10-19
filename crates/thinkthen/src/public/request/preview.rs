@@ -21,11 +21,11 @@ impl Engine {
         }
         if request.request.call.function() == RequestFunction::Find {
             let (_, summary) = request.plan_find(self, environment)?;
-            return crate::public::plan::from_summary(summary);
+            return crate::public::plan::from_summary(summary, self.inner.backend().api_type());
         }
         let annotation = request.request.call.function() == RequestFunction::Annotate;
         let (summary, dropped, count, groups) = self.preview_request(request, environment, annotation)?;
-        crate::public::plan::from_summary(summary).map(|plan| {
+        crate::public::plan::from_summary(summary, self.inner.backend().api_type()).map(|plan| {
             plan.with_request_details(dropped, annotation.then_some((count, groups)))
         })
     }
@@ -57,14 +57,14 @@ impl Engine {
                 engine.backend(), engine.profile(), ask, rows, controls.context_text(),
                 controls.recognition_text_limit.unwrap_or(crate::engine::facade::MAX_TEXT_BYTES),
             )?;
-            return PlanEstimate::from_recognition(preview, dropped);
+            return PlanEstimate::from_recognition(preview, dropped, engine.backend().api_type());
         }
         if let RequestDefinition::Relate(ask) = definition {
             let engine = self.for_model(ask.0.model.as_ref())?;
             let preview = crate::public::complete::relate::preview_relations(
                 engine.backend(), engine.profile(), &ask, rows, &controls,
             )?;
-            return PlanEstimate::from_relations(preview);
+            return PlanEstimate::from_relations(preview, engine.backend().api_type());
         }
         Err(Error::defect("whole-set preview lost its admitted definition"))
     }

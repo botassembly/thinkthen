@@ -40,3 +40,30 @@ fn explicit_request_rates_retain_the_native_bounds() {
         }
     }
 }
+
+#[test]
+fn built_engine_observations_use_actual_adapter_model_and_profile_without_sending() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
+    for (backend, model, provider, mutable) in [
+        ("typesafe", "jev-latest", "systemone", true),
+        ("typesafe", "fixed", "systemone", false),
+        ("openai", "jev-latest", "openai", false),
+    ] {
+        let engine = Engine::builder().backend(backend).unwrap()
+            .base_url(listener.base()).unwrap().model(model).unwrap()
+            .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"explicit-profile","max_questions":3}"#).unwrap()
+            .no_cache().build().unwrap();
+        assert_eq!(engine.provider_name(), provider);
+        assert_eq!(engine.model_is_mutable_alias(), mutable);
+        assert_eq!(engine.profile_name(), Some("explicit-profile"));
+        let question = thinkthen::Question::decide("Fits?").unwrap().cut();
+        for records in [vec![], vec!["evidence"]] {
+            let plan = engine.plan(&question, records).unwrap();
+            let note = plan.token_estimate_note();
+            assert!(note.starts_with("token-estimate measured byte rates; actual billed input can exceed the upper estimate;"));
+            assert_eq!(note.contains("5131"), backend == "typesafe");
+            assert!(!serde_json::to_value(&plan).unwrap().as_object().unwrap().contains_key("token_estimate_note"));
+        }
+    }
+    assert_eq!(listener.count(), 0);
+}

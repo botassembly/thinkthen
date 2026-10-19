@@ -118,8 +118,9 @@ impl PlanEstimate {
     pub(in crate::public) fn from_recognition(
         preview: crate::public::complete::recognize::RecognitionPreview,
         dropped: bool,
+        adapter: crate::core::adapters::ApiType,
     ) -> Result<Self, Error> {
-        let mut plan = super::from_summary(preview.summary)?.with_request_details(dropped, None);
+        let mut plan = super::from_summary(preview.summary, adapter)?.with_request_details(dropped, None);
         if let Some(first) = preview.first {
             plan.details.recognition = Some(RecognitionPlan { pieces: first.pieces,
                 name_requests_upper_bound: first.names, relation_pairs_upper_bound: first.relations });
@@ -129,8 +130,9 @@ impl PlanEstimate {
     }
     pub(in crate::public) fn from_relations(
         preview: crate::public::complete::relate::RelationPreview,
+        adapter: crate::core::adapters::ApiType,
     ) -> Result<Self, Error> {
-        let mut plan = super::from_summary(preview.summary)?;
+        let mut plan = super::from_summary(preview.summary, adapter)?;
         let mut rules = Vec::new();
         for (at, rule) in preview.prepared.rules.into_iter().enumerate() {
             rules.push(RuleData { name: rule.name, source: rule.source, target: rule.target,
