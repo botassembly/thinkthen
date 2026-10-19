@@ -108,8 +108,6 @@ def every(name, doc, text, folder=None):
             out.append(f"{name}: starts on `{trigger}`; only workflow_dispatch may start a workflow")
     for job, _, step in steps(doc):
         uses = step.get("uses")
-        if "cache" in (uses or "") or "cache" in (step.get("with") or {}):
-            out.append(f"{name}: job {job} uses a cache")
         if uses and not uses.startswith("./") and not PINNED.match(uses):
             out.append(f"{name}: job {job} uses {uses}, which is not pinned to a commit")
         run = step.get("run") or ""
@@ -131,6 +129,11 @@ def every(name, doc, text, folder=None):
 def release(name, doc):
     """Publishing requires release mode, the approved environment and its armed guard."""
     out = publish_dispatch(name, doc)
+    # Release jobs transfer build outputs as artifacts; other workflows retain
+    # their independently approved dependency caches.
+    for job, _, step in steps(doc):
+        if "cache" in (step.get("uses") or "") or "cache" in (step.get("with") or {}):
+            out.append(f"{name}: job {job} uses a cache")
     if doc.get("permissions") != {}:
         out.append(f"{name}: top-level permissions must be {{}}")
     trigger = doc.get("on", doc.get(True)) or {}
