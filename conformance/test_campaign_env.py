@@ -185,10 +185,13 @@ if '--message-format=json' in sys.argv:
 ''')
             real_git = shutil.which('git')
             (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
+                                      f'sys.path.insert(0, {str(root)!r})\n'
+                                      'from conformance.children.children import child_env\n'
                                       'if len(sys.argv) == 5 and sys.argv[1] == "-C" and '
                                       'sys.argv[3] == "rev-parse" and sys.argv[4].endswith("^{commit}"):\n'
                                       '    print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n'
-                                      f'else:\n    os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
+                                      f'else:\n    os.execve({real_git!r}, [{real_git!r}, *sys.argv[1:]], '
+                                      f'child_env(home={str(root / "fixture-git-home")!r}))\n')
             (tools / 'python3').symlink_to(sys.executable)
             (root / 'probe.py').write_text(capture)
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
