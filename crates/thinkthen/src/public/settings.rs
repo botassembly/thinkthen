@@ -90,6 +90,7 @@ pub struct EngineBuilder {
     refresh_cache: bool,
     timeout: Duration,
     max_retries: u32,
+    retry_wait: Duration,
     profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
@@ -122,6 +123,7 @@ impl fmt::Debug for EngineBuilder {
             .field("refresh_cache", &self.refresh_cache)
             .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
+            .field("retry_wait", &self.retry_wait)
             .field("profile", &self.profile)
             .field("record", &self.record)
             .field("replay", &self.replay)
@@ -191,6 +193,7 @@ impl EngineBuilder {
             refresh_cache: false,
             timeout: Duration::from_secs(30),
             max_retries: 3,
+            retry_wait: Duration::from_secs(1),
             profile: None,
             record: None,
             replay: None,
@@ -357,6 +360,24 @@ impl EngineBuilder {
         self
     }
 
+    /// Set the initial retry wait; zero retries immediately unless the server
+    /// requires a longer wait. Omission retains the one-second default.
+    #[must_use]
+    pub fn retry_wait(mut self, value: Duration) -> Self {
+        self.retry_wait = value;
+        self
+    }
+
+    /// Pace starts on the selected posting address using the native rate grammar.
+    /// Other engines on that address share the existing process pacer.
+    /// # Errors
+    /// Refuses zero or a rate beyond the native maximum.
+    pub fn requests_per_minute(mut self, value: u32) -> Result<Self, Error> {
+        self.per_minute = crate::engine::backoff::per_minute(Some(&value.to_string()))
+            .map_err(Error::usage)?;
+        Ok(self)
+    }
+
     /// Read this backend profile at build time.
     /// # Errors
     /// Returns [`Error::Usage`] for an empty path.
@@ -463,7 +484,7 @@ impl EngineBuilder {
             profile: profile.clone(),
             timeout: self.timeout,
             max_retries: self.max_retries,
-            retry_wait: Duration::from_secs(1),
+            retry_wait: self.retry_wait,
             width: self.width,
             per_minute: self.per_minute,
             storage: self.served(self.storage()?)?,

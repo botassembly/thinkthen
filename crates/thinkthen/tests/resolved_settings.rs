@@ -28,3 +28,15 @@ fn settings_inspection_withholds_credentials_and_never_sends() {
     assert!(!error.to_string().contains(key));
     assert_eq!(listener.count(), 0);
 }
+
+#[test]
+fn explicit_request_rates_retain_the_native_bounds() {
+    for (rate, admitted) in [(0, false), (1, true), (60_000, true), (60_001, false)] {
+        let selected = Engine::builder().requests_per_minute(rate);
+        assert_eq!(selected.is_ok(), admitted);
+        if let Err(error) = selected {
+            assert_eq!(error.kind(), ErrorKind::Usage);
+            assert_eq!(error.detail().message(), "THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000");
+        }
+    }
+}

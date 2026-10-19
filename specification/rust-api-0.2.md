@@ -38,6 +38,8 @@ The annotation command uses `Engine::plan_request` through the same native group
 
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
 
+The command applies its captured request rate with `EngineBuilder::requests_per_minute` and its existing debug retry-delay input with `retry_wait`. These setters retain the shared posting-address pacer, native retry policy and default one-second wait. They introduce no extra environment reads or execution owner.
+
 `EngineBuilder::configuration_shared` retains the existing early permission warning without resolving a route. `EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
 
 `Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
@@ -228,6 +230,8 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+fn EngineBuilder::requests_per_minute(self, u32) -> Result<EngineBuilder, Error>
+fn EngineBuilder::retry_wait(self, Duration) -> EngineBuilder
 const fn PlanEstimate::largest_request_bytes(&self) -> usize
 const fn PlanEstimate::largest_request_estimated_input_tokens(&self) -> u64
 const fn PlanEstimate::token_estimate_method(&self) -> &'static str
