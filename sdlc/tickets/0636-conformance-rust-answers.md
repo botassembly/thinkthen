@@ -22,3 +22,7 @@ Depends on: 0612, 0638
 ## Evidence
 
 The conformance suite is strong. `conformance/cases.json` lists 29 consumers with none pending, and the loopback backend is shared. But each language runner checks answers that the language computed itself, and the session rules are proven again in every host (`libraries/BINDING-AUTHOR.md`: "each migration proves its language's idiom without duplicating the native session test matrix"). Language runners consume the shared files unevenly: `settings.json` is read by about 10 surfaces (git grep under `libraries/`). Once Rust settles each answer, the expected value, probability, pick and resolution can be fixed once in the shared cases.
+
+## Progress
+
+- 2026-10-19 started
