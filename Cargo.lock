@@ -2201,6 +2201,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "thinkthen-host"
+version = "0.2.0"
+dependencies = [
+ "serde_json",
+ "thinkthen",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
