@@ -1,5 +1,6 @@
 //! Complete relation details delegate to the shared native renderer.
-use crate::core::{self, json_line};
+use crate::core::{self};
+use crate::render::json_line;
 use crate::failure::Failure;
 use serde::{Serialize, Serializer};
 use std::io::Write;

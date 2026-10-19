@@ -6,9 +6,8 @@ use std::process::ExitCode;
 
 use super::JudgingInput;
 use super::judged::Records;
-use crate::core::{
-    Backend, Evidence, PlanSummary, Reading, Setting, Sources, json_line,
-};
+use crate::core::{Backend, Evidence, PlanSummary, Reading, Setting, Sources};
+use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
 use crate::profile::Mismatch;

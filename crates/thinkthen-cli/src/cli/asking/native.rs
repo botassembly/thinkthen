@@ -3,7 +3,8 @@ use super::{
     JudgingInput,
     judged::{Held, Records},
 };
-use crate::core::{Outcome, Reading, RecordValue, Setting, Value, json_line};
+use crate::core::{Outcome, Reading, RecordValue, Setting, Value};
+use crate::render::json_line;
 use crate::failure::Failure;
 use crate::schedule::{Judged, Output};
 use std::cell::RefCell;

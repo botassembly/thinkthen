@@ -164,10 +164,10 @@ pub(super) fn write(
             value: &edges,
             originals: sources.occurrences.iter().collect(),
         };
-        crate::edge::write_line(writer, &crate::core::json_line(&located)?)?;
+        crate::edge::write_line(writer, &crate::render::json_line(&located)?)?;
     } else {
         for edge in edges {
-            if !crate::edge::write_line(&mut *writer, &crate::core::json_line(&edge)?)? {
+            if !crate::edge::write_line(&mut *writer, &crate::render::json_line(&edge)?)? {
                 break;
             }
         }

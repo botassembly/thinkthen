@@ -1,8 +1,6 @@
 //! Native atomic preparation retains the CLI's expected verb and typed overrides.
-use crate::core::{
-    Cutting, Json, QuestionFile, QuestionFileError, QuestionSet, Resolved, Typed, Verb, json_line,
-    resolve,
-};
+use crate::core::{Cutting, Json, QuestionFile, QuestionFileError, QuestionSet, Resolved, Typed, Verb, resolve};
+use crate::render::json_line;
 use crate::{Error, RequestDefinition};
 
 #[derive(Clone, Debug)]

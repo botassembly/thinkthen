@@ -20,7 +20,7 @@ use serde::Serialize;
 use serde_json::Number;
 
 use crate::core::json::Json;
-use crate::core::render::{RenderError, json_line};
+use crate::render::{RenderError, json_line};
 
 /// The two-sided 95% normal quantile.
 const Z: f64 = 1.959_963_984_540_054;
@@ -388,5 +388,5 @@ fn round(value: Json) -> Json {
 }
 
 #[cfg(test)]
-#[path = "measure/tests.rs"]
+#[path = "statistics/tests.rs"]
 mod tests;

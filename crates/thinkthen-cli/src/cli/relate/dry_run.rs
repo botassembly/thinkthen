@@ -3,7 +3,8 @@ use std::io::Write;
 use serde::Serialize;
 
 use super::config::From;
-use crate::core::{Backend, BackendProfile, Framing, RelateFields, RelateSpec, json_line};
+use crate::core::{Backend, BackendProfile, Framing, RelateFields, RelateSpec};
+use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
 

@@ -2,9 +2,8 @@
 
 use super::Failure;
 use crate::core::adapters::built_in::DecodeError;
-use crate::core::{
-    BackendError, QuestionFileError, QuestionSetError, ReadingError, RecordError, RenderError,
-};
+use crate::core::{BackendError, QuestionFileError, QuestionSetError, ReadingError, RecordError};
+use crate::render::RenderError;
 use crate::engine::error::Error as EngineError;
 
 impl From<crate::config::ConfigError> for Failure {

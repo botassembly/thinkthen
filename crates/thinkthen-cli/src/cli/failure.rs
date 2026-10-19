@@ -5,10 +5,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in::DecodeError;
-use crate::core::{
-    BackendError, PointerError, ProfileError, ProfileLimit, QuestionFileError, QuestionSetError,
-    ReadingError, RecordError, RenderError, Source,
-};
+use crate::core::{BackendError, PointerError, ProfileError, ProfileLimit, QuestionFileError, QuestionSetError, ReadingError, RecordError, Source};
+use crate::render::RenderError;
 
 use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;

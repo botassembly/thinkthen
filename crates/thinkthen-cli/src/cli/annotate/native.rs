@@ -1,6 +1,7 @@
 //! Annotation keeps CLI framing and presentation around the native request stream.
 use super::{Judging, asker::Parser};
-use crate::core::{Outcome, Reading, Record, RecordValue, Setting, json_line};
+use crate::core::{Outcome, Reading, Record, RecordValue, Setting};
+use crate::render::json_line;
 use crate::failure::Failure;
 use crate::schedule::{Judged, Output, Placed};
 use std::{cell::RefCell, collections::BTreeMap, io::Write, process::ExitCode, sync::Arc};

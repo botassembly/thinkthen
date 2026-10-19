@@ -8,7 +8,8 @@ use serde::Serialize;
 
 use crate::cli::intake::{Data, Intake};
 use crate::core::adapters::built_in;
-use crate::core::{Backend, BackendProfile, Description, Reading, RecognizeSpec, json_line};
+use crate::core::{Backend, BackendProfile, Description, Reading, RecognizeSpec};
+use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
 
@@ -219,7 +220,8 @@ fn print(
 mod tests {
     //! Stays: dry-run probability accounting requires direct numeric boundary checks.
     use super::{DryRun, Request};
-    use crate::core::{KEY_VAR, json_line};
+    use crate::core::{KEY_VAR};
+use crate::render::json_line;
 
     #[test]
     #[allow(

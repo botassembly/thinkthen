@@ -73,7 +73,7 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
             requests += counts.requests;
             Ok(format!(
                 "function-plan {name} {}",
-                core::json_line(&counts)?
+                crate::render::json_line(&counts)?
             ))
         })
         .collect::<Result<Vec<_>, Failure>>()?;

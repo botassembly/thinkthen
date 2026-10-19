@@ -11,6 +11,7 @@ mod mcp;
 mod statistics;
 mod probes;
 mod plan_document;
+mod render;
 #[cfg(windows)]
 mod windows;
 

@@ -1,7 +1,8 @@
 //! Recognition framing and display around the native ordered stage executor.
 use super::{Running, source};
 use crate::cli::intake::{Data, Item};
-use crate::core::{Outcome, Reading, RecognizeSpec, Record, RecordValue, json_line};
+use crate::core::{Outcome, Reading, RecognizeSpec, Record, RecordValue};
+use crate::render::json_line;
 use crate::failure::{Failure, ReplayContext};
 use crate::schedule::{Judged, Output, Placed};
 use std::{cell::RefCell, collections::BTreeMap, process::ExitCode, sync::Arc};

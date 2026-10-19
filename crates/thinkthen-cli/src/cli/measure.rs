@@ -9,7 +9,7 @@ use std::path::Path;
 
 use crate::statistics::answer::{Rule, Shown};
 use crate::statistics::{Line, MeasureError, json_lines};
-use crate::core::{Threshold, ThresholdError};
+use thinkthen::{Threshold, ThresholdError};
 use crate::failure::Failure;
 
 /// Why a measuring command stopped, told with the command name and the input's role.

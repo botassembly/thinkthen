@@ -2,7 +2,8 @@
 use super::{Rendered, Unit};
 use crate::args::Common;
 use crate::cli::intake;
-use crate::core::{Reading, json_line};
+use crate::core::{Reading};
+use crate::render::json_line;
 use crate::failure::Failure;
 
 pub(super) fn rendered(

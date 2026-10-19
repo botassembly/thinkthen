@@ -11,7 +11,7 @@ use crate::core::json::Json;
 use crate::core::plan::{Descriptions, Plan};
 use crate::core::question::Question;
 use crate::core::question_set::QuestionSet;
-use crate::core::render::json_line;
+use crate::render::json_line;
 use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
 use crate::core::result::Usage;
 use crate::core::text::{Evidence, ModelName};

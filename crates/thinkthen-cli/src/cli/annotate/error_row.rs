@@ -2,7 +2,8 @@
 
 use serde::Serialize;
 
-use crate::core::{Outcome, json_line};
+use crate::core::{Outcome};
+use crate::render::json_line;
 use crate::failure::Failure;
 use crate::schedule::Judged;
 

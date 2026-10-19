@@ -335,7 +335,7 @@ fn member(line: &mut String, name: &str, value: &impl Serialize) -> Result<(), F
     let end = line
         .strip_suffix('}')
         .ok_or(Failure::Defect("a detailed row is not an object"))?;
-    *line = format!("{end},\"{name}\":{}}}", crate::core::json_line(value)?);
+    *line = format!("{end},\"{name}\":{}}}", crate::render::json_line(value)?);
     Ok(())
 }
 
@@ -364,7 +364,7 @@ pub(crate) fn document(
     } else {
         *line = format!(
             "{{\"input_file\":{},\"value\":{line}}}",
-            crate::core::json_line(&position.file)?
+            crate::render::json_line(&position.file)?
         );
     }
     Ok(())
@@ -388,7 +388,7 @@ pub(crate) fn source_members(
     let (Some(line), Some(position)) = (line, position.filter(|p| p.located)) else {
         return Ok(());
     };
-    let fields = crate::core::json_line(&SourceFields {
+    let fields = crate::render::json_line(&SourceFields {
         file: position.file.as_deref(),
         first_line: position.first,
         last_line: position.last,
@@ -412,7 +412,7 @@ pub(crate) fn source_value(
 ) -> Result<String, Failure> {
     let mut line = Some(format!(
         "{{\"input\":{},\"value\":{value}}}",
-        crate::core::json_line(record)?
+        crate::render::json_line(record)?
     ));
     source_members(&mut line, Some(position))?;
     line.ok_or(Failure::Defect("a located value has no carrier"))

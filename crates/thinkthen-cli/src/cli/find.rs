@@ -4,9 +4,8 @@ use crate::plan_document::PlanDocument;
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
-use crate::core::{
-    Backend, Framing, MAX_RECORD_BYTES, Pointer, Reading, Record, json_line,
-};
+use crate::core::{Backend, Framing, MAX_RECORD_BYTES, Pointer, Reading, Record};
+use crate::render::json_line;
 
 use crate::args::{Common, FindArguments};
 use crate::asking::{self, Folders};
