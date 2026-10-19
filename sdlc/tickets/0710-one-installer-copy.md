@@ -10,7 +10,7 @@ Reviews: revision bd47e44, accept
 
 ## Outcome
 
-- Changes: `site/public/install.sh`, `site/public/install.ps1`, `site/package.json`, `site/scripts/copy-installers.mjs`, `sdlc/scripts/versions`, `sdlc/scripts/windows-installer-test.py`, `sdlc/planning/release-process.md`.
+- Changes: `site/public/install.sh`, `site/public/install.ps1`, `site/package.json`, `site/scripts/copy-installers.mjs`, `sdlc/scripts/versions`, `sdlc/scripts/windows-installer-test.py`, `sdlc/planning/release-process.md`, `sdlc/scripts/scratch.sh`.
 - `site/public/install.sh` and `site/public/install.ps1` are deleted from the tree. The site build copies the root `install.sh` and `install.ps1` into its output, so the site serves the same bytes from one source.
 - The copy comparison in `sdlc/scripts/versions` and the matching one in `sdlc/scripts/windows-installer-test.py` are deleted, with their self-test cases. The release process names one installer file to update.
 
