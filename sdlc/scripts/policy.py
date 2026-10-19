@@ -1565,23 +1565,27 @@ def check_core_policy() -> None:
     )
     if any(core_policy_failures(control) for control in policy_controls):
         fail("core", "comments, literals, lifetimes, and internal imports remain allowed")
+    # Clap belongs only to the command package after the split. Plant its
+    # dependency as well as its imports so these parser/alias probes still
+    # exercise the core ban without restoring a command dependency.
+    parser_dependencies = {**dependencies, "clap": {}}
     dependency_plants = (
         (dependencies, "use crate::core::image::ImageState;", []),
         (dependencies, "image::ImageReader::new();", ["image"]),
         (dependencies, "::image::ImageReader::new();", ["image"]),
         (dependencies, "use image as decoder;", ["image"]),
         (dependencies, "jpeg_decoder::Decoder::new();", ["jpeg-decoder"]),
-        (dependencies, "use clap::Parser;", ["clap"]),
+        (parser_dependencies, "use clap::Parser;", ["clap"]),
         (dependencies, "windows_sys::Win32::Foundation::HANDLE", ["windows-sys"]),
         (dependencies, "use windows_sys as native;", ["windows-sys"]),
         (dependencies, "use {windows_sys::{self as native, Win32}};", ["windows-sys"]),
         (dependencies, "nix::unistd::geteuid();", ["nix"]),
-        (dependencies, "use clap as parser;", ["clap"]),
-        (dependencies, "use {clap as parser};", ["clap"]),
-        (dependencies, "use {clap::{self as parser, Parser}};", ["clap"]),
-        (dependencies, "use {\n    r#clap::{Parser},\n};", ["clap"]),
-        (dependencies, "extern crate clap as parser;", ["clap"]),
-        (dependencies, "clap::Parser::parse();", ["clap"]),
+        (parser_dependencies, "use clap as parser;", ["clap"]),
+        (parser_dependencies, "use {clap as parser};", ["clap"]),
+        (parser_dependencies, "use {clap::{self as parser, Parser}};", ["clap"]),
+        (parser_dependencies, "use {\n    r#clap::{Parser},\n};", ["clap"]),
+        (parser_dependencies, "extern crate clap as parser;", ["clap"]),
+        (parser_dependencies, "clap::Parser::parse();", ["clap"]),
         (dependencies, "use {csv_core::{Reader as CsvReader}};", ["csv-core"]),
         (dependencies, "use csv_core as records;", ["csv-core"]),
         (dependencies, "use ureq as transport;", ["ureq"]),
@@ -1597,9 +1601,10 @@ def check_core_policy() -> None:
         (dependencies, 'const TEXT: &str = r#"clap::Parser"#;', []),
         (dependencies, "use crate::{core::Answer, engine_value as value};", []),
     )
-    if any(core_dependency_failures(text, held) != expected
-           for held, text, expected in dependency_plants):
-        fail("core", "the outer-dependency and alias plants are refused")
+    for held, text, expected in dependency_plants:
+        actual = core_dependency_failures(text, held)
+        if actual != expected:
+            fail("core", f"dependency plant {text!r}: expected {expected}, found {actual}")
 
 
 # Ticket 0083: the transform catalog prints embedded bytes and owns nothing
