@@ -203,7 +203,7 @@ pub(crate) fn run(
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
-    schedule::jobs_of(common.jobs, reading.streams())?;
+    schedule::jobs_of(common.jobs, reading.streams(), environment)?;
     let context = context::for_run(
         batch.as_ref().and_then(|tiers| tiers.context),
         settled.text().as_json().as_str().is_some(),

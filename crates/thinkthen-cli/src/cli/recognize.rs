@@ -93,7 +93,7 @@ pub(crate) fn run(
     };
     let reading =
         Reading::new(framing, pointers)?.with_item_schema(spec.metadata.item_schema.clone());
-    schedule::jobs_of(arguments.common.jobs, reading.streams())?;
+    schedule::jobs_of(arguments.common.jobs, reading.streams(), environment)?;
     if (arguments.common.located() || arguments.common.input.len() > 1)
         && (!spec.on.is_empty()
             || arguments.common.jsonl
@@ -172,6 +172,6 @@ pub(crate) fn run(
         &reading,
         &spec,
         source,
-        &mut schedule::Output::streaming(&mut writer, environment.usage()),
+        &mut schedule::Output::streaming(&mut writer),
     )
 }

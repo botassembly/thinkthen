@@ -294,7 +294,7 @@ fn over_kept(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    let mut output = Output::streaming(writer, environment.usage());
+    let mut output = Output::streaming(writer);
     output.display(display.clone());
     let context = match keeping {
         Keeping::Passing => ReplayContext::Filter,
@@ -335,7 +335,7 @@ fn judging(
         asked,
         environment,
         input,
-        &mut Output::streaming(writer, environment.usage()),
+        &mut Output::streaming(writer),
     )
     .map_err(|error| error.with_replay_context(context))
 }

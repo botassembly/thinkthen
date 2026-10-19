@@ -50,7 +50,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
-    crate::schedule::width(arguments.common.jobs)?;
+    crate::schedule::width(arguments.common.jobs, environment)?;
     let backend = environment.resolve(
         arguments.common.backend.as_deref(),
         arguments.common.url.as_deref(),
@@ -95,7 +95,7 @@ pub(crate) fn run(
     if arguments.common.dry_run {
         return plan::dry_run(&judging, admitted, &reading, inputs, setting, &mut writer);
     }
-    let mut output = Output::streaming(&mut writer, environment.usage());
+    let mut output = Output::streaming(&mut writer);
     native::run(&judging, admitted, &reading, inputs, setting, &mut output)
 }
 

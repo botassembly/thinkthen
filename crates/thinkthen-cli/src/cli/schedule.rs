@@ -4,10 +4,7 @@
 use std::fmt;
 use std::io::Write;
 
-use crate::core::{ModelName, Outcome, Withheld};
-use crate::engine::error::Error as EngineError;
-use crate::engine::usage::Counters;
-use crate::engine::{Width, Widths};
+use crate::cli::edge::Environment;
 use crate::failure::Failure;
 use crate::profile::Mismatch;
 
@@ -26,8 +23,8 @@ impl Placed {
     }
 }
 
-impl From<EngineError> for Placed {
-    fn from(error: EngineError) -> Self {
+impl From<crate::Error> for Placed {
+    fn from(error: crate::Error) -> Self {
         Self {
             cause: error.into(),
             at: None,
@@ -41,9 +38,26 @@ impl From<Failure> for Placed {
     }
 }
 
+/// The command's three exit/read states, independent of native implementation types.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Outcome {
+    Yes,
+    No,
+    Unresolved,
+}
+impl From<crate::Answer> for Outcome {
+    fn from(answer: crate::Answer) -> Self {
+        match answer {
+            crate::Answer::Yes => Self::Yes,
+            crate::Answer::No => Self::No,
+            crate::Answer::Unsure => Self::Unresolved,
+        }
+    }
+}
+
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
-    pub(crate) model: Option<ModelName>,
+    pub(crate) model: Option<String>,
     pub(crate) printed: Option<String>,
     pub(crate) position: Option<crate::cli::intake::Position>,
     pub(crate) outcome: Outcome,
@@ -59,7 +73,7 @@ impl fmt::Debug for Judged {
             .debug_struct("Judged")
             .field(
                 "printed",
-                &Withheld(self.printed.as_ref().map_or(0, String::len)),
+                &self.printed.as_ref().map(String::len),
             )
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
@@ -87,34 +101,33 @@ impl fmt::Debug for Judged {
 pub(crate) struct Output<'a> {
     writer: &'a mut dyn Write,
     display: crate::cli::display::Display,
-    usage: &'a Counters,
     model_guard: bool,
     run_model: ModelGuard,
 }
 
 /// Live reply comparison shared by row output and rank observations.
 #[derive(Default)]
-pub(crate) struct ModelGuard(Option<ModelName>);
+pub(crate) struct ModelGuard(Option<String>);
 
 impl ModelGuard {
     pub(crate) fn check_sources<'a>(
         &mut self,
-        sources: impl Iterator<Item = &'a crate::core::QuestionSource>,
+        sources: impl Iterator<Item = &'a crate::QuestionSource>,
     ) -> Result<(), Failure> {
         for source in sources {
-            if source.origin() == crate::core::Origin::Live {
-                self.check_model(Some(source.model()))?;
+            if source.origin() == crate::Origin::Live {
+                self.check_model(Some(source.answered_by()))?;
             }
         }
         Ok(())
     }
 
-    fn check_model(&mut self, model: Option<&ModelName>) -> Result<(), Failure> {
+    fn check_model(&mut self, model: Option<&str>) -> Result<(), Failure> {
         // Stored answers take no part in this comparison (ADR 0111 section 4).
         if let Some(model) = model {
             match &self.0 {
-                Some(first) if first != model => return Err(Failure::RunModelsDiffer),
-                None => self.0 = Some(model.clone()),
+                Some(first) if first.as_str() != model => return Err(Failure::RunModelsDiffer),
+                None => self.0 = Some(model.to_owned()),
                 Some(_) => {}
             }
         }
@@ -129,10 +142,9 @@ impl fmt::Debug for Output<'_> {
 }
 
 impl Output<'_> {
-    pub(crate) fn streaming<'a>(writer: &'a mut dyn Write, usage: &'a Counters) -> Output<'a> {
+    pub(crate) fn streaming<'a>(writer: &'a mut dyn Write) -> Output<'a> {
         Output {
             writer,
-            usage,
             display: crate::cli::display::Display::default(),
             model_guard: false,
             run_model: ModelGuard::default(),
@@ -165,7 +177,7 @@ impl Output<'_> {
         self.model_guard = true;
     }
 
-    fn check_model(&mut self, model: Option<&ModelName>) -> Result<(), Failure> {
+    fn check_model(&mut self, model: Option<&str>) -> Result<(), Failure> {
         if self.model_guard {
             self.run_model.check_model(model)?;
         }
@@ -173,15 +185,11 @@ impl Output<'_> {
     }
 
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
-        let result = self.print(judged);
-        if result.is_ok() {
-            self.usage.record_done();
-        }
-        result
+        self.print(judged)
     }
 
     pub(crate) fn print(&mut self, judged: Judged) -> Result<bool, Failure> {
-        self.check_model(judged.model.as_ref())?;
+        self.check_model(judged.model.as_deref())?;
         if let Some(mismatch) = &judged.profile_mismatch {
             mismatch.print_once()?;
         }
@@ -192,29 +200,20 @@ impl Output<'_> {
     }
 }
 
-pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure> {
-    match asked {
-        Some(_) if !streams => Err(Failure::JobsOutsideRecords),
-        asked => width(asked),
+pub(crate) fn jobs_of(asked: Option<u8>, streams: bool, environment: &Environment) -> Result<(), Failure> {
+    if asked.is_some() && !streams {
+        return Err(Failure::JobsOutsideRecords);
     }
+    width(asked, environment)
 }
 
-/// Register this command's `--jobs` with the process and return the width
-/// its calls follow.
-pub(crate) fn width(asked: Option<u8>) -> Result<usize, Failure> {
-    let cancel = crate::engine::Cancel::default();
-    let limits = crate::engine::limits::of(std::process::id(), &cancel)?;
-    width_in(&limits.widths, asked)
-}
-
-/// `--jobs N` selects N. An omitted `--jobs` selects nothing and follows the
-/// width the process runs at, which is 8 until something selects another.
-pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Failure> {
-    let asked = asked.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
-    widths
-        .select(asked)
-        .map(Width::get)
-        .map_err(Failure::WidthActive)
+/// Select an explicit command width at this command's original admission point.
+/// Omission follows the process without reserving its fallback width.
+pub(crate) fn width(asked: Option<u8>, environment: &Environment) -> Result<(), Failure> {
+    if let Some(width) = asked {
+        environment.update_builder(|builder| builder.select_throttle(width))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]
