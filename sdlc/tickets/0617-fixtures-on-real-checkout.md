@@ -1,6 +1,6 @@
 # 0617: Run harness fixtures on the tracked checkout, not copied scripts
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

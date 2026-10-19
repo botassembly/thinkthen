@@ -1,6 +1,6 @@
 # 0618: Count "not run" (exit 77) as failure everywhere
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
