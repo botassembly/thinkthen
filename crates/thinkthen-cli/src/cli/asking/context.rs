@@ -3,13 +3,12 @@
 use std::fs;
 use std::path::Path;
 
-use crate::core::Evidence;
 use crate::failure::Failure;
 use crate::failure::context::Error;
 
 #[derive(Clone)]
 pub(super) struct Context {
-    evidence: Evidence,
+    evidence: String,
 }
 
 pub(super) fn for_run(
@@ -27,32 +26,26 @@ pub(super) fn for_run(
 
 pub(crate) fn shared(path: Option<&Path>) -> Result<Option<String>, Failure> {
     path.map(|path| {
-        Context::read(path)?
-            .evidence
-            .as_text()
-            .map(|text| text.into_owned())
-            .map_err(Failure::from)
+        Ok(Context::read(path)?.evidence)
     })
     .transpose()
 }
 
 pub(crate) fn record(
-    record: &crate::core::Record,
+    record: &crate::RawRecord,
     pointer: Option<&str>,
-    schema: Option<&crate::core::InputDeclaration>,
-) -> Result<Option<crate::public::RecordContext>, Failure> {
+    schema: Option<&crate::InputDeclaration>,
+) -> Result<Option<crate::RecordContext>, Failure> {
     let Some(pointer) = pointer else {
         return Ok(None);
     };
-    let mut reading = crate::public::RecordReading::new(&[], Some(pointer), None)
+    let mut reading = crate::RecordReading::new(&[], Some(pointer), None)
         .map_err(|_| Failure::Usage("--context-field needs a valid JSON Pointer"))?;
     if let Some(schema) = schema {
         reading = reading.with_context_schema(schema.clone());
     }
     reading
-        .compose(crate::public::RawRecord(std::sync::Arc::new(
-            record.clone(),
-        )))
+        .compose(record.clone())
         .map(|record| record.context)
         .map_err(|_| Failure::Usage("the per-item context does not match context_schema"))
 }
@@ -61,11 +54,13 @@ impl Context {
     pub(super) fn read(path: &Path) -> Result<Self, Failure> {
         let bytes = fs::read(path).map_err(|error| Failure::Context(Error::Open(error)))?;
         let text = String::from_utf8(bytes).map_err(|_| Failure::Context(Error::NotUtf8))?;
-        let evidence = Evidence::new(text).map_err(|_| Failure::Context(Error::Empty))?;
-        Ok(Self { evidence })
+        if text.trim().is_empty() {
+            return Err(Failure::Context(Error::Empty));
+        }
+        Ok(Self { evidence: text })
     }
 
-    pub(super) fn evidence(&self) -> Evidence {
+    pub(super) fn evidence(&self) -> String {
         self.evidence.clone()
     }
 }
