@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 77112f3, accept
+
 ## Outcome
 
 - Changes: `build-tools/results/answer_rules.py`, `build-tools/results/legacy/`, `conformance/library-surface.json`, `conformance/library-surface/`, the readers of `library-surface.json` under `conformance/` and `sdlc/scripts/`.
