@@ -70,7 +70,7 @@ impl<'connection> Catalog<'connection> {
         self.connection.create_scalar_function(
             NAME,
             0,
-            FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY,
+            FunctionFlags::SQLITE_UTF8,
             move |_| Ok(descriptions.clone()),
         )
     }
