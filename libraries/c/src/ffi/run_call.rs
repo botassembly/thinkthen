@@ -3,7 +3,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::EngineHandle;
 use crate::failures::{self, Failure};
-use crate::session::views::thinkthen_complete_utf8_v1 as Text;
+use crate::session::views::thinkthen_complete_utf8_v1;
 use std::ffi::c_void;
 use thinkthen::{CallOptions, RequestEnvironment, RequestFeed, RequestInput, RequestItem, Surface};
 
@@ -23,7 +23,8 @@ pub struct CallCancelHandle(thinkthen::CancelToken);
 /// Bytes remain readable until the next invocation or until run_call returns.
 /// It runs synchronously on the run_call caller, and may reenter independent C operations.
 /// Never unwind or throw across this callback; retain private host exceptions locally.
-pub type CallProducerV1 = Option<unsafe extern "C" fn(*mut c_void, *mut Text) -> u32>;
+pub type CallProducerV1 =
+    Option<unsafe extern "C" fn(*mut c_void, *mut thinkthen_complete_utf8_v1) -> u32>;
 /// Producer published one canonical RequestItem JSON value.
 pub const THINKTHEN_CALL_PRODUCER_ITEM_V1: u32 = 0;
 /// Producer ended normally; the output is ignored.
@@ -31,13 +32,13 @@ pub const THINKTHEN_CALL_PRODUCER_END_V1: u32 = 1;
 /// Producer failed; no host exception text crosses this boundary.
 pub const THINKTHEN_CALL_PRODUCER_FAILURE_V1: u32 = 2;
 
-fn view(text: &str) -> Text {
-    Text {
+fn view(text: &str) -> thinkthen_complete_utf8_v1 {
+    thinkthen_complete_utf8_v1 {
         data: text.as_ptr().cast(),
         len: text.len(),
     }
 }
-unsafe fn read<'a>(text: Text) -> Result<&'a str, Failure> {
+unsafe fn read<'a>(text: thinkthen_complete_utf8_v1) -> Result<&'a str, Failure> {
     // SAFETY: the foreign caller retains the counted readable extent.
     unsafe { super::text(text.data, text.len) }
 }
@@ -80,7 +81,7 @@ unsafe fn execute(
                 if finished {
                     return None;
                 }
-                let mut item = Text {
+                let mut item = thinkthen_complete_utf8_v1 {
                     data: std::ptr::null(),
                     len: 0,
                 };
@@ -196,7 +197,9 @@ pub unsafe extern "C" fn thinkthen_call_cancel_fire(token: *const CallCancelHand
 /// # Safety
 /// owner is NULL or live for every reader of the returned text.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call_result_json(owner: *const CallResultHandle) -> Text {
+pub unsafe extern "C" fn thinkthen_call_result_json(
+    owner: *const CallResultHandle,
+) -> thinkthen_complete_utf8_v1 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }.map_or(view(""), |owner| view(&owner.0))
@@ -226,7 +229,9 @@ pub unsafe extern "C" fn thinkthen_call_error_retryable(owner: *const CallErrorH
 /// # Safety
 /// owner is NULL or live for every reader of the returned text.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call_error_message(owner: *const CallErrorHandle) -> Text {
+pub unsafe extern "C" fn thinkthen_call_error_message(
+    owner: *const CallErrorHandle,
+) -> thinkthen_complete_utf8_v1 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }.map_or(view(""), |owner| view(owner.failure.message_text()))
@@ -236,7 +241,9 @@ pub unsafe extern "C" fn thinkthen_call_error_message(owner: *const CallErrorHan
 /// # Safety
 /// owner is NULL or live for every reader of the returned text.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_call_error_facts_json(owner: *const CallErrorHandle) -> Text {
+pub unsafe extern "C" fn thinkthen_call_error_facts_json(
+    owner: *const CallErrorHandle,
+) -> thinkthen_complete_utf8_v1 {
     failures::guard(None, view(""), || {
         // SAFETY: caller retains the immutable owner.
         unsafe { owner.as_ref() }

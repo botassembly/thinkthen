@@ -108,7 +108,7 @@ def run(native, scratch):
             isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
             backend = shared.Backend(backend_binary, isolated)
             try:
-                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"hold" if probe == "held" else "full"}/v1',
+                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held" else "full"}/v1',
                                 THINKTHEN_API_KEY='sk-conformance-loopback')
                 value = shared.document(rows[CASES[0]], cases, named)
                 value['held_cancel'] = probe == 'held'

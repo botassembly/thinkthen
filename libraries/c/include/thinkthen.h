@@ -966,10 +966,6 @@ typedef struct thinkthen_session_result thinkthen_session_result;
  */
 typedef struct thinkthen_value thinkthen_value;
 
-typedef struct thinkthen_complete_usage_persistence_v1 {
-  uint32_t kind;
-} thinkthen_complete_usage_persistence_v1;
-
 /*
  C descriptor or borrowed view `thinkthen_complete_utf8_v1`.
  */
@@ -983,6 +979,10 @@ typedef struct thinkthen_complete_utf8_v1 {
    */
   size_t len;
 } thinkthen_complete_utf8_v1;
+
+typedef struct thinkthen_complete_usage_persistence_v1 {
+  uint32_t kind;
+} thinkthen_complete_usage_persistence_v1;
 
 typedef struct thinkthen_request_text_v1 {
   struct thinkthen_complete_utf8_v1 text;
@@ -2259,6 +2259,14 @@ typedef struct thinkthen_request_arguments_v1 {
   const struct thinkthen_request_call_options_v1 *m_options;
   const struct thinkthen_request_question_selector_v1 *m_question;
 } thinkthen_request_arguments_v1;
+
+/*
+ A producer returns ITEM and counted RequestItem JSON, END, or FAILURE.
+ Bytes remain readable until the next invocation or until run_call returns.
+ It runs synchronously on the run_call caller, and may reenter independent C operations.
+ Never unwind or throw across this callback; retain private host exceptions locally.
+ */
+typedef uint32_t (*thinkthen_call_producer_v1)(void*, struct thinkthen_complete_utf8_v1*);
 
 typedef struct thinkthen_request_reader_failure_producer_v1 {
   uint32_t reserved;
@@ -4807,7 +4815,7 @@ int32_t thinkthen_call_error_code(const struct thinkthen_call_error *owner);
  # Safety
  owner is NULL or live for every reader of the returned text.
  */
-Text thinkthen_call_error_facts_json(const struct thinkthen_call_error *owner);
+struct thinkthen_complete_utf8_v1 thinkthen_call_error_facts_json(const struct thinkthen_call_error *owner);
 
 /*
  Free this independent owner; NULL is ignored.
@@ -4821,7 +4829,7 @@ void thinkthen_call_error_free(struct thinkthen_call_error *owner);
  # Safety
  owner is NULL or live for every reader of the returned text.
  */
-Text thinkthen_call_error_message(const struct thinkthen_call_error *owner);
+struct thinkthen_complete_utf8_v1 thinkthen_call_error_message(const struct thinkthen_call_error *owner);
 
 /*
  Read retryability from any thread; NULL returns false.
@@ -4842,7 +4850,7 @@ void thinkthen_call_result_free(struct thinkthen_call_result *owner);
  # Safety
  owner is NULL or live for every reader of the returned text.
  */
-Text thinkthen_call_result_json(const struct thinkthen_call_result *owner);
+struct thinkthen_complete_utf8_v1 thinkthen_call_result_json(const struct thinkthen_call_result *owner);
 
 /*
  Finish this engine's current usage deltas and observe their persistence.

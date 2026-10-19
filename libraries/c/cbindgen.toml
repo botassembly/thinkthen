@@ -11,7 +11,7 @@ sort_by = "Name"
 parse_deps = false
 [export]
 include = ["InputDeclarationKindV1", "InputPropertyKindV1", "QuestionLoaderRoleV1"]
-item_types = ["constants", "enums", "structs", "unions", "opaque", "functions"]
+item_types = ["constants", "enums", "structs", "unions", "opaque", "functions", "typedefs"]
 exclude = ["OK", "USAGE", "DEFECT", "NO_DEADLINE"]
 [export.rename]
 "ValueHandle" = "thinkthen_value"
