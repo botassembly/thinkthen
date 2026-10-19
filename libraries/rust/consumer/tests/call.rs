@@ -51,9 +51,12 @@ fn cancellation_while_reply_is_held_returns_settled_failure() -> Result<(), Box<
     let worker = std::thread::spawn(move || engine.call("decide", arguments(false)?, RequestEnvironment { controls: CallOptions::new().cancel(&stop), feed: None }));
     let arrived = arrival.recv_timeout(Duration::from_secs(5));
     cancel.cancel();
-    release.wait();
+    if arrived.is_ok() {
+        release.wait();
+    }
+    let outcome = worker.join().map_err(|_| "call worker panicked")?;
     arrived?;
-    let error = worker.join().map_err(|_| "call worker panicked")?.err().ok_or("cancelled call succeeded")?;
+    let error = outcome.err().ok_or("cancelled call succeeded")?;
     kind(&error, ErrorKind::Cancelled, "the call was cancelled")?;
     assert_eq!(listener.count(), 1);
     assert_eq!(error.facts().ok_or("missing final facts")?.requests_sent(), 1);
