@@ -48,6 +48,8 @@ The command applies its captured request rate with `EngineBuilder::requests_per_
 
 `Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
 
+`RequestDefinition::question_sha256` exposes the existing canonical identity used by complete results for atomic, ordered-set, find and recognition questions. Atomic identities retain the resolved threshold and profile; recognition uses the native stage-context normalization. `relation_sha256` requires explicit record or line interpretation, so offline audit accepts both existing relation identities without rewriting saved JSON. A dynamic choose template has no complete question identity before per-record options arrive and returns Usage. These operations read no file and send nothing. The command retains digest mismatch precedence and owns all file mutation.
+
 `ParsedJson::from_json` admits any native ordered JSON shape for read-only consumers without the execution record byte ceiling. `ParsedJson::content` borrows the original content; clones share that parsed value and Debug withholds it. The type has no execution conversion, implicit serialization or owned-content API. Offline commands retain their own object-only admission and selector behavior. `RawRecord` and request construction retain their existing byte admission.
 
 `Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection. JSON, profile, threshold and configuration refusals expose closed classifications and numeric parser locations. These classifications omit parser prose, duplicate paths, authored values and credential bytes; configuration sentences retain only the existing safe producer wording.
@@ -368,6 +370,16 @@ const RequestFunction::ALL: [RequestFunction; 10]
 fn RequestFunction::allows_option(self, &str) -> bool
 const fn RequestFunction::images(self) -> bool
 fn EngineBuilder::configuration_shared(&self) -> bool
+enum RelationIdentityMode
+impl Clone for RelationIdentityMode
+impl Copy for RelationIdentityMode
+impl Debug for RelationIdentityMode
+impl Eq for RelationIdentityMode
+impl PartialEq for RelationIdentityMode
+RelationIdentityMode::Records
+RelationIdentityMode::Lines
+fn RequestDefinition::question_sha256(&self) -> Result<String, Error>
+fn RequestDefinition::relation_sha256(&self, mode: RelationIdentityMode) -> Result<String, Error>
 struct ParsedJson
 impl Clone for ParsedJson
 impl Debug for ParsedJson

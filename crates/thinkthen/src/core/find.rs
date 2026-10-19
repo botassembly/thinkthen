@@ -157,18 +157,20 @@ impl Find {
 
     /// Digest the public question, excluding generated ids and unit count.
     pub(crate) fn question_sha256(&self) -> Result<String, FindError> {
-        let canonical = self.canonical_question()?;
-        Ok(hex(&Sha256::digest(canonical.as_bytes())))
+        Self::identity(&self.text, self.none, self.profile.as_ref())
     }
 
+    pub(crate) fn identity(text: &QuestionText, none: bool, profile: Option<&ProfileName>) -> Result<String, FindError> {
+        let canonical = Self::canonical(text, none, profile)?;
+        Ok(hex(&Sha256::digest(canonical.as_bytes())))
+    }
+    fn canonical(text: &QuestionText, none: bool, profile: Option<&ProfileName>) -> Result<String, FindError> {
+        serde_json::to_string(&FindQuestion { verb: "find", text, none, profile })
+            .map_err(|_| FindError::Render)
+    }
+    #[cfg(test)]
     fn canonical_question(&self) -> Result<String, FindError> {
-        serde_json::to_string(&FindQuestion {
-            verb: "find",
-            text: &self.text,
-            none: self.none,
-            profile: self.profile.as_ref(),
-        })
-        .map_err(|_| FindError::Render)
+        Self::canonical(&self.text, self.none, self.profile.as_ref())
     }
 
     /// Build the dedicated detailed result.

@@ -10,6 +10,8 @@ pub use column::{RequestColumn, RequestColumnValues, RequestColumnView};
 mod composition;
 mod decoding;
 mod definition;
+mod identity;
+pub use identity::RelationIdentityMode;
 pub use decoding::RequestDecodeCause;
 mod execution;
 #[cfg(test)]

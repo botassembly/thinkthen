@@ -10,6 +10,7 @@ mod native_feed;
 #[path = "request_contract/preview.rs"]
 mod preview;
 mod overrides;
+mod identity;
 #[path = "request_contract/projections.rs"]
 mod projections;
 #[path = "request_contract/source.rs"]
