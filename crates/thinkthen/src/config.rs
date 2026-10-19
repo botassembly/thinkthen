@@ -38,7 +38,6 @@ const fn refused_price(message: &'static str) -> ConfigError {
     }
 }
 
-#[cfg(any(feature = "cli", test))]
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
 #[cfg(not(windows))]
@@ -175,7 +174,6 @@ impl Config {
     pub(crate) fn named(&self) -> &[Named] {
         &self.named
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn present(&self) -> bool {
         self.present
     }
@@ -188,11 +186,9 @@ impl Config {
     pub(crate) const fn has_model(&self) -> bool {
         self.model.is_some()
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn has_cache(&self) -> bool {
         self.cache.is_some()
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn has_cache_bytes(&self) -> bool {
         self.cache_bytes.is_some()
     }
@@ -202,7 +198,6 @@ impl Config {
     pub(crate) fn cache_enabled(&self) -> bool {
         self.cache.unwrap_or(true)
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn cache_bytes(&self) -> u64 {
         self.cache_bytes.unwrap_or(DEFAULT_CACHE_BYTES)
     }

@@ -36,7 +36,8 @@ impl EngineBuilder {
 
     /// Return the permission status of the configuration captured by this builder.
     pub(crate) fn from_env_with_config_status() -> Result<(Self, bool), Error> {
-        let config = Config::read(config::path().as_deref()).map_err(|refused| {
+        let config_path = config::path();
+        let config = Config::read(config_path.as_deref()).map_err(|refused| {
             if refused.unreadable {
                 Error::local(refused.message.into_owned())
             } else {
@@ -59,6 +60,14 @@ impl EngineBuilder {
         }
         builder.captured = Captured {
             prices: config.prices(),
+            metadata: super::snapshot::CapturedMetadata {
+                path: config_path,
+                present: config.present(),
+                shared: config.shared(),
+                cache_configured: config.has_cache(),
+                cache_bytes: Some(config.cache_bytes()),
+                cache_bytes_configured: config.has_cache_bytes(),
+            },
             base_url,
             backend: variable("THINKTHEN_BACKEND")?,
             config_url: config.url().map(str::to_owned),

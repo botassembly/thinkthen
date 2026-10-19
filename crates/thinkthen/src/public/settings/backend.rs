@@ -22,6 +22,7 @@ pub(super) struct Captured {
     pub(super) config_backend: Option<String>,
     pub(super) config_model: Option<ModelName>,
     pub(super) prices: Option<Prices>,
+    pub(super) metadata: super::snapshot::CapturedMetadata,
     pub(super) configured: Vec<Named>,
     /// Each named variable that was set and nonblank.
     pub(super) keys: BTreeMap<String, Secret>,
@@ -45,6 +46,9 @@ impl fmt::Debug for Captured {
 
 /// The resolved backend, the key it sends, and the variable a missing key names.
 pub(super) struct Selected {
+    pub(super) name: Option<String>,
+    pub(super) url_source: &'static str,
+    pub(super) model_source: &'static str,
     pub(super) backend: Backend,
     pub(super) prices: Option<Prices>,
     pub(super) profile: Option<BackendProfile>,
@@ -103,7 +107,26 @@ impl EngineBuilder {
             }
         };
         let (prices, profile) = choice.setup(&backend);
+        let url_source = match (choice.tier, choice.url.is_some()) {
+            (None, _) => "built_in",
+            (Some(0), true) => "command_line",
+            (Some(1), true) => "environment",
+            (Some(2), true) => "configuration",
+            (Some(_), _) => "backend",
+        };
+        let model_source = if self.model.is_some() {
+            "command_line"
+        } else if choice.named.is_some() {
+            "backend"
+        } else if captured.config_model.is_some() {
+            "configuration"
+        } else {
+            "built_in"
+        };
         Ok(Selected {
+            name: choice.named.as_ref().map(|entry| entry.name().to_owned()),
+            url_source,
+            model_source,
             prices: prices.or(captured.prices),
             profile,
             backend,

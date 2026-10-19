@@ -32,6 +32,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `current_usage_month` and `read_usage` expose the existing count-only store for offline status. The caller owns the explicit directory and selected month. `UsageTotals` projects the existing public `Counters` for that month and all recorded months. Reads retain shared locking, permissions and safe path-specific failure messages and never change persisted state.
 
+`EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -208,6 +210,28 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+struct ResolvedSettings
+impl Debug for ResolvedSettings
+impl Clone for ResolvedSettings
+fn EngineBuilder::resolved_settings(&self) -> Result<ResolvedSettings, Error>
+ResolvedSettings::configuration_path: Option<PathBuf>
+ResolvedSettings::configuration_present: bool
+ResolvedSettings::configuration_shared: bool
+ResolvedSettings::backend_name: Option<String>
+ResolvedSettings::url: String
+ResolvedSettings::url_source: &'static str
+ResolvedSettings::model: String
+ResolvedSettings::model_source: &'static str
+ResolvedSettings::key_variable: String
+ResolvedSettings::api_key_set: bool
+ResolvedSettings::cache_enabled: bool
+ResolvedSettings::cache_enabled_source: &'static str
+ResolvedSettings::cache_path: Option<PathBuf>
+ResolvedSettings::cache_path_source: &'static str
+ResolvedSettings::cache_is_platform_default: bool
+ResolvedSettings::cache_target_bytes: u64
+ResolvedSettings::cache_target_source: &'static str
+ResolvedSettings::usage_path: Option<PathBuf>
 struct UsageTotals
 UsageTotals::month: Counters
 UsageTotals::total: Counters

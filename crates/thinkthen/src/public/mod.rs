@@ -133,7 +133,7 @@ pub use results::{
 };
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 pub use set::{QuestionSet, QuestionSetBuilder};
-pub use settings::EngineBuilder;
+pub use settings::{EngineBuilder, ResolvedSettings};
 
 /// The Polars crate the interface takes, so a caller names the exact version.
 #[cfg(feature = "polars")]

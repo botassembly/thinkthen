@@ -3,6 +3,8 @@
 mod backend;
 mod budgets;
 mod environment;
+mod snapshot;
+pub use snapshot::ResolvedSettings;
 pub(super) mod json;
 mod prices;
 mod server;
@@ -422,6 +424,7 @@ impl EngineBuilder {
             variable,
             prices,
             profile: setup_profile,
+            ..
         } = self.selected()?;
         let backend = if self.explicit_request_bytes {
             backend.with_request_size(self.max_request_bytes)
