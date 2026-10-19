@@ -1,6 +1,6 @@
 # 0622: Split the Intel macOS smoke into parallel jobs and tighten job time limits
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
