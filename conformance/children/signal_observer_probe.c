@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     sigemptyset(&blocked);
     sigaddset(&blocked, signum);
     if (sigprocmask(SIG_BLOCK, &blocked, NULL) != 0) return 2;
-    struct sigaction action = {0}, old = {0}, query = {0};
+    struct sigaction action = {0}, old = {0}, query = {0}, native_query = {0};
     if (strcmp(mode, "ignored") == 0) {
         action.sa_handler = SIG_IGN;
         if (sigaction(signum, &action, NULL) != 0) return 3;
@@ -52,12 +52,15 @@ int main(int argc, char **argv) {
     sigemptyset(&action.sa_mask);
     sigaddset(&action.sa_mask, SIGUSR1);
     if (strcmp(mode, "reset") == 0) action.sa_flags |= SA_RESETHAND;
+    /* Compare query flags with an untouched signal: Darwin normalizes reset flags. */
+    if (sigaction(SIGUSR2, &action, NULL) != 0 ||
+        sigaction(SIGUSR2, NULL, &native_query) != 0) return 17;
     if (sigaction(signum, &action, &old) != 0) return 3;
     if (old.sa_handler != (strcmp(mode, "ignored") == 0 ? SIG_IGN : SIG_DFL)) return 4;
     if (sigaction(signum, NULL, &query) != 0 ||
-        query.sa_sigaction != native_handler || query.sa_flags != action.sa_flags ||
+        query.sa_sigaction != native_handler || query.sa_flags != native_query.sa_flags ||
         !sigismember(&query.sa_mask, SIGUSR1)) {
-        fprintf(stderr, "query flags: %x; registered flags: %x\n", query.sa_flags, action.sa_flags);
+        fprintf(stderr, "query flags: %x; native query flags: %x\n", query.sa_flags, native_query.sa_flags);
         return 5;
     }
     if (strcmp(mode, "replacement") == 0 && sigaction(signum, &action, &old) != 0) return 6;
