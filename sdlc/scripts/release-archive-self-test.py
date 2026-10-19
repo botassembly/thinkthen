@@ -1121,7 +1121,13 @@ def main():
         fake_go.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_GO_VERSION\"\n")
         fake_go.chmod(0o755)
         no_python = fake_bin / "python3"
-        no_python.write_text("#!/bin/sh\nexit 1\n")
+        # Keep the real platform/input admission before the unavailable Python
+        # dependency and generator plants, so each refusal reaches its owner.
+        no_python.write_text(f"#!{sys.executable}\n"
+                             "import os, sys\nfrom pathlib import Path\n"
+                             f"if len(sys.argv) > 1 and Path(sys.argv[1]).resolve() == Path({str(REPO / 'sdlc/scripts/check_verdict.py')!r}):\n"
+                             "    os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
+                             "sys.exit(1)\n")
         no_python.chmod(0o755)
         for version, diagnostic in (
             ("go version go1.21.9 linux/amd64", "Go 1.22 or newer is required"),
@@ -1136,9 +1142,11 @@ def main():
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
         installed_env = os.environ | {"PATH": fixture_path(fake_bin),
                                       "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
-                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
-                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
+                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64"}
         for family in ("go", "cpp"):
+            # Supply a real wrapper so admission reaches the missing C archive.
+            wrapper = next((base / "paired").glob(f"thinkthen-{family}-*.tar.gz"))
+            installed_env["THINKTHEN_ARTIFACT"] = str(wrapper)
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
