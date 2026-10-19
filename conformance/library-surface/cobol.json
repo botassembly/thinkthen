@@ -1,0 +1,46 @@
+{
+  "libraries": {
+    "cobol": {
+      "root": "libraries/cobol",
+      "language": "cobol",
+      "naming": "upper",
+      "declarations": [
+        "libraries/cobol/copybooks/*.cpy",
+        "libraries/cobol/src/*.h"
+      ],
+      "option_containers": [
+        "tt-n-cobol-RequestOptions"
+      ],
+      "setting_containers": [
+        "tt-n-cobol-Settings"
+      ],
+      "function_prefix": "TT_SESSION_",
+      "test_folders": [
+        "checks",
+        "examples"
+      ],
+      "helper_names": {
+        "plan": "TT_PREVIEW",
+        "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
+        "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS",
+        "question_file": "thinkthen_cobol_RequestQuestionFile",
+        "question_name": "thinkthen_cobol_RequestQuestionName",
+        "question_reference": "thinkthen_cobol_RequestQuestionReference",
+        "item": "thinkthen_cobol_RequestItem",
+        "files": "thinkthen_cobol_RequestSource"
+      },
+      "function_containers": [
+        ""
+      ],
+      "field_prefix": "v-m-",
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": [],
+      "representation_calls": [
+        "TT_SESSION_NEXT",
+        "TT_SESSION_TEXT"
+      ]
+    }
+  }
+}

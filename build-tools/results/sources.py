@@ -1,5 +1,6 @@
 """Pure ownership and source classification for native generation and policy gates."""
 from pathlib import Path as FilePath, PurePosixPath as Path
+import json
 import os
 import subprocess
 from registry import OUTPUTS, generated_paths
@@ -18,6 +19,19 @@ TOOL_GENERATED = {'libraries/r/thinkthen/R/extendr-wrappers.R',
 
 # Artifact qualification scripts exercise installed packages rather than ship with them.
 TEST_FILES = {'libraries/python/check-windows.py'}
+
+
+def load_manifest(path):
+    """Load shared surface policy and each host's own migration entry."""
+    path = FilePath(path)
+    manifest = json.loads(path.read_text())
+    for section in ('libraries', 'databases'):
+        manifest[section] = {}
+    for entry in sorted(path.with_suffix('').glob('*.json')):
+        data = json.loads(entry.read_text())
+        for section in ('libraries', 'databases'):
+            manifest[section].update(data.get(section, {}))
+    return manifest
 
 
 def source_owners(manifest):

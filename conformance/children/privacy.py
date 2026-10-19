@@ -13,7 +13,7 @@ import tarfile
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'build-tools/results'))
-from sources import classification, generated_paths, source_owners, tracked_files
+from sources import load_manifest, classification, generated_paths, source_owners, tracked_files
 
 PRIVATE = re.compile(rb'(?P<home_path>/home/)|(?P<users_path>/Users/)|(?P<auth_file>auth\.json)|'
                      rb'(?P<private_key>-----BEGIN PRIVATE KEY-----)|(?P<canary>tt-canary-)|'
@@ -135,7 +135,7 @@ def public_files(root):
     """Use the existing surface ownership to omit test fixtures from public source."""
     root = Path(root).resolve()
     repo = Path(__file__).resolve().parents[2]
-    manifest = json.loads((repo / 'conformance/library-surface.json').read_text())
+    manifest = load_manifest(repo / 'conformance/library-surface.json')
     relative_root = root.relative_to(repo).as_posix()
     name = next((name for name, config in source_owners(manifest).items() if config['root'] == relative_root), None)
     generated = generated_paths()

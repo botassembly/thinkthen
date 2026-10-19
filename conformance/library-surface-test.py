@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / 'conformance/library-surface.py'
 sys.path.insert(0, str(ROOT))
 from conformance.children.children import child_env
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
+from sources import load_manifest
 
 
 class PublicSurface(unittest.TestCase):
@@ -625,7 +627,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             result['$defs'] = dict(canonical['$defs'], **result['$defs'])
             write('request.json', json.dumps(request))
             write('result.json', json.dumps(result))
-            manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+            manifest = load_manifest(ROOT / 'conformance/library-surface.json')
             manifest['authority'] = {'request': 'request.json', 'result': 'result.json'}
             config = manifest['libraries']['typescript']
             manifest['libraries'] = {'typescript': config}
@@ -634,6 +636,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             config['setting_containers'] = ['Settings']
             config['function_containers'] = ['Client']
             config['representation_types'] = ['Settings']
+            write('conformance/library-surface/typescript.json', json.dumps({'libraries': {'typescript': config}}))
+            del manifest['libraries'], manifest['databases']
             write('conformance/library-surface.json', json.dumps(manifest))
             generated = ('export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };\n'
                          'export class NativeNumber { readonly raw: string; private constructor(); }\n'
@@ -714,7 +718,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertTrue(any('unlisted generated declaration:' in error and '.surprise' in error for error in errors))
 
     def test_go_lifecycle_calls_belong_to_native_owners(self):
-        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(ROOT / 'conformance/library-surface.json')
         with tempfile.TemporaryDirectory(prefix='library-surface-go-') as folder:
             root = Path(folder)
             for name in ['sdlc', 'specification']:
@@ -761,7 +765,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('unlisted generated declaration: owned_results_generated.go:RequestOptions.Surprise', errors)
 
     def test_csharp_generated_named_calls_are_checked_at_the_cli(self):
-        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(ROOT / 'conformance/library-surface.json')
         with tempfile.TemporaryDirectory(prefix='library-surface-csharp-') as folder:
             root = Path(folder)
             for name in ['sdlc', 'specification']:
@@ -835,7 +839,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('unlisted generated declaration: NamedCalls.g.cs:CallResult.SurpriseProbability', field)
 
     def test_java_record_components_are_checked_at_the_cli(self):
-        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(ROOT / 'conformance/library-surface.json')
         with tempfile.TemporaryDirectory(prefix='library-surface-records-') as folder:
             root = Path(folder)
             for name in ['sdlc', 'specification', 'crates']:
@@ -916,11 +920,14 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             target = root / 'libraries/c/include/thinkthen.h'
             target.parent.mkdir(parents=True)
             shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', target)
-            manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+            manifest = load_manifest(ROOT / 'conformance/library-surface.json')
             manifest['libraries']['php']['function_containers'] = ['Client']
             manifest['libraries']['php']['option_containers'] = ['Options']
             manifest['libraries']['php']['setting_containers'] = ['Settings']
             selected = root / 'manifest.json'
+            selected.with_suffix('').mkdir()
+            (selected.with_suffix('') / 'php.json').write_text(json.dumps({'libraries': {'php': manifest['libraries']['php']}}))
+            del manifest['libraries'], manifest['databases']
             selected.write_text(json.dumps(manifest))
             calls = root / 'libraries/php/src/session/results_generated.php'
             original = calls.read_text()
@@ -978,7 +985,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
         spec = importlib.util.spec_from_file_location('surface_cli_facades', CHECK)
         checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(checker)
-        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(ROOT / 'conformance/library-surface.json')
         config = manifest['libraries']['jvm']
         declared = set()
         for language, container in [('java', 'Engine'), ('kotlin', 'KotlinEngine'), ('scala', 'ScalaEngine')]:
@@ -997,7 +1004,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
         spec = importlib.util.spec_from_file_location('surface_cli_builders', CHECK)
         checker = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(checker)
-        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(ROOT / 'conformance/library-surface.json')
         manifest['helpers'] = {'question_file': 'builder', 'question_name': 'builder',
                                'question_reference': 'builder', 'item': 'builder', 'files': 'builder'}
         config = manifest['libraries']['go']
