@@ -411,7 +411,7 @@ fn overflow() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "usage overflow")
 }
 
-fn recognized_month(name: &str) -> bool {
+pub(crate) fn recognized_month(name: &str) -> bool {
     let bytes = name.as_bytes();
     if bytes.len() != 12 || bytes.get(4) != Some(&b'-') || bytes.get(7..) != Some(b".json") {
         return false;

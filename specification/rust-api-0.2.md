@@ -30,6 +30,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 The same ticket exposes the existing explicit cache maintenance operations for `cache convert`, `cache unused`, `cache prune` and offline status counts. The caller owns the named directory and parses command options. The library keeps store locking, ownership checks, current-time capture, selection rules and failure classification. `CacheCounts`, `CacheConversion`, `CachePruneOptions`, `CachePruneSelection` and `CachePruned` are reexports of the existing store values; they add no second implementation or maintenance capability.
 
+`current_usage_month` and `read_usage` expose the existing count-only store for offline status. The caller owns the explicit directory and selected month. `UsageTotals` projects the existing public `Counters` for that month and all recorded months. Reads retain shared locking, permissions and safe path-specific failure messages and never change persisted state.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -206,6 +208,16 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+struct UsageTotals
+UsageTotals::month: Counters
+UsageTotals::total: Counters
+impl Debug for UsageTotals
+impl Clone for UsageTotals
+impl Copy for UsageTotals
+impl Eq for UsageTotals
+impl PartialEq for UsageTotals
+fn current_usage_month() -> String
+fn read_usage(&Path, &str) -> Result<UsageTotals, Error>
 struct CacheCounts
 CacheCounts::answers: u64
 CacheCounts::bytes: u64
