@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision c6529de, accept
+
 ## Outcome
 
 `sdlc/scripts/test` and `sdlc/scripts/lint` print each step's elapsed seconds, so their cost can be split without guessing.
