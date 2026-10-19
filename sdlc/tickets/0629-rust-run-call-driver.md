@@ -23,3 +23,7 @@ Depends on: 0612, 0628
 ## Evidence
 
 Every binding writes its own loop to run a call: start a session, push input from a producer, read packets, enforce one reader and one producer, handle closed and cancelled states, notice a missing final packet, and chain the producer's error. Examples: Go `libraries/go/session.go:86-280`, Swift `libraries/swift/Sources/ThinkThen/OwnedSession.swift:15-292`, Dart `libraries/dart/lib/src/session/client.dart:40-140`, Ruby `libraries/ruby/lib/thinkthen/session.rb:100-296`, C# `libraries/csharp/src/OwnedSession.cs:24-111`, PHP `libraries/php/src/session/operation.php:7-101`. The copies already disagree on error text: "Closed session", "client is closed", "operation is closed", and Dart's `StateError('Native owner is closed')`. Go also checks a nil producer itself (`session.go:96`), and so does Ruby (`session.rb:107,128`). All of these rules belong in Rust.
+
+## Progress
+
+- 2026-10-19 started
