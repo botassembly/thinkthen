@@ -770,6 +770,7 @@ pub(super) fn apply(
     Ok(())
 }
 fn apply_question(q: &mut Question, options: &RequestOptions) -> Result<(), Error> {
+    super::wording::apply(q, options)?;
     if let Some(model) = &options.model {
         q.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
     }

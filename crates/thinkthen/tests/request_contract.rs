@@ -9,6 +9,7 @@ mod located_filter;
 mod native_feed;
 #[path = "request_contract/preview.rs"]
 mod preview;
+mod overrides;
 #[path = "request_contract/projections.rs"]
 mod projections;
 #[path = "request_contract/source.rs"]

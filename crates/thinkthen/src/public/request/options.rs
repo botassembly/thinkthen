@@ -52,7 +52,8 @@ impl RequestBatch {
         }
     }
 }
-/// Optional controls; absent values retain the native defaults, null refuses.
+/// Optional controls; absent values retain native defaults. Null refuses except
+/// where it is explicit authored yes/no or label-description content.
 #[derive(Clone, Default, Deserialize, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
@@ -65,6 +66,22 @@ pub struct RequestOptions {
     )]
     #[cfg_attr(test, schemars(with = "String"))]
     pub model: Option<String>,
+    /// Replacement yes meaning; explicit null is authored content, absence retains the saved meaning.
+    #[serde(default, deserialize_with = "super::wording::description", serialize_with = "super::wording::serialize_description", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "crate::core::Description"))]
+    pub yes: Option<crate::Description>,
+    /// Replacement no meaning; explicit null is authored content, absence retains the saved meaning.
+    #[serde(default, deserialize_with = "super::wording::description", serialize_with = "super::wording::serialize_description", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "crate::core::Description"))]
+    pub no: Option<crate::Description>,
+    /// Whole replacement choose options or tag labels, in caller order with descriptions.
+    #[serde(default, deserialize_with = "super::wording::list", serialize_with = "super::wording::serialize_list", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "Vec<super::wording::OptionSchema>"))]
+    pub labels: Option<Vec<crate::RecordOption>>,
+    /// Whole replacement score levels, from lowest to highest with descriptions.
+    #[serde(default, deserialize_with = "super::wording::list", serialize_with = "super::wording::serialize_list", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "Vec<super::wording::OptionSchema>"))]
+    pub levels: Option<Vec<crate::RecordOption>>,
     /// Explicit recognition stage selection; omission retains the saved mode.
     #[serde(
         default,

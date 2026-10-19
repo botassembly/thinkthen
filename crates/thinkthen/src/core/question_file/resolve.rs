@@ -49,9 +49,9 @@ pub(crate) struct Typed {
     /// `--threshold`, as it was written.
     pub(crate) threshold: Option<String>,
     /// `--true`, the text that says what a yes means.
-    pub(crate) yes: Option<String>,
+    pub(crate) yes: Option<crate::core::Json>,
     /// `--false`, the text that says what a no means.
-    pub(crate) no: Option<String>,
+    pub(crate) no: Option<crate::core::Json>,
     /// The options or the levels, as labels with their descriptions.
     pub(crate) labels: Option<Described>,
     /// `--model`.
@@ -236,12 +236,12 @@ pub(crate) fn resolve(
     };
     let (yes, yes_source) = meaning_of(
         "true",
-        typed.yes.as_deref(),
+        typed.yes.as_ref(),
         file.and_then(|f| f.yes.clone()),
     )?;
     let (no, no_source) = meaning_of(
         "false",
-        typed.no.as_deref(),
+        typed.no.as_ref(),
         file.and_then(|f| f.no.clone()),
     )?;
     let (threshold, threshold_source) = threshold_of(verb, typed, file)?;
@@ -373,13 +373,13 @@ fn on_of(
 /// The text for what yes or what no means, and where it came from.
 fn meaning_of(
     key: &'static str,
-    typed: Option<&str>,
+    typed: Option<&crate::core::Json>,
     held: Option<Meaning>,
 ) -> Result<(Option<Meaning>, Source), QuestionFileError> {
     match (typed, held) {
         (Some(typed), _) => Ok((
             Some(
-                Meaning::new(typed).map_err(|error| QuestionFileError::Blank {
+                meaning(typed).map_err(|error| QuestionFileError::Blank {
                     origin: Source::CommandLine,
                     key,
                     error,
@@ -389,6 +389,13 @@ fn meaning_of(
         )),
         (None, Some(held)) => Ok((Some(held), Source::File)),
         (None, None) => Ok((None, Source::Default)),
+    }
+}
+
+fn meaning(value: &crate::core::Json) -> Result<Meaning, crate::core::BlankTextError> {
+    match value {
+        crate::core::Json::String(text) => Meaning::new(text),
+        other => Meaning::structured(other).ok_or(crate::core::BlankTextError::Meaning),
     }
 }
 

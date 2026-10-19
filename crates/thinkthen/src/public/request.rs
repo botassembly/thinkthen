@@ -20,6 +20,7 @@ mod inline;
 mod input;
 mod native_feed;
 mod options;
+mod wording;
 mod preview;
 pub(crate) mod pull;
 pub use pull::RequestRows;
@@ -303,6 +304,9 @@ impl RequestFunction {
     #[must_use]
     pub fn allows_option(self, name: &str) -> bool {
         match name {
+            "yes" | "no" => matches!(self, Self::Decide | Self::Filter | Self::Rank),
+            "labels" => matches!(self, Self::Choose | Self::Tag),
+            "levels" => self == Self::Score,
             "threshold" => matches!(
                 self,
                 Self::Decide

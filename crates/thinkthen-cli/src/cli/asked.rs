@@ -39,8 +39,8 @@ fn yes_no(
     let (caller, cutting) = operation;
     let typed = Typed {
         threshold: threshold.cloned(),
-        yes: meanings.yes.clone(),
-        no: meanings.no.clone(),
+        yes: meanings.yes.clone().map(Json::String),
+        no: meanings.no.clone().map(Json::String),
         model: common.model.clone(),
         on: fields(common),
         cutting,

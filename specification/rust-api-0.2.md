@@ -38,7 +38,7 @@ The annotation command uses `Engine::plan_request` through the same native group
 
 Recognition and relation command dry runs use the same `Engine::plan_request`. `prepared_requests` borrows native digests and encoded bodies without rebuilding them. Recognition retains the first record's request disclosure and tokenizer, name and relation bounds; aggregate counts still cover every input. Relations retain native entity admission, authored rule order, methods, logical counts and per-rule request counts, including empty input. These explicit body and rule views can expose original evidence and authored text. Their Debug output withholds that content. They add no fields to generic plan serialization. Existing adapter accounting and staged upper-bound caveats still apply.
 
-`RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation. `instructions` and `entity_definition` replace saved recognition task wording independently; absence retains each saved value. Blank text and use with another verb refuse during header admission. Ordinary execution and preview share the native recognition overlay.
+`RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation. `instructions` and `entity_definition` replace saved recognition task wording independently; absence retains each saved value. Blank text and use with another verb refuse during header admission. Ordinary execution and preview share the native recognition overlay. Atomic `yes`, `no`, `labels` and `levels` use the existing native question resolver. Supplied meanings replace saved meanings, and supplied lists replace the entire saved list with native order, duplicate and cardinality checks. Absent controls retain saved content; explicit null meanings and descriptions remain authored content. The command owns option spelling and source labels.
 
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
 
@@ -273,6 +273,10 @@ fn PlanEstimate::prepared_requests(&self) -> impl ExactSizeIterator<Item = Prepa
 const fn PlanEstimate::recognition(&self) -> Option<&RecognitionPlan>
 fn PlanEstimate::relations(&self) -> Option<RelationPlan<'_>>
 RequestOptions::max_text_bytes: Option<usize>
+RequestOptions::yes: Option<Description>
+RequestOptions::no: Option<Description>
+RequestOptions::labels: Option<Vec<RecordOption>>
+RequestOptions::levels: Option<Vec<RecordOption>>
 RequestOptions::instructions: Option<String>
 RequestOptions::entity_definition: Option<String>
 fn EngineBuilder::requests_per_minute(self, u32) -> Result<EngineBuilder, Error>

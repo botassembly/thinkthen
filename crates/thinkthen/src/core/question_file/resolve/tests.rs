@@ -110,7 +110,7 @@ fn the_command_line_beats_the_file_and_the_file_beats_the_default() {
     );
     let typed = Typed {
         threshold: Some("0.9".to_owned()),
-        yes: Some("Cash back.".to_owned()),
+        yes: Some(crate::core::Json::String("Cash back.".to_owned())),
         model: Some("jev-1.14.0".to_owned()),
         on: Some(vec!["/note".to_owned()]),
         ..Typed::default()
@@ -349,8 +349,8 @@ proptest! {
             Some(&text),
             None,
             &Typed {
-                yes: yes.clone(),
-                no: no.clone(),
+                yes: yes.clone().map(crate::core::Json::String),
+                no: no.clone().map(crate::core::Json::String),
                 ..Typed::default()
             },
         )

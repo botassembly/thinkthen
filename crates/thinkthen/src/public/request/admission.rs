@@ -166,7 +166,7 @@ fn admit_header(
             value.clone(),
             native_originals,
         )?),
-        RequestQuestion::Text { text } => Some(text_question(function, text)?),
+        RequestQuestion::Text { text } => Some(text_question(function, text, &args.options)?),
         RequestQuestion::File { path } => {
             path_header(path)?;
             None
@@ -196,8 +196,9 @@ fn admit_header(
     }
     Ok(admitted)
 }
-fn text_question(function: Function, text: &str) -> Result<RequestDefinition, Error> {
+fn text_question(function: Function, text: &str, options: &RequestOptions) -> Result<RequestDefinition, Error> {
     match function {
+        Function::Choose | Function::Tag | Function::Score => super::wording::text(function, text, options),
         Function::Decide | Function::Filter => Ok(Question::decide(text)?.cut().into()),
         Function::Rank => Ok(Question::rank(text)?.into()),
         Function::Find => Ok(RequestDefinition::Atomic(LoadedQuestion::Question(
@@ -302,6 +303,14 @@ fn admit_options(
     input: &RequestInput,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    for (name, supplied) in [
+        ("yes", options.yes.is_some()), ("no", options.no.is_some()),
+        ("labels", options.labels.is_some()), ("levels", options.levels.is_some()),
+    ] {
+        if supplied && !function.allows_option(name) {
+            return Err(Error::usage(format!("{name} does not apply to this function")));
+        }
+    }
     if let Some(model) = &options.model {
         crate::core::ModelName::new(model).map_err(|cause| {
             Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
@@ -587,6 +596,7 @@ fn admit_definition_controls(
     definition: &RequestDefinition,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    super::wording::validate(definition, options)?;
     match definition {
         RequestDefinition::Rank(q) => {
             let rule = options
