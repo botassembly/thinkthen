@@ -2,6 +2,9 @@
 use super::{Error, diagnostic::Diagnostic};
 use crate::{ErrorKind, engine::error::Error as Native};
 
+mod classification;
+pub use classification::{ConfigurationFailure, JsonFailure, ProfileFailure};
+
 /// A validated subtype of backend connection failure.
 pub use crate::engine::error::TransportKind as TransportFailure;
 
@@ -26,6 +29,33 @@ pub struct ProviderFailure<'a> {
 /// They contain no provider bodies, original records or credential values.
 #[derive(Debug)]
 pub enum ErrorDiagnostic<'a> {
+    /// Pure native JSON admission, without quoted input or duplicate paths.
+    Json(JsonFailure),
+    /// A record's native JSON admission, preserving safe location facts.
+    RecordJson(JsonFailure),
+    /// A saved question's native JSON admission.
+    QuestionJson {
+        /// Native parser classification and numeric location.
+        failure: JsonFailure,
+        /// Whether the saved grammar reports a file as its source.
+        from_file: bool,
+    },
+    /// Native threshold grammar or numeric admission.
+    Threshold(crate::ThresholdError),
+    /// Native backend-profile grammar, with no parser prose or authored values.
+    Profile {
+        /// Closed native refusal classification.
+        failure: ProfileFailure,
+        /// Whether the caller selected a profile file.
+        from_file: bool,
+    },
+    /// Captured configuration admission with its existing value-free sentence.
+    Configuration {
+        /// Closed refusal classification.
+        failure: ConfigurationFailure,
+        /// Existing producer sentence; contains no paths, values or parser bodies.
+        message: &'a str,
+    },
     /// Backend connection classification.
     Transport(TransportFailure),
     /// Actual HTTP status.
@@ -219,6 +249,12 @@ impl Error {
     #[must_use]
     pub fn diagnostic(&self) -> Option<ErrorDiagnostic<'_>> {
         Some(match self.detail().diagnostic.as_deref()? {
+            Diagnostic::Configuration(cause) => ErrorDiagnostic::Configuration {
+                failure: if cause.unreadable { ConfigurationFailure::Unreadable }
+                    else if cause.price.is_some() { ConfigurationFailure::Prices }
+                    else { ConfigurationFailure::Grammar },
+                message: self.detail().message(),
+            },
             Diagnostic::Engine(error) => engine(error),
             Diagnostic::EngineRange { cause, first, last } => ErrorDiagnostic::Range {
                 first: *first, last: *last, cause: Box::new(engine(cause)),
@@ -306,6 +342,15 @@ fn engine(error: &Native) -> ErrorDiagnostic<'_> {
 
 fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option<ErrorDiagnostic<'_>> {
     use ErrorDiagnostic as D;
+    if let Some(error) = cause.downcast_ref::<crate::core::JsonError>() {
+        return Some(D::Json(classification::json(error)));
+    }
+    if let Some(error) = cause.downcast_ref::<crate::ThresholdError>() {
+        return Some(D::Threshold(*error));
+    }
+    if let Some(error) = cause.downcast_ref::<crate::core::ProfileError>() {
+        return Some(D::Profile { failure: classification::profile(error), from_file: kind == ErrorKind::Local });
+    }
     if let Some(error) = cause.downcast_ref::<crate::core::ExamplesError>() {
         return Some(D::RecognitionExamples(error.to_string()));
     }
@@ -321,6 +366,9 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
         return Some(D::EntitySet(error.to_string()));
     }
     if let Some(error) = cause.downcast_ref::<crate::core::QuestionFileError>() {
+        if let crate::core::QuestionFileError::NotJson(cause) = error {
+            return Some(D::QuestionJson { failure: classification::json(cause), from_file: error.origin() == crate::core::Source::File });
+        }
         return Some(D::Question { message: error.to_string(), from_file: error.origin() == crate::core::Source::File });
     }
     if let Some(error) = cause.downcast_ref::<crate::core::QuestionSetError>() {
@@ -332,6 +380,8 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
     if let Some(error) = cause.downcast_ref::<crate::core::RecordError>() {
         return Some(match error {
             crate::core::RecordError::NotUtf8 => D::InvalidUtf8,
+            crate::core::RecordError::Json(cause) => D::RecordJson(classification::json(cause)),
+            crate::core::RecordError::InputJson { line, column } => D::RecordJson(JsonFailure::Syntax { line: *line, column: *column }),
             crate::core::RecordError::Render(cause) => D::Rendering(cause.to_string()),
             _ => D::Record(error.to_string()),
         });

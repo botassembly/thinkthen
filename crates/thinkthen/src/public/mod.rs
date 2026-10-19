@@ -55,6 +55,8 @@ mod question;
 pub(crate) use question::Kind as NativeQuestionKind;
 mod question_file;
 mod record_choose;
+mod parsed_json;
+pub use parsed_json::ParsedJson;
 mod record_composition;
 pub use record_composition::validate_pointer;
 pub use record_choose::RecordChooseQuestion;
@@ -93,7 +95,7 @@ pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{Error, ErrorDetail, ErrorDiagnostic, ErrorKind, ProviderFailure, StopCause, Stopped, TransportFailure};
+pub use error::{ConfigurationFailure, Error, ErrorDetail, ErrorDiagnostic, ErrorKind, JsonFailure, ProfileFailure, ProviderFailure, StopCause, Stopped, TransportFailure};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use options::{

@@ -395,7 +395,8 @@ impl EngineBuilder {
     pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {
         self.profile = Some(Profile::Inline(
             BackendProfile::parse(value)
-                .map_err(|error| Error::usage(format!("the profile JSON {error}")))?,
+                .map_err(|error| Error::usage(format!("the profile JSON {error}"))
+                    .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error))))?,
         ));
         Ok(self)
     }
@@ -473,7 +474,8 @@ impl EngineBuilder {
                     let text = std::fs::read_to_string(path)
                         .map_err(|_| Error::local("the profile file could not be read"))?;
                     BackendProfile::parse(&text)
-                        .map_err(|error| Error::local(format!("the profile file {error}")))
+                        .map_err(|error| Error::local(format!("the profile file {error}"))
+                            .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error))))
                 }
                 Profile::Inline(profile) => Ok(profile.clone()),
             })

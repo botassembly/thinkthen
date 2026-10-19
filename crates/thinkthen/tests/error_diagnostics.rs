@@ -52,3 +52,57 @@ fn provider_identifiers_exclude_secrets_originals_and_raw_parser_bodies() {
         assert_eq!(listener.count(), 1);
     }
 }
+
+fn assert_private(error: &thinkthen::Error, marker: &str) {
+    for output in [format!("{error:?}"), error.to_string(),
+        serde_json::to_string(&error.complete()).unwrap(), format!("{:?}", error.diagnostic())] {
+        assert!(!output.contains(marker), "private bytes in {output}");
+    }
+    assert!(std::error::Error::source(error).is_none());
+}
+
+#[test]
+fn native_json_categories_and_locations_never_reveal_parser_input() {
+    use thinkthen::{JsonFailure, ParsedJson, RawRecord};
+    let marker = "private_parser_evidence_0639";
+    let deep = format!("{}\"{marker}\"{}", "[".repeat(130), "]".repeat(130));
+    let cases = [
+        (format!(r#"{{"{marker}":0,"{marker}":1}}"#), JsonFailure::DuplicateName),
+        (format!(r#"{{"{marker}":1e9999}}"#), JsonFailure::NotFinite),
+        (deep, JsonFailure::TooDeep),
+    ];
+    for (text, expected) in cases {
+        let error = ParsedJson::from_json(&text).unwrap_err();
+        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::Json(actual)) if actual == expected));
+        assert_private(&error, marker);
+        let error = RawRecord::json(&text).unwrap_err();
+        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::RecordJson(actual)) if actual == expected));
+        assert_private(&error, marker);
+    }
+    let error = ParsedJson::from_json(&format!("{{\n\"{marker}\":?}}")).unwrap_err();
+    assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::Json(JsonFailure::Syntax { line: 2, column })) if column > 0));
+    assert_private(&error, marker);
+    let error = thinkthen::Question::from_json(&format!("{{\"{marker}\":?}}")).unwrap_err();
+    assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::QuestionJson { failure: JsonFailure::Syntax { .. }, from_file: true })));
+    assert_private(&error, marker);
+}
+
+#[test]
+fn profile_grammar_has_closed_safe_classifications() {
+    use thinkthen::{JsonFailure, ProfileFailure};
+    let marker = "private_profile_evidence_0639";
+    for (text, expected) in [
+        (format!(r#"{{"{marker}":?}}"#), ProfileFailure::Json(JsonFailure::Syntax { line: 1, column: marker.len() + 5 })),
+        ("[]".into(), ProfileFailure::Object),
+        ("{}".into(), ProfileFailure::Schema),
+        (format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{marker} !"}}"#), ProfileFailure::Name),
+        (format!(r#"{{"{marker}":1}}"#), ProfileFailure::UnknownKey),
+        (r#"{"schema":"thinkthen.backend-profile/1","name":"valid","max_questions":0}"#.into(), ProfileFailure::Limit("max_questions")),
+        (r#"{"schema":"thinkthen.backend-profile/1","name":"valid"}"#.into(), ProfileFailure::NoLimit),
+        (r#"{"schema":"thinkthen.backend-profile/2","name":"valid","image_profile":null}"#.into(), ProfileFailure::ImageProfile),
+    ] {
+        let error = Engine::builder().profile_json(&text).err().unwrap();
+        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::Profile { failure, from_file: false }) if failure == expected), "{:?}", error.diagnostic());
+        assert_private(&error, marker);
+    }
+}

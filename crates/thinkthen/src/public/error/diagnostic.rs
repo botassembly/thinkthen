@@ -3,6 +3,7 @@
 use std::any::Any;
 
 pub(crate) enum Diagnostic {
+    Configuration(crate::config::ConfigError),
     RequestDecode(crate::public::request::RequestDecodeCause),
     Engine(
         crate::engine::error::Error,

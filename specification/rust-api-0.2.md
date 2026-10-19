@@ -48,7 +48,9 @@ The command applies its captured request rate with `EngineBuilder::requests_per_
 
 `Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
 
-`Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection.
+`ParsedJson::from_json` admits any native ordered JSON shape for read-only consumers without the execution record byte ceiling. `ParsedJson::content` borrows the original content; clones share that parsed value and Debug withholds it. The type has no execution conversion, implicit serialization or owned-content API. Offline commands retain their own object-only admission and selector behavior. `RawRecord` and request construction retain their existing byte admission.
+
+`Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection. JSON, profile, threshold and configuration refusals expose closed classifications and numeric parser locations. These classifications omit parser prose, duplicate paths, authored values and credential bytes; configuration sentences retain only the existing safe producer wording.
 
 MCP discovery now reads `request_schema`, `RequestFunction::ALL`, `allows_option` and `images` through the public library. These expose the existing committed schema, canonical function order and discovery predicates without copying schemas or function tables into the command package. Full native admission remains authoritative for option validation.
 
@@ -360,9 +362,61 @@ const RequestFunction::ALL: [RequestFunction; 10]
 fn RequestFunction::allows_option(self, &str) -> bool
 const fn RequestFunction::images(self) -> bool
 fn EngineBuilder::configuration_shared(&self) -> bool
+struct ParsedJson
+impl Clone for ParsedJson
+impl Debug for ParsedJson
+fn ParsedJson::from_json(text: &str) -> Result<Self, Error>
+fn ParsedJson::content(&self) -> QuestionContent<'_>
+enum JsonFailure
+impl Clone for JsonFailure
+impl Copy for JsonFailure
+impl Debug for JsonFailure
+impl Eq for JsonFailure
+impl PartialEq for JsonFailure
+JsonFailure::DuplicateName
+JsonFailure::NotFinite
+JsonFailure::TooDeep
+JsonFailure::Syntax
+JsonFailure::Syntax::line: usize
+JsonFailure::Syntax::column: usize
+enum ConfigurationFailure
+impl Clone for ConfigurationFailure
+impl Copy for ConfigurationFailure
+impl Debug for ConfigurationFailure
+impl Eq for ConfigurationFailure
+impl PartialEq for ConfigurationFailure
+ConfigurationFailure::Unreadable
+ConfigurationFailure::Prices
+ConfigurationFailure::Grammar
+enum ProfileFailure
+impl Clone for ProfileFailure
+impl Copy for ProfileFailure
+impl Debug for ProfileFailure
+impl Eq for ProfileFailure
+impl PartialEq for ProfileFailure
+ProfileFailure::Json(JsonFailure)
+ProfileFailure::Object
+ProfileFailure::Schema
+ProfileFailure::Name
+ProfileFailure::UnknownKey
+ProfileFailure::Limit(&'static str)
+ProfileFailure::NoLimit
+ProfileFailure::ImageProfile
 enum ErrorDiagnostic<'a>
 impl Debug for ErrorDiagnostic
 fn Error::diagnostic(&self) -> Option<ErrorDiagnostic<'_>>
+ErrorDiagnostic::Json(JsonFailure)
+ErrorDiagnostic::RecordJson(JsonFailure)
+ErrorDiagnostic::QuestionJson
+ErrorDiagnostic::QuestionJson::failure: JsonFailure
+ErrorDiagnostic::QuestionJson::from_file: bool
+ErrorDiagnostic::Threshold(ThresholdError)
+ErrorDiagnostic::Profile
+ErrorDiagnostic::Profile::failure: ProfileFailure
+ErrorDiagnostic::Profile::from_file: bool
+ErrorDiagnostic::Configuration
+ErrorDiagnostic::Configuration::failure: ConfigurationFailure
+ErrorDiagnostic::Configuration::message: &'a str
 ErrorDiagnostic::Transport(TransportFailure)
 ErrorDiagnostic::Status(u16)
 ErrorDiagnostic::Provider

@@ -74,7 +74,6 @@ pub(crate) use crate::core::backend::BackendError;
 pub(crate) use crate::core::backend::named::{self, Named};
 pub(crate) use crate::core::backend::{Backend, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE};
 pub(crate) use crate::core::backend_profile::LimitKind;
-#[cfg(test)]
 pub(crate) use crate::core::backend_profile::ProfileError;
 pub(crate) use crate::core::backend_profile::{BackendProfile, ProfileLimit, ProfileName};
 pub(crate) use crate::core::batch::{BatchError, BatchRecord, Setting};

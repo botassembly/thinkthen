@@ -4,7 +4,7 @@ use serde::Serialize;
 pub(crate) mod diagnostic;
 mod stopped;
 mod presentation;
-pub use presentation::{ErrorDiagnostic, ProviderFailure, TransportFailure};
+pub use presentation::{ConfigurationFailure, ErrorDiagnostic, JsonFailure, ProfileFailure, ProviderFailure, TransportFailure};
 pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};

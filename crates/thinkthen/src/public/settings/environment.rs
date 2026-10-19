@@ -39,11 +39,12 @@ impl EngineBuilder {
     pub fn from_env() -> Result<Self, Error> {
         let config_path = config::path();
         let config = Config::read(config_path.as_deref()).map_err(|refused| {
-            if refused.unreadable {
-                Error::local(refused.message.into_owned())
+            let public = if refused.unreadable {
+                Error::local(refused.message.to_string())
             } else {
-                Error::usage(refused.message.into_owned())
-            }
+                Error::usage(refused.message.to_string())
+            };
+            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(refused))
         })?;
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
         let platform = named.is_none();

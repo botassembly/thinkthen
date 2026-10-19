@@ -19,11 +19,12 @@ impl EngineBuilder {
     pub fn from_config() -> Result<Self, Error> {
         let path = config::path();
         let config = Config::read(path.as_deref()).map_err(|error| {
-            if let Some(message) = error.price {
+            let public = if let Some(message) = error.price {
                 Error::usage(message)
             } else {
-                Error::local(error.message.into_owned())
-            }
+                Error::local(error.message.to_string())
+            };
+            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(error))
         })?;
         Ok(Self::configured(&config, path, config::cache_path(), true))
     }

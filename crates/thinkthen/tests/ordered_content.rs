@@ -19,3 +19,26 @@ fn borrowed_inspection_preserves_authored_order_false_null_and_exact_numbers() {
     assert!(content.pointer("$.z").is_err());
     assert!(content.pointer("/a~1b/01").unwrap().is_none());
 }
+
+#[test]
+fn read_only_json_preserves_shapes_and_shared_borrowed_content_without_execution_admission() {
+    use thinkthen::{ParsedJson, RawRecord};
+    for text in ["null", "false", "0", "1.25", r#""evidence""#, "[]", "{}", r#"{"z":false,"a":null}"#] {
+        let value = ParsedJson::from_json(text).unwrap();
+        assert_eq!(value.content().to_json().unwrap(), text);
+        let clone = value.clone();
+        drop(value);
+        assert_eq!(clone.content().to_json().unwrap(), text);
+    }
+    let marker = "private_read_only_evidence_0639";
+    let value = ParsedJson::from_json(&format!(r#"{{"evidence":"{marker}"}}"#)).unwrap();
+    assert!(!format!("{value:?}").contains(marker));
+    let clone = value.clone();
+    let original = value.content().fields().unwrap().next().unwrap().1;
+    let shared = clone.content().fields().unwrap().next().unwrap().1;
+    assert!(std::ptr::eq(original.text().unwrap().as_ptr(), shared.text().unwrap().as_ptr()));
+    let oversized = format!(r#"{{"evidence":"{}"}}"#, "x".repeat(RawRecord::max_bytes()));
+    let value = ParsedJson::from_json(&oversized).unwrap();
+    assert_eq!(value.content().to_json().unwrap(), oversized);
+    assert!(RawRecord::json(&oversized).is_err());
+}
