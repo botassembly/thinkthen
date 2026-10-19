@@ -20,43 +20,35 @@ from unittest.mock import patch
 import yaml
 
 REPO = Path(__file__).resolve().parents[2]
-def workflow_command(name, doc):
-    # Run the public gate against an isolated workflow tree, with its real scripts.
-    with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
-        root = Path(temporary)
-        for source in REPO.iterdir():
-            if source.name not in ('.git', '.github', 'sdlc'):
-                if source.name in ('.gitignore', '.gitattributes'):
-                    (root / source.name).write_bytes(source.read_bytes())
-                else:
-                    (root / source.name).symlink_to(source)
-        scripts = root / 'sdlc/scripts'
-        scripts.mkdir(parents=True)
-        for source in (REPO / 'sdlc/scripts').iterdir():
-            target = scripts / source.name
-            if source.name == 'workflows':
-                target.write_bytes(source.read_bytes())
-            else:
-                target.symlink_to(source)
-        (root / 'sdlc/generators').symlink_to(REPO / 'sdlc/generators')
-        workflows = root / '.github/workflows'
-        workflows.mkdir(parents=True)
-        for source in (REPO / '.github/workflows').glob('*.y*ml'):
-            (workflows / source.name).write_bytes(source.read_bytes())
-        original = (REPO / '.github/workflows' / name).read_text()
-        (workflows / name).write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
-        subprocess.run(['git', 'init', '-q', str(root)], check=True)
-        subprocess.run(['git', '-C', str(root), 'add', '.github/workflows'], check=True)
-        result = subprocess.run([sys.executable, str(scripts / 'workflows')],
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
+
+
+def workflow_command(root, name, doc):
+    # Restore each mutation so the next rule sees the same tracked checkout.
+    workflow = root / '.github/workflows' / name
+    original = workflow.read_text()
+    workflow.write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
+    try:
+        result = subprocess.run([sys.executable, str(root / 'sdlc/scripts/workflows')],
                                 cwd=REPO, capture_output=True, text=True, timeout=30)
         return result.returncode, result.stdout + result.stderr
+    finally:
+        workflow.write_text(original)
 
 
 def workflow_cases():
+    with tempfile.TemporaryDirectory(prefix='thinkthen-hosted-gate-') as temporary:
+        root = Path(temporary)
+        stage_checkout(REPO, root)
+        workflow_cases_at(root)
+
+
+def workflow_cases_at(root):
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
     for name, doc in (('release.yml', release), ('windows.yml', windows)):
-        code, output = workflow_command(name, doc)
+        code, output = workflow_command(root, name, doc)
         assert code == 0, (name, code, output)
     # The host cache exception must not admit another release cache or a wider key.
     for job in ('build', 'smoke'):
@@ -79,11 +71,11 @@ def workflow_cases():
             else:
                 doc['jobs'][job]['steps'].remove(candidate)
                 doc['jobs']['publish']['steps'].append(candidate)
-            code, output = workflow_command('release.yml', doc)
+            code, output = workflow_command(root, 'release.yml', doc)
             owner = 'publish' if defect == 'publish' else job
             assert code == 1 and f'job {owner} uses a cache' in output, (job, defect, output)
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    code, output = workflow_command('gate.yml', gate)
+    code, output = workflow_command(root, 'gate.yml', gate)
     assert code == 0, ('gate.yml', code, output)
     for defect in ('options', 'declaration', 'dynamic', 'paid', 'string', 'default'):
         doc = deepcopy(gate)
@@ -94,7 +86,7 @@ def workflow_cases():
         elif defect == 'paid': platform['options'].append('macos-15-large')
         elif defect == 'string': platform['type'] = 'string'
         else: platform['default'] = 'macos-15-large'
-        code, output = workflow_command('gate.yml', doc)
+        code, output = workflow_command(root, 'gate.yml', doc)
         assert code == 1 and 'standard free hosted runners' in output, (defect, code, output)
     for defect in ('paid', 'matrix-paid', 'skip-apple', 'mask-apple', 'wrong-sha', 'missing-language', 'mixed-paid', 'job-mask', 'upload-always'):
         doc = deepcopy(release)
@@ -119,7 +111,7 @@ def workflow_cases():
             apple['strategy']['matrix']['include'][0]['runner'] = 'macos-15-large'
         else:
             proof['run'] = '\n'.join(proof['run'].splitlines()[:-1])
-        code, output = workflow_command('release.yml', doc)
+        code, output = workflow_command(root, 'release.yml', doc)
         assert code == 1 and ('standard free hosted runners' if 'paid' in defect else 'both installed Apple languages') in output, (defect, output)
     for defect in ('skip', 'mask', 'wrong-sha', 'late', 'guard-bypass', 'missing-input'):
         doc = deepcopy(windows)
@@ -138,7 +130,7 @@ def workflow_cases():
         else:
             steps.remove(guard)
             steps.append(guard)
-        code, output = workflow_command('windows.yml', doc)
+        code, output = workflow_command(root, 'windows.yml', doc)
         assert code == 1 and 'candidate SHA' in output, (defect, output)
 
 
@@ -159,7 +151,7 @@ def workflow_cases():
             lane = next(step for step in steps if step.get('name') == 'Require the standard Windows lane')
             steps.remove(lane)
             steps.insert(next(i for i, step in enumerate(steps) if step.get('id') == 'candidate') + 1, lane)
-        code, output = workflow_command('windows.yml', doc)
+        code, output = workflow_command(root, 'windows.yml', doc)
         assert code == 1, (defect, output)
     lane = next(step for step in windows['jobs']['stage-0']['steps']
                 if step.get('name') == 'Require the standard Windows lane')
