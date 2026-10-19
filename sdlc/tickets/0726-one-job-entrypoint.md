@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 2ae50ac, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/job`, `sdlc/pm.json`, `sdlc/scripts/README.md`, `sdlc/scripts/tools.py`.
