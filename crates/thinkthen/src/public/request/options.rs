@@ -85,6 +85,14 @@ pub struct RequestOptions {
     #[serde(default, deserialize_with = "present", skip_serializing_if = "Option::is_none")]
     #[cfg_attr(test, schemars(with = "usize", range(min = 1)))]
     pub max_text_bytes: Option<usize>,
+    /// Replacement recognition task wording; absence retains saved wording.
+    #[serde(default, deserialize_with = "present", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "String"))]
+    pub instructions: Option<String>,
+    /// Replacement literal entity definition; absence retains the saved definition.
+    #[serde(default, deserialize_with = "present", skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "String"))]
+    pub entity_definition: Option<String>,
     /// Authored relation cut, applicable only to whole recognition.
     #[serde(
         default,

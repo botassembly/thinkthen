@@ -553,3 +553,48 @@ fn relation_preview_retains_rule_order_empty_counts_and_native_requests() {
         assert_eq!(engine.usage().requests_sent(), 0);
     }
 }
+
+#[test]
+fn recognition_wording_overrides_saved_values_independently_before_preview() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let saved = thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{"instructions":"saved_task_marker","entity_definition":"saved_entity_marker"}}"#).unwrap();
+    for (instructions, entity_definition, task, entity) in [
+        (None, None, "saved_task_marker", "saved_entity_marker"),
+        (Some("replacement_task_marker"), None, "replacement_task_marker", "saved_entity_marker"),
+        (None, Some("replacement_entity_marker"), "saved_task_marker", "replacement_entity_marker"),
+    ] {
+        let arguments = RequestArguments {
+            question: RequestQuestion::Definition { value: saved.clone().into() },
+            input: RequestInput::Text { text: "Ada".into(), images: vec![] },
+            options: RequestOptions {
+                instructions: instructions.map(str::to_owned),
+                entity_definition: entity_definition.map(str::to_owned),
+                ..RequestOptions::default()
+            },
+        };
+        let request = Request::named("recognize", arguments).unwrap().admit().unwrap();
+        let preview = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        let bodies = preview.prepared_requests().map(|request| String::from_utf8_lossy(request.body).into_owned()).collect::<Vec<_>>().join("\n");
+        assert!(bodies.contains(task));
+        assert!(bodies.contains(entity));
+    }
+    for (function, instructions, entity_definition) in [
+        ("decide", Some("task"), None),
+        ("decide", None, Some("entity")),
+        ("recognize", Some(" "), None),
+        ("recognize", None, Some("")),
+    ] {
+        let arguments = RequestArguments {
+            question: RequestQuestion::Text { text: "Fits?".into() },
+            input: RequestInput::Text { text: "Ada".into(), images: vec![] },
+            options: RequestOptions {
+                instructions: instructions.map(str::to_owned),
+                entity_definition: entity_definition.map(str::to_owned),
+                ..RequestOptions::default()
+            },
+        };
+        assert!(Request::named(function, arguments).unwrap().admit().is_err());
+    }
+    assert_eq!(listener.count(), 0);
+}

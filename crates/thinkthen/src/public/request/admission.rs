@@ -307,6 +307,14 @@ fn admit_options(
             Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
         })?;
     }
+    if options.instructions.is_some() || options.entity_definition.is_some() {
+        if function != Function::Recognize {
+            return Err(Error::usage("recognition wording belongs to recognize"));
+        }
+        for value in [&options.instructions, &options.entity_definition].into_iter().flatten() {
+            crate::core::QuestionText::new(value).map_err(Error::refused)?;
+        }
+    }
     if let Some(limit) = options.max_text_bytes {
         if function != Function::Recognize {
             return Err(Error::usage("max text bytes belongs to recognize"));
@@ -612,6 +620,12 @@ pub(super) fn apply_recognition(
     spec: &mut crate::core::RecognizeSpec,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    if let Some(value) = &options.instructions {
+        spec.instructions = Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
+    }
+    if let Some(value) = &options.entity_definition {
+        spec.entity_definition = Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
+    }
     if let Some(value) = options.snippet_pieces {
         spec.snippet_pieces = value;
     }
