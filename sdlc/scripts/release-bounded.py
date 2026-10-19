@@ -9,6 +9,9 @@ import tempfile
 import time
 
 
+KILL_REAP_TIMEOUT = 5
+
+
 def capture(args, *, env, timeout, input=None, text=False, cwd=None):
     tool = Path(args[0]).name if not isinstance(args, str) else args.split()[0]
     deadline = time.monotonic() + timeout
@@ -51,7 +54,7 @@ def capture(args, *, env, timeout, input=None, text=False, cwd=None):
                     if child.poll() is None:
                         child.kill()  # Owned Popen handle, including failed suspended setup.
                     try:
-                        child.wait(timeout=5)
+                        child.wait(timeout=KILL_REAP_TIMEOUT)
                     except subprocess.TimeoutExpired as error:
                         raise ValueError(f'{tool} owned child cleanup timed out') from error
         stdout.seek(0)

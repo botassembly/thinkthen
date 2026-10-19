@@ -21,6 +21,8 @@ import zipfile
 import warnings
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT
 NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
 SPEC = importlib.util.spec_from_file_location('windows_command', REPO / 'sdlc/scripts/release-windows-command.py')
 COMMAND = importlib.util.module_from_spec(SPEC)
@@ -28,7 +30,7 @@ SPEC.loader.exec_module(COMMAND)
 CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 
 
-def run_fixture(args, env, *, timeout, label):
+def run_fixture(args, env, *, timeout=FIXTURE_HANG_TIMEOUT, label):
     # Windows redirected stdout can default to cp1252. The enclosing smoke
     # decodes this log as UTF-8, including Unicode fixture paths and diagnostics.
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -68,7 +70,7 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.S
 }
 '''
     run_fixture([host, '-NoProfile', '-NonInteractive', '-Command', script],
-                env=env | {'THINKTHEN_FIXTURE_PATH': str(root)}, timeout=30,
+                env=env | {'THINKTHEN_FIXTURE_PATH': str(root)},
                 label='private fixture preparation').check_returncode()
 
 
@@ -328,7 +330,7 @@ def main():
                         call = [host, '-NoProfile', '-NonInteractive', '-File',
                                 str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
                                 '-Installer', str(REPO / 'install.ps1'), '-Mode', mode, '-FixtureRoot', str(root)]
-                        recovery = run_fixture(call, env=env, timeout=30, label='recovery ' + mode)
+                        recovery = run_fixture(call, env=env, label='recovery ' + mode)
                         expected = 1 if mode == 'uncommitted' else 0
                         if recovery.returncode != expected:
                             raise RuntimeError(f'actual recovery AST {mode} exited {recovery.returncode}, expected {expected}')

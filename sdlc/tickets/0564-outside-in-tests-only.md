@@ -16,6 +16,8 @@ Reviews: revision 387ccc1, accept
 
 Reviews: revision 699ef50, accept
 
+Reviews: revision ea272a3, accept
+
 ## Outcome
 
 Unit tests in `src` stay only where no public surface can show the behavior, or where the stakes call for a direct test, and each one says why. Every behavior they covered that a caller can reach has an outside-in test through the CLI, the Rust public API, the MCP command or an installed library. No behavior a caller can reach loses its only test. Passing tests leave no temporary folders behind.
@@ -74,3 +76,4 @@ PM amendment, 2026-10-18, for 0.2.1. Coverage does not gate, so this ticket no l
 - 2026-10-14 next: Merged the reviewed eight-line duplicate test deletion at 12a8ba5ff with the stronger CLI assertion preserved; measured Rust total is 188214, and other inspected tests remain because they carry distinct provenance, diagnostics, privacy, cancellation or ownership checks.
 - 2026-10-14 next: Safe cuts are complete; the final survey retained distinct checks and product behavior, and the 510e8e97a ruling sets the Rust ratchet to the measured total at freeze with the feature growth recorded.
 - 2026-10-14 next: Merged the d057ff25c location ruling and private ownership Stays comment into the combined branch at f82fe98c2; the original test body is byte-identical and its prepared worktree is removed.
+- 2026-10-19 next: Fresh review accepts ea272a396 after M5 witness1792448427896-45031 passed141 tests with3 ignored release cases and zero owned temporary folders before and after; full lint and test now run once with the accepted wave-one batch.
