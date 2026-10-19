@@ -10,17 +10,22 @@ Depends on: 0612, 0618, 0638, 0642
 
 ## Outcome
 
-- examples/session.c calls the run-call entry point and reads the packet's answer, probability and failure fields directly.
-- A small C dumper implements the 0642 packet-dump contract over the installed archive and replaces C-specific fixture expectations. This ticket owns the C dumper; 0642 proves the oracle with the Rust consumer.
-- Door tests that only repeat what the dumper proves through the installed archive are deleted. Tests that prove memory ownership, threading and cancellation at the ABI stay.
-- The gate has no exit-77 path except platforms the 0615 manifest marks unsupported.
+- Changes: `libraries/c/check.sh`, `libraries/c/examples/session.c`, `libraries/c/README.md`, `libraries/c/tests/`.
+- `examples/session.c` keeps calling `thinkthen_run_call` and prints the call's answer and probability read from the result, not the whole result JSON.
+- A small C dumper, `libraries/c/tests/c/dump.c`, implements the 0642 packet-dump contract over the installed archive and replaces the C-specific fixture expectations. This ticket owns the C dumper; 0642 proves the oracle with the Rust consumer.
+- Door tests in `libraries/c/tests/door/` and C programs in `libraries/c/tests/c/` that only repeat what the dumper proves through the installed archive are deleted. Tests that prove memory ownership, threading and cancellation at the ABI stay.
+- The C gate has no exit-77 path except platforms the `sdlc/tools.json` manifest marks unsupported.
 
 ### Proof
 
-On the M5 through pm job, the gate builds the archive, unpacks it, compiles the example and dumper from outside the repository, and matches the 0642 oracle for every shared case.
+- On the M5 natively: `pm job run --machine m5 0640 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check unpacks the archive, compiles the example and the dumper from outside the repository, and matches the 0642 oracle for every shared case. Before the change no C program prints packets for the oracle, so a changed oracle value passes the C gate.
+- Done once by hand and not committed: changing one expected value in the oracle `conformance/fixtures/packets.json` makes the same run fail with a diff.
+- Linux runs at the 0619 container checkpoint.
 
 ## Evidence
 
-- The C library's main checks are Rust integration tests inside the crate (libraries/c/tests/door/*.rs, about 1,300 lines) plus C files compiled against the source tree (libraries/c/check.sh:41-58).
-- The installed archive is exercised only with THINKTHEN_ARTIFACT set (check.sh:36-39) and by tests/installed-session.py.
-- examples/session.c reads answers by walking packet views. When the core adds the answer and probability to the packet and a single run-call entry point, the example and tests should use them.
+- `libraries/c/check.sh` runs `tests/test_installed_consumers.py`, then with `THINKTHEN_ARTIFACT` set runs `tests/installed-session.py` on the archive and stops. Without it, it runs `generate-c-header.py --check`, `check-c-exports.py`, the crate's `cargo test` (the Rust door tests in `libraries/c/tests/door/*.rs`, about 1,400 lines), and compiles `examples/session.c` against the debug build.
+- `tests/installed-session.py` and `tests/installed_cases.py` run the JSON session and plan cases against an extracted archive with the loopback `Backend`. `tests/c/` holds C programs such as `session.c`, `session_cases.c`, `run_call.c` and `error_views.c`.
+- 0638 landed `thinkthen_run_call` and the `thinkthen_call_result` and `thinkthen_call_error` owners, and `examples/session.c` already calls `thinkthen_run_call`; it prints `thinkthen_call_result_json` whole.
+- `sdlc/scripts/release-pack` `part_c` packs `thinkthen-c-VERSION-TARGET.tar.gz` with the header, both libraries and a `.pc` file.
+- The Darwin linking defect in the source check, where `check.sh` copies `libthinkthen_c.so`, belongs to 0641, which also claims `libraries/c/check.sh`.

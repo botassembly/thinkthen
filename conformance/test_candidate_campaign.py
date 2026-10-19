@@ -13,7 +13,10 @@ import unittest
 
 from conformance import parity
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups
+
+from conformance.children.children import fixture_communicate
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -93,9 +96,10 @@ class CandidateSmokes(unittest.TestCase):
             # Rendezvous makes the old four outer reservations deadlock reliably.
             (root / 'compile.py').write_text(
                 'from pathlib import Path\nimport os,subprocess,sys,time\n'
+                'from conformance.children.children import FIXTURE_HANG_TIMEOUT\n'
                 'slot=sys.argv[1]; Path("ready-"+slot).touch()\n'
                 'env={"PATH":os.environ["PATH"]}\n'
-                'deadline=time.monotonic()+5\n'
+                'deadline=time.monotonic()+FIXTURE_HANG_TIMEOUT\n'
                 'while len(list(Path(".").glob("ready-*"))) != 4:\n'
                 ' assert time.monotonic()<deadline, "smoke children did not start"\n'
                 ' time.sleep(0.01)\n'
@@ -109,7 +113,7 @@ class CandidateSmokes(unittest.TestCase):
                 'print("smoke: true")\n')
             env = child_env(home=root / 'home')
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            env['PATH'] = str(tools) + os.pathsep + env['PATH']
+            env['PATH'] = fixture_path(tools, path=env['PATH'])
             children = []
             try:
                 for slot in range(4):
@@ -121,14 +125,14 @@ class CandidateSmokes(unittest.TestCase):
                         ['sh', str(scripts / 'smoke'), '--one', str(binaries), surface],
                         cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True))
                 for child in children:
-                    log, _ = child.communicate(timeout=10)
+                    log, _ = fixture_communicate(child)
                     self.assertEqual(child.returncode, 0, log)
                 self.assertEqual(len(list(root.glob('built-*'))), 4)
             finally:
                 for child in children:
                     if child.poll() is None:
                         os.killpg(child.pid, signal.SIGKILL)
-                    child.communicate(timeout=3)
+                    fixture_communicate(child)
 
     def test_smoke_fails_required_exit77_and_accepts_declared_unsupported_platforms(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:
@@ -152,7 +156,7 @@ class CandidateSmokes(unittest.TestCase):
                 library = root / 'libraries' / member
                 library.mkdir(parents=True, exist_ok=True)
                 (library / 'check.sh').write_text('exit 77\n')
-            env = {'PATH': str(tools) + ':' + os.defpath, 'HOME': str(root / 'home')}
+            env = {'PATH': fixture_path(tools), 'HOME': str(root / 'home')}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             manifest = json.loads((root / 'sdlc/tools.json').read_text())
             arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
@@ -179,7 +183,7 @@ class RetainedNpmArtifact(unittest.TestCase):
             library = root / 'libraries/typescript'
             scripts = root / 'sdlc/scripts'
             tools = root / 'home/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
-            for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
+            for directory in (library, scripts, tools, root / 'build-tools/results'):
                 directory.mkdir(parents=True, exist_ok=True)
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
             (library / 'fixture').write_text('package')
@@ -200,7 +204,7 @@ cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
                 path.chmod(0o755)
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
-                   'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
+                   'PATH': fixture_path(tools), 'THINKTHEN_TEST_PROFILE': 'full'}
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)

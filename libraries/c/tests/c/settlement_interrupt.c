@@ -12,7 +12,7 @@ static void drain_after_interrupt(thinkthen_session *session) {
     uint32_t state;
     do {
         thinkthen_session_result *packet = NULL;
-        check(thinkthen_session_try_read(session, &state, &packet) == THINKTHEN_OK, "settlement transfer succeeds");
+        check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &state, &packet) == THINKTHEN_OK, "settlement transfer succeeds");
         if (packet) { packet_json(packet); thinkthen_session_result_free(packet); }
     } while (state == THINKTHEN_SESSION_RESULT_V1);
     check(state == THINKTHEN_SESSION_END_V1, "terminal exhausts the interrupted drain");

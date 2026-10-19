@@ -17,6 +17,9 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.source_fixtures import stage_checkout
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT, fixture_stalled, fixture_run, fixture_wait
+
 HELPER = Path(__file__).with_name('build-admission.py')
 # The launch boundary controls host load without an extra production setting.
 LAUNCH = 'import os,runpy,sys; load=sys.argv[1]; os.getloadavg=lambda:(float(open(load).read()),0,0); sys.argv=sys.argv[2:]; runpy.run_path(sys.argv[0],run_name="__main__")'
@@ -50,14 +53,14 @@ class Admission(unittest.TestCase):
                         child.terminate()
                 except OSError as error:
                     errors.append(error)
-            deadline = time.monotonic() + 2
+            deadline = time.monotonic() + FIXTURE_HANG_TIMEOUT
             for child in self.children:
                 try:
                     try:
                         child.wait(timeout=max(0, deadline - time.monotonic()))
                     except subprocess.TimeoutExpired:
                         child.kill()
-                        child.wait(timeout=2)
+                        fixture_wait(child)
                 except (OSError, subprocess.TimeoutExpired) as error:
                     errors.append(error)
             for pid in self.descendants:
@@ -171,7 +174,7 @@ class Admission(unittest.TestCase):
         return child
 
     def wait_for(self, predicate):
-        deadline = time.monotonic() + 2
+        deadline = time.monotonic() + FIXTURE_HANG_TIMEOUT
         while not predicate():
             if time.monotonic() >= deadline:
                 self.fail('process did not reach expected state')
@@ -190,14 +193,15 @@ class Admission(unittest.TestCase):
         except ProcessLookupError:
             return False
 
-    def wait_entry(self, child, timeout=3):
+    def wait_entry(self, child, timeout=FIXTURE_HANG_TIMEOUT):
         try:
             return child.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as error:
+            fixture_stalled(error)
             # The caller owns this session. Its supervisors receive TERM and
             # finish their compiler cleanup before fixture locks disappear.
             os.killpg(child.pid, signal.SIGTERM)
-            child.wait(timeout=2)
+            fixture_wait(child)
             self.wait_group_finished(child)
             raise
 
@@ -247,7 +251,7 @@ class Admission(unittest.TestCase):
                         with self.assertRaises(PermissionError):
                             os.killpg(child.pid, 0)
                     finally:
-                        child.wait(timeout=2)
+                        fixture_wait(child)
 
     def assert_resources_available(self):
         with ExitStack() as stack:
@@ -275,7 +279,7 @@ class Admission(unittest.TestCase):
         self.wait_for(lambda: self.started('high'))
         self.assertFalse(self.started('normal'))
         self.release('high')
-        self.assertEqual(high.wait(timeout=2), 0)
+        self.assertEqual(fixture_wait(high), 0)
         self.wait_for(lambda: self.started('normal'))
 
     def test_exclusive_checkpoint_blocks_all_permits_and_waits_for_all_compilers(self):
@@ -292,7 +296,7 @@ class Admission(unittest.TestCase):
                 with self.assertRaises(BlockingIOError):
                     fcntl.flock(checkpoint, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.release(str(index))
-            self.assertEqual(self.children[index].wait(timeout=2), 0)
+            self.assertEqual(fixture_wait(self.children[index]), 0)
         self.assert_resources_available()
         self.assertEqual(self.lock.stat().st_ino, inode)
 
@@ -324,12 +328,12 @@ class Admission(unittest.TestCase):
         self.wait_for(lambda: self.started('alias-high'))
         self.assertFalse(self.started('alias-normal'))
         self.release('alias-high')
-        self.assertEqual(high.wait(timeout=2), 0)
+        self.assertEqual(fixture_wait(high), 0)
         self.wait_for(lambda: self.started('alias-normal'))
         for name in ('1', '2', '3', 'alias-normal'):
             self.release(name)
         for child in self.children:
-            self.assertEqual(child.wait(timeout=2), 0)
+            self.assertEqual(fixture_wait(child), 0)
         self.assert_resources_available()
         self.assertEqual(self.lock.stat().st_ino, inode)
 
@@ -379,7 +383,7 @@ class Admission(unittest.TestCase):
             with self.subTest(context=context):
                 name = 'local-' + str(index)
                 child = self.launch(name, timeout=.2, context=context)
-                self.assertEqual(child.wait(timeout=2), 124)
+                self.assertEqual(fixture_wait(child), 124)
                 self.assertFalse(self.started(name))
                 self.assert_resources_available()
 
@@ -410,13 +414,13 @@ class Admission(unittest.TestCase):
             signum = {'terminate': signal.SIGTERM, 'interrupt': signal.SIGINT, 'hangup': signal.SIGHUP}.get(mode)
             if signum:
                 child.send_signal(signum)
-            self.assertEqual(child.wait(timeout=2), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
+            self.assertEqual(fixture_wait(child), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
             self.wait_for(lambda: not self.process_alive(int(pidfile.read_text())))
             self.assert_resources_available()
 
     def test_command_launch_failure_releases_every_resource(self):
         child = self.launch('missing', command=[str(self.root / 'missing-command')])
-        self.assertNotEqual(child.wait(timeout=2), 0)
+        self.assertNotEqual(fixture_wait(child), 0)
         self.assert_resources_available()
 
     @unittest.skipUnless(sys.platform == 'linux', 'Linux descendant ownership')
@@ -437,7 +441,7 @@ class Admission(unittest.TestCase):
                 signum = {'terminate': signal.SIGTERM, 'interrupt': signal.SIGINT, 'hangup': signal.SIGHUP}.get(mode)
                 if signum:
                     child.send_signal(signum)
-                self.assertEqual(child.wait(timeout=2), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
+                self.assertEqual(fixture_wait(child), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
                 with self.assertRaises(ProcessLookupError):
                     os.kill(pid, 0)
                 self.assertIsNone(unrelated.poll())
@@ -450,7 +454,7 @@ class Admission(unittest.TestCase):
             child = self.launch('mask', command=[sys.executable, '-c', code])
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, previous)
-        self.assertEqual(child.wait(timeout=2), 0)
+        self.assertEqual(fixture_wait(child), 0)
 
     def test_wait_timeout_removes_priority_and_child_inherits_no_lock_descriptor(self):
         with self.lock.open('a+b') as legacy:
@@ -460,7 +464,7 @@ class Admission(unittest.TestCase):
                 self.wait_for(lambda: bool(list(Path(str(self.lock) + '.priority').glob('wait-*'))))
                 if signum:
                     child.send_signal(signum)
-                self.assertEqual(child.wait(timeout=2), 128 + signum if signum else 124)
+                self.assertEqual(fixture_wait(child), 128 + signum if signum else 124)
                 self.assertEqual(list(Path(str(self.lock) + '.priority').glob('wait-*')), [])
         self.assert_resources_available()
         if sys.platform == 'linux':
@@ -471,7 +475,7 @@ class Admission(unittest.TestCase):
                     ' except FileNotFoundError: continue\n'
                     ' assert (info.st_dev,info.st_ino)!=(lock.st_dev,lock.st_ino)')
             child = self.launch('descriptor', command=[sys.executable, '-c', code, str(self.lock)])
-            self.assertEqual(child.wait(timeout=2), 0)
+            self.assertEqual(fixture_wait(child), 0)
 
     def test_library_wrapper_preserves_shell_arguments_and_owned_build_environment(self):
         # Cold compiler/SDK setup is fixture work, outside the shell deadline.
@@ -533,7 +537,7 @@ assert 'THINKTHEN_TEST_PROFILE' not in os.environ
 assert 'THINKTHEN_ARTIFACT' not in os.environ
 BOUNDARY
 ''')
-        self.assertEqual(subprocess.run(['/bin/sh', str(rung)], env=env, timeout=3).returncode, 0)
+        self.assertEqual(fixture_run(['/bin/sh', str(rung)], env=env).returncode, 0)
 
     def test_shell_caller_timeout_cleans_owned_supervisor_and_compiler(self):
         scripts = self.entry_scripts()
@@ -593,7 +597,7 @@ RUNG
         for index in range(5):
             self.release('rung-' + str(index))
         for child in self.children:
-            self.assertEqual(child.wait(timeout=2), 0)
+            self.assertEqual(fixture_wait(child), 0)
         self.assertFalse(invoked.exists())
         # An ordinary mode value must not select the inherited script path either.
         env['heavy_library'] = '0'
@@ -602,7 +606,7 @@ RUNG
         self.wait_for(lambda: self.started('ordinary') or child.poll() is not None)
         self.assertTrue(self.started('ordinary'))
         self.release('ordinary')
-        self.assertEqual(child.wait(timeout=2), 0)
+        self.assertEqual(fixture_wait(child), 0)
         self.assertFalse(invoked.exists())
 
     def test_compilers_keep_cache_mutation_lock_exclusive(self):

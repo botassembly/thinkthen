@@ -16,7 +16,10 @@ import zipfile
 
 from conformance.children import privacy
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout
+
+from conformance.children.children import fixture_run
 
 
 class PrivacyTests(unittest.TestCase):
@@ -30,8 +33,8 @@ class PrivacyTests(unittest.TestCase):
                             'libraries/typescript', 'libraries/python', 'libraries/php', 'libraries/go',
                             'libraries/zig', 'libraries/r', 'databases/duckdb', 'databases/sqlite'):
                 with self.subTest(surface=surface):
-                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
-                                            capture_output=True, text=True, timeout=30)
+                    result = fixture_run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2, result.stderr)
                     self.assertIn('profile', result.stderr.lower())
                     self.assertNotIn('missing.tar.gz', result.stderr)
@@ -46,8 +49,8 @@ class PrivacyTests(unittest.TestCase):
                             'libraries/objective-c', 'libraries/ada', 'libraries/cobol',
                             'libraries/typescript', 'libraries/swift'):
                 with self.subTest(surface=surface):
-                    result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
-                                            capture_output=True, text=True, timeout=30)
+                    result = fixture_run(['sh', str(repo / surface / 'check.sh')], env=env,
+                                            capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
                     self.assertEqual(result.stdout,
                                      f'{surface}: missing input THINKTHEN_ARTIFACT: {artifact}\n')
@@ -67,7 +70,7 @@ class PrivacyTests(unittest.TestCase):
                     self.assertIn('distribution.txt', result.stderr)
                     if name == 'THINKTHEN_ARTIFACT':
                         gate = ['sh', str(Path(privacy.__file__).resolve().parents[2] / 'libraries/c/check.sh')]
-                        result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
+                        result = fixture_run(gate, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 1)
                         self.assertIn('missing input THINKTHEN_ARTIFACT', result.stdout)
                         self.assertIn('distribution.txt', result.stdout)
@@ -76,7 +79,7 @@ class PrivacyTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 1)
                     self.assertIn('private pattern in distribution.txt', result.stderr)
                     if name == 'THINKTHEN_ARTIFACT':
-                        result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
+                        result = fixture_run(gate, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 1)
                         self.assertIn('private pattern in distribution.txt', result.stderr)
                     path.unlink()
@@ -97,7 +100,7 @@ class PrivacyTests(unittest.TestCase):
                                'if [ "$1" = -xzf ]; then touch "$INSTALL_MARKER"; fi\n'
                                'exec "$REAL_TAR" "$@"\n')
                 tar.chmod(0o755)
-                env = child_env(home=root / 'home', PATH=str(tools) + ':' + os.environ.get('PATH', os.defpath),
+                env = child_env(home=root / 'home', PATH=fixture_path(tools),
                                 THINKTHEN_RESOLVED_TOOLS=surface, THINKTHEN_TEST_PROFILE=profile,
                                 INSTALL_MARKER=str(marker), REAL_TAR=shutil.which('tar'),
                                 THINKTHEN_BASE_URL='http://127.0.0.1:1', THINKTHEN_CACHE=str(root / 'cache'))
@@ -131,7 +134,7 @@ class PrivacyTests(unittest.TestCase):
                                      'mkdir -p "$2/include" "$2/lib"\n'
                                      'printf "public header" > "$2/include/thinkthen.h"\n'
                                      'printf "PRIVATE_KEY_MARKER" > "$2/lib/libthinkthen.a"\n}\n')
-                    (root / 'sdlc/generators/results/generate.py').write_text('')
+                    (root / 'build-tools/results/generate.py').write_text('')
                     zig = tools / 'zig'
                     zig.write_text('#!/bin/sh\n[ "$1" = fmt ] || exit 9\n')
                     zig.chmod(0o755)

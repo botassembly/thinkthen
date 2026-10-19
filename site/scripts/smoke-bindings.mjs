@@ -10,6 +10,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { buildLines } from '../src/data/build-lines.mjs';
+import { checkCFunctionCall } from './check-cases.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
 import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile, trackedFiles } from './binding-samples.mjs';
 
@@ -115,7 +116,7 @@ function csharpFeed() {
   const root = path.join(tmp, 'csharp-source');
   const source = path.join(root, 'libraries/csharp');
   fs.cpSync(path.join(repo, 'libraries/csharp'), source, { recursive: true, filter: (f) => !/\/(bin|obj|target)$/.test(f) });
-  fs.cpSync(path.join(repo, 'sdlc/generators/results/csharp'), path.join(root, 'sdlc/generators/results/csharp'), { recursive: true });
+  fs.cpSync(path.join(repo, 'build-tools/results/csharp'), path.join(root, 'build-tools/results/csharp'), { recursive: true });
   const out = path.join(tmp, 'csharp-feed');
   const native = [`-p:ThinkThenNativeAsset=${path.join(cDoor(), 'lib/libthinkthen.so')}`, '-p:ThinkThenNativeRid=linux-x64', '-p:ThinkThenNativeName=libthinkthen.so'];
   const done = compile('dotnet', ['pack', 'ThinkThen.csproj', ...native, '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
@@ -533,6 +534,11 @@ function attempt(rel, binding, answers, named = {}, keep = false) {
   };
   const done = run(cmd, args, { cwd: dir ?? cwd, env });
   if (!keep) fs.rmSync(work, { recursive: true, force: true });
+  if (done.status === 0 && /^functions\/[^/]+\/c\.c$/.test(rel)) {
+    try { checkCFunctionCall(rel, done.stdout); }
+    catch (error) { return { ok: false, stdout: '', output: String(error) }; }
+    return { ok: true, stdout: '', output: done.stderr.trim() };
+  }
   return { ok: done.status === 0, stdout: done.stdout, output: `${done.stdout}${done.stderr}`.trim() };
 }
 

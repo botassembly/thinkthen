@@ -241,8 +241,8 @@ jobs:
         run: |
           exec > >(tee -a "$RUNNER_TEMP/language.log") 2>&1
           set -eu
-          python3 sdlc/generators/results/generate.py --target cpp --check
-          python3 sdlc/generators/results/generate.py --target cpp --inputs --check
+          python3 build-tools/results/generate.py --target cpp --check
+          python3 build-tools/results/generate.py --target cpp --inputs --check
       - name: Prepare the pinned PostgreSQL hosts
         if: inputs.language == 'postgresql'
         timeout-minutes: 355

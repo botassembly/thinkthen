@@ -27,6 +27,9 @@ from unittest.mock import patch
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.source_fixtures import stage_checkout
+from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
@@ -210,7 +213,7 @@ def signing_cases(root, base, layout, artifacts, stem):
             command.write_text(f'#!{sys.executable}\n' + GPG)
             command.chmod(0o755)
         log = tools / 'calls'
-        env = {'PATH': f"{tools}:{os.environ['PATH']}", 'FAKE_GPG_LOG': str(log)}
+        env = {'PATH': fixture_path(tools), 'FAKE_GPG_LOG': str(log)}
         before = {p.name: p.read_bytes() for p in base.iterdir()}
         signed = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
         calls = [json.loads(line) for line in log.read_text().splitlines()]
@@ -255,7 +258,7 @@ def go_tag_cases():
             for tool in ("gh", "curl"):
                 (bin_dir / tool).chmod(0o755)
             env = {k: v for k, v in os.environ.items() if k not in SECRETS}
-            env.update(PATH=f"{bin_dir}:{env['PATH']}", FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
+            env.update(PATH=fixture_path(bin_dir, path=env['PATH']), FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
                        FAKE_GO_SHA=sha, GITHUB_REPOSITORY="o/r")
             result = subprocess.run(["sh", str(REPO / "sdlc/scripts/release-workflow"), "publish", "v0", head],
                                     env=env, capture_output=True, text=True)
@@ -363,7 +366,7 @@ def jvm_contract_cases():
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
         stage_checkout(REPO, root)
-        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output"), "RUNNER_TEMP": str(root)}
+        env = {"PATH": fixture_path(root / "bin"), "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output"), "RUNNER_TEMP": str(root)}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
         for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
@@ -427,7 +430,9 @@ def apple_package_cases():
         # Shell helpers need the same supported Python as this test, not the host's system Python.
         (tools / 'python3').symlink_to(sys.executable)
         for name, body in {'uname': 'echo Darwin', 'rustc': 'echo "host: aarch64-apple-darwin"',
-                           'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
+                           'cargo': 'echo unexpected-native-build >&2; exit 99',
+                           'swift': 'echo unexpected-Apple-compiler >&2; exit 99',
+                           'swiftc': 'echo unexpected-Apple-compiler >&2; exit 99'}.items():
             tool = tools / name
             tool.write_text('#!/bin/sh\n' + body + '\n'); tool.chmod(0o755)
         framework = root / 'libraries/swift/CThinkThen.xcframework'; framework.mkdir()
@@ -441,9 +446,12 @@ def apple_package_cases():
             package.add(native / 'include', arcname='./include')
         digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
-        env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
-                            'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
-        apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
+        env = child_env(home=root / 'target/home', PATH=fixture_path(tools),
+                        THINKTHEN_RELEASE_EXPECTED_SHA=commit)
+        # Own the platform and every compiler prerequisite, including Swift's
+        # availability check. Reaching a compiler must fail on every host.
+        # Resolving host tools again would replace this controlled environment.
+        apple_env = env | {'THINKTHEN_RESOLVED_TOOLS': 'swift', 'THINKTHEN_ARTIFACT': ''}
         refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
         assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
         apple_env['THINKTHEN_ARTIFACT'] = str(output / name)
@@ -493,8 +501,8 @@ def apple_package_cases():
             assert example.strip() == page.split('```objc\n', 1)[1].split('\n```', 1)[0].strip()
             raise CompilerReached
         artifact = output / f'thinkthen-objective-c-{version()}-{target}.tar.gz'
-        with patch.dict(os.environ, THINKTHEN_ARTIFACT=str(artifact),
-                        THINKTHEN_COVERAGE_STAGE=str(consumer)), patch.object(
+        with patch.dict(os.environ, env | {'THINKTHEN_ARTIFACT': str(artifact),
+                        'THINKTHEN_COVERAGE_STAGE': str(consumer)}, clear=True), patch.object(
                 sys, 'platform', 'darwin'), patch.object(subprocess, 'run', side_effect=compiler):
             try:
                 runpy.run_path(str(REPO / 'libraries/objective-c/checks/foundation_installed.py'))

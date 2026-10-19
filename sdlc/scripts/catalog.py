@@ -20,7 +20,7 @@ import tempfile
 import tarfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+sys.path.insert(0, str(REPO / "build-tools/results"))
 from sources import tracked_files
 PACKAGED = "crates/thinkthen/transforms"
 TABLE = "crates/thinkthen/src/cli/transform.rs"

@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
-from tools import commands
+from tools import fixture_path
 import subprocess
 import sys
 import tarfile
@@ -20,6 +20,9 @@ from install_check_channels import download, python, rust, maven, c, INSTALLERS,
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
 from inputs import selected as duckdb_identity, versions as duckdb_versions
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'conformance/children'))
+from children import fixture_run
 
 
 class ZipInstallation(unittest.TestCase):
@@ -107,8 +110,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
                             'exit 0; fi\nexec "$NATIVE_CARGO" "$@"\n')
                         (tools / 'cargo').chmod(0o755)
-                        env = {'PATH': str(tools) + os.pathsep + os.pathsep.join(dict.fromkeys(
-                                   str(Path(shutil.which(tool)).parent) for tool in commands() if shutil.which(tool))),
+                        env = {'PATH': fixture_path(tools),
                                'HOME': str(root / 'home'), 'CARGO_HOME': str(root / 'home/.cargo'),
                                'RUSTC': rustc, 'NATIVE_CARGO': cargo, 'CARGO_NET_OFFLINE': 'true', 'LC_ALL': 'C.UTF-8',
                                'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1', 'CXXFLAGS': '-O2'}
@@ -139,9 +141,9 @@ class NativeInstallation(unittest.TestCase):
                             stale.parent.mkdir(parents=True)
                             stale.write_bytes(b'stale library must not be copied')
                         out = root / 'install space'
-                        done = subprocess.run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
+                        done = fixture_run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
                                                shell, str(script), str(repo), str(out), str(script.with_name('scratch.sh'))], cwd=caller,
-                                              env=env, capture_output=True, text=True, timeout=30)
+                                              env=env, capture_output=True, text=True)
                         self.assertEqual(done.stdout, '')
                         self.assertTrue((root / 'build.log').exists(), done)
                         owned = Path((root / 'build.log').read_text())
@@ -672,8 +674,8 @@ class RefusalTable(unittest.TestCase):
             with self.subTest(ref=ref, commit=commit), tempfile.TemporaryDirectory() as own:
                 env = clean_environment(Path(own))
                 env.update(VERSION='0.2.0', REF=ref, SHA=commit)
-                result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
-                                        env=env, cwd=repo, capture_output=True, timeout=10)
+                result = fixture_run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
+                                        env=env, cwd=repo, capture_output=True)
                 self.assertEqual(result.returncode, status)
 
 

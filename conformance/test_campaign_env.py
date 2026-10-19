@@ -12,6 +12,9 @@ import unittest
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 from conformance import parity
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+
+from conformance.children.children import fixture_communicate, fixture_run
 
 
 class CampaignEnvironment(unittest.TestCase):
@@ -85,7 +88,7 @@ exit 2
                 executable = tools / name
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
-            env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
+            env = child_env(home=root / 'home') | {'PATH': fixture_path(tools),
                    'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
@@ -238,7 +241,7 @@ if '--message-format=json' in sys.argv:
                     private.mkdir(exist_ok=True)
                     receipt = root / 'capture.jsonl'
                     receipt.write_text('')
-                    env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
+                    env = child_env(home=private) | {'PATH': fixture_path(tools),
                            'HOME': str(private), 'THINKTHEN_TOOLCHAINS': str(cache),
                            'THINKTHEN_HEAVY_LOCK_HELD': '/tmp/thinkthen-heavy.lock',
                            'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
@@ -306,7 +309,7 @@ while True:time.sleep(60)
                     try:
                         if cancellation is not None:
                             process.send_signal(cancellation)
-                        _, error = process.communicate(timeout=8)
+                        _, error = fixture_communicate(process)
                         self.assertEqual(process.returncode, expected, error)
                         if linux:
                             reaped, status = os.waitpid(descendant, os.WNOHANG)
@@ -333,7 +336,7 @@ while True:time.sleep(60)
                 ctypes.CDLL(None).prctl(36, 0, 0, 0, 0)
 
     def test_normal_exit_retains_stdin_and_exit_code(self):
-        result = subprocess.run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
+        result = fixture_run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
                                  'sh', '-c', 'read value; printf "%s" "$value"; exit 7'],
-                                env=child_env(), input='owned input\n', text=True, capture_output=True, timeout=3)
+                                env=child_env(), input='owned input\n', text=True, capture_output=True)
         self.assertEqual((result.returncode, result.stdout), (7, 'owned input'))

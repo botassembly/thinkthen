@@ -71,4 +71,6 @@ fn excluded_held_model_warning_is_call_scoped_and_corrected_cache_hits_remain_si
     assert!(!held.facts().unwrap().held_model_mismatch());
     assert_eq!(held.facts().unwrap().requests_sent(), 0);
     assert_eq!(listener.count(), 2);
+    drop(engine);
+    std::fs::remove_dir_all(folder).unwrap();
 }

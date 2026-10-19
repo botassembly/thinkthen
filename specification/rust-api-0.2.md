@@ -22,6 +22,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0628](../sdlc/tickets/0628-one-session-queue.md) makes recovery a mode of the shared session queue. `RequestRecoveringSession` delegates ownership to its inner `RequestSession`, whose destructor cancels without joining the worker. The worker retains the shared queue until it settles. The recovering wrapper no longer implements `Drop` itself.
 
+[0629](../sdlc/tickets/0629-rust-run-call-driver.md) adds `Engine::call` as the synchronous owner of a named call. It consumes `RequestArguments` and `RequestEnvironment`, borrows the engine and stop controls, owns the optional named pull producer, and returns the settled `Call<RequestValue>` or the native error with final facts when execution started. The producer advances on the caller; no separate reader escapes. Admission rejects a missing named producer or a producer supplied for inline or source input before advancing it. Producer failures retain their original typed `Error` as the standard error source. The three question conversions consume their prepared question without parsing JSON: banded decisions retain `LoadedQuestion::Banded`; typed choose and tag retain their underlying question and authored labels in `LoadedQuestion::Question`. The returned request value carries labels rather than the original choice enum. The [decide](../libraries/rust/examples/decide.rs), [choose](../libraries/rust/examples/choose.rs) and [tag](../libraries/rust/examples/tag.rs) examples use this owner and the shared argument builder.
+
 [0643](../sdlc/tickets/0643-database-settings-in-rust.md), accepted at revision `2478857b6`, adds `EngineBuilder::setting` to apply a setting name and raw JSON value through the shared settings parser. The method retains the reviewed settings validation and SQL profile handling.
 
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
@@ -270,6 +272,7 @@ fn CompleteRelated::probability(&self) -> Vec<Option<f64>>
 fn CompleteSetRank::probability(&self) -> Option<f64>
 fn Engine::annotate<'a, I>(&'a self, &'a QuestionSet, I) -> Result<AnnotationCall<I::Item>, Error> where I: IntoIterator + 'a, I::Item: Evidence
 fn Engine::annotate_with<'a, I>(&'a self, &'a QuestionSet, I, CallOptions<'a>) -> Result<AnnotationCall<I::Item>, Error> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::call(&self, &str, RequestArguments, RequestEnvironment<'_>) -> Result<Call<RequestValue>, Error>
 fn Engine::choose<C: Choice>(&self, &ChooseQuestion<C>, &str) -> Result<ChoiceCall<C>, Error>
 fn Engine::choose_with<C: Choice>(&self, &ChooseQuestion<C>, &str, CallOptions<'_>) -> Result<ChoiceCall<C>, Error>
 fn Engine::decide<Q: DecisionQuestion + ?Sized>(&self, &Q, &str) -> Result<DecisionCall, Error>
@@ -334,6 +337,9 @@ impl Display for SourceBudgetExceeded
 impl Error for SourceBudgetExceeded
 impl From<(Question, RecordReading)> for RequestDefinition
 impl From<(Recognize, RecordReading)> for RequestDefinition
+impl From<BandedQuestion> for RequestDefinition
+impl From<ChooseQuestion<C>> for RequestDefinition
+impl From<TagQuestion<C>> for RequestDefinition
 impl FromStr for RequestFunction
 impl Serialize for Call
 impl Serialize for CallReply

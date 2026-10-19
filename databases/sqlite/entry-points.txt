@@ -1,2 +1,1 @@
 sqlite3_thinkthen_init
-sqlite3_thinkthen_trusted_init

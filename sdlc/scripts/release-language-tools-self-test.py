@@ -4,6 +4,7 @@
 import importlib.util
 import json
 import os
+from tools import fixture_path
 from pathlib import Path
 import subprocess
 import sys
@@ -112,7 +113,7 @@ def main():
                           THINKTHEN_KOTLIN_HOME=str(root / "kotlin"),
                           THINKTHEN_SCALA_HOME=str(root / "scala"),
                           JAVA_HOME=str(root / "wrong-java"), JAVACMD=str(root / "wrong-java/bin/java"),
-                          PATH=str(root / "bin") + os.pathsep + old.get("PATH", ""))
+                          PATH=fixture_path(root / "bin", path=old["PATH"]))
         try:
             with patch.object(tools.platform, "system", return_value="Linux"), \
                  patch.object(tools.platform, "machine", return_value="x86_64"):
@@ -329,7 +330,7 @@ def acquisition_cli(root):
                "try: tools.main(sys.argv[2:])\n"
                "except RuntimeError as error: print(error, file=sys.stderr); sys.exit(1)\n")
     env = os.environ.copy()
-    env.update(PATH=str(process_dir) + os.pathsep + env["PATH"], OBSERVE_LOG=str(log),
+    env.update(PATH=fixture_path(process_dir, path=env["PATH"]), OBSERVE_LOG=str(log),
                OBSERVE_INSTALLED=str(root / "installed"),
                OBSERVE_PROVIDER=f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev",
                OBSERVE_METADATA="\n\n".join(

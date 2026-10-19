@@ -287,6 +287,7 @@ def host_functions(code, family):
         literals = (r'(?:br|r)(?P<hashes>\#*)"[\s\S]*?"(?P=hashes)|'
                     r'"(?:\\[\s\S]|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
     functions = set()
+    named_requests = {}
     if family == 'cobol':
         # Match CALL operands before masking other literals, including DISPLAY text.
         operands = r'\bCALL\s+["\'](?:thinkthen_|tt_)' + FUNCTION_NAMES + r'["\'](?=\s+USING\b)'
@@ -305,6 +306,14 @@ def host_functions(code, family):
                     functions.add(function)
             except (ValueError, TypeError, KeyError):
                 pass
+            # A blocking call's literal name belongs to its explicit request record.
+            # Count it only when that exact record is passed to the exported call.
+            declaration = re.search(r'\bthinkthen_named_request_v1\s+(\w+)\s*=\s*\{\s*\.function\s*=\s*\{\s*$',
+                                    code[:token.start()])
+            if declaration:
+                name = json.loads(token[0])
+                if isinstance(name, str) and re.fullmatch(FUNCTION_NAMES, name):
+                    named_requests[declaration[1]] = name
         return ' '
     if family == 'crate':
         # Rust block comments nest, and their contents are never string tokens.
@@ -328,6 +337,10 @@ def host_functions(code, family):
         code = ''.join(pieces)
     else:
         code = re.sub(literals + '|' + comments, mask, code)
+    if family == 'c':
+        for request in re.findall(r'\bthinkthen_run_call\s*\(\s*[^,;]+,\s*&\s*(\w+)\s*,', code):
+            if request in named_requests:
+                functions.add(named_requests[request])
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
     generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?\']+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
@@ -459,6 +472,9 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
     return pages[0].parent if len(pages) == 1 else destination
 
 
+TERMINATION_GRACE = 1
+
+
 def run_process(command, work, env, input, timeout):
     with subprocess.Popen(command, cwd=work, env=env, stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -473,7 +489,7 @@ def run_process(command, work, env, input, timeout):
             except ProcessLookupError:
                 pass
             try:
-                process.communicate(timeout=1)
+                process.communicate(timeout=TERMINATION_GRACE)
             except subprocess.TimeoutExpired:
                 pass
             finally:
@@ -569,7 +585,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         env['PATH'] = str(package) + os.pathsep + env['PATH']
         output = run(['bash', '-euo', 'pipefail', str(sample)])
     elif family == 'python':
-        run(['uv', 'venv', '--offline', '--python', '3.12', str(work / 'venv')])
+        run(['uv', 'venv', '--offline', '--python', sys.executable, str(work / 'venv')])
         wheel = next(path for path in packages.iterdir() if path.suffix == '.whl')
         run(['uv', 'pip', 'install', '--offline', '--no-deps', '--python', str(work / 'venv/bin/python'), str(wheel)])
         output = run([str(work / 'venv/bin/python'), str(sample)])
@@ -734,8 +750,30 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
                 run([str(binaries / 'pg_ctl'), '-D', str(data), '-m', 'immediate', '-w', '-t', '20', 'stop'])
     else:
         raise Refusal('example-preparation-unavailable: ' + family)
+    if family == 'c':
+        check_c_calls(output)
     if expected is not None and output != expected:
         raise Refusal('example-output-mismatch: ' + family)
+
+
+def check_c_calls(output):
+    """Read each complete owned Call; retain the README's six exact answers."""
+    calls = [json.loads(line) for line in output.splitlines()]
+    wanted = [('decide', [True, False, True]), ('choose', ['billing', 'shipping', 'account'])]
+    if len(calls) != len(wanted):
+        raise Refusal('c-example-call-count')
+    for call, (function, values) in zip(calls, wanted):
+        answer = call.get('answer', {})
+        actual = answer.get('value')
+        matches = (isinstance(actual, list) and len(actual) == len(values)
+                   and all(type(got) is type(want) and got == want
+                           for got, want in zip(actual, values)))
+        if (answer.get('function') != function or not matches
+                or call.get('facts', {}).get('records') != len(values)):
+            raise Refusal('c-example-answer-or-facts: ' + json.dumps({
+                'function': answer.get('function'), 'value': actual,
+                'records': call.get('facts', {}).get('records'),
+                'expected_function': function, 'expected_value': values}))
 
 
 def check_examples(packages, root=REPO, families=None):

@@ -160,7 +160,7 @@ def abi_plants(header):
             (source / original.name).write_bytes(original.read_bytes())
         project = scratch / 'ThinkThen.csproj'
         project.write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup></Project>')
-        generated = ROOT.parents[1] / 'sdlc/generators/results/csharp/CompleteFacts.g.cs'
+        generated = ROOT.parents[1] / 'build-tools/results/csharp/CompleteFacts.g.cs'
         (source / generated.name).write_bytes(generated.read_bytes())
         config = scratch / 'NuGet.Config'
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')

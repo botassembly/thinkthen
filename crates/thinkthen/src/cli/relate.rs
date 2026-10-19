@@ -125,7 +125,9 @@ fn execute(
         if let Some(facts) = error.facts() {
             environment.settle_native(facts);
         }
-        Failure::from(error).with_replay_context(ReplayContext::Relate)
+        Failure::from(error)
+            .with_replay_context(ReplayContext::Relate)
+            .with_size_advice(crate::failure::SizeAdvice::Batches)
     };
     let outcome = native
         .execute_request(

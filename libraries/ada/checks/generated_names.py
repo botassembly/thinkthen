@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "sdlc/generators/results"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "build-tools/results"))
 from sources import tracked_files
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -9,8 +9,8 @@ import sys
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
-from sources import tracked_files
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
+from sources import load_manifest, tracked_files
 
 
 def support(name):
@@ -126,7 +126,7 @@ def exported(declared, names):
 def check(root, manifest, name):
     config = manifest['libraries'][name]
     request, result, functions = SCHEMA.contracts(root, manifest['authority'])
-    sys.path.insert(0, str(root / 'sdlc/generators/results'))
+    sys.path.insert(0, str(root / 'build-tools/results'))
     from registry import OUTPUTS
     suffixes = {
         'python': ('.pyi',), 'typescript': ('.d.ts',), 'ruby': ('.rb', '.rbs'),
@@ -303,7 +303,7 @@ def main():
     args = parser.parse_args()
     try:
         root = args.root.resolve()
-        manifest = json.loads((args.manifest or root / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(args.manifest or root / 'conformance/library-surface.json')
         libraries = args.library or list(manifest['libraries'])
         unknown = set(libraries) - manifest['libraries'].keys()
         if unknown:

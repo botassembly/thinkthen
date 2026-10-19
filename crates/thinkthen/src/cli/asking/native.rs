@@ -117,6 +117,13 @@ pub(super) fn run(
         view: configuration.view,
         keeping: configuration.keeping,
         streams: configuration.streams,
+        size_advice: if configuration.common.images() {
+            crate::failure::SizeAdvice::Backend
+        } else if configuration.streams {
+            crate::failure::SizeAdvice::Batches
+        } else {
+            crate::failure::SizeAdvice::Text
+        },
         documents: configuration.documents,
         text_view: configuration.text_view,
         mismatch: configuration.mismatch,
@@ -304,7 +311,10 @@ impl Renderer {
                 if let Some(facts) = error.facts() {
                     environment.settle_native(facts);
                 }
-                Some((at, host_error(error, self.streams)))
+                Some((
+                    at,
+                    host_error(error, self.streams).with_size_advice(self.size_advice),
+                ))
             }
         };
 
@@ -376,6 +386,7 @@ struct Renderer {
     view: crate::judge::View,
     keeping: crate::judge::Keeping,
     streams: bool,
+    size_advice: crate::failure::SizeAdvice,
     documents: bool,
     text_view: bool,
     mismatch: crate::profile::Mismatch,

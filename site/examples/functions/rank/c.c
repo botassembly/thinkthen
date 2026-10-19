@@ -11,55 +11,44 @@ const char *inbox[] = {
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 };
-char request[1024];
-int at = snprintf(request, sizeof request,
-    "{\"schema\":\"thinkthen.request/1\","
-    "\"call\":{\"function\":\"rank\","
-    "\"question\":{\"kind\":\"text\",\"text\":\"%s\"},"
-    "\"input\":{\"kind\":\"records\",\"items\":[",
+char question_json[512];
+snprintf(question_json, sizeof question_json,
+    "{\"kind\":\"text\",\"text\":\"%s\"}",
     question);
+char input_json[1024];
+int at = snprintf(input_json, sizeof input_json,
+    "{\"kind\":\"records\",\"items\":[");
 for (int i = 0; i < 4; i++) {
-    at += snprintf(request + at, sizeof request - at,
-        "%s{\"original\":"
-        "{\"kind\":\"text\",\"text\":\"%s\"}}",
+    at += snprintf(input_json + at, sizeof input_json - at,
+        "%s{\"original\":{\"kind\":\"text\","
+        "\"text\":\"%s\"}}",
         i ? "," : "", inbox[i]);
 }
-snprintf(request + at, sizeof request - at, "]}}}");
+snprintf(input_json + at, sizeof input_json - at, "]}");
 
 thinkthen_engine *tt = thinkthen_engine_new();
-thinkthen_session *call = NULL;
-int rc = thinkthen_session_new(
-    tt, request, strlen(request), &call);
-assert(rc == THINKTHEN_OK);
+assert(tt != NULL);
+thinkthen_named_request_v1 request = {
+    .function = {"rank", 4},
+    .question_json = {question_json, strlen(question_json)},
+    .input_json = {input_json, strlen(input_json)},
+    .options_json = {"{}", 2},
+};
+thinkthen_call_result *priority_call = NULL;
+thinkthen_call_error *error = NULL;
+int rc = thinkthen_run_call(tt, &request,
+    NULL, NULL, NULL, &priority_call, &error);
 thinkthen_engine_free(tt);
-
-int by_urgency[4] = {-1, -1, -1, -1};
-const uint32_t rank_aggregate =
-    THINKTHEN_COMPLETE_SESSION_PACKET_RANK_AGGREGATE_V1;
-uint32_t status = THINKTHEN_SESSION_PENDING_V1;
-while (status != THINKTHEN_SESSION_END_V1) {
-    thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_next_packet(call,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
-        &status, &owner);
-    assert(rc == THINKTHEN_OK);
-
-    if (status != THINKTHEN_SESSION_RESULT_V1) continue;
-    const thinkthen_complete_session_packet_v1 *packet;
-    thinkthen_session_result_view(owner, &packet);
-    if (packet->kind == rank_aggregate) {
-        const thinkthen_complete_atomic_non_zero_usize_v1
-            *const *places =
-            packet->data.rank_aggregate->value.data;
-        size_t count =
-            packet->data.rank_aggregate->value.len;
-        for (size_t i = 0; i < count; i++) {
-            by_urgency[places[i]->value - 1] =
-                (int)places[i]->index.value;
-        }
-    }
-    thinkthen_session_result_free(owner);
+if (rc != THINKTHEN_OK) {
+    thinkthen_complete_utf8_v1 message =
+        thinkthen_call_error_message(error);
+    fwrite(message.data, 1, message.len, stderr);
+    thinkthen_call_error_free(error);
 }
-thinkthen_session_free(call);
-assert(by_urgency[0] == 1 && by_urgency[1] == 3);
-assert(by_urgency[2] == 2 && by_urgency[3] == 0);
+assert(rc == THINKTHEN_OK);
+thinkthen_complete_utf8_v1 json =
+    thinkthen_call_result_json(priority_call);
+assert(json.data != NULL && json.len > 0);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
+thinkthen_call_result_free(priority_call);

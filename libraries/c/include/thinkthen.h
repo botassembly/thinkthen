@@ -10,6 +10,21 @@
 #include <stdlib.h>
 
 /*
+ Producer ended normally; the output is ignored.
+ */
+#define THINKTHEN_CALL_PRODUCER_END_V1 1
+
+/*
+ Producer failed; no host exception text crosses this boundary.
+ */
+#define THINKTHEN_CALL_PRODUCER_FAILURE_V1 2
+
+/*
+ Producer published one canonical RequestItem JSON value.
+ */
+#define THINKTHEN_CALL_PRODUCER_ITEM_V1 0
+
+/*
  A counted COBOL scalar exceeds its documented representation capacity.
  */
 #define THINKTHEN_COBOL_OVERFLOW 1002
@@ -515,6 +530,12 @@
 #define THINKTHEN_EUSAGE 1
 
 /*
+ Exact C interface compatibility number. Compare with thinkthen_version at load.
+ Change this number whenever the C contract becomes incompatible.
+ */
+#define THINKTHEN_INTERFACE_NUMBER 1
+
+/*
  C value `THINKTHEN_NO`.
  */
 #define THINKTHEN_NO 0
@@ -908,6 +929,21 @@ typedef enum thinkthen_question_loader_role_v1 {
 } thinkthen_question_loader_role_v1;
 
 /*
+ A caller-owned cancellation token. Keep alive until the call and all cancels return.
+ */
+typedef struct thinkthen_call_cancel thinkthen_call_cancel;
+
+/*
+ Independent safe failure details. Send or read on any thread; free after all readers.
+ */
+typedef struct thinkthen_call_error thinkthen_call_error;
+
+/*
+ One independent complete Call in the existing canonical JSON grammar.
+ */
+typedef struct thinkthen_call_result thinkthen_call_result;
+
+/*
  The current C interface owns engines, parsed questions, sessions and packet views.
  Free each owner after its last use. Request preview returns an owned string
  released with thinkthen_free_string. Diagnostics borrow per-thread storage.
@@ -936,10 +972,6 @@ typedef struct thinkthen_session_result thinkthen_session_result;
  */
 typedef struct thinkthen_value thinkthen_value;
 
-typedef struct thinkthen_complete_usage_persistence_v1 {
-  uint32_t kind;
-} thinkthen_complete_usage_persistence_v1;
-
 /*
  C descriptor or borrowed view `thinkthen_complete_utf8_v1`.
  */
@@ -953,6 +985,10 @@ typedef struct thinkthen_complete_utf8_v1 {
    */
   size_t len;
 } thinkthen_complete_utf8_v1;
+
+typedef struct thinkthen_complete_usage_persistence_v1 {
+  uint32_t kind;
+} thinkthen_complete_usage_persistence_v1;
 
 typedef struct thinkthen_request_text_v1 {
   struct thinkthen_complete_utf8_v1 text;
@@ -2229,6 +2265,14 @@ typedef struct thinkthen_request_arguments_v1 {
   const struct thinkthen_request_call_options_v1 *m_options;
   const struct thinkthen_request_question_selector_v1 *m_question;
 } thinkthen_request_arguments_v1;
+
+/*
+ A producer returns ITEM and counted RequestItem JSON, END, or FAILURE.
+ Bytes remain readable until the next invocation or until run_call returns.
+ It runs synchronously on the run_call caller, and may reenter independent C operations.
+ Never unwind or throw across this callback; retain private host exceptions locally.
+ */
+typedef uint32_t (*thinkthen_call_producer_v1)(void*, struct thinkthen_complete_utf8_v1*);
 
 typedef struct thinkthen_request_reader_failure_producer_v1 {
   uint32_t reserved;
@@ -4747,6 +4791,74 @@ extern "C" {
 #endif // __cplusplus
 
 /*
+ Cancel from any thread. NULL is ignored.
+ # Safety
+ token is NULL or live until every concurrent call/cancel returns.
+ */
+void thinkthen_call_cancel_fire(const struct thinkthen_call_cancel *token);
+
+/*
+ Free this independent owner; NULL is ignored.
+ # Safety
+ owner is NULL or unfreed, after all concurrent operations and borrowed reads finish.
+ */
+void thinkthen_call_cancel_free(struct thinkthen_call_cancel *owner);
+
+/*
+ Allocate an independent cancellation token; NULL only if the boundary panics.
+ */
+struct thinkthen_call_cancel *thinkthen_call_cancel_new(void);
+
+/*
+ Read the error kind as the existing status code. NULL returns EUSAGE.
+ # Safety
+ owner is NULL or live throughout this read.
+ */
+int32_t thinkthen_call_error_code(const struct thinkthen_call_error *owner);
+
+/*
+ Borrow existing canonical Facts JSON until error_free; absent facts return empty text.
+ # Safety
+ owner is NULL or live for every reader of the returned text.
+ */
+struct thinkthen_complete_utf8_v1 thinkthen_call_error_facts_json(const struct thinkthen_call_error *owner);
+
+/*
+ Free this independent owner; NULL is ignored.
+ # Safety
+ owner is NULL or unfreed, after all concurrent operations and borrowed reads finish.
+ */
+void thinkthen_call_error_free(struct thinkthen_call_error *owner);
+
+/*
+ Borrow safe counted error text until error_free. NULL returns empty text.
+ # Safety
+ owner is NULL or live for every reader of the returned text.
+ */
+struct thinkthen_complete_utf8_v1 thinkthen_call_error_message(const struct thinkthen_call_error *owner);
+
+/*
+ Read retryability from any thread; NULL returns false.
+ # Safety
+ owner is NULL or live throughout this read.
+ */
+int32_t thinkthen_call_error_retryable(const struct thinkthen_call_error *owner);
+
+/*
+ Free this independent owner; NULL is ignored.
+ # Safety
+ owner is NULL or unfreed, after all concurrent operations and borrowed reads finish.
+ */
+void thinkthen_call_result_free(struct thinkthen_call_result *owner);
+
+/*
+ Borrow complete canonical Call JSON until result_free. NULL returns empty text.
+ # Safety
+ owner is NULL or live for every reader of the returned text.
+ */
+struct thinkthen_complete_utf8_v1 thinkthen_call_result_json(const struct thinkthen_call_result *owner);
+
+/*
  Finish this engine's current usage deltas and observe their persistence.
  Only usage-lock acquisition has a deadline; other filesystem work can take
  longer. Written covers current deltas only, not future calls or other engines.
@@ -5008,6 +5120,28 @@ int thinkthen_request_plan_value(const struct thinkthen_engine *engine,
                                  const char *request_json,
                                  size_t request_len,
                                  struct thinkthen_value **out);
+
+/*
+ Run one named call to completion using canonical counted question/input/options JSON.
+ Producer is optional and supplies the declared feed. Its callback runs only on this
+ calling thread. Async hosts dedicate one worker to this operation and cancel through
+ the token from another thread. Rust owns all admission, scheduling and stop rules.
+ On success publish only result; on failure publish only an independent error.
+ The other output remains unchanged. No legacy per-thread error slot is changed.
+ Both output slots are required and must be distinct; invalid slots return EUSAGE
+ without publishing. Every returned owner survives engine destruction and thread exit.
+ # Safety
+ engine and optional cancel are live for the whole call. request and its counted
+ UTF-8 components remain readable until return. Output slots are aligned writable
+ distinct storage. producer/context obey CallProducerV1 and outlive the call.
+ */
+int32_t thinkthen_run_call(const struct thinkthen_engine *engine,
+                           const struct thinkthen_named_request_v1 *request,
+                           thinkthen_call_producer_v1 producer,
+                           void *context,
+                           const struct thinkthen_call_cancel *cancel,
+                           struct thinkthen_call_result **result,
+                           struct thinkthen_call_error **error);
 
 /*
  Signal cancellation without waiting for a provider or final facts. NULL is ignored.
@@ -5305,6 +5439,25 @@ int thinkthen_value_parse(const char *json, size_t len, struct thinkthen_value *
  */
 int thinkthen_value_view(const struct thinkthen_value *owner,
                          const struct thinkthen_complete_json_v1 **out);
+
+/*
+ Return the loaded library's NUL-terminated package version and write its interface
+ number. The returned immutable text lives until the library is unloaded; never free
+ it. This bootstrap signature stays stable even when the interface number changes.
+ It allocates nothing, sends nothing, and changes no engine or thread error state.
+
+ Check once when loading the library, before creating an engine or calling any other
+ operation. Compare the written number exactly with THINKTHEN_INTERFACE_NUMBER.
+ On mismatch, report "ThinkThen C interface mismatch: header requires %u, loaded
+ library %s provides %u" with the header number, returned version and loaded number,
+ then refuse all other operations. A dynamic loader must also refuse a library
+ missing this symbol. Package version differences alone do not imply incompatibility.
+
+ # Safety
+ interface_number is nonnull, aligned writable storage for one uint32_t, retained
+ throughout this call. The library remains loaded while reading the returned text.
+ */
+const char *thinkthen_version(uint32_t *interface_number);
 
 #ifdef __cplusplus
 }  // extern "C"

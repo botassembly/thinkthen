@@ -5,8 +5,8 @@ A loopback HTTP server stands in for GitHub: the /releases/latest redirect, the
 API's release list, the archives, and their checksums. THINKTHEN_INSTALL_BASE
 and THINKTHEN_INSTALL_API point `install.sh` at it, since the real boundary is
 GitHub over HTTPS and no gate touches the network. Each archive holds a fake
-`thinkthen` that prints a version. Every case runs with a fresh HOME and a PATH
-that holds only the tools named below, and pins the whole output and exit code.
+`thinkthen` that prints a version. Every case runs with a fresh HOME and the
+resolved tool PATH, and pins the whole output and exit code.
 """
 
 import hashlib
@@ -15,7 +15,6 @@ import io
 import json
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -23,9 +22,13 @@ import tempfile
 import threading
 
 from loopback_server import LoopbackServer
+from tools import fixture_path
+
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import fixture_run
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-TOOLS = "awk cat chmod cp curl gzip head mkdir mktemp mv perl rm sed sync tar uname".split()
 # Each `uname -s` and `uname -m` pair install.sh accepts, and the command archive's target
 # that release-pack publishes for it: static musl on Linux, the Rust target on macOS.
 PLATFORMS = {("Linux", "x86_64"): "x86_64-unknown-linux-musl", ("Linux", "amd64"): "x86_64-unknown-linux-musl",
@@ -107,26 +110,26 @@ def serve(releases, latest, api=True):
 
 
 def toolbox(root, jq=True, sha="sha256sum", uname=None):
-    """A folder holding links to exactly the tools a case allows."""
+    """Keep the resolved runtime and remove only the tested fallback tool."""
     tools = root / "tools"
     tools.mkdir()
-    for tool in TOOLS + ["dash", "bash", "sh", sha] + (["jq"] if jq else []):
-        if tool != "uname" or uname is None:
-            os.symlink(shutil.which(tool), tools / tool)
     if uname:
         (tools / "uname").write_text(f"#!/bin/sh\nif [ \"$1\" = -s ]; then echo {uname[0]}; else echo {uname[1]}; fi\n")
         (tools / "uname").chmod(0o755)
-    return tools
+    exclude = ([] if jq else ['jq']) + (['sha256sum'] if sha == 'shasum' else [])
+    return fixture_path(tools, exclude=exclude)
 
 
 def run(shell, port, root, args=(), on_path=False, folder=None, **tools):
     home = root / "home"
-    path = str(toolbox(root, **tools)) + (f":{home}/.local/bin" if on_path else "")
+    path = toolbox(root, **tools)
+    if on_path:
+        path = fixture_path(home / '.local/bin', path=path)
     env = {"HOME": str(home), "PATH": path, "THINKTHEN_INSTALL_BASE": f"http://127.0.0.1:{port}",
            "THINKTHEN_INSTALL_API": f"http://127.0.0.1:{port}"}
     if folder:
         env["THINKTHEN_INSTALL_DIR"] = str(root / folder)
-    done = subprocess.run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
+    done = fixture_run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True)
     return done.returncode, done.stdout, done.stderr
 
 
