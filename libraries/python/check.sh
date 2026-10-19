@@ -2,14 +2,14 @@
 # Check the package callers install. Full shared parity waits for a candidate.
 unset THINKTHEN_API_KEY
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case "$profile" in routine|full|smoke) ;; *) echo 'unknown Python test profile' >&2; exit 2 ;; esac
 tools_group=python
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case "$profile" in routine|full|smoke) ;; *) echo 'unknown Python test profile' >&2; exit 2 ;; esac
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "$profile" = full ] || exit 2
 fi

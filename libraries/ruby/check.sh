@@ -4,13 +4,13 @@
 # the rung built, so the slide sample and the tests leave the rung's backend
 # alone. Exit 77 means no host toolchain: the rung reports "not run".
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 tools_group=ruby
 [ "${THINKTHEN_RUBY_MINOR:-4.0}" != 3.4 ] || tools_group=ruby34
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"

@@ -3,12 +3,12 @@
 # port as $1; each test starts its own backend, so this check reads none.
 # It runs only the pinned Node, fetches nothing, and holds no real key.
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 tools_group=typescript
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "$profile" = full ] || exit 2
 fi
