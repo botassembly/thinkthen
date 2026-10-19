@@ -22,7 +22,7 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
             format!("{}/generic/v1", backend.origin()),
         )
         .env("THINKTHEN_CACHE", scratch("canonical-preview-cache"))
-        .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
+        .env("ASAN_OPTIONS", super::ASAN_OPTIONS)
         .output()
         .expect("the canonical preview program ran");
     super::successful(&output);
