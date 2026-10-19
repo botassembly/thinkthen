@@ -2,10 +2,21 @@
 #include <thinkthen.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 static thinkthen_complete_utf8_v1 text(const char *s) {
     return (thinkthen_complete_utf8_v1){s,strlen(s)};
 }
 int main(void) {
+#ifdef _WIN32
+    if (_setmode(_fileno(stdout), _O_BINARY) == -1 ||
+        _setmode(_fileno(stderr), _O_BINARY) == -1) {
+        perror("set binary output mode");
+        return 1;
+    }
+#endif
     thinkthen_engine *engine=thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
     if(!engine)return 1;
     thinkthen_named_request_v1 request={text("decide"),text("{\"kind\":\"text\",\"text\":\"Does it pass?\"}"),
