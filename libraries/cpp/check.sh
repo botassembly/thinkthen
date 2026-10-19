@@ -33,8 +33,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
  static=$native/lib/libthinkthen.a
 else
  wrapper=$repo/libraries/cpp
- "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
- "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
+ "$python_bin" "$repo/build-tools/results/generate.py" --target cpp --check
+ "$python_bin" "$repo/build-tools/results/generate.py" --target cpp --inputs --check
  . "$repo/sdlc/scripts/installed.sh"
  native_install "$repo" "$out/native"
  header=$out/native/include/thinkthen.h

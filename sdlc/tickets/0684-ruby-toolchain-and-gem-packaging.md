@@ -10,22 +10,22 @@ Depends on: 0615, 0618, 0619, 0683, 0688
 
 ## Outcome
 
-- On Linux, the 0619 pinned image supplies both pinned Rubies. On macOS, the 0615 resolver supplies them. `setup-ruby.sh` and the source build of Ruby and OpenSSL are deleted.
-- Precompiled platform gems keep one extension per supported Ruby minor, built by the shared packaging step.
-- One diagnostic gem for the generic `ruby` platform stays. The packaging step builds it, and the `THINKTHEN_RUBY_FALLBACK` switch in the gemspec is deleted.
-- The Ruby conformance runner becomes a packet dumper following the 0642 contract, and `tests/test_owned_session.rb` is deleted.
+- Changes: `libraries/ruby/setup-ruby.sh`, `libraries/ruby/toolchain.env`, `libraries/ruby/build.sh`, `libraries/ruby/check.sh`, `libraries/ruby/thinkthen.gemspec`, `libraries/ruby/fallback/`, `libraries/ruby/tests/test_package.rb`, `libraries/ruby/README-DEVELOPMENT.md`, `sdlc/planning/libraries/ruby.md`, `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack`, `.github/workflows/gate.yml`, `site/README.md`, `site/scripts/smoke-bindings.mjs`.
+- On Linux, the 0619 pinned image supplies both pinned Rubies. On macOS, `sdlc/scripts/tools.py` supplies them through the `ruby` and `ruby34` groups. `setup-ruby.sh` is deleted, and every caller resolves Ruby through the manifest.
+- Precompiled platform gems keep one extension per supported Ruby minor, built by `build.sh` for each minor in `RUBY_MINORS`.
+- One diagnostic gem for the generic `ruby` platform stays. The packaging step builds it from its own spec under `libraries/ruby/fallback/`, and the `THINKTHEN_RUBY_FALLBACK` switch in `thinkthen.gemspec` is deleted.
+- The Ruby packet dumper is 0712.
 
 ### Proof
 
-- On the M5 through pm job, natively and in the pinned arm64 container, a clean Ruby runs `gem install` on the candidate platform gem and executes a named call on each supported Ruby minor, with no library path. Its dump matches the 0642 oracle.
-- Installing the diagnostic gem on an unsupported Ruby fails with its message naming the supported versions.
+- On the M5: `pm job run --machine m5 0684 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && THINKTHEN_TEST_PROFILE=full sh libraries/ruby/check.sh'`. Both Ruby minors build, install the platform gem with no library path and run their installed checks. Before the change, `git grep setup-ruby` finds callers in the release scripts, `gate.yml` and the site runner.
+- `ruby tests/test_package.rb` in that run proves that installing the diagnostic gem on an unsupported Ruby fails with a message naming Ruby 3.4 and 4.0.
+- The same full check in the pinned arm64 container runs at the 0619 container checkpoint, and the x86_64 container on Yellow at the 0691 checkpoint after this lands.
 
 ## Evidence
 
-- **Self-built Ruby.**
-  - `libraries/ruby/toolchain.env` pins Ruby 3.4.11 and 4.0.7 by checksum, plus libyaml, the OpenSSL 3.6 series and a macOS 15 floor.
-  - `setup-ruby.sh` builds Ruby from source.
-  - About 47 commits since 2026-09-15 touch the toolchain, install prefixes or macOS (2d58a6aed, 4162db0b0, 36e8427fd, 68646ab8e, e2ec4deb6).
-- **Gem layout.** 0592 settled one extension per Ruby minor version in each platform gem, and that is on main. The diagnostic gem for the generic `ruby` platform is switched by `THINKTHEN_RUBY_FALLBACK` inside the gemspec (`thinkthen.gemspec:20-28`). 0425 plans to publish that diagnostic gem in place of the RubyGems placeholder.
-- **Silent skips.** `check.sh:22` exits 77, and so do `build.sh` and `setup-ruby.sh`; 0618 makes these failures.
-- **Fixture consumers.** `tests/test_owned_session.rb` drives conformance.
+- **Wrapper over the manifest.** `libraries/ruby/setup-ruby.sh` now only calls `sdlc/scripts/tools.py` for the `ruby34` and `ruby` groups (0615). On macOS, `tools.py` installs each Ruby through its provider and `ruby_source` for libyaml. `toolchain.env` reads `sdlc/tools.json` for the versions (Ruby 3.4.11 and 4.0.7, OpenSSL 3.0.22, rbs) and fixes the macOS 15.0 deployment target.
+- **Callers of the wrapper.** `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `.github/workflows/gate.yml`, `site/scripts/smoke-bindings.mjs`, `site/README.md`, `libraries/ruby/README-DEVELOPMENT.md` and `sdlc/planning/libraries/ruby.md` still name `setup-ruby.sh`. 0620 rewrites `.github/workflows/release.yml`, so this ticket leaves that file to it.
+- **Gem layout.** 0592's one extension per Ruby minor is on main: `build.sh` builds `lib/thinkthen/3.4/` and `lib/thinkthen/4.0/`, and `lib/thinkthen.rb` loads by `RUBY_VERSION`. `build.sh` builds the diagnostic gem by running `gem build` again with `THINKTHEN_RUBY_FALLBACK=1`, and `thinkthen.gemspec` switches on it. `part_ruby` in `sdlc/scripts/release-pack` keeps the generic gem on the x86_64 Linux target. 0425 plans to publish that diagnostic gem in place of the RubyGems placeholder.
+- **Failures, not skips.** 0618 landed; `check.sh` fails through `not_run` with exit 1, so no exit-77 path remains to remove.
+- Package release numbers, tool pins and the Ruby 3.4 and 4.0 minimums stay under the no-version-numbers ruling.

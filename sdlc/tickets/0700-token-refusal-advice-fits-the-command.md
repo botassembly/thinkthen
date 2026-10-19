@@ -1,6 +1,6 @@
 # 0700 — Token-limit refusal advice fits the command
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

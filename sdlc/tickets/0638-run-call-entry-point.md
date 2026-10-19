@@ -1,6 +1,6 @@
 # 0638: Add one blocking run-call C function with one result representation
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

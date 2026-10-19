@@ -3,6 +3,7 @@
 
 import hashlib
 import os
+from tools import fixture_path
 from pathlib import Path
 import shutil
 import struct
@@ -74,7 +75,7 @@ exec '{sys.executable}' "$@"''',
         (tools / tool).write_text("#!/bin/sh\n" + body + "\n")
         (tools / tool).chmod(0o755)
     log = base / "host-calls"
-    env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
+    env = os.environ | {"PATH": fixture_path(tools),
                         "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log)}
     expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", TARGET, env=env))
     assert log.read_text().splitlines() == [
@@ -339,7 +340,7 @@ def main():
         build = base / "build"
         (build / "debug").mkdir(parents=True)
         shutil.copy2(binary, build / "debug/thinkthen.exe")
-        env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
+        env = os.environ | {"PATH": fixture_path(tools),
                             "CARGO_TARGET_DIR": str(build), "WINDOWS_TEST_BINARY": str(binary)}
         remap_transport(base, source, scripts, tools, env)
         for args in (("--reuse",), ()):

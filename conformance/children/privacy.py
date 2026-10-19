@@ -12,7 +12,7 @@ import struct
 import tarfile
 import zipfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'sdlc/generators/results'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'build-tools/results'))
 from sources import classification, generated_paths, source_owners, tracked_files
 
 PRIVATE = re.compile(rb'(?P<home_path>/home/)|(?P<users_path>/Users/)|(?P<auth_file>auth\.json)|'

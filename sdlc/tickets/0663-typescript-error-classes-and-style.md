@@ -10,16 +10,21 @@ Depends on: 0665, 0688
 
 ## Outcome
 
-- `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError` and `DefectError` extend a common `ThinkThenError` that carries `retryable`, `facts`, `results` and `terminal`. The addon throws them directly.
-- The wrapper source is TypeScript compiled at package time, formatted by a standard formatter checked in the gate. Handwritten native.d.ts is replaced by compiler output.
-- The `prototype` patching in `crossing` is deleted.
+- Changes: `libraries/typescript/native.js`, `libraries/typescript/native.ts`, `libraries/typescript/native.d.ts`, `libraries/typescript/index.js`, `libraries/typescript/index.mjs`, `libraries/typescript/index.d.ts`, `libraries/typescript/src/request_node.rs`, `libraries/typescript/package.json`, `libraries/typescript/package-lock.json`, `libraries/typescript/check.sh`, `libraries/typescript/README-DEVELOPMENT.md`, `libraries/typescript/tests/`, `conformance/library-surface.json`, `site/src/data/catalog.mjs`.
+- `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError` and `DefectError` extend a common `ThinkThenError` that carries `retryable`, `facts`, `results` and `terminal`. The addon throws them directly. `ClientError` and its `kind` string are deleted.
+- The wrapper source is `native.ts`, compiled at package time by the locked TypeScript devDependency and formatted by a standard formatter that the gate checks. The handwritten `native.d.ts` is replaced by compiler output.
+- The `Object.setPrototypeOf` patching in `crossing` is deleted.
+- The error class change updates its docs and registry in the same change: `README-DEVELOPMENT.md`, the TypeScript errors line in `site/src/data/catalog.mjs`, and the `wrapper_members` entry for `ClientError` in `conformance/library-surface.json`.
 
 ### Proof
 
-On the M5 through pm job, an installed caller catches each error class with `instanceof` in the shared failure cases. `tsc --strict` passes over the caller.
+- On the M5 natively: `pm job run --machine m5 0663 SHA --memory 8 -- env THINKTHEN_TEST_PROFILE=full sh libraries/typescript/check.sh` passes. An installed caller in `tests/` catches each error class with `instanceof` in the shared failure cases, and `tsc --strict` passes over it. Before the change `instanceof UsageError` fails because the package exports only `ClientError`.
+- The gate's formatter check fails on the current packed, many-statements-per-line style and passes on the compiled source.
+- `python3 conformance/library-surface.py --library typescript` passes.
 
 ## Evidence
 
-- The contract asks for "Typed Error subclasses" (BINDING-AUTHOR.md, TypeScript table). The package has one `ClientError` with a `kind` string (libraries/typescript/native.js:4-6). It patches native errors onto that class with `Object.setPrototypeOf` (:25-29).
-- native.js packs many statements per line in a minified style (for example :49-51 and :100-138). That makes review and debugging hard.
-- The package is JavaScript with handwritten native.d.ts, not TypeScript source.
+- The contract asks for "Typed Error subclasses" (`libraries/BINDING-AUTHOR.md`, TypeScript table). The package has one `ClientError` with a `kind` string in `libraries/typescript/native.js`, exported again by `index.mjs`. `crossing` patches native errors onto that class with `Object.setPrototypeOf`. The addon builds those errors in `failure` in `src/request_node.rs`.
+- native.js packs many statements per line in a minified style, for example `Client` and `Operation`. That makes review and debugging hard.
+- The package is JavaScript with handwritten `native.d.ts`, not TypeScript source. `package.json` already locks `typescript` 7.0.2 as a devDependency.
+- `ClientError` appears in `README-DEVELOPMENT.md`, in the TypeScript errors line of `site/src/data/catalog.mjs`, in `wrapper_members` in `conformance/library-surface.json`, and in `tests/owned_session.test.mjs` and `tests/owned_types.test.ts`.

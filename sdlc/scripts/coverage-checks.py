@@ -1,6 +1,7 @@
 """Focused regressions for coverage process ownership and missing profiles."""
 import json
 import os
+from tools import fixture_path
 import platform
 import plistlib
 from pathlib import Path
@@ -118,8 +119,6 @@ class InstalledScriptInvocation(unittest.TestCase):
             tools.mkdir()
             for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
                 (tools / name).symlink_to('/bin/true')
-            for name in ('uname', 'dirname', 'env', 'sh'):
-                (tools / name).symlink_to(shutil.which(name))
             library = run / 'libthinkthen.so'
             library.touch()
             script_dir = run / 'ada'
@@ -130,7 +129,7 @@ class InstalledScriptInvocation(unittest.TestCase):
             script = script_dir / 'check.sh'
             script.write_text(prefix + 'exit 23\n')
             script.chmod(0o700)
-            env = {'PATH': str(tools)}
+            env = {'PATH': fixture_path(tools)}
             invoked = []
             def command(args, cwd, settings, log, **kwargs):
                 if 'package_owned.py' in ' '.join(args):
@@ -169,7 +168,7 @@ class ManagedToolAvailability(unittest.TestCase):
                 binary = tools / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)
-            env = {'HOME': str(root), 'PATH': str(tools),
+            env = {'HOME': str(root), 'PATH': fixture_path(tools),
                    'THINKTHEN_DOTNET': str(tools / 'configured-dotnet'),
                    'TT_DART': str(tools / 'configured-dart'), 'TT_FLUTTER': str(tools / 'configured-flutter'),
                    'THINKTHEN_SWIFT': str(tools / 'configured-swift')}
@@ -271,7 +270,7 @@ class ManagedToolAvailability(unittest.TestCase):
             metadata = {'AvailableLibraries': [dict(SupportedPlatform='macos', SupportedArchitectures=['arm64'],
                          LibraryIdentifier='macos-arm64', LibraryPath='libthinkthen.a', HeadersPath='Headers')]}
             (slice.parent / 'Info.plist').write_bytes(plistlib.dumps(metadata))
-            env = {'PATH': '/usr/bin:/bin'}
+            env = {'PATH': os.environ['PATH']}
             def command(args, cwd, settings, log, **kwargs):
                 self.assertEqual(args, ['sh', './check.sh'])
                 self.assertEqual(settings['THINKTHEN_COVERAGE_INITIALIZER'], str(root / 'profile.o'))
@@ -324,7 +323,7 @@ class ManagedToolAvailability(unittest.TestCase):
                 binary = root / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)
-            env = {'HOME': str(root), 'PATH': str(root)}
+            env = {'HOME': str(root), 'PATH': fixture_path(root)}
             fixed = root / 'fixed-bwrap'
             real_which = coverage_installed_managed.shutil.which
             self.assertIsNotNone(real_which('bwrap', path=env['PATH']))
@@ -370,7 +369,7 @@ while True:
             for capture in (False, True):
                 with self.subTest(capture=capture):
                     result = DRIVER['command']([sys.executable, '-c', script], root,
-                                               {'PATH': os.defpath}, root / 'active.log',
+                                               {'PATH': os.environ['PATH']}, root / 'active.log',
                                                capture=capture, timeout=5)
                     self.assertIn('orphan reaped while harness alive', (root / 'active.log').read_text())
                     if capture:
@@ -381,17 +380,17 @@ while True:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             foreign = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(23)'],
-                                       env={'PATH': os.defpath})
+                                       env={'PATH': os.environ['PATH']})
             previous_handler = signal.getsignal(signal.SIGCHLD)
             previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, [])
             try:
                 for attempt in range(10):
                     with self.assertRaisesRegex(RuntimeError, 'exit 47'):
                         DRIVER['command']([sys.executable, '-c', 'import sys; sys.exit(47)'],
-                                          root, {'PATH': os.defpath}, root / 'immediate.log', capture=True)
+                                          root, {'PATH': os.environ['PATH']}, root / 'immediate.log', capture=True)
                 script = "import json, signal; print(json.dumps(sorted(map(int, signal.pthread_sigmask(signal.SIG_BLOCK, [])))))"
                 result = DRIVER['command']([sys.executable, '-c', script], root,
-                                           {'PATH': os.defpath}, root / 'mask.log', capture=True)
+                                           {'PATH': os.environ['PATH']}, root / 'mask.log', capture=True)
                 self.assertEqual(json.loads(result), sorted(map(int, previous_mask)))
                 self.assertEqual(signal.getsignal(signal.SIGCHLD), previous_handler)
                 self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), previous_mask)

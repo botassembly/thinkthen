@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'sdlc/generators/results'))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'build-tools/results'))
 from sources import tracked_files
 
 

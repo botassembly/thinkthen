@@ -6,11 +6,12 @@ Milestone: 0.2.1
 
 Phase: release
 
-Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0646, 0647, 0649, 0652, 0654, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696
+Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0693, 0647, 0649, 0652, 0655, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696, 0711, 0592, 0710, 0712, 0713, 0714, 0715, 0716, 0717, 0718, 0722
 
 ## Outcome
 
-- The 0.2.1 candidate is one main revision that has passed the 0691 checkpoint run, cut as an immutable candidate branch whose name the workflow reads (0620). Every language library builds natively and passes its installed tests on every platform it supports. The rehearsal and the hosted Linux core and functional jobs pass on that same revision, with no release-only check meeting it for the first time.
+- Changes: `crates/thinkthen/Cargo.toml`, `Cargo.lock`, `CHANGELOG.md`, `release-notes/0.2.1.md`, `sdlc/records/0687-qualification.md`, and the package manifests that `sdlc/scripts/versions --set 0.2.1` writes.
+- The 0.2.1 candidate is one main revision that has passed the 0691 checkpoint run, tagged `rc/0.2.1-rc.N`, the only candidate ref the release workflow's resolve step admits (0620). Every language library builds natively and passes its installed tests on every platform it supports. The rehearsal and the hosted Linux core and functional jobs pass on that same revision, with no release-only check meeting it for the first time.
 - Each item above has a named passing receipt on that revision: the job name and log for each item and each hosted job, all on one SHA. In particular:
   - the hosted Linux x86_64 full-case jobs pass with no timeout (0621);
   - the hosted Windows recognition-session cases pass repeatedly, or each remaining failure is filed and ruled on before the go;
@@ -18,11 +19,12 @@ Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 06
   - the Ruby platform gem installs and runs on Ruby 3.4 and 4.0 (0592);
   - the Windows x64 NuGet consumer (0669), the Go windows/amd64 build (0657), and the C, C++ and Python Windows and Intel macOS installs (0641, 0653, 0660) pass.
 - The 0425 artifact QA control job (branch `ticket/0425-hosted-artifact-qa`, retargeted and reviewed) runs on the tagged candidate and measures both C++ 100000-record memory modes. Its measurement keeps test-fixture copy and serialize memory separate from native held-answer memory.
-- Version strings read 0.2.1. The coordinator brings the passing revision to the PM for Ian's publish go.
+- Package release numbers read 0.2.1, set with `sdlc/scripts/versions --set 0.2.1`. Format versions stay removed, per `sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md`. The coordinator brings the passing revision to the PM for Ian's publish go.
 
 ### Proof
 
-- One list in the release record names every required receipt above by job and log, each on the same candidate SHA. A missing or failing receipt fails this ticket.
+- One list in `sdlc/records/0687-qualification.md` names every required receipt above by job and log, each on the same candidate SHA. A missing or failing receipt fails this ticket.
+- On the M5: `pm job run --machine m5 0687 SHA --memory 16 -- sh -c 'sdlc/scripts/test-full-cases --run && sdlc/scripts/package && sdlc/scripts/test-stress --run'` passes on the candidate SHA. The Linux arm64 and x86_64 runs come from the 0619 containers on the M5 and Yellow; Windows and Intel macOS come from the hosted rehearsal (`gh workflow run release.yml --ref rc/0.2.1-rc.N -f mode=rehearse`) and `windows.yml` on the same tag.
 
 ## Evidence
 

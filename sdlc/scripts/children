@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'generators/results'))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / 'build-tools/results'))
 from sources import tracked_files
 
 LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeScript",

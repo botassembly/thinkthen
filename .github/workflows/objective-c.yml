@@ -44,7 +44,7 @@ jobs:
           THINKTHEN_APPLE_PACKAGE: ${{ github.workspace }}/target/foundation-package
           CARGO_TARGET_DIR: ${{ github.workspace }}/native-source/target
         run: |
-          python3 sdlc/generators/results/generate.py --target objc --check
+          python3 build-tools/results/generate.py --target objc --check
           sh libraries/objective-c/check.sh
       - name: Replay Objective-C website examples
         if: ${{ inputs.website_examples && !cancelled() }}

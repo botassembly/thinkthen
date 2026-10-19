@@ -10,21 +10,23 @@ Depends on: 0615, 0618, 0619, 0668, 0688
 
 ## Outcome
 
+- Changes: `libraries/csharp/ThinkThen.csproj`, `libraries/csharp/Botassembly.ThinkThen.nuspec`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/check.sh`, `libraries/csharp/tests/`, `libraries/csharp/README.md`, `build-tools/results/csharp/`, `sdlc/tools.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`.
 - One NuGet package carries the native library for every supported runtime under standard `runtimes/<rid>/native` folders, so the default .NET loader finds it.
-- The custom resolver and its filename special case are deleted, or reduced to what the standard layout cannot do.
+- The custom resolver in `NativeLoader.cs` and its filename special case are deleted, or reduced to what the standard layout cannot do.
 - The native library name cannot collide with the managed assembly name.
-- Supported runtimes come from the shared product inventory. Windows arm64 is either supported or listed as unsupported in that inventory.
-- The C# conformance runner becomes a packet dumper following the 0642 contract, and the old fixture consumer is deleted.
+- Supported runtimes come from the `csharp` entry under `libraries` in `sdlc/tools.json`. Windows arm64 is either supported or listed as unsupported there. `check_platforms` adds `darwin-arm64` and `linux-arm64`.
+- The C# conformance runner becomes a packet dumper following the 0642 contract, and the old fixture consumer (`tests/public_types.py` with `tests/source/TypeCase.cs`) is deleted.
 
 ### Proof
 
-- On the M5 through pm job, natively and in the pinned arm64 container, the installed-consumer check installs the single package from a local feed and runs a named call with no library path, and its dump matches the 0642 oracle.
+- On the M5 through `pm job run --machine m5 0669 SHA --memory 8 -- sh libraries/csharp/check.sh`, the C# check runs natively on macOS arm64: it installs the single package from a local feed, runs a named call with no library path, and its dump matches the 0642 oracle. Before the change the check exits 77 on the M5 because `sdlc/tools.json` declares only `linux-x86_64`.
+- The same check in the arm64 container runs at the 0619 container checkpoint.
 - Windows x64 and Linux x64 are proven on the candidate in 0687.
 
 ## Evidence
 
 - **Late Windows qualification.** Windows was qualified on the release day. Four commits on 10-17 fixed Windows loading the managed `ThinkThen.dll` in place of the native `thinkthen.dll` (547dae8ef, 6dc2d80ff, b3e9dd194, 98322d5ff).
-- **Filename hack.** The fix is a filename special case in `libraries/csharp/src/NativeLoader.cs:20-21`.
-- **Windows on arm64 refused.** `NativeLoader.cs:15` refuses it.
-- **One runtime per pack.** `ThinkThen.csproj:18-23` packs one runtime per pack, and `check.sh:30,84` packs only linux-x64. `sdlc/scripts/release-managed-pair.py:119-137` checks the assembled NuGet package.
-- **Silent skip.** `check.sh:10-11` exits 77 when dotnet is missing.
+- **Filename hack.** `Resolve` in `libraries/csharp/src/NativeLoader.cs` skips a candidate path equal to the managed assembly's location on Windows.
+- **Windows on arm64 refused.** The same `Resolve` throws `PlatformNotSupportedException` for Windows on anything but x64.
+- **One runtime per pack.** `ThinkThen.csproj` packs one `ThinkThenNativeRid` per pack, and `check.sh` packs only `linux-x64` with `libthinkthen.so`. `sdlc/scripts/release-workflow` packs per target from `csharp_inventory` in `sdlc/scripts/package-inventory.py`, and `sdlc/scripts/release-managed-pair.py` (`check_nupkg`) checks the assembled package.
+- **One checked platform.** `sdlc/tools.json` lists five C# platforms but `check_platforms` holds only `linux-x86_64`.
