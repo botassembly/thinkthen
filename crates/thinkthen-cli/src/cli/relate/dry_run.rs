@@ -2,12 +2,12 @@ use std::io::Write;
 
 use serde::Serialize;
 
-use super::config::From;
-use crate::{ResolvedSettings, RequestFraming as Framing};
 use super::config::Fields;
-use crate::render::json_line;
+use super::config::From;
 use crate::edge;
 use crate::failure::Failure;
+use crate::render::json_line;
+use crate::{RequestFraming as Framing, ResolvedSettings};
 
 #[derive(Serialize)]
 struct Report<'a> {
@@ -71,17 +71,35 @@ pub(super) fn write(
         controls = controls.context(shared);
     }
     let rows = super::records(originals, sources)?;
-    let preview = engine.plan_request(&request, crate::RequestEnvironment {
-        controls, feed: Some(crate::RequestFeed::from_records("cli-relate", rows)),
-    })?;
-    let prepared = preview.relations().ok_or(Failure::Defect("a relation plan has no rules"))?;
-    let relations = prepared.rules().map(|rule| Relation {
-        name: rule.name, source: rule.source, target: rule.target, reads: rule.reads,
-        either: rule.either, method: match rule.method {
-            crate::RelationMethod::Choice => "choice", crate::RelationMethod::YesNo => "yes_no",
-        }, fallback: None, logical_questions: rule.logical_questions, request_count: rule.request_count,
-    }).collect::<Vec<_>>();
-    let requests = preview.prepared_requests()
+    let preview = engine.plan_request(
+        &request,
+        crate::RequestEnvironment {
+            controls,
+            feed: Some(crate::RequestFeed::from_records("cli-relate", rows)),
+        },
+    )?;
+    let prepared = preview
+        .relations()
+        .ok_or(Failure::Defect("a relation plan has no rules"))?;
+    let relations = prepared
+        .rules()
+        .map(|rule| Relation {
+            name: rule.name,
+            source: rule.source,
+            target: rule.target,
+            reads: rule.reads,
+            either: rule.either,
+            method: match rule.method {
+                crate::RelationMethod::Choice => "choice",
+                crate::RelationMethod::YesNo => "yes_no",
+            },
+            fallback: None,
+            logical_questions: rule.logical_questions,
+            request_count: rule.request_count,
+        })
+        .collect::<Vec<_>>();
+    let requests = preview
+        .prepared_requests()
         .map(|request| {
             Ok(Request {
                 digest: request.digest,

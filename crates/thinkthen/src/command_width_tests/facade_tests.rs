@@ -191,9 +191,15 @@ fn native_selection_child() {
         key_reads.load(Ordering::SeqCst),
     );
     assert_eq!(before.1, 6);
-    assert_eq!(before.2, 6, "the real native producer counted its key lookups");
+    assert_eq!(
+        before.2, 6,
+        "the real native producer counted its key lookups"
+    );
     assert_eq!(before.3, 6);
-    assert_eq!(before.4, 6, "the configured key source ran for each request");
+    assert_eq!(
+        before.4, 6,
+        "the configured key source ran for each request"
+    );
     let Err(refused) = Engine::new(counted_settings(Some(8))) else {
         panic!("a different width is refused")
     };

@@ -121,7 +121,7 @@ fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_uncha
 
 #[test]
 fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
-    use crate::public::request::transport::{TransportAttachmentLimit, RequestDescriptor};
+    use crate::public::request::transport::{RequestDescriptor, TransportAttachmentLimit};
     let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

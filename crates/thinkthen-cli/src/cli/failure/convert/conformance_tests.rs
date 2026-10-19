@@ -54,10 +54,9 @@ fn native_fault_projections_keep_command_causes_and_exit_codes() {
 
 #[test]
 fn actual_public_status_and_cancel_errors_keep_their_command_mapping() {
-    let listener = conformance_backend::Listener::answering(|_| {
-        conformance_backend::Canned::status(422, "")
-    })
-    .expect("loopback listener");
+    let listener =
+        conformance_backend::Listener::answering(|_| conformance_backend::Canned::status(422, ""))
+            .expect("loopback listener");
     let engine = thinkthen::Engine::builder()
         .base_url(listener.base())
         .expect("loopback address")
@@ -98,7 +97,10 @@ fn actual_public_status_and_cancel_errors_keep_their_command_mapping() {
         )
         .expect_err("cancelled call");
     assert_eq!(error.kind(), thinkthen::ErrorKind::Cancelled);
-    assert!(error.diagnostic().is_none(), "pre-admission cancellation has no native cause");
+    assert!(
+        error.diagnostic().is_none(),
+        "pre-admission cancellation has no native cause"
+    );
     let cause = Failure::from(error);
     assert!(matches!(cause, Failure::Cancelled));
     let failure = Failure::Stopped {

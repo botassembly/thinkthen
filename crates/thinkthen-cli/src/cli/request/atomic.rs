@@ -20,40 +20,70 @@ pub(super) fn meanings(options: &mut RequestOptions, meanings: &Meanings) -> Res
 }
 
 pub(super) fn bare(names: &[String]) -> Vec<RecordOption> {
-    names.iter().map(|name| RecordOption { name: name.clone(), description: None }).collect()
+    names
+        .iter()
+        .map(|name| RecordOption {
+            name: name.clone(),
+            description: None,
+        })
+        .collect()
 }
 
 fn described(entries: &[String], label: bool) -> Result<Vec<RecordOption>, Failure> {
-    entries.iter().map(|entry| {
-        let (name, text) = entry.split_once('=').ok_or(if label {
-            Failure::LabelWithoutSign
-        } else { Failure::OptionWithoutSign })?;
-        let description = if text.trim().is_empty() { None } else {
-            Some(Description::text(text).map_err(Failure::from)?)
-        };
-        Ok(RecordOption { name: name.to_owned(), description })
-    }).collect()
+    entries
+        .iter()
+        .map(|entry| {
+            let (name, text) = entry.split_once('=').ok_or(if label {
+                Failure::LabelWithoutSign
+            } else {
+                Failure::OptionWithoutSign
+            })?;
+            let description = if text.trim().is_empty() {
+                None
+            } else {
+                Some(Description::text(text).map_err(Failure::from)?)
+            };
+            Ok(RecordOption {
+                name: name.to_owned(),
+                description,
+            })
+        })
+        .collect()
 }
 
-pub(super) fn choice_options(arguments: &ChooseArguments) -> Result<Option<Vec<RecordOption>>, Failure> {
+pub(super) fn choice_options(
+    arguments: &ChooseArguments,
+) -> Result<Option<Vec<RecordOption>>, Failure> {
     let listed = !arguments.options.is_empty();
     let explained = !arguments.described.is_empty();
-    if listed && explained { return Err(Failure::OptionWithList); }
+    if listed && explained {
+        return Err(Failure::OptionWithList);
+    }
     if arguments.options_pointer.is_some() && (listed || explained) {
         return Err(Failure::OptionsWithList);
     }
-    if listed { Ok(Some(bare(&arguments.options))) }
-    else if explained { described(&arguments.described, false).map(Some) }
-    else { Ok(None) }
+    if listed {
+        Ok(Some(bare(&arguments.options)))
+    } else if explained {
+        described(&arguments.described, false).map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 pub(super) fn tag_options(arguments: &TagArguments) -> Result<Option<Vec<RecordOption>>, Failure> {
     let listed = !arguments.labels.is_empty();
     let explained = !arguments.described.is_empty();
-    if listed && explained { return Err(Failure::LabelWithList); }
-    if listed { Ok(Some(bare(&arguments.labels))) }
-    else if explained { described(&arguments.described, true).map(Some) }
-    else { Ok(None) }
+    if listed && explained {
+        return Err(Failure::LabelWithList);
+    }
+    if listed {
+        Ok(Some(bare(&arguments.labels)))
+    } else if explained {
+        described(&arguments.described, true).map(Some)
+    } else {
+        Ok(None)
+    }
 }
 
 pub(super) fn choose_selector(arguments: &ChooseArguments) -> Result<RequestQuestion, Failure> {
@@ -62,7 +92,9 @@ pub(super) fn choose_selector(arguments: &ChooseArguments) -> Result<RequestQues
     }
     if arguments.options_pointer.is_some() {
         return Question::choose_records(&arguments.question)
-            .map(|question| RequestQuestion::Definition { value: question.into() })
+            .map(|question| RequestQuestion::Definition {
+                value: question.into(),
+            })
             .map_err(Failure::from);
     }
     Ok(super::selector(&arguments.question))

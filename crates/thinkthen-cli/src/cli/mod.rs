@@ -8,7 +8,6 @@ mod audit;
 pub(crate) mod cache;
 mod check;
 mod construction;
-mod plan_counts;
 mod diff;
 pub(crate) mod display;
 pub(crate) mod edge;
@@ -22,12 +21,13 @@ mod interrupt;
 pub(crate) mod judge;
 mod measure;
 pub(crate) mod normalize;
+mod plan_counts;
 pub(crate) mod profile;
 mod question_text;
+pub(crate) mod reading;
 pub(crate) mod recognize;
 pub(crate) mod relate;
 mod request;
-pub(crate) mod reading;
 pub(crate) mod schedule;
 pub(crate) mod status;
 mod transform;
@@ -59,7 +59,10 @@ pub(crate) fn entry() -> ExitCode {
     let stdout = io::stdout();
     let stderr = io::stderr();
     if cli.version {
-        return match edge::write_line(stdout.lock(), &format!("thinkthen {}", env!("CARGO_PKG_VERSION"))) {
+        return match edge::write_line(
+            stdout.lock(),
+            &format!("thinkthen {}", env!("CARGO_PKG_VERSION")),
+        ) {
             Ok(_) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
@@ -199,9 +202,11 @@ fn finish_usage(environment: &Environment) {
                 format!("local usage file {name} has {category}")
             },
         );
-        let _unwritten = writeln!(writer,
-            "thinkthen: usage counters could not be updated; {advice}")
-            .and_then(|()| writer.flush());
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: usage counters could not be updated; {advice}"
+        )
+        .and_then(|()| writer.flush());
     }
 }
 

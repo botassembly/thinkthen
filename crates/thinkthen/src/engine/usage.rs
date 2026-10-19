@@ -12,9 +12,9 @@ mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
-mod timing;
 mod files;
 mod lock;
+mod timing;
 pub(crate) use files::open_read;
 use files::{
     make_private_directory, open_private, open_stable_lock, open_verified, sync_directory,

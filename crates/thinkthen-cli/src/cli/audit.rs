@@ -14,15 +14,15 @@ use std::path::{Path, PathBuf};
 use clap::{Args, ValueEnum};
 
 use crate::cli::measure::{BY, Cause, Match, Refusal, lines, rule, write};
+use crate::failure::Failure;
+use crate::saved_json::Pointer;
 use crate::statistics::answer::{self, Identity};
 use crate::statistics::audit::{self as grade, By, Pooled, Row, Settings};
+use crate::statistics::batch::SavedBatch as BatchSetting;
 use crate::statistics::group;
 use crate::statistics::key::Key;
 use crate::statistics::optimize::Measure;
 use crate::statistics::rounded_line;
-use crate::statistics::batch::SavedBatch as BatchSetting;
-use crate::saved_json::Pointer;
-use crate::failure::Failure;
 
 /// The command line of `runs audit`.
 #[derive(Args, Debug)]
@@ -177,7 +177,11 @@ fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
 fn saved_results(path: &Path) -> Result<Vec<crate::statistics::Line>, Cause> {
     let results = lines(path)?;
     for (line, row) in &results {
-        if row.member("schema").and_then(crate::saved_json::Json::as_str) == Some("thinkthen.result/1") {
+        if row
+            .member("schema")
+            .and_then(crate::saved_json::Json::as_str)
+            == Some("thinkthen.result/1")
+        {
             return Err(Cause::OldResults(*line));
         }
     }

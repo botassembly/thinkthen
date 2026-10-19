@@ -39,7 +39,9 @@ pub(crate) struct PlanSummary {
 impl PlanSummary {
     /// Combine native counters before rounding, with no encoding or input access.
     pub(crate) fn combine(&self, other: &Self) -> Result<Self, PlanCombineError> {
-        if self.accounting != other.accounting { return Err(PlanCombineError::Accounting); }
+        if self.accounting != other.accounting {
+            return Err(PlanCombineError::Accounting);
+        }
         let add = |left: usize, right: usize| left.checked_add(right).ok_or(PlanTooLarge);
         Ok(Self {
             records: add(self.records, other.records)?,
@@ -54,7 +56,10 @@ impl PlanSummary {
         })
     }
     /// Public plans already retain their explicit first body; hidden counters do not.
-    pub(crate) fn without_body(mut self) -> Self { self.first_body = None; self }
+    pub(crate) fn without_body(mut self) -> Self {
+        self.first_body = None;
+        self
+    }
 
     pub(crate) const TOKEN_ESTIMATE_METHOD: &str = "encoded-body-bytes-908-v1";
     /// Version-one measured high rate, shared by preview and per-attempt admission.
@@ -237,7 +242,10 @@ mod tests {
                 2 => limit.estimated_bytes = usize::MAX,
                 _ => limit.token_bytes = usize::MAX,
             }
-            assert!(matches!(limit.combine(&first), Err(PlanCombineError::TooLarge(_))));
+            assert!(matches!(
+                limit.combine(&first),
+                Err(PlanCombineError::TooLarge(_))
+            ));
         }
     }
 

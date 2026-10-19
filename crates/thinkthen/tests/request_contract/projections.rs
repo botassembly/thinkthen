@@ -646,16 +646,31 @@ fn recognition_text_limits_apply_before_sending_and_belong_to_recognition() {
     for limit in [1, 2] {
         let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"recognize","question":{{"kind":"definition","value":{{"version":1,"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
         let arguments = request.call.arguments().clone();
-        let error = engine.call("recognize", arguments, RequestEnvironment::default()).unwrap_err();
+        let error = engine
+            .call("recognize", arguments, RequestEnvironment::default())
+            .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
-        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::TextTooLong { bytes: 3, limit: actual }) if actual == limit));
+        assert!(
+            matches!(error.diagnostic(), Some(ErrorDiagnostic::TextTooLong { bytes: 3, limit: actual }) if actual == limit)
+        );
         assert_eq!(listener.count(), 0);
     }
-    let mut arguments = args(Question::decide("Fits?").unwrap().cut().into(), RequestInput::Text { text: "Ada".into(), images: vec![] });
+    let mut arguments = args(
+        Question::decide("Fits?").unwrap().cut().into(),
+        RequestInput::Text {
+            text: "Ada".into(),
+            images: vec![],
+        },
+    );
     arguments.options.max_text_bytes = Some(3);
-    let error = engine.call("decide", arguments, RequestEnvironment::default()).unwrap_err();
+    let error = engine
+        .call("decide", arguments, RequestEnvironment::default())
+        .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
-    assert_eq!(error.detail().message(), "max text bytes belongs to recognize");
+    assert_eq!(
+        error.detail().message(),
+        "max text bytes belongs to recognize"
+    );
     assert_eq!(listener.count(), 0);
 }
 
@@ -664,19 +679,39 @@ fn ranked_score_projection_retains_native_weighting_ties_and_decision_absence() 
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"score","probabilities":{"0":0.8,"1":0.2}},"q2":{"type":"score","probabilities":{"0":0.1,"1":0.9}}}}"#)).unwrap();
     let engine = engine(&listener);
     let score = Question::rank_from_json(r#"{"score":"Grade?","levels":["low","high"]}"#).unwrap();
-    let arguments = args(score.into(), RequestInput::Records {
-        items: ["first", "second", "first"].into_iter().map(item).collect(),
-    });
-    let call = engine.call("rank", arguments, RequestEnvironment {
-        controls: CallOptions::new().batch(BatchSetting::Max), feed: None,
-    }).unwrap();
-    let RequestValue::Ranked(rows) = call.value() else { panic!("rank result") };
-    assert_eq!(rows.iter().map(|row| row.ordinal()).collect::<Vec<_>>(), [1, 0, 2]);
+    let arguments = args(
+        score.into(),
+        RequestInput::Records {
+            items: ["first", "second", "first"].into_iter().map(item).collect(),
+        },
+    );
+    let call = engine
+        .call(
+            "rank",
+            arguments,
+            RequestEnvironment {
+                controls: CallOptions::new().batch(BatchSetting::Max),
+                feed: None,
+            },
+        )
+        .unwrap();
+    let RequestValue::Ranked(rows) = call.value() else {
+        panic!("rank result")
+    };
+    assert_eq!(
+        rows.iter().map(|row| row.ordinal()).collect::<Vec<_>>(),
+        [1, 0, 2]
+    );
     for (row, expected) in rows.iter().zip([0.9, 0.2, 0.2]) {
         assert!((row.result().score().unwrap() - expected).abs() < 1e-12);
         assert!(row.result().probability().is_none());
     }
-    assert_eq!(rows.iter().map(|row| row.result().value()).collect::<Vec<_>>(), [1, 2, 3]);
+    assert_eq!(
+        rows.iter()
+            .map(|row| row.result().value())
+            .collect::<Vec<_>>(),
+        [1, 2, 3]
+    );
     assert_eq!(call.facts().requests_sent(), 1);
 
     let listener = Listener::answering(response).unwrap();
@@ -686,12 +721,26 @@ fn ranked_score_projection_retains_native_weighting_ties_and_decision_absence() 
         RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Ready?"}}}"#).unwrap().into(),
     ];
     for definition in definitions {
-        let call = engine.call("rank", args(definition, RequestInput::Records {
-            items: vec![item("first"), item("second")],
-        }), RequestEnvironment::default()).unwrap();
+        let call = engine
+            .call(
+                "rank",
+                args(
+                    definition,
+                    RequestInput::Records {
+                        items: vec![item("first"), item("second")],
+                    },
+                ),
+                RequestEnvironment::default(),
+            )
+            .unwrap();
         match call.value() {
-            RequestValue::Ranked(rows) => assert!(rows.iter().all(|row| row.result().score().is_none())),
-            RequestValue::SetRanked(rows) => assert!(rows.iter().all(|row| row.result().result().score().is_none())),
+            RequestValue::Ranked(rows) => {
+                assert!(rows.iter().all(|row| row.result().score().is_none()))
+            }
+            RequestValue::SetRanked(rows) => assert!(
+                rows.iter()
+                    .all(|row| row.result().result().score().is_none())
+            ),
             _ => panic!("rank result"),
         }
     }

@@ -4,10 +4,10 @@
     clippy::indexing_slicing,
     reason = "invalid fixtures, replies or fixed sample counts stop this opt-in measurement"
 )]
-#[path = "support/command.rs"]
-mod command;
 #[path = "../../thinkthen/src/test_deadline/child.rs"]
 mod child;
+#[path = "support/command.rs"]
+mod command;
 use child::ChildEnvironment as _;
 use conformance_backend::Backend;
 use serde_json::{Value, json};

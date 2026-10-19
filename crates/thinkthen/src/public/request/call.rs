@@ -26,7 +26,9 @@ impl Engine {
             Request::named(function, arguments)?,
             environment.controls.attachment_limit,
         )?;
-        environment.controls.admit_preparation(request.request.call.function())?;
+        environment
+            .controls
+            .admit_preparation(request.request.call.function())?;
         if let Some(feed) = &environment.feed
             && let super::execution::FeedContents::Descriptors(descriptors) = &feed.contents
         {

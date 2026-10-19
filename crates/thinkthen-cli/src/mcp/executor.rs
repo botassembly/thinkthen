@@ -20,10 +20,11 @@ impl Executor for NativeExecutor {
         let single = invocation.arguments.records.is_none()
             && invocation.arguments.source.is_none()
             && invocation.arguments.inputs.is_none();
-        match self
-            .engine
-            .call(invocation.tool.name(), arguments, RequestEnvironment { controls, feed })
-        {
+        match self.engine.call(
+            invocation.tool.name(),
+            arguments,
+            RequestEnvironment { controls, feed },
+        ) {
             Ok(call) => complete(call, single),
             Err(error) => failure(error),
         }
@@ -56,7 +57,12 @@ fn failure(error: Error) -> Result<NativeReply, Error> {
             failure: error.complete(),
         })
     }
-    .map_err(|_| Error::new(crate::ErrorKind::Defect, "defect: native batch outcome could not be written"))?;
+    .map_err(|_| {
+        Error::new(
+            crate::ErrorKind::Defect,
+            "defect: native batch outcome could not be written",
+        )
+    })?;
     Ok(NativeReply {
         object,
         failed: true,
@@ -82,9 +88,15 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
         ($rows:expr) => {{
             match $rows.as_slice() {
                 [one] => single_reply(&call, one, failed),
-                rows => Err(Error::new(crate::ErrorKind::Defect, if rows.is_empty() {
-                    "defect: one input produced no result"
-                } else { "defect: one input produced extra results" }).with_facts(call.facts().clone())),
+                rows => Err(Error::new(
+                    crate::ErrorKind::Defect,
+                    if rows.is_empty() {
+                        "defect: one input produced no result"
+                    } else {
+                        "defect: one input produced extra results"
+                    },
+                )
+                .with_facts(call.facts().clone())),
             }
         }};
     }
@@ -100,7 +112,11 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
         _ => reply(call, failed),
     }
 }
-fn single_reply<T: Serialize>(call: &Call<RequestValue>, value: &T, failed: bool) -> Result<NativeReply, Error> {
+fn single_reply<T: Serialize>(
+    call: &Call<RequestValue>,
+    value: &T,
+    failed: bool,
+) -> Result<NativeReply, Error> {
     #[derive(Serialize)]
     struct Scalar<'a, T> {
         value: &'a T,
@@ -108,19 +124,36 @@ fn single_reply<T: Serialize>(call: &Call<RequestValue>, value: &T, failed: bool
         answer: Option<&'a crate::SettledAnswer>,
         facts: crate::CompleteFacts<'a>,
     }
-    let facts = call.facts().complete().ok_or_else(||
-        Error::new(crate::ErrorKind::Defect, "defect: a completed call has no identity")
-            .with_facts(call.facts().clone()))?;
+    let facts = call.facts().complete().ok_or_else(|| {
+        Error::new(
+            crate::ErrorKind::Defect,
+            "defect: a completed call has no identity",
+        )
+        .with_facts(call.facts().clone())
+    })?;
     Ok(NativeReply {
-        object: NativeObject::new(&Scalar { value, answer: call.answer(), facts })
-            .map_err(|_| Error::new(crate::ErrorKind::Defect, "defect: native complete call could not be written"))?,
+        object: NativeObject::new(&Scalar {
+            value,
+            answer: call.answer(),
+            facts,
+        })
+        .map_err(|_| {
+            Error::new(
+                crate::ErrorKind::Defect,
+                "defect: native complete call could not be written",
+            )
+        })?,
         failed,
     })
 }
 fn reply<T: Serialize>(call: Call<T>, failed: bool) -> Result<NativeReply, Error> {
     Ok(NativeReply {
-        object: NativeObject::new(&call)
-            .map_err(|_| Error::new(crate::ErrorKind::Defect, "defect: native complete call could not be written"))?,
+        object: NativeObject::new(&call).map_err(|_| {
+            Error::new(
+                crate::ErrorKind::Defect,
+                "defect: native complete call could not be written",
+            )
+        })?,
         failed,
     })
 }

@@ -263,8 +263,11 @@ where
         }
         // A missing annotation pointer must settle its ordered row and caller
         // decision before another original enters the native coordinator.
-        if self.input_barrier.as_ref().is_some_and(|barrier|
-            barrier.load(std::sync::atomic::Ordering::Acquire)) {
+        if self
+            .input_barrier
+            .as_ref()
+            .is_some_and(|barrier| barrier.load(std::sync::atomic::Ordering::Acquire))
+        {
             self.pending_ask = true;
             return;
         }

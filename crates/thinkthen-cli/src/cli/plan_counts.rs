@@ -14,17 +14,22 @@ pub(crate) struct Counts {
     pub(crate) upper_bound: bool,
 }
 #[derive(Debug, Serialize)]
-struct TokenBand { lower: usize, upper: usize }
+struct TokenBand {
+    lower: usize,
+    upper: usize,
+}
 impl From<&PlanEstimate> for Counts {
     fn from(plan: &PlanEstimate) -> Self {
         let (lower, upper) = plan.estimated_input_tokens();
         Self {
-            records: plan.records(), requests: plan.requests(),
+            records: plan.records(),
+            requests: plan.requests(),
             estimated_bytes: plan.estimated_bytes(),
             largest_request_bytes: plan.largest_request_bytes(),
             largest_request_estimated_input_tokens: plan.largest_request_estimated_input_tokens(),
             token_estimate_method: plan.token_estimate_method(),
-            estimated_input_tokens: TokenBand { lower, upper }, upper_bound: plan.upper_bound(),
+            estimated_input_tokens: TokenBand { lower, upper },
+            upper_bound: plan.upper_bound(),
         }
     }
 }

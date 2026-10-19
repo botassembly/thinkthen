@@ -74,18 +74,36 @@ impl Queue {
         self.wake.notify_all();
     }
     pub(super) fn register_input_wake(&self, wake: Option<crate::public::readiness::Wake>) {
-        let mut previous = self.input_wake.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        if let Some(previous) = previous.take() { previous.clear(); }
+        let mut previous = self
+            .input_wake
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(previous) = previous.take() {
+            previous.clear();
+        }
         *previous = wake;
     }
     fn notify_input(&self) {
-        let wake = self.input_wake.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
-        if let Some(wake) = wake { wake.notify(); }
+        let wake = self
+            .input_wake
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        if let Some(wake) = wake {
+            wake.notify();
+        }
     }
     pub(super) fn reschedule_input(&self) {
-        let ready = { let state = self.lock(); state.input.is_some() || state.finish.is_some()
-            || state.intake_closed || self.cancel.is_cancelled() };
-        if ready { self.notify_input(); }
+        let ready = {
+            let state = self.lock();
+            state.input.is_some()
+                || state.finish.is_some()
+                || state.intake_closed
+                || self.cancel.is_cancelled()
+        };
+        if ready {
+            self.notify_input();
+        }
     }
     pub(super) fn try_input(&self, controls: CallOptions<'_>) -> super::session_input::Read {
         let mut state = self.lock();
@@ -93,14 +111,22 @@ impl Queue {
         self.notify();
         value
     }
-    fn take_input(&self, state: &mut State, controls: CallOptions<'_>) -> super::session_input::Read {
+    fn take_input(
+        &self,
+        state: &mut State,
+        controls: CallOptions<'_>,
+    ) -> super::session_input::Read {
         use super::session_input::Read;
-        if state.intake_closed || self.cancel.is_cancelled() { return Read::End; }
+        if state.intake_closed || self.cancel.is_cancelled() {
+            return Read::End;
+        }
         if let Err(error) = controls.reader_admission() {
             state.intake_closed = true;
             return Read::Item(Err(error));
         }
-        if let Some(item) = state.input.take() { return Read::Item(Ok(item)); }
+        if let Some(item) = state.input.take() {
+            return Read::Item(Ok(item));
+        }
         if let Some(failure) = &mut state.finish {
             let error = match failure {
                 Finish::Transport(failure) => failure.as_ref().map(RequestReaderFailure::error),
@@ -257,19 +283,36 @@ impl Queue {
         self.notify_input();
         Ok(())
     }
-    pub(super) fn next(&self, controls: CallOptions<'_>) -> Option<Result<RequestSessionDescriptor, Error>> {
+    pub(super) fn next(
+        &self,
+        controls: CallOptions<'_>,
+    ) -> Option<Result<RequestSessionDescriptor, Error>> {
         let mut state = self.lock();
         loop {
             match self.take_input(&mut state, controls) {
-                super::session_input::Read::Item(item) => { self.notify(); return Some(item); }
-                super::session_input::Read::End => { self.notify(); return None; }
+                super::session_input::Read::Item(item) => {
+                    self.notify();
+                    return Some(item);
+                }
+                super::session_input::Read::End => {
+                    self.notify();
+                    return None;
+                }
                 super::session_input::Read::Pending => {}
             }
             state = match controls.reader_remaining() {
-                Ok(Some(remaining)) => self.wake.wait_timeout(state, remaining)
-                    .unwrap_or_else(std::sync::PoisonError::into_inner).0,
+                Ok(Some(remaining)) => {
+                    self.wake
+                        .wait_timeout(state, remaining)
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .0
+                }
                 Ok(None) => self.wait(state),
-                Err(error) => { state.intake_closed = true; self.notify(); return Some(Err(error)); }
+                Err(error) => {
+                    state.intake_closed = true;
+                    self.notify();
+                    return Some(Err(error));
+                }
             };
         }
     }
@@ -291,7 +334,10 @@ impl Queue {
         state.settled = true;
         self.notify();
         drop(state);
-        self.logical.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
+        self.logical
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
         self.notify_input();
     }
     pub(super) fn read(&self) -> Read {

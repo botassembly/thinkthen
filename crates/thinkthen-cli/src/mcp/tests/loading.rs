@@ -69,12 +69,11 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
             json!({"name":tool,"arguments":{"question_file":path,"evidence":"x"}}),
         )
         .unwrap();
-        let failure = Invocation::admit(params)
+        let failure = Invocation::admit(params).unwrap().request().unwrap().0;
+        let failure = crate::Engine::builder()
+            .no_cache()
+            .build()
             .unwrap()
-            .request()
-            .unwrap()
-            .0;
-        let failure = crate::Engine::builder().no_cache().build().unwrap()
             .call(tool, failure, crate::RequestEnvironment::default())
             .unwrap_err();
         assert_eq!(failure.kind(), crate::ErrorKind::Local, "{tool}");
@@ -85,12 +84,11 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         json!({"name":"decide","arguments":{"question_file":absent,"evidence":"x"}}),
     )
     .unwrap();
-    let failure = Invocation::admit(params)
+    let failure = Invocation::admit(params).unwrap().request().unwrap().0;
+    let failure = crate::Engine::builder()
+        .no_cache()
+        .build()
         .unwrap()
-        .request()
-        .unwrap()
-        .0;
-    let failure = crate::Engine::builder().no_cache().build().unwrap()
         .call("decide", failure, crate::RequestEnvironment::default())
         .unwrap_err();
     assert_eq!(
@@ -103,12 +101,11 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         json!({"name":"decide","arguments":{"question_file":path,"evidence":"x"}}),
     )
     .unwrap();
-    let failure = Invocation::admit(params)
+    let failure = Invocation::admit(params).unwrap().request().unwrap().0;
+    let failure = crate::Engine::builder()
+        .no_cache()
+        .build()
         .unwrap()
-        .request()
-        .unwrap()
-        .0;
-    let failure = crate::Engine::builder().no_cache().build().unwrap()
         .call("decide", failure, crate::RequestEnvironment::default())
         .unwrap_err();
     assert_eq!(failure.kind(), crate::ErrorKind::Local);
@@ -124,7 +121,9 @@ fn native_question_set_preparation_keeps_authored_names_and_utf8_order() {
         r#"{"version":1,"questions":{"zebra":{"decide":"café 😀?"},"alpha":{"score":"grade","levels":["low","high"]}}}"#,
     );
     let crate::RequestQuestion::Definition {
-        value: crate::RequestDefinition::DecodedSet { annotation: set, .. },
+        value: crate::RequestDefinition::DecodedSet {
+            annotation: set, ..
+        },
     } = call.unwrap().request().unwrap().0.question
     else {
         panic!("annotate set")

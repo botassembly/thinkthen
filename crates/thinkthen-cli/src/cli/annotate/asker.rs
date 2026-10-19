@@ -1,7 +1,7 @@
 //! CLI annotation framing and preview presentation; native execution owns answers.
 use super::Judging;
-use crate::cli::reading::Reading;
 use crate::RawRecord as Record;
+use crate::cli::reading::Reading;
 use crate::failure::Failure;
 
 pub(crate) type Framed = crate::cli::intake::Item;

@@ -76,7 +76,9 @@ pub(crate) fn write(
         records: snapshot.facts.records(),
         requests_sent: snapshot.counts.requests_sent(),
         largest_request_bytes: snapshot.facts.largest_request_bytes(),
-        largest_request_estimated_input_tokens: snapshot.facts.largest_request_estimated_input_tokens(),
+        largest_request_estimated_input_tokens: snapshot
+            .facts
+            .largest_request_estimated_input_tokens(),
         token_estimate_method: snapshot.facts.token_estimate_method(),
         retries: snapshot.counts.retries(),
         cache_answers: snapshot.counts.cache_answers(),

@@ -2,9 +2,12 @@
 
 use serde::Serialize;
 pub(crate) mod diagnostic;
-mod stopped;
 mod presentation;
-pub use presentation::{ConfigurationFailure, ErrorDiagnostic, JsonFailure, ProfileFailure, ProviderFailure, TransportFailure};
+mod stopped;
+pub use presentation::{
+    ConfigurationFailure, ErrorDiagnostic, JsonFailure, ProfileFailure, ProviderFailure,
+    TransportFailure,
+};
 pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
@@ -128,10 +131,7 @@ impl Error {
     /// Reader adapters use this to retain their own errors without library coupling.
     /// An existing source is preserved; the first attached cause owns the chain.
     #[must_use]
-    pub fn with_source(
-        mut self,
-        source: impl std::error::Error + Send + Sync + 'static,
-    ) -> Self {
+    pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
         if self.detail().producer.is_none() {
             self.detail_mut().producer = Some(Box::new(source));
         }

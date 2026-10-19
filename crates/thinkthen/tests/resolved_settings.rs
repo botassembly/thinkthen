@@ -7,9 +7,12 @@ fn settings_inspection_withholds_credentials_and_never_sends() {
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let key = "settings-snapshot-private-key";
     let builder = Engine::builder()
-        .base_url(listener.base()).unwrap()
-        .model("settings-private-model").unwrap()
-        .api_key(key).unwrap()
+        .base_url(listener.base())
+        .unwrap()
+        .model("settings-private-model")
+        .unwrap()
+        .api_key(key)
+        .unwrap()
         .no_cache();
     let settings = builder.resolved_settings().unwrap();
     assert!(settings.api_key_set);
@@ -36,7 +39,10 @@ fn explicit_request_rates_retain_the_native_bounds() {
         assert_eq!(selected.is_ok(), admitted);
         if let Err(error) = selected {
             assert_eq!(error.kind(), ErrorKind::Usage);
-            assert_eq!(error.detail().message(), "THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000");
+            assert_eq!(
+                error.detail().message(),
+                "THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000"
+            );
         }
     }
 }
@@ -53,7 +59,10 @@ fn built_engine_observations_use_actual_adapter_model_and_profile_without_sendin
             .base_url(listener.base()).unwrap().model(model).unwrap()
             .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"explicit-profile","max_questions":3}"#).unwrap()
             .no_cache();
-        assert_eq!(builder.resolved_settings().unwrap().model_is_mutable_alias, mutable);
+        assert_eq!(
+            builder.resolved_settings().unwrap().model_is_mutable_alias,
+            mutable
+        );
         let engine = builder.build().unwrap();
         assert_eq!(engine.provider_name(), provider);
         assert_eq!(engine.model_is_mutable_alias(), mutable);
@@ -64,7 +73,13 @@ fn built_engine_observations_use_actual_adapter_model_and_profile_without_sendin
             let note = plan.token_estimate_note();
             assert!(note.starts_with("token-estimate measured byte rates; actual billed input can exceed the upper estimate;"));
             assert_eq!(note.contains("5131"), backend == "typesafe");
-            assert!(!serde_json::to_value(&plan).unwrap().as_object().unwrap().contains_key("token_estimate_note"));
+            assert!(
+                !serde_json::to_value(&plan)
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .contains_key("token_estimate_note")
+            );
         }
     }
     assert_eq!(listener.count(), 0);

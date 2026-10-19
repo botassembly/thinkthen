@@ -39,8 +39,9 @@ impl<T: Send + 'static> Reader<T> {
     /// the pump immediately; the existing poll bound still admits cancellation.
     pub(crate) fn wait(&self, timeout: std::time::Duration) {
         if let Ok(state) = self.0.state.lock() {
-            let _ready = self.0.changed.wait_timeout_while(state, timeout,
-                |state| state.item.is_none() && !state.stopped);
+            let _ready = self.0.changed.wait_timeout_while(state, timeout, |state| {
+                state.item.is_none() && !state.stopped
+            });
         }
     }
     /// Demand one item without blocking the command's event pump.

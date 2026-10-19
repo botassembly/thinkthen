@@ -83,7 +83,10 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         live.facts().largest_request_estimated_input_tokens(),
         Some((REFUND_REQUEST.len() as u64 * 908).div_ceil(1000))
     );
-    assert_eq!(live.facts().token_estimate_method(), "encoded-body-bytes-908-v1");
+    assert_eq!(
+        live.facts().token_estimate_method(),
+        "encoded-body-bytes-908-v1"
+    );
     let http = engine.http_time().expect("valid HTTP timeline");
     assert!(http > Duration::ZERO);
     assert!(http.as_secs_f64() <= live.facts().seconds());
@@ -95,7 +98,10 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     );
     let cached = engine.decide(&asked, "Refund me.").expect("cached");
     assert_eq!(cached.facts().largest_request_bytes(), 0);
-    assert_eq!(cached.facts().largest_request_estimated_input_tokens(), Some(0));
+    assert_eq!(
+        cached.facts().largest_request_estimated_input_tokens(),
+        Some(0)
+    );
     assert_eq!(engine.http_time(), Some(http));
     assert_eq!(cached.facts().estimated_cost_usd(), Some("0.000000"));
     assert_eq!(

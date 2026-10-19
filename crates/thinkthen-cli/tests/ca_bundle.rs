@@ -1,16 +1,20 @@
 //! Genuine command TLS trust and refusal ordering through the installed selection.
-#![allow(clippy::expect_used, clippy::panic, reason = "a failed local certificate fixture stops the boundary proof")]
+#![allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "a failed local certificate fixture stops the boundary proof"
+)]
 use crate::child::ChildEnvironment as _;
-use std::process::Command;
 use std::io::Write;
 use std::net::TcpListener;
 use std::path::Path;
+use std::process::Command;
 use std::process::Stdio;
 #[path = "../../thinkthen/src/test_deadline/child.rs"]
 mod child;
 #[path = "../../thinkthen/tests/support/tls.rs"]
 mod tls;
-use tls::{KEY, RESPONSE, Fixture, Server};
+use tls::{Fixture, KEY, RESPONSE, Server};
 
 #[path = "support/command.rs"]
 mod command;
@@ -137,21 +141,46 @@ fn certificate_admission_precedes_cache_and_cost_warnings() {
     fs::write(&malformed, b"distinctive-private-certificate-marker").unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     listener.set_nonblocking(true).unwrap();
-    let url = format!("https://127.0.0.1:{}", listener.local_addr().unwrap().port());
+    let url = format!(
+        "https://127.0.0.1:{}",
+        listener.local_addr().unwrap().port()
+    );
     let run = |bundle: &Path, cache: &Path, model: &str, refresh: bool| {
         let mut command = Command::new(crate::command::binary());
-        command.args(["decide", "Fits?", "--url", &url, "--model", model, "--cache"])
-            .arg(cache).clear_environment().home(&fixture.0)
+        command
+            .args([
+                "decide", "Fits?", "--url", &url, "--model", model, "--cache",
+            ])
+            .arg(cache)
+            .clear_environment()
+            .home(&fixture.0)
             .env("THINKTHEN_CA_BUNDLE", bundle)
-            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
-        if refresh { command.arg("--refresh-cache"); }
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        if refresh {
+            command.arg("--refresh-cache");
+        }
         let mut child = command.spawn().unwrap();
-        child.stdin.take().unwrap().write_all(b"Evidence.\n").unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(b"Evidence.\n")
+            .unwrap();
         child.wait_with_output().unwrap()
     };
     for (bundle, code, sentence) in [
-        (fixture.at("missing.pem"), 5, "THINKTHEN_CA_BUNDLE file could not be read"),
-        (malformed, 2, "THINKTHEN_CA_BUNDLE accepts only PEM CERTIFICATE blocks"),
+        (
+            fixture.at("missing.pem"),
+            5,
+            "THINKTHEN_CA_BUNDLE file could not be read",
+        ),
+        (
+            malformed,
+            2,
+            "THINKTHEN_CA_BUNDLE accepts only PEM CERTIFICATE blocks",
+        ),
     ] {
         let output = run(&bundle, &cache, "jev-latest", true);
         assert_eq!(output.status.code(), Some(code));
@@ -176,5 +205,7 @@ fn certificate_admission_precedes_cache_and_cost_warnings() {
     assert!(stderr.starts_with(COST), "{stderr}");
     assert!(stderr[COST.len()..].starts_with("thinkthen: "), "{stderr}");
     assert_eq!(fs::read(&blocked).unwrap(), b"unchanged storage marker");
-    assert!(matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
 }

@@ -6,14 +6,14 @@ use std::process::ExitCode;
 
 use super::JudgingInput;
 use super::judged::Records;
-use crate::{BatchSetting as Setting, PlanEstimate, ResolvedSettings};
 use crate::cli::reading::Reading;
-use crate::plan_document::Sources;
-use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
+use crate::plan_document::Sources;
 use crate::profile::Mismatch;
+use crate::render::json_line;
 use crate::schedule::Output;
+use crate::{BatchSetting as Setting, PlanEstimate, ResolvedSettings};
 
 /// What a plan shows beyond the request: where the question came from.
 pub(super) struct Planning<'a> {
@@ -51,22 +51,28 @@ pub(super) fn packed(
         super::native::compose(&composition, &held)
     });
     let native = crate::cli::construction::engine(
-        configuration.common, configuration.environment,
+        configuration.common,
+        configuration.environment,
         super::Folders::of(configuration.common, configuration.environment)?,
         configuration.common.jobs,
     )?;
     let mut arguments = admitted.request().call.arguments().clone();
-    arguments.question = crate::RequestQuestion::Definition { value: admitted.resolve_question()? };
+    arguments.question = crate::RequestQuestion::Definition {
+        value: admitted.resolve_question()?,
+    };
     arguments.input = crate::RequestInput::Feed {
-        name: "cli-plan".to_owned(), framing: crate::RequestFraming::Document,
-        reading: crate::ReaderOptions::default(), images: Vec::new(),
+        name: "cli-plan".to_owned(),
+        framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(),
+        images: Vec::new(),
     };
     arguments.options.field = None;
     arguments.options.context_field = None;
     arguments.options.options_field = None;
     arguments.options.examples_field = None;
     arguments.options.seed_spans_field = None;
-    let admitted = crate::Request::for_function(admitted.request().call.function(), arguments).admit()?;
+    let admitted =
+        crate::Request::for_function(admitted.request().call.function(), arguments).admit()?;
     let shared = context.as_deref();
     let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(shared) = shared {
@@ -83,15 +89,25 @@ pub(super) fn packed(
         feed = feed.with_image_inputs();
     }
     let summary = native.plan_request(
-        &admitted, crate::RequestEnvironment { controls, feed: Some(feed) },
+        &admitted,
+        crate::RequestEnvironment {
+            controls,
+            feed: Some(feed),
+        },
     )?;
-    crate::cli::check::say_dropped_detail(summary.drops_detail(), configuration.environment.named())?;
+    crate::cli::check::say_dropped_detail(
+        summary.drops_detail(),
+        configuration.environment.named(),
+    )?;
     let Some(first) = summary.first_body() else {
         return Ok(ExitCode::SUCCESS);
     };
     print_plan(
         backend,
-        &configuration.mismatch.clone().running_profile(configuration.profile.as_deref(), native.profile_name()),
+        &configuration
+            .mismatch
+            .clone()
+            .running_profile(configuration.profile.as_deref(), native.profile_name()),
         reading,
         &configuration.planning(),
         first.to_vec(),
@@ -124,7 +140,11 @@ pub(super) fn print_plan(
         ));
     }
     let document = if reading.streams() {
-        document.reading(reading.framing(), reading.fields().to_vec(), reading.is_default())
+        document.reading(
+            reading.framing(),
+            reading.fields().to_vec(),
+            reading.is_default(),
+        )
     } else {
         document
     };

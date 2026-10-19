@@ -508,10 +508,15 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
 fn offline_readers_keep_unbounded_object_bytes_and_reject_other_shapes() {
     // This unused member exceeds execution admission. Offline commands keep their
     // historical read-only parser behavior and never render it or open a backend.
-    let large = format!("{{\"input\":{{\"id\":1}},\"value\":true,\"answer\":{{\"probability\":0.9}},\"unused\":\"{}\"}}\n",
-        "x".repeat(thinkthen::RawRecord::max_bytes()));
+    let large = format!(
+        "{{\"input\":{{\"id\":1}},\"value\":true,\"answer\":{{\"probability\":0.9}},\"unused\":\"{}\"}}\n",
+        "x".repeat(thinkthen::RawRecord::max_bytes())
+    );
     assert!(thinkthen::RawRecord::json(large.trim()).is_err());
-    for arguments in [vec!["runs", "audit", "-"], vec!["runs", "diff", "-", "--compare-threshold", "0.5"]] {
+    for arguments in [
+        vec!["runs", "audit", "-"],
+        vec!["runs", "diff", "-", "--compare-threshold", "0.5"],
+    ] {
         let (code, stdout, stderr) = measure(&arguments, large.as_bytes());
         assert_eq!((code, stderr.as_str()), (0, ""));
         assert!(!stdout.contains("xxxx"));

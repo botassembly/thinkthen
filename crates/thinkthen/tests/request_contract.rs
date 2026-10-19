@@ -3,20 +3,20 @@ use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use thinkthen::RequestFunction;
 use thinkthen::*;
+#[path = "request_contract/identity.rs"]
+mod identity;
 #[path = "request_contract/located_filter.rs"]
 mod located_filter;
 #[path = "request_contract/native_feed.rs"]
 mod native_feed;
-#[path = "request_contract/preview.rs"]
-mod preview;
-#[path = "request_contract/shared_state.rs"]
-mod shared_state;
 #[path = "request_contract/overrides.rs"]
 mod overrides;
-#[path = "request_contract/identity.rs"]
-mod identity;
+#[path = "request_contract/preview.rs"]
+mod preview;
 #[path = "request_contract/projections.rs"]
 mod projections;
+#[path = "request_contract/shared_state.rs"]
+mod shared_state;
 #[path = "request_contract/source.rs"]
 mod source;
 #[path = "request_contract/table.rs"]

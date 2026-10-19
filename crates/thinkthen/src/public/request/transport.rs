@@ -1,7 +1,7 @@
 //! Unresolved transport descriptors share native admission and attachment accounting.
-use super::{AdmittedRequest, RequestItem, RequestSource};
 #[cfg(test)]
 use super::RequestFeed;
+use super::{AdmittedRequest, RequestItem, RequestSource};
 use super::{RequestImage, RequestInput};
 use crate::{
     Error, ImageMedia, ObjectContext, RawRecord, RecordContext, RecordOption, RecordOptions,

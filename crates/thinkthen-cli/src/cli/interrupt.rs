@@ -6,8 +6,8 @@ use std::sync::{Arc, OnceLock};
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
 mod signal;
-pub(crate) use signal::Signal;
 use Signal as Cancel;
+pub(crate) use signal::Signal;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Action {
@@ -192,10 +192,7 @@ impl Routing {
     }
 
     #[cfg(not(any(unix, windows)))]
-    fn start(
-        _cancel: Cancel,
-        _acknowledgment: Option<PathBuf>,
-    ) -> Result<Self, StartError> {
+    fn start(_cancel: Cancel, _acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
         Ok(Self::Idle)
     }
 

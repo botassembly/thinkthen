@@ -5,9 +5,7 @@ use std::any::Any;
 pub(crate) enum Diagnostic {
     Configuration(crate::config::ConfigError),
     RequestDecode(crate::public::request::RequestDecodeCause),
-    Engine(
-        crate::engine::error::Error,
-    ),
+    Engine(crate::engine::error::Error),
     EngineRange {
         cause: crate::engine::error::Error,
         first: usize,
@@ -26,33 +24,21 @@ pub(crate) enum Diagnostic {
         last: usize,
     },
     Refusal(Box<dyn Any + Send + Sync>),
-    RelationEntityCount(
-        usize,
-    ),
-    Model(
-        crate::core::BlankTextError,
-    ),
-    Pointer(
-        &'static str,
-        String,
-        crate::core::PointerError,
-    ),
+    RelationEntityCount(usize),
+    Model(crate::core::BlankTextError),
+    Pointer(&'static str, String, crate::core::PointerError),
     Batch,
-    ThresholdFunction(
-        crate::RequestFunction,
-    ),
-    QuestionRead(
-        crate::QuestionFileError,
-    ),
+    ThresholdFunction(crate::RequestFunction),
+    QuestionRead(crate::QuestionFileError),
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn hidden_native_causes_do_not_reach_error_debug_or_standard_sources() {
-        let error = crate::Error::usage("a safe refusal").with_diagnostic(super::Diagnostic::Refusal(
-            Box::new("private-cause-marker".to_owned()),
-        ));
+        let error = crate::Error::usage("a safe refusal").with_diagnostic(
+            super::Diagnostic::Refusal(Box::new("private-cause-marker".to_owned())),
+        );
         assert!(!format!("{error:?}").contains("private-cause-marker"));
         assert!(std::error::Error::source(&error).is_none());
     }

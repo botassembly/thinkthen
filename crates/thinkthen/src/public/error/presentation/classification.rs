@@ -56,7 +56,10 @@ pub(super) fn json(error: &crate::core::JsonError) -> JsonFailure {
         Native::DuplicateName { .. } => JsonFailure::DuplicateName,
         Native::NotFinite => JsonFailure::NotFinite,
         Native::TooDeep => JsonFailure::TooDeep,
-        Native::Syntax { line, column } => JsonFailure::Syntax { line: *line, column: *column },
+        Native::Syntax { line, column } => JsonFailure::Syntax {
+            line: *line,
+            column: *column,
+        },
     }
 }
 pub(super) fn profile(error: &crate::core::ProfileError) -> ProfileFailure {

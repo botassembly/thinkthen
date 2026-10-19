@@ -231,7 +231,10 @@ pub struct RequestSessionFeedOptions {
     /// without queue/scheduler locks. Never wait on this same session, and release
     /// caller waits on cancellation or receiver shutdown. General recovering
     /// sessions and other functions refuse this policy before reading input.
-    #[expect(clippy::type_complexity, reason = "the owned narrow callback retains the ordinary annotation policy without a result or sink facade")]
+    #[expect(
+        clippy::type_complexity,
+        reason = "the owned narrow callback retains the ordinary annotation policy without a result or sink facade"
+    )]
     pub on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>,
     /// Retain an otherwise successful native result when cancellation arrives
     /// during final settlement. Active work still stops on cancellation.
@@ -266,9 +269,11 @@ impl std::fmt::Debug for RequestSessionFeedOptions {
             .field("retain_success_on_cancel", &self.retain_success_on_cancel)
             .field("incremental_recognition", &self.incremental_recognition)
             .field("input_pause", &self.input_pause)
-            .field("eager", &self.eager).field("image_inputs", &self.image_inputs)
+            .field("eager", &self.eager)
+            .field("image_inputs", &self.image_inputs)
             .field("all_filter_results", &self.all_filter_results)
-            .field("record_reading", &self.record_reading).finish()
+            .field("record_reading", &self.record_reading)
+            .finish()
     }
 }
 
@@ -458,15 +463,23 @@ impl Engine {
     ) -> Result<RequestSession, Error> {
         if options.on_missing_annotation_pointer.is_some() {
             if request.call.function() != super::RequestFunction::Annotate {
-                return Err(Error::usage("missing annotation pointer continuation requires an annotation request"));
+                return Err(Error::usage(
+                    "missing annotation pointer continuation requires an annotation request",
+                ));
             }
             if matches!(mode, Mode::Recovering) {
-                return Err(Error::usage("annotation pointer continuation cannot accompany general row recovery"));
+                return Err(Error::usage(
+                    "annotation pointer continuation cannot accompany general row recovery",
+                ));
             }
         }
-        if options.incremental_recognition && (request.call.function() != super::RequestFunction::Recognize
-            || matches!(mode, Mode::Recovering)) {
-            return Err(Error::usage("incremental recognition requires an ordinary recognition session"));
+        if options.incremental_recognition
+            && (request.call.function() != super::RequestFunction::Recognize
+                || matches!(mode, Mode::Recovering))
+        {
+            return Err(Error::usage(
+                "incremental recognition requires an ordinary recognition session",
+            ));
         }
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
@@ -481,7 +494,8 @@ impl Engine {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(&queue), &options))
             }
-            _ if options.input_pause.is_some() || options.eager
+            _ if options.input_pause.is_some()
+                || options.eager
                 || options.image_inputs
                 || options.all_filter_results
                 || options.record_reading.is_some() =>
@@ -555,9 +569,13 @@ fn run(
                 .record(&RequestValue::Recognized(rows.clone()));
             if options.incremental_recognition {
                 if !rows.is_empty() {
-                    queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(rows)));
+                    queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
+                        rows,
+                    )));
                 }
-            } else { recognized.borrow_mut().extend(rows); }
+            } else {
+                recognized.borrow_mut().extend(rows);
+            }
         }
         value => publish_rows(
             queue,
@@ -574,15 +592,22 @@ fn run(
         }
         _ => None,
     };
-    let mut controls = CallOptions::new().surface(surface).cancel(&queue.cancel)
-        .retain_success_on_cancel(options.retain_success_on_cancel).observe(&observer);
+    let mut controls = CallOptions::new()
+        .surface(surface)
+        .cancel(&queue.cancel)
+        .retain_success_on_cancel(options.retain_success_on_cancel)
+        .observe(&observer);
     if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
         controls = controls.on_missing_annotation_pointer(callback);
     }
     let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
     let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
-    let registration = feed.as_ref().map(|_| super::session_input::Registration::new(queue, readiness.wake()));
-    if feed.is_some() { controls = controls.readiness(&readiness); }
+    let registration = feed
+        .as_ref()
+        .map(|_| super::session_input::Registration::new(queue, readiness.wake()));
+    if feed.is_some() {
+        controls = controls.readiness(&readiness);
+    }
     let environment = RequestEnvironment { controls, feed };
     let mut terminal =
         match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
@@ -707,11 +732,20 @@ fn run_recovering(
     };
     let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
     let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
-    let feed_request = matches!(request.request.call.arguments().input, RequestInput::Feed { .. });
-    let registration = feed_request.then(|| super::session_input::Registration::new(queue, readiness.wake()));
-    let mut controls = CallOptions::new().surface(surface).cancel(&queue.cancel)
-        .retain_success_on_cancel(options.retain_success_on_cancel).observe(&observe);
-    if feed_request { controls = controls.readiness(&readiness); }
+    let feed_request = matches!(
+        request.request.call.arguments().input,
+        RequestInput::Feed { .. }
+    );
+    let registration =
+        feed_request.then(|| super::session_input::Registration::new(queue, readiness.wake()));
+    let mut controls = CallOptions::new()
+        .surface(surface)
+        .cancel(&queue.cancel)
+        .retain_success_on_cancel(options.retain_success_on_cancel)
+        .observe(&observe);
+    if feed_request {
+        controls = controls.readiness(&readiness);
+    }
     let environment = RequestEnvironment {
         controls,
         feed: match &request.request.call.arguments().input {

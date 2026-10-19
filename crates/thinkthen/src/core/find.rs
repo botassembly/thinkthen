@@ -162,13 +162,26 @@ impl Find {
         Self::identity(&self.text, self.none, self.profile.as_ref())
     }
 
-    pub(crate) fn identity(text: &QuestionText, none: bool, profile: Option<&ProfileName>) -> Result<String, FindError> {
+    pub(crate) fn identity(
+        text: &QuestionText,
+        none: bool,
+        profile: Option<&ProfileName>,
+    ) -> Result<String, FindError> {
         let canonical = Self::canonical(text, none, profile)?;
         Ok(hex(&Sha256::digest(canonical.as_bytes())))
     }
-    fn canonical(text: &QuestionText, none: bool, profile: Option<&ProfileName>) -> Result<String, FindError> {
-        serde_json::to_string(&FindQuestion { verb: "find", text, none, profile })
-            .map_err(|_| FindError::Render)
+    fn canonical(
+        text: &QuestionText,
+        none: bool,
+        profile: Option<&ProfileName>,
+    ) -> Result<String, FindError> {
+        serde_json::to_string(&FindQuestion {
+            verb: "find",
+            text,
+            none,
+            profile,
+        })
+        .map_err(|_| FindError::Render)
     }
     #[cfg(test)]
     fn canonical_question(&self) -> Result<String, FindError> {

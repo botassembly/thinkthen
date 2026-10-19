@@ -1,10 +1,10 @@
 //! Preview admitted native requests before any function check sends.
 
 use super::{RELATE, TEXT, choice, decision, score, tags};
-use thinkthen::{Engine, PlanEstimate};
 use crate::cli::plan_counts::Counts;
 use crate::failure::Failure;
 use crate::{RequestEnvironment as Environment, RequestInput as Input};
+use thinkthen::{Engine, PlanEstimate};
 
 /// One line per function and the bound before retries and refusal splits.
 pub(in crate::cli::check) fn prepare(engine: &Engine) -> Result<(Vec<String>, usize), Failure> {
@@ -79,7 +79,11 @@ pub(in crate::cli::check) fn prepare(engine: &Engine) -> Result<(Vec<String>, us
             if name == "recognize" {
                 // The fixed check presents one possible kind request after its
                 // native boundary bodies, as specification/check.md defines.
-                counts.requests = summary.prepared_requests().len().checked_add(1).ok_or_else(|| invalid(()))?;
+                counts.requests = summary
+                    .prepared_requests()
+                    .len()
+                    .checked_add(1)
+                    .ok_or_else(|| invalid(()))?;
                 counts.upper_bound = true;
             }
             requests += counts.requests;
@@ -106,7 +110,9 @@ fn staged(
             items: vec![item(TEXT), item("The box was intact.")],
         },
     )?;
-    let summary = engine.plan_request(&find, Environment::default()).map_err(Failure::from)?;
+    let summary = engine
+        .plan_request(&find, Environment::default())
+        .map_err(Failure::from)?;
     summaries.push(("find", summary));
     let annotation = admitted(
         crate::RequestFunction::Annotate,
@@ -132,7 +138,9 @@ fn staged(
             .into(),
         text("Ada"),
     )?;
-    let summary = engine.plan_request(&recognition, Environment::default()).map_err(Failure::from)?;
+    let summary = engine
+        .plan_request(&recognition, Environment::default())
+        .map_err(Failure::from)?;
     summaries.push(("recognize", summary));
     let relation = admitted(
         crate::RequestFunction::Relate,
@@ -141,7 +149,9 @@ fn staged(
             items: vec![entity("Ada")?, entity("Bo")?],
         },
     )?;
-    let summary = engine.plan_request(&relation, Environment::default()).map_err(Failure::from)?;
+    let summary = engine
+        .plan_request(&relation, Environment::default())
+        .map_err(Failure::from)?;
     summaries.push(("relate", summary));
     Ok(())
 }

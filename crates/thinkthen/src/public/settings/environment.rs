@@ -44,7 +44,9 @@ impl EngineBuilder {
             } else {
                 Error::usage(refused.message.to_string())
             };
-            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(refused))
+            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(
+                refused,
+            ))
         })?;
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
         let platform = named.is_none();

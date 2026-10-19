@@ -5,38 +5,61 @@ use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::args::Common;
 use crate::BatchSetting;
+use crate::args::Common;
 use crate::failure::Failure;
 
 /// Read the profile file a run explicitly selected.
 pub(crate) fn read(common: &Common, environment: &crate::edge::Environment) -> Result<(), Failure> {
-    let Some(path) = common.profile.as_deref() else { return Ok(()); };
+    let Some(path) = common.profile.as_deref() else {
+        return Ok(());
+    };
     let text = fs::read_to_string(path).map_err(|error| Failure::OpenProfile {
-        path: path.to_path_buf(), error,
+        path: path.to_path_buf(),
+        error,
     })?;
     let builder = environment.take_builder()?;
-    let builder = builder.profile_json(&text).map_err(|error| Failure::Profile {
-        path: path.to_path_buf(), error,
-    })?;
+    let builder = builder
+        .profile_json(&text)
+        .map_err(|error| Failure::Profile {
+            path: path.to_path_buf(),
+            error,
+        })?;
     environment.restore_builder(builder)
 }
 
 /// A caller-owned notice, without private library profile representations.
 #[derive(Clone, Debug)]
-pub(crate) struct ProfileWarning { tuned_for: String, running: String }
+pub(crate) struct ProfileWarning {
+    tuned_for: String,
+    running: String,
+}
 impl ProfileWarning {
-    pub(crate) fn tuned_for(&self) -> &str { &self.tuned_for }
-    pub(crate) fn running(&self) -> &str { &self.running }
+    pub(crate) fn tuned_for(&self) -> &str {
+        &self.tuned_for
+    }
+    pub(crate) fn running(&self) -> &str {
+        &self.running
+    }
 }
 #[derive(Clone, Debug)]
-pub(crate) struct BatchWarning { tuned_for: BatchSetting, running: BatchSetting }
+pub(crate) struct BatchWarning {
+    tuned_for: BatchSetting,
+    running: BatchSetting,
+}
 impl BatchWarning {
-    pub(crate) const fn tuned_for(&self) -> BatchSetting { self.tuned_for }
-    pub(crate) const fn running(&self) -> BatchSetting { self.running }
+    pub(crate) const fn tuned_for(&self) -> BatchSetting {
+        self.tuned_for
+    }
+    pub(crate) const fn running(&self) -> BatchSetting {
+        self.running
+    }
 }
 fn batch_text(setting: BatchSetting) -> String {
-    match setting { BatchSetting::Max => "max".to_owned(), BatchSetting::Records(n) => n.to_string() }
+    match setting {
+        BatchSetting::Max => "max".to_owned(),
+        BatchSetting::Records(n) => n.to_string(),
+    }
 }
 
 /// One run's mismatch, printed once and copied into every detailed row.
@@ -51,8 +74,13 @@ pub(crate) struct Mismatch {
 impl Mismatch {
     pub(crate) fn new(tuned_for: Option<&str>, running: Option<&str>) -> Self {
         Self {
-            warning: tuned_for.zip(running).filter(|(tuned, running)| tuned != running)
-                .map(|(tuned_for, running)| ProfileWarning { tuned_for: tuned_for.to_owned(), running: running.to_owned() }),
+            warning: tuned_for
+                .zip(running)
+                .filter(|(tuned, running)| tuned != running)
+                .map(|(tuned_for, running)| ProfileWarning {
+                    tuned_for: tuned_for.to_owned(),
+                    running: running.to_owned(),
+                }),
             printed: Arc::new(AtomicBool::new(false)),
             batch_warning: None,
             batch_printed: Arc::new(AtomicBool::new(false)),
@@ -60,14 +88,23 @@ impl Mismatch {
     }
 
     /// Attach the actual built profile after native construction and admission.
-    pub(crate) fn running_profile(mut self, tuned_for: Option<&str>, running: Option<&str>) -> Self {
+    pub(crate) fn running_profile(
+        mut self,
+        tuned_for: Option<&str>,
+        running: Option<&str>,
+    ) -> Self {
         self.warning = Self::new(tuned_for, running).warning;
         self
     }
 
-    pub(crate) fn with_batch(mut self, tuned_for: Option<BatchSetting>, running: BatchSetting) -> Self {
-        self.batch_warning =
-            tuned_for.filter(|&tuned| tuned != running).map(|tuned_for| BatchWarning { tuned_for, running });
+    pub(crate) fn with_batch(
+        mut self,
+        tuned_for: Option<BatchSetting>,
+        running: BatchSetting,
+    ) -> Self {
+        self.batch_warning = tuned_for
+            .filter(|&tuned| tuned != running)
+            .map(|tuned_for| BatchWarning { tuned_for, running });
         self
     }
 

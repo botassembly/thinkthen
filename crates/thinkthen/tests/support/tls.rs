@@ -1,5 +1,10 @@
 //! Local TLS fixtures shared by the native and command trust boundaries.
-#![allow(dead_code, clippy::expect_used, clippy::panic, reason = "each owning test binary uses the shared TLS fixture operations it needs")]
+#![allow(
+    dead_code,
+    clippy::expect_used,
+    clippy::panic,
+    reason = "each owning test binary uses the shared TLS fixture operations it needs"
+)]
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -146,4 +151,3 @@ fn serve(listener: &TcpListener, config: rustls::ServerConfig, reply: &str) -> S
     }
     String::from_utf8_lossy(&sent).into_owned()
 }
-

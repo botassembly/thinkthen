@@ -33,7 +33,10 @@ fn terminal(terminal: &RequestSessionTerminal, retain: bool) {
         assert!(terminal.error.is_none());
         assert_eq!(terminal.resolution, AnswerResolution::Resolved);
     } else {
-        assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Cancelled);
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            ErrorKind::Cancelled
+        );
         assert_eq!(terminal.resolution, AnswerResolution::Failed);
     }
 }
@@ -53,25 +56,37 @@ fn final_settlement_retains_success_only_when_the_caller_opts_in() {
         );
         session.cancel();
         let packets = drain(&session);
-        let kinds = packets.iter().map(|packet| match packet {
-            RequestSessionResult::Observation { value: OwnedRecordObservation::Question { .. }, .. } => "question",
-            RequestSessionResult::Observation { value: OwnedRecordObservation::Row { .. }, .. } => "row",
-            RequestSessionResult::Aggregate(RequestValue::Ranked(rows)) => {
-                assert!(retain);
-                assert_eq!(rows.len(), 1);
-                "aggregate"
+        let kinds = packets
+            .iter()
+            .map(|packet| match packet {
+                RequestSessionResult::Observation {
+                    value: OwnedRecordObservation::Question { .. },
+                    ..
+                } => "question",
+                RequestSessionResult::Observation {
+                    value: OwnedRecordObservation::Row { .. },
+                    ..
+                } => "row",
+                RequestSessionResult::Aggregate(RequestValue::Ranked(rows)) => {
+                    assert!(retain);
+                    assert_eq!(rows.len(), 1);
+                    "aggregate"
+                }
+                RequestSessionResult::Terminal(value) => {
+                    terminal(value, retain);
+                    "terminal"
+                }
+                other => panic!("unexpected packet {other:?}"),
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            kinds,
+            if retain {
+                vec!["question", "row", "aggregate", "terminal"]
+            } else {
+                vec!["question", "row", "terminal"]
             }
-            RequestSessionResult::Terminal(value) => {
-                terminal(value, retain);
-                "terminal"
-            }
-            other => panic!("unexpected packet {other:?}"),
-        }).collect::<Vec<_>>();
-        assert_eq!(kinds, if retain {
-            vec!["question", "row", "aggregate", "terminal"]
-        } else {
-            vec!["question", "row", "terminal"]
-        });
+        );
         assert_eq!(listener.count(), 1);
     }
 }
@@ -81,7 +96,11 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
     for retain in [false, true] {
         let listener = Listener::answering(response).unwrap();
         let session = engine(&listener)
-            .request_recovering_session_with_feed_options(ranked_request(), Surface::Rust, options(retain))
+            .request_recovering_session_with_feed_options(
+                ranked_request(),
+                Surface::Rust,
+                options(retain),
+            )
             .unwrap();
         assert_eq!(
             session.wait(RequestSessionWaitInterest::Result, Duration::from_secs(5)),
@@ -93,11 +112,19 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
         loop {
             match session.try_read() {
                 RequestRecoveringRead::Result(packet) => kinds.push(match packet {
-                    RequestRecoveringResult::Observation { value: OwnedRecordObservation::Question { .. }, .. } => "question",
-                    RequestRecoveringResult::Observation { value: OwnedRecordObservation::Row { .. }, .. } => "row",
+                    RequestRecoveringResult::Observation {
+                        value: OwnedRecordObservation::Question { .. },
+                        ..
+                    } => "question",
+                    RequestRecoveringResult::Observation {
+                        value: OwnedRecordObservation::Row { .. },
+                        ..
+                    } => "row",
                     RequestRecoveringResult::Row(row) => {
                         assert!(retain);
-                        let RequestValue::Ranked(rows) = row.outcome().unwrap() else { panic!("rank aggregate") };
+                        let RequestValue::Ranked(rows) = row.outcome().unwrap() else {
+                            panic!("rank aggregate")
+                        };
                         assert_eq!(rows.len(), 1);
                         "aggregate"
                     }
@@ -119,11 +146,14 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
                 RequestRecoveringRead::End => break,
             }
         }
-        assert_eq!(kinds, if retain {
-            vec!["question", "row", "aggregate", "terminal"]
-        } else {
-            vec!["question", "row", "terminal"]
-        });
+        assert_eq!(
+            kinds,
+            if retain {
+                vec!["question", "row", "aggregate", "terminal"]
+            } else {
+                vec!["question", "row", "terminal"]
+            }
+        );
         assert_eq!(listener.count(), 1);
     }
 }
@@ -138,8 +168,13 @@ fn opting_in_still_stops_an_empty_feed_before_any_send() {
         session.cancel();
         let packets = drain(&session);
         assert_eq!(packets.len(), 1);
-        let RequestSessionResult::Terminal(terminal) = &packets[0] else { panic!("terminal") };
-        assert_eq!(terminal.error.as_ref().unwrap().kind(), ErrorKind::Cancelled);
+        let RequestSessionResult::Terminal(terminal) = &packets[0] else {
+            panic!("terminal")
+        };
+        assert_eq!(
+            terminal.error.as_ref().unwrap().kind(),
+            ErrorKind::Cancelled
+        );
         assert_eq!(listener.count(), 0);
     }
 }

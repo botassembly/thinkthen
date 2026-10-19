@@ -16,11 +16,18 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
-        environment.controls.admit_preparation(request.request.call.function())?;
+        environment
+            .controls
+            .admit_preparation(request.request.call.function())?;
         if environment.controls.annotation_missing.is_some() {
-            return Err(Error::usage("annotation pointer continuation applies only to execution"));
+            return Err(Error::usage(
+                "annotation pointer continuation applies only to execution",
+            ));
         }
-        if matches!(request.request.call.function(), RequestFunction::Recognize | RequestFunction::Relate) {
+        if matches!(
+            request.request.call.function(),
+            RequestFunction::Recognize | RequestFunction::Relate
+        ) {
             return self.plan_whole_request(request, environment);
         }
         if request.request.call.function() == RequestFunction::Find {
@@ -28,10 +35,10 @@ impl Engine {
             return crate::public::plan::from_summary(summary, self.inner.backend().api_type());
         }
         let annotation = request.request.call.function() == RequestFunction::Annotate;
-        let (summary, dropped, count, groups) = self.preview_request(request, environment, annotation)?;
-        crate::public::plan::from_summary(summary, self.inner.backend().api_type()).map(|plan| {
-            plan.with_request_details(dropped, annotation.then_some((count, groups)))
-        })
+        let (summary, dropped, count, groups) =
+            self.preview_request(request, environment, annotation)?;
+        crate::public::plan::from_summary(summary, self.inner.backend().api_type())
+            .map(|plan| plan.with_request_details(dropped, annotation.then_some((count, groups))))
     }
 
     fn plan_whole_request<'a>(
@@ -58,19 +65,31 @@ impl Engine {
                 }),
             );
             let preview = crate::public::complete::recognize::preview_recognition(
-                engine.backend(), engine.profile(), ask, rows, controls.context_text(),
-                controls.recognition_text_limit.unwrap_or(crate::engine::facade::MAX_TEXT_BYTES),
+                engine.backend(),
+                engine.profile(),
+                ask,
+                rows,
+                controls.context_text(),
+                controls
+                    .recognition_text_limit
+                    .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES),
             )?;
             return PlanEstimate::from_recognition(preview, dropped, engine.backend().api_type());
         }
         if let RequestDefinition::Relate(ask) = definition {
             let engine = self.for_model(ask.0.model.as_ref())?;
             let preview = crate::public::complete::relate::preview_relations(
-                engine.backend(), engine.profile(), &ask, rows, &controls,
+                engine.backend(),
+                engine.profile(),
+                &ask,
+                rows,
+                &controls,
             )?;
             return PlanEstimate::from_relations(preview, engine.backend().api_type());
         }
-        Err(Error::defect("whole-set preview lost its admitted definition"))
+        Err(Error::defect(
+            "whole-set preview lost its admitted definition",
+        ))
     }
 
     fn preview_request<'a>(
@@ -128,15 +147,12 @@ impl Engine {
             if annotation && let RequestDefinition::Annotate(set) = &definition {
                 dropped |= set.0.questions().iter().any(|question| {
                     crate::core::adapters::built_in::drops_detail_of(
-                        engine.backend().descriptions(), question.question(),
+                        engine.backend().descriptions(),
+                        question.question(),
                     )
                 });
                 return crate::public::complete::annotation_preview_asks(
-                    &engine,
-                    set,
-                    row,
-                    &controls,
-                    at,
+                    &engine, set, row, &controls, at,
                 )
                 .map_err(|error| error.at_record(at));
             }

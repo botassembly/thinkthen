@@ -15,7 +15,6 @@ pub struct AdmittedRequest {
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
-
     /// Retain a saved definition read and parsed by an authorized host.
     ///
     /// The host owns file permission, reading, saved grammar and caller-setting
@@ -170,9 +169,15 @@ fn admit_header(
     }
     Ok(admitted)
 }
-fn text_question(function: Function, text: &str, options: &RequestOptions) -> Result<RequestDefinition, Error> {
+fn text_question(
+    function: Function,
+    text: &str,
+    options: &RequestOptions,
+) -> Result<RequestDefinition, Error> {
     match function {
-        Function::Choose | Function::Tag | Function::Score => super::wording::text(function, text, options),
+        Function::Choose | Function::Tag | Function::Score => {
+            super::wording::text(function, text, options)
+        }
         Function::Decide | Function::Filter => Ok(Question::decide(text)?.cut().into()),
         Function::Rank => Ok(Question::rank(text)?.into()),
         Function::Find => Ok(RequestDefinition::Atomic(LoadedQuestion::Question(
@@ -278,11 +283,15 @@ fn admit_options(
     options: &RequestOptions,
 ) -> Result<(), Error> {
     for (name, supplied) in [
-        ("yes", options.yes.is_some()), ("no", options.no.is_some()),
-        ("labels", options.labels.is_some()), ("levels", options.levels.is_some()),
+        ("yes", options.yes.is_some()),
+        ("no", options.no.is_some()),
+        ("labels", options.labels.is_some()),
+        ("levels", options.levels.is_some()),
     ] {
         if supplied && !function.allows_option(name) {
-            return Err(Error::usage(format!("{name} does not apply to this function")));
+            return Err(Error::usage(format!(
+                "{name} does not apply to this function"
+            )));
         }
     }
     if let Some(model) = &options.model {
@@ -294,7 +303,10 @@ fn admit_options(
         if function != Function::Recognize {
             return Err(Error::usage("recognition wording belongs to recognize"));
         }
-        for value in [&options.instructions, &options.entity_definition].into_iter().flatten() {
+        for value in [&options.instructions, &options.entity_definition]
+            .into_iter()
+            .flatten()
+        {
             crate::core::QuestionText::new(value).map_err(Error::refused)?;
         }
     }
@@ -608,7 +620,8 @@ pub(super) fn apply_recognition(
         spec.instructions = Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
     }
     if let Some(value) = &options.entity_definition {
-        spec.entity_definition = Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
+        spec.entity_definition =
+            Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
     }
     if let Some(value) = options.snippet_pieces {
         spec.snippet_pieces = value;

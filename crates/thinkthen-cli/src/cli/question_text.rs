@@ -28,11 +28,16 @@ pub(crate) fn reference(
     path: &Path,
     unopened: fn(io::Error) -> Failure,
 ) -> Result<String, Failure> {
-    let Some(value) = path.to_str() else { return read(path, unopened) };
+    let Some(value) = path.to_str() else {
+        return read(path, unopened);
+    };
     let reference = crate::QuestionFileReference::reference(&format!("@{value}"))
         .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned()))?;
     let text = selected_text(&reference, unopened)?;
-    reference.parse(&text, crate::QuestionFileRole::Set, |text| Ok(text.to_owned()))
+    reference
+        .parse(&text, crate::QuestionFileRole::Set, |text| {
+            Ok(text.to_owned())
+        })
         .map_err(Failure::from)
 }
 
@@ -42,9 +47,13 @@ pub(crate) fn selected_text(
     reference: &crate::QuestionFileReference,
     unopened: fn(io::Error) -> Failure,
 ) -> Result<String, Failure> {
-    let Some(root) = reference.named_root() else { return read(reference.path(), unopened) };
+    let Some(root) = reference.named_root() else {
+        return read(reference.path(), unopened);
+    };
     let unavailable = || Failure::NamedQuestion("the named question is unavailable".to_owned());
     let target = reference.path().canonicalize().map_err(|_| unavailable())?;
-    if !target.starts_with(root) || !target.is_file() { return Err(unavailable()); }
+    if !target.starts_with(root) || !target.is_file() {
+        return Err(unavailable());
+    }
     read(&target, unopened).map_err(|_| unavailable())
 }

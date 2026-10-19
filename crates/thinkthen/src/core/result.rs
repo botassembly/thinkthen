@@ -354,7 +354,6 @@ impl NamedValues {
     pub(crate) fn into_values(self) -> Vec<(String, AnnotatedValue)> {
         self.0
     }
-
 }
 impl Serialize for NamedValues {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

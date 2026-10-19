@@ -77,7 +77,8 @@ impl Tiers<'_> {
 
 pub(crate) fn parse_batch(text: &str) -> Option<Setting> {
     let batch = text.parse::<usize>().map_or_else(
-        |_| crate::RequestBatch::Named(text.to_owned()), crate::RequestBatch::Count,
+        |_| crate::RequestBatch::Named(text.to_owned()),
+        crate::RequestBatch::Count,
     );
     batch.native().ok()
 }
@@ -334,13 +335,8 @@ fn judging(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    run(
-        asked,
-        environment,
-        input,
-        &mut Output::streaming(writer),
-    )
-    .map_err(|error| error.with_replay_context(context))
+    run(asked, environment, input, &mut Output::streaming(writer))
+        .map_err(|error| error.with_replay_context(context))
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -365,8 +361,9 @@ pub(crate) fn choose(
             if !arguments.common.jsonl {
                 return Err(Failure::OptionsOutsideJsonl);
             }
-            crate::validate_pointer(typed)
-                .map_err(|error| Failure::Pointer("--options", typed.to_owned(), error.to_string()))?;
+            crate::validate_pointer(typed).map_err(|error| {
+                Failure::Pointer("--options", typed.to_owned(), error.to_string())
+            })?;
             Asks::FromRecord
         }
         None => fixed(&settled)?,

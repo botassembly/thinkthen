@@ -24,16 +24,29 @@ const CHILD_HOME: &str = "THINKTHEN_TEST_COMMAND_DEADLINE_HOME";
 
 /// Reuse the shared cleared-environment fixture for native captured usage paths.
 fn isolated(name: &str) -> bool {
-    if std::env::var_os(CHILD_HOME).is_some() { return true; }
+    if std::env::var_os(CHILD_HOME).is_some() {
+        return true;
+    }
     let home = scratch(name);
     let path = format!("cli::edge::deadline_tests::{name}");
     let mut command = std::process::Command::new(std::env::current_exe().expect("test binary"));
-    command.args(["--exact", &path, "--nocapture", "--test-threads=1"])
-        .clear_environment().isolated_home(&home).env(CHILD_HOME, &home);
+    command
+        .args(["--exact", &path, "--nocapture", "--test-threads=1"])
+        .clear_environment()
+        .isolated_home(&home)
+        .env(CHILD_HOME, &home);
     let output = child::run::output(&mut command).expect("isolated deadline test");
     fs::remove_dir_all(home).expect("child home removed");
-    assert!(output.status.success(), "{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
-    assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed"), "the child ran its test");
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("1 passed"),
+        "the child ran its test"
+    );
     false
 }
 
@@ -102,12 +115,26 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
         _ => panic!("no runner arm for {label}"),
     };
 
-    assert_eq!(environment.snapshot().counts.requests_sent(), 0, "{label} requests counted");
-    assert!(environment.finish_usage().is_none(), "{label} persisted usage safely");
+    assert_eq!(
+        environment.snapshot().counts.requests_sent(),
+        0,
+        "{label} requests counted"
+    );
+    assert!(
+        environment.finish_usage().is_none(),
+        "{label} persisted usage safely"
+    );
     let home = std::env::var_os(CHILD_HOME).expect("isolated child home");
-    let totals = crate::read_usage(&Folder::Usage.under(std::path::Path::new(&home)), &crate::current_usage_month())
-        .expect("persisted usage totals");
-    assert_eq!(totals.total.requests_sent(), 0, "{label} persisted requests counted");
+    let totals = crate::read_usage(
+        &Folder::Usage.under(std::path::Path::new(&home)),
+        &crate::current_usage_month(),
+    )
+    .expect("persisted usage totals");
+    assert_eq!(
+        totals.total.requests_sent(),
+        0,
+        "{label} persisted requests counted"
+    );
     assert!(
         matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock),
         "{label} opened a connection"
@@ -124,10 +151,13 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
 /// Private key-reader admission counts remain owned by the library tests.
 fn admitted(command: &Command) -> crate::AdmittedRequest {
     let admitted = crate::cli::request::admit(command)
-        .expect("native header").expect("judging request");
+        .expect("native header")
+        .expect("judging request");
     let mut request = admitted.request().clone();
     request.call.arguments.options.deadline_ms = Some(0);
-    request.admit().expect("spent deadline is an admitted control")
+    request
+        .admit()
+        .expect("spent deadline is an admitted control")
 }
 
 fn questions(label: &str) -> String {
@@ -151,7 +181,9 @@ fn file(label: &str, name: &str, text: &str) -> String {
 
 #[test]
 fn a_spent_deadline_on_every_direct_path_sends_nothing() {
-    if !isolated("a_spent_deadline_on_every_direct_path_sends_nothing") { return; }
+    if !isolated("a_spent_deadline_on_every_direct_path_sends_nothing") {
+        return;
+    }
     let annotate = questions("annotate-questions");
     let split = file(
         "split-profile",
@@ -191,7 +223,9 @@ fn a_spent_deadline_on_every_direct_path_sends_nothing() {
 
 #[test]
 fn a_spent_deadline_over_records_stops_before_the_first_request() {
-    if !isolated("a_spent_deadline_over_records_stops_before_the_first_request") { return; }
+    if !isolated("a_spent_deadline_over_records_stops_before_the_first_request") {
+        return;
+    }
     let stopped = format!("{DEADLINE}thinkthen: stopped at record 1; 0 records finished\n");
     let annotate = questions("annotate-records-questions");
     let cases: [Case<'_>; 4] = [

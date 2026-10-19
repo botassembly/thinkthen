@@ -44,11 +44,7 @@ impl Stopped {
             Failure::Status(413, _) | Failure::TokenLimit | Failure::RequestTooLarge { .. } => {
                 ("too_large", None, false)
             }
-            Failure::Status(status, retryable) => (
-                "status",
-                Some(*status),
-                *retryable,
-            ),
+            Failure::Status(status, retryable) => ("status", Some(*status), *retryable),
             Failure::Reply(_) | Failure::ReplyTooLarge(_) | Failure::PartialReply { .. } => {
                 ("reply", None, false)
             }

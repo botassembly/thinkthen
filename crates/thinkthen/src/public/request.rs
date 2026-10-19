@@ -11,8 +11,8 @@ mod composition;
 mod decoding;
 mod definition;
 mod identity;
-pub use identity::RelationIdentityMode;
 pub use decoding::RequestDecodeCause;
+pub use identity::RelationIdentityMode;
 mod execution;
 #[cfg(test)]
 pub(in crate::public) use execution::native_atomic as atomic;
@@ -22,9 +22,9 @@ mod inline;
 mod input;
 mod native_feed;
 mod options;
-mod wording;
 mod preview;
 pub(crate) mod pull;
+mod wording;
 pub use pull::RequestRows;
 mod recovered;
 mod recovering;
@@ -38,8 +38,8 @@ pub(in crate::public) use recovered::row as recovery_row;
 mod source;
 pub use source::RequestSourceReader;
 mod session;
-mod session_queue;
 mod session_input;
+mod session_queue;
 mod session_result;
 mod settlement;
 #[cfg(test)]
@@ -51,7 +51,6 @@ use super::{Error, LoadedQuestion};
 pub use admission::AdmittedRequest;
 pub use definition::RequestDefinition;
 pub use execution::{RequestEnvironment, RequestFeed};
-pub use transport::RequestDescriptor;
 pub use input::{
     RequestFraming, RequestImage, RequestInput, RequestItem, RequestOriginal, RequestSource,
 };
@@ -65,6 +64,7 @@ pub use session::{
 };
 pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;
+pub use transport::RequestDescriptor;
 
 /// The admitted wire version; other versions are refused.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -321,7 +321,9 @@ impl RequestFunction {
             ),
             "options_field" => self == Self::Choose,
             "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context"
-            | "snippet_pieces" | "max_text_bytes" | "instructions" | "entity_definition" => self == Self::Recognize,
+            | "snippet_pieces" | "max_text_bytes" | "instructions" | "entity_definition" => {
+                self == Self::Recognize
+            }
             "none" => self == Self::Find,
             "top" => self == Self::Rank,
             "files_only" => self == Self::Filter,

@@ -217,7 +217,10 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
 #[test]
 fn cancellation_is_typed_and_silent_except_for_a_stopped_summary() {
     assert!(matches!(
-        Failure::from(thinkthen::Error::new(thinkthen::ErrorKind::Cancelled, "caller cancelled")),
+        Failure::from(thinkthen::Error::new(
+            thinkthen::ErrorKind::Cancelled,
+            "caller cancelled"
+        )),
         Failure::Cancelled
     ));
 
@@ -232,13 +235,19 @@ fn stopped_counts_use_record_only_at_one() {
         (
             1,
             1,
-            Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
+            Failure::Record(
+                "the record is over 16 MiB, which is far past what a backend reads in one request"
+                    .to_owned(),
+            ),
             "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
         ),
         (
             2,
             0,
-            Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
+            Failure::Record(
+                "the record is over 16 MiB, which is far past what a backend reads in one request"
+                    .to_owned(),
+            ),
             "thinkthen: stopped at record 3; 2 records finished, 0 records from a recording\n",
         ),
         (
@@ -281,6 +290,8 @@ fn caller_sources_keep_the_command_failure_shape_and_counts() {
     let error = failure.into_error();
     let recovered = Failure::from(error);
     assert_eq!(super::super::sentence(&recovered), expected);
-    assert!(matches!(recovered, Failure::Stopped { at: 7, finished: 2, replayed: 1, held: true, cause, .. }
-        if matches!(*cause, Failure::RequestTooLarge { tokens: true, advice: super::super::SizeAdvice::Batches })));
+    assert!(
+        matches!(recovered, Failure::Stopped { at: 7, finished: 2, replayed: 1, held: true, cause, .. }
+        if matches!(*cause, Failure::RequestTooLarge { tokens: true, advice: super::super::SizeAdvice::Batches }))
+    );
 }

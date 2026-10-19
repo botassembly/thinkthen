@@ -58,7 +58,10 @@ impl Failure {
 
     /// Name invalid text by its framing while preserving every other record error.
     pub(crate) fn record(error: thinkthen::Error, streamed: bool) -> Self {
-        if matches!(error.diagnostic(), Some(thinkthen::ErrorDiagnostic::InvalidUtf8)) {
+        if matches!(
+            error.diagnostic(),
+            Some(thinkthen::ErrorDiagnostic::InvalidUtf8)
+        ) {
             Self::InvalidUtf8 { record: streamed }
         } else {
             Self::from(error)

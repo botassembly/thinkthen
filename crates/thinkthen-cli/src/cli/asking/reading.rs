@@ -18,17 +18,14 @@ pub(super) fn read_by(
         || !keeping.streams_only()
         || common.unit.as_deref() == Some("file")
     {
-        return Ok(
-            Reading::new(asked, on)?
-        );
+        return Ok(Reading::new(asked, on)?);
     }
     let framing = if on.is_empty() {
         Framing::Lines
     } else {
         Framing::Jsonl
     };
-    Ok(Reading::new(framing, on)?
-        .by_default())
+    Ok(Reading::new(framing, on)?.by_default())
 }
 
 /// Charge original evidence at source admission, leaving the iterator tail unread.
@@ -36,10 +33,7 @@ pub(super) fn charge(reading: &Reading, held: &Held, remaining: &mut usize) -> R
     let record_error = |error| Placed::at(Failure::record(error, reading.streams()), held.at);
     let bytes = match &held.arrived {
         Some(bytes) => reading.as_it_arrived(bytes).map_err(record_error)?.len(),
-        None => reading
-            .evidence(&held.record)
-            .map_err(record_error)?
-            .len(),
+        None => reading.evidence(&held.record).map_err(record_error)?.len(),
     };
     *remaining = remaining.checked_sub(bytes).ok_or_else(|| {
         Placed::at(

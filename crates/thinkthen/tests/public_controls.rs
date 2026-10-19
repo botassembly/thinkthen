@@ -564,21 +564,47 @@ mod api;
 
 #[test]
 fn explicit_early_throttle_selection_persists_without_changing_lazy_builders() {
-    alone("explicit_early_throttle_selection_persists_without_changing_lazy_builders", || {
-        let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
-        // Lazy settings and an omitted-width build must not reserve their width.
-        drop(Engine::builder().throttle(3).expect("lazy width"));
-        Engine::builder().no_cache().build().expect("unselected default");
-        let builder = Engine::builder().select_throttle(2).expect("early selection");
-        let failure = builder.profile_json("{}").expect_err("later setting fails");
-        assert_eq!(failure.kind(), thinkthen::ErrorKind::Usage);
-        drop(Engine::builder().select_throttle(2).expect("same width survives failure"));
-        let conflict = Engine::builder().select_throttle(3).expect_err("selected width persists after drop");
-        assert!(matches!(conflict.diagnostic(), Some(thinkthen::ErrorDiagnostic::WidthActive(_))));
-        assert_eq!(conflict.detail().message(), "throttle 2 is already active for this process; use throttle 2 or drop the throttle argument");
-        let engine = Engine::builder().base_url(listener.base()).expect("route")
-            .select_throttle(2).expect("same selection").no_cache().build().expect("same build");
-        assert_eq!(engine.usage().requests_sent(), 0);
-        assert_eq!(listener.count(), 0);
-    });
+    alone(
+        "explicit_early_throttle_selection_persists_without_changing_lazy_builders",
+        || {
+            let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+            // Lazy settings and an omitted-width build must not reserve their width.
+            drop(Engine::builder().throttle(3).expect("lazy width"));
+            Engine::builder()
+                .no_cache()
+                .build()
+                .expect("unselected default");
+            let builder = Engine::builder()
+                .select_throttle(2)
+                .expect("early selection");
+            let failure = builder.profile_json("{}").expect_err("later setting fails");
+            assert_eq!(failure.kind(), thinkthen::ErrorKind::Usage);
+            drop(
+                Engine::builder()
+                    .select_throttle(2)
+                    .expect("same width survives failure"),
+            );
+            let conflict = Engine::builder()
+                .select_throttle(3)
+                .expect_err("selected width persists after drop");
+            assert!(matches!(
+                conflict.diagnostic(),
+                Some(thinkthen::ErrorDiagnostic::WidthActive(_))
+            ));
+            assert_eq!(
+                conflict.detail().message(),
+                "throttle 2 is already active for this process; use throttle 2 or drop the throttle argument"
+            );
+            let engine = Engine::builder()
+                .base_url(listener.base())
+                .expect("route")
+                .select_throttle(2)
+                .expect("same selection")
+                .no_cache()
+                .build()
+                .expect("same build");
+            assert_eq!(engine.usage().requests_sent(), 0);
+            assert_eq!(listener.count(), 0);
+        },
+    );
 }

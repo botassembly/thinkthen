@@ -5,13 +5,31 @@ use thinkthen::RawRecord;
 fn borrowed_inspection_preserves_authored_order_false_null_and_exact_numbers() {
     let original = RawRecord::json(r#"{"z":false,"a":null,"a/b":[42,0.5,"x"]}"#).unwrap();
     let content = original.content().unwrap();
-    let names = content.fields().unwrap().map(|(name, _)| name).collect::<Vec<_>>();
+    let names = content
+        .fields()
+        .unwrap()
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
     assert_eq!(names, ["z", "a", "a/b"]);
     assert_eq!(content.member("z").unwrap().boolean(), Some(false));
     assert!(content.member("a").unwrap().is_null());
     assert!(content.member("absent").is_none());
-    assert_eq!(content.pointer("/a~1b/0").unwrap().unwrap().number().unwrap().as_u64(), Some(42));
-    let values = content.member("a/b").unwrap().elements().unwrap().collect::<Vec<_>>();
+    assert_eq!(
+        content
+            .pointer("/a~1b/0")
+            .unwrap()
+            .unwrap()
+            .number()
+            .unwrap()
+            .as_u64(),
+        Some(42)
+    );
+    let values = content
+        .member("a/b")
+        .unwrap()
+        .elements()
+        .unwrap()
+        .collect::<Vec<_>>();
     assert_eq!(values.len(), 3);
     assert_eq!(values[1].number().unwrap().as_f64(), Some(0.5));
     assert_eq!(values[2].text(), Some("x"));
@@ -23,7 +41,16 @@ fn borrowed_inspection_preserves_authored_order_false_null_and_exact_numbers() {
 #[test]
 fn read_only_json_preserves_shapes_and_shared_borrowed_content_without_execution_admission() {
     use thinkthen::{ParsedJson, RawRecord};
-    for text in ["null", "false", "0", "1.25", r#""evidence""#, "[]", "{}", r#"{"z":false,"a":null}"#] {
+    for text in [
+        "null",
+        "false",
+        "0",
+        "1.25",
+        r#""evidence""#,
+        "[]",
+        "{}",
+        r#"{"z":false,"a":null}"#,
+    ] {
         let value = ParsedJson::from_json(text).unwrap();
         assert_eq!(value.content().to_json().unwrap(), text);
         let clone = value.clone();
@@ -36,7 +63,10 @@ fn read_only_json_preserves_shapes_and_shared_borrowed_content_without_execution
     let clone = value.clone();
     let original = value.content().fields().unwrap().next().unwrap().1;
     let shared = clone.content().fields().unwrap().next().unwrap().1;
-    assert!(std::ptr::eq(original.text().unwrap().as_ptr(), shared.text().unwrap().as_ptr()));
+    assert!(std::ptr::eq(
+        original.text().unwrap().as_ptr(),
+        shared.text().unwrap().as_ptr()
+    ));
     let oversized = format!(r#"{{"evidence":"{}"}}"#, "x".repeat(RawRecord::max_bytes()));
     let value = ParsedJson::from_json(&oversized).unwrap();
     assert_eq!(value.content().to_json().unwrap(), oversized);
@@ -47,7 +77,12 @@ fn read_only_json_preserves_shapes_and_shared_borrowed_content_without_execution
 fn raw_physical_units_share_the_cursor_without_skipping_or_decoding() {
     use std::io::Cursor;
     use thinkthen::{FileReader, ReaderOptions, SourceUnit};
-    let mut reader = FileReader::new("input", Cursor::new(b"\n \r\nx\r\nlast"), ReaderOptions::default()).unwrap();
+    let mut reader = FileReader::new(
+        "input",
+        Cursor::new(b"\n \r\nx\r\nlast"),
+        ReaderOptions::default(),
+    )
+    .unwrap();
     let blank = reader.next_bytes().unwrap().unwrap();
     assert_eq!(blank.record, b"\n");
     assert_eq!((blank.first_line, blank.last_line), (1, 1));
@@ -58,16 +93,28 @@ fn raw_physical_units_share_the_cursor_without_skipping_or_decoding() {
     assert_eq!(tail.record, b"last");
     assert_eq!((tail.first_line, tail.last_line), (4, 4));
     assert!(reader.next_bytes().is_none());
-    let mut window = FileReader::new("input", Cursor::new(b"\r\n x\r\nz"), ReaderOptions {
-        unit: SourceUnit::Window, window: Some(2),
-    }).unwrap();
+    let mut window = FileReader::new(
+        "input",
+        Cursor::new(b"\r\n x\r\nz"),
+        ReaderOptions {
+            unit: SourceUnit::Window,
+            window: Some(2),
+        },
+    )
+    .unwrap();
     let first = window.next_bytes().unwrap().unwrap();
     assert_eq!(first.record, b"\r\n x\r\n");
     assert_eq!((first.first_line, first.last_line), (1, 2));
     assert_eq!(window.next().unwrap().unwrap().record, "z");
-    let mut empty = FileReader::new("empty", Cursor::new(b""), ReaderOptions {
-        unit: SourceUnit::File, window: None,
-    }).unwrap();
+    let mut empty = FileReader::new(
+        "empty",
+        Cursor::new(b""),
+        ReaderOptions {
+            unit: SourceUnit::File,
+            window: None,
+        },
+    )
+    .unwrap();
     let raw = empty.next_bytes().unwrap().unwrap();
     assert!(raw.record.is_empty());
     assert_eq!((raw.first_line, raw.last_line), (1, 1));
@@ -79,16 +126,29 @@ fn raw_original_admission_retains_annotation_fallback_and_size_precedence() {
     use thinkthen::{ErrorDiagnostic, JsonFailure, RawRecord, RecordReading, RequestFraming};
     let reading = RecordReading::new(&[], None, None).unwrap();
     let oversized = vec![0xff; RawRecord::max_bytes() + 2];
-    let error = reading.read_original(&oversized, RequestFraming::Lines).unwrap_err();
+    let error = reading
+        .read_original(&oversized, RequestFraming::Lines)
+        .unwrap_err();
     assert!(error.to_string().contains("over 16 MiB"));
-    assert!(!matches!(error.diagnostic(), Some(ErrorDiagnostic::InvalidUtf8)));
-    let blank = reading.read_original(b"", RequestFraming::Document).unwrap();
+    assert!(!matches!(
+        error.diagnostic(),
+        Some(ErrorDiagnostic::InvalidUtf8)
+    ));
+    let blank = reading
+        .read_original(b"", RequestFraming::Document)
+        .unwrap();
     assert_eq!(blank.literal(), Some(""));
     assert!(reading.read_document(b"").is_err());
     let syntax = reading.read_annotation_document(b"{broken").unwrap();
     assert_eq!(syntax.literal(), Some("{broken"));
     for text in ["false", "null", "2.5", "[]", "{}"] {
-        assert!(reading.read_annotation_document(text.as_bytes()).unwrap().content().is_some());
+        assert!(
+            reading
+                .read_annotation_document(text.as_bytes())
+                .unwrap()
+                .content()
+                .is_some()
+        );
     }
     let deep = format!("{}0{}", "[".repeat(130), "]".repeat(130));
     for (text, expected) in [
@@ -96,15 +156,21 @@ fn raw_original_admission_retains_annotation_fallback_and_size_precedence() {
         ("1e9999".to_owned(), JsonFailure::NotFinite),
         (deep, JsonFailure::TooDeep),
     ] {
-        let error = reading.read_annotation_document(text.as_bytes()).unwrap_err();
-        assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::RecordJson(actual)) if actual == expected));
+        let error = reading
+            .read_annotation_document(text.as_bytes())
+            .unwrap_err();
+        assert!(
+            matches!(error.diagnostic(), Some(ErrorDiagnostic::RecordJson(actual)) if actual == expected)
+        );
     }
     for framing in [RequestFraming::Csv, RequestFraming::Tsv] {
         assert!(reading.read_original(b"", framing).is_err());
     }
 }
 
-struct FailingReader { remaining: &'static [u8] }
+struct FailingReader {
+    remaining: &'static [u8],
+}
 impl std::io::Read for FailingReader {
     fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
         use std::io::BufRead as _;
@@ -119,28 +185,52 @@ impl std::io::BufRead for FailingReader {
     fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
         if self.remaining.is_empty() {
             Err(std::io::Error::other("private-caller-io-marker"))
-        } else { Ok(self.remaining) }
+        } else {
+            Ok(self.remaining)
+        }
     }
-    fn consume(&mut self, count: usize) { self.remaining = &self.remaining[count..]; }
+    fn consume(&mut self, count: usize) {
+        self.remaining = &self.remaining[count..];
+    }
 }
 fn assert_caller_io(error: &thinkthen::Error) {
-    let cause = std::error::Error::source(error).unwrap().downcast_ref::<std::io::Error>().unwrap();
+    let cause = std::error::Error::source(error)
+        .unwrap()
+        .downcast_ref::<std::io::Error>()
+        .unwrap();
     assert_eq!(cause.to_string(), "private-caller-io-marker");
-    for shown in [format!("{error:?}"), error.to_string(), format!("{:?}", error.diagnostic()),
-        serde_json::to_string(&error.complete()).unwrap()] {
+    for shown in [
+        format!("{error:?}"),
+        error.to_string(),
+        format!("{:?}", error.diagnostic()),
+        serde_json::to_string(&error.complete()).unwrap(),
+    ] {
         assert!(!shown.contains("private-caller-io-marker"));
     }
 }
 #[test]
 fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them() {
     use thinkthen::{FileReader, ReaderOptions, TableFormat, TableReader};
-    let mut text = FileReader::new("input", FailingReader { remaining: b"" }, ReaderOptions::default()).unwrap();
+    let mut text = FileReader::new(
+        "input",
+        FailingReader { remaining: b"" },
+        ReaderOptions::default(),
+    )
+    .unwrap();
     let error = text.next_bytes().unwrap().unwrap_err();
     assert_caller_io(&error);
     assert!(text.next().is_none());
-    let error = TableReader::new("input", FailingReader { remaining: b"" }, TableFormat::Csv).unwrap_err();
+    let error =
+        TableReader::new("input", FailingReader { remaining: b"" }, TableFormat::Csv).unwrap_err();
     assert_caller_io(&error);
-    let mut table = TableReader::new("input", FailingReader { remaining: b"column\n" }, TableFormat::Csv).unwrap();
+    let mut table = TableReader::new(
+        "input",
+        FailingReader {
+            remaining: b"column\n",
+        },
+        TableFormat::Csv,
+    )
+    .unwrap();
     let error = table.next().unwrap().unwrap_err();
     assert_caller_io(&error);
     assert!(table.next().is_none());
@@ -148,9 +238,16 @@ fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them(
 
 #[test]
 fn raw_cut_units_keep_the_native_overread_bound_and_abandon_unterminated_tails() {
-    use std::{cell::Cell, io::{BufRead, Read}, rc::Rc};
+    use std::{
+        cell::Cell,
+        io::{BufRead, Read},
+        rc::Rc,
+    };
     use thinkthen::{FileReader, RawRecord, ReaderOptions, RecordReading, RequestFraming};
-    struct Counted<'a> { bytes: &'a [u8], consumed: Rc<Cell<usize>> }
+    struct Counted<'a> {
+        bytes: &'a [u8],
+        consumed: Rc<Cell<usize>>,
+    }
     impl Read for Counted<'_> {
         fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
             let count = output.len().min(self.bytes.len());
@@ -160,7 +257,9 @@ fn raw_cut_units_keep_the_native_overread_bound_and_abandon_unterminated_tails()
         }
     }
     impl BufRead for Counted<'_> {
-        fn fill_buf(&mut self) -> std::io::Result<&[u8]> { Ok(self.bytes) }
+        fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
+            Ok(self.bytes)
+        }
         fn consume(&mut self, count: usize) {
             self.bytes = &self.bytes[count..];
             self.consumed.set(self.consumed.get() + count);
@@ -169,12 +268,22 @@ fn raw_cut_units_keep_the_native_overread_bound_and_abandon_unterminated_tails()
     let mut bytes = vec![0xff; RawRecord::max_bytes() + 3];
     bytes.extend_from_slice(b"\nnext\n");
     let consumed = Rc::new(Cell::new(0));
-    let mut reader = FileReader::new("input", Counted { bytes: &bytes, consumed: consumed.clone() }, ReaderOptions::default()).unwrap();
+    let mut reader = FileReader::new(
+        "input",
+        Counted {
+            bytes: &bytes,
+            consumed: consumed.clone(),
+        },
+        ReaderOptions::default(),
+    )
+    .unwrap();
     let raw = reader.next_bytes().unwrap().unwrap();
     assert_eq!(raw.record.len(), RawRecord::max_bytes() + 2);
     assert_eq!(consumed.get(), RawRecord::max_bytes() + 2);
-    let error = RecordReading::new(&[], None, None).unwrap()
-        .read_original(&raw.record, RequestFraming::Lines).unwrap_err();
+    let error = RecordReading::new(&[], None, None)
+        .unwrap()
+        .read_original(&raw.record, RequestFraming::Lines)
+        .unwrap_err();
     assert!(error.to_string().contains("over 16 MiB"));
     assert!(reader.next_bytes().is_none());
     assert_eq!(consumed.get(), RawRecord::max_bytes() + 2);

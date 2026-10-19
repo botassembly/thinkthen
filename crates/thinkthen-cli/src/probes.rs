@@ -5,10 +5,12 @@
 
 use serde::Serialize;
 
-use thinkthen::{BatchSetting, CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, FailureCause,
-    Error, ErrorKind, PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord, Request, RequestArguments,
-    RequestEnvironment, RequestInput, RequestOptions, RequestQuestion};
 use crate::render::json_line;
+use thinkthen::{
+    BatchSetting, CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, Error,
+    ErrorKind, FailureCause, PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord,
+    Request, RequestArguments, RequestEnvironment, RequestInput, RequestOptions, RequestQuestion,
+};
 
 const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 const OBJECT: &str = r#"{"note":"The parcel arrived on Tuesday.","box":"intact"}"#;
@@ -50,47 +52,106 @@ pub(crate) struct Probe {
 /// Prepare the four fixed, typed probes through the native public call family.
 pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Result<Vec<Probe>, Error> {
     let names = ["noul", "choice", "score", "mixed"];
-    PROBES.iter().zip(names).map(|((structured, set), name)| {
-        let arguments = RequestArguments {
-            question: RequestQuestion::Definition { value: QuestionSet::from_json(set).map_err(|_| broken_probe())?.into() },
-            input: if *structured {
-                RequestInput::Json { value: RawRecord::json(OBJECT).map_err(|_| broken_probe())?, images: vec![] }
-            } else {
-                RequestInput::Text { text: TEXT.into(), images: vec![] }
-            },
-            options: RequestOptions::default(),
-        };
-        let request = Request::named("annotate", arguments.clone()).and_then(Request::admit).map_err(|_| broken_probe())?;
-        let plan = engine.plan_request(&request, RequestEnvironment {
-            controls: CallOptions::new().shared_state_groups().batch(BatchSetting::Max), feed: None,
-        })?;
-        Ok(Probe { name, arguments, drops_detail: plan.drops_detail(), plan,
-            warning: detail_warning(backend_name) })
-    }).collect()
+    PROBES
+        .iter()
+        .zip(names)
+        .map(|((structured, set), name)| {
+            let arguments = RequestArguments {
+                question: RequestQuestion::Definition {
+                    value: QuestionSet::from_json(set)
+                        .map_err(|_| broken_probe())?
+                        .into(),
+                },
+                input: if *structured {
+                    RequestInput::Json {
+                        value: RawRecord::json(OBJECT).map_err(|_| broken_probe())?,
+                        images: vec![],
+                    }
+                } else {
+                    RequestInput::Text {
+                        text: TEXT.into(),
+                        images: vec![],
+                    }
+                },
+                options: RequestOptions::default(),
+            };
+            let request = Request::named("annotate", arguments.clone())
+                .and_then(Request::admit)
+                .map_err(|_| broken_probe())?;
+            let plan = engine.plan_request(
+                &request,
+                RequestEnvironment {
+                    controls: CallOptions::new()
+                        .shared_state_groups()
+                        .batch(BatchSetting::Max),
+                    feed: None,
+                },
+            )?;
+            Ok(Probe {
+                name,
+                arguments,
+                drops_detail: plan.drops_detail(),
+                plan,
+                warning: detail_warning(backend_name),
+            })
+        })
+        .collect()
 }
 
-fn broken_probe() -> Error { Error::new(ErrorKind::Defect, "a check probe no longer parses") }
+fn broken_probe() -> Error {
+    Error::new(ErrorKind::Defect, "a check probe no longer parses")
+}
 
 #[derive(Serialize)]
-struct Said<'a> { model: &'a str, answers: Vec<Outcome>, usage: Option<ReplyUsage> }
+struct Said<'a> {
+    model: &'a str,
+    answers: Vec<Outcome>,
+    usage: Option<ReplyUsage>,
+}
 #[derive(Serialize)]
-struct ReplyUsage { input_tokens: u64, output_tokens: u64 }
+struct ReplyUsage {
+    input_tokens: u64,
+    output_tokens: u64,
+}
 fn usage(reply: &CompleteAnnotated) -> Option<ReplyUsage> {
     let usage = reply.meta().usage()?;
-    Some(ReplyUsage { input_tokens: usage.input_tokens()?, output_tokens: usage.output_tokens()? })
+    Some(ReplyUsage {
+        input_tokens: usage.input_tokens()?,
+        output_tokens: usage.output_tokens()?,
+    })
 }
 #[derive(Serialize)]
 #[serde(untagged)]
-enum Outcome { Answered(Answer), Failed { failed: Failure } }
+enum Outcome {
+    Answered(Answer),
+    Failed { failed: Failure },
+}
 #[derive(Serialize)]
-struct Failure { kind: &'static str, cause: FailureCause }
+struct Failure {
+    kind: &'static str,
+    cause: FailureCause,
+}
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum Answer {
-    YesNo { probability: f64 },
-    Choice { pick: String, probabilities: Odds, #[serde(skip_serializing_if = "Option::is_none")] confidence: Option<f64> },
-    Tag { probabilities: Odds },
-    Score { level: String, probabilities: Odds, #[serde(skip_serializing_if = "Option::is_none")] confidence: Option<f64> },
+    YesNo {
+        probability: f64,
+    },
+    Choice {
+        pick: String,
+        probabilities: Odds,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        confidence: Option<f64>,
+    },
+    Tag {
+        probabilities: Odds,
+    },
+    Score {
+        level: String,
+        probabilities: Odds,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        confidence: Option<f64>,
+    },
 }
 struct Odds(Vec<(String, f64)>);
 impl Serialize for Odds {
@@ -100,16 +161,34 @@ impl Serialize for Odds {
 }
 fn outcome(member: CompleteAnnotationMember<'_>) -> Option<Outcome> {
     if let Some(cause) = member.failure() {
-        return Some(Outcome::Failed { failed: Failure { kind: "backend", cause } });
+        return Some(Outcome::Failed {
+            failed: Failure {
+                kind: "backend",
+                cause,
+            },
+        });
     }
     let answer = match member.probabilities()? {
         Probabilities::YesNo { yes } => Answer::YesNo { probability: yes },
         Probabilities::Named(values) => {
-            let probabilities = Odds(values.into_iter().map(|value| (value.name().to_owned(), value.probability())).collect());
+            let probabilities = Odds(
+                values
+                    .into_iter()
+                    .map(|value| (value.name().to_owned(), value.probability()))
+                    .collect(),
+            );
             let confidence = member.confidence();
             match member.question().kind() {
-                QuestionKind::Choose => Answer::Choice { pick: member.leader()?.to_owned(), probabilities, confidence },
-                QuestionKind::Score => Answer::Score { level: member.leader()?.to_owned(), probabilities, confidence },
+                QuestionKind::Choose => Answer::Choice {
+                    pick: member.leader()?.to_owned(),
+                    probabilities,
+                    confidence,
+                },
+                QuestionKind::Score => Answer::Score {
+                    level: member.leader()?.to_owned(),
+                    probabilities,
+                    confidence,
+                },
                 QuestionKind::Tag => Answer::Tag { probabilities },
                 _ => return None,
             }
@@ -121,8 +200,11 @@ fn outcome(member: CompleteAnnotationMember<'_>) -> Option<Outcome> {
 /// Render retained native answers; no provider bytes or inferred leaders enter output.
 pub(crate) fn reply_line(probe: &Probe, reply: &CompleteAnnotated) -> Option<String> {
     let metadata = reply.meta();
-    let said = Said { model: metadata.model(),
-        answers: reply.members().map(outcome).collect::<Option<Vec<_>>>()?, usage: usage(reply) };
+    let said = Said {
+        model: metadata.model(),
+        answers: reply.members().map(outcome).collect::<Option<Vec<_>>>()?,
+        usage: usage(reply),
+    };
     Some(format!("reply {} {}", probe.name, json_line(&said).ok()?))
 }
 
@@ -156,7 +238,9 @@ impl Report {
         for member in reply.members() {
             let width = if member.question().kind() == QuestionKind::Tag {
                 member.question().options().count()
-            } else { 1 };
+            } else {
+                1
+            };
             findings.extend(graded(&member, place, width));
             place += width;
         }
@@ -269,10 +353,19 @@ fn graded(member: &CompleteAnnotationMember<'_>, place: usize, width: usize) -> 
             1 => format!("question `{first}`"),
             _ => format!("questions `{first}` to `q{}`", place + width),
         };
-        return Some((true, format!("the answer to {named} failed as `{}`", cause.trim_matches('"'))));
+        return Some((
+            true,
+            format!(
+                "the answer to {named} failed as `{}`",
+                cause.trim_matches('"')
+            ),
+        ));
     }
     let said = format!("the answer to question `{first}` carries no confidence");
-    let graded = matches!(member.question().kind(), QuestionKind::Choose | QuestionKind::Score);
+    let graded = matches!(
+        member.question().kind(),
+        QuestionKind::Choose | QuestionKind::Score
+    );
     (graded && member.confidence().is_none()).then_some((false, said))
 }
 

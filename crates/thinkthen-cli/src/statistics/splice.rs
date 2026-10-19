@@ -141,7 +141,14 @@ fn string(bytes: &[u8], at: usize) -> Option<(String, usize)> {
         end += if bytes.get(end) == Some(&b'\\') { 2 } else { 1 };
     }
     let raw = std::str::from_utf8(bytes.get(at..=end)?).ok()?;
-    Some((ParsedJson::from_json(raw).ok()?.content().text()?.to_owned(), end + 1))
+    Some((
+        ParsedJson::from_json(raw)
+            .ok()?
+            .content()
+            .text()?
+            .to_owned(),
+        end + 1,
+    ))
 }
 
 #[cfg(test)]

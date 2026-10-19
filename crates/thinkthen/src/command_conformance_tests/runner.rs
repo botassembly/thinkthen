@@ -49,7 +49,10 @@ fn run_fault(case: &super::Case, expected: &str) {
         ("recording_read_failure", Some(D::RecordingStorage))
         | ("cancel_token", Some(D::Cancelled)) => {}
         ("expired_deadline", Some(D::Deadline(message))) => {
-            assert_eq!(message, "the deadline of 0 s passed before the call answered");
+            assert_eq!(
+                message,
+                "the deadline of 0 s passed before the call answered"
+            );
         }
         ("internal_invariant_failure", Some(D::Defect(message))) => {
             assert_eq!(message, "injected invariant failure");

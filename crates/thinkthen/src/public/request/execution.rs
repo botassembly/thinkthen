@@ -157,8 +157,12 @@ impl Engine {
         release: Option<&dyn Fn(usize)>,
         recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
-        environment.controls.admit_preparation(request.request.call.function())?;
-        let recover = recover.or(environment.controls.annotation_missing
+        environment
+            .controls
+            .admit_preparation(request.request.call.function())?;
+        let recover = recover.or(environment
+            .controls
+            .annotation_missing
             .map(|callback| callback as &dyn Fn(usize, &str) -> bool));
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
@@ -322,9 +326,7 @@ where
                 )?;
                 // Owned feeds retain native composition, not prior declaration
                 // admission. Validate selected values before any batch can send.
-                if !self.controls.recovery_rows
-                    && !self.controls.entity_rows
-                {
+                if !self.controls.recovery_rows && !self.controls.entity_rows {
                     declarations(&self.reading, &self.options, &row, input)?;
                 }
                 Ok(row)
@@ -754,7 +756,8 @@ pub(super) fn apply(
         }
         RequestDefinition::Relate(q) => {
             if let Some(rule) = &options.threshold {
-                q.0.override_threshold(&rule.native()?.to_string()).map_err(Error::refused)?;
+                q.0.override_threshold(&rule.native()?.to_string())
+                    .map_err(Error::refused)?;
             }
             if let Some(model) = &options.model {
                 q.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);

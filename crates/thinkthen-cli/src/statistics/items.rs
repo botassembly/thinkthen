@@ -1,9 +1,9 @@
 //! Said and keyed `recognize` names and `relate` edges, and the greedy match between them.
 
+use crate::Probability;
 use crate::saved_json::{Json, Kind};
 use crate::statistics::MeasureError;
 use crate::statistics::answer::{Rule, Verb};
-use crate::Probability;
 use thinkthen::RecognitionMode;
 
 /// How a said name matches a key name.
@@ -99,26 +99,33 @@ pub(crate) fn read(
     if !relate && self::mode(value) != Some(mode) {
         return Err(ungradable);
     }
-    let (names, either): (Vec<String>, Vec<&Json>) =
-        match question.member(if relate { "relations" } else { "kinds" }).map(Json::kind) {
-            Some(Kind::Array(rules)) if relate => (
-                rules
-                    .iter()
-                    .map(|rule| text(rule.member("name")))
-                    .collect::<Option<_>>()
-                    .ok_or(ungradable)?,
-                rules
-                    .iter()
-                    .filter(|rule| matches!(rule.member("either").map(Json::kind), Some(Kind::Bool(true))))
-                    .filter_map(|rule| rule.member("name"))
-                    .collect(),
-            ),
-            Some(Kind::Object(kinds)) if !relate => (
-                kinds.iter().map(|(kind, _)| kind.clone()).collect(),
-                Vec::new(),
-            ),
-            _ => return Err(ungradable),
-        };
+    let (names, either): (Vec<String>, Vec<&Json>) = match question
+        .member(if relate { "relations" } else { "kinds" })
+        .map(Json::kind)
+    {
+        Some(Kind::Array(rules)) if relate => (
+            rules
+                .iter()
+                .map(|rule| text(rule.member("name")))
+                .collect::<Option<_>>()
+                .ok_or(ungradable)?,
+            rules
+                .iter()
+                .filter(|rule| {
+                    matches!(
+                        rule.member("either").map(Json::kind),
+                        Some(Kind::Bool(true))
+                    )
+                })
+                .filter_map(|rule| rule.member("name"))
+                .collect(),
+        ),
+        Some(Kind::Object(kinds)) if !relate => (
+            kinds.iter().map(|(kind, _)| kind.clone()).collect(),
+            Vec::new(),
+        ),
+        _ => return Err(ungradable),
+    };
     let said = list(verb, mode, value).ok_or(ungradable)?;
     let mut items = Vec::new();
     for (place, held) in said.iter().enumerate() {
@@ -178,7 +185,9 @@ fn list(verb: Verb, mode: RecognitionMode, value: &Json) -> Option<&Vec<Json>> {
 fn mode(value: &Json) -> Option<RecognitionMode> {
     match value.member("mode").map(Json::kind) {
         None => Some(RecognitionMode::Whole),
-        Some(Kind::String(mode)) => serde_json::from_value(serde_json::Value::String(mode.clone())).ok(),
+        Some(Kind::String(mode)) => {
+            serde_json::from_value(serde_json::Value::String(mode.clone())).ok()
+        }
         _ => None,
     }
 }

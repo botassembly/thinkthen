@@ -17,8 +17,8 @@ use super::error::Error;
 use super::options::CallOptions;
 use super::question::Kind;
 
-mod details;
 mod combination;
+mod details;
 pub use details::{PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan};
 
 /// A request admission bound before cache answers, refusal splits or retries.
@@ -122,7 +122,9 @@ impl PlanEstimate {
     /// The request bound remains available separately through `requests`.
     #[must_use]
     pub fn question_requests(&self) -> Option<(usize, &[usize])> {
-        self.question_requests.as_ref().map(|(total, groups)| (*total, groups.as_slice()))
+        self.question_requests
+            .as_ref()
+            .map(|(total, groups)| (*total, groups.as_slice()))
     }
 
     pub(in crate::public) fn with_request_details(
@@ -332,7 +334,10 @@ pub(super) fn estimate(
     context: Option<crate::core::Evidence>,
     asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
 ) -> Result<PlanEstimate, Error> {
-    from_summary(estimate_summary(engine, setting, context, asks)?, engine.backend().api_type())
+    from_summary(
+        estimate_summary(engine, setting, context, asks)?,
+        engine.backend().api_type(),
+    )
 }
 
 pub(in crate::public) fn estimate_summary(
@@ -402,10 +407,16 @@ pub(in crate::public) fn estimate_tagged_summary<T>(
     Ok(summary)
 }
 
-pub(in crate::public) fn from_summary(summary: PlanSummary, adapter: crate::core::adapters::ApiType) -> Result<PlanEstimate, Error> {
+pub(in crate::public) fn from_summary(
+    summary: PlanSummary,
+    adapter: crate::core::adapters::ApiType,
+) -> Result<PlanEstimate, Error> {
     from_summary_with_note(summary, adapter.plan_estimate_note())
 }
-fn from_summary_with_note(summary: PlanSummary, token_estimate_note: &'static str) -> Result<PlanEstimate, Error> {
+fn from_summary_with_note(
+    summary: PlanSummary,
+    token_estimate_note: &'static str,
+) -> Result<PlanEstimate, Error> {
     let counts = summary
         .counts()
         .map_err(|_| Error::usage("the planned input is too large to count"))?;

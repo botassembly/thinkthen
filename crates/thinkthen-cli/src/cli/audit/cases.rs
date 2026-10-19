@@ -184,10 +184,15 @@ fn truth(want: Want) -> Option<Json> {
 }
 
 fn item_shape(verb: Verb, mode: thinkthen::RecognitionMode, kept: &[Item]) -> Json {
-    let items = Json::made(Kind::Array(kept.iter().map(|item| item.printed.clone()).collect()));
+    let items = Json::made(Kind::Array(
+        kept.iter().map(|item| item.printed.clone()).collect(),
+    ));
     if verb == Verb::Recognize && mode == thinkthen::RecognitionMode::BoundaryOnly {
         Json::made(Kind::Object(vec![
-            ("mode".to_owned(), Json::made(Kind::String("boundary_only".to_owned()))),
+            (
+                "mode".to_owned(),
+                Json::made(Kind::String("boundary_only".to_owned())),
+            ),
             ("proposals".to_owned(), items),
         ]))
     } else if verb == Verb::Recognize {

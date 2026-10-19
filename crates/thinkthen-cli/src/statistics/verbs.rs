@@ -1,9 +1,9 @@
 //! How the answer of each verb reads from a saved line: a `tag` answer's
 //! labels, a question's names, a probability, and a distribution's top.
 
+use crate::Probability;
 use crate::saved_json::{Json, Kind, NULL};
 use crate::statistics::MeasureError;
-use crate::Probability;
 
 use super::{Answer, Printed, Top, Verb, verb_named};
 
@@ -132,7 +132,13 @@ pub(super) fn verb(
         Some("recognize") => Verb::Recognize,
         Some("relate") => Verb::Relate,
         Some(other) if !other.is_empty() => return Err(MeasureError::Ungradable(line)),
-        _ if matches!(value.map(Json::kind), None | Some(Kind::Null | Kind::Bool(_))) => Verb::Decide,
+        _ if matches!(
+            value.map(Json::kind),
+            None | Some(Kind::Null | Kind::Bool(_))
+        ) =>
+        {
+            Verb::Decide
+        }
         _ if audit && !matches!(value.map(Json::kind), Some(Kind::String(_))) && !failed => {
             return Err(MeasureError::NoQuestion(line));
         }

@@ -6,8 +6,8 @@ use std::process::ExitCode;
 
 use super::JudgingInput;
 use crate::BatchSetting as Setting;
-use crate::cli::reading::Reading;
 use crate::RawRecord;
+use crate::cli::reading::Reading;
 use crate::failure::Failure;
 use crate::judge::Keeping;
 use crate::schedule::{Output, Placed};
@@ -40,7 +40,9 @@ pub(super) fn records(
     let mut source = source.enumerate();
     let mut stopped = false;
     Ok(Box::new(std::iter::from_fn(move || {
-        if stopped { return None; }
+        if stopped {
+            return None;
+        }
         let (ordinal, item) = source.next()?;
         let held = item.and_then(|item| {
             let (record, arrived, images) = match item.data {

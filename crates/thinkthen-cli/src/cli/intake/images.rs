@@ -3,11 +3,11 @@ use super::{Data, Intake, Item, Piece, Position, Source};
 use crate::args::Common;
 use crate::cli::reading::Reading;
 use crate::failure::Failure;
+use crate::schedule::Placed;
 use crate::{
     ImageEvidence, InputFileReader, InputReaderOptions, ReaderMedia, ReaderOptions, SourceItem,
     SourceItems, SourceUnit,
 };
-use crate::schedule::Placed;
 use std::io::{BufReader, Read};
 
 fn options() -> InputReaderOptions {

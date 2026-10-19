@@ -12,11 +12,18 @@ pub(super) fn at_record(mut failure: Failure, at: usize) -> Failure {
 }
 
 pub(super) fn shared(path: Option<&Path>, question: &mut crate::Recognize) -> Result<(), Failure> {
-    let Some(path) = path else { return Ok(()); };
+    let Some(path) = path else {
+        return Ok(());
+    };
     let text = std::fs::read_to_string(path)
         .map_err(|_| Failure::Usage("recognition examples file must be readable UTF-8"))?;
-    let lines = text.lines().filter(|line| !line.trim().is_empty()).collect::<Vec<_>>();
-    let jsonl = lines.first().is_some_and(|line| matches!(line.trim_start().chars().next(), Some('{' | '"')));
+    let lines = text
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>();
+    let jsonl = lines
+        .first()
+        .is_some_and(|line| matches!(line.trim_start().chars().next(), Some('{' | '"')));
     let examples = lines.into_iter().enumerate().map(|(at, line)| {
         if jsonl {
             serde_json::from_str(line).map_err(|_| Failure::Recognize(crate::failure::recognize::Error::Examples {

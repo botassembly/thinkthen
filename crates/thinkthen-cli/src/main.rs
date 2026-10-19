@@ -13,11 +13,11 @@ mod test_deadline;
 
 mod cli;
 mod mcp;
-mod statistics;
-mod saved_json;
-mod probes;
 mod plan_document;
+mod probes;
 mod render;
+mod saved_json;
+mod statistics;
 #[cfg(windows)]
 mod windows;
 

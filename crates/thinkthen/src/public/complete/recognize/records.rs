@@ -44,7 +44,9 @@ impl Engine {
         ask.0.validate_mode().map_err(Error::refused)?;
         let options = options.started()?;
         options.admission()?;
-        let limit = options.recognition_text_limit.unwrap_or(facade::MAX_TEXT_BYTES);
+        let limit = options
+            .recognition_text_limit
+            .unwrap_or(facade::MAX_TEXT_BYTES);
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let units = self.try_within_admission(

@@ -29,12 +29,23 @@ impl RequestDefinition {
             }
             Self::Atomic(LoadedQuestion::Banded(question)) => return atomic(&question.0),
             Self::Find(question) => return atomic(question.question()),
-            Self::Annotate(set) | Self::DecodedSet { annotation: set, .. } => set.0.sha256(),
+            Self::Annotate(set)
+            | Self::DecodedSet {
+                annotation: set, ..
+            } => set.0.sha256(),
             Self::RankSet(set) => set.0.sha256(),
             Self::Recognize(question) => core::recognize_sha256(&question.question().0),
             Self::Recognition(question) => core::recognize_sha256(&question.0),
-            Self::Relate(_) => return Err(Error::usage("relate identity requires its record or line mode")),
-            Self::DynamicChoose(_) => return Err(Error::usage("a per-record choose question has no identity before its options")),
+            Self::Relate(_) => {
+                return Err(Error::usage(
+                    "relate identity requires its record or line mode",
+                ));
+            }
+            Self::DynamicChoose(_) => {
+                return Err(Error::usage(
+                    "a per-record choose question has no identity before its options",
+                ));
+            }
         };
         encoded.map_err(|_| Error::defect("question identity could not be written"))
     }
@@ -48,19 +59,33 @@ impl RequestDefinition {
         let Self::Relate(question) = self else {
             return Err(Error::usage("relation identity requires a relate question"));
         };
-        question.0.question(mode == RelationIdentityMode::Lines).sha256()
+        question
+            .0
+            .question(mode == RelationIdentityMode::Lines)
+            .sha256()
             .map_err(|_| Error::defect("question identity could not be written"))
     }
 }
 
 fn atomic(question: &crate::Question) -> Result<String, Error> {
-    if matches!(question.kind, crate::public::question::Kind::Find | crate::public::question::Kind::FindNone) {
+    if matches!(
+        question.kind,
+        crate::public::question::Kind::Find | crate::public::question::Kind::FindNone
+    ) {
         let core::Question::Decide { text, .. } = &question.core else {
             return Err(Error::defect("a find preparation lost its question"));
         };
-        return core::Find::identity(text, question.kind == crate::public::question::Kind::FindNone, question.profile.as_ref())
-            .map_err(|_| Error::defect("question identity could not be written"));
+        return core::Find::identity(
+            text,
+            question.kind == crate::public::question::Kind::FindNone,
+            question.profile.as_ref(),
+        )
+        .map_err(|_| Error::defect("question identity could not be written"));
     }
-    core::question_sha256_with_profile(&question.core, question.threshold, question.profile.as_ref())
-        .map_err(|_| Error::defect("question identity could not be written"))
+    core::question_sha256_with_profile(
+        &question.core,
+        question.threshold,
+        question.profile.as_ref(),
+    )
+    .map_err(|_| Error::defect("question identity could not be written"))
 }

@@ -16,7 +16,9 @@ impl ParsedJson {
     /// Refuses malformed, duplicate-name, nonfinite or overdeep JSON through the
     /// ordinary safe parser diagnostic. No parser body becomes an error source.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        core::Json::parse(text).map(|value| Self(Arc::new(value))).map_err(Error::refused)
+        core::Json::parse(text)
+            .map(|value| Self(Arc::new(value)))
+            .map_err(Error::refused)
     }
 
     /// Borrow ordered content. This explicit view can expose original evidence.

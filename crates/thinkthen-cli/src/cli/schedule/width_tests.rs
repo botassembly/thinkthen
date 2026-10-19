@@ -177,11 +177,7 @@ fn command_setup_child() {
         ExitCode::SUCCESS
     );
 
-    let before = (
-        listener.connections(),
-        listener.count(),
-        requests_counted(),
-    );
+    let before = (listener.connections(), listener.count(), requests_counted());
     assert_eq!(before.1, 6);
     assert_eq!(before.2, 6);
     let unread = Arc::new(AtomicUsize::new(0));
@@ -193,11 +189,7 @@ fn command_setup_child() {
         "thinkthen: throttle 4 is already active for this process; use throttle 4 or drop the throttle argument\n"
     );
     assert_eq!(unread.load(Ordering::SeqCst), 0, "no input was read");
-    let after = (
-        listener.connections(),
-        listener.count(),
-        requests_counted(),
-    );
+    let after = (listener.connections(), listener.count(), requests_counted());
     assert_eq!(after, before, "no connection, request, or count");
 }
 

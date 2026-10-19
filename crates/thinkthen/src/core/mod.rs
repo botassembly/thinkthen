@@ -92,10 +92,10 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub use crate::core::question_file::QuestionRole;
+pub(crate) use crate::core::question_file::Source;
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key,
 };
-pub(crate) use crate::core::question_file::Source;
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
     Asked, NameOdds, Odds, Piece, PieceOdds, RecognizedName, TAGS, TagRow, decode as found_names,
@@ -108,7 +108,9 @@ pub(crate) use crate::core::recognize_file::{
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
-pub(crate) use crate::core::relate_file::{EntitySetError, RelateConfigError, RelateSpec, inline_rule};
+pub(crate) use crate::core::relate_file::{
+    EntitySetError, RelateConfigError, RelateSpec, inline_rule,
+};
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
     pair_edges, plan_pairs, plan_relate, reaches_cut, relate_edge,

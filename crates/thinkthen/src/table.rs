@@ -16,7 +16,9 @@ pub(crate) enum ReadError {
 impl ReadError {
     pub(crate) fn native(self) -> crate::Error {
         match self {
-            Self::Input(error) => crate::Error::local("table input could not be read").with_source(error),
+            Self::Input(error) => {
+                crate::Error::local("table input could not be read").with_source(error)
+            }
             Self::Table(error) if error.input_failure() => crate::Error::local(error.to_string()),
             Self::Table(error) => crate::Error::usage(error.to_string()),
         }

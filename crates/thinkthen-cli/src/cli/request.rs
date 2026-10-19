@@ -5,14 +5,14 @@ use super::{
 };
 use crate::RequestFunction;
 use crate::{
-    Request, RequestArguments, RequestBatch, RequestFraming, RequestImage,
-    RequestInput, RequestOptions, RequestQuestion, RequestSource,
+    Request, RequestArguments, RequestBatch, RequestFraming, RequestImage, RequestInput,
+    RequestOptions, RequestQuestion, RequestSource,
 };
 use std::path::PathBuf;
 
 mod atomic;
-mod relations;
 mod recognition;
+mod relations;
 
 #[expect(
     clippy::too_many_lines,
@@ -46,11 +46,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             options.labels = atomic::tag_options(a)?;
             (
                 RequestFunction::Tag,
-                arguments(
-                    &mut a.common.clone(),
-                    question,
-                    options,
-                )?,
+                arguments(&mut a.common.clone(), question, options)?,
             )
         }
         Command::Score(a) => {
@@ -59,11 +55,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             options.levels = (!a.levels.is_empty()).then(|| atomic::bare(&a.levels));
             (
                 RequestFunction::Score,
-                arguments(
-                    &mut a.common.clone(),
-                    question,
-                    options,
-                )?,
+                arguments(&mut a.common.clone(), question, options)?,
             )
         }
         Command::Filter(a) => {
@@ -144,12 +136,10 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             options.mode = a
                 .mode
                 .as_deref()
-                .map(|mode| {
-                    match mode {
-                        "whole" => Ok(crate::RecognitionMode::Whole),
-                        "boundary_only" => Ok(crate::RecognitionMode::BoundaryOnly),
-                        _ => Err(Failure::Usage("recognize mode is whole or boundary_only")),
-                    }
+                .map(|mode| match mode {
+                    "whole" => Ok(crate::RecognitionMode::Whole),
+                    "boundary_only" => Ok(crate::RecognitionMode::BoundaryOnly),
+                    _ => Err(Failure::Usage("recognize mode is whole or boundary_only")),
                 })
                 .transpose()?;
             options.threshold = a
@@ -205,9 +195,13 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
 }
 fn selector(text: &str) -> RequestQuestion {
     if text.starts_with('@') {
-        RequestQuestion::Reference { reference: text.to_owned() }
+        RequestQuestion::Reference {
+            reference: text.to_owned(),
+        }
     } else {
-        RequestQuestion::Text { text: text.to_owned() }
+        RequestQuestion::Text {
+            text: text.to_owned(),
+        }
     }
 }
 fn source_common(common: &Common, extra: &[std::ffi::OsString]) -> Result<Common, Failure> {

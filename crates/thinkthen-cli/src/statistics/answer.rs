@@ -4,13 +4,13 @@ use std::collections::BTreeSet;
 
 use serde::{Serialize, Serializer};
 
+use crate::Probability;
+use crate::Threshold;
+use crate::saved_json::Pointer;
 use crate::saved_json::{Json, Kind};
 use crate::statistics::items::{self, Item, Items};
 use crate::statistics::levels::{LevelCuts, level_at};
 use crate::statistics::{MeasureError, python_float_text, record_id, rounded};
-use crate::saved_json::Pointer;
-use crate::Probability;
-use crate::Threshold;
 
 #[path = "verbs.rs"]
 mod verbs;
@@ -348,7 +348,10 @@ impl Answer {
             options: Vec::new(),
             number: None,
             digest,
-            band: matches!(entry.member("threshold").map(Json::kind), Some(Kind::String(_))),
+            band: matches!(
+                entry.member("threshold").map(Json::kind),
+                Some(Kind::String(_))
+            ),
             items: None,
         };
         match verb {
@@ -409,10 +412,7 @@ impl Answer {
         if self.failed || !detailed_decision(entry) {
             return Ok(());
         }
-        let Some(threshold) = entry
-            .member("threshold")
-            .filter(|held| !held.is_null())
-        else {
+        let Some(threshold) = entry.member("threshold").filter(|held| !held.is_null()) else {
             return Ok(());
         };
         let threshold = match threshold.kind() {
@@ -476,11 +476,13 @@ impl Answer {
                 })
             }
             Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
-                Rule::Threshold(threshold) => match self.probability.and_then(|p| threshold.apply(p)) {
-                    Some(true) => Said::Yes,
-                    Some(false) => Said::No,
-                    _ => Said::Unresolved,
-                },
+                Rule::Threshold(threshold) => {
+                    match self.probability.and_then(|p| threshold.apply(p)) {
+                        Some(true) => Said::Yes,
+                        Some(false) => Said::No,
+                        _ => Said::Unresolved,
+                    }
+                }
                 Rule::AsRun | Rule::Levels(_) => match self.value {
                     Some(Printed::Bool(true)) => Said::Yes,
                     Some(Printed::Bool(false)) => Said::No,

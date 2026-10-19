@@ -2,11 +2,11 @@
 //! Ticket 0165's edge rows: what one record's names or edges do between two sides.
 
 use super::{Row, Side, diff};
+use crate::render::json_line;
+use crate::saved_json::Pointer;
 use crate::statistics::answer::{self, Identity, Rule, Shown};
 use crate::statistics::items::Matching;
 use crate::statistics::json_lines;
-use crate::saved_json::Pointer;
-use crate::render::json_line;
 
 /// `MATCH CUT_A CUT_B | A | B | EXPECTED`. `-` reads a side as run, at its run cut of 0.5. A name
 /// is `KIND START END STRENGTH`, and an edge `RELATION SOURCE/KIND TARGET/KIND P`, where `wrote`

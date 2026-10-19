@@ -7,14 +7,13 @@ use crate::BatchSetting as Setting;
 use crate::cli::reading::Reading;
 use crate::schedule::Outcome;
 mod presentation;
-use presentation::Atomic;
-use crate::render::json_line;
 use crate::failure::Failure;
+use crate::render::json_line;
 use crate::schedule::{Judged, Output};
+use presentation::Atomic;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::process::ExitCode;
-
 
 #[expect(
     clippy::too_many_lines,
@@ -31,9 +30,8 @@ pub(super) fn run(
     let environment = configuration.environment;
     let common = configuration.common;
     let recording = configuration.folders.reported();
-    let engine = crate::cli::construction::engine(
-        common, environment, configuration.folders, common.jobs,
-    )?;
+    let engine =
+        crate::cli::construction::engine(common, environment, configuration.folders, common.jobs)?;
     environment.observe_engine(&engine);
     let composition = composition(&admitted, reading)?;
     let function = admitted.request().call.function();
@@ -41,8 +39,10 @@ pub(super) fn run(
     let mut arguments = admitted.request().call.arguments().clone();
     arguments.question = crate::RequestQuestion::Definition { value: definition };
     arguments.input = crate::RequestInput::Feed {
-        name: "cli-atomic".to_owned(), framing: crate::RequestFraming::Document,
-        reading: crate::ReaderOptions::default(), images: Vec::new(),
+        name: "cli-atomic".to_owned(),
+        framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(),
+        images: Vec::new(),
     };
     arguments.options.field = None;
     arguments.options.context_field = None;
@@ -61,26 +61,42 @@ pub(super) fn run(
     };
     let request = crate::Request::for_function(function, arguments);
     let tally = environment.tally().start();
-    let session = engine.request_session_with_feed_options(request, crate::Surface::Cli,
+    let session = engine.request_session_with_feed_options(
+        request,
+        crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
-            on_missing_annotation_pointer: None, incremental_recognition: false,
+            on_missing_annotation_pointer: None,
+            incremental_recognition: false,
             input_pause: environment.input_pause(),
-            retain_success_on_cancel: true, eager: false, image_inputs: common.images(),
+            retain_success_on_cancel: true,
+            eager: false,
+            image_inputs: common.images(),
             all_filter_results: configuration.keeping == crate::judge::Keeping::Passing,
             record_reading: Some(composition),
-        })?;
+        },
+    )?;
     let held = RefCell::new(BTreeMap::new());
     let reader = super::native_reader::Reader::new(records);
     let downstream = crate::edge::Downstream::default();
-    if configuration.keeping != crate::judge::Keeping::Answers { output.guard_models(); }
+    if configuration.keeping != crate::judge::Keeping::Answers {
+        output.guard_models();
+    }
     let rendering = Renderer {
-        view: configuration.view, keeping: configuration.keeping,
+        view: configuration.view,
+        keeping: configuration.keeping,
         streams: configuration.streams,
-        size_advice: if common.images() { crate::failure::SizeAdvice::Backend }
-            else if configuration.streams { crate::failure::SizeAdvice::Batches }
-            else { crate::failure::SizeAdvice::Text },
-        documents: configuration.documents, text_view: configuration.text_view,
-        mismatch: configuration.mismatch.running_profile(configuration.profile.as_deref(), engine.profile_name()),
+        size_advice: if common.images() {
+            crate::failure::SizeAdvice::Backend
+        } else if configuration.streams {
+            crate::failure::SizeAdvice::Batches
+        } else {
+            crate::failure::SizeAdvice::Text
+        },
+        documents: configuration.documents,
+        text_view: configuration.text_view,
+        mismatch: configuration
+            .mismatch
+            .running_profile(configuration.profile.as_deref(), engine.profile_name()),
     };
     let mut progress = RankProgress::default();
     let mut ended = Ended::default();
@@ -89,8 +105,12 @@ pub(super) fn run(
     let mut tally = Some(tally);
     let mut terminal = None;
     loop {
-        if !cancelled && (environment.cancel().fired() || downstream.gone()
-            || ended.closed || ended.failure.is_some()) {
+        if !cancelled
+            && (environment.cancel().fired()
+                || downstream.gone()
+                || ended.closed
+                || ended.failure.is_some())
+        {
             session.cancel();
             cancelled = true;
             input_done = true;
@@ -98,25 +118,32 @@ pub(super) fn run(
         match session.try_read() {
             crate::RequestSessionRead::Result(packet) => {
                 match packet {
-                    crate::RequestSessionResult::Row(row) => {
-                        match row_value(row) {
-                            Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
-                            Err(error) => { ended.failure.get_or_insert(error); }
+                    crate::RequestSessionResult::Row(row) => match row_value(row) {
+                        Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
+                        Err(error) => {
+                            ended.failure.get_or_insert(error);
                         }
-                    }
+                    },
                     crate::RequestSessionResult::Aggregate(value) => {
                         rendering.receive(value, &held, reading, output, &mut ended);
                     }
                     crate::RequestSessionResult::Observation { value, .. }
-                        if configuration.keeping == crate::judge::Keeping::Ordered => {
+                        if configuration.keeping == crate::judge::Keeping::Ordered =>
+                    {
                         progress.observe(value);
-                        if progress.failure.is_some() { session.cancel(); cancelled = true; input_done = true; }
+                        if progress.failure.is_some() {
+                            session.cancel();
+                            cancelled = true;
+                            input_done = true;
+                        }
                     }
                     crate::RequestSessionResult::Observation { .. } => {}
                     crate::RequestSessionResult::Terminal(value) => {
                         if let Some(facts) = &value.facts {
                             environment.settle_native(facts);
-                            if let Some(start) = tally.take() { start.finish(facts)?; }
+                            if let Some(start) = tally.take() {
+                                start.finish(facts)?;
+                            }
                         }
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
@@ -128,19 +155,17 @@ pub(super) fn run(
         }
         let mut pending_reader = false;
         if !input_done {
-            let pushed = session.try_push_with(|| {
-                match reader.try_next() {
-                    super::native_reader::Read::Pending => Err(FeedRead::Pending),
-                    super::native_reader::Read::End => Err(FeedRead::End),
-                    super::native_reader::Read::Item(Err(placed)) => {
-                        ended.input_at = placed.at;
-                        Err(FeedRead::Failed(placed.cause.into_error()))
-                    }
-                    super::native_reader::Read::Item(Ok(unit)) => {
-                        let descriptor = descriptor(&unit)?;
-                        held.borrow_mut().insert(unit.ordinal, unit);
-                        Ok(descriptor)
-                    }
+            let pushed = session.try_push_with(|| match reader.try_next() {
+                super::native_reader::Read::Pending => Err(FeedRead::Pending),
+                super::native_reader::Read::End => Err(FeedRead::End),
+                super::native_reader::Read::Item(Err(placed)) => {
+                    ended.input_at = placed.at;
+                    Err(FeedRead::Failed(placed.cause.into_error()))
+                }
+                super::native_reader::Read::Item(Ok(unit)) => {
+                    let descriptor = descriptor(&unit)?;
+                    held.borrow_mut().insert(unit.ordinal, unit);
+                    Ok(descriptor)
                 }
             });
             match pushed {
@@ -148,7 +173,10 @@ pub(super) fn run(
                 Ok(crate::RequestSessionPushStatus::Full) => {}
                 Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
                 Err(FeedRead::Pending) => pending_reader = true,
-                Err(FeedRead::End) => { session.finish(None)?; input_done = true; }
+                Err(FeedRead::End) => {
+                    session.finish(None)?;
+                    input_done = true;
+                }
                 Err(FeedRead::Failed(error)) => {
                     session.finish_native_reader_error(error)?;
                     input_done = true;
@@ -161,42 +189,81 @@ pub(super) fn run(
             reader.wait(std::time::Duration::from_millis(50));
             continue;
         }
-        let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done { crate::RequestSessionWaitInterest::Result }
-            else { crate::RequestSessionWaitInterest::Input };
+        let interest = if cancelled {
+            crate::RequestSessionWaitInterest::Settlement
+        } else if input_done {
+            crate::RequestSessionWaitInterest::Result
+        } else {
+            crate::RequestSessionWaitInterest::Input
+        };
         let ready = session.wait(interest, std::time::Duration::from_millis(50));
-        if ready == crate::RequestSessionReady::End { break; }
+        if ready == crate::RequestSessionReady::End {
+            break;
+        }
     }
     if configuration.keeping == crate::judge::Keeping::Ordered {
         ended.finished = progress.finished;
         ended.replayed = progress.replayed;
-        if let Some(failure) = progress.failure { ended.failure.get_or_insert(failure); }
+        if let Some(failure) = progress.failure {
+            ended.failure.get_or_insert(failure);
+        }
     }
     rendering.finish(
         terminal.ok_or(Failure::Defect("native session ended without settlement"))?,
-        ended, (recording, configuration.asks.verb(), downstream.latched()),
+        ended,
+        (recording, configuration.asks.verb(), downstream.latched()),
     )
 }
 
-enum FeedRead { Pending, End, Failed(crate::Error) }
+enum FeedRead {
+    Pending,
+    End,
+    Failed(crate::Error),
+}
 impl From<crate::Error> for FeedRead {
-    fn from(error: crate::Error) -> Self { Self::Failed(error) }
+    fn from(error: crate::Error) -> Self {
+        Self::Failed(error)
+    }
 }
 
 fn descriptor(unit: &Held) -> Result<crate::RequestSessionDescriptor, crate::Error> {
     let original = Some(match unit.record.literal() {
-        Some(text) => crate::RequestOriginal::Text { text: text.to_owned() },
-        None => crate::RequestOriginal::Json { value: unit.record.clone() },
+        Some(text) => crate::RequestOriginal::Text {
+            text: text.to_owned(),
+        },
+        None => crate::RequestOriginal::Json {
+            value: unit.record.clone(),
+        },
     });
-    let images = unit.images.as_ref().map_or_else(Vec::new, |images| images.images().iter()
-        .map(|image| crate::RequestImage::Bytes { media: image.media(), bytes: image.bytes().to_vec() }).collect());
-    let location = unit.position.as_ref().filter(|position| position.located)
+    let images = unit.images.as_ref().map_or_else(Vec::new, |images| {
+        images
+            .images()
+            .iter()
+            .map(|image| crate::RequestImage::Bytes {
+                media: image.media(),
+                bytes: image.bytes().to_vec(),
+            })
+            .collect()
+    });
+    let location = unit
+        .position
+        .as_ref()
+        .filter(|position| position.located)
         .and_then(|position| position.file.as_ref().map(|file| (file, position)))
-        .map(|(file, position)| crate::SourceLocation::new(file.clone(), position.first, position.last))
+        .map(|(file, position)| {
+            crate::SourceLocation::new(file.clone(), position.first, position.last)
+        })
         .transpose()?;
     Ok(crate::RequestSessionDescriptor {
-        item: crate::RequestItem { original, images, context: unit.context.clone(), options: None,
-            seed_spans: None, examples: None }, location,
+        item: crate::RequestItem {
+            original,
+            images,
+            context: unit.context.clone(),
+            options: None,
+            seed_spans: None,
+            examples: None,
+        },
+        location,
     })
 }
 
@@ -207,7 +274,9 @@ fn row_value(row: crate::RequestSessionRow) -> Result<crate::RequestValue, Failu
         crate::RequestSessionRow::Tags(row) => crate::RequestValue::Tags(vec![row]),
         crate::RequestSessionRow::Score(row) => crate::RequestValue::Scores(vec![row]),
         crate::RequestSessionRow::Filter(row) => crate::RequestValue::Filtered(vec![row]),
-        crate::RequestSessionRow::Annotation(_) => return Err(Failure::Defect("atomic session returned annotation")),
+        crate::RequestSessionRow::Annotation(_) => {
+            return Err(Failure::Defect("atomic session returned annotation"));
+        }
     })
 }
 
@@ -230,7 +299,6 @@ pub(super) fn composition(
     let composition = crate::RecordReading::new(&fields, None, options).map_err(Failure::from)?;
     Ok(composition)
 }
-
 
 pub(super) fn compose(
     composition: &crate::RecordReading,
@@ -289,7 +357,10 @@ impl Renderer {
         let (recording, verb, closed) = completion;
         let failure = result.err().map(|error| {
             let at = error.stopped().at().or(ended.input_at);
-            (at, host_error(error, self.streams).with_size_advice(self.size_advice))
+            (
+                at,
+                host_error(error, self.streams).with_size_advice(self.size_advice),
+            )
         });
 
         if ended.closed || closed {
@@ -343,10 +414,16 @@ impl RankProgress {
     fn observe(&mut self, event: crate::OwnedRecordObservation) {
         match event {
             crate::OwnedRecordObservation::Question { detail, .. } => {
-                self.live |= detail.detail().question_sources().iter()
+                self.live |= detail
+                    .detail()
+                    .question_sources()
+                    .iter()
                     .any(|source| source.origin() == crate::Origin::Live);
                 if self.failure.is_none() {
-                    self.failure = self.models.check_sources(detail.detail().question_sources().iter()).err();
+                    self.failure = self
+                        .models
+                        .check_sources(detail.detail().question_sources().iter())
+                        .err();
                 }
             }
             crate::OwnedRecordObservation::Row { .. } => {
@@ -459,7 +536,11 @@ impl Renderer {
         row: &impl serde::Serialize,
         position: Option<crate::cli::intake::Position>,
     ) -> Result<Judged, Failure> {
-        let mut printed = Some(if self.streams { json_line(row)? } else { presentation::without_batch(row)? });
+        let mut printed = Some(if self.streams {
+            json_line(row)?
+        } else {
+            presentation::without_batch(row)?
+        });
         crate::cli::intake::locate(&mut printed, position.as_ref())?;
         crate::cli::intake::source_members(&mut printed, position.as_ref())?;
         Ok(Judged {
@@ -475,28 +556,33 @@ impl Renderer {
     }
 }
 impl Renderer {
-    fn row(
-        &self,
-        reading: &Reading,
-        unit: Held,
-        value: Atomic<'_>,
-    ) -> Result<Judged, Failure> {
+    fn row(&self, reading: &Reading, unit: Held, value: Atomic<'_>) -> Result<Judged, Failure> {
         let outcome = value.outcome();
         let metadata = value.meta();
-        let replayed = metadata.identity().question_sources().iter()
+        let replayed = metadata
+            .identity()
+            .question_sources()
+            .iter()
             .all(|source| source.origin() != crate::Origin::Live);
-        let model = metadata.identity().question_sources().iter()
+        let model = metadata
+            .identity()
+            .question_sources()
+            .iter()
             .find(|source| source.origin() == crate::Origin::Live)
             .map(|source| source.answered_by().to_owned());
         let passing = self.keeping == crate::judge::Keeping::Passing;
         let mut printed = if passing && outcome != Outcome::Yes {
             None
         } else if self.view.details {
-            Some(value.details(
-                (self.streams || passing || self.keeping == crate::judge::Keeping::Ordered).then_some(&unit.record),
-                (passing || self.keeping == crate::judge::Keeping::Ordered).then_some(unit.ordinal),
-                self.streams,
-            )?)
+            Some(
+                value.details(
+                    (self.streams || passing || self.keeping == crate::judge::Keeping::Ordered)
+                        .then_some(&unit.record),
+                    (passing || self.keeping == crate::judge::Keeping::Ordered)
+                        .then_some(unit.ordinal),
+                    self.streams,
+                )?,
+            )
         } else if self.keeping.streams_only() {
             Some(match &unit.arrived {
                 Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
@@ -512,8 +598,14 @@ impl Renderer {
             None
         } else if self.streams {
             #[derive(serde::Serialize)]
-            struct RecordValue<'a> { input: &'a crate::RawRecord, value: crate::saved_json::Json }
-            Some(json_line(&RecordValue { input: &unit.record, value: value.value()? })?)
+            struct RecordValue<'a> {
+                input: &'a crate::RawRecord,
+                value: crate::saved_json::Json,
+            }
+            Some(json_line(&RecordValue {
+                input: &unit.record,
+                value: value.value()?,
+            })?)
         } else {
             Some(json_line(&value.value()?)?)
         };
@@ -580,7 +672,11 @@ impl Renderer {
 }
 
 fn host_error(error: crate::Error, streams: bool) -> Failure {
-    if !streams && let Some(crate::ErrorDiagnostic::PartialReply { cause: Some(cause), .. }) = error.diagnostic() {
+    if !streams
+        && let Some(crate::ErrorDiagnostic::PartialReply {
+            cause: Some(cause), ..
+        }) = error.diagnostic()
+    {
         return Failure::Reply(cause);
     }
     Failure::from(error)

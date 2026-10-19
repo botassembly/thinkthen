@@ -2,16 +2,31 @@
 use super::*;
 use crate::public::readiness::Wake;
 use crate::{RequestFraming, RequestImage, RequestOriginal};
-use std::{sync::{Arc, mpsc}, time::Duration};
+use std::{
+    sync::{Arc, mpsc},
+    time::Duration,
+};
 
 fn descriptor(text: &str) -> RequestSessionDescriptor {
-    RequestSessionDescriptor { item: super::super::RequestItem {
-        original: Some(RequestOriginal::Text { text: text.to_owned() }), images: Vec::new(),
-        context: None, options: None, seed_spans: None, examples: None,
-    }, location: None }
+    RequestSessionDescriptor {
+        item: super::super::RequestItem {
+            original: Some(RequestOriginal::Text {
+                text: text.to_owned(),
+            }),
+            images: Vec::new(),
+            context: None,
+            options: None,
+            seed_spans: None,
+            examples: None,
+        },
+        location: None,
+    }
 }
 fn push(queue: &Queue, text: &str) {
-    assert!(matches!(queue.push(descriptor(text)), RequestSessionPush::Accepted));
+    assert!(matches!(
+        queue.push(descriptor(text)),
+        RequestSessionPush::Accepted
+    ));
 }
 #[test]
 fn headers_reschedule_buffered_work_and_staging_retains_only_one_logical_record() {
@@ -23,8 +38,14 @@ fn headers_reschedule_buffered_work_and_staging_retains_only_one_logical_record(
     let wake = Wake::default();
     wake.register(Box::new(move || {
         if let Some(queue) = for_wake.upgrade() {
-            assert!(queue.state.try_lock().is_ok(), "wake runs after releasing queue state");
-            assert!(queue.logical.try_lock().is_ok(), "wake runs after releasing logical input");
+            assert!(
+                queue.state.try_lock().is_ok(),
+                "wake runs after releasing queue state"
+            );
+            assert!(
+                queue.logical.try_lock().is_ok(),
+                "wake runs after releasing logical input"
+            );
         }
         events.send(()).unwrap();
     }));
@@ -42,21 +63,36 @@ fn headers_reschedule_buffered_work_and_staging_retains_only_one_logical_record(
     push(&queue, "second\n");
     notified.recv_timeout(Duration::from_secs(5)).unwrap();
     assert!(queue.logical_ready(CallOptions::new()));
-    assert!(queue.state.lock().unwrap().input.is_some(), "one staged row does not drain the raw cell");
+    assert!(
+        queue.state.lock().unwrap().input.is_some(),
+        "one staged row does not drain the raw cell"
+    );
     let first = queue.next_decoded(CallOptions::new()).unwrap().unwrap();
-    let Some(RequestOriginal::Json { value }) = first.item.original else { panic!("decoded table row") };
-    assert_eq!(value.content().unwrap().member("note").unwrap().text(), Some("first"));
+    let Some(RequestOriginal::Json { value }) = first.item.original else {
+        panic!("decoded table row")
+    };
+    assert_eq!(
+        value.content().unwrap().member("note").unwrap().text(),
+        Some("first")
+    );
     assert!(queue.logical_ready(CallOptions::new()));
     let _second = queue.next_decoded(CallOptions::new()).unwrap().unwrap();
     assert!(!queue.logical_ready(CallOptions::new()));
-    assert_eq!(notified.try_recv(), Err(mpsc::TryRecvError::Empty), "empty readiness does not spin");
+    assert_eq!(
+        notified.try_recv(),
+        Err(mpsc::TryRecvError::Empty),
+        "empty readiness does not spin"
+    );
     queue.finish(None).unwrap();
     notified.recv_timeout(Duration::from_secs(5)).unwrap();
     assert!(queue.logical_ready(CallOptions::new()));
     assert!(queue.next_decoded(CallOptions::new()).is_none());
     queue.register_input_wake(None);
     drop(queue);
-    assert!(weak.upgrade().is_none(), "decoder and wake retain no queue cycle");
+    assert!(
+        weak.upgrade().is_none(),
+        "decoder and wake retain no queue cycle"
+    );
 }
 
 #[test]
@@ -71,10 +107,22 @@ fn staged_errors_are_deferred_and_staging_never_opens_attachments() {
     let queue = Queue::default();
     queue.configure_input(RequestFraming::Document);
     let mut item = descriptor("first");
-    item.item.images.push(RequestImage::File { path: "absent-staged-image".into(), media: None });
+    item.item.images.push(RequestImage::File {
+        path: "absent-staged-image".into(),
+        media: None,
+    });
     assert!(matches!(queue.push(item), RequestSessionPush::Accepted));
     assert!(queue.logical_ready(CallOptions::new()));
-    assert_eq!(queue.next_decoded(CallOptions::new()).unwrap().unwrap().item.images.len(), 1);
+    assert_eq!(
+        queue
+            .next_decoded(CallOptions::new())
+            .unwrap()
+            .unwrap()
+            .item
+            .images
+            .len(),
+        1
+    );
 }
 
 #[test]
@@ -95,7 +143,14 @@ fn cancel_and_receiver_drop_notify_without_holding_queue_locks() {
         queue.stop(drop_receiver);
         notified.recv_timeout(Duration::from_secs(5)).unwrap();
         assert!(queue.logical_ready(CallOptions::new().cancel(&queue.cancel)));
-        assert_eq!(queue.next_decoded(CallOptions::new().cancel(&queue.cancel)).unwrap().unwrap_err().kind(), crate::ErrorKind::Cancelled);
+        assert_eq!(
+            queue
+                .next_decoded(CallOptions::new().cancel(&queue.cancel))
+                .unwrap()
+                .unwrap_err()
+                .kind(),
+            crate::ErrorKind::Cancelled
+        );
         queue.register_input_wake(None);
     }
 }

@@ -24,21 +24,38 @@ pub(crate) fn run(
     let shared_context = asking::context::shared(arguments.context.as_deref())?;
     let settled = config::settle(arguments, &mut admitted)?;
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
-    let backend = environment.resolve(arguments.common.backend.as_deref(),
-        arguments.common.url.as_deref(), settled.model.as_deref())?;
+    let backend = environment.resolve(
+        arguments.common.backend.as_deref(),
+        arguments.common.url.as_deref(),
+        settled.model.as_deref(),
+    )?;
     environment.set_request_size(request_size)?;
     environment.warn_request_size(&backend, request_size)?;
     profile::read(&arguments.common, environment)?;
-    let (sources, originals) = source::selection(&arguments.common, input, settled.framing, &settled.fields)?;
-    if originals.is_empty() { return Ok(ExitCode::SUCCESS); }
+    let (sources, originals) =
+        source::selection(&arguments.common, input, settled.framing, &settled.fields)?;
+    if originals.is_empty() {
+        return Ok(ExitCode::SUCCESS);
+    }
     let folders = Folders::of(&arguments.common, environment)?;
-    if arguments.common.dry_run && folders.named() { return Err(Failure::DryRunWithRecording); }
-    let engine = crate::cli::construction::engine(&arguments.common, environment, folders, arguments.common.jobs)?;
+    if arguments.common.dry_run && folders.named() {
+        return Err(Failure::DryRunWithRecording);
+    }
+    let engine = crate::cli::construction::engine(
+        &arguments.common,
+        environment,
+        folders,
+        arguments.common.jobs,
+    )?;
     let mut arguments_native = admitted.request().call.arguments().clone();
-    arguments_native.question = crate::RequestQuestion::Definition { value: settled.definition.clone() };
+    arguments_native.question = crate::RequestQuestion::Definition {
+        value: settled.definition.clone(),
+    };
     arguments_native.input = crate::RequestInput::Feed {
-        name: "cli-relate".to_owned(), framing: crate::RequestFraming::Document,
-        reading: crate::ReaderOptions::default(), images: Vec::new(),
+        name: "cli-relate".to_owned(),
+        framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(),
+        images: Vec::new(),
     };
     arguments_native.options.field = None;
     arguments_native.options.attempts = arguments.common.details;
@@ -46,15 +63,30 @@ pub(crate) fn run(
     arguments_native.options.threshold = settled.threshold;
     let request = crate::Request::for_function(crate::RequestFunction::Relate, arguments_native);
     if arguments.common.dry_run {
-        dry_run::write(&mut writer, dry_run::Context {
-            backend: &backend, profile: engine.profile_name(), framing: settled.framing,
-            fields: &settled.fields, from: settled.from, key_env: &backend.key_variable,
-            shared_context: shared_context.as_deref(),
-        }, request.admit()?, (&originals, sources.as_ref()), &engine)?;
+        dry_run::write(
+            &mut writer,
+            dry_run::Context {
+                backend: &backend,
+                profile: engine.profile_name(),
+                framing: settled.framing,
+                fields: &settled.fields,
+                from: settled.from,
+                key_env: &backend.key_variable,
+                shared_context: shared_context.as_deref(),
+            },
+            request.admit()?,
+            (&originals, sources.as_ref()),
+            &engine,
+        )?;
         return Ok(ExitCode::SUCCESS);
     }
     let mismatch = profile::Mismatch::new(settled.profile.as_deref(), engine.profile_name());
-    let result = execute(request, (&originals, sources.as_ref()), &engine, environment)?;
+    let result = execute(
+        request,
+        (&originals, sources.as_ref()),
+        &engine,
+        environment,
+    )?;
     let partial = result.members().any(|member| member.failure_id().is_some());
     if let Some(sources) = &sources {
         source::write(&mut writer, arguments.common.details, &result, sources)?;
@@ -62,7 +94,11 @@ pub(crate) fn run(
         result::write(&mut writer, arguments.common.details, &result, &originals)?;
     }
     mismatch.print_once()?;
-    Ok(if partial { ExitCode::from(6) } else { ExitCode::SUCCESS })
+    Ok(if partial {
+        ExitCode::from(6)
+    } else {
+        ExitCode::SUCCESS
+    })
 }
 
 fn execute(
@@ -72,17 +108,36 @@ fn execute(
     environment: &Environment,
 ) -> Result<crate::CompleteRelated, Failure> {
     let tally = environment.tally().start();
-    let session = engine.request_session_with_feed_options(request, crate::Surface::Cli,
-        crate::RequestSessionFeedOptions { retain_success_on_cancel: true, eager: true, ..Default::default() })?;
+    let session = engine.request_session_with_feed_options(
+        request,
+        crate::Surface::Cli,
+        crate::RequestSessionFeedOptions {
+            retain_success_on_cancel: true,
+            eager: true,
+            ..Default::default()
+        },
+    )?;
     let mut descriptors = originals.iter().enumerate().map(|(ordinal, original)| {
         let original = Some(match original.literal() {
-            Some(text) => crate::RequestOriginal::Text { text: text.to_owned() },
-            None => crate::RequestOriginal::Json { value: original.clone() },
+            Some(text) => crate::RequestOriginal::Text {
+                text: text.to_owned(),
+            },
+            None => crate::RequestOriginal::Json {
+                value: original.clone(),
+            },
         });
         Ok(crate::RequestSessionDescriptor {
-            item: crate::RequestItem { original, images: Vec::new(), context: None,
-                options: None, examples: None, seed_spans: None },
-            location: sources.map(|sources| sources.location(ordinal)).transpose()?,
+            item: crate::RequestItem {
+                original,
+                images: Vec::new(),
+                context: None,
+                options: None,
+                examples: None,
+                seed_spans: None,
+            },
+            location: sources
+                .map(|sources| sources.location(ordinal))
+                .transpose()?,
         })
     });
     let mut input_done = false;
@@ -92,7 +147,9 @@ fn execute(
     let mut result = None;
     loop {
         if !cancelled && environment.cancel().fired() {
-            session.cancel(); cancelled = true; input_done = true;
+            session.cancel();
+            cancelled = true;
+            input_done = true;
         }
         match session.try_read() {
             crate::RequestSessionRead::Result(packet) => {
@@ -100,14 +157,19 @@ fn execute(
                     crate::RequestSessionResult::Aggregate(crate::RequestValue::Related(row)) => {
                         result = Some(row.into_parts().1);
                     }
-                    crate::RequestSessionResult::Aggregate(_) | crate::RequestSessionResult::Row(_) => {
-                        session.cancel(); cancelled = true; input_done = true;
+                    crate::RequestSessionResult::Aggregate(_)
+                    | crate::RequestSessionResult::Row(_) => {
+                        session.cancel();
+                        cancelled = true;
+                        input_done = true;
                     }
                     crate::RequestSessionResult::Observation { .. } => {}
                     crate::RequestSessionResult::Terminal(value) => {
                         if let Some(facts) = &value.facts {
                             environment.settle_native(facts);
-                            if let Some(start) = tally.take() { start.finish(facts)?; }
+                            if let Some(start) = tally.take() {
+                                start.finish(facts)?;
+                            }
                         }
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
@@ -118,28 +180,56 @@ fn execute(
             crate::RequestSessionRead::Pending => {}
         }
         if !input_done {
-            match session.try_push_with(|| descriptors.next().ok_or(FeedRead::End)?.map_err(FeedRead::Failed)) {
+            match session.try_push_with(|| {
+                descriptors
+                    .next()
+                    .ok_or(FeedRead::End)?
+                    .map_err(FeedRead::Failed)
+            }) {
                 Ok(crate::RequestSessionPushStatus::Accepted) => continue,
                 Ok(crate::RequestSessionPushStatus::Full) => {}
                 Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
-                Err(FeedRead::End) => { session.finish(None)?; input_done = true; }
-                Err(FeedRead::Failed(error)) => { session.finish_native_reader_error(error)?; input_done = true; }
+                Err(FeedRead::End) => {
+                    session.finish(None)?;
+                    input_done = true;
+                }
+                Err(FeedRead::Failed(error)) => {
+                    session.finish_native_reader_error(error)?;
+                    input_done = true;
+                }
             }
         }
-        let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done { crate::RequestSessionWaitInterest::Result }
-            else { crate::RequestSessionWaitInterest::Input };
-        if session.wait(interest, std::time::Duration::from_millis(50)) == crate::RequestSessionReady::End { break; }
+        let interest = if cancelled {
+            crate::RequestSessionWaitInterest::Settlement
+        } else if input_done {
+            crate::RequestSessionWaitInterest::Result
+        } else {
+            crate::RequestSessionWaitInterest::Input
+        };
+        if session.wait(interest, std::time::Duration::from_millis(50))
+            == crate::RequestSessionReady::End
+        {
+            break;
+        }
     }
-    terminal.ok_or(Failure::Defect("native session ended without settlement"))?
-        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Relate)
-            .with_size_advice(crate::failure::SizeAdvice::Batches))?;
+    terminal
+        .ok_or(Failure::Defect("native session ended without settlement"))?
+        .map_err(|error| {
+            Failure::from(error)
+                .with_replay_context(ReplayContext::Relate)
+                .with_size_advice(crate::failure::SizeAdvice::Batches)
+        })?;
     result.ok_or(Failure::Defect("relate returned a different function"))
 }
 
-enum FeedRead { End, Failed(crate::Error) }
+enum FeedRead {
+    End,
+    Failed(crate::Error),
+}
 impl From<crate::Error> for FeedRead {
-    fn from(error: crate::Error) -> Self { Self::Failed(error) }
+    fn from(error: crate::Error) -> Self {
+        Self::Failed(error)
+    }
 }
 
 fn records<'a>(
@@ -165,8 +255,7 @@ fn records<'a>(
                     seed_spans: None,
                 });
             }
-            let mut row =
-                composition.compose(original.clone())?;
+            let mut row = composition.compose(original.clone())?;
             if let Some(sources) = sources {
                 row.original = row.original.with_location(sources.location(ordinal)?);
             }

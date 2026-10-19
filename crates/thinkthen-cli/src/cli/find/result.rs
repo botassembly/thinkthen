@@ -3,8 +3,8 @@ use super::{Rendered, Unit};
 use crate::args::Common;
 use crate::cli::intake;
 use crate::cli::reading::Reading;
-use crate::render::json_line;
 use crate::failure::Failure;
+use crate::render::json_line;
 
 pub(super) fn rendered(
     common: &Common,
@@ -65,20 +65,32 @@ pub(super) fn rendered(
 // Route/model overrides remain in native metadata; native identities and values
 // pass through unchanged. The native canonical question already owns every
 // semantic field and declaration, so only this presentation label is adjusted.
-fn details(found: &crate::CompleteFound<crate::QuestionInput>, authored_model: Option<&str>) -> Result<String, Failure> {
+fn details(
+    found: &crate::CompleteFound<crate::QuestionInput>,
+    authored_model: Option<&str>,
+) -> Result<String, Failure> {
     let document = crate::saved_json::Json::parse(&found.to_json()?)?;
     let crate::saved_json::Kind::Object(mut members) = document.kind().clone() else {
         return Err(Failure::Defect("a native find result is not an object"));
     };
-    let question = members.iter_mut().find(|(name, _)| name == "question")
+    let question = members
+        .iter_mut()
+        .find(|(name, _)| name == "question")
         .ok_or(Failure::Defect("a native find result has no question"))?;
     let crate::saved_json::Kind::Object(mut fields) = question.1.kind().clone() else {
         return Err(Failure::Defect("a native find question is not an object"));
     };
     if let Some((_, model)) = fields.iter_mut().find(|(name, _)| name == "model") {
-        if let Some(authored) = authored_model { *model = crate::saved_json::Json::made(crate::saved_json::Kind::String(authored.to_owned())); }
-        else { fields.retain(|(name, _)| name != "model"); }
+        if let Some(authored) = authored_model {
+            *model =
+                crate::saved_json::Json::made(crate::saved_json::Kind::String(authored.to_owned()));
+        } else {
+            fields.retain(|(name, _)| name != "model");
+        }
     }
     question.1 = crate::saved_json::Json::made(crate::saved_json::Kind::Object(fields));
-    json_line(&crate::saved_json::Json::made(crate::saved_json::Kind::Object(members))).map_err(Failure::from)
+    json_line(&crate::saved_json::Json::made(
+        crate::saved_json::Kind::Object(members),
+    ))
+    .map_err(Failure::from)
 }

@@ -8,9 +8,9 @@
 
 #[path = "../../../thinkthen/src/test_deadline/child.rs"]
 mod child;
-mod harness;
 #[path = "../support/command.rs"]
 mod command;
+mod harness;
 #[allow(
     clippy::expect_used,
     reason = "a measurement fixture that cannot run stops the proof"

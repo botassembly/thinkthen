@@ -121,8 +121,8 @@ impl Arguments {
 fn run(arguments: &Arguments) -> Result<(), Error> {
     let engine = arguments.engine()?;
     let executor = super::executor::NativeExecutor { engine };
-    let (input_file, output_file) =
-        super::input::pipes().map_err(|_| Error::new(crate::ErrorKind::Local, "MCP stdio pipes unavailable"))?;
+    let (input_file, output_file) = super::input::pipes()
+        .map_err(|_| Error::new(crate::ErrorKind::Local, "MCP stdio pipes unavailable"))?;
     #[cfg(unix)]
     let result = super::runtime::serve(
         move |stop| {

@@ -53,13 +53,13 @@ mod proxy;
 mod pull;
 mod question;
 pub(crate) use question::Kind as NativeQuestionKind;
+mod parsed_json;
 mod question_file;
 mod record_choose;
-mod parsed_json;
 pub use parsed_json::ParsedJson;
 mod record_composition;
-pub use record_composition::validate_pointer;
 pub use record_choose::RecordChooseQuestion;
+pub use record_composition::validate_pointer;
 mod record_context;
 mod record_input;
 pub use crate::core::{Surface, SurfaceError};
@@ -95,7 +95,10 @@ pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{ConfigurationFailure, Error, ErrorDetail, ErrorDiagnostic, ErrorKind, JsonFailure, ProfileFailure, ProviderFailure, StopCause, Stopped, TransportFailure};
+pub use error::{
+    ConfigurationFailure, Error, ErrorDetail, ErrorDiagnostic, ErrorKind, JsonFailure,
+    ProfileFailure, ProviderFailure, StopCause, Stopped, TransportFailure,
+};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use options::{
@@ -103,7 +106,10 @@ pub use options::{
     process_requests_sent,
 };
 pub use panic::{contained, uncontained};
-pub use plan::{PlanEstimate, PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan, SourceBudgetExceeded};
+pub use plan::{
+    PlanEstimate, PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan,
+    SourceBudgetExceeded,
+};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,
@@ -166,7 +172,6 @@ pub use named_question::QuestionFileReference;
 pub use results::{
     SourceBoundaryProposal, SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation,
 };
-
 
 pub use results::{
     AnnotationCall, ChoiceCall, DecisionCall, FilterCall, FindCall, RankCall, RecognitionCall,

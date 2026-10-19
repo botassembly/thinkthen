@@ -4,10 +4,7 @@ use super::Failure;
 #[derive(Debug)]
 pub(crate) enum Error {
     /// The inline rules or the question file are refused.
-    Config {
-        file: bool,
-        error: String,
-    },
+    Config { file: bool, error: String },
     /// The complete entity set is refused before any request.
     Entities(String),
     /// The command saw the complete oversized set; the public core error remains count-free.
@@ -17,11 +14,7 @@ pub(crate) enum Error {
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
     match failure {
         Failure::Relate(Error::Config { file, error }) => {
-            let code = if *file {
-                5
-            } else {
-                2
-            };
+            let code = if *file { 5 } else { 2 };
             Some((code, error.to_string()))
         }
         Failure::Relate(Error::Entities(error)) => Some((2, error.to_string())),

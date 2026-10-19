@@ -22,10 +22,17 @@ impl SavedBatch {
             BatchSetting::Records(count) => Self::Records(count.get()),
         })
     }
-    pub(crate) fn in_results(lines: &[(usize, Json)]) -> Result<BTreeSet<Self>, (usize, &'static str)> {
+    pub(crate) fn in_results(
+        lines: &[(usize, Json)],
+    ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
         let mut settings = BTreeSet::new();
         for (line, row) in lines {
-            let Some(named) = row.member("meta").and_then(|meta| meta.member("batch_setting")) else { continue };
+            let Some(named) = row
+                .member("meta")
+                .and_then(|meta| meta.member("batch_setting"))
+            else {
+                continue;
+            };
             settings.insert(Self::of_json(named).ok_or((*line, "meta.batch_setting"))?);
         }
         Ok(settings)

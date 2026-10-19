@@ -156,7 +156,9 @@ impl CompleteAnnotationMember<'_> {
     /// backend answer's original leader even when its read value is null.
     #[must_use]
     pub fn leader(&self) -> Option<&str> {
-        self.canonical.reading.answered()
+        self.canonical
+            .reading
+            .answered()
             .and_then(|(_, answer, _, _)| answer.leader())
     }
 

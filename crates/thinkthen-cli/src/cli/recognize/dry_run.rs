@@ -7,11 +7,11 @@ use std::process::ExitCode;
 use serde::Serialize;
 
 use crate::cli::intake::{Data, Intake};
-use crate::{Engine, Recognize, ResolvedSettings};
 use crate::cli::reading::Reading;
-use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
+use crate::render::json_line;
+use crate::{Engine, Recognize, ResolvedSettings};
 
 #[derive(Serialize)]
 struct DryRun<'a> {
@@ -113,9 +113,7 @@ pub(super) fn run(
                     .record(&bytes)
                     .map_err(|error| Failure::record(error, reading.streams()))?,
             };
-            let mut native = composition
-                .compose(record.clone())
-                .map_err(Failure::from)?;
+            let mut native = composition.compose(record.clone()).map_err(Failure::from)?;
             native.context = crate::asking::context::record(
                 &record,
                 *context_field,
@@ -127,10 +125,13 @@ pub(super) fn run(
     let request = super::native::request(admitted, *context).admit()?;
     // Plans use the same captured provider and size selection without reading answers.
     let engine: Engine = environment.take_builder()?.no_cache().build()?;
-    let preview = engine.plan_request(&request, crate::RequestEnvironment {
-        controls: crate::CallOptions::new().surface(crate::Surface::Cli),
-        feed: Some(crate::RequestFeed::from_records("cli-recognize", records)),
-    })?;
+    let preview = engine.plan_request(
+        &request,
+        crate::RequestEnvironment {
+            controls: crate::CallOptions::new().surface(crate::Surface::Cli),
+            feed: Some(crate::RequestFeed::from_records("cli-recognize", records)),
+        },
+    )?;
     print(preview, backend, question, writer)
 }
 

@@ -71,10 +71,7 @@ impl fmt::Debug for Judged {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Judged")
-            .field(
-                "printed",
-                &self.printed.as_ref().map(String::len),
-            )
+            .field("printed", &self.printed.as_ref().map(String::len))
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
             .field("order_value", &self.order_value)
@@ -200,7 +197,11 @@ impl Output<'_> {
     }
 }
 
-pub(crate) fn jobs_of(asked: Option<u8>, streams: bool, environment: &Environment) -> Result<(), Failure> {
+pub(crate) fn jobs_of(
+    asked: Option<u8>,
+    streams: bool,
+    environment: &Environment,
+) -> Result<(), Failure> {
     if asked.is_some() && !streams {
         return Err(Failure::JobsOutsideRecords);
     }

@@ -5,8 +5,8 @@
 //! follow Python's own arithmetic.
 
 pub(crate) mod answer;
-pub(crate) mod batch;
 pub(crate) mod audit;
+pub(crate) mod batch;
 pub(crate) mod diff;
 pub(crate) mod group;
 pub(crate) mod items;
@@ -20,8 +20,8 @@ pub(crate) mod splice;
 use serde::Serialize;
 use serde_json::Number;
 
-use crate::saved_json::{Json, Kind};
 use crate::render::{RenderError, json_line};
+use crate::saved_json::{Json, Kind};
 
 /// The two-sided 95% normal quantile.
 const Z: f64 = 1.959_963_984_540_054;
@@ -373,13 +373,19 @@ pub(crate) fn rounded_line<T: Serialize>(value: &T) -> Result<String, RenderErro
 
 fn round(value: Json) -> Json {
     match value.kind() {
-        Kind::Number(number) if number.is_f64() => Json::made(number
-            .as_f64()
-            .and_then(|held| Number::from_f64(rounded(held)))
-            .map_or(Kind::Null, Kind::Number)),
+        Kind::Number(number) if number.is_f64() => Json::made(
+            number
+                .as_f64()
+                .and_then(|held| Number::from_f64(rounded(held)))
+                .map_or(Kind::Null, Kind::Number),
+        ),
         Kind::Array(items) => Json::made(Kind::Array(items.iter().cloned().map(round).collect())),
-        Kind::Object(members) => Json::made(Kind::Object(members.iter()
-            .map(|(name, held)| (name.clone(), round(held.clone()))).collect())),
+        Kind::Object(members) => Json::made(Kind::Object(
+            members
+                .iter()
+                .map(|(name, held)| (name.clone(), round(held.clone())))
+                .collect(),
+        )),
         _ => value,
     }
 }

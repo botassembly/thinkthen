@@ -21,7 +21,11 @@ impl<'a> QuestionContent<'a> {
         let core::Json::Object(fields) = self.0 else {
             return None;
         };
-        Some(fields.iter().map(|(name, value)| (name.as_str(), Self(value))))
+        Some(
+            fields
+                .iter()
+                .map(|(name, value)| (name.as_str(), Self(value))),
+        )
     }
 
     /// Array elements in their original authored order.

@@ -137,7 +137,6 @@ pub(crate) struct Sources {
 }
 
 impl Sources {
-
     pub(crate) const fn model_is_default(&self) -> bool {
         matches!(self.model, Source::Default)
     }
@@ -203,16 +202,9 @@ pub(crate) fn resolve(
             Source::CommandLine,
         ),
     };
-    let (yes, yes_source) = meaning_of(
-        "true",
-        typed.yes.as_ref(),
-        file.and_then(|f| f.yes.clone()),
-    )?;
-    let (no, no_source) = meaning_of(
-        "false",
-        typed.no.as_ref(),
-        file.and_then(|f| f.no.clone()),
-    )?;
+    let (yes, yes_source) =
+        meaning_of("true", typed.yes.as_ref(), file.and_then(|f| f.yes.clone()))?;
+    let (no, no_source) = meaning_of("false", typed.no.as_ref(), file.and_then(|f| f.no.clone()))?;
     let (threshold, threshold_source) = threshold_of(verb, typed, file)?;
     let (model, model_source) = model_of(typed, file)?;
     let (on, on_source) = on_of(typed, file)?;
@@ -347,13 +339,11 @@ fn meaning_of(
 ) -> Result<(Option<Meaning>, Source), QuestionFileError> {
     match (typed, held) {
         (Some(typed), _) => Ok((
-            Some(
-                meaning(typed).map_err(|error| QuestionFileError::Blank {
-                    origin: Source::CommandLine,
-                    key,
-                    error,
-                })?,
-            ),
+            Some(meaning(typed).map_err(|error| QuestionFileError::Blank {
+                origin: Source::CommandLine,
+                key,
+                error,
+            })?),
             Source::CommandLine,
         )),
         (None, Some(held)) => Ok((Some(held), Source::File)),

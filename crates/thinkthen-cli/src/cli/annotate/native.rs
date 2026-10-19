@@ -1,40 +1,62 @@
 //! Public sessions own annotation execution; the command owns ordered presentation.
 use super::{Judging, asker::Parser, continuation::Continuation};
-use crate::{BatchSetting, RawRecord, RequestSessionRead, RequestSessionResult};
 use crate::cli::reading::Reading;
 use crate::failure::Failure;
 use crate::schedule::{Output, Placed};
+use crate::{BatchSetting, RawRecord, RequestSessionRead, RequestSessionResult};
 use std::{collections::BTreeMap, process::ExitCode};
 mod rendering;
 use rendering::{Ended, Held};
 
-enum FeedRead { Pending, End, Failed(crate::Error) }
+enum FeedRead {
+    Pending,
+    End,
+    Failed(crate::Error),
+}
 impl From<crate::Error> for FeedRead {
-    fn from(error: crate::Error) -> Self { Self::Failed(error) }
+    fn from(error: crate::Error) -> Self {
+        Self::Failed(error)
+    }
 }
 
-#[expect(clippy::too_many_lines, reason = "one ordered pump joins input, continuation acknowledgements and native settlement")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one ordered pump joins input, continuation acknowledgements and native settlement"
+)]
 pub(super) fn run(
-    judging: &Judging<'_>, admitted: crate::AdmittedRequest, reading: &Reading,
+    judging: &Judging<'_>,
+    admitted: crate::AdmittedRequest,
+    reading: &Reading,
     inputs: impl Iterator<Item = Result<crate::cli::intake::Item, Placed>> + Send + 'static,
-    setting: Option<BatchSetting>, output: &mut Output<'_>,
+    setting: Option<BatchSetting>,
+    output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let parser = Parser::of(judging, reading);
     let frames = inputs.enumerate().map(move |(ordinal, frame)| {
         let frame = frame?;
         let at = frame.at;
         let position = frame.position.clone();
-        let record = parser.record(frame).map_err(|error| Placed::at(error, at))?;
+        let record = parser
+            .record(frame)
+            .map_err(|error| Placed::at(error, at))?;
         Ok((ordinal, Held { record, position }))
     });
     let reader = crate::asking::native_reader::Reader::new(frames);
-    let fields = reading.fields().iter().map(String::as_str).collect::<Vec<_>>();
+    let fields = reading
+        .fields()
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
     let composition = crate::RecordReading::new(&fields, None, None)?;
     let mut arguments = admitted.request().call.arguments().clone();
-    arguments.question = crate::RequestQuestion::Definition { value: judging.set.clone().into() };
+    arguments.question = crate::RequestQuestion::Definition {
+        value: judging.set.clone().into(),
+    };
     arguments.input = crate::RequestInput::Feed {
-        name: "cli-annotate".to_owned(), framing: crate::RequestFraming::Document,
-        reading: crate::ReaderOptions::default(), images: Vec::new(),
+        name: "cli-annotate".to_owned(),
+        framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(),
+        images: Vec::new(),
     };
     arguments.options.field = None;
     arguments.options.context_field = None;
@@ -47,11 +69,14 @@ pub(super) fn run(
     let (continuation, callback) = Continuation::new(judging.cancel().clone());
     let tally = judging.environment.tally().start();
     let session = judging.engine.request_session_with_feed_options(
-        crate::Request::for_function(crate::RequestFunction::Annotate, arguments), crate::Surface::Cli,
+        crate::Request::for_function(crate::RequestFunction::Annotate, arguments),
+        crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
             on_missing_annotation_pointer: judging.continue_missing().then_some(callback),
             input_pause: judging.environment.input_pause(),
-            retain_success_on_cancel: true, record_reading: Some(composition), ..Default::default()
+            retain_success_on_cancel: true,
+            record_reading: Some(composition),
+            ..Default::default()
         },
     )?;
     let mut tally = Some(tally);
@@ -62,7 +87,12 @@ pub(super) fn run(
     let mut cancelled = false;
     let mut terminal = None;
     loop {
-        if !cancelled && (judging.cancel().fired() || downstream.gone() || ended.closed || ended.failure.is_some()) {
+        if !cancelled
+            && (judging.cancel().fired()
+                || downstream.gone()
+                || ended.closed
+                || ended.failure.is_some())
+        {
             continuation.close();
             session.cancel();
             cancelled = true;
@@ -77,19 +107,27 @@ pub(super) fn run(
                         rendering::receive(judging, row, &mut held, output, &mut ended);
                     }
                     RequestSessionResult::Row(_) => {
-                        ended.failure.get_or_insert(Failure::Defect("annotate returned another function"));
+                        ended
+                            .failure
+                            .get_or_insert(Failure::Defect("annotate returned another function"));
                     }
                     RequestSessionResult::Aggregate(crate::RequestValue::Annotations(rows)) => {
-                        for row in rows { rendering::receive(judging, row, &mut held, output, &mut ended); }
+                        for row in rows {
+                            rendering::receive(judging, row, &mut held, output, &mut ended);
+                        }
                     }
                     RequestSessionResult::Aggregate(_) => {
-                        ended.failure.get_or_insert(Failure::Defect("annotate returned another function"));
+                        ended
+                            .failure
+                            .get_or_insert(Failure::Defect("annotate returned another function"));
                     }
                     RequestSessionResult::Observation { .. } => {}
                     RequestSessionResult::Terminal(value) => {
                         if let Some(facts) = &value.facts {
                             judging.environment.settle_native(facts);
-                            if let Some(start) = tally.take() { start.finish(facts)?; }
+                            if let Some(start) = tally.take() {
+                                start.finish(facts)?;
+                            }
                         }
                         terminal = Some(value.error.map_or(Ok(()), Err));
                     }
@@ -107,11 +145,21 @@ pub(super) fn run(
                 match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
                     .and_then(|row| output.take(row))
                 {
-                    Ok(true) => { ended.finished += 1; ended.skipped += 1; missing.acknowledge(true); }
+                    Ok(true) => {
+                        ended.finished += 1;
+                        ended.skipped += 1;
+                        missing.acknowledge(true);
+                    }
                     // Preserve the old callback's accepted closed-pipe row. Its
                     // native accounting still settles before command success.
-                    Ok(false) => { ended.closed = true; missing.acknowledge(true); }
-                    Err(error) => { ended.failure = Some(error); missing.acknowledge(false); }
+                    Ok(false) => {
+                        ended.closed = true;
+                        missing.acknowledge(true);
+                    }
+                    Err(error) => {
+                        ended.failure = Some(error);
+                        missing.acknowledge(false);
+                    }
                 }
             }
             continue;
@@ -138,8 +186,14 @@ pub(super) fn run(
                 Ok(crate::RequestSessionPushStatus::Full) => {}
                 Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
                 Err(FeedRead::Pending) => pending_reader = true,
-                Err(FeedRead::End) => { session.finish(None)?; input_done = true; }
-                Err(FeedRead::Failed(error)) => { session.finish_native_reader_error(error)?; input_done = true; }
+                Err(FeedRead::End) => {
+                    session.finish(None)?;
+                    input_done = true;
+                }
+                Err(FeedRead::Failed(error)) => {
+                    session.finish_native_reader_error(error)?;
+                    input_done = true;
+                }
             }
         }
         // The private callback channel cannot wake the native result queue;
@@ -148,39 +202,79 @@ pub(super) fn run(
             reader.wait(std::time::Duration::from_millis(50));
             continue;
         }
-        let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done { crate::RequestSessionWaitInterest::Result }
-            else { crate::RequestSessionWaitInterest::Input };
-        if session.wait(interest, std::time::Duration::from_millis(50)) == crate::RequestSessionReady::End { break; }
+        let interest = if cancelled {
+            crate::RequestSessionWaitInterest::Settlement
+        } else if input_done {
+            crate::RequestSessionWaitInterest::Result
+        } else {
+            crate::RequestSessionWaitInterest::Input
+        };
+        if session.wait(interest, std::time::Duration::from_millis(50))
+            == crate::RequestSessionReady::End
+        {
+            break;
+        }
     }
     continuation.close();
-    rendering::finish(judging, reading, ended,
-        terminal.ok_or(Failure::Defect("native session ended without settlement"))?, downstream.latched())
+    rendering::finish(
+        judging,
+        reading,
+        ended,
+        terminal.ok_or(Failure::Defect("native session ended without settlement"))?,
+        downstream.latched(),
+    )
 }
 
-fn descriptor(judging: &Judging<'_>, original: &Held) -> Result<crate::RequestSessionDescriptor, crate::Error> {
-    let context = crate::asking::context::record(&original.record,
-        judging.context_field.as_deref(), judging.settings.context_schema.as_ref())
-        .map_err(Failure::into_error)?;
-    let location = original.position.as_ref().filter(|position| position.located)
+fn descriptor(
+    judging: &Judging<'_>,
+    original: &Held,
+) -> Result<crate::RequestSessionDescriptor, crate::Error> {
+    let context = crate::asking::context::record(
+        &original.record,
+        judging.context_field.as_deref(),
+        judging.settings.context_schema.as_ref(),
+    )
+    .map_err(Failure::into_error)?;
+    let location = original
+        .position
+        .as_ref()
+        .filter(|position| position.located)
         .and_then(|position| position.file.as_ref().map(|file| (file, position)))
-        .map(|(file, position)| crate::SourceLocation::new(file.clone(), position.first, position.last))
+        .map(|(file, position)| {
+            crate::SourceLocation::new(file.clone(), position.first, position.last)
+        })
         .transpose()?;
     let original = Some(match original.record.literal() {
-        Some(text) => crate::RequestOriginal::Text { text: text.to_owned() },
-        None => crate::RequestOriginal::Json { value: original.record.clone() },
+        Some(text) => crate::RequestOriginal::Text {
+            text: text.to_owned(),
+        },
+        None => crate::RequestOriginal::Json {
+            value: original.record.clone(),
+        },
     });
-    Ok(crate::RequestSessionDescriptor { item: crate::RequestItem {
-        original, images: Vec::new(), context, options: None, seed_spans: None, examples: None,
-    }, location })
+    Ok(crate::RequestSessionDescriptor {
+        item: crate::RequestItem {
+            original,
+            images: Vec::new(),
+            context,
+            options: None,
+            seed_spans: None,
+            examples: None,
+        },
+        location,
+    })
 }
 
 pub(super) fn compose(
-    judging: &Judging<'_>, composition: &crate::RecordReading, original: &RawRecord,
+    judging: &Judging<'_>,
+    composition: &crate::RecordReading,
+    original: &RawRecord,
 ) -> Result<crate::RecordInput<crate::RecordEvidence>, Failure> {
     let mut record = composition.compose(original.clone())?;
     record.context = crate::asking::context::record(
-        original, judging.context_field.as_deref(), judging.settings.context_schema.as_ref(),
+        original,
+        judging.context_field.as_deref(),
+        judging.settings.context_schema.as_ref(),
     )?;
     Ok(record)
 }

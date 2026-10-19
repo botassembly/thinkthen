@@ -108,4 +108,3 @@ fn cli_typed_admission_refusal_emits_no_invocation_id_and_sends_nothing() {
     assert!(facts.get("call_id").is_none());
     assert_eq!(facts.get("requests_sent"), Some(&serde_json::json!(0)));
 }
-

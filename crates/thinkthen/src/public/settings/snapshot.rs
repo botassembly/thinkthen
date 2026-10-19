@@ -37,7 +37,8 @@ pub struct CacheSettings {
 }
 impl fmt::Debug for CacheSettings {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.debug_struct("CacheSettings")
+        formatter
+            .debug_struct("CacheSettings")
             .field("configuration_shared", &self.configuration_shared)
             .field("cache_enabled", &self.cache_enabled)
             .field("cache_target_bytes", &self.cache_target_bytes)
@@ -124,9 +125,12 @@ impl EngineBuilder {
         let cache_enabled = match &self.cache {
             Cache::Off => false,
             Cache::At(_) => true,
-            Cache::Default => self.seeded.as_ref().is_none_or(|seeded| {
-                !seeded.platform || (seeded.enabled && !self.server)
-            }) && (self.seeded.is_some() || !self.server),
+            Cache::Default => {
+                self.seeded
+                    .as_ref()
+                    .is_none_or(|seeded| !seeded.platform || (seeded.enabled && !self.server))
+                    && (self.seeded.is_some() || !self.server)
+            }
         };
         let cache_enabled_source = match self.cache {
             Cache::Off | Cache::At(_) => "command_line",
@@ -137,7 +141,9 @@ impl EngineBuilder {
         let (cache_path, cache_path_source, cache_is_platform_default) = match &self.cache {
             Cache::At(path) => (Some(path.clone()), "command_line", false),
             _ => (
-                self.seeded.as_ref().and_then(|seeded| seeded.folder.clone()),
+                self.seeded
+                    .as_ref()
+                    .and_then(|seeded| seeded.folder.clone()),
                 if platform { "platform" } else { "environment" },
                 platform,
             ),
@@ -167,9 +173,10 @@ impl EngineBuilder {
     /// Returns the same backend selection and address-secret refusals as build.
     pub fn resolved_settings(&self) -> Result<ResolvedSettings, Error> {
         let selected = self.selected()?;
-        if selected.backend.address_contains_key(
-            selected.key.as_ref().map(|Secret(value)| value.as_ref()),
-        ) {
+        if selected
+            .backend
+            .address_contains_key(selected.key.as_ref().map(|Secret(value)| value.as_ref()))
+        {
             return Err(Error::usage(crate::core::KEY_IN_ADDRESS));
         }
         let metadata = &self.captured.metadata;
@@ -183,7 +190,10 @@ impl EngineBuilder {
             is_built_in: selected.backend.is_built_in(),
             url_source: selected.url_source,
             model: selected.backend.model().as_str().to_owned(),
-            model_is_mutable_alias: selected.backend.api_type().is_mutable_alias(selected.backend.model()),
+            model_is_mutable_alias: selected
+                .backend
+                .api_type()
+                .is_mutable_alias(selected.backend.model()),
             model_source: selected.model_source,
             key_variable: selected.variable,
             key_variables: selected.variables,

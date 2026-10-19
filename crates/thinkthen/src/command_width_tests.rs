@@ -1,8 +1,8 @@
 //! Native process-width and facade proofs moved from command tests.
 //! Stays: controlled concurrent requests and private selection counters require native tests.
+use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
-use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 

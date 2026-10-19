@@ -1,14 +1,13 @@
 //! Deadlines for test subprocesses, on both sides of the pipe.
 
 pub(crate) mod child;
-pub(crate) mod isolated;
 #[cfg(test)]
 mod child_tests;
+pub(crate) mod isolated;
 use child::{run, wait};
 
 pub(crate) use run::output;
 pub(crate) use wait::finish;
-
 
 /// Read the whole `{}` request before replying. A socket closed with unread
 /// bytes resets the connection, and on Windows the reset can reach the client

@@ -60,19 +60,14 @@ pub(crate) enum Error {
     ReplyTooLarge(u64),
     Reply(DecodeError),
     /// Strict replay found no stored answer under this question key.
-    QuestionMiss(
-        String,
-    ),
+    QuestionMiss(String),
     /// A replay folder holds both the fixture and the live store.
     StoreAmbiguous,
     /// A read-only replay met a write that did not finish.
     StoreHotJournal,
     /// A named store file predates the current format.
     StoreVersion(String),
-    Entry(
-        String,
-        String,
-    ),
+    Entry(String, String),
     RecordingStorage,
     RecordingForbidden,
     RecordingPathIsFile,
@@ -92,9 +87,7 @@ pub(crate) enum Error {
     /// A later explicit width differs from the one this process selected.
     WidthActive(crate::engine::WidthActive),
     /// Replies for one logical result named different model versions.
-    ModelsDiffer(
-        Option<(String, String)>,
-    ),
+    ModelsDiffer(Option<(String, String)>),
     /// Reply token counts cannot be represented as one total.
     UsageOverflow,
     /// Recognition asked for more kinds than one kind question can carry.

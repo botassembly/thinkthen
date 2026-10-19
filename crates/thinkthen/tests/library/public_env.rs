@@ -12,12 +12,12 @@
     reason = "a failed fixture or child stops the proof"
 )]
 
-#[path = "public_env/config_capture.rs"]
-mod config_capture;
 #[path = "public_env/batch.rs"]
 mod batch;
 #[path = "public_env/cache_budget.rs"]
 mod cache_budget;
+#[path = "public_env/config_capture.rs"]
+mod config_capture;
 #[path = "public_env/settings_json.rs"]
 mod settings_json;
 #[path = "public_env/shared_host.rs"]
@@ -471,8 +471,6 @@ fn a_seeded_engine_equals_one_given_each_value() {
         entries(&cache) > 0,
         "the answer is cached under THINKTHEN_CACHE"
     );
-
-
 }
 
 #[test]

@@ -10,9 +10,8 @@ impl<'a> CallOptions<'a> {
     /// # Errors
     /// Returns Usage when the limit is zero.
     pub fn retained_attachment_limit(mut self, bytes: usize) -> Result<Self, Error> {
-        self.attachment_limit = Some(
-            crate::public::request::transport::TransportAttachmentLimit::new(bytes)?,
-        );
+        self.attachment_limit =
+            Some(crate::public::request::transport::TransportAttachmentLimit::new(bytes)?);
         Ok(self)
     }
 }

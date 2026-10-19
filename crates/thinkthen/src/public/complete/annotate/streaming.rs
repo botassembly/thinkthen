@@ -6,7 +6,10 @@ use crate::public::{
     QuestionSet, RecordInput,
 };
 use crate::public::{asking::Text, options::Stop, pull};
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 struct Original<T> {
     held: Held<T>,
@@ -84,7 +87,11 @@ impl Engine {
                 }
                 Err(_) => true,
             };
-            Ok(Original { held, prepared, missing_pointer })
+            Ok(Original {
+                held,
+                prepared,
+                missing_pointer,
+            })
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
@@ -111,7 +118,9 @@ impl Engine {
             Box::new(move |_, original: &Original<T>| {
                 // Arm only when this actual input is fed, never while an eager
                 // reader preflights later originals before the pull starts.
-                if original.missing_pointer { preparing_barrier.store(true, Ordering::Release); }
+                if original.missing_pointer {
+                    preparing_barrier.store(true, Ordering::Release);
+                }
                 Ok(Prepared {
                     explicit_context: original.prepared.explicit_context,
                     text: Text {

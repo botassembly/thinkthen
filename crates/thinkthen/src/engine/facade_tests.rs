@@ -404,7 +404,11 @@ fn local_refusals_send_nothing_and_store_nothing() {
         for call in calls {
             let error = call.expect_err(name);
             assert_eq!(error.kind(), kind, "{name}: {error:?}");
-            assert_eq!(cancel.keys(), 0, "{name}: local refusal performed no key lookup");
+            assert_eq!(
+                cancel.keys(),
+                0,
+                "{name}: local refusal performed no key lookup"
+            );
         }
         assert_eq!(engine.usage().expect("usage").requests_sent, 0, "{name}");
     }
@@ -423,26 +427,38 @@ fn spent_deadline_before_empty_or_split_work_never_looks_up_a_key() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let profile = BackendProfile::parse(
         r#"{"schema":"thinkthen.backend-profile/1","name":"split","max_questions":1}"#,
-    ).expect("profile");
+    )
+    .expect("profile");
     let engine = Engine::new(Settings {
         profile: Some(profile.clone()),
         ..settings(listener.base())
-    }).expect("engine");
-    let plan = Plan::authored(evidence("Refund the card."),
+    })
+    .expect("engine");
+    let plan = Plan::authored(
+        evidence("Refund the card."),
         ModelName::new("jev-latest").expect("model"),
         vec![decide("Is this a refund?"), decide("Is this urgent?")],
-    ).expect("plan");
+    )
+    .expect("plan");
     let mut split = Asks::default();
     split.add(engine.backend(), &plan).expect("asks");
     let bound = Bound::pairs(Some(&profile));
-    assert_eq!(split.requests(engine.backend(), Some(&profile), bound).expect("split requests").len(), 2);
+    assert_eq!(
+        split
+            .requests(engine.backend(), Some(&profile), bound)
+            .expect("split requests")
+            .len(),
+        2
+    );
     for asks in [Asks::default(), split] {
         let cancel = Cancel::default().with_deadline(Deadline::after(Duration::ZERO));
         let mut rows = 0;
-        let error = engine.ask_each(&asks, bound, &cancel, |_, _| {
-            rows += 1;
-            Ok(())
-        }).expect_err("deadline precedes empty and split work");
+        let error = engine
+            .ask_each(&asks, bound, &cancel, |_, _| {
+                rows += 1;
+                Ok(())
+            })
+            .expect_err("deadline precedes empty and split work");
         assert_eq!(error.kind(), Kind::Deadline);
         assert_eq!(rows, 0);
         assert_eq!(cancel.keys(), 0);

@@ -3,13 +3,13 @@
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
+use crate::Engine;
+use crate::RequestFraming as Framing;
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::cli::intake::Intake;
 use crate::cli::reading::Reading;
-use crate::RequestFraming as Framing;
 use crate::edge::Environment;
-use crate::Engine;
 use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
@@ -71,15 +71,24 @@ pub(crate) fn run(
     let pointers = if arguments.common.field.is_empty() {
         spec.on().map(str::to_owned).collect::<Vec<_>>()
     } else {
-        let fields = arguments.common.field.iter().map(String::as_str).collect::<Vec<_>>();
+        let fields = arguments
+            .common
+            .field
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
         crate::RecordReading::new(&fields, None, None)?;
         arguments.common.field.clone()
     };
     let has_on = spec.on().next().is_some();
     let mut request_arguments = admitted.request().call.arguments().clone();
-    request_arguments.question = crate::RequestQuestion::Definition { value: question.clone().into() };
+    request_arguments.question = crate::RequestQuestion::Definition {
+        value: question.clone().into(),
+    };
     request_arguments.options.max_text_bytes = arguments.max_text_bytes;
-    let admitted = crate::Request::for_function(crate::RequestFunction::Recognize, request_arguments).admit()?;
+    let admitted =
+        crate::Request::for_function(crate::RequestFunction::Recognize, request_arguments)
+            .admit()?;
     let framing = if arguments.common.input.len() > 1
         && arguments.common.unit.is_none()
         && matches!(arguments.common.framing(), Framing::Document)
@@ -88,8 +97,7 @@ pub(crate) fn run(
     } else {
         arguments.common.framing()
     };
-    let reading =
-        Reading::new(framing, pointers)?;
+    let reading = Reading::new(framing, pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams(), environment)?;
     if (arguments.common.located() || arguments.common.input.len() > 1)
         && (has_on
@@ -105,7 +113,8 @@ pub(crate) fn run(
     let source = Intake::new(&arguments.common, &reading, input, has_on)?;
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = environment.resolve(
-        arguments.common.backend.as_deref(), arguments.common.url.as_deref(),
+        arguments.common.backend.as_deref(),
+        arguments.common.url.as_deref(),
         arguments.common.model.as_deref().or(spec.model()),
     )?;
     environment.set_request_size(request_size)?;
@@ -141,14 +150,22 @@ pub(crate) fn run(
     let folders = Folders::of(&arguments.common, environment)?;
     let recording = folders.reported();
     let engine = crate::cli::construction::engine(
-        &arguments.common, environment, folders, arguments.common.jobs,
+        &arguments.common,
+        environment,
+        folders,
+        arguments.common.jobs,
     )?;
     let mismatch = profile::Mismatch::new(spec.profile(), engine.profile_name());
     let running = Running {
-        common: &arguments.common, environment, engine, mismatch, context,
+        common: &arguments.common,
+        environment,
+        engine,
+        mismatch,
+        context,
         context_field: arguments.context_field.clone(),
         examples_field: arguments.examples_field.clone(),
-        seed_spans_field: arguments.seed_spans_field.clone(), recording,
+        seed_spans_field: arguments.seed_spans_field.clone(),
+        recording,
     };
     native::run(
         &running,

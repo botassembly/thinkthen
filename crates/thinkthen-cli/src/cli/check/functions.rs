@@ -25,18 +25,21 @@ pub(super) fn check(
     environment: &crate::cli::edge::Environment,
     report: &mut crate::probes::Report,
 ) -> Result<(), crate::failure::Failure> {
-    use thinkthen::AttemptObservation;
     use std::sync::atomic::{AtomicBool, Ordering};
+    use thinkthen::AttemptObservation;
 
     let interrupted = || environment.cancel().fired();
     for (name, row) in ROWS {
         let stopped = AtomicBool::new(false);
         let observe = |attempt: AttemptObservation| {
-            if attempt.outcome() == crate::AttemptOutcome::Transport || matches!(attempt.status(), Some(401..=404)) {
+            if attempt.outcome() == crate::AttemptOutcome::Transport
+                || matches!(attempt.status(), Some(401..=404))
+            {
                 stopped.store(true, Ordering::Relaxed);
             }
         };
-        let options = CallOptions::new().surface(crate::Surface::Cli)
+        let options = CallOptions::new()
+            .surface(crate::Surface::Cli)
             .interrupt(&interrupted)
             .observe_attempt(&observe);
         let tally = environment.tally().start();
@@ -44,11 +47,19 @@ pub(super) fn check(
             Ok((facts, failed_annotation)) => {
                 environment.settle_native(&facts);
                 tally.finish(&facts)?;
-                failed_annotation.then(|| Error::new(thinkthen::ErrorKind::Backend,
-                    "the backend failed an annotation question").to_string())
-            },
+                failed_annotation.then(|| {
+                    Error::new(
+                        thinkthen::ErrorKind::Backend,
+                        "the backend failed an annotation question",
+                    )
+                    .to_string()
+                })
+            }
             Err(error) => {
-                if let Some(facts) = error.facts() { environment.settle_native(facts); tally.finish(facts)?; }
+                if let Some(facts) = error.facts() {
+                    environment.settle_native(facts);
+                    tally.finish(facts)?;
+                }
                 if let Some(reason) = error.estimated_input_denial() {
                     return Err(crate::failure::Failure::EstimatedInput(reason));
                 }
@@ -73,21 +84,33 @@ const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 
 /// Run one real public function. The check checks the backend contract, not a guess
 /// about which day, name, relation, or decision a model ought to return.
-pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Result<(thinkthen::Facts, bool), Error> {
+pub(super) fn run(
+    engine: &Engine,
+    name: &str,
+    options: CallOptions<'_>,
+) -> Result<(thinkthen::Facts, bool), Error> {
     let decide = decision()?;
     match name {
-        "decide" => engine.decide_with(&decide, TEXT, options).map(|call| (call.facts().clone(), false)),
+        "decide" => engine
+            .decide_with(&decide, TEXT, options)
+            .map(|call| (call.facts().clone(), false)),
         "choose" => {
             let question = choice()?;
-            engine.choose_with(&question, TEXT, options).map(|call| (call.facts().clone(), false))
+            engine
+                .choose_with(&question, TEXT, options)
+                .map(|call| (call.facts().clone(), false))
         }
         "tag" => {
             let question = tags()?;
-            engine.tag_with(&question, TEXT, options).map(|call| (call.facts().clone(), false))
+            engine
+                .tag_with(&question, TEXT, options)
+                .map(|call| (call.facts().clone(), false))
         }
         "score" => {
             let question = score()?;
-            engine.score_with(&question, TEXT, options).map(|call| (call.facts().clone(), false))
+            engine
+                .score_with(&question, TEXT, options)
+                .map(|call| (call.facts().clone(), false))
         }
         "filter" => {
             let request = crate::Request::for_function(
@@ -117,7 +140,9 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
         }
         "rank" => {
             let question = Question::rank("Did the parcel arrive undamaged?")?;
-            engine.rank_with(&question, [TEXT], options).map(|call| (call.facts().clone(), false))
+            engine
+                .rank_with(&question, [TEXT], options)
+                .map(|call| (call.facts().clone(), false))
         }
         "find" => {
             let question = Question::find("Which text says when the parcel arrived?")?;
@@ -128,22 +153,29 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
         "annotate" => {
             let set = QuestionSet::builder().question("intact", decide)?.build()?;
             let call = engine.annotate_with(&set, [TEXT], options)?;
-            let failed = call.value().iter().any(|row| row.iter()
-                .any(|held| matches!(held.value(), Annotated::Failed(_))));
+            let failed = call.value().iter().any(|row| {
+                row.iter()
+                    .any(|held| matches!(held.value(), Annotated::Failed(_)))
+            });
             Ok((call.facts().clone(), failed))
         }
         "recognize" => {
             let ask = Recognize::builder()
                 .kind(Kind::new("person", None)?)?
                 .build()?;
-            engine.recognize_with(&ask, "Ada", options).map(|call| (call.facts().clone(), false))
+            engine
+                .recognize_with(&ask, "Ada", options)
+                .map(|call| (call.facts().clone(), false))
         }
         "relate" => {
             let ask = Relate::from_json(RELATE)?;
             let entities = [Entity::new("Ada", "person")?, Entity::new("Bo", "person")?];
-            engine.relate_with(&ask, entities, options).map(|call| (call.facts().clone(), false))
+            engine
+                .relate_with(&ask, entities, options)
+                .map(|call| (call.facts().clone(), false))
         }
-        _ => Err(Error::new(thinkthen::ErrorKind::Defect,
+        _ => Err(Error::new(
+            thinkthen::ErrorKind::Defect,
             "an unknown function reached the backend check",
         )),
     }

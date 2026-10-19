@@ -13,7 +13,6 @@ pub(crate) struct Find {
 }
 
 impl Find {
-
     pub(crate) fn profile(&self) -> Option<&str> {
         self.reading.question.profile()
     }

@@ -145,7 +145,10 @@ impl Engine {
     /// Whether the actual adapter treats this engine's selected model as a mutable alias.
     #[must_use]
     pub fn model_is_mutable_alias(&self) -> bool {
-        self.inner.backend().api_type().is_mutable_alias(self.inner.backend().model())
+        self.inner
+            .backend()
+            .api_type()
+            .is_mutable_alias(self.inner.backend().model())
     }
     /// The actual built engine's selected local profile name, including configured defaults.
     /// This reads no file or environment variable and exposes no profile content.

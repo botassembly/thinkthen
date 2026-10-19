@@ -264,33 +264,62 @@ impl Error {
     pub fn diagnostic(&self) -> Option<ErrorDiagnostic<'_>> {
         Some(match self.detail().diagnostic.as_deref()? {
             Diagnostic::Configuration(cause) => ErrorDiagnostic::Configuration {
-                failure: if cause.unreadable { ConfigurationFailure::Unreadable }
-                    else if cause.price.is_some() { ConfigurationFailure::Prices }
-                    else { ConfigurationFailure::Grammar },
+                failure: if cause.unreadable {
+                    ConfigurationFailure::Unreadable
+                } else if cause.price.is_some() {
+                    ConfigurationFailure::Prices
+                } else {
+                    ConfigurationFailure::Grammar
+                },
                 message: self.detail().message(),
             },
             Diagnostic::Engine(error) => engine(error),
             Diagnostic::EngineRange { cause, first, last } => ErrorDiagnostic::Range {
-                first: *first, last: *last, cause: Box::new(engine(cause)),
+                first: *first,
+                last: *last,
+                cause: Box::new(engine(cause)),
             },
-            Diagnostic::Context { initial, kind, limit, actual, profile } => ErrorDiagnostic::Context {
-                initial: *initial, dimension: kind.words(), limit: *limit, actual: *actual,
+            Diagnostic::Context {
+                initial,
+                kind,
+                limit,
+                actual,
+                profile,
+            } => ErrorDiagnostic::Context {
+                initial: *initial,
+                dimension: kind.words(),
+                limit: *limit,
+                actual: *actual,
                 profile: profile.as_ref().map(|name| name.as_str()),
             },
             Diagnostic::PartialReply { cause, first, last } => ErrorDiagnostic::PartialReply {
-                first: *first, last: *last, cause: cause.as_ref().map(ToString::to_string),
+                first: *first,
+                last: *last,
+                cause: cause.as_ref().map(ToString::to_string),
             },
             Diagnostic::RelationEntityCount(count) => ErrorDiagnostic::RelationEntityCount(*count),
-            Diagnostic::Model(crate::core::BlankTextError::ModelControl) => ErrorDiagnostic::ModelControl,
+            Diagnostic::Model(crate::core::BlankTextError::ModelControl) => {
+                ErrorDiagnostic::ModelControl
+            }
             Diagnostic::Model(_) => ErrorDiagnostic::ModelBlank,
             Diagnostic::Pointer(option, selector, cause) => ErrorDiagnostic::Pointer {
-                option, selector, reason: cause.to_string(),
+                option,
+                selector,
+                reason: cause.to_string(),
             },
             Diagnostic::Batch => ErrorDiagnostic::Batch,
-            Diagnostic::ThresholdFunction(crate::RequestFunction::Annotate) => ErrorDiagnostic::AnnotationThreshold,
-            Diagnostic::QuestionRead(crate::QuestionFileError::Unreadable(cause)) => ErrorDiagnostic::QuestionUnreadable(cause.to_string()),
-            Diagnostic::QuestionRead(crate::QuestionFileError::TooLarge) => ErrorDiagnostic::QuestionTooLarge,
-            Diagnostic::QuestionRead(crate::QuestionFileError::NotUtf8) => ErrorDiagnostic::QuestionNotUtf8,
+            Diagnostic::ThresholdFunction(crate::RequestFunction::Annotate) => {
+                ErrorDiagnostic::AnnotationThreshold
+            }
+            Diagnostic::QuestionRead(crate::QuestionFileError::Unreadable(cause)) => {
+                ErrorDiagnostic::QuestionUnreadable(cause.to_string())
+            }
+            Diagnostic::QuestionRead(crate::QuestionFileError::TooLarge) => {
+                ErrorDiagnostic::QuestionTooLarge
+            }
+            Diagnostic::QuestionRead(crate::QuestionFileError::NotUtf8) => {
+                ErrorDiagnostic::QuestionNotUtf8
+            }
             Diagnostic::Refusal(cause) => return refusal(cause.as_ref(), self.kind()),
             _ => return None,
         })
@@ -309,16 +338,28 @@ fn engine(error: &Native) -> ErrorDiagnostic<'_> {
         Native::Provider { cause, diagnostic } => D::Provider {
             cause: Box::new(engine(cause)),
             provider: ProviderFailure {
-                backend: diagnostic.backend, quota: diagnostic.quota,
+                backend: diagnostic.backend,
+                quota: diagnostic.quota,
                 alternate_backend_hint: diagnostic.ollama,
-                error_type: diagnostic.error_type.as_deref(), code: diagnostic.code.as_deref(),
+                error_type: diagnostic.error_type.as_deref(),
+                code: diagnostic.code.as_deref(),
             },
         },
         Native::SendBudgetFirst => D::SendBudget(crate::SendBudgetDenial::BeforeFirstSend),
-        Native::SendBudgetAdditional => D::SendBudget(crate::SendBudgetDenial::BeforeAdditionalSend),
-        Native::SendBudgetRetry(status) => D::SendBudget(crate::SendBudgetDenial::BeforeRetry { last_status: *status }),
-        Native::EstimatedInput(reason) => D::EstimatedInput { reason, images: false },
-        Native::ImageEstimatedInput(reason) => D::EstimatedInput { reason, images: true },
+        Native::SendBudgetAdditional => {
+            D::SendBudget(crate::SendBudgetDenial::BeforeAdditionalSend)
+        }
+        Native::SendBudgetRetry(status) => D::SendBudget(crate::SendBudgetDenial::BeforeRetry {
+            last_status: *status,
+        }),
+        Native::EstimatedInput(reason) => D::EstimatedInput {
+            reason,
+            images: false,
+        },
+        Native::ImageEstimatedInput(reason) => D::EstimatedInput {
+            reason,
+            images: true,
+        },
         Native::TokenLimit => D::TokenLimit,
         Native::ReplyTooLarge(limit) => D::ReplyTooLarge(*limit),
         Native::Reply(cause) => D::Reply(cause.to_string()),
@@ -336,25 +377,43 @@ fn engine(error: &Native) -> ErrorDiagnostic<'_> {
         Native::Defect(message) => D::Defect(message),
         Native::Usage(message) => D::Usage(message),
         Native::ProfileLimit(limit) => D::ProfileLimit {
-            profile: limit.name.as_str(), dimension: limit.kind.words(),
-            limit: limit.limit, actual: limit.actual,
+            profile: limit.name.as_str(),
+            dimension: limit.kind.words(),
+            limit: limit.limit,
+            actual: limit.actual,
         },
         Native::Cancelled => D::Cancelled,
         Native::Deadline(budget) => D::Deadline(budget.to_string()),
         Native::NoKey(variable) => D::NoKey(variable),
         Native::WidthActive(active) => D::WidthActive(active.to_string()),
-        Native::ModelsDiffer(models) => D::ModelsDiffer(models.as_ref().map(|(a, b)| (a.as_str(), b.as_str()))),
+        Native::ModelsDiffer(models) => {
+            D::ModelsDiffer(models.as_ref().map(|(a, b)| (a.as_str(), b.as_str())))
+        }
         Native::UsageOverflow => D::UsageOverflow,
         Native::RecognizeKinds => D::RecognitionKinds,
         Native::RecognitionExamples(error) => D::RecognitionExamples(error.to_string()),
         Native::RecognizeLogical => D::RecognitionLogical,
-        Native::TextTooLong { bytes, limit } => D::TextTooLong { bytes: *bytes, limit: *limit },
-        Native::RecognizeRelationNames { count, limit } => D::RecognitionRelationLimit(crate::engine::error::relation_names_message(*count, *limit)),
-        Native::RecognizeRelationQuestions { names, count, limit } => D::RecognitionRelationLimit(crate::engine::error::relation_questions_message(*names, *count, *limit)),
+        Native::TextTooLong { bytes, limit } => D::TextTooLong {
+            bytes: *bytes,
+            limit: *limit,
+        },
+        Native::RecognizeRelationNames { count, limit } => D::RecognitionRelationLimit(
+            crate::engine::error::relation_names_message(*count, *limit),
+        ),
+        Native::RecognizeRelationQuestions {
+            names,
+            count,
+            limit,
+        } => D::RecognitionRelationLimit(crate::engine::error::relation_questions_message(
+            *names, *count, *limit,
+        )),
     }
 }
 
-fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option<ErrorDiagnostic<'_>> {
+fn refusal(
+    cause: &(dyn std::any::Any + Send + Sync),
+    kind: ErrorKind,
+) -> Option<ErrorDiagnostic<'_>> {
     use ErrorDiagnostic as D;
     if let Some(error) = cause.downcast_ref::<crate::core::BlankTextError>() {
         match error {
@@ -370,27 +429,41 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
         return Some(D::Threshold(*error));
     }
     if let Some(error) = cause.downcast_ref::<crate::core::ProfileError>() {
-        return Some(D::Profile { failure: classification::profile(error), from_file: kind == ErrorKind::Local });
+        return Some(D::Profile {
+            failure: classification::profile(error),
+            from_file: kind == ErrorKind::Local,
+        });
     }
     if let Some(error) = cause.downcast_ref::<crate::core::ExamplesError>() {
         return Some(D::RecognitionExamples(error.to_string()));
     }
     if let Some(error) = cause.downcast_ref::<crate::core::RelateConfigError>() {
         return Some(D::RelationConfiguration {
-            message: error.to_string(), from_file: kind == ErrorKind::Local && *error != crate::core::RelateConfigError::WrongVerb,
+            message: error.to_string(),
+            from_file: kind == ErrorKind::Local
+                && *error != crate::core::RelateConfigError::WrongVerb,
         });
     }
     if let Some(error) = cause.downcast_ref::<crate::core::RecognizeConfigError>() {
-        return Some(D::RecognitionConfiguration { message: error.to_string(), from_file: kind == ErrorKind::Local });
+        return Some(D::RecognitionConfiguration {
+            message: error.to_string(),
+            from_file: kind == ErrorKind::Local,
+        });
     }
     if let Some(error) = cause.downcast_ref::<crate::core::EntitySetError>() {
         return Some(D::EntitySet(error.to_string()));
     }
     if let Some(error) = cause.downcast_ref::<crate::core::QuestionFileError>() {
         if let crate::core::QuestionFileError::NotJson(cause) = error {
-            return Some(D::QuestionJson { failure: classification::json(cause), from_file: error.origin() == crate::core::Source::File });
+            return Some(D::QuestionJson {
+                failure: classification::json(cause),
+                from_file: error.origin() == crate::core::Source::File,
+            });
         }
-        return Some(D::Question { message: error.to_string(), from_file: error.origin() == crate::core::Source::File });
+        return Some(D::Question {
+            message: error.to_string(),
+            from_file: error.origin() == crate::core::Source::File,
+        });
     }
     if let Some(error) = cause.downcast_ref::<crate::core::QuestionSetError>() {
         return Some(D::QuestionSet(error.to_string()));
@@ -403,7 +476,10 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
             crate::core::RecordError::Missed(pointer) => D::MissingPointer { pointer },
             crate::core::RecordError::NotUtf8 => D::InvalidUtf8,
             crate::core::RecordError::Json(cause) => D::RecordJson(classification::json(cause)),
-            crate::core::RecordError::InputJson { line, column } => D::InputJson { line: *line, column: *column },
+            crate::core::RecordError::InputJson { line, column } => D::InputJson {
+                line: *line,
+                column: *column,
+            },
             crate::core::RecordError::Render(cause) => D::Rendering(cause.to_string()),
             _ => D::Record(error.to_string()),
         });
@@ -419,22 +495,36 @@ mod input_json_tests {
     #[test]
     fn native_document_and_record_readers_keep_distinct_safe_syntax_projections() {
         let marker = "private-whole-document-marker";
-        for text in [String::new(), format!("{{\n\"{marker}\":?}}") ] {
-            for (framing, document) in [(crate::core::Framing::Document, true), (crate::core::Framing::Jsonl, false)] {
-                let reading = crate::core::Reading::new(framing,
-                    vec![crate::core::Pointer::new("/evidence").expect("pointer")]).expect("reading");
+        for text in [String::new(), format!("{{\n\"{marker}\":?}}")] {
+            for (framing, document) in [
+                (crate::core::Framing::Document, true),
+                (crate::core::Framing::Jsonl, false),
+            ] {
+                let reading = crate::core::Reading::new(
+                    framing,
+                    vec![crate::core::Pointer::new("/evidence").expect("pointer")],
+                )
+                .expect("reading");
                 let cause = reading.record(text.as_bytes()).expect_err("malformed JSON");
                 let error = Error::refused(cause);
                 let diagnostic = error.diagnostic().expect("retained native cause");
                 let (line, column) = match diagnostic {
                     ErrorDiagnostic::InputJson { line, column } if document => (line, column),
-                    ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column }) if !document => (line, column),
+                    ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column })
+                        if !document =>
+                    {
+                        (line, column)
+                    }
                     other => panic!("unexpected diagnostic: {other:?}"),
                 };
                 assert_eq!(line, if text.is_empty() { 1 } else { 2 });
                 assert_eq!(column == 0, text.is_empty());
-                for shown in [format!("{error:?}"), error.to_string(), format!("{:?}", error.diagnostic()),
-                    serde_json::to_string(&error.complete()).expect("safe error document")] {
+                for shown in [
+                    format!("{error:?}"),
+                    error.to_string(),
+                    format!("{:?}", error.diagnostic()),
+                    serde_json::to_string(&error.complete()).expect("safe error document"),
+                ] {
                     assert!(!shown.contains(marker));
                 }
                 assert!(std::error::Error::source(&error).is_none());

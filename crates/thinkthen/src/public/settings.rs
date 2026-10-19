@@ -2,8 +2,8 @@
 
 mod backend;
 mod budgets;
-mod environment;
 mod configuration;
+mod environment;
 mod snapshot;
 pub use snapshot::{CacheSettings, ResolvedSettings};
 pub(super) mod json;
@@ -266,7 +266,10 @@ impl EngineBuilder {
         if let Some(roots) = &self.admitted_roots {
             return Ok(Some(roots.clone()));
         }
-        self.ca_bundle.as_deref().map(Roots::load).transpose()
+        self.ca_bundle
+            .as_deref()
+            .map(Roots::load)
+            .transpose()
             .map_err(|error| match error {
                 RootsError::Usage(message) => Error::usage(message),
                 RootsError::Local(message) => Error::local(message),
@@ -310,9 +313,12 @@ impl EngineBuilder {
     /// Returns Usage for an invalid width or the existing typed active-width conflict.
     pub fn select_throttle(self, value: u8) -> Result<Self, Error> {
         let builder = self.throttle(value)?;
-        let limits = crate::engine::limits::of(std::process::id(), &crate::engine::Cancel::default())
-            .map_err(Error::from)?;
-        limits.widths.select(builder.width)
+        let limits =
+            crate::engine::limits::of(std::process::id(), &crate::engine::Cancel::default())
+                .map_err(Error::from)?;
+        limits
+            .widths
+            .select(builder.width)
             .map_err(|active| Error::from(crate::engine::error::Error::WidthActive(active)))?;
         Ok(builder)
     }
@@ -424,8 +430,8 @@ impl EngineBuilder {
     /// # Errors
     /// Refuses zero or a rate beyond the native maximum.
     pub fn requests_per_minute(mut self, value: u32) -> Result<Self, Error> {
-        self.per_minute = crate::engine::backoff::per_minute(Some(&value.to_string()))
-            .map_err(Error::usage)?;
+        self.per_minute =
+            crate::engine::backoff::per_minute(Some(&value.to_string())).map_err(Error::usage)?;
         Ok(self)
     }
 
@@ -444,11 +450,13 @@ impl EngineBuilder {
     /// # Errors
     /// Returns [`Error::Usage`] for an invalid profile object.
     pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {
-        self.profile = Some(Profile::Inline(
-            BackendProfile::parse(value)
-                .map_err(|error| Error::usage(format!("the profile JSON {error}"))
-                    .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error))))?,
-        ));
+        self.profile = Some(Profile::Inline(BackendProfile::parse(value).map_err(
+            |error| {
+                Error::usage(format!("the profile JSON {error}")).with_diagnostic(
+                    crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error)),
+                )
+            },
+        )?));
         Ok(self)
     }
 
@@ -516,9 +524,11 @@ impl EngineBuilder {
                 Profile::File(path) => {
                     let text = std::fs::read_to_string(path)
                         .map_err(|_| Error::local("the profile file could not be read"))?;
-                    BackendProfile::parse(&text)
-                        .map_err(|error| Error::local(format!("the profile file {error}"))
-                            .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error))))
+                    BackendProfile::parse(&text).map_err(|error| {
+                        Error::local(format!("the profile file {error}")).with_diagnostic(
+                            crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error)),
+                        )
+                    })
                 }
                 Profile::Inline(profile) => Ok(profile.clone()),
             })

@@ -56,7 +56,9 @@ fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
             *destination = schema;
         }
     }
-    if !changed.is_empty() && std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1") {
+    if !changed.is_empty()
+        && std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1")
+    {
         std::fs::write(
             FILE,
             serde_json::to_string_pretty(&committed).expect("schema text") + "\n",
@@ -65,6 +67,7 @@ fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
     }
     assert!(
         changed.is_empty(),
-        "generated command schemas differ; run THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests, then rewrite and rerun the library schema tests; differences: {}", changed.join("; ")
+        "generated command schemas differ; run THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests, then rewrite and rerun the library schema tests; differences: {}",
+        changed.join("; ")
     );
 }

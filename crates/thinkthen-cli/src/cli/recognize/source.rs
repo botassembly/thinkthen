@@ -1,8 +1,8 @@
 //! Typed physical span presentation; evidence and answer identity stay unchanged.
 use crate::SourceRecord;
 use crate::cli::intake::{Position, SourceFields};
-use crate::{RecognizedEntity, Recognized, RecognitionValue};
 use crate::failure::Failure;
+use crate::{RecognitionValue, Recognized, RecognizedEntity};
 use serde::{Serialize, Serializer};
 
 #[derive(Serialize)]
@@ -67,8 +67,11 @@ pub(super) fn located<'a>(
                 .iter()
                 .map(|proposal| {
                     Ok(Proposal {
-                        text: proposal.text(), start: proposal.start(), end: proposal.end(),
-                        length: proposal.length(), probability: proposal.probability(),
+                        text: proposal.text(),
+                        start: proposal.start(),
+                        end: proposal.end(),
+                        length: proposal.length(),
+                        probability: proposal.probability(),
                         coordinates: coordinates(proposal.start(), proposal.end(), position, text)?,
                     })
                 })
@@ -107,8 +110,12 @@ fn entity<'a>(
     text: &str,
 ) -> Result<Entity<'a>, Failure> {
     Ok(Entity {
-        text: name.text(), start: name.start(), end: name.end(),
-        length: name.length(), kind: name.kind(), strength: name.strength(),
+        text: name.text(),
+        start: name.start(),
+        end: name.end(),
+        length: name.length(),
+        kind: name.kind(),
+        strength: name.strength(),
         coordinates: coordinates(name.start(), name.end(), position, text)?,
     })
 }
@@ -152,7 +159,7 @@ pub(super) struct Complete<'a> {
 }
 impl Serialize for Complete<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::{SerializeMap as _, Error as _};
+        use serde::ser::{Error as _, SerializeMap as _};
         let text = self.canonical.to_json().map_err(S::Error::custom)?;
         let document = crate::saved_json::Json::parse(&text).map_err(S::Error::custom)?;
         let crate::saved_json::Kind::Object(fields) = document.kind() else {
@@ -160,12 +167,21 @@ impl Serialize for Complete<'_> {
         };
         let mut map = serializer.serialize_map(None)?;
         for (name, value) in fields {
-            if name == "input" || name == "index" { continue; }
+            if name == "input" || name == "index" {
+                continue;
+            }
             if name == "value" {
-                if let Some(located) = &self.value { map.serialize_entry(name, located)?; }
-                else { map.serialize_entry(name, value)?; }
-                if let Some(input) = self.input { map.serialize_entry("input", input)?; }
-            } else { map.serialize_entry(name, value)?; }
+                if let Some(located) = &self.value {
+                    map.serialize_entry(name, located)?;
+                } else {
+                    map.serialize_entry(name, value)?;
+                }
+                if let Some(input) = self.input {
+                    map.serialize_entry("input", input)?;
+                }
+            } else {
+                map.serialize_entry(name, value)?;
+            }
         }
         map.end()
     }

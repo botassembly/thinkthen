@@ -12,10 +12,10 @@ use serde::Serialize;
 
 use crate::args::Common;
 use crate::cli::reading::Reading;
-use crate::{FileReader, RawRecord, ReaderOptions, SourceUnit, TableFormat, TableReader};
 use crate::edge;
 use crate::failure::Failure;
 use crate::schedule::Placed;
+use crate::{FileReader, RawRecord, ReaderOptions, SourceUnit, TableFormat, TableReader};
 
 /// A display location, independent of the pipeline's global label.
 #[derive(Clone, Serialize)]
@@ -75,25 +75,43 @@ struct Piece {
 
 fn options(streams: bool, window: usize) -> ReaderOptions {
     ReaderOptions {
-        unit: if !streams { SourceUnit::File } else if window > 1 { SourceUnit::Window } else { SourceUnit::Line },
+        unit: if !streams {
+            SourceUnit::File
+        } else if window > 1 {
+            SourceUnit::Window
+        } else {
+            SourceUnit::Line
+        },
         window: (streams && window > 1).then_some(window),
     }
 }
 
 impl TextSource {
     fn next(&mut self, streams: bool) -> Option<Result<Piece, Failure>> {
-        Some(self.reader.next_bytes()?.map_err(input_failure).map(|unit| Piece {
-            position: Some(Position {
-                source: self.source,
-                located: self.located,
-                file: self.file.as_ref().map(|path| path.to_string_lossy().into_owned()),
-                first: Some(unit.first_line),
-                last: Some(unit.last_line),
-                images: None,
-            }),
-            data: Data::Bytes(unit.record),
-            advance: if streams { unit.last_line - unit.first_line + 1 } else { 1 },
-        }))
+        Some(
+            self.reader
+                .next_bytes()?
+                .map_err(input_failure)
+                .map(|unit| Piece {
+                    position: Some(Position {
+                        source: self.source,
+                        located: self.located,
+                        file: self
+                            .file
+                            .as_ref()
+                            .map(|path| path.to_string_lossy().into_owned()),
+                        first: Some(unit.first_line),
+                        last: Some(unit.last_line),
+                        images: None,
+                    }),
+                    data: Data::Bytes(unit.record),
+                    advance: if streams {
+                        unit.last_line - unit.first_line + 1
+                    } else {
+                        1
+                    },
+                }),
+        )
     }
 }
 
@@ -118,8 +136,8 @@ impl std::error::Error for ReaderFailure {
 }
 
 pub(crate) fn input_failure(error: crate::Error) -> Failure {
-    if let Some(cause) = std::error::Error::source(&error)
-        .and_then(|cause| cause.downcast_ref::<std::io::Error>())
+    if let Some(cause) =
+        std::error::Error::source(&error).and_then(|cause| cause.downcast_ref::<std::io::Error>())
     {
         return Failure::Input(std::io::Error::new(cause.kind(), ReaderFailure(error)));
     }
@@ -147,7 +165,11 @@ impl Source {
                 None => Self::Text(TextSource {
                     source: *source,
                     file: Some(file.clone()),
-                    reader: match FileReader::new(file.to_string_lossy(), reader, options(streams, window)) {
+                    reader: match FileReader::new(
+                        file.to_string_lossy(),
+                        reader,
+                        options(streams, window),
+                    ) {
                         Ok(reader) => reader,
                         Err(error) => return Some(Err(input_failure(error))),
                     },
@@ -280,13 +302,23 @@ impl Intake {
             .into_iter()
             .enumerate()
             .map(|(source, (file, reader))| match kind {
-                Some(kind) => TableReader::new(file.as_ref().map_or_else(String::new, |path| path.to_string_lossy().into_owned()), reader, kind)
-                    .map(|rows| Source::Table(Box::new(rows)))
-                    .map_err(input_failure),
+                Some(kind) => TableReader::new(
+                    file.as_ref()
+                        .map_or_else(String::new, |path| path.to_string_lossy().into_owned()),
+                    reader,
+                    kind,
+                )
+                .map(|rows| Source::Table(Box::new(rows)))
+                .map_err(input_failure),
                 None => Ok(Source::Text(TextSource {
                     source,
-                    reader: FileReader::new(file.as_ref().map_or_else(String::new, |path| path.to_string_lossy().into_owned()), reader, options(reading.streams(), window))
-                        .map_err(input_failure)?,
+                    reader: FileReader::new(
+                        file.as_ref()
+                            .map_or_else(String::new, |path| path.to_string_lossy().into_owned()),
+                        reader,
+                        options(reading.streams(), window),
+                    )
+                    .map_err(input_failure)?,
                     file,
                     located: common.located(),
                 })),

@@ -1,21 +1,24 @@
 //! Established MCP carrier aliases enter the single native Request contract.
 use super::{admission::Invocation, inputs::Descriptor};
-use crate::RequestFunction;
 use crate::RequestDescriptor;
+use crate::RequestFunction;
 use crate::{
-    Error, RequestArguments, RequestFeed, RequestInput,
-    RequestItem, RequestOriginal, RequestQuestion, RequestSource,
+    Error, RequestArguments, RequestFeed, RequestInput, RequestItem, RequestOriginal,
+    RequestQuestion, RequestSource,
 };
 
 impl Invocation {
-    pub(super) fn request(&self) -> Result<(RequestArguments, Option<RequestFeed<'static>>), Error> {
+    pub(super) fn request(
+        &self,
+    ) -> Result<(RequestArguments, Option<RequestFeed<'static>>), Error> {
         let a = &self.arguments;
         let questions = usize::from(a.question.is_some())
             + usize::from(a.question_file.is_some())
             + usize::from(a.question_name.is_some())
             + usize::from(a.question_reference.is_some());
         if questions != 1 {
-            return Err(Error::new(crate::ErrorKind::Usage,
+            return Err(Error::new(
+                crate::ErrorKind::Usage,
                 "give exactly one question, file, name or explicit reference",
             ));
         }
@@ -24,13 +27,15 @@ impl Invocation {
             + usize::from(a.source.is_some())
             + usize::from(a.inputs.is_some());
         if forms > 1 || (forms == 0 && a.images.is_empty()) {
-            return Err(Error::new(crate::ErrorKind::Usage,
+            return Err(Error::new(
+                crate::ErrorKind::Usage,
                 "give one of evidence, records, source or inputs, or explicit images",
             ));
         }
         if !a.images.is_empty() && (a.records.is_some() || a.source.is_some() || a.inputs.is_some())
         {
-            return Err(Error::new(crate::ErrorKind::Usage,
+            return Err(Error::new(
+                crate::ErrorKind::Usage,
                 "attachments cannot accompany records, source or inputs",
             ));
         }
@@ -165,7 +170,10 @@ impl Descriptor {
             + usize::from(self.source.is_some())
             > 1
         {
-            return Err(Error::new(crate::ErrorKind::Usage, "a descriptor selects one original"));
+            return Err(Error::new(
+                crate::ErrorKind::Usage,
+                "a descriptor selects one original",
+            ));
         }
         let original = if let Some(text) = &self.text {
             Some(RequestOriginal::Text { text: text.clone() })
@@ -190,12 +198,15 @@ impl Descriptor {
         .collect();
         let json = serde_json::to_string(&fields)
             .map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid per-item controls"))?;
-        let controls: RequestItem =
-            serde_json::from_str(&json).map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid per-item controls"))?;
+        let controls: RequestItem = serde_json::from_str(&json)
+            .map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid per-item controls"))?;
         if let Some(raw) = &self.context {
             let context: RequestItem =
                 serde_json::from_str(&format!("{{\"context\":{}}}", raw.get())).map_err(|_| {
-                    Error::new(crate::ErrorKind::Usage, "the per-item context does not match context_schema")
+                    Error::new(
+                        crate::ErrorKind::Usage,
+                        "the per-item context does not match context_schema",
+                    )
                 })?;
             item.context = context.context;
         }

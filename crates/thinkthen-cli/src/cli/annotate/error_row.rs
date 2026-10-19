@@ -2,10 +2,10 @@
 
 use serde::Serialize;
 
-use crate::schedule::Outcome;
-use crate::render::json_line;
 use crate::failure::Failure;
+use crate::render::json_line;
 use crate::schedule::Judged;
+use crate::schedule::Outcome;
 
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]

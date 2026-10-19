@@ -59,7 +59,6 @@ pub fn prune_cache(path: &Path, options: &CachePruneOptions) -> Result<CachePrun
 /// those checks. The caller owns its private-default exemption and warning timing.
 #[must_use]
 pub fn storage_writable_by_another(path: &Path) -> bool {
-    std::fs::metadata(path).is_ok_and(|metadata| {
-        metadata.is_dir() && crate::config::writable_by_another(&metadata)
-    })
+    std::fs::metadata(path)
+        .is_ok_and(|metadata| metadata.is_dir() && crate::config::writable_by_another(&metadata))
 }

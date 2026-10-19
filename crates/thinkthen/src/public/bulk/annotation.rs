@@ -123,12 +123,17 @@ impl Annotating {
             if self.shared_state_groups {
                 self.engine.check_plan(&plan).map_err(Error::from)?;
             }
-            let grouped = pack::asks_for(self.engine.backend().api_type(), self.engine.backend().url(), &plan)
-                .map_err(|_| Error::defect("a request could not be written as JSON"))?;
+            let grouped = pack::asks_for(
+                self.engine.backend().api_type(),
+                self.engine.backend().url(),
+                &plan,
+            )
+            .map_err(|_| Error::defect("a request could not be written as JSON"))?;
             group_done(group, grouped.len());
             asks.extend(grouped);
         }
-        let shared_context = self.shared_state_groups
+        let shared_context = self
+            .shared_state_groups
             .then(|| self.shared_context.as_ref().map(core::Evidence::as_json))
             .flatten();
         if let Some(context) = self.context.as_ref().or(shared_context.as_ref()) {
@@ -139,7 +144,9 @@ impl Annotating {
                     .state
                     .with_context_value(context)
                     .map_err(|_| Error::defect("an aggregate context could not be written"))?;
-                ask.key = ask.state.key(self.engine.backend().url(), &model, &ask.question);
+                ask.key = ask
+                    .state
+                    .key(self.engine.backend().url(), &model, &ask.question);
             }
         }
         Ok(asks)

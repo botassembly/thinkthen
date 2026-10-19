@@ -4,8 +4,11 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::{BatchSetting as Setting, Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing, ResolvedSettings};
 use crate::cli::reading::Reading;
+use crate::{
+    BatchSetting as Setting, Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing,
+    ResolvedSettings,
+};
 
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
@@ -16,12 +19,12 @@ use crate::profile::{self, Mismatch};
 use crate::schedule::Output;
 
 mod asker;
+mod continuation;
 pub(crate) mod error_row;
 mod native;
 mod plan;
-mod settings;
-mod continuation;
 mod presentation;
+mod settings;
 
 pub(crate) fn run(
     arguments: &AnnotateArguments,
@@ -75,7 +78,9 @@ pub(crate) fn run(
         environment.warn_request_size(&backend, size)?;
     }
     if let (Framing::Lines, Some(name)) = (arguments.common.framing(), settings.first_part()) {
-        return Err(Failure::Reading(format!("question `{name}` reads `on`, and a --lines record is text with no members")));
+        return Err(Failure::Reading(format!(
+            "question `{name}` reads `on`, and a --lines record is text with no members"
+        )));
     }
     let inputs = crate::cli::intake::Intake::new(
         &arguments.common,
@@ -91,7 +96,16 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?;
     let mismatch = Mismatch::new(settings.profile.as_deref(), engine.profile_name());
-    let judging = Judging::new(arguments, environment, engine, set, mismatch, settings, backend, recording)?;
+    let judging = Judging::new(
+        arguments,
+        environment,
+        engine,
+        set,
+        mismatch,
+        settings,
+        backend,
+        recording,
+    )?;
     if arguments.common.dry_run {
         return plan::dry_run(&judging, admitted, &reading, inputs, setting, &mut writer);
     }
@@ -172,7 +186,8 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
 
 fn reading(common: &Common) -> Result<Reading, Failure> {
     for pointer in &common.field {
-        crate::validate_pointer(pointer).map_err(|error| Failure::Pointer("--field", pointer.clone(), error.to_string()))?;
+        crate::validate_pointer(pointer)
+            .map_err(|error| Failure::Pointer("--field", pointer.clone(), error.to_string()))?;
     }
     Reading::new(common.framing(), common.field.clone())
 }

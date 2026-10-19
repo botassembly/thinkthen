@@ -90,10 +90,7 @@ impl EngineBuilder {
             ),
         ];
         let choice = named::choose(&tiers, &captured.configured).map_err(Error::refused)?;
-        let unnamed_model = captured
-            .config_model
-            .as_deref()
-            .unwrap_or(DEFAULT_MODEL);
+        let unnamed_model = captured.config_model.as_deref().unwrap_or(DEFAULT_MODEL);
         let backend = choice
             .backend(self.model.as_ref().map(ModelName::as_str), unnamed_model)
             .map_err(Error::refused)?;

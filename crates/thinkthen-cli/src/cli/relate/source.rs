@@ -6,9 +6,9 @@ use serde::Serialize;
 
 use crate::args::Common;
 use crate::cli::intake::{Data, Intake};
-use crate::{RequestFraming as Framing, RawRecord as Record};
 use crate::cli::reading::Reading;
 use crate::failure::Failure;
+use crate::{RawRecord as Record, RequestFraming as Framing};
 
 pub(super) struct Sources {
     occurrences: Vec<Occurrence>,
@@ -16,10 +16,12 @@ pub(super) struct Sources {
 
 impl Sources {
     pub(super) fn location(&self, ordinal: usize) -> Result<crate::SourceLocation, crate::Error> {
-        let source = self
-            .occurrences
-            .get(ordinal)
-            .ok_or_else(|| crate::Error::new(crate::ErrorKind::Defect, "defect: relate lost an occurrence"))?;
+        let source = self.occurrences.get(ordinal).ok_or_else(|| {
+            crate::Error::new(
+                crate::ErrorKind::Defect,
+                "defect: relate lost an occurrence",
+            )
+        })?;
         crate::SourceLocation::new(
             source.file.clone().unwrap_or_default(),
             source.first_line,
@@ -151,7 +153,10 @@ pub(super) fn write(
                 either: edge.edge().either(),
             };
             // The CLI spells an absent filename as null, so measure its rendered shape.
-            budget = budget.checked_sub(crate::render::json_line(&located)?.len() + usize::from(!details || at > 0))
+            budget = budget
+                .checked_sub(
+                    crate::render::json_line(&located)?.len() + usize::from(!details || at > 0),
+                )
                 .ok_or(Failure::Usage("source relate output exceeds 16 MiB"))?;
             Ok(located)
         })

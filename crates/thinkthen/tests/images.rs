@@ -520,39 +520,86 @@ mod typesafe;
 #[test]
 fn image_composition_keeps_the_whole_set_and_refuses_record_projection_controls() {
     use thinkthen::RecordReading;
-    let originals = || ImageEvidence::new(Some("Compare originals.".to_owned()), vec![
-        fixture(RED, ImageMedia::Png), fixture(BLUE, ImageMedia::Png), fixture(RED, ImageMedia::Png),
-    ]).unwrap();
+    let originals = || {
+        ImageEvidence::new(
+            Some("Compare originals.".to_owned()),
+            vec![
+                fixture(RED, ImageMedia::Png),
+                fixture(BLUE, ImageMedia::Png),
+                fixture(RED, ImageMedia::Png),
+            ],
+        )
+        .unwrap()
+    };
     for reading in [
         RecordReading::new(&["/body"], None, None).unwrap(),
         RecordReading::new(&[], Some("/context"), None).unwrap(),
         RecordReading::new(&[], None, Some("/options")).unwrap(),
-        RecordReading::new(&[], None, None).unwrap().with_examples_field("/examples").unwrap(),
-        RecordReading::new(&[], None, None).unwrap().with_seed_spans_field("/seeds").unwrap(),
+        RecordReading::new(&[], None, None)
+            .unwrap()
+            .with_examples_field("/examples")
+            .unwrap(),
+        RecordReading::new(&[], None, None)
+            .unwrap()
+            .with_seed_spans_field("/seeds")
+            .unwrap(),
     ] {
         let error = reading.compose_images(originals()).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
-        assert_eq!(error.detail().message(), "image source records have no field, context or options pointers");
+        assert_eq!(
+            error.detail().message(),
+            "image source records have no field, context or options pointers"
+        );
     }
-    let row = RecordReading::new(&[], None, None).unwrap().compose_images(originals()).unwrap();
-    let QuestionInput::Images(images) = &row.original else { panic!("images retained") };
+    let row = RecordReading::new(&[], None, None)
+        .unwrap()
+        .compose_images(originals())
+        .unwrap();
+    let QuestionInput::Images(images) = &row.original else {
+        panic!("images retained")
+    };
     assert_eq!(images.text(), Some("Compare originals."));
-    assert_eq!(images.images().iter().map(ImageInput::bytes).collect::<Vec<_>>(), [RED, BLUE, RED]);
-    assert!(row.context.is_none() && row.options.is_none() && row.examples.is_none() && row.seed_spans.is_none());
+    assert_eq!(
+        images
+            .images()
+            .iter()
+            .map(ImageInput::bytes)
+            .collect::<Vec<_>>(),
+        [RED, BLUE, RED]
+    );
+    assert!(
+        row.context.is_none()
+            && row.options.is_none()
+            && row.examples.is_none()
+            && row.seed_spans.is_none()
+    );
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener, "liquid", "d1");
-    let request = thinkthen::Request::for_function(thinkthen::RequestFunction::Decide,
+    let request = thinkthen::Request::for_function(
+        thinkthen::RequestFunction::Decide,
         thinkthen::RequestArguments {
-            question: thinkthen::RequestQuestion::Text { text: "Same?".to_owned() },
+            question: thinkthen::RequestQuestion::Text {
+                text: "Same?".to_owned(),
+            },
             input: thinkthen::RequestInput::Text {
                 text: images.text().unwrap().to_owned(),
-                images: images.images().iter().map(|image| thinkthen::RequestImage::Bytes {
-                    media: image.media(), bytes: image.bytes().to_vec(),
-                }).collect(),
+                images: images
+                    .images()
+                    .iter()
+                    .map(|image| thinkthen::RequestImage::Bytes {
+                        media: image.media(),
+                        bytes: image.bytes().to_vec(),
+                    })
+                    .collect(),
             },
             options: thinkthen::RequestOptions::default(),
-        }).admit().unwrap();
-    let plan = engine.plan_request(&request, thinkthen::RequestEnvironment::default()).unwrap();
+        },
+    )
+    .admit()
+    .unwrap();
+    let plan = engine
+        .plan_request(&request, thinkthen::RequestEnvironment::default())
+        .unwrap();
     let body: Value = serde_json::from_slice(plan.first_body().unwrap()).unwrap();
     let encoded = body["images"].as_array().unwrap();
     assert_eq!(encoded.len(), 3);

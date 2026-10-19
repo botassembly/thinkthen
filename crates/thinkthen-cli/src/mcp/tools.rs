@@ -5,32 +5,31 @@ use serde_json::{Value, json};
 pub(super) type Tool = crate::RequestFunction;
 
 fn description(tool: Tool) -> &'static str {
-        match tool {
-            Tool::Decide => "Answer yes, no or unsure.",
-            Tool::Choose => {
-                "Pick one declared option, or null. question.options is an ordered list of at least two names or a name-to-description map."
-            }
-            Tool::Tag => {
-                "Return every applicable declared label. question.labels is an ordered list of names or a name-to-description map."
-            }
-            Tool::Score => {
-                "Place evidence on declared levels. question.levels is an ordered list of at least two names, lowest first, or a name-to-meaning map."
-            }
-            Tool::Filter => "Keep records passing a yes/no question.",
-            Tool::Rank => "Order the complete records by the declared question or set.",
-            Tool::Find => "Select one unit from a complete set, or none.",
-            Tool::Annotate => {
-                "Ask an ordered ordinary question set for each record. question is {version:1,questions:{name:{decide:question_text}}}; entries also accept choose, tag or score."
-            }
-            Tool::Recognize => {
-                "Recognize caller-defined literal entities and physical text spans. question is {version:1,recognize:{kinds:{kind_name:description}}}."
-            }
-            Tool::Relate => {
-                "Judge relationships over the complete entity set. question is {version:1,relate:{relations:[{name:relation_name}]}}; records hold entities with name and kind."
-            }
+    match tool {
+        Tool::Decide => "Answer yes, no or unsure.",
+        Tool::Choose => {
+            "Pick one declared option, or null. question.options is an ordered list of at least two names or a name-to-description map."
+        }
+        Tool::Tag => {
+            "Return every applicable declared label. question.labels is an ordered list of names or a name-to-description map."
+        }
+        Tool::Score => {
+            "Place evidence on declared levels. question.levels is an ordered list of at least two names, lowest first, or a name-to-meaning map."
+        }
+        Tool::Filter => "Keep records passing a yes/no question.",
+        Tool::Rank => "Order the complete records by the declared question or set.",
+        Tool::Find => "Select one unit from a complete set, or none.",
+        Tool::Annotate => {
+            "Ask an ordered ordinary question set for each record. question is {version:1,questions:{name:{decide:question_text}}}; entries also accept choose, tag or score."
+        }
+        Tool::Recognize => {
+            "Recognize caller-defined literal entities and physical text spans. question is {version:1,recognize:{kinds:{kind_name:description}}}."
+        }
+        Tool::Relate => {
+            "Judge relationships over the complete entity set. question is {version:1,relate:{relations:[{name:relation_name}]}}; records hold entities with name and kind."
         }
     }
-
+}
 
 /// Compact discovery guidance; shared native admission owns the full grammar.
 pub(super) fn list() -> Value {
@@ -49,8 +48,7 @@ pub(super) fn list() -> Value {
 
 fn input_schema(tool: Tool) -> Value {
     let canonical: Value =
-        serde_json::from_str(crate::request_schema())
-            .unwrap_or_else(|_| json!({}));
+        serde_json::from_str(crate::request_schema()).unwrap_or_else(|_| json!({}));
     let mut options = json!({"type":"object","additionalProperties":false,
         "properties":canonical.pointer("/$defs/RequestOptions/properties").cloned().unwrap_or_else(|| json!({}))});
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {

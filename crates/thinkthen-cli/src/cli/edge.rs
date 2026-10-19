@@ -8,7 +8,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-
 mod backend;
 mod key;
 mod roots;
@@ -47,8 +46,8 @@ impl Downstream {
     }
 }
 
-use crate::{CacheSettings, Engine, EngineBuilder, Facts, ResolvedSettings, Tally};
 use crate::failure::Failure;
+use crate::{CacheSettings, Engine, EngineBuilder, Facts, ResolvedSettings, Tally};
 use std::sync::{Mutex, OnceLock};
 
 /// The process observation and the one captured builder transferred to its engine.
@@ -75,11 +74,21 @@ impl Default for Environment {
     fn default() -> Self {
         let builder = Engine::builder();
         Self {
-            base_url: None, backend: None, batch: None, max_request_bytes: None,
-            cache: builder.cache_settings(), builder: Mutex::new(Some(builder)),
-            resolved: OnceLock::new(), engine: Mutex::new(None), tally: Tally::new(),
-            native_facts: Mutex::new(None), key: KeySnapshot::default(),
-            ca_bundle: None, retry_wait_ms: None, input_pause_ms: None, sigint_ack: None,
+            base_url: None,
+            backend: None,
+            batch: None,
+            max_request_bytes: None,
+            cache: builder.cache_settings(),
+            builder: Mutex::new(Some(builder)),
+            resolved: OnceLock::new(),
+            engine: Mutex::new(None),
+            tally: Tally::new(),
+            native_facts: Mutex::new(None),
+            key: KeySnapshot::default(),
+            ca_bundle: None,
+            retry_wait_ms: None,
+            input_pause_ms: None,
+            sigint_ack: None,
             cancel: crate::cli::interrupt::Signal::default(),
         }
     }
@@ -87,19 +96,25 @@ impl Default for Environment {
 
 impl std::fmt::Debug for Environment {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.debug_struct("Environment")
+        formatter
+            .debug_struct("Environment")
             .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
             .field("backend", &self.backend.as_ref().map(|_| "<withheld>"))
-            .field("key", &self.key).finish_non_exhaustive()
+            .field("key", &self.key)
+            .finish_non_exhaustive()
     }
 }
 
 impl Environment {
     pub(crate) fn settle_native(&self, facts: &Facts) {
-        if let Ok(mut settled) = self.native_facts.lock() { *settled = Some(facts.clone()); }
+        if let Ok(mut settled) = self.native_facts.lock() {
+            *settled = Some(facts.clone());
+        }
     }
     pub(crate) fn native_call_id(&self) -> Option<crate::CallId> {
-        self.native_facts.lock().ok()
+        self.native_facts
+            .lock()
+            .ok()
             .and_then(|facts| facts.as_ref().and_then(|facts| facts.call_id().cloned()))
     }
     pub(crate) fn read() -> Result<Self, Failure> {
@@ -112,50 +127,88 @@ impl Environment {
             cache.cache_path_source = "environment";
         }
         if let Some(rate) = read("THINKTHEN_REQUESTS_PER_MINUTE") {
-            let invalid = || Failure::Usage("THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000");
-            let value = rate.parse::<u32>().ok()
-                .filter(|_| rate.bytes().all(|byte| byte.is_ascii_digit())).ok_or_else(invalid)?;
+            let invalid = || {
+                Failure::Usage("THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000")
+            };
+            let value = rate
+                .parse::<u32>()
+                .ok()
+                .filter(|_| rate.bytes().all(|byte| byte.is_ascii_digit()))
+                .ok_or_else(invalid)?;
             builder = builder.requests_per_minute(value).map_err(|_| invalid())?;
         }
         if let Some(total) = read("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL") {
-            let value = total.parse::<u64>().ok()
+            let value = total
+                .parse::<u64>()
+                .ok()
                 .filter(|_| total.bytes().all(|byte| byte.is_ascii_digit()))
-                .ok_or(Failure::Usage("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more"))?;
+                .ok_or(Failure::Usage(
+                    "THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more",
+                ))?;
             builder = builder.max_estimated_input_tokens_total(Some(value));
         }
         Ok(Self {
-            base_url: read("THINKTHEN_BASE_URL"), backend: read("THINKTHEN_BACKEND"),
-            batch: read("THINKTHEN_BATCH"), max_request_bytes: read("THINKTHEN_MAX_REQUEST_BYTES"),
-            cache, builder: Mutex::new(Some(builder)),
+            base_url: read("THINKTHEN_BASE_URL"),
+            backend: read("THINKTHEN_BACKEND"),
+            batch: read("THINKTHEN_BATCH"),
+            max_request_bytes: read("THINKTHEN_MAX_REQUEST_BYTES"),
+            cache,
+            builder: Mutex::new(Some(builder)),
             ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
-            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
-            input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS").and_then(|text| text.parse().ok()),
+            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
+                .and_then(|text| text.parse().ok()),
+            input_pause_ms: test_only("THINKTHEN_TEST_INPUT_PAUSE_MS")
+                .and_then(|text| text.parse().ok()),
             sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             ..Self::default()
         })
     }
-    pub(crate) fn cache(&self) -> Option<&Path> { self.cache.cache_path.as_deref() }
-    pub(crate) const fn cache_is_platform_default(&self) -> bool { self.cache.cache_is_platform_default }
-    pub(crate) const fn default_cache_enabled(&self) -> bool { self.cache.cache_enabled }
-    pub(crate) const fn cache_bytes(&self) -> u64 { self.cache.cache_target_bytes }
-    pub(crate) const fn configuration_shared(&self) -> bool { self.cache.configuration_shared }
-    pub(crate) fn named_cache(&self) -> bool { self.cache.cache_path_source == "environment" }
-    pub(crate) fn batch(&self) -> Option<&str> { self.batch.as_deref() }
+    pub(crate) fn cache(&self) -> Option<&Path> {
+        self.cache.cache_path.as_deref()
+    }
+    pub(crate) const fn cache_is_platform_default(&self) -> bool {
+        self.cache.cache_is_platform_default
+    }
+    pub(crate) const fn default_cache_enabled(&self) -> bool {
+        self.cache.cache_enabled
+    }
+    pub(crate) const fn cache_bytes(&self) -> u64 {
+        self.cache.cache_target_bytes
+    }
+    pub(crate) const fn configuration_shared(&self) -> bool {
+        self.cache.configuration_shared
+    }
+    pub(crate) fn named_cache(&self) -> bool {
+        self.cache.cache_path_source == "environment"
+    }
+    pub(crate) fn batch(&self) -> Option<&str> {
+        self.batch.as_deref()
+    }
     pub(crate) fn request_size_selected(&self, flag: Option<&str>) -> bool {
         flag.is_some() || self.max_request_bytes.is_some()
     }
     pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
-        let Some(value) = flag.or(self.max_request_bytes.as_deref()) else { return Ok(DEFAULT_REQUEST_SIZE); };
-        value.parse::<usize>().ok()
+        let Some(value) = flag.or(self.max_request_bytes.as_deref()) else {
+            return Ok(DEFAULT_REQUEST_SIZE);
+        };
+        value
+            .parse::<usize>()
+            .ok()
             .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()))
             .ok_or(Failure::Usage(if flag.is_some() {
                 "--max-request-bytes takes a whole number of at least 1"
-            } else { "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1" }))
+            } else {
+                "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1"
+            }))
     }
     pub(crate) fn set_request_size(&self, size: usize) -> Result<(), Failure> {
         self.update_builder(|builder| builder.max_request_bytes(size))
     }
-    pub(crate) fn warn_request_size(&self, route: &crate::ResolvedSettings, size: usize) -> Result<(), Failure> {
+    pub(crate) fn warn_request_size(
+        &self,
+        route: &crate::ResolvedSettings,
+        size: usize,
+    ) -> Result<(), Failure> {
         if route.is_built_in && size > DEFAULT_REQUEST_SIZE {
             writeln!(io::stderr().lock(),
                 "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens")
@@ -164,32 +217,58 @@ impl Environment {
         Ok(())
     }
     pub(crate) fn retry_wait(&self) -> Duration {
-        self.retry_wait_ms.map_or(Duration::from_secs(1), Duration::from_millis)
+        self.retry_wait_ms
+            .map_or(Duration::from_secs(1), Duration::from_millis)
     }
-    pub(crate) fn input_pause(&self) -> Option<Duration> { self.input_pause_ms.map(Duration::from_millis) }
-    pub(crate) const fn cancel(&self) -> &crate::cli::interrupt::Signal { &self.cancel }
+    pub(crate) fn input_pause(&self) -> Option<Duration> {
+        self.input_pause_ms.map(Duration::from_millis)
+    }
+    pub(crate) const fn cancel(&self) -> &crate::cli::interrupt::Signal {
+        &self.cancel
+    }
     pub(crate) fn take_builder(&self) -> Result<EngineBuilder, Failure> {
-        self.builder.lock().map_err(|_| Failure::Defect("command settings lock failed"))?
-            .take().ok_or(Failure::Defect("command settings were already consumed"))
+        self.builder
+            .lock()
+            .map_err(|_| Failure::Defect("command settings lock failed"))?
+            .take()
+            .ok_or(Failure::Defect("command settings were already consumed"))
     }
-    pub(crate) fn update_builder(&self, update: impl FnOnce(EngineBuilder) -> Result<EngineBuilder, crate::Error>) -> Result<(), Failure> {
+    pub(crate) fn update_builder(
+        &self,
+        update: impl FnOnce(EngineBuilder) -> Result<EngineBuilder, crate::Error>,
+    ) -> Result<(), Failure> {
         let builder = update(self.take_builder()?)?;
         self.restore_builder(builder)
     }
     pub(crate) fn restore_builder(&self, builder: EngineBuilder) -> Result<(), Failure> {
-        *self.builder.lock().map_err(|_| Failure::Defect("command settings lock failed"))? = Some(builder);
+        *self
+            .builder
+            .lock()
+            .map_err(|_| Failure::Defect("command settings lock failed"))? = Some(builder);
         Ok(())
     }
     pub(crate) fn observe_engine(&self, engine: &Engine) {
-        if let Ok(mut observed) = self.engine.lock() { *observed = Some(engine.clone()); }
+        if let Ok(mut observed) = self.engine.lock() {
+            *observed = Some(engine.clone());
+        }
     }
-    pub(crate) fn tally(&self) -> &Tally { &self.tally }
+    pub(crate) fn tally(&self) -> &Tally {
+        &self.tally
+    }
     pub(crate) fn snapshot(&self) -> crate::cli::facts::Snapshot {
-        let engine = self.engine.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
-        let facts = engine.as_ref().map_or_else(|| self.tally.facts(), |engine| self.tally.facts_with_engine(engine));
-        crate::cli::facts::Snapshot { facts,
+        let engine = self
+            .engine
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let facts = engine.as_ref().map_or_else(
+            || self.tally.facts(),
+            |engine| self.tally.facts_with_engine(engine),
+        );
+        crate::cli::facts::Snapshot {
+            facts,
             counts: engine.as_ref().map_or(crate::Counters::ZERO, Engine::usage),
-            http_time: engine.as_ref().and_then(Engine::http_time) }
+            http_time: engine.as_ref().and_then(Engine::http_time),
+        }
     }
     pub(crate) fn finish_usage(&self) -> Option<Option<crate::UsageFailure>> {
         let engine = self.engine.lock().ok()?;
@@ -233,12 +312,17 @@ pub(crate) fn source<'a>(
 }
 
 #[cfg(not(windows))]
-fn open_read(path: &Path) -> io::Result<File> { File::open(path) }
+fn open_read(path: &Path) -> io::Result<File> {
+    File::open(path)
+}
 
 #[cfg(windows)]
 fn open_read(path: &Path) -> io::Result<File> {
     use std::os::windows::fs::OpenOptionsExt as _;
-    std::fs::OpenOptions::new().read(true).custom_flags(0x0200_0000).open(path)
+    std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(0x0200_0000)
+        .open(path)
 }
 
 /// Classify and buffer the handle that `source` opened.
@@ -301,8 +385,8 @@ mod deadline_tests;
 mod tests {
     //! Stays: direct I/O fault and secrecy checks cover replaced handles, broken pipes and bounded incremental reads.
     use super::{Environment, open_read, opened, write_line};
-    use crate::{FileReader, ReaderOptions, SourceUnit};
     use crate::failure::Failure;
+    use crate::{FileReader, ReaderOptions, SourceUnit};
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
 
@@ -406,9 +490,14 @@ mod tests {
     fn release_only_a_record_is_read_no_further_than_two_bytes_past_the_limit() {
         let limit = crate::RawRecord::max_bytes();
         for unit in [SourceUnit::Line, SourceUnit::File] {
-            let mut source = std::io::BufReader::with_capacity(1, std::io::repeat(b'x').take((limit * 4) as u64));
+            let mut source = std::io::BufReader::with_capacity(
+                1,
+                std::io::repeat(b'x').take((limit * 4) as u64),
+            );
             {
-                let mut reader = FileReader::new("input", &mut source, ReaderOptions { unit, window: None }).expect("reader");
+                let mut reader =
+                    FileReader::new("input", &mut source, ReaderOptions { unit, window: None })
+                        .expect("reader");
                 assert!(reader.next().expect("refused record").is_err());
             }
             assert_eq!(source.get_ref().limit(), (limit * 4 - limit - 2) as u64);
@@ -422,7 +511,8 @@ mod tests {
         for ending in ["", "\n", "\r\n"] {
             let mut bytes = vec![b'x'; limit];
             bytes.extend_from_slice(ending.as_bytes());
-            let mut reader = FileReader::new("input", bytes.as_slice(), ReaderOptions::default()).expect("reader");
+            let mut reader = FileReader::new("input", bytes.as_slice(), ReaderOptions::default())
+                .expect("reader");
             let first = reader.next().expect("one record").expect("text");
             assert_eq!(first.record.len(), limit, "{ending:?}");
         }
@@ -431,8 +521,10 @@ mod tests {
     #[test]
     fn a_stream_yields_one_line_at_a_time_and_a_document_yields_every_byte_once() {
         let read = |bytes: &[u8], unit| {
-            FileReader::new("input", bytes, ReaderOptions { unit, window: None }).expect("reader")
-                .map(|record| record.expect("text").record).collect::<Vec<_>>()
+            FileReader::new("input", bytes, ReaderOptions { unit, window: None })
+                .expect("reader")
+                .map(|record| record.expect("text").record)
+                .collect::<Vec<_>>()
         };
         assert_eq!(read(b"a\nb\n", SourceUnit::Line), ["a", "b"]);
         assert_eq!(read(b"a\nb", SourceUnit::Line), ["a", "b"]);

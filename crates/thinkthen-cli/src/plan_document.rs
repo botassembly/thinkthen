@@ -15,7 +15,9 @@ impl Sources {
         };
         if let Some((_, held)) = self.0.iter_mut().find(|(held, _)| held == name) {
             *held = source.to_owned();
-        } else { self.0.push((name.to_owned(), source.to_owned())); }
+        } else {
+            self.0.push((name.to_owned(), source.to_owned()));
+        }
         self
     }
 }
@@ -53,22 +55,37 @@ pub(crate) struct PlanDocument<'a> {
 }
 impl std::fmt::Debug for PlanDocument<'_> {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.debug_struct("PlanDocument")
-            .field("request_bytes", &self.request.get().len()).finish_non_exhaustive()
+        formatter
+            .debug_struct("PlanDocument")
+            .field("request_bytes", &self.request.get().len())
+            .finish_non_exhaustive()
     }
 }
 impl<'a> PlanDocument<'a> {
-    pub(crate) fn request_body(&self) -> &[u8] { self.request.get().as_bytes() }
+    pub(crate) fn request_body(&self) -> &[u8] {
+        self.request.get().as_bytes()
+    }
 
     /// Retain exactly the body closed by native admission and packing.
     pub(crate) fn of_body(settings: &'a ResolvedSettings, body: Vec<u8>) -> Result<Self, Error> {
-        let refused = || Error::new(thinkthen::ErrorKind::Defect, "a native prepared request is not JSON text");
+        let refused = || {
+            Error::new(
+                thinkthen::ErrorKind::Defect,
+                "a native prepared request is not JSON text",
+            )
+        };
         let text = String::from_utf8(body).map_err(|_| refused())?;
         let request = RawValue::from_string(text).map_err(|_| refused())?;
         Ok(Self {
-            url: &settings.url, model: &settings.model, key_env: &settings.key_variable,
-            input: None, from: None, on: None, request_count: None,
-            group_requests: None, request,
+            url: &settings.url,
+            model: &settings.model,
+            key_env: &settings.key_variable,
+            input: None,
+            from: None,
+            on: None,
+            request_count: None,
+            group_requests: None,
+            request,
         })
     }
     #[must_use]
@@ -77,8 +94,17 @@ impl<'a> PlanDocument<'a> {
         self
     }
     #[must_use]
-    pub(crate) fn reading(mut self, framing: RequestFraming, fields: Vec<String>, default: bool) -> Self {
-        self.input = Some(ReadingPlan { framing, field: fields, from: default.then_some("default") });
+    pub(crate) fn reading(
+        mut self,
+        framing: RequestFraming,
+        fields: Vec<String>,
+        default: bool,
+    ) -> Self {
+        self.input = Some(ReadingPlan {
+            framing,
+            field: fields,
+            from: default.then_some("default"),
+        });
         self
     }
     #[must_use]
@@ -88,10 +114,19 @@ impl<'a> PlanDocument<'a> {
     }
     #[must_use]
     pub(crate) fn questions_on(mut self, pointers: Vec<(String, Vec<String>)>) -> Self {
-        self.on = Some(QuestionPointers(pointers.into_iter().map(|(name, pointers)| {
-            let shown = if pointers.is_empty() { vec![String::new()] } else { pointers };
-            (name, shown)
-        }).collect()));
+        self.on = Some(QuestionPointers(
+            pointers
+                .into_iter()
+                .map(|(name, pointers)| {
+                    let shown = if pointers.is_empty() {
+                        vec![String::new()]
+                    } else {
+                        pointers
+                    };
+                    (name, shown)
+                })
+                .collect(),
+        ));
         self
     }
     #[must_use]

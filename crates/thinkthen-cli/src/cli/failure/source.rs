@@ -1,6 +1,6 @@
 //! Only command-owned failures cross the public caller-source boundary.
-use std::{fmt, sync::Mutex};
 use super::Failure;
+use std::{fmt, sync::Mutex};
 
 #[derive(Debug)]
 struct CommandSource(Mutex<Option<Failure>>);

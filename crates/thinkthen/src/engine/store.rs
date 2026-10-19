@@ -35,12 +35,12 @@ mod versioned;
 pub(crate) use original::Original;
 mod probe;
 mod prune;
+pub use convert::Summary as ConversionSummary;
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
 pub(crate) use probe::Probe;
 pub use prune::{Counts, Prune, Pruned, Selection};
 pub(crate) use prune::{counts, preview, run as prune, unused};
-pub use convert::Summary as ConversionSummary;
 
 /// The live container's file name.
 pub(crate) const SQLITE: &str = "thinkthen.sqlite";

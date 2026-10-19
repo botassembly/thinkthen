@@ -329,16 +329,29 @@ impl QuestionFile {
     pub(crate) fn from_question(question: &crate::core::Question) -> Self {
         use crate::core::Question;
         let (verb, text, yes, no, labels) = match question {
-            Question::Decide { text, yes, no } => (Verb::Decide, text, yes.clone(), no.clone(), None),
+            Question::Decide { text, yes, no } => {
+                (Verb::Decide, text, yes.clone(), no.clone(), None)
+            }
             Question::Choose { text, options } => (Verb::Choose, text, None, None, Some(options)),
             Question::Tag { text, labels } => (Verb::Tag, text, None, None, Some(labels)),
             Question::Score { text, levels } => (Verb::Score, text, None, None, Some(levels)),
         };
         Self {
             metadata: crate::core::declaration::QuestionMetadata::default(),
-            verb, text: text.clone(), yes, no,
-            labels: labels.map(|labels| labels.descriptions().map(|(name, value)| (name.clone(), value.cloned())).collect()),
-            threshold: None, on: None, model: None, profile: None,
+            verb,
+            text: text.clone(),
+            yes,
+            no,
+            labels: labels.map(|labels| {
+                labels
+                    .descriptions()
+                    .map(|(name, value)| (name.clone(), value.cloned()))
+                    .collect()
+            }),
+            threshold: None,
+            on: None,
+            model: None,
+            profile: None,
         }
     }
 

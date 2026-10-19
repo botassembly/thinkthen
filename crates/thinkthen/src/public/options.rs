@@ -1,8 +1,8 @@
 //! Call options, the cancel token, and the one interface every public call passes.
 
 mod admission;
-mod observer;
 mod attachments;
+mod observer;
 pub(crate) mod readiness;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
@@ -25,7 +25,9 @@ use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation}
 pub(crate) type AnnotationRecovery<'a> = Option<&'a dyn Fn(usize, &str) -> bool>;
 
 pub(crate) fn continue_annotation(
-    callback: &dyn Fn(usize, &str) -> bool, ordinal: usize, pointer: &str,
+    callback: &dyn Fn(usize, &str) -> bool,
+    ordinal: usize,
+    pointer: &str,
 ) -> bool {
     catch_unwind(AssertUnwindSafe(|| callback(ordinal, pointer))).unwrap_or(false)
 }
@@ -72,7 +74,6 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
-
     /// A token that has not fired.
     #[must_use]
     pub fn new() -> Self {
@@ -117,7 +118,8 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
-    pub(in crate::public) attachment_limit: Option<super::request::transport::TransportAttachmentLimit>,
+    pub(in crate::public) attachment_limit:
+        Option<super::request::transport::TransportAttachmentLimit>,
     pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) shared_state_groups: bool,
@@ -290,7 +292,8 @@ impl<'a> CallOptions<'a> {
     /// own invocation or session. It is never a request/result sink.
     #[must_use]
     pub const fn on_missing_annotation_pointer(
-        mut self, callback: &'a (dyn Fn(usize, &str) -> bool + Sync),
+        mut self,
+        callback: &'a (dyn Fn(usize, &str) -> bool + Sync),
     ) -> Self {
         self.annotation_missing = Some(callback);
         self
@@ -298,17 +301,26 @@ impl<'a> CallOptions<'a> {
 
     pub(in crate::public) fn admit_recovery(&self) -> Result<(), Error> {
         if self.annotation_missing.is_some() {
-            return Err(Error::usage("annotation pointer continuation cannot accompany general row recovery"));
+            return Err(Error::usage(
+                "annotation pointer continuation cannot accompany general row recovery",
+            ));
         }
         Ok(())
     }
 
-    pub(in crate::public) fn admit_preparation(&self, function: crate::RequestFunction) -> Result<(), Error> {
+    pub(in crate::public) fn admit_preparation(
+        &self,
+        function: crate::RequestFunction,
+    ) -> Result<(), Error> {
         if self.annotation_missing.is_some() && function != crate::RequestFunction::Annotate {
-            return Err(Error::usage("missing annotation pointer continuation requires an annotation request"));
+            return Err(Error::usage(
+                "missing annotation pointer continuation requires an annotation request",
+            ));
         }
         if self.shared_state_groups && function != crate::RequestFunction::Annotate {
-            return Err(Error::usage("shared-state groups require an annotation request"));
+            return Err(Error::usage(
+                "shared-state groups require an annotation request",
+            ));
         }
         Ok(())
     }

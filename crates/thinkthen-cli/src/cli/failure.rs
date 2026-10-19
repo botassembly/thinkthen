@@ -4,20 +4,20 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use thinkthen::{ErrorKind, TransportFailure as TransportKind};
 use crate::render::RenderError;
+use thinkthen::{ErrorKind, TransportFailure as TransportKind};
 
 mod after_signal;
 pub(crate) mod context;
 mod convert;
-mod source;
-mod message;
 pub(crate) mod facts;
-pub(crate) mod recognize;
-mod recording;
+mod json;
+mod message;
 mod profile;
 mod provider;
-mod json;
+pub(crate) mod recognize;
+mod recording;
+mod source;
 pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
@@ -59,7 +59,10 @@ pub(crate) enum Failure {
     QuietWithDetails,
     RawWithAnotherView,
     /// The question file, or a value beside it, was refused.
-    Question { message: String, from_file: bool },
+    Question {
+        message: String,
+        from_file: bool,
+    },
     /// The file the question was to be read from could not be opened.
     OpenQuestionFile(io::Error),
     /// The question file or question set holds more than 1 MiB.
@@ -294,10 +297,9 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         return code;
     }
     let (code, message): (u8, String) = match failure {
-        Failure::Question { message, from_file } => (
-            if *from_file { 5 } else { 2 },
-            message.clone(),
-        ),
+        Failure::Question { message, from_file } => {
+            (if *from_file { 5 } else { 2 }, message.clone())
+        }
         Failure::OpenQuestionFile(error) => {
             (5, format!("the question file could not be opened: {error}"))
         }
@@ -562,14 +564,13 @@ pub(crate) fn sentence(failure: &Failure) -> (u8, String) {
     (code, text.strip_prefix(&prefix).unwrap_or(text).to_owned())
 }
 
-fn provider_message(
-    cause: &Failure,
-    diagnostic: &provider::Diagnostic,
-) -> (u8, String) {
+fn provider_message(cause: &Failure, diagnostic: &provider::Diagnostic) -> (u8, String) {
     let (code, text) = sentence(cause);
     (code, diagnostic.sentence(text))
 }
 
 fn reply_too_large(limit: u64) -> String {
-    format!("the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again")
+    format!(
+        "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
+    )
 }

@@ -7,10 +7,10 @@ use std::fmt;
 use std::io::{Read as _, Write};
 use std::path::Path;
 
+use crate::failure::Failure;
 use crate::statistics::answer::{Rule, Shown};
 use crate::statistics::{Line, MeasureError, json_lines};
 use thinkthen::{Threshold, ThresholdError};
-use crate::failure::Failure;
 
 /// Why a measuring command stopped, told with the command name and the input's role.
 ///

@@ -124,15 +124,39 @@ fn find_count_range_and_native_admission_share_the_complete_set_boundary() {
     for (none, expected) in [(false, 2..=255), (true, 1..=254)] {
         let range = find_candidate_count_range(none);
         assert_eq!(range, expected);
-        for count in [*range.start() - 1, *range.start(), *range.end(), *range.end() + 1] {
-            let request = Request::named("find", RequestArguments {
-                question: RequestQuestion::Text { text: "Fits?".to_owned() },
-                input: RequestInput::Units { items: (0..count).map(|_| item("evidence")).collect() },
-                options: RequestOptions { none, ..RequestOptions::default() },
-            }).unwrap().admit();
-            let planned = request.and_then(|request| engine.plan_request(&request, RequestEnvironment::default()));
-            assert_eq!(planned.is_ok(), range.contains(&count), "none={none}, count={count}");
-            if let Err(error) = planned { assert_eq!(error.kind(), ErrorKind::Usage); }
+        for count in [
+            *range.start() - 1,
+            *range.start(),
+            *range.end(),
+            *range.end() + 1,
+        ] {
+            let request = Request::named(
+                "find",
+                RequestArguments {
+                    question: RequestQuestion::Text {
+                        text: "Fits?".to_owned(),
+                    },
+                    input: RequestInput::Units {
+                        items: (0..count).map(|_| item("evidence")).collect(),
+                    },
+                    options: RequestOptions {
+                        none,
+                        ..RequestOptions::default()
+                    },
+                },
+            )
+            .unwrap()
+            .admit();
+            let planned = request
+                .and_then(|request| engine.plan_request(&request, RequestEnvironment::default()));
+            assert_eq!(
+                planned.is_ok(),
+                range.contains(&count),
+                "none={none}, count={count}"
+            );
+            if let Err(error) = planned {
+                assert_eq!(error.kind(), ErrorKind::Usage);
+            }
             assert!(listener.requests().is_empty());
             assert_eq!(listener.count(), 0);
         }

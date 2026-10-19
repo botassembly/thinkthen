@@ -7,11 +7,14 @@ use std::io::Read;
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
 
-use crate::{BatchSetting as Setting, InputDeclaration, QuestionKind, RequestFraming as Framing, ResolvedSettings};
 use crate::cli::asked::Resolved;
 use crate::cli::reading::Reading;
-use crate::schedule::Outcome;
 use crate::plan_document::Sources;
+use crate::schedule::Outcome;
+use crate::{
+    BatchSetting as Setting, InputDeclaration, QuestionKind, RequestFraming as Framing,
+    ResolvedSettings,
+};
 
 use crate::args::Common;
 use crate::edge::Environment;
@@ -38,17 +41,27 @@ use reading::read_by;
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
 #[derive(Clone, Debug)]
-pub(crate) enum Asks { Fixed(QuestionKind), Set, FromRecord }
+pub(crate) enum Asks {
+    Fixed(QuestionKind),
+    Set,
+    FromRecord,
+}
 impl Asks {
     const fn verb(&self) -> &'static str {
         match self {
-            Self::Fixed(QuestionKind::Tag) => "tag", Self::Fixed(QuestionKind::Score) => "score",
-            Self::Fixed(QuestionKind::Choose) | Self::FromRecord => "choose", _ => "decide",
+            Self::Fixed(QuestionKind::Tag) => "tag",
+            Self::Fixed(QuestionKind::Score) => "score",
+            Self::Fixed(QuestionKind::Choose) | Self::FromRecord => "choose",
+            _ => "decide",
         }
     }
 }
 pub(crate) fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
-    if settled.dynamic { return Err(Failure::Defect("a verb with no list left its question open")); }
+    if settled.dynamic {
+        return Err(Failure::Defect(
+            "a verb with no list left its question open",
+        ));
+    }
     Ok(Asks::Fixed(settled.kind))
 }
 
@@ -85,7 +98,8 @@ pub(crate) fn run(
     let asked = settled.model.as_deref();
     let per_document = matches!(
         asks,
-        Asks::Fixed(QuestionKind::Choose | QuestionKind::Tag | QuestionKind::Score) | Asks::FromRecord
+        Asks::Fixed(QuestionKind::Choose | QuestionKind::Tag | QuestionKind::Score)
+            | Asks::FromRecord
     );
     let request_size = batch
         .as_ref()
@@ -99,15 +113,20 @@ pub(crate) fn run(
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = environment.resolve(common.backend.as_deref(), common.url.as_deref(), asked)?;
-    if let Some(size) = request_size { environment.set_request_size(size)?; }
+    if let Some(size) = request_size {
+        environment.set_request_size(size)?;
+    }
     // The configuration's model applies only on the unnamed path.
-    let configured_model = asked.is_none() && backend.backend_name.is_none()
+    let configured_model = asked.is_none()
+        && backend.backend_name.is_none()
         && backend.model_source == "configuration";
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
-    if let Some(size) = request_size { environment.warn_request_size(&backend, size)?; }
+    if let Some(size) = request_size {
+        environment.warn_request_size(&backend, size)?;
+    }
     profile::read(common, environment)?;
     crate::cli::intake::window(common, !settled.on.is_empty())?;
     let reading = read_by(common, settled, keeping)?;
@@ -139,12 +158,11 @@ pub(crate) fn run(
     })?;
     let mismatch = match batch {
         Some(running) => {
-            let running =
-                if matches!(asks, Asks::Set) || settled.literal_question {
-                    running
-                } else {
-                    Setting::Records(NonZeroUsize::MIN)
-                };
+            let running = if matches!(asks, Asks::Set) || settled.literal_question {
+                running
+            } else {
+                Setting::Records(NonZeroUsize::MIN)
+            };
             Mismatch::new(settled.profile.as_deref(), None).with_batch(tuned_for, running)
         }
         None => Mismatch::new(settled.profile.as_deref(), None),
@@ -176,7 +194,11 @@ pub(crate) fn run(
         context_field,
         sources: (settled.saved || configured_model).then(|| {
             let sources = settled.sources.clone();
-            if configured_model { sources.setting("model", "configuration") } else { sources }
+            if configured_model {
+                sources.setting("model", "configuration")
+            } else {
+                sources
+            }
         }),
     };
 

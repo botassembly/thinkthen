@@ -11,18 +11,18 @@ use std::path::{Path, PathBuf};
 use clap::Args;
 
 use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
+use crate::failure::Failure;
 use crate::saved_json::Pointer;
+use crate::saved_json::{Json, Kind, NULL};
 use crate::statistics::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
 use crate::statistics::answer::{self, Identity};
+use crate::statistics::batch::SavedBatch as BatchSetting;
 use crate::statistics::diff::{
     self as compare, Change, Effect, ItemChange, KindChange, Last, Row, Side, Summary,
 };
 use crate::statistics::items::number;
 use crate::statistics::key::Key;
 use crate::statistics::{places, rounded, rounded_line};
-use crate::statistics::batch::SavedBatch as BatchSetting;
-use crate::saved_json::{Json, Kind, NULL};
-use crate::failure::Failure;
 
 /// The command line of `runs diff`.
 #[derive(Args, Debug)]

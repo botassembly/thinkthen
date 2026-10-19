@@ -142,7 +142,12 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
 
 #[cfg(unix)]
 fn status(home: &Path) -> serde_json::Value {
-    let total = thinkthen::read_usage(&Folder::Usage.under(home), &thinkthen::current_usage_month()).unwrap().total;
+    let total = thinkthen::read_usage(
+        &Folder::Usage.under(home),
+        &thinkthen::current_usage_month(),
+    )
+    .unwrap()
+    .total;
     serde_json::json!({"requests_sent": total.requests_sent(), "retries": total.retries(),
         "input_tokens": total.input_tokens(), "output_tokens": total.output_tokens(),
         "cache_answers": total.cache_answers()})

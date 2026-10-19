@@ -7,12 +7,12 @@ use std::process::ExitCode;
 
 use super::Judging;
 use super::asker::{self, Framed};
-use crate::{PlanEstimate, BatchSetting as Setting};
 use crate::cli::reading::Reading;
-use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
+use crate::render::json_line;
 use crate::schedule::Placed;
+use crate::{BatchSetting as Setting, PlanEstimate};
 
 pub(super) fn dry_run(
     judging: &Judging<'_>,
@@ -37,18 +37,22 @@ pub(super) fn dry_run(
         .map(|row| {
             row.map(|record| record.map_original(crate::QuestionInput::Record))
                 .map_err(Failure::into_error)
-
         });
     let native = judging.engine();
     let mut arguments = admitted.request().call.arguments().clone();
-    arguments.question = crate::RequestQuestion::Definition { value: judging.set.clone().into() };
+    arguments.question = crate::RequestQuestion::Definition {
+        value: judging.set.clone().into(),
+    };
     arguments.input = crate::RequestInput::Feed {
-        name: "cli-annotate-plan".to_owned(), framing: crate::RequestFraming::Document,
-        reading: crate::ReaderOptions::default(), images: Vec::new(),
+        name: "cli-annotate-plan".to_owned(),
+        framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(),
+        images: Vec::new(),
     };
     arguments.options.field = None;
     arguments.options.context_field = None;
-    let admitted = crate::Request::for_function(crate::RequestFunction::Annotate, arguments).admit()?;
+    let admitted =
+        crate::Request::for_function(crate::RequestFunction::Annotate, arguments).admit()?;
     let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
     if let Some(context) = judging.context.as_deref() {
         controls = controls.context(context);
@@ -59,9 +63,13 @@ pub(super) fn dry_run(
             Setting::Records(count) => crate::BatchSetting::Records(count),
         });
     }
-    let summary = native.plan_request(&admitted, crate::RequestEnvironment {
-        controls, feed: Some(crate::RequestFeed::from_records("cli-annotate-plan", rows)),
-    })?;
+    let summary = native.plan_request(
+        &admitted,
+        crate::RequestEnvironment {
+            controls,
+            feed: Some(crate::RequestFeed::from_records("cli-annotate-plan", rows)),
+        },
+    )?;
     print_plan(judging, reading, &summary, writer)
 }
 
@@ -77,15 +85,20 @@ fn print_plan(
     };
     judging.mismatch().print_once()?;
     crate::cli::check::say_dropped_detail(summary.drops_detail(), judging.environment.named())?;
-    let (count, group_requests) = summary.question_requests()
-        .ok_or(Failure::Defect("annotation preview lost its native group counts"))?;
+    let (count, group_requests) = summary.question_requests().ok_or(Failure::Defect(
+        "annotation preview lost its native group counts",
+    ))?;
     let document = PlanDocument::of_body(backend, first.to_vec())
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
         .key_env(&backend.key_variable)
         .questions_on(judging.settings.on.clone())
         .requests(count, group_requests.to_vec());
     let document = if reading.streams() {
-        document.reading(reading.framing(), reading.fields().to_vec(), reading.is_default())
+        document.reading(
+            reading.framing(),
+            reading.fields().to_vec(),
+            reading.is_default(),
+        )
     } else {
         document
     };

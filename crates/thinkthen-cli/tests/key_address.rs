@@ -1,5 +1,8 @@
 //! Command admission refuses credential-bearing addresses before local effects.
-#![allow(clippy::expect_used, reason = "a failed isolated command fixture stops the proof")]
+#![allow(
+    clippy::expect_used,
+    reason = "a failed isolated command fixture stops the proof"
+)]
 #[path = "../../thinkthen/src/test_deadline/child.rs"]
 mod child;
 use child::ChildEnvironment as _;

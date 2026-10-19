@@ -198,9 +198,10 @@ fn backend_failures_preserve_actual_started_facts_and_hide_private_payloads() {
 
 #[test]
 fn source_failure_preserves_the_completed_prefix_and_observed_facts() {
-    let listener = Listener::answering(|_| Canned::ok(
-        r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
-    )).unwrap();
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
+    .unwrap();
     let mut session = Session::launch(listener.base());
     session.initialize();
     let first = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -210,11 +211,14 @@ fn source_failure_preserves_the_completed_prefix_and_observed_facts() {
     // then tests a real started prefix, rather than an upfront missing path.
     let invalid = session.home.join("invalid-prefix-source-0639.txt");
     std::fs::write(&invalid, [0xff]).unwrap();
-    let result = session.call("decide", json!({
-        "question":"Q?",
-        "source":{"paths":[first, invalid],"unit":"file"},
-        "options":{"batch":1}
-    }));
+    let result = session.call(
+        "decide",
+        json!({
+            "question":"Q?",
+            "source":{"paths":[first, invalid],"unit":"file"},
+            "options":{"batch":1}
+        }),
+    );
     assert_eq!(result["isError"], true);
     let content = &result["structuredContent"];
     assert_eq!(content["error"]["kind"], "usage");

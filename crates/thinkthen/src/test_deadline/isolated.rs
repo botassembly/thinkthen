@@ -1,6 +1,10 @@
 //! Isolate process-global native state in a bounded child test process.
 use super::child::ChildEnvironment as _;
-use std::{env, fs, process::{Command, Stdio}, sync::atomic::Ordering};
+use std::{
+    env, fs,
+    process::{Command, Stdio},
+    sync::atomic::Ordering,
+};
 const CHILD: &str = "THINKTHEN_TEST_WIDTH_CHILD";
 
 /// Run the ignored test at `path` alone in a fresh copy of the binary. A

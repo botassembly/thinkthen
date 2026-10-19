@@ -11,11 +11,11 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::cli::measure::Cause;
-use crate::statistics::Line;
-use crate::statistics::batch::SavedBatch as BatchSetting;
 use crate::saved_json::Json;
+use crate::statistics::Line;
 use crate::statistics::answer::{Answer, Verb};
 use crate::statistics::audit::{Kind, Row};
+use crate::statistics::batch::SavedBatch as BatchSetting;
 use crate::statistics::optimize::Bar;
 use crate::statistics::rows::number;
 use crate::statistics::splice::{remove, splice};
@@ -54,13 +54,16 @@ pub(super) fn bars(
     if json.member("rank").is_some() || json.member("find").is_some() {
         return Err(Cause::NotQuestions);
     }
-    let definition = RequestDefinition::from_authored_json(&text).map_err(|_| Cause::NotQuestions)?;
+    let definition =
+        RequestDefinition::from_authored_json(&text).map_err(|_| Cause::NotQuestions)?;
     if matches!(definition, RequestDefinition::DynamicChoose(_)) {
         return Err(Cause::NotQuestions);
     }
     let digests: Vec<String> = if matches!(definition, RequestDefinition::Relate(_)) {
         [RelationIdentityMode::Records, RelationIdentityMode::Lines]
-            .into_iter().filter_map(|mode| definition.relation_sha256(mode).ok()).collect()
+            .into_iter()
+            .filter_map(|mode| definition.relation_sha256(mode).ok())
+            .collect()
     } else {
         definition.question_sha256().ok().into_iter().collect()
     };

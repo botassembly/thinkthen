@@ -1,9 +1,7 @@
 //! Command framing and presentation over native record admission.
 
 use crate::failure::Failure;
-use crate::{
-    Error, RawRecord, RecordEvidence, RecordInput, RecordReading, RequestFraming,
-};
+use crate::{Error, RawRecord, RecordEvidence, RecordInput, RecordReading, RequestFraming};
 
 #[derive(Clone)]
 pub(crate) struct Reading {
@@ -16,7 +14,9 @@ pub(crate) struct Reading {
 impl Reading {
     pub(crate) fn new(framing: RequestFraming, fields: Vec<String>) -> Result<Self, Failure> {
         if matches!(framing, RequestFraming::Lines) && !fields.is_empty() {
-            return Err(Failure::Usage("--field: a text line has no members, so --lines takes no pointer"));
+            return Err(Failure::Usage(
+                "--field: a text line has no members, so --lines takes no pointer",
+            ));
         }
         let pointers = fields.iter().map(String::as_str).collect::<Vec<_>>();
         let composition = RecordReading::new(&pointers, None, None)?;
@@ -33,7 +33,9 @@ impl Reading {
         self
     }
 
-    pub(crate) const fn is_default(&self) -> bool { self.default }
+    pub(crate) const fn is_default(&self) -> bool {
+        self.default
+    }
 
     pub(crate) fn fields(&self) -> &[String] {
         &self.fields
@@ -63,7 +65,10 @@ impl Reading {
         }
     }
 
-    pub(crate) fn compose(&self, original: RawRecord) -> Result<RecordInput<RecordEvidence>, Error> {
+    pub(crate) fn compose(
+        &self,
+        original: RawRecord,
+    ) -> Result<RecordInput<RecordEvidence>, Error> {
         self.composition.compose(original)
     }
 

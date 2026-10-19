@@ -113,8 +113,11 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
     let resolved = environment.resolve(backend, None, None)?;
     let cache = cache_status(&resolved)?;
     let month = crate::current_usage_month();
-    let (usage, problem) = match resolved.usage_path.as_deref()
-        .map(|path| crate::read_usage(path, &month)) {
+    let (usage, problem) = match resolved
+        .usage_path
+        .as_deref()
+        .map(|path| crate::read_usage(path, &month))
+    {
         None => (None, None),
         Some(Ok(totals)) => (Some(totals), None),
         Some(Err(failure)) => (None, Some(failure.to_string())),
@@ -147,10 +150,15 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
 }
 
 fn cache_status(settings: &crate::ResolvedSettings) -> Result<Cache, Failure> {
-    let counts = settings.cache_path.as_deref()
+    let counts = settings
+        .cache_path
+        .as_deref()
         .map(|path| crate::cache_counts(path, settings.cache_is_platform_default))
-        .transpose().map_err(|error| match error.diagnostic() {
-            Some(crate::ErrorDiagnostic::StoreVersion(file)) => Failure::StoreVersion(file.to_owned()),
+        .transpose()
+        .map_err(|error| match error.diagnostic() {
+            Some(crate::ErrorDiagnostic::StoreVersion(file)) => {
+                Failure::StoreVersion(file.to_owned())
+            }
             _ => Failure::StatusState,
         })?;
     Ok(Cache {

@@ -104,7 +104,15 @@ pub(crate) fn prune(
             ),
         )?;
         for key in &preview.keys {
-            edge::write_line(&mut writer, &format!("selected {}", key.iter().map(|byte| format!("{byte:02x}")).collect::<String>()))?;
+            edge::write_line(
+                &mut writer,
+                &format!(
+                    "selected {}",
+                    key.iter()
+                        .map(|byte| format!("{byte:02x}"))
+                        .collect::<String>()
+                ),
+            )?;
         }
         return Ok(ExitCode::SUCCESS);
     }

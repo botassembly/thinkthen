@@ -1,13 +1,17 @@
 //! Genuine public TLS trust and bounded named-bundle refusals.
-#![allow(clippy::expect_used, clippy::panic, reason = "a failed local certificate fixture stops the boundary proof")]
+#![allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "a failed local certificate fixture stops the boundary proof"
+)]
 use crate::child::ChildEnvironment as _;
 use std::fs;
-use std::process::Command;
 use std::path::PathBuf;
+use std::process::Command;
 use thinkthen::{Engine, EngineBuilder, ErrorKind, Question};
 #[path = "../support/tls.rs"]
 mod tls;
-use tls::{CA, KEY, RESPONSE, RESPONSE_ALT, Fixture, Server};
+use tls::{CA, Fixture, KEY, RESPONSE, RESPONSE_ALT, Server};
 
 #[test]
 fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
@@ -64,8 +68,14 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
             .no_cache()
             .build()
             .expect_err("bad CA before transport");
-        let preloaded = Engine::builder().base_url(base).unwrap()
-            .ca_bundle(&path).unwrap().no_cache().preload_ca_bundle().unwrap_err();
+        let preloaded = Engine::builder()
+            .base_url(base)
+            .unwrap()
+            .ca_bundle(&path)
+            .unwrap()
+            .no_cache()
+            .preload_ca_bundle()
+            .unwrap_err();
         assert_eq!(preloaded.kind(), refused.kind(), "{name}");
         assert_eq!(preloaded.to_string(), refused.to_string(), "{name}");
         assert_eq!(refused.kind(), ErrorKind::Usage, "{name}");
@@ -155,21 +165,33 @@ fn explicit_preload_retains_roots_and_new_selection_invalidates_them() {
     // Selecting a bundle is lazy: it may be created before ordinary build.
     fs::write(&path, CA).unwrap();
     builder.build().unwrap();
-    let builder = Engine::builder().no_cache().ca_bundle(&path).unwrap()
-        .preload_ca_bundle().unwrap();
+    let builder = Engine::builder()
+        .no_cache()
+        .ca_bundle(&path)
+        .unwrap()
+        .preload_ca_bundle()
+        .unwrap();
     fs::remove_file(&path).unwrap();
     // Both a repeated preload and build reuse the admitted roots without reopening.
     let builder = builder.preload_ca_bundle().unwrap();
     builder.build().unwrap();
 
     fs::write(&path, CA).unwrap();
-    let builder = Engine::builder().no_cache().ca_bundle(&path).unwrap()
-        .preload_ca_bundle().unwrap();
+    let builder = Engine::builder()
+        .no_cache()
+        .ca_bundle(&path)
+        .unwrap()
+        .preload_ca_bundle()
+        .unwrap();
     let missing = fixture.at("replacement-missing.pem");
     let error = builder.ca_bundle(&missing).unwrap().build().unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
-    let expected = Engine::builder().no_cache().ca_bundle(&missing).unwrap()
-        .preload_ca_bundle().unwrap_err();
+    let expected = Engine::builder()
+        .no_cache()
+        .ca_bundle(&missing)
+        .unwrap()
+        .preload_ca_bundle()
+        .unwrap_err();
     assert_eq!(error.to_string(), expected.to_string());
     assert!(!error.to_string().contains(missing.to_str().unwrap()));
 }
@@ -190,7 +212,10 @@ fn named_storage_metadata_is_a_warning_signal_only() {
         for (mode, warned) in [(0o700, false), (0o770, false), (0o707, true)] {
             fs::set_permissions(&folder, fs::Permissions::from_mode(mode)).unwrap();
             assert_eq!(thinkthen::storage_writable_by_another(&folder), warned);
-            assert_eq!(fs::metadata(&folder).unwrap().permissions().mode() & 0o777, mode);
+            assert_eq!(
+                fs::metadata(&folder).unwrap().permissions().mode() & 0o777,
+                mode
+            );
         }
     }
     #[cfg(not(unix))]

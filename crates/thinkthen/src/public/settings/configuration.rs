@@ -1,6 +1,9 @@
 //! Capture platform configuration without admitting unrelated request settings.
 use super::{EngineBuilder, Seeded, backend::Captured, snapshot::CapturedMetadata};
-use crate::{Error, config::{self, Config}};
+use crate::{
+    Error,
+    config::{self, Config},
+};
 use std::path::PathBuf;
 
 impl EngineBuilder {
@@ -24,7 +27,9 @@ impl EngineBuilder {
             } else {
                 Error::local(error.message.to_string())
             };
-            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(error))
+            public.with_diagnostic(crate::public::error::diagnostic::Diagnostic::Configuration(
+                error,
+            ))
         })?;
         Ok(Self::configured(&config, path, config::cache_path(), true))
     }

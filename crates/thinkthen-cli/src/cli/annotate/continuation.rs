@@ -1,6 +1,10 @@
 //! One bounded missing-pointer event and its caller-owned acknowledgement.
 use crate::cli::interrupt::Signal;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, SyncSender}};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+    mpsc::{self, Receiver, SyncSender},
+};
 use std::time::Duration;
 
 type Callback = Arc<dyn Fn(usize, &str) -> bool + Send + Sync>;
@@ -10,7 +14,9 @@ pub(super) struct Missing {
     acknowledge: SyncSender<bool>,
 }
 impl Missing {
-    pub(super) fn acknowledge(self, accepted: bool) { let _sent = self.acknowledge.try_send(accepted); }
+    pub(super) fn acknowledge(self, accepted: bool) {
+        let _sent = self.acknowledge.try_send(accepted);
+    }
 }
 pub(super) struct Continuation {
     events: Receiver<Missing>,
@@ -22,9 +28,20 @@ impl Continuation {
         let closed = Arc::new(AtomicBool::new(false));
         let stopped = closed.clone();
         let callback = Arc::new(move |ordinal: usize, pointer: &str| {
-            if stopped.load(Ordering::Acquire) || signal.fired() { return false; }
+            if stopped.load(Ordering::Acquire) || signal.fired() {
+                return false;
+            }
             let (acknowledge, replies) = mpsc::sync_channel(1);
-            if sender.try_send(Missing { ordinal, pointer: pointer.to_owned(), acknowledge }).is_err() { return false; }
+            if sender
+                .try_send(Missing {
+                    ordinal,
+                    pointer: pointer.to_owned(),
+                    acknowledge,
+                })
+                .is_err()
+            {
+                return false;
+            }
             loop {
                 match replies.recv_timeout(Duration::from_millis(50)) {
                     Ok(accepted) => return accepted,
@@ -41,11 +58,17 @@ impl Continuation {
         });
         (Self { events, closed }, callback)
     }
-    pub(super) fn try_next(&self) -> Option<Missing> { self.events.try_recv().ok() }
-    pub(super) fn close(&self) { self.closed.store(true, Ordering::Release); }
+    pub(super) fn try_next(&self) -> Option<Missing> {
+        self.events.try_recv().ok()
+    }
+    pub(super) fn close(&self) {
+        self.closed.store(true, Ordering::Release);
+    }
 }
 impl Drop for Continuation {
-    fn drop(&mut self) { self.close(); }
+    fn drop(&mut self) {
+        self.close();
+    }
 }
 
 #[cfg(test)]
@@ -57,9 +80,17 @@ mod tests {
     fn acknowledgement_holds_the_worker_until_the_command_finishes_its_row() {
         let (continuation, callback) = Continuation::new(Signal::default());
         let (settled, result) = mpsc::sync_channel(1);
-        let worker = std::thread::spawn(move || { settled.send(callback(2, "/selected")).unwrap(); });
-        let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
-        assert_eq!((missing.ordinal, missing.pointer.as_str()), (2, "/selected"));
+        let worker = std::thread::spawn(move || {
+            settled.send(callback(2, "/selected")).unwrap();
+        });
+        let missing = continuation
+            .events
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap();
+        assert_eq!(
+            (missing.ordinal, missing.pointer.as_str()),
+            (2, "/selected")
+        );
         assert_eq!(result.try_recv(), Err(mpsc::TryRecvError::Empty));
         missing.acknowledge(true);
         assert!(result.recv_timeout(Duration::from_secs(5)).unwrap());
@@ -68,7 +99,9 @@ mod tests {
 
     fn invoke(callback: Callback) -> (std::thread::JoinHandle<()>, Receiver<bool>) {
         let (sender, result) = mpsc::sync_channel(1);
-        let worker = std::thread::spawn(move || { sender.send(callback(0, "/missing")).unwrap(); });
+        let worker = std::thread::spawn(move || {
+            sender.send(callback(0, "/missing")).unwrap();
+        });
         (worker, result)
     }
 
@@ -77,8 +110,15 @@ mod tests {
         for explicit_refusal in [false, true] {
             let (continuation, callback) = Continuation::new(Signal::default());
             let (worker, result) = invoke(callback);
-            let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
-            if explicit_refusal { missing.acknowledge(false); } else { drop(missing); }
+            let missing = continuation
+                .events
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap();
+            if explicit_refusal {
+                missing.acknowledge(false);
+            } else {
+                drop(missing);
+            }
             assert!(!result.recv_timeout(Duration::from_secs(5)).unwrap());
             worker.join().unwrap();
         }
@@ -89,8 +129,15 @@ mod tests {
         for drop_receiver in [false, true] {
             let (continuation, callback) = Continuation::new(Signal::default());
             let (worker, result) = invoke(callback);
-            let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
-            if drop_receiver { drop(continuation); } else { continuation.close(); }
+            let missing = continuation
+                .events
+                .recv_timeout(Duration::from_secs(5))
+                .unwrap();
+            if drop_receiver {
+                drop(continuation);
+            } else {
+                continuation.close();
+            }
             // Keep the sender alive: closure must release the callback even
             // when command output has stalled while holding this event.
             assert!(!result.recv_timeout(Duration::from_secs(5)).unwrap());
@@ -103,7 +150,10 @@ mod tests {
     fn rendered_closed_pipe_acknowledgement_wins_before_shutdown() {
         let (continuation, callback) = Continuation::new(Signal::default());
         let (worker, result) = invoke(callback);
-        let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
+        let missing = continuation
+            .events
+            .recv_timeout(Duration::from_secs(5))
+            .unwrap();
         missing.acknowledge(true);
         continuation.close();
         assert!(result.recv_timeout(Duration::from_secs(5)).unwrap());

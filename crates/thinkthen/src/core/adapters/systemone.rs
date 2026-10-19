@@ -21,13 +21,12 @@ use thiserror::Error;
 use crate::core::text::ModelName;
 
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
-pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::drops_any;
+pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
 pub(crate) use crate::core::adapters::systemone::response::{decode_answers, decode_questions};
-
 
 /// The name this adapter answers to, in the recording key and the entry.
 ///

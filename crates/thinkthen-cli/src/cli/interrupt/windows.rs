@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 
-use super::{Acknowledgment, StartError};
 use super::Signal as Cancel;
+use super::{Acknowledgment, StartError};
 
 pub(super) struct Carrier {
     stop: Sender<()>,
@@ -34,11 +34,7 @@ impl Carrier {
     }
 }
 
-fn poll(
-    cancel: Cancel,
-    stopped: Receiver<()>,
-    acknowledgment: Acknowledgment,
-) -> Result<(), ()> {
+fn poll(cancel: Cancel, stopped: Receiver<()>, acknowledgment: Acknowledgment) -> Result<(), ()> {
     let mut acknowledged = false;
     loop {
         if cancel.fired() && !acknowledged {

@@ -7,7 +7,9 @@ type Notify = Box<dyn Fn() + Send + Sync>;
 #[derive(Clone, Default)]
 pub(crate) struct Wake(Arc<Mutex<Option<Notify>>>);
 impl std::fmt::Debug for Wake {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("Wake") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Wake")
+    }
 }
 impl Wake {
     pub(crate) fn register(&self, notify: Notify) {

@@ -158,7 +158,9 @@ impl<R: BufRead> FileReader<R> {
     /// IO failures retain only the caller-supplied reader's error through explicit
     /// standard source access; normal error output withholds its text.
     pub fn next_bytes(&mut self) -> Option<Result<SourceRecord<Vec<u8>>, Error>> {
-        if self.stopped { return None; }
+        if self.stopped {
+            return None;
+        }
         let Some(unit) = self.chunks.next_unit(self.options.window.unwrap_or(1)) else {
             self.stopped = true;
             return None;
@@ -167,17 +169,25 @@ impl<R: BufRead> FileReader<R> {
             Ok(unit) => unit,
             Err(error) => {
                 self.stopped = true;
-                return Some(Err(Error::local("source file could not be read").with_source(error)));
+                return Some(Err(
+                    Error::local("source file could not be read").with_source(error)
+                ));
             }
         };
         let first_line = self.line + 1;
         self.line += count;
-        Some(Ok(SourceRecord { record, file: self.file.clone(), first_line,
-            last_line: self.line.max(first_line) }))
+        Some(Ok(SourceRecord {
+            record,
+            file: self.file.clone(),
+            first_line,
+            last_line: self.line.max(first_line),
+        }))
     }
 
     fn read_record(&mut self) -> Result<Option<SourceRecord<String>>, Error> {
-        let Some(unit) = self.next_bytes().transpose()? else { return Ok(None); };
+        let Some(unit) = self.next_bytes().transpose()? else {
+            return Ok(None);
+        };
         let bytes = unit.record;
         let streams = self.options.unit != SourceUnit::File;
         let reading = Reading::new(
