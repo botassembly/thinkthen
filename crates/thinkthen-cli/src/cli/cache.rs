@@ -39,7 +39,7 @@ pub(crate) fn unused(
         }
         used.insert(line.to_owned());
     }
-    let keys = crate::engine::store::unused(&arguments.directory, &used)?;
+    let keys = crate::cache_unused(&arguments.directory, &used)?;
     edge::write_line(
         &mut writer,
         &format!("unused from supplied keys: {}", keys.len()),
@@ -56,7 +56,7 @@ pub(crate) fn convert(arguments: &ConvertArguments) -> Result<ExitCode, Failure>
     if !fs::metadata(&arguments.directory).is_ok_and(|metadata| metadata.is_dir()) {
         return Err(Failure::ConvertFolder);
     }
-    let summary = crate::engine::store::convert(&arguments.directory)?;
+    let summary = crate::convert_cache(&arguments.directory)?;
     let stderr = std::io::stderr();
     let mut diagnostic = stderr.lock();
     edge::write_line(
@@ -86,14 +86,13 @@ pub(crate) fn prune(
             "--answered-by-other-than takes a nonblank model",
         ));
     }
-    let options = crate::engine::store::Prune {
+    let options = crate::CachePruneOptions {
         max_size,
         older_than,
         answered_by_other_than: arguments.answered_by_other_than.clone(),
     };
-    let now = crate::engine::store::now();
     if arguments.dry_run {
-        let preview = crate::engine::store::preview(&arguments.directory, &options, now)?;
+        let preview = crate::preview_cache_prune(&arguments.directory, &options)?;
         edge::write_line(
             &mut writer,
             &format!(
@@ -105,11 +104,11 @@ pub(crate) fn prune(
             ),
         )?;
         for key in &preview.keys {
-            edge::write_line(&mut writer, &format!("selected {}", crate::core::hex(key)))?;
+            edge::write_line(&mut writer, &format!("selected {}", key.iter().map(|byte| format!("{byte:02x}")).collect::<String>()))?;
         }
         return Ok(ExitCode::SUCCESS);
     }
-    let result = crate::engine::store::prune(&arguments.directory, &options, now)?;
+    let result = crate::prune_cache(&arguments.directory, &options)?;
     edge::write_line(
         &mut writer,
         &format!(

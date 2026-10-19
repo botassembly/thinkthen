@@ -47,7 +47,7 @@ use clap::{CommandFactory as _, FromArgMatches as _};
 
 /// Parse the process inputs, run one command, and report its exit code.
 #[must_use]
-pub fn entry() -> ExitCode {
+pub(crate) fn entry() -> ExitCode {
     let started = Instant::now();
     let cli = match parsed_cli() {
         Ok(cli) => cli,

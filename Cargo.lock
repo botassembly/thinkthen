@@ -2179,7 +2179,6 @@ version = "0.2.0"
 dependencies = [
  "arc-swap",
  "base64 0.22.1",
- "clap",
  "conformance-backend",
  "csv-core",
  "image",
@@ -2197,6 +2196,23 @@ dependencies = [
  "signal-hook 0.3.18",
  "thiserror",
  "ureq",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "thinkthen-cli"
+version = "0.2.0"
+dependencies = [
+ "clap",
+ "conformance-backend",
+ "nix",
+ "proptest",
+ "rustls",
+ "schemars",
+ "serde",
+ "serde_json",
+ "signal-hook 0.3.18",
+ "thinkthen",
  "windows-sys 0.61.2",
 ]
 

@@ -1,0 +1,73 @@
+[package]
+name = "thinkthen-cli"
+version = "0.2.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
+license = "MIT"
+repository = "https://github.com/botassembly/thinkthen"
+homepage = "https://thinkthen.dev"
+readme = "README.md"
+keywords = ["classification", "llm", "cli", "text"]
+categories = ["command-line-utilities", "text-processing"]
+
+[package.metadata.thinkthen]
+supported-platforms = ["linux", "macos", "windows-x86_64-msvc"]
+
+[[bin]]
+name = "thinkthen"
+path = "src/main.rs"
+
+[dependencies]
+thinkthen = { version = "=0.2.0", path = "../thinkthen" }
+clap = { version = "4.6.7", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+signal-hook = "0.3.18"
+
+# Ticket 0380 C confines unsafe to the reviewed Windows FFI leaves.
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = "forbid"
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"
+
+[dev-dependencies]
+conformance-backend = { path = "../../conformance/backend" }
+proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+# Ticket 0372: the CA bundle test serves its own TLS. Already in the lock.
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std"] }
+# ADR 0112: derives the result schema in a unit test only. Never `preserve_order`.
+schemars = { version = "=1.2.2", features = ["raw_value"] }
+signal-hook = "0.3.18"
+
+[target."cfg(unix)".dev-dependencies]
+nix = { version = "0.29", default-features = false, features = ["pthread", "signal"] }
+
+[target."cfg(unix)".dependencies]
+nix = { version = "0.29", default-features = false, features = ["poll", "signal", "user"] }
+
+[target."cfg(windows)".dependencies]
+windows-sys = { version = "=0.61.2", default-features = false, features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_Console", "Win32_System_IO"] }
+
+[target."cfg(windows)".dev-dependencies]
+windows-sys = { version = "=0.61.2", default-features = false, features = ["Win32_System_Console"] }
