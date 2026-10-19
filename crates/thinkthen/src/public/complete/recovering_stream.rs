@@ -104,6 +104,7 @@ impl Engine {
             packing,
             most: self.most,
             pending_inputs: options.pending_inputs,
+            input_barrier: None,
         };
         Ok(pull::try_start_prepared(
             call,

@@ -110,11 +110,13 @@ fn callback_panic_declines_and_incompatible_modes_refuse_before_input() {
     let engine = engine(&listener);
     let callback = Arc::new(|_: usize, _: &str| -> bool { panic!("fixture callback panic") });
     let session = engine.request_session_with_feed_options(annotation(), Surface::Rust, options(Some(callback))).unwrap();
-    session.try_push(original(true)).unwrap();
+    session.push_with(|| Ok::<_, Error>(original(true))).unwrap();
+    session.push_with(|| Ok::<_, Error>(distinct_original(false, 1))).unwrap();
     session.finish(None).unwrap();
     let packets = drain(&session);
     assert!(matches!(terminal(&packets).error.as_ref().unwrap().diagnostic(), Some(ErrorDiagnostic::MissingPointer { pointer: "/body" })));
     assert!(terminal(&packets).facts.is_some());
+    assert_eq!(listener.count(), 0, "callback panic admits no later request");
     let callback: Policy = Arc::new(|_: usize, _: &str| true);
     assert_eq!(engine.request_session_with_feed_options(request(feed()), Surface::Rust, options(Some(callback.clone()))).unwrap_err().kind(), ErrorKind::Usage);
     assert_eq!(engine.request_recovering_session_with_feed_options(annotation(), Surface::Rust, options(Some(callback))).unwrap_err().kind(), ErrorKind::Usage);

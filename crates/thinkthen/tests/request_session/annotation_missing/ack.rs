@@ -51,8 +51,9 @@ fn cancellation_and_a_dropped_ack_receiver_release_the_native_failure_path() {
         });
         let session = engine(&listener).request_session_with_feed_options(annotation(), Surface::Rust, options(Some(policy))).unwrap();
         session.try_push(original(true)).unwrap();
-        session.finish(None).unwrap();
         events.recv_timeout(Duration::from_secs(5)).unwrap();
+        session.push_with(|| Ok::<_, Error>(distinct_original(false, 1))).unwrap();
+        session.finish(None).unwrap();
         if cancel { session.cancel(); }
         drop(acknowledge);
         let packets = drain(&session);

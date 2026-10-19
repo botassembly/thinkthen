@@ -126,6 +126,7 @@ impl Engine {
                 packing,
                 most: self.most,
                 pending_inputs: false,
+            input_barrier: None,
             },
             SetRecords {
                 records: Records(Arc::clone(&engine), false),

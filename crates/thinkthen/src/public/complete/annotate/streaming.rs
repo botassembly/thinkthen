@@ -6,11 +6,12 @@ use crate::public::{
     QuestionSet, RecordInput,
 };
 use crate::public::{asking::Text, options::Stop, pull};
-use std::sync::Arc;
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
 
 struct Original<T> {
     held: Held<T>,
     prepared: Prepared,
+    missing_pointer: bool,
 }
 impl Engine {
     pub(crate) fn annotate_stream<'a, I, T>(
@@ -76,12 +77,14 @@ impl Engine {
             let (held, prepared) = record
                 .and_then(|record| prepare_record(&preparing_set, record, context.as_deref(), at))
                 .map_err(|error| error.at_record(at))?;
-            if let Err(error) = preparing.asks(&prepared)
-                && (strict_preflight || error.missed_pointer().is_none())
-            {
-                return Err(error.at_record(at));
-            }
-            Ok(Original { held, prepared })
+            let missing_pointer = match preparing.asks(&prepared) {
+                Ok(_) => false,
+                Err(error) if strict_preflight || error.missed_pointer().is_none() => {
+                    return Err(error.at_record(at));
+                }
+                Err(_) => true,
+            };
+            Ok(Original { held, prepared, missing_pointer })
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
@@ -91,18 +94,24 @@ impl Engine {
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
+        let barrier = Arc::new(AtomicBool::new(false));
+        let preparing_barrier = Arc::clone(&barrier);
         let call = pull::Call {
             engine: Arc::clone(&engine),
             stop,
             packing,
             most: self.most,
             pending_inputs: false,
+            input_barrier: Some(Arc::clone(&barrier)),
         };
         Ok(pull::try_start_prepared(
             call,
             asker,
             records,
-            Box::new(|_, original: &Original<T>| {
+            Box::new(move |_, original: &Original<T>| {
+                // Arm only when this actual input is fed, never while an eager
+                // reader preflights later originals before the pull starts.
+                if original.missing_pointer { preparing_barrier.store(true, Ordering::Release); }
                 Ok(Prepared {
                     explicit_context: original.prepared.explicit_context,
                     text: Text {
@@ -130,8 +139,11 @@ impl Engine {
                     && let Some(recover) = recover
                     && crate::public::options::continue_annotation(recover, at, pointer)
                 {
+                    barrier.store(false, Ordering::Release);
                     return Ok(None);
                 }
+                // Decline, panic and all other errors use the existing joined
+                // terminal path; no later input can cross the armed barrier.
                 let result = complete_row(&engine, &questions.0, stop, &original.held, at, row)
                     .map_err(|error| error.at_record(at))?;
                 project(original.held.original, at, result)
