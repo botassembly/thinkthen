@@ -238,6 +238,9 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
     let Ok(Value::Object(fields)) = serde_json::from_slice::<Value>(bytes) else {
         return "the configuration file is not valid closed JSON";
     };
+    if fields.contains_key("schema") {
+        return SCHEMA;
+    }
     for (name, value) in &fields {
         let fault = match (name.as_str(), value) {
             ("url" | "model", Value::String(_) | Value::Null)
@@ -246,7 +249,6 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
             ("usd_per_million_input" | "usd_per_million_output", Value::String(_))
             | ("backend", Value::String(_) | Value::Null)
             | ("backends", Value::Object(_) | Value::Null) => continue,
-            ("schema", _) => SCHEMA,
             ("url", _) => "configuration field `url` must be a string",
             ("model", _) => "configuration field `model` must be a string",
             ("cache", _) => "configuration field `cache` must be true or false",

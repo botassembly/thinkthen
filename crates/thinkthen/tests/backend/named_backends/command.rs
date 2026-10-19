@@ -6,9 +6,9 @@ use super::support::{Home, LIQUID_BASE, Proxy, TYPESAFE_BASE, by_marker, listene
 const LOCAL: &str = r#""local-d1":{"url":"URL","key_env":"LOCAL_D1_KEY","model":"jev-1.13.0"}"#;
 
 fn config_with(backend: Option<&str>, local_url: &str) -> String {
-    let backend = backend.map_or_else(String::new, |name| format!(r#","backend":"{name}""#));
+    let backend = backend.map_or_else(String::new, |name| format!(r#""backend":"{name}","#));
     format!(
-        r#"{{{backend},"backends":{{{}}}}}"#,
+        r#"{{{backend}"backends":{{{}}}}}"#,
         LOCAL.replace("URL", local_url)
     )
 }
@@ -132,7 +132,7 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     // (flags, changes, configuration, standard error, exit code). A
     // configuration refusal exits 5, as every configuration refusal does.
     type Case<'a> = (Vec<&'a str>, Vec<(&'a str, &'a str)>, String, String, i32);
-    let cases: Vec<Case<'_>> = vec![
+    let mut cases: Vec<Case<'_>> = vec![
         (vec![], vec![], r#"{"schema":"thinkthen.config/1"}"#.to_owned(), "thinkthen: delete configuration field `schema`\n".to_owned(), 5),
         (vec!["--backend", "typesafe", "--url", LIQUID_BASE], vec![], String::new(), refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec!["--backend", "liquid", "--url", TYPESAFE_BASE], vec![], String::new(), refusal("liquid", "LIQUIDAI_API_KEY", "liquid", "typesafe"), 2),
@@ -156,6 +156,15 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
         (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)), "thinkthen: configuration backend entries hold only `url`, `path`, `key_env`, `model`, `requests_per_minute`, `both_sides`, `usd_per_million_input`, `usd_per_million_output`, and `profile`\n".to_owned(), 5),
         (vec![], vec![], format!(r#"{{"api_key":"{marker}"}}"#), "thinkthen: the configuration file holds a field other than `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`\n".to_owned(), 5),
     ];
+    for value in ["null", "false", "7", "[]", "{}", r#""private-marker""#] {
+        cases.push((
+            vec![],
+            vec![],
+            format!(r#"{{"cache":"bad","schema":{value}}}"#),
+            "thinkthen: delete configuration field `schema`\n".to_owned(),
+            5,
+        ));
+    }
     for (index, (flags, changes, config, sentence, code)) in cases.into_iter().enumerate() {
         let home = Home::new("refused");
         home.config(&config);
