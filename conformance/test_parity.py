@@ -9,6 +9,8 @@ import io
 import os
 import shlex
 import shutil
+import select
+import signal
 import sys
 import tempfile
 import unittest
@@ -18,6 +20,56 @@ from conformance import c_images
 from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
+
+
+@unittest.skipUnless(sys.platform == 'darwin', 'Darwin loader observation')
+class DarwinSignalObservation(unittest.TestCase):
+    def test_native_handler_completes_only_after_pending_signal_unblocks(self):
+        from conformance.children.signals import SignalObservation
+        from conformance.children.children import read_process_line
+        with tempfile.TemporaryDirectory(prefix='thinkthen-signal-observation-') as folder:
+            home = Path(folder)
+            env = child_env(home=home)
+            probe = home / 'signal-probe'
+            source = Path(__file__).parent / 'children/signal_observer_probe.c'
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
+                            '-o', str(probe)], env=env, check=True, text=True)
+            observation = SignalObservation(home, env)
+            self.addCleanup(observation.close)
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                for mode in ('stable', 'ignored', 'replacement', 'reset', 'reentrant', 'failure'):
+                    with self.subTest(signal=signum, mode=mode):
+                        process = subprocess.Popen([str(probe), str(signum), mode],
+                                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                   stderr=subprocess.PIPE, text=True,
+                                                   **observation.options)
+                        def expect_line(expected):
+                            self.assertTrue(select.select([process.stdout], [], [], 30)[0])
+                            actual = read_process_line(process.stdout)
+                            if not actual:
+                                _, stderr = process.communicate(timeout=30)
+                                self.fail(f'probe exited {process.returncode}: {stderr}')
+                            self.assertEqual(actual, expected + '\n')
+                        try:
+                            expect_line('ready')
+                            process.send_signal(signum)
+                            process.stdin.write('p')
+                            process.stdin.flush()
+                            expect_line('pending')
+                            self.assertFalse(select.select([observation.reader], [], [], 0)[0],
+                                             'a blocked signal was falsely acknowledged')
+                            process.stdin.write('u')
+                            process.stdin.flush()
+                            expect_line('completed')
+                            stdout, stderr = process.communicate(timeout=30)
+                            self.assertEqual((process.returncode, stdout, stderr), (0, '', ''))
+                            self.assertTrue(select.select([observation.reader], [], [], 0)[0])
+                            expected = b'H' + (bytes([signum]) if mode in ('stable', 'ignored', 'failure') else b'')
+                            self.assertEqual(os.read(observation.reader, 3), expected)
+                        finally:
+                            if process.poll() is None:
+                                process.kill()
+                                process.communicate()
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
