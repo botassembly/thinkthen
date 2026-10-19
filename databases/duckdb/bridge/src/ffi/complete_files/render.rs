@@ -1,7 +1,7 @@
 //! Recovered source rows keep the existing native observer and joined facts.
 use crate::complete_native::{defect, observations, put};
 use serde_json::{Value, json};
-use thinkthen::{Error, RequestRecoveringResult as Packet, RequestSessionResult};
+use thinkthen::{Error, RecordObservation, RequestRecoveringResult as Packet, RequestSessionResult};
 
 pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
     match packet {
