@@ -197,8 +197,8 @@ impl<T: Serialize, R: Serialize, P: Serialize> Serialize for Call<T, R, P> {
             .facts
             .complete()
             .ok_or_else(|| serde::ser::Error::custom("a completed call has no identity"))?;
-        let mut document =
-            serializer.serialize_struct("Call", if self.projected { 5 } else { 3 })?;
+        let fields = usize::from(self.answer.is_some()) + if self.projected { 4 } else { 2 };
+        let mut document = serializer.serialize_struct("Call", fields)?;
         document.serialize_field("value", &self.value)?;
         if let Some(answer) = &self.answer {
             document.serialize_field("answer", answer)?;
