@@ -77,6 +77,9 @@ impl Store {
             return Ok(());
         }
         self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
+        self.waiting(cancel, || {
+            connection.pragma_update(None, "user_version", super::STORE_VERSION)
+        })?;
         fixture.map_or(Ok(()), |entries| {
             self.waiting(cancel, || entries.insert_all(connection))
         })
