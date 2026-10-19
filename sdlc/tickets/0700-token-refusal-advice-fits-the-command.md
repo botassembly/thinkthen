@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision d253870, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/cli/failure/status.rs`, `crates/thinkthen/src/cli/failure.rs`, `crates/thinkthen/tests/backend/status_reason.rs`.
