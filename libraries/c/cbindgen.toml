@@ -166,3 +166,8 @@ exclude = ["OK", "USAGE", "DEFECT", "NO_DEADLINE"]
 "SummaryV1" = "thinkthen_summary_v1"
 "TagViewV1" = "thinkthen_tag_view_v1"
 "UsageV1" = "thinkthen_usage_v1"
+
+"CallResultHandle" = "thinkthen_call_result"
+"CallErrorHandle" = "thinkthen_call_error"
+"CallCancelHandle" = "thinkthen_call_cancel"
+"CallProducerV1" = "thinkthen_call_producer_v1"

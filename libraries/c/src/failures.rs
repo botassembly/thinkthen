@@ -404,3 +404,16 @@ pub(crate) fn view(held: Option<&Held>) -> *const thinkthen_error_view_v1 {
 pub(crate) fn session_view() -> *const thinkthen_error_view_v1 {
     session_last(std::ptr::null(), Last::view)
 }
+
+/// Contain the same boundary panic without recording a legacy diagnostic slot.
+pub(crate) fn owned_call<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
+    protect(Err(Failure::defect("a panic crossed the C interface")), body, || {})
+}
+impl Failure {
+    pub(crate) fn code(&self) -> i32 { self.code }
+    pub(crate) fn retry_signal(&self) -> bool { self.retryable }
+    pub(crate) fn message_text(&self) -> &str { &self.message }
+    pub(crate) fn owned_facts(&self) -> Option<String> {
+        self.facts.as_ref().map(|facts| facts_json(facts))
+    }
+}
