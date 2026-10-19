@@ -165,9 +165,6 @@ fn admitted(
     Ok(entities)
 }
 
-#[cfg(test)]
 mod preview;
-#[cfg(test)]
 pub(crate) use preview::Preview as RelationPreview;
-#[cfg(test)]
 pub(in crate::public) use preview::prepare as preview_relations;

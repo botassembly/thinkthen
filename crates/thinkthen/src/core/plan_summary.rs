@@ -120,7 +120,6 @@ impl PlanSummary {
 
     /// Staged work may need this many later requests after answers arrive;
     /// no body exists yet, so bytes count only the prepared requests.
-    #[cfg(test)]
     pub(crate) fn possible_requests(&mut self, count: usize) -> Result<(), PlanTooLarge> {
         self.requests = self.requests.checked_add(count).ok_or(PlanTooLarge)?;
         self.upper_bound = true;

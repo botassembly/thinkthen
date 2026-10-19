@@ -36,10 +36,8 @@ pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 #[cfg(test)]
 pub(crate) use recognize::Recognized;
-#[cfg(test)]
 pub(crate) use recognize::step_one_context;
 pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition};
-#[cfg(test)]
 pub(crate) use relate::PreparedRelations;
 pub(crate) use relate::{Execution, Logical, relations};
 

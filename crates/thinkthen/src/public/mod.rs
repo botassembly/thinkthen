@@ -101,7 +101,7 @@ pub use options::{
     process_requests_sent,
 };
 pub use panic::{contained, uncontained};
-pub use plan::{PlanEstimate, SourceBudgetExceeded};
+pub use plan::{PlanEstimate, PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan, SourceBudgetExceeded};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,

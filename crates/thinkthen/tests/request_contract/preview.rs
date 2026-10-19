@@ -480,3 +480,76 @@ fn annotation_preview_retains_group_counts_without_adding_generic_json_fields() 
         assert_eq!(engine.usage().requests_sent(), 0);
     }
 }
+
+#[test]
+fn recognition_preview_discloses_only_first_record_requests_with_full_input_counts() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let ask = Recognize::builder().mode(RecognitionMode::BoundaryOnly).build().unwrap();
+    for rows in [vec![], vec![item("Ada"), item("Bob")]] {
+        let count = rows.len();
+        let request = Request::named("recognize", args(ask.clone().into(),
+            RequestInput::Records { items: rows })).unwrap().admit().unwrap();
+        let plan = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        assert_eq!(plan.records(), count);
+        let prepared = plan.prepared_requests().collect::<Vec<_>>();
+        if count == 0 {
+            assert!(plan.recognition().is_none());
+            assert!(prepared.is_empty());
+        } else {
+            let recognition = plan.recognition().unwrap();
+            assert_eq!(recognition.pieces, 1);
+            assert_eq!(recognition.name_requests_upper_bound, 0);
+            assert_eq!(recognition.relation_pairs_upper_bound, Some(0));
+            assert_eq!(prepared.len(), 1);
+            assert_eq!(plan.first_body(), Some(prepared[0].body));
+            assert_eq!(prepared[0].digest.len(), 64);
+            let body = std::str::from_utf8(prepared[0].body).unwrap();
+            assert!(body.contains("Ada"));
+            assert!(!body.contains("Bob"));
+            assert!(!format!("{:?}", prepared[0]).contains("Ada"));
+        }
+        let json = serde_json::to_value(&plan).unwrap();
+        for member in ["prepared_requests", "recognition", "relations", "details"] {
+            assert!(json.get(member).is_none());
+        }
+        assert_eq!(listener.count(), 0);
+    }
+}
+
+#[test]
+fn relation_preview_retains_rule_order_empty_counts_and_native_requests() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let ask = Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"zeta","source":"*","target":"*","reads":"private_relation_preview_marker"},{"name":"alpha","source":"*","target":"*","reads":"linked","either":true}]}}"#).unwrap();
+    let records = ["Ada", "Bob"].map(|name| RequestItem {
+        original: Some(RequestOriginal::Json { value: RawRecord::json(
+            &format!(r#"{{"name":"{name}","kind":"person"}}"#)).unwrap() }),
+        ..item("")
+    });
+    for rows in [vec![], records.to_vec()] {
+        let count = rows.len();
+        let request = Request::named("relate", args(ask.clone().into(),
+            RequestInput::Records { items: rows })).unwrap().admit().unwrap();
+        let plan = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        let relations = plan.relations().unwrap();
+        assert_eq!(relations.entity_count(), count);
+        let rules = relations.rules().collect::<Vec<_>>();
+        assert_eq!(rules.iter().map(|rule| rule.name).collect::<Vec<_>>(), ["zeta", "alpha"]);
+        assert_eq!(rules[0].method, RelationMethod::YesNo);
+        assert_eq!(rules[0].logical_questions, if count == 0 { 0 } else { 2 });
+        assert_eq!(rules[1].logical_questions, usize::from(count != 0));
+        assert!(!format!("{rules:?}").contains("private_relation_preview_marker"));
+        let prepared = plan.prepared_requests().collect::<Vec<_>>();
+        if count == 0 {
+            assert!(prepared.is_empty());
+            assert!(rules.iter().all(|rule| rule.request_count == 0));
+        } else {
+            assert_eq!(plan.first_body(), Some(prepared[0].body));
+            assert!(std::str::from_utf8(prepared[0].body).unwrap().contains("private_relation_preview_marker"));
+            assert!(rules.iter().all(|rule| rule.request_count > 0));
+        }
+        assert_eq!(listener.count(), 0);
+        assert_eq!(engine.usage().requests_sent(), 0);
+    }
+}

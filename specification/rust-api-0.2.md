@@ -36,6 +36,8 @@ The command's final facts use the existing count-only `Facts` request-size gette
 
 The annotation command uses `Engine::plan_request` through the same native grouped preview packer. `PlanEstimate::question_requests` exposes the uninterrupted wire count and per-group counts in authored order. `drops_detail` retains the selected adapter's description warning. These observations and the existing size getters let command rendering keep its plan and count lines without exposing the native backend or summary. Added detail storage stays out of generic plan JSON and Debug output.
 
+Recognition and relation command dry runs use the same `Engine::plan_request`. `prepared_requests` borrows native digests and encoded bodies without rebuilding them. Recognition retains the first record's request disclosure and tokenizer, name and relation bounds; aggregate counts still cover every input. Relations retain native entity admission, authored rule order, methods, logical counts and per-rule request counts, including empty input. These explicit body and rule views can expose original evidence and authored text. Their Debug output withholds that content. They add no fields to generic plan serialization. Existing adapter accounting and staged upper-bound caveats still apply.
+
 `RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation.
 
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
@@ -232,6 +234,42 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+struct PreparedRequest<'a>
+PreparedRequest::digest: &'a str
+PreparedRequest::body: &'a [u8]
+impl Clone for PreparedRequest<'_>
+impl Copy for PreparedRequest<'_>
+impl Debug for PreparedRequest<'_>
+struct RecognitionPlan
+RecognitionPlan::pieces: usize
+RecognitionPlan::name_requests_upper_bound: usize
+RecognitionPlan::relation_pairs_upper_bound: Option<usize>
+impl Clone for RecognitionPlan
+impl Copy for RecognitionPlan
+impl Debug for RecognitionPlan
+impl Eq for RecognitionPlan
+impl PartialEq for RecognitionPlan
+struct PlannedRelation<'a>
+PlannedRelation::name: &'a str
+PlannedRelation::source: &'a str
+PlannedRelation::target: &'a str
+PlannedRelation::reads: &'a str
+PlannedRelation::either: bool
+PlannedRelation::method: RelationMethod
+PlannedRelation::logical_questions: usize
+PlannedRelation::request_count: usize
+impl Clone for PlannedRelation<'_>
+impl Copy for PlannedRelation<'_>
+impl Debug for PlannedRelation<'_>
+struct RelationPlan<'a>
+impl Clone for RelationPlan<'_>
+impl Copy for RelationPlan<'_>
+impl Debug for RelationPlan<'_>
+const fn RelationPlan::entity_count(&self) -> usize
+fn RelationPlan::rules(&self) -> impl ExactSizeIterator<Item = PlannedRelation<'_>>
+fn PlanEstimate::prepared_requests(&self) -> impl ExactSizeIterator<Item = PreparedRequest<'_>>
+const fn PlanEstimate::recognition(&self) -> Option<&RecognitionPlan>
+fn PlanEstimate::relations(&self) -> Option<RelationPlan<'_>>
 RequestOptions::max_text_bytes: Option<usize>
 fn EngineBuilder::requests_per_minute(self, u32) -> Result<EngineBuilder, Error>
 fn EngineBuilder::retry_wait(self, Duration) -> EngineBuilder

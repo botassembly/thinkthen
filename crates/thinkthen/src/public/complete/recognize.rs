@@ -72,9 +72,6 @@ mod records;
 mod recovering;
 mod streaming;
 
-#[cfg(test)]
 mod preview;
-#[cfg(test)]
 pub(crate) use preview::Preview as RecognitionPreview;
-#[cfg(test)]
 pub(in crate::public) use preview::prepare as preview_recognition;

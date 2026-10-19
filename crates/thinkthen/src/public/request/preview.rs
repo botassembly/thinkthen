@@ -6,7 +6,7 @@ use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 type Preview = (crate::core::PlanSummary, bool, usize, Vec<usize>);
 
 impl Engine {
-    /// Preview an admitted atomic, annotation, find or rank request without sending.
+    /// Preview an admitted request through the native preparation without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
     /// No key, cache or answer is read. Unsupported functions refuse before input advances.
     /// # Errors
@@ -16,6 +16,9 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
+        if matches!(request.request.call.function(), RequestFunction::Recognize | RequestFunction::Relate) {
+            return self.plan_whole_request(request, environment);
+        }
         if request.request.call.function() == RequestFunction::Find {
             let (_, summary) = request.plan_find(self, environment)?;
             return crate::public::plan::from_summary(summary);
@@ -25,6 +28,45 @@ impl Engine {
         crate::public::plan::from_summary(summary).map(|plan| {
             plan.with_request_details(dropped, annotation.then_some((count, groups)))
         })
+    }
+
+    fn plan_whole_request<'a>(
+        &self,
+        request: &'a AdmittedRequest,
+        environment: RequestEnvironment<'a>,
+    ) -> Result<PlanEstimate, Error> {
+        let (definition, rows, controls) = route_preview(request, environment)?;
+        let rows = rows.enumerate().map(|(at, row)| {
+            self.check_record_limit(at)?;
+            row
+        });
+        let recognition = match &definition {
+            RequestDefinition::Recognition(ask) => Some(ask),
+            RequestDefinition::Recognize(file) => Some(file.question()),
+            _ => None,
+        };
+        if let Some(ask) = recognition {
+            let engine = self.for_model(ask.0.model.as_ref())?;
+            let dropped = crate::core::adapters::built_in::drops_any(
+                engine.backend().descriptions(),
+                ask.0.kinds.iter().filter_map(|(_, description)| {
+                    description.as_ref().map(crate::core::Description::as_json)
+                }),
+            );
+            let preview = crate::public::complete::recognize::preview_recognition(
+                engine.backend(), engine.profile(), ask, rows, controls.context_text(),
+                controls.recognition_text_limit.unwrap_or(crate::engine::facade::MAX_TEXT_BYTES),
+            )?;
+            return PlanEstimate::from_recognition(preview, dropped);
+        }
+        if let RequestDefinition::Relate(ask) = definition {
+            let engine = self.for_model(ask.0.model.as_ref())?;
+            let preview = crate::public::complete::relate::preview_relations(
+                engine.backend(), engine.profile(), &ask, rows, &controls,
+            )?;
+            return PlanEstimate::from_relations(preview);
+        }
+        Err(Error::defect("whole-set preview lost its admitted definition"))
     }
 
     pub(crate) fn plan_request_summary<'a>(

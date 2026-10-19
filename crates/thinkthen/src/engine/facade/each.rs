@@ -5,7 +5,6 @@
 //! address, model, state and question, as the record functions' are.
 
 use crate::core::pack::{self, Ask, Entry, PackError, PackLimits, Packer};
-#[cfg(test)]
 use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{Backend, BackendProfile, ModelName, Plan, Question};
 use crate::engine::Cancel;
@@ -71,7 +70,6 @@ pub(crate) struct Asks {
 /// nothing cached.
 pub(crate) struct Request {
     pub(crate) body: Vec<u8>,
-    #[cfg(test)]
     pub(crate) digest: Digest,
     /// The place of each logical question it holds, once per wire question.
     pub(crate) places: Vec<usize>,
@@ -192,7 +190,6 @@ impl Asks {
         Ok(closed
             .into_iter()
             .map(|request| Request {
-                #[cfg(test)]
                 digest: Recorded::new(backend.url(), &request.body).digest(),
                 body: request.body,
                 places: request.items,

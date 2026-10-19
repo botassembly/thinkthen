@@ -17,6 +17,9 @@ use super::error::Error;
 use super::options::CallOptions;
 use super::question::Kind;
 
+mod details;
+pub use details::{PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan};
+
 /// A request admission bound before cache answers, refusal splits or retries.
 /// Bytes and the token band describe the uncoalesced uninterrupted preview, not a bill.
 /// It serializes as the `plan` definition of the result schema.
@@ -39,6 +42,9 @@ pub struct PlanEstimate {
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     question_requests: Option<(usize, Vec<usize>)>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    details: details::Details,
 }
 
 /// The low and high input-token estimates of a plan.
@@ -407,5 +413,6 @@ pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstima
         first_body,
         dropped_detail: false,
         question_requests: None,
+        details: details::Details::default(),
     })
 }

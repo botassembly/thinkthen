@@ -1,7 +1,6 @@
 //! Relations between given entities, planned as one ordered set of pair and
 //! menu questions.
 
-#[cfg(test)]
 use super::Request;
 use super::each::Models;
 use super::{Answered, Asks, Bound, Engine};
@@ -19,11 +18,8 @@ pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
     pub(crate) asked: Vec<RelateAsk>,
     pub(crate) asks: Asks,
-    #[cfg(test)]
     pub(crate) requests: Vec<Request>,
-    #[cfg(test)]
     pub(crate) questions_per_rule: Vec<usize>,
-    #[cfg(test)]
     pub(crate) requests_per_rule: Vec<usize>,
 }
 
@@ -65,14 +61,11 @@ pub(crate) fn relations(
         plan_relate(entities, &rules).map_err(|_| Error::Defect("relation planning failed"))?
     else {
         return Ok(PreparedRelations {
-            #[cfg(test)]
             questions_per_rule: vec![0; rules.len()],
-            #[cfg(test)]
             requests_per_rule: vec![0; rules.len()],
             rules,
             asked: Vec::new(),
             asks: Asks::default(),
-            #[cfg(test)]
             requests: Vec::new(),
         });
     };
@@ -113,11 +106,8 @@ pub(crate) fn relations(
         rules,
         asked: planned.asked,
         asks,
-        #[cfg(test)]
         requests,
-        #[cfg(test)]
         questions_per_rule,
-        #[cfg(test)]
         requests_per_rule,
     })
 }
