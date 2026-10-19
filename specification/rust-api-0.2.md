@@ -38,6 +38,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection.
 
+MCP discovery now reads `request_schema`, `RequestFunction::ALL`, `allows_option` and `images` through the public library. These expose the existing committed schema, canonical function order and discovery predicates without copying schemas or function tables into the command package. Full native admission remains authoritative for option validation.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -214,6 +216,10 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+const fn request_schema() -> &'static str
+const RequestFunction::ALL: [RequestFunction; 10]
+fn RequestFunction::allows_option(self, &str) -> bool
+const fn RequestFunction::images(self) -> bool
 fn EngineBuilder::configuration_shared(&self) -> bool
 enum ErrorDiagnostic<'a>
 impl Debug for ErrorDiagnostic

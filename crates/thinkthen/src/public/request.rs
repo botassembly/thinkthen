@@ -2,6 +2,8 @@
 
 mod admission;
 mod call;
+mod schema;
+pub use schema::request_schema;
 mod column;
 mod question_parts;
 pub use column::{RequestColumn, RequestColumnValues, RequestColumnView};
@@ -283,8 +285,8 @@ impl RequestFunction {
             super::InputFunction::Relate => Self::Relate,
         }
     }
-    #[cfg(feature = "cli")]
-    pub(crate) const ALL: [Self; 10] = [
+    /// Every judging function, in canonical discovery order.
+    pub const ALL: [Self; 10] = [
         Self::Decide,
         Self::Choose,
         Self::Tag,
@@ -296,7 +298,10 @@ impl RequestFunction {
         Self::Recognize,
         Self::Relate,
     ];
-    pub(crate) fn allows_option(self, name: &str) -> bool {
+    /// Whether a known canonical option applies to this function's discovery view.
+    /// Supply names from [`request_schema`]; full admission validates unknown keys.
+    #[must_use]
+    pub fn allows_option(self, name: &str) -> bool {
         match name {
             "threshold" => matches!(
                 self,
@@ -332,7 +337,9 @@ impl RequestFunction {
             Self::Relate => "relate",
         }
     }
-    pub(crate) const fn images(self) -> bool {
+    /// Whether this function accepts ordered image evidence.
+    #[must_use]
+    pub const fn images(self) -> bool {
         matches!(self, Self::Decide | Self::Choose | Self::Score)
     }
 }
