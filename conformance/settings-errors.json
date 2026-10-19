@@ -1,0 +1,5 @@
+{
+  "throttle": "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)",
+  "batch": "thinkthen usage: batch requires a positive whole number or max (retryable: no)",
+  "sqlite_request_total": "thinkthen usage: a request total is a whole number of 1 or more (retryable: no)"
+}

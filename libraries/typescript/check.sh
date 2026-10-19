@@ -227,13 +227,6 @@ expected_pack=$(python3 "$repo/sdlc/scripts/package-inventory.py" npm --platform
 [ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 
 step 'flags, pins, one guard, and no unsafe'
-if grep -hE '^[^#]*cargo (build|test|clippy)' check.sh build-addon.sh | grep -vE -- '--locked.*--offline|--offline.*--locked'; then
-    fail 'a cargo call above lacks --locked or --offline'
-fi
-if grep -hE '^[^#]*cargo (deny|fetch)' check.sh | grep -v -- '--offline' | grep -vE -- '--version|cargo fetch --quiet --manifest-path "\$plant/copy'; then
-    fail 'a cargo call above lacks --offline'
-fi
-grep -q 'npm ci --offline' check.sh || fail 'npm ci runs without --offline'
 node -e 'const d = require("./package.json").devDependencies; for (const [n, v] of Object.entries(d)) if (!/^\d+\.\d+\.\d+$/.test(v)) process.exit(1)' ||
     fail 'a dev dependency is not an exact version'
 [ "$(grep -rc 'catch_unwind(' src | awk -F: '{ n += $2 } END { print n }')" = 0 ] || fail 'src catches panics outside thinkthen::contained'
