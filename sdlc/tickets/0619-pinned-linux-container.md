@@ -76,6 +76,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: M5 image preparation passed with declared tools at fingerprint144a79e08586978ccaff and the independent Linux fixture batch passed18 of20 checks, while the stale Python bootstrap boundary is fixed in11029bd29 and the remaining coverage linker failure awaits a bounded diagnostic after the active Yellow image preparation.
 - 2026-10-19 next: Fresh component review accepted44c23ea3a and its repairs are merged at153cf822f; Yellow job1792449735916-256181 passed the archive fixture and1792449579815-247892 passed all17 coverage cases, completing the two failures from the earlier18-of20 fixture batch while whole container gates and installed proofs remain open.
 - 2026-10-19 next: Fresh component review accepted21eb8a401 after M5 job1792452113122-60314 passed explicit Docker selection; merged at86d7eccda, with whole container gates, installed checks and image refresh pending the next data integration.
+- 2026-10-19 next: Fresh component review accepts3e0026983 after M5job1792453065626-23106 passed both fragment integration tests; fingerprint51d2ff24478158bce64f includes22 fragments, Yellow image preparation starts independently, and whole Linux/native gates and release/database suites remain open.
 
 ## Amendment, 2026-10-18
 
