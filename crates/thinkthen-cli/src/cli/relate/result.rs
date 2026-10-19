@@ -57,7 +57,10 @@ struct Complete<'a, I: ?Sized, V: ?Sized> {
 }
 impl<I: ?Sized, V: Serialize + ?Sized> Complete<'_, I, V> {
     fn write_value<M: serde::ser::SerializeMap>(
-        &self, map: &mut M, name: &str, held: &Json,
+        &self,
+        map: &mut M,
+        name: &str,
+        held: &Json,
     ) -> Result<(), M::Error> {
         if let Some(value) = self.value {
             map.serialize_entry(name, value)?;

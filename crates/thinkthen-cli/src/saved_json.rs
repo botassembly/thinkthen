@@ -71,36 +71,34 @@ impl Json {
         self.kind.get_or_init(|| self.materialize())
     }
     fn materialize(&self) -> Kind {
-            let Some(held) = self.content() else {
-                return Kind::Null;
-            };
-            if let Some(fields) = held.fields() {
-                return Kind::Object(
-                    fields
-                        .map(|(name, _)| {
-                            (name.to_owned(), self.child(Step::Field(name.to_owned())))
-                        })
-                        .collect(),
-                );
-            }
-            if let Some(elements) = held.elements() {
-                return Kind::Array(
-                    elements
-                        .enumerate()
-                        .map(|(at, _)| self.child(Step::Element(at)))
-                        .collect(),
-                );
-            }
-            if let Some(text) = held.text() {
-                return Kind::String(text.to_owned());
-            }
-            if let Some(number) = held.number() {
-                return Kind::Number(number.clone());
-            }
-            if let Some(boolean) = held.boolean() {
-                return Kind::Bool(boolean);
-            }
-            Kind::Null
+        let Some(held) = self.content() else {
+            return Kind::Null;
+        };
+        if let Some(fields) = held.fields() {
+            return Kind::Object(
+                fields
+                    .map(|(name, _)| (name.to_owned(), self.child(Step::Field(name.to_owned()))))
+                    .collect(),
+            );
+        }
+        if let Some(elements) = held.elements() {
+            return Kind::Array(
+                elements
+                    .enumerate()
+                    .map(|(at, _)| self.child(Step::Element(at)))
+                    .collect(),
+            );
+        }
+        if let Some(text) = held.text() {
+            return Kind::String(text.to_owned());
+        }
+        if let Some(number) = held.number() {
+            return Kind::Number(number.clone());
+        }
+        if let Some(boolean) = held.boolean() {
+            return Kind::Bool(boolean);
+        }
+        Kind::Null
     }
     pub(crate) fn member(&self, name: &str) -> Option<&Self> {
         let Kind::Object(fields) = self.kind() else {

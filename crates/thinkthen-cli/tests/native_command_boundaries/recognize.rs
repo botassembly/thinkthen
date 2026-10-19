@@ -9,7 +9,7 @@ use fixture::response;
 fn cli_details_show_the_same_proposal_facts_without_changing_bare_output_or_replay_keys() {
     use super::child::ChildEnvironment as _;
     let listener = Listener::answering(response).unwrap();
-    let home = folder();
+    let home = folder().unwrap();
     let input = home.join("input.jsonl");
     std::fs::write(
         &input,

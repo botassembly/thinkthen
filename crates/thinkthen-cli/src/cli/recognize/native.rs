@@ -180,18 +180,17 @@ pub(super) fn run(
         let packet = session.try_read();
         let received = matches!(&packet, crate::RequestSessionRead::Result(_));
         match packet {
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(value)) if !ended.closed && ended.failure.is_none() =>
-                    {
-                        if let Err(error) =
-                            receive(running, reading, value, &held, output, &mut ended)
-                        {
-                            ended.failure = Some(error);
-                        }
-                    }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(value))
+                if !ended.closed && ended.failure.is_none() =>
+            {
+                if let Err(error) = receive(running, reading, value, &held, output, &mut ended) {
+                    ended.failure = Some(error);
+                }
+            }
             crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
-                        running.environment.settle_session(&value, &mut tally)?;
-                        terminal = Some(value.error.map_or(Ok(()), Err));
-                    }
+                running.environment.settle_session(&value, &mut tally)?;
+                terminal = Some(value.error.map_or(Ok(()), Err));
+            }
             crate::RequestSessionRead::Result(_) => {}
 
             crate::RequestSessionRead::End => break,
@@ -202,28 +201,24 @@ pub(super) fn run(
         }
         let mut pending_reader = false;
         let next_descriptor = || {
-                if let Some(finite) = &mut finite {
-                    return finite.next().ok_or(FeedRead::End);
+            if let Some(finite) = &mut finite {
+                return finite.next().ok_or(FeedRead::End);
+            }
+            match reader
+                .as_ref()
+                .map(crate::asking::native_reader::Reader::try_next)
+            {
+                Some(crate::asking::native_reader::Read::Pending) => Err(FeedRead::Pending),
+                Some(crate::asking::native_reader::Read::Item(Err(placed))) => {
+                    ended.input_at = placed.at;
+                    Err(FeedRead::Failed(placed.cause.into_error()))
                 }
-                match reader
-                    .as_ref()
-                    .map(crate::asking::native_reader::Reader::try_next)
-                {
-                    Some(crate::asking::native_reader::Read::Pending) => Err(FeedRead::Pending),
-                    Some(crate::asking::native_reader::Read::Item(Err(placed))) => {
-                        ended.input_at = placed.at;
-                        Err(FeedRead::Failed(placed.cause.into_error()))
-                    }
-                    Some(crate::asking::native_reader::Read::Item(Ok((ordinal, frame)))) => {
-                        compose(ordinal, frame).map_err(|error| {
-                            FeedRead::Failed(
-                                super::examples::at_record(error, ordinal).into_error(),
-                            )
-                        })
-                    }
-                    _ => Err(FeedRead::End),
+                Some(crate::asking::native_reader::Read::Item(Ok((ordinal, frame)))) => {
+                    compose(ordinal, frame).map_err(|error| placed_failure(error, ordinal))
                 }
-            };
+                _ => Err(FeedRead::End),
+            }
+        };
         if !input_done {
             let pushed = session.try_push_with(next_descriptor);
             match pushed {
@@ -413,4 +408,8 @@ pub(super) fn composition(
             .map_err(Failure::from)?;
     }
     Ok(composition)
+}
+
+fn placed_failure(error: Failure, ordinal: usize) -> FeedRead {
+    FeedRead::Failed(super::examples::at_record(error, ordinal).into_error())
 }

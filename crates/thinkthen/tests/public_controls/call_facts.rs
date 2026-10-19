@@ -481,7 +481,7 @@ fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
     assert_eq!(plain.estimate_reported_cost(1, 1), None);
     assert_eq!(
         plain
-            .decide(&asked, "Another.")
+            .decide(asked, "Another.")
             .expect("plain answer")
             .facts()
             .estimated_cost_usd(),
@@ -497,7 +497,7 @@ fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
         .build()
         .expect("zero engine");
     assert_eq!(
-        zero.decide(&asked, "Zero.")
+        zero.decide(asked, "Zero.")
             .expect("zero price answer")
             .facts()
             .estimated_cost_usd(),

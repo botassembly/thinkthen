@@ -787,16 +787,16 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
 }
 
 fn assert_combined_overflow(mut growing: PlanEstimate) {
-        let mut overflow = false;
-        for _ in 0..usize::BITS {
-            match growing.combine(&growing) {
-                Ok(next) => growing = next,
-                Err(error) => {
-                    assert_eq!(error.kind(), ErrorKind::Usage);
-                    overflow = true;
-                    break;
-                }
+    let mut overflow = false;
+    for _ in 0..usize::BITS {
+        match growing.combine(&growing) {
+            Ok(next) => growing = next,
+            Err(error) => {
+                assert_eq!(error.kind(), ErrorKind::Usage);
+                overflow = true;
+                break;
             }
         }
-        assert!(overflow);
+    }
+    assert!(overflow);
 }

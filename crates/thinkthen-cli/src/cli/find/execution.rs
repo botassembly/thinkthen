@@ -40,18 +40,21 @@ pub(super) fn execute(
         let packet = session.try_read();
         let received = matches!(&packet, crate::RequestSessionRead::Result(_));
         match packet {
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(crate::RequestValue::Found(value))) => {
-                        found = Some(value);
-                    }
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { .. }) => {}
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(
+                crate::RequestValue::Found(value),
+            )) => {
+                found = Some(value);
+            }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation {
+                ..
+            }) => {}
             crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
-                        environment.settle_session(&value, &mut tally)?;
-                        terminal = Some(value.error.map_or(Ok(()), Err));
-                    }
+                environment.settle_session(&value, &mut tally)?;
+                terminal = Some(value.error.map_or(Ok(()), Err));
+            }
             crate::RequestSessionRead::Result(_) => {
-                        failure
-                            .get_or_insert(Failure::Defect("find returned another native result"));
-                    }
+                failure.get_or_insert(Failure::Defect("find returned another native result"));
+            }
 
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}

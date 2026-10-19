@@ -8,28 +8,26 @@ use thinkthen::{
     RequestQuestion, RequestSource, RequestValue, SourceUnit,
 };
 
-fn listener() -> Listener {
+fn listener() -> std::io::Result<Listener> {
     Listener::answering(|_| {
         Canned::ok(include_str!(
             "../../../specification/fixtures/images/liquid-decide-reply.json"
         ))
     })
-    .unwrap()
 }
-fn engine(listener: &Listener) -> Engine {
+fn engine(listener: &Listener) -> Result<Engine, thinkthen::Error> {
     Engine::builder()
         .backend("liquid")
-        .unwrap()
+?
         .model("d1")
-        .unwrap()
+?
         .base_url(listener.base())
-        .unwrap()
+?
         .api_key("fake-transport-key")
-        .unwrap()
+?
         .no_cache()
         .max_retries(0)
         .build()
-        .unwrap()
 }
 fn image_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../specification/fixtures/images/red.png")
@@ -79,7 +77,7 @@ fn run_descriptors(
         "decide",
         arguments(feed_input(vec![])),
         RequestEnvironment {
-            controls: CallOptions::new().retained_attachment_limit(limit).unwrap(),
+            controls: CallOptions::new().retained_attachment_limit(limit)?,
             feed: Some(RequestFeed::from_descriptors("owned", descriptors)),
         },
     )
@@ -87,8 +85,8 @@ fn run_descriptors(
 
 #[test]
 fn descriptor_admission_precedes_every_question_and_source_read() {
-    let listener = listener();
-    let engine = engine(&listener);
+    let listener = listener().unwrap();
+    let engine = engine(&listener).unwrap();
     let missing = image_path().with_file_name("absent-evidence.txt");
     let descriptors = vec![
         RequestDescriptor {
@@ -154,8 +152,8 @@ fn descriptor_admission_precedes_every_question_and_source_read() {
 
 #[test]
 fn mixed_and_repeated_attachments_share_the_exact_budget_before_evidence() {
-    let listener = listener();
-    let engine = engine(&listener);
+    let listener = listener().unwrap();
+    let engine = engine(&listener).unwrap();
     let path = image_path();
     let bytes = std::fs::read(&path).unwrap();
     for (limit, missing) in [(bytes.len() * 2, false), (bytes.len() * 2 - 1, true)] {
@@ -219,8 +217,8 @@ fn mixed_and_repeated_attachments_share_the_exact_budget_before_evidence() {
 
 #[test]
 fn descriptor_feeds_refuse_wrong_names_shared_images_and_initial_cancellation() {
-    let listener = listener();
-    let engine = engine(&listener);
+    let listener = listener().unwrap();
+    let engine = engine(&listener).unwrap();
     for (name, shared, cancelled) in [
         ("wrong", false, false),
         ("owned", true, false),
@@ -262,8 +260,8 @@ fn descriptor_feeds_refuse_wrong_names_shared_images_and_initial_cancellation() 
 
 #[test]
 fn failed_named_calls_expose_only_the_actual_prefix_through_explicit_access() {
-    let listener = listener();
-    let engine = engine(&listener);
+    let listener = listener().unwrap();
+    let engine = engine(&listener).unwrap();
     let path = image_path();
     let bytes = std::fs::read(&path).unwrap();
     let mut args = arguments(RequestInput::Source {
@@ -307,8 +305,8 @@ fn failed_named_calls_expose_only_the_actual_prefix_through_explicit_access() {
 
 #[test]
 fn failed_feed_originals_require_explicit_prefix_access() {
-    let listener = listener();
-    let engine = engine(&listener);
+    let listener = listener().unwrap();
+    let engine = engine(&listener).unwrap();
     let marker = "sensitive-prefix-original-0639";
     let mut first = item();
     first.original = Some(RequestOriginal::Text {

@@ -119,29 +119,35 @@ pub(super) fn run(
         let packet = session.try_read();
         let received = matches!(&packet, crate::RequestSessionRead::Result(_));
         match packet {
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Row(row)) => match row_value(row) {
-                        Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
-                        Err(error) => {
-                            ended.failure.get_or_insert(error);
-                        }
-                    },
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Row(row)) => {
+                match row_value(row) {
+                    Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
+                    Err(error) => {
+                        ended.failure.get_or_insert(error);
+                    }
+                }
+            }
             crate::RequestSessionRead::Result(crate::RequestSessionResult::Aggregate(value)) => {
-                        rendering.receive(value, &held, reading, output, &mut ended);
-                    }
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { value, .. }) if configuration.keeping == crate::judge::Keeping::Ordered =>
-                    {
-                        progress.observe(value);
-                        if progress.failure.is_some() {
-                            session.cancel();
-                            cancelled = true;
-                            input_done = true;
-                        }
-                    }
-            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation { .. }) => {}
+                rendering.receive(value, &held, reading, output, &mut ended);
+            }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation {
+                value,
+                ..
+            }) if configuration.keeping == crate::judge::Keeping::Ordered => {
+                progress.observe(value);
+                if progress.failure.is_some() {
+                    session.cancel();
+                    cancelled = true;
+                    input_done = true;
+                }
+            }
+            crate::RequestSessionRead::Result(crate::RequestSessionResult::Observation {
+                ..
+            }) => {}
             crate::RequestSessionRead::Result(crate::RequestSessionResult::Terminal(value)) => {
-                        environment.settle_session(&value, &mut tally)?;
-                        terminal = Some(value.error.map_or(Ok(()), Err));
-                    }
+                environment.settle_session(&value, &mut tally)?;
+                terminal = Some(value.error.map_or(Ok(()), Err));
+            }
 
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}

@@ -93,7 +93,9 @@ pub(super) fn settle(
             .unwrap_or_else(|| field("kind", "/kind")),
     };
     // The native authored parser owns override validation and its relation-specific diagnostics.
-    if file.is_some() && let RequestDefinition::Relate(relation) = &mut definition {
+    if file.is_some()
+        && let RequestDefinition::Relate(relation) = &mut definition
+    {
         *relation = relation.clone().record_fields(&fields.name, &fields.kind)?;
     }
     let framing = if arguments.common.input.len() > 1
@@ -162,7 +164,11 @@ fn authored(file: Option<&str>, admitted: &mut AdmittedRequest) -> Result<Option
     })
 }
 
-fn setting_sources(arguments: &RelateArguments, file: Option<&str>, top: Option<&Json>) -> Option<From> {
+fn setting_sources(
+    arguments: &RelateArguments,
+    file: Option<&str>,
+    top: Option<&Json>,
+) -> Option<From> {
     let source = |supplied, name| {
         if supplied {
             "command line"

@@ -363,21 +363,21 @@ fn wholly_undecodable_replies_keep_native_error_and_started_facts_in_both_modes(
 }
 
 fn assert_failed_members(members: &[CompleteAnnotationMember<'_>], wrong_kind: bool) {
-        for member in members.iter().filter(|m| m.failure().is_some()) {
-            assert_eq!(
-                member.failure(),
-                Some(if wrong_kind {
-                    FailureCause::WrongKind
-                } else {
-                    FailureCause::MissingAnswer
-                })
-            );
-            assert!(member.value().is_none());
-            assert!(member.probabilities().is_none());
-            assert!(member.leader().is_none());
-            assert!(member.answer_id().is_none());
-            assert!(member.failure_id().is_some());
-            assert_eq!(member.observations().len(), 1);
-            assert!(member.reported_usage().is_some());
-        }
+    for member in members.iter().filter(|m| m.failure().is_some()) {
+        assert_eq!(
+            member.failure(),
+            Some(if wrong_kind {
+                FailureCause::WrongKind
+            } else {
+                FailureCause::MissingAnswer
+            })
+        );
+        assert!(member.value().is_none());
+        assert!(member.probabilities().is_none());
+        assert!(member.leader().is_none());
+        assert!(member.answer_id().is_none());
+        assert!(member.failure_id().is_some());
+        assert_eq!(member.observations().len(), 1);
+        assert!(member.reported_usage().is_some());
+    }
 }

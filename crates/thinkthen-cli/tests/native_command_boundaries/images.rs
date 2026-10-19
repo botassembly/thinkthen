@@ -9,7 +9,7 @@ const REPLY: &str = r#"{"model":"local","answers":{"q1":{"type":"noul","noul":0.
 #[test]
 fn cli_profile_uses_the_existing_file_door_and_refuses_unknown_ids_without_sends() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
-    let place = folder();
+    let place = folder().unwrap();
     let profile = place.join("profile.json");
     let image = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");

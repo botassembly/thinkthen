@@ -3,7 +3,10 @@ use super::*;
 use thinkthen::RelationIdentityMode;
 
 fn completed_identity(value: &Value) -> Option<&str> {
-    let value = value.as_array().and_then(|rows| rows.first()).unwrap_or(value);
+    let value = value
+        .as_array()
+        .and_then(|rows| rows.first())
+        .unwrap_or(value);
     let meta = value.get("meta")?;
     meta.get("question_sha256")
         .or_else(|| meta.get("questions_sha256"))?

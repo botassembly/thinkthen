@@ -3,7 +3,7 @@ use super::{Judging, asker::Parser, continuation::Continuation};
 use crate::cli::reading::Reading;
 use crate::failure::Failure;
 use crate::schedule::{Output, Placed};
-use crate::{BatchSetting, RawRecord, RequestSessionRead, RequestSessionResult};
+use crate::{BatchSetting, RawRecord, RequestSessionResult};
 use std::{collections::BTreeMap, process::ExitCode};
 mod rendering;
 use rendering::{Ended, Held};
@@ -103,29 +103,33 @@ pub(super) fn run(
         let packet = session.try_read();
         let received = matches!(&packet, crate::RequestSessionRead::Result(_));
         match packet {
-            crate::RequestSessionRead::Result(RequestSessionResult::Row(crate::RequestSessionRow::Annotation(row))) => {
-                        rendering::receive(judging, row, &mut held, output, &mut ended);
-                    }
+            crate::RequestSessionRead::Result(RequestSessionResult::Row(
+                crate::RequestSessionRow::Annotation(row),
+            )) => {
+                rendering::receive(judging, row, &mut held, output, &mut ended);
+            }
             crate::RequestSessionRead::Result(RequestSessionResult::Row(_)) => {
-                        ended
-                            .failure
-                            .get_or_insert(Failure::Defect("annotate returned another function"));
-                    }
-            crate::RequestSessionRead::Result(RequestSessionResult::Aggregate(crate::RequestValue::Annotations(rows))) => {
-                        for row in rows {
-                            rendering::receive(judging, row, &mut held, output, &mut ended);
-                        }
-                    }
+                ended
+                    .failure
+                    .get_or_insert(Failure::Defect("annotate returned another function"));
+            }
+            crate::RequestSessionRead::Result(RequestSessionResult::Aggregate(
+                crate::RequestValue::Annotations(rows),
+            )) => {
+                for row in rows {
+                    rendering::receive(judging, row, &mut held, output, &mut ended);
+                }
+            }
             crate::RequestSessionRead::Result(RequestSessionResult::Aggregate(_)) => {
-                        ended
-                            .failure
-                            .get_or_insert(Failure::Defect("annotate returned another function"));
-                    }
+                ended
+                    .failure
+                    .get_or_insert(Failure::Defect("annotate returned another function"));
+            }
             crate::RequestSessionRead::Result(RequestSessionResult::Observation { .. }) => {}
             crate::RequestSessionRead::Result(RequestSessionResult::Terminal(value)) => {
-                        judging.environment.settle_session(&value, &mut tally)?;
-                        terminal = Some(value.error.map_or(Ok(()), Err));
-                    }
+                judging.environment.settle_session(&value, &mut tally)?;
+                terminal = Some(value.error.map_or(Ok(()), Err));
+            }
 
             crate::RequestSessionRead::End => break,
             crate::RequestSessionRead::Pending => {}
@@ -140,21 +144,21 @@ pub(super) fn run(
         }
         let mut pending_reader = false;
         let next_descriptor = || match reader.try_next() {
-                crate::asking::native_reader::Read::Pending => Err(FeedRead::Pending),
-                crate::asking::native_reader::Read::End => Err(FeedRead::End),
-                crate::asking::native_reader::Read::Item(Err(placed)) => {
-                    ended.input_at = placed.at;
-                    Err(FeedRead::Failed(placed.cause.into_error()))
-                }
-                crate::asking::native_reader::Read::Item(Ok((ordinal, original))) => {
-                    let descriptor = descriptor(judging, &original).map_err(|error| {
-                        ended.input_at = Some(ordinal + 1);
-                        FeedRead::Failed(error)
-                    })?;
-                    held.insert(ordinal, original);
-                    Ok(descriptor)
-                }
-            };
+            crate::asking::native_reader::Read::Pending => Err(FeedRead::Pending),
+            crate::asking::native_reader::Read::End => Err(FeedRead::End),
+            crate::asking::native_reader::Read::Item(Err(placed)) => {
+                ended.input_at = placed.at;
+                Err(FeedRead::Failed(placed.cause.into_error()))
+            }
+            crate::asking::native_reader::Read::Item(Ok((ordinal, original))) => {
+                let descriptor = descriptor(judging, &original).map_err(|error| {
+                    ended.input_at = Some(ordinal + 1);
+                    FeedRead::Failed(error)
+                })?;
+                held.insert(ordinal, original);
+                Ok(descriptor)
+            }
+        };
         if !input_done {
             match session.try_push_with(next_descriptor) {
                 Ok(crate::RequestSessionPushStatus::Accepted) => continue,
@@ -260,27 +264,27 @@ fn acknowledge_missing(
     output: &mut crate::schedule::Output<'_>,
     ended: &mut rendering::Ended,
 ) {
-if cancelled || ended.closed || ended.failure.is_some() {
-    missing.acknowledge(false);
-} else {
-    match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
-        .and_then(|row| output.take(row))
-    {
-        Ok(true) => {
-            ended.finished += 1;
-            ended.skipped += 1;
-            missing.acknowledge(true);
-        }
-        // Preserve the old callback's accepted closed-pipe row. Its
-        // native accounting still settles before command success.
-        Ok(false) => {
-            ended.closed = true;
-            missing.acknowledge(true);
-        }
-        Err(error) => {
-            ended.failure = Some(error);
-            missing.acknowledge(false);
+    if cancelled || ended.closed || ended.failure.is_some() {
+        missing.acknowledge(false);
+    } else {
+        match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
+            .and_then(|row| output.take(row))
+        {
+            Ok(true) => {
+                ended.finished += 1;
+                ended.skipped += 1;
+                missing.acknowledge(true);
+            }
+            // Preserve the old callback's accepted closed-pipe row. Its
+            // native accounting still settles before command success.
+            Ok(false) => {
+                ended.closed = true;
+                missing.acknowledge(true);
+            }
+            Err(error) => {
+                ended.failure = Some(error);
+                missing.acknowledge(false);
+            }
         }
     }
-}
 }

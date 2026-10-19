@@ -159,7 +159,10 @@ pub(super) struct Complete<'a> {
 }
 impl Complete<'_> {
     fn write_value<M: serde::ser::SerializeMap>(
-        &self, map: &mut M, name: &str, value: &crate::saved_json::Json,
+        &self,
+        map: &mut M,
+        name: &str,
+        value: &crate::saved_json::Json,
     ) -> Result<(), M::Error> {
         if let Some(located) = &self.value {
             map.serialize_entry(name, located)?;

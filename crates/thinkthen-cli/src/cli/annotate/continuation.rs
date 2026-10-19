@@ -43,7 +43,6 @@ impl Continuation {
                 return false;
             }
             await_acknowledgement(&replies, &stopped, &signal)
-
         });
         (Self { events, closed }, callback)
     }

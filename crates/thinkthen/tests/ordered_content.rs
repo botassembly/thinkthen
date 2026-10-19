@@ -176,7 +176,9 @@ impl std::io::Read for FailingReader {
         use std::io::BufRead as _;
         let source = self.fill_buf()?;
         let count = source.len().min(output.len());
-        output[..count].copy_from_slice(&source[..count]);
+        let destination = output.get_mut(..count).ok_or_else(|| std::io::Error::other("short output buffer"))?;
+        let bytes = source.get(..count).ok_or_else(|| std::io::Error::other("short input buffer"))?;
+        destination.copy_from_slice(bytes);
         self.consume(count);
         Ok(count)
     }
@@ -190,23 +192,24 @@ impl std::io::BufRead for FailingReader {
         }
     }
     fn consume(&mut self, count: usize) {
-        self.remaining = &self.remaining[count..];
+        self.remaining = self.remaining.get(count..).unwrap_or_default();
     }
 }
-fn assert_caller_io(error: &thinkthen::Error) {
+fn assert_caller_io(error: &thinkthen::Error) -> Result<(), Box<dyn std::error::Error>> {
     let cause = std::error::Error::source(error)
-        .unwrap()
+        .ok_or("missing caller IO source")?
         .downcast_ref::<std::io::Error>()
-        .unwrap();
+        .ok_or("unexpected caller IO source type")?;
     assert_eq!(cause.to_string(), "private-caller-io-marker");
     for shown in [
         format!("{error:?}"),
         error.to_string(),
         format!("{:?}", error.diagnostic()),
-        serde_json::to_string(&error.complete()).unwrap(),
+        serde_json::to_string(&error.complete())?,
     ] {
         assert!(!shown.contains("private-caller-io-marker"));
     }
+    Ok(())
 }
 #[test]
 fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them() {
@@ -218,11 +221,11 @@ fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them(
     )
     .unwrap();
     let error = text.next_bytes().unwrap().unwrap_err();
-    assert_caller_io(&error);
+    assert_caller_io(&error).unwrap();
     assert!(text.next().is_none());
     let error =
         TableReader::new("input", FailingReader { remaining: b"" }, TableFormat::Csv).unwrap_err();
-    assert_caller_io(&error);
+    assert_caller_io(&error).unwrap();
     let mut table = TableReader::new(
         "input",
         FailingReader {
@@ -232,7 +235,7 @@ fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them(
     )
     .unwrap();
     let error = table.next().unwrap().unwrap_err();
-    assert_caller_io(&error);
+    assert_caller_io(&error).unwrap();
     assert!(table.next().is_none());
 }
 

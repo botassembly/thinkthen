@@ -1,13 +1,18 @@
 //! Public request overlays retain native precedence, descriptions and list admission.
 use super::*;
 
-fn preview(engine: &Engine, function: &str, question: &str, options: &str) -> Result<String, Box<dyn std::error::Error>> {
+fn preview(
+    engine: &Engine,
+    function: &str,
+    question: &str,
+    options: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
     let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#))
         ?.admit()?;
-    let plan = engine
-        .plan_request(&request, RequestEnvironment::default())
-        ?;
-    Ok(String::from_utf8(plan.first_body().ok_or("missing preview body")?.to_vec())?)
+    let plan = engine.plan_request(&request, RequestEnvironment::default())?;
+    Ok(String::from_utf8(
+        plan.first_body().ok_or("missing preview body")?.to_vec(),
+    )?)
 }
 
 #[test]

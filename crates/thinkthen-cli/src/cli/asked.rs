@@ -157,16 +157,16 @@ fn prepare(
     let tuned = function != crate::RequestFunction::Rank
         && member.is_some_and(|value| value.member("threshold").is_some());
     let mut resolved = Resolved {
-            kind,
-            dynamic,
-            model,
-            on,
-            profile,
-            literal_question,
-            context_schema,
-            sources: Sources::default(),
-            saved,
-        };
+        kind,
+        dynamic,
+        model,
+        on,
+        profile,
+        literal_question,
+        context_schema,
+        sources: Sources::default(),
+        saved,
+    };
     resolved.sources = resolved.setting_sources(function, options, member, top, tuned);
     Ok((
         resolved,
@@ -187,50 +187,52 @@ impl Resolved {
         top: Option<&Json>,
         tuned: bool,
     ) -> Sources {
-    let source = |typed: bool, name: &str| {
-        if typed {
-            "command line"
-        } else if member.is_some_and(|value| value.member(name).is_some()) {
-            "file"
-        } else {
-            "default"
-        }
-    };
-    let mut sources =
-        Sources::default().setting("question", if self.saved { "file" } else { "command line" });
-    sources = match self.kind {
-        QuestionKind::Choose => sources.setting(
-            "options",
-            source(options.labels.is_some() || self.dynamic, "options"),
-        ),
-        QuestionKind::Tag => sources.setting("labels", source(options.labels.is_some(), "labels")),
-        QuestionKind::Score => {
-            sources.setting("levels", source(options.levels.is_some(), "levels"))
-        }
-        _ => sources
-            .setting("true", source(options.yes.is_some(), "true"))
-            .setting("false", source(options.no.is_some(), "false")),
-    };
-    if self.kind != QuestionKind::Score
-        && (function != crate::RequestFunction::Rank || options.threshold.is_some() || tuned)
-    {
-        sources = sources.setting(
-            "threshold",
-            source(options.threshold.is_some(), "threshold"),
-        );
-    }
-    sources = sources
-        .setting("on", source(options.field.is_some(), "on"))
-        .setting(
-            "model",
-            if options.model.is_some() {
+        let source = |typed: bool, name: &str| {
+            if typed {
                 "command line"
-            } else if top.is_some_and(|value| value.member("model").is_some()) {
+            } else if member.is_some_and(|value| value.member(name).is_some()) {
                 "file"
             } else {
                 "default"
-            },
-        );
+            }
+        };
+        let mut sources = Sources::default()
+            .setting("question", if self.saved { "file" } else { "command line" });
+        sources = match self.kind {
+            QuestionKind::Choose => sources.setting(
+                "options",
+                source(options.labels.is_some() || self.dynamic, "options"),
+            ),
+            QuestionKind::Tag => {
+                sources.setting("labels", source(options.labels.is_some(), "labels"))
+            }
+            QuestionKind::Score => {
+                sources.setting("levels", source(options.levels.is_some(), "levels"))
+            }
+            _ => sources
+                .setting("true", source(options.yes.is_some(), "true"))
+                .setting("false", source(options.no.is_some(), "false")),
+        };
+        if self.kind != QuestionKind::Score
+            && (function != crate::RequestFunction::Rank || options.threshold.is_some() || tuned)
+        {
+            sources = sources.setting(
+                "threshold",
+                source(options.threshold.is_some(), "threshold"),
+            );
+        }
+        sources = sources
+            .setting("on", source(options.field.is_some(), "on"))
+            .setting(
+                "model",
+                if options.model.is_some() {
+                    "command line"
+                } else if top.is_some_and(|value| value.member("model").is_some()) {
+                    "file"
+                } else {
+                    "default"
+                },
+            );
         sources
     }
 }
@@ -330,8 +332,10 @@ fn mismatch(
 mod tests;
 
 fn admit_rank_meanings(
-    function: crate::RequestFunction, options: &crate::RequestOptions,
-    rank_set: bool, kind: QuestionKind,
+    function: crate::RequestFunction,
+    options: &crate::RequestOptions,
+    rank_set: bool,
+    kind: QuestionKind,
 ) -> Result<(), Failure> {
     if function == crate::RequestFunction::Rank && (options.yes.is_some() || options.no.is_some()) {
         if rank_set {
