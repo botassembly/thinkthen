@@ -61,9 +61,18 @@ fn recognition_can_publish_before_feed_eof_without_replaying_its_prefix() {
 
 #[test]
 fn incremental_empty_eager_and_cancellation_keep_actual_settlement() {
+    let listener = Listener::answering(|body| recognition_response(body, None)).unwrap();
+    let inline = start(&listener, RequestInput::Records { items: Vec::new() }, false);
+    let inline_packets = drain(&inline);
+    assert!(rows(&inline_packets).is_empty());
+    assert!(!inline_packets.iter().any(|packet| matches!(packet, RequestSessionResult::Aggregate(_))));
+    let RequestSessionResult::Terminal(inline_terminal) = inline_packets.last().unwrap() else { panic!("terminal") };
+    assert!(inline_terminal.error.is_none());
+    assert_eq!(listener.count(), 0);
     for eager in [false, true] {
         let listener = Listener::answering(|body| recognition_response(body, None)).unwrap();
-        let session = start(&listener, RequestInput::Records { items: Vec::new() }, eager);
+        let session = start(&listener, feed(), eager);
+        session.finish(None).unwrap();
         let packets = drain(&session);
         assert!(rows(&packets).is_empty());
         assert!(!packets.iter().any(|packet| matches!(packet, RequestSessionResult::Aggregate(_))));

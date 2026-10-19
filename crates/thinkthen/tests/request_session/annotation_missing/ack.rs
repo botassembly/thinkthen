@@ -13,11 +13,8 @@ fn held_acknowledgement_allows_prior_output_to_drain_and_blocks_later_sends() {
         acknowledgements.lock().unwrap().recv().unwrap_or(false)
     });
     let session = engine(&listener).request_session_with_feed_options(annotation(), Surface::Rust, options(Some(policy))).unwrap();
-    session.push_with(|| Ok::<_, Error>(original(false))).unwrap();
+    session.push_with(|| Ok::<_, Error>(distinct_original(false, 0))).unwrap();
     session.push_with(|| Ok::<_, Error>(original(true))).unwrap();
-    assert_eq!(events.recv_timeout(Duration::from_secs(5)).unwrap(), (1, "/body".to_owned()));
-    session.push_with(|| Ok::<_, Error>(original(false))).unwrap();
-    session.finish(None).unwrap();
     let mut packets = Vec::new();
     loop {
         let RequestSessionRead::Result(packet) = next(&session) else { panic!("first row") };
@@ -25,7 +22,13 @@ fn held_acknowledgement_allows_prior_output_to_drain_and_blocks_later_sends() {
         packets.push(packet);
         if row { break; }
     }
+    // Native observation and row publication use one bounded packet cell.
+    // Drain prior output before expecting the next preparation's policy offer.
     assert_eq!(ordinals(&packets), [0]);
+    assert_eq!(events.recv_timeout(Duration::from_secs(5)).unwrap(), (1, "/body".to_owned()));
+    session.push_with(|| Ok::<_, Error>(distinct_original(false, 2))).unwrap();
+    session.finish(None).unwrap();
+    assert!(matches!(session.try_read(), RequestSessionRead::Pending));
     assert_eq!(listener.count(), 1);
     acknowledge.send(true).unwrap();
     packets.extend(drain(&session));

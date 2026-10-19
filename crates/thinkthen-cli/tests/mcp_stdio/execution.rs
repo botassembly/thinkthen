@@ -206,10 +206,13 @@ fn source_failure_preserves_the_completed_prefix_and_observed_facts() {
     let first = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/recognize/README.md");
     let expected = std::fs::read_to_string(&first).unwrap();
-    let missing = first.with_file_name("absent-prefix-source-0639.txt");
+    // Both paths must pass native manifest admission. A later content error
+    // then tests a real started prefix, rather than an upfront missing path.
+    let invalid = session.home.join("invalid-prefix-source-0639.txt");
+    std::fs::write(&invalid, [0xff]).unwrap();
     let result = session.call("decide", json!({
         "question":"Q?",
-        "source":{"paths":[first, missing],"unit":"file"},
+        "source":{"paths":[first, invalid],"unit":"file"},
         "options":{"batch":1}
     }));
     assert_eq!(result["isError"], true);

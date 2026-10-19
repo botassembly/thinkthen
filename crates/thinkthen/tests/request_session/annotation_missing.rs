@@ -16,6 +16,14 @@ fn original(missing: bool) -> RequestSessionDescriptor {
         if missing { json!({"private-marker":"withheld"}) } else { json!({"body":"Fits."}) }
     }}}).to_string()).unwrap()
 }
+fn distinct_original(missing: bool, ordinal: usize) -> RequestSessionDescriptor {
+    let mut value = original(missing);
+    if !missing {
+        value.item.original = Some(RequestOriginal::Json { value: RawRecord::json(
+            &json!({"body": format!("Fits {ordinal}.")}).to_string()).unwrap() });
+    }
+    value
+}
 fn options(policy: Option<Policy>) -> RequestSessionFeedOptions {
     RequestSessionFeedOptions { on_missing_annotation_pointer: policy, ..Default::default() }
 }
@@ -42,7 +50,7 @@ fn ordinary_annotation_policy_only_skips_the_actual_missing_question_pointer() {
                 }) as Policy
             });
             let session = engine(&listener).request_session_with_feed_options(annotation(), Surface::Rust, options(callback)).unwrap();
-            for at in 0..3 { let _status = session.push_with(|| Ok::<_, Error>(original(at == missing))).unwrap(); }
+            for at in 0..3 { let _status = session.push_with(|| Ok::<_, Error>(distinct_original(at == missing, at))).unwrap(); }
             session.finish(None).unwrap();
             let packets = drain(&session);
             let terminal = terminal(&packets);
