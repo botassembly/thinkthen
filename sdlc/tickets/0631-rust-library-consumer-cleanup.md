@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision 3d338bb, accept
 
+Reviews: revision 442b831, accept
+
 ## Outcome
 
 - Changes: `conformance/consumer/consumer/tests/public/cases.rs`, `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
