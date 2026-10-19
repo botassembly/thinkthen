@@ -223,23 +223,6 @@ impl<'a> CallOptions<'a> {
         self
     }
 
-    // CLI signals retain an earned whole-set answer before the process exits.
-    // Public caller cancellation remains dominant unless this private bridge is selected.
-    #[cfg(test)]
-    pub(crate) const fn cli_cancel(
-        mut self,
-        value: &'a CancelToken,
-        deadline: Option<Deadline>,
-    ) -> Self {
-        self.cancel[1] = Some(value);
-        self.due = match deadline {
-            Some(deadline) => Some(Due::Started(deadline)),
-            None => None,
-        };
-        self.settle_success_on_cancel = true;
-        self
-    }
-
     /// Supply a reserved proxy activation. Every supplied variant refuses before execution.
     #[must_use]
     pub const fn proxy(mut self, value: &'a crate::public::ProxyActivation) -> Self {
