@@ -165,7 +165,10 @@ pub(crate) enum Failure {
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
     /// A too-large refusal with a remedy selected by the request shape.
-    RequestTooLarge { tokens: bool, advice: SizeAdvice },
+    RequestTooLarge {
+        tokens: bool,
+        advice: SizeAdvice,
+    },
     /// The reply passed its request's limit of this many bytes and was not kept.
     ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
@@ -223,8 +226,18 @@ impl Failure {
 
     fn attach_size_advice(&mut self, advice: SizeAdvice) {
         match self {
-            Self::TokenLimit => *self = Self::RequestTooLarge { tokens: true, advice },
-            Self::Status(413) => *self = Self::RequestTooLarge { tokens: false, advice },
+            Self::TokenLimit => {
+                *self = Self::RequestTooLarge {
+                    tokens: true,
+                    advice,
+                }
+            }
+            Self::Status(413) => {
+                *self = Self::RequestTooLarge {
+                    tokens: false,
+                    advice,
+                }
+            }
             Self::Provider { cause, .. }
             | Self::Stopped { cause, .. }
             | Self::BatchFailed { cause, .. } => cause.attach_size_advice(advice),

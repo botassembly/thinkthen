@@ -14,10 +14,7 @@ const PHRASES: [(u16, &str); 19] = [
     (402, "the account has no credit"),
     (403, "the key may not use this model or address"),
     (404, "nothing answers at this address"),
-    (
-        413,
-        "the backend refused the request as too large",
-    ),
+    (413, "the backend refused the request as too large"),
     (
         422,
         "the backend refused the request as malformed or too large",

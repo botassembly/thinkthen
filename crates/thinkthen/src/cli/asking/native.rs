@@ -311,7 +311,10 @@ impl Renderer {
                 if let Some(facts) = error.facts() {
                     environment.settle_native(facts);
                 }
-                Some((at, host_error(error, self.streams).with_size_advice(self.size_advice)))
+                Some((
+                    at,
+                    host_error(error, self.streams).with_size_advice(self.size_advice),
+                ))
             }
         };
 
