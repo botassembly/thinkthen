@@ -106,3 +106,55 @@ fn configuration_profile_observation_borrows_the_actual_built_profile_without_se
     assert_eq!(listener.count(), 0);
     fs::remove_dir_all(home).unwrap();
 }
+
+/// Observe maintenance metadata before route validation; explicit paths remain usable.
+pub(super) fn cache_capture(named: &str) -> Vec<String> {
+    let builder = EngineBuilder::from_config().unwrap();
+    let cache = builder.cache_settings();
+    let mut lines = vec![json!({
+        "enabled": cache.cache_enabled,
+        "enabled_source": cache.cache_enabled_source,
+        "platform": cache.cache_is_platform_default,
+        "target": cache.cache_target_bytes,
+        "target_source": cache.cache_target_source,
+        "path_present": cache.cache_path.is_some(),
+    }).to_string(), shown(builder.resolved_settings())];
+    let builder = builder.cache_at(named).unwrap();
+    let cache = builder.cache_settings();
+    assert_eq!(cache.cache_path.as_deref(), Some(Path::new(named)));
+    assert!(cache.cache_enabled);
+    assert!(!cache.cache_is_platform_default);
+    assert_eq!(cache.cache_path_source, "command_line");
+    assert!(!format!("{cache:?}").contains(named));
+    lines.push(format!("named target {}", cache.cache_target_bytes));
+    lines
+}
+
+#[test]
+fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_target() {
+    for (tag, route) in [("unknown", r#""backend":"unknown-private-route""#),
+        ("url", r#""url":"invalid-relative-address""#)] {
+        let home = folder(&format!("cache-route-{tag}"));
+        let config = if cfg!(target_os = "macos") {
+            home.join("Library/Application Support/thinkthen/config.json")
+        } else {
+            home.join("thinkthen/config.json")
+        };
+        fs::create_dir_all(config.parent().unwrap()).unwrap();
+        fs::write(&config, format!(r#"{{"schema":"thinkthen.config/1","cache":false,"cache_bytes":17,{route}}}"#)).unwrap();
+        let named = home.join("unopened-private-cache-marker");
+        let written = in_child("cache-only", &[
+            ("XDG_CONFIG_HOME", home.to_str().unwrap()), ("HOME", home.to_str().unwrap()),
+            ("APPDATA", home.to_str().unwrap()), ("THINKTHEN_API_KEY", "private-unread-key"),
+            ("THINKTHEN_BASE_URL", "irrelevant-invalid-address"),
+            (ARGUMENT, named.to_str().unwrap()),
+        ]);
+        for fact in ["\"enabled\":false", "\"platform\":true", "\"path_present\":true",
+            "\"target\":17", "\"target_source\":\"configuration\"", "named target 17", "Usage:"] {
+            assert!(written.contains(fact), "{written}");
+        }
+        assert!(!written.contains("private-unread-key"));
+        assert!(!named.exists());
+        fs::remove_dir_all(home).unwrap();
+    }
+}

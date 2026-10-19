@@ -5,7 +5,7 @@ mod budgets;
 mod environment;
 mod configuration;
 mod snapshot;
-pub use snapshot::ResolvedSettings;
+pub use snapshot::{CacheSettings, ResolvedSettings};
 pub(super) mod json;
 mod prices;
 mod server;

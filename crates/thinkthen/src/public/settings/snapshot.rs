@@ -14,6 +14,37 @@ pub(super) struct CapturedMetadata {
     pub(super) cache_bytes_configured: bool,
 }
 
+/// Route-independent cache settings for explicit maintenance and status commands.
+/// This view contains no backend, credential or answer. Debug withholds paths.
+#[derive(Clone)]
+pub struct CacheSettings {
+    /// Whether the captured configuration may be changed by another user.
+    pub configuration_shared: bool,
+    /// Whether answer caching is enabled for this builder.
+    pub cache_enabled: bool,
+    /// The existing tier selecting enablement.
+    pub cache_enabled_source: &'static str,
+    /// The captured cache path, including a disabled platform default.
+    pub cache_path: Option<PathBuf>,
+    /// The existing path tier: platform, environment or command_line.
+    pub cache_path_source: &'static str,
+    /// Whether the path is the private platform default.
+    pub cache_is_platform_default: bool,
+    /// The captured allocated-byte target for cache pruning.
+    pub cache_target_bytes: u64,
+    /// The existing pruning target tier.
+    pub cache_target_source: &'static str,
+}
+impl fmt::Debug for CacheSettings {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_struct("CacheSettings")
+            .field("configuration_shared", &self.configuration_shared)
+            .field("cache_enabled", &self.cache_enabled)
+            .field("cache_target_bytes", &self.cache_target_bytes)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Resolved settings for an explicit caller-owned status or plan presentation.
 /// No credential value is exposed. The builder retains every captured key.
 /// Debug withholds address, model and local paths as the builder does.
@@ -76,20 +107,12 @@ impl fmt::Debug for ResolvedSettings {
 }
 
 impl EngineBuilder {
-    /// Inspect nonsecret resolved settings without building an engine.
-    /// This operation reads no environment, file, answer or credential source;
-    /// it uses only values already captured by this builder. It sends nothing.
-    /// Status renders this view; the caller owns its text and output format.
-    ///
-    /// # Errors
-    /// Returns the same backend selection and address-secret refusals as build.
-    pub fn resolved_settings(&self) -> Result<ResolvedSettings, Error> {
-        let selected = self.selected()?;
-        if selected.backend.address_contains_key(
-            selected.key.as_ref().map(|Secret(value)| value.as_ref()),
-        ) {
-            return Err(Error::usage(crate::core::KEY_IN_ADDRESS));
-        }
+    /// Inspect captured cache settings without selecting a backend or address.
+    /// Maintenance commands use this after [`Self::from_config`] so irrelevant
+    /// route settings cannot refuse an explicit cache operation. This reads no
+    /// environment, file, credential or answer and sends nothing. The caller
+    /// owns environment cache overrides, command precedence and warning timing.
+    pub fn cache_settings(&self) -> CacheSettings {
         let metadata = &self.captured.metadata;
         let platform = self.seeded.as_ref().is_none_or(|seeded| seeded.platform);
         let cache_enabled = match &self.cache {
@@ -113,6 +136,38 @@ impl EngineBuilder {
                 platform,
             ),
         };
+        CacheSettings {
+            configuration_shared: metadata.shared,
+            cache_enabled,
+            cache_enabled_source,
+            cache_path,
+            cache_path_source,
+            cache_is_platform_default,
+            cache_target_bytes: metadata.cache_bytes.unwrap_or(config::DEFAULT_CACHE_BYTES),
+            cache_target_source: if metadata.cache_bytes_configured {
+                "configuration"
+            } else {
+                "built_in"
+            },
+        }
+    }
+
+    /// Inspect nonsecret resolved settings without building an engine.
+    /// This operation reads no environment, file, answer or credential source;
+    /// it uses only values already captured by this builder. It sends nothing.
+    /// Status renders this view; the caller owns its text and output format.
+    ///
+    /// # Errors
+    /// Returns the same backend selection and address-secret refusals as build.
+    pub fn resolved_settings(&self) -> Result<ResolvedSettings, Error> {
+        let selected = self.selected()?;
+        if selected.backend.address_contains_key(
+            selected.key.as_ref().map(|Secret(value)| value.as_ref()),
+        ) {
+            return Err(Error::usage(crate::core::KEY_IN_ADDRESS));
+        }
+        let metadata = &self.captured.metadata;
+        let cache = self.cache_settings();
         Ok(ResolvedSettings {
             configuration_path: metadata.path.clone(),
             configuration_present: metadata.present,
@@ -125,17 +180,13 @@ impl EngineBuilder {
             key_variable: selected.variable,
             key_variables: selected.variables,
             api_key_set: selected.key.is_some(),
-            cache_enabled,
-            cache_enabled_source,
-            cache_path,
-            cache_path_source,
-            cache_is_platform_default,
-            cache_target_bytes: metadata.cache_bytes.unwrap_or(config::DEFAULT_CACHE_BYTES),
-            cache_target_source: if metadata.cache_bytes_configured {
-                "configuration"
-            } else {
-                "built_in"
-            },
+            cache_enabled: cache.cache_enabled,
+            cache_enabled_source: cache.cache_enabled_source,
+            cache_path: cache.cache_path,
+            cache_path_source: cache.cache_path_source,
+            cache_is_platform_default: cache.cache_is_platform_default,
+            cache_target_bytes: cache.cache_target_bytes,
+            cache_target_source: cache.cache_target_source,
             usage_path: self.seeded.as_ref().and_then(|seeded| seeded.usage.clone()),
         })
     }

@@ -235,6 +235,7 @@ fn run(case: &str, argument: &str) -> Vec<String> {
     let seed = || EngineBuilder::from_env().expect("a seed");
     match case {
         "config-only" => config_capture::capture(argument),
+        "cache-only" => config_capture::cache_capture(argument),
         "settings-json" => vec![shown(EngineBuilder::from_settings_json(argument))],
         "settings-profile" => vec![shown(
             EngineBuilder::from_settings_json(argument).and_then(EngineBuilder::build),

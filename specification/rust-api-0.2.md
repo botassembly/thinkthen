@@ -40,6 +40,8 @@ Recognition and relation command dry runs use the same `Engine::plan_request`. `
 
 `RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation. `instructions` and `entity_definition` replace saved recognition task wording independently; absence retains each saved value. Blank text and use with another verb refuse during header admission. Ordinary execution and preview share the native recognition overlay. Atomic `yes`, `no`, `labels` and `levels` use the existing native question resolver. Supplied meanings replace saved meanings, and supplied lists replace the entire saved list with native order, duplicate and cardinality checks. Absent controls retain saved content; explicit null meanings and descriptions remain authored content. The command owns option spelling and source labels.
 
+`EngineBuilder::cache_settings` exposes the captured cache path, enablement, platform-default flag, pruning target and existing source tiers without resolving a route. The CLI environment uses this for cache maintenance and its shared-configuration warning, so unknown backends and irrelevant invalid addresses do not refuse explicit-path maintenance. `resolved_settings` reuses the same cache derivation. Environment cache capture, selection, warning timing and output remain command responsibilities. This operation reads no credentials or answers and creates no directory.
+
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
 
 The command applies its captured request rate with `EngineBuilder::requests_per_minute` and its existing debug retry-delay input with `retry_wait`. These setters retain the shared posting-address pacer, native retry policy and default one-second wait. They introduce no extra environment reads or execution owner.
@@ -547,6 +549,18 @@ impl Copy for TransportFailure
 impl Eq for TransportFailure
 impl PartialEq for TransportFailure
 fn Error::with_source(self, impl Error + Send + Sync + 'static) -> Error
+struct CacheSettings
+impl Clone for CacheSettings
+impl Debug for CacheSettings
+fn EngineBuilder::cache_settings(&self) -> CacheSettings
+CacheSettings::configuration_shared: bool
+CacheSettings::cache_enabled: bool
+CacheSettings::cache_enabled_source: &'static str
+CacheSettings::cache_path: Option<PathBuf>
+CacheSettings::cache_path_source: &'static str
+CacheSettings::cache_is_platform_default: bool
+CacheSettings::cache_target_bytes: u64
+CacheSettings::cache_target_source: &'static str
 struct ResolvedSettings
 impl Debug for ResolvedSettings
 impl Clone for ResolvedSettings
