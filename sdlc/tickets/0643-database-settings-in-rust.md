@@ -1,6 +1,6 @@
 # 0643: Set engine settings by name and value through one core parser
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

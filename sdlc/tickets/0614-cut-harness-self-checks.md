@@ -1,6 +1,6 @@
 # 0614: Delete workflow-text assertions and planted lint self-tests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -11,6 +11,8 @@ Reviews: revision eee512a, accept
 Reviews: revision a0ba9b4, accept
 
 Reviews: revision 179a777, accept
+
+Reviews: revision 2df9248, accept
 
 ## Outcome
 
@@ -34,3 +36,4 @@ A large share of the harness tests the harness itself, not the product. `sdlc/sc
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: Closing gate on 1ff7af044 retained the passed inventory repair but stopped in the Apple workflow fixture at its unchanged five-second limit; a fresh developer is measuring fixture interpreter selection before a minimal repair and fresh review.

@@ -1018,6 +1018,8 @@ def parameter_cases():
             path = root / 'bin' / tool
             path.write_text('#!/bin/sh\n' + body + '\n')
             path.chmod(0o755)
+        # Run the real candidate guard with the prepared interpreter, not the host launcher.
+        (root / 'bin/python3').symlink_to(sys.executable)
         env = {'PATH': f'{root}/bin:{os.defpath}', 'HOME': str(root), 'LANG': 'C.UTF-8'}
         # Exercise the workflow caller with the real archived, non-executable helper.
         archived = subprocess.check_output(['git', 'archive', 'HEAD',
