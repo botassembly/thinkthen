@@ -49,7 +49,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         },
         Failure::Profile {
             path: "safe-profile.json".into(),
-            error: ProfileError::Name,
+            error: crate::Engine::builder().profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"INVALID","max_questions":1}"#).unwrap_err(),
         },
         Failure::ProfileLimit(ProfileLimit {
             name: ProfileName::new("safe-profile").expect("safe name"),

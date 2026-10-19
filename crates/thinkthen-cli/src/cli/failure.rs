@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in::DecodeError;
-use crate::core::{BackendError, PointerError, ProfileError, ProfileLimit, QuestionFileError, QuestionSetError, ReadingError, RecordError, Source};
+use crate::core::{BackendError, PointerError, ProfileLimit, QuestionFileError, QuestionSetError, ReadingError, RecordError, Source};
 use crate::render::RenderError;
 
 use crate::engine::error::{TransportKind, reply_too_large};
@@ -17,6 +17,7 @@ mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
+mod profile;
 pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
@@ -44,7 +45,7 @@ pub(crate) enum Failure {
     },
     Profile {
         path: PathBuf,
-        error: ProfileError,
+        error: crate::Error,
     },
     ProfileLimit(ProfileLimit),
     /// A shared context file or its batch could not be used.
@@ -378,7 +379,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::OpenProfile { path, error } => profile_open_message(path, error),
         Failure::Profile { path, error } => {
-            (5, format!("the profile file `{}` {error}", path.display()))
+            profile::message(path, error)
         }
         Failure::ProfileLimit(limit) => (
             2,

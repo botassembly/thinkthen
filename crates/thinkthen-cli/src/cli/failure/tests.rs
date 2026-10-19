@@ -2,7 +2,7 @@
 use super::{Failure, report};
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{
-    LimitKind, ProfileError, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
+    LimitKind, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
 };
 use crate::engine::error::{Error as EngineError, TransportKind};
 use crate::engine::http::Client;
@@ -81,7 +81,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         },
         Failure::Profile {
             path: "safe-profile.json".into(),
-            error: ProfileError::Name,
+            error: crate::Engine::builder().profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"INVALID","max_questions":1}"#).unwrap_err(),
         },
         Failure::ProfileLimit(ProfileLimit {
             name: ProfileName::new("safe-profile").expect("safe name"),
