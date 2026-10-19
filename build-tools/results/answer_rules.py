@@ -51,7 +51,7 @@ MARKERS = {
     'call settlement': re.compile(r'\bsettle\s*\([^\n)]*\b(?:function|verb|input)\b'),
     'probability arithmetic': re.compile(
         r'\b(?:probability|probabilities|chance|odds)\s*'
-        r'(?::\s*[^=\n;]+)?\s*(?:[+*/-]=|(?::=|=)\s*[^\n;]*[+*/-])'),
+        r'(?::\s*[^=\n;]+)?\s*(?:[+*/-]=|(?::=|=)\s*[^\n;]*(?:[+*/]|-(?!>)))'),
     # Reading a span-probability field for a declaration/codec is mechanical.
     # Selecting a proposal's odds joins observations into an answer.
     'span probability join': re.compile(
@@ -68,7 +68,8 @@ def self_test():
         if not pattern.search(source):
             raise AssertionError(f'probability arithmetic escaped: {source}')
     for source in ('probability: float', 'probability = packet.probability',
-                   'probabilities: list[float]', 'chance = nativeChance()'):
+                   'probabilities: list[float]', 'chance = nativeChance()',
+                   'row->probability=edge->probability'):
         if pattern.search(source):
             raise AssertionError(f'mechanical declaration refused: {source}')
     print('answer rules: arithmetic marker regressions pass')
