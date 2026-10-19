@@ -46,14 +46,14 @@ else
         echo "lint: THINKTHEN_PRIVATE_NAMES must point outside the repository" >&2
         exit 1 ;;
     esac
-    grep -q -v '^[[:space:]]*$' "$list" || {
+    step grep -q -v '^[[:space:]]*$' "$list" || {
         echo "lint: THINKTHEN_PRIVATE_NAMES holds no name" >&2
         exit 1
     }
     scratch_dir found
-    git ls-files >"$found/paths"
+    step git ls-files >"$found/paths"
     status=0
-    grep -v '^[[:space:]]*$' "$list" | grep -n -i -F -f - "$found/paths" >"$found/path-hits" || status=$?
+    step grep -v '^[[:space:]]*$' "$list" | step grep -n -i -F -f - "$found/paths" >"$found/path-hits" || status=$?
     if [ "$status" -gt 1 ]; then
         echo "lint: the private-name path check failed (grep exit $status)" >&2
         exit 1
@@ -63,7 +63,7 @@ else
         exit 1
     fi
     status=0
-    grep -v '^[[:space:]]*$' "$list" | git grep -n -I -i -F -f - >"$found/file-hits" || status=$?
+    step grep -v '^[[:space:]]*$' "$list" | step git grep -n -I -i -F -f - >"$found/file-hits" || status=$?
     if [ "$status" -gt 1 ]; then
         echo "lint: the private-name file check failed (git grep exit $status)" >&2
         exit 1
