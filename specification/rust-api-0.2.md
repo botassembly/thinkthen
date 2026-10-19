@@ -42,6 +42,8 @@ MCP discovery now reads `request_schema`, `RequestFunction::ALL`, `allows_option
 
 Offline command reports inspect `RawRecord::content` through additional borrowed `QuestionContent` operations: member and array access, ordered field and element iteration, exact number and boolean access, and the existing native pointer grammar. The library keeps duplicate, nonfinite and depth validation; command reporting does not receive or copy the private JSON tree or implement another parser. These views retain false, null, numeric distinctions and authored order without reparsing originals.
 
+`RequestSessionFeedOptions::retain_success_on_cancel` defaults to false. Explicit opt-in retains only an otherwise successful native result when cancellation arrives during final settlement; active work still stops. Both ordinary and recovering sessions apply the same policy to inline, source and feed requests. The command opts in to preserve its existing earned whole-set result under SIGINT, drains final output and facts with Settlement interest, and retains its existing signal exit. Rust callers, C adapters and MCP keep dominant cancellation unless they explicitly request this policy. The operation reuses the existing private settlement rule and exposes no scheduler, sink or readiness internals.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -218,6 +220,7 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+RequestSessionFeedOptions::retain_success_on_cancel: bool
 fn QuestionContent::member(self, &str) -> Option<QuestionContent<'a>>
 fn QuestionContent::element(self, usize) -> Option<QuestionContent<'a>>
 fn QuestionContent::fields(self) -> Option<impl ExactSizeIterator<Item = (&'a str, QuestionContent<'a>)> + 'a>

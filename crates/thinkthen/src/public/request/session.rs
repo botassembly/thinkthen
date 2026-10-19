@@ -220,9 +220,14 @@ pub enum RequestSessionReady {
     Timeout,
 }
 
-/// Owned controls for the native session feed, separate from canonical Request JSON.
+/// Owned session controls, separate from canonical Request JSON.
 #[derive(Debug, Default, Clone)]
 pub struct RequestSessionFeedOptions {
+    /// Retain an otherwise successful native result when cancellation arrives
+    /// during final settlement. Active work still stops on cancellation.
+    /// Defaults to false: ordinary caller cancellation takes precedence over success.
+    /// Applies to inline, source and feed requests in either session mode.
+    pub retain_success_on_cancel: bool,
     /// Validate the supported input before any provider sends.
     pub eager: bool,
     /// Admit the image route before the caller reads content.
@@ -520,6 +525,7 @@ fn run(
         controls: CallOptions::new()
             .surface(surface)
             .cancel(&queue.cancel)
+            .retain_success_on_cancel(options.retain_success_on_cancel)
             .observe(&observer),
         feed,
     };
@@ -647,6 +653,7 @@ fn run_recovering(
         controls: CallOptions::new()
             .surface(surface)
             .cancel(&queue.cancel)
+            .retain_success_on_cancel(options.retain_success_on_cancel)
             .observe(&observe),
         feed: match &request.request.call.arguments().input {
             RequestInput::Feed { name, .. } => {

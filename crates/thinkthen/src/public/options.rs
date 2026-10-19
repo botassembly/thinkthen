@@ -198,6 +198,11 @@ impl<'a> CallOptions<'a> {
         }
     }
 
+    pub(crate) const fn retain_success_on_cancel(mut self, retain: bool) -> Self {
+        self.settle_success_on_cancel = retain;
+        self
+    }
+
     #[cfg(feature = "cli")]
     pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
         self.cli_text_limit = Some(limit);

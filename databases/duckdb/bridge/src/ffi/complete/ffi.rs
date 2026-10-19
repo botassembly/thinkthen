@@ -104,6 +104,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
                 request,
                 thinkthen::Surface::Duckdb,
                 thinkthen::RequestSessionFeedOptions {
+                    retain_success_on_cancel: false,
                     eager: !input.incremental,
                     image_inputs: input.image_inputs()?,
                     all_filter_results,

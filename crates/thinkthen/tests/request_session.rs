@@ -9,6 +9,8 @@ use thinkthen::*;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 
+#[path = "request_session/cancel_settlement.rs"]
+mod cancel_settlement;
 #[path = "request_session/framing.rs"]
 mod framing;
 #[path = "request_session/push.rs"]
