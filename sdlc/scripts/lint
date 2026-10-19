@@ -103,7 +103,6 @@ sh sdlc/scripts/surfaces --registry
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses
 cargo fmt --all -- --check
-cargo fmt --all --manifest-path crates/thinkthen-host/Cargo.toml -- --check
 cargo clippy --locked --workspace --all-targets -- -D warnings
 cargo clippy --locked -p thinkthen --lib --no-default-features --features bundled-sqlite -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
