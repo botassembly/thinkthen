@@ -19,6 +19,9 @@ from unittest.mock import patch
 import coverage_installed_managed
 import coverage_installed_c_hosts
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT, fixture_run, fixture_wait
+
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
@@ -234,9 +237,9 @@ class ManagedToolAvailability(unittest.TestCase):
                     self.assertEqual((package / 'README.md').read_bytes(),
                                      (checkout / 'libraries' / language / 'README-PUBLIC.md').read_bytes())
                     if language == 'swift':
-                        result = subprocess.run(['swift', 'package', '--package-path', str(package), 'describe'],
+                        result = fixture_run(['swift', 'package', '--package-path', str(package), 'describe'],
                                                 env={'PATH': os.environ['PATH'], 'HOME': str(run)},
-                                                capture_output=True, timeout=60)
+                                                capture_output=True)
                         self.assertEqual(result.returncode, 0, result.stderr.decode())
                     else:
                         # Run the actual consumer through extraction, README replay setup,
@@ -370,7 +373,7 @@ while True:
                 with self.subTest(capture=capture):
                     result = DRIVER['command']([sys.executable, '-c', script], root,
                                                {'PATH': os.environ['PATH']}, root / 'active.log',
-                                               capture=capture, timeout=5)
+                                               capture=capture, timeout=FIXTURE_HANG_TIMEOUT)
                     self.assertIn('orphan reaped while harness alive', (root / 'active.log').read_text())
                     if capture:
                         self.assertEqual(result, b'before orphan\norphan reaped while harness alive\n')
@@ -394,7 +397,7 @@ while True:
                 self.assertEqual(json.loads(result), sorted(map(int, previous_mask)))
                 self.assertEqual(signal.getsignal(signal.SIGCHLD), previous_handler)
                 self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), previous_mask)
-                self.assertEqual(foreign.wait(timeout=3), 23)
+                self.assertEqual(fixture_wait(foreign, ), 23)
             finally:
                 if foreign.poll() is None:
                     foreign.kill()

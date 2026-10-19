@@ -5,6 +5,8 @@ import subprocess
 import sys
 import tempfile
 
+from children import fixture_run, fixture_wait
+
 
 def main():
     binary, server = map(str, map(Path, sys.argv[1:]))
@@ -22,12 +24,11 @@ def main():
                                   'unexpected_probability'))
         with tempfile.TemporaryDirectory() as home:
             for arm, command, cause, status in arms:
-                result = subprocess.run([binary, *command, '--url',
+                result = fixture_run([binary, *command, '--url',
                                          f'http://127.0.0.1:{port}/arm/{arm}/v1',
                                          '--no-cache', '--max-retries', '0', '--facts'],
                                         input='private evidence', capture_output=True, text=True,
-                                        env={'HOME': home, 'THINKTHEN_API_KEY': 'sk-loopback-arms'},
-                                        timeout=30)
+                                        env={'HOME': home, 'THINKTHEN_API_KEY': 'sk-loopback-arms'})
                 assert result.returncode == 4, (arm, result)
                 assert result.stdout == '', (arm, result.stdout)
                 lines = result.stderr.splitlines()
@@ -43,7 +44,7 @@ def main():
                 prefix = 'thinkthen: the reply was refused:' if cause == 'reply' else 'thinkthen: the backend '
                 assert lines[0].startswith(prefix), (arm, lines)
         backend.stdin.close()
-        assert backend.wait(timeout=10) == 0
+        assert fixture_wait(backend, ) == 0
         assert backend.stderr.read() == ''
         print(f'Installed provider diagnostic boundary: {len(arms)} fault arms passed')
     finally:

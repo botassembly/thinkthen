@@ -7,6 +7,8 @@ import tempfile
 
 from children import child_env, read_process_line
 
+from children import fixture_communicate, fixture_wait
+
 PROBE = ('test -z "${THINKTHEN_SENTINEL+x}" && test -z "${FAKE_SERVICE_API_KEY+x}" && '
          'test -z "${ABSENT_0127+x}" && test "$KEPT_0127" = kept && test "$SET_0127" = set')
 REFUSED = ("THINKTHEN_BASE_URL", "OPENAI_API_KEY", "GITHUB_TOKEN", "db_password", "AWS_SECRET_ACCESS_KEY")
@@ -35,10 +37,10 @@ for newline in ("\n", "\r\n"):
     script = "import sys; sys.stdout.write(" + repr(output) + ")"
     child = subprocess.Popen([sys.executable, "-c", script], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=child_env())
-    child.wait(timeout=5)
+    fixture_wait(child, )
     if read_process_line(child.stdout) != "ready\n":
         bad.append("process acknowledgement")
-    stdout, stderr = child.communicate(timeout=5)
+    stdout, stderr = fixture_communicate(child, )
     if child.returncode != 0 or stderr or json.loads(stdout) != {"answer": True}:
         bad.append("JSON after process acknowledgement")
 print(f"children python: {'ok' if not bad else 'FAIL ' + ', '.join(bad)}")

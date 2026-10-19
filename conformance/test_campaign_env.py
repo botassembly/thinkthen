@@ -14,6 +14,8 @@ from conformance import parity
 from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 
+from conformance.children.children import fixture_communicate, fixture_run
+
 
 class CampaignEnvironment(unittest.TestCase):
     def test_nested_full_rungs_restore_owned_compiler_settings(self):
@@ -307,7 +309,7 @@ while True:time.sleep(60)
                     try:
                         if cancellation is not None:
                             process.send_signal(cancellation)
-                        _, error = process.communicate(timeout=8)
+                        _, error = fixture_communicate(process, )
                         self.assertEqual(process.returncode, expected, error)
                         if linux:
                             reaped, status = os.waitpid(descendant, os.WNOHANG)
@@ -334,7 +336,7 @@ while True:time.sleep(60)
                 ctypes.CDLL(None).prctl(36, 0, 0, 0, 0)
 
     def test_normal_exit_retains_stdin_and_exit_code(self):
-        result = subprocess.run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
+        result = fixture_run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
                                  'sh', '-c', 'read value; printf "%s" "$value"; exit 7'],
-                                env=child_env(), input='owned input\n', text=True, capture_output=True, timeout=3)
+                                env=child_env(), input='owned input\n', text=True, capture_output=True)
         self.assertEqual((result.returncode, result.stdout), (7, 'owned input'))

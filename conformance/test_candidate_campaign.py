@@ -16,6 +16,8 @@ from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups
 
+from conformance.children.children import fixture_communicate
+
 
 class CandidatePlatforms(unittest.TestCase):
     def test_parity_uses_manifest_exclusions_and_fails_required_gaps(self):
@@ -122,14 +124,14 @@ class CandidateSmokes(unittest.TestCase):
                         ['sh', str(scripts / 'smoke'), '--one', str(binaries), surface],
                         cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True))
                 for child in children:
-                    log, _ = child.communicate(timeout=10)
+                    log, _ = fixture_communicate(child, )
                     self.assertEqual(child.returncode, 0, log)
                 self.assertEqual(len(list(root.glob('built-*'))), 4)
             finally:
                 for child in children:
                     if child.poll() is None:
                         os.killpg(child.pid, signal.SIGKILL)
-                    child.communicate(timeout=3)
+                    fixture_communicate(child, )
 
     def test_smoke_fails_required_exit77_and_accepts_declared_unsupported_platforms(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-candidate-') as folder:

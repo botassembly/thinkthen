@@ -9,6 +9,8 @@ never kept: a test sets a THINKTHEN_ value or a fake key explicitly.
 import os
 from pathlib import Path
 import re
+import subprocess
+import sys
 
 # The names cargo and rustup read, as test_deadline/child.rs lists them.
 CARGO = ("HOME", "CARGO_HOME", "CARGO_BUILD_JOBS", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN",
@@ -53,3 +55,50 @@ def read_process_line(stream):
         if byte == b"\n":
             break
     return line.decode(stream.encoding or "utf-8", stream.errors or "strict").replace("\r\n", "\n")
+
+
+# Ordinary fixture completion only; product deadlines and cancellation probes
+# keep their own controls. This bound detects hangs on a busy build host.
+FIXTURE_HANG_TIMEOUT = 60
+
+
+def fixture_stalled(error):
+    """Keep the stalled command and captured output in the failing gate log."""
+    print(f'fixture hung: {error.cmd!r} after {error.timeout}s', file=sys.stderr, flush=True)
+    for name, output in (('stdout', error.stdout), ('stderr', error.stderr)):
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        print(f'{name}:\n{output or "(empty or inherited by the gate log)"}', file=sys.stderr, flush=True)
+
+
+def fixture_run(command, **options):
+    """Run an ordinary fixture with the shared hang guard."""
+    try:
+        return subprocess.run(command, timeout=FIXTURE_HANG_TIMEOUT, **options)
+    except subprocess.TimeoutExpired as error:
+        fixture_stalled(error)
+        raise
+
+
+def fixture_communicate(child, input=None):
+    """Collect a fixture child without a machine-speed deadline."""
+    try:
+        return child.communicate(input=input, timeout=FIXTURE_HANG_TIMEOUT)
+    except subprocess.TimeoutExpired as error:
+        child.kill()
+        fixture_stalled(error)
+        raise
+
+
+def fixture_wait(child):
+    """Wait for an ordinary fixture, retaining output if it hangs."""
+    try:
+        return child.wait(timeout=FIXTURE_HANG_TIMEOUT)
+    except subprocess.TimeoutExpired as error:
+        child.kill()
+        try:
+            error.stdout, error.stderr = child.communicate(timeout=FIXTURE_HANG_TIMEOUT)
+        except subprocess.TimeoutExpired:
+            pass
+        fixture_stalled(error)
+        raise

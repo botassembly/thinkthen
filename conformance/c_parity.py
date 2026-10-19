@@ -9,6 +9,8 @@ import subprocess
 import sys
 import tempfile
 
+from conformance.children.children import fixture_wait
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "conformance/children"))
 ERRORS = {'usage': 1, 'backend': 2, 'local': 4, 'cancelled': 5, 'deadline': 3, 'defect': 6}
@@ -212,7 +214,7 @@ class Backend:
         return self.process.stdout.readline().strip()
     def close(self):
         self.process.stdin.close()
-        code = self.process.wait(timeout=10)
+        code = fixture_wait(self.process, )
         stderr = self.process.stderr.read()
         if code or stderr:
             raise AssertionError('owned fixture backend failed: ' + stderr)

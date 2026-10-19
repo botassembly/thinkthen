@@ -14,6 +14,9 @@ import tempfile
 import time
 from unittest import mock
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import fixture_wait
+
 SCRIPTS = Path(__file__).resolve().parent
 
 
@@ -203,7 +206,7 @@ def portable(root):
                     pass
     finally:
         unrelated.kill()
-        unrelated.wait(timeout=5)
+        fixture_wait(unrelated, )
 
 
 def sdk_project_locations(root):
