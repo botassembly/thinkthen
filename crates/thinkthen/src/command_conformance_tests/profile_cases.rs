@@ -8,8 +8,8 @@ use crate::engine::facade;
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
-const CASES: &str = include_str!("../../../../../conformance/cases.json");
-const PROFILES: &str = include_str!("../../../../../conformance/backend-profiles.json");
+const CASES: &str = include_str!("../../../../conformance/cases.json");
+const PROFILES: &str = include_str!("../../../../conformance/backend-profiles.json");
 
 #[derive(Deserialize)]
 struct ProfileDocument {

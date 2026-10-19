@@ -3,7 +3,7 @@
 //! and prove refusal sends nothing even when the parent has a key and address.
 
 use super::CASES;
-use super::conformance_support::{Case, Document, QuestionForm};
+use super::{Case, Document, QuestionForm};
 use crate::args::{Cli, Command};
 use crate::edge::Environment;
 use crate::failure::{Failure, report};

@@ -53,3 +53,6 @@ mod ownership_tests;
 
 #[cfg(test)]
 mod command_carrier_secrecy_tests;
+
+#[cfg(test)]
+mod command_conformance_tests;
