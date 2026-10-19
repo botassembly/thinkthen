@@ -128,6 +128,14 @@ def tools():
     return llvm
 
 
+def profile_link_flags(initializer):
+    flags = ['-C', f'link-arg={initializer}']
+    if sys.platform == 'linux':
+        # The initializer follows Rust's default libraries and needs libc after it.
+        flags += ['-C', 'link-arg=-lc']
+    return flags
+
+
 def activate(run, name):
     folder = run / name
     folder.mkdir()
@@ -373,7 +381,7 @@ def main():
               (Path((os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
-             '-C', f'link-arg={initializer}']
+             *profile_link_flags(initializer)]
     cflags = shlex.join([f'-ffile-prefix-map={source}={destination}' for source, destination in remaps])
     if continuous:
         flags += ['-C', 'llvm-args=-runtime-counter-relocation']

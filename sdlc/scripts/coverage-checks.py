@@ -445,8 +445,8 @@ class ProfileCauses(unittest.TestCase):
                             '-DPROFILE_PATH=' + json.dumps(str(collection / '%m.profraw')),
                             '-DPROFILE_DIR=' + json.dumps(str(collection)), '-o', str(root / 'profile.o')], check=True)
             program = 'fn main() { let a: Vec<_> = std::env::args().collect(); if a.len() > 1 { unsafe { unsafe extern "C" { fn raise(s: i32) -> i32; } raise(a[1].parse().unwrap()); } } }'
-            subprocess.run(['rustc', '--edition', '2024', '-C', 'instrument-coverage', '-C',
-                            'link-arg=' + str(root / 'profile.o'), '-o', str(root / 'probe'), '-'],
+            subprocess.run(['rustc', '--edition', '2024', '-C', 'instrument-coverage',
+                            *DRIVER['profile_link_flags'](root / 'profile.o'), '-o', str(root / 'probe'), '-'],
                            input=program.encode(), check=True)
             env = {'PATH': os.environ['PATH']}
             for signum in (signal.SIGINT, signal.SIGTERM):
