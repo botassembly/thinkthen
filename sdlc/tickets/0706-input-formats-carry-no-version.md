@@ -23,3 +23,7 @@ Depends on: 0704
 ## Evidence
 
 Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbers-before-1-0.md). Each of these inputs accepts exactly one value today (`profile` accepts 1 and 2, where 2 is 1 plus an optional member), so the marker guards nothing and users must write it. Found in the 2026-10-19 version survey: `core/question_set/parsing.rs`, `core/recognize_file.rs`, `core/relate_file.rs`, `config.rs`, `core/backend_profile.rs`, `public/request.rs`. 0704 made the question-set `version` optional; this ticket removes it.
+
+## Amendment, 2026-10-19
+
+Ian ruled that `wording_version` does not belong in the SDK: the SDK asks the question directly, and tracking wordings of a question belongs to the proxy, where question optimization will live. This ticket also deletes `wording_version` from question files, the public Rust API (`with_wording_version`), the C interface (`thinkthen_complete_wording_version_v1`), results, generated wrappers, the specification and fixtures. A question file that still carries it is refused with the same one-sentence rule as `version`.
