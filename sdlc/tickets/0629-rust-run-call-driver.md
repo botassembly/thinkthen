@@ -27,3 +27,4 @@ Every binding writes its own loop to run a call: start a session, push input fro
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: Implementationafb307004 is pushed with core/control and all-ten plain-fed checks passing in job1792423680791-41766, but jobs1792423680791-41766 and1792424137376-24355 also exposed example fixes and omitted invocation prerequisites, so a fresh developer will run the existing complete Rust entrypoint before installed-proof acceptance.
