@@ -306,7 +306,8 @@ def drain_signal(args, stdin, home, env, backend, signum):
 def drain_observed_signal(args, stdin, home, env, backend, signum, observation):
     child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True, cwd=home,
-                             **(observation.options if observation else {'env': env}))
+                             env=observation.env if observation else env,
+                             pass_fds=observation.pass_fds if observation else ())
     try:
         child.stdin.write(stdin)
         child.stdin.close()

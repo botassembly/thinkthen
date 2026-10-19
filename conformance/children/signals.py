@@ -17,9 +17,9 @@ class SignalObservation:
                        text=True)
         self.reader, self.writer = os.pipe()
         os.set_blocking(self.writer, False)
-        self.options = {'env': {**env, 'DYLD_INSERT_LIBRARIES': str(library),
-                               'CLI_SIGNAL_OBSERVER_FD': str(self.writer)},
-                        'pass_fds': (self.writer,)}
+        self.env = {**env, 'DYLD_INSERT_LIBRARIES': str(library),
+                    'CLI_SIGNAL_OBSERVER_FD': str(self.writer)}
+        self.pass_fds = (self.writer,)
 
     def wait(self, child, signum, deadline):
         while True:

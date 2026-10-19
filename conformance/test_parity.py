@@ -42,7 +42,8 @@ class DarwinSignalObservation(unittest.TestCase):
                         process = subprocess.Popen([str(probe), str(signum), mode],
                                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                    stderr=subprocess.PIPE, text=True,
-                                                   **observation.options)
+                                                   env=observation.env,
+                                                   pass_fds=observation.pass_fds)
                         def expect_line(expected):
                             self.assertTrue(select.select([process.stdout], [], [], 30)[0])
                             actual = read_process_line(process.stdout)
