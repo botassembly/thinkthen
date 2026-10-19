@@ -16,8 +16,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .relation(works_for)?
         .build()?;
     let text = "Maria Chen joined Northwind Freight last spring.";
-    let call = tt.call("recognize", support::arguments(ask, support::text(text)), RequestEnvironment::default())?;
-    let RequestValue::Recognized(rows) = call.value() else { return Err("expected recognition".into()); };
+    let call = tt.call(
+        "recognize",
+        support::arguments(ask, support::text(text)),
+        RequestEnvironment::default(),
+    )?;
+    let RequestValue::Recognized(rows) = call.value() else {
+        return Err("expected recognition".into());
+    };
     let found = rows.first().ok_or("missing recognition")?.result().value();
     let mut out = std::io::stdout().lock();
     for name in found.entities() {

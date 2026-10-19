@@ -8,8 +8,7 @@ use std::time::Duration;
 
 use thinkthen::{
     CallOptions, Engine, QuestionDetail, QuestionInput, Recognize, RecordInput, RecordObservation,
-    Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions,
-    RequestValue,
+    Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestValue,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

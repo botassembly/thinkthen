@@ -15,8 +15,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Our checkout page is down and customers cannot pay.",
     ];
     let mut out = std::io::stdout().lock();
-    let ranked = tt.call("rank", support::arguments(urgent, support::records(inbox)), RequestEnvironment::default())?;
-    let RequestValue::Ranked(rows) = ranked.value() else { return Err("expected ranked records".into()); };
+    let ranked = tt.call(
+        "rank",
+        support::arguments(urgent, support::records(inbox)),
+        RequestEnvironment::default(),
+    )?;
+    let RequestValue::Ranked(rows) = ranked.value() else {
+        return Err("expected ranked records".into());
+    };
     for one in rows {
         writeln!(
             out,

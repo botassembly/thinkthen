@@ -14,8 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Arrived a day early. Thank you!",
         "The zipper broke the first time I used it.",
     ];
-    let kept = tt.call("filter", support::arguments(complaint, support::records(reviews)), RequestEnvironment::default())?;
-    let RequestValue::Filtered(rows) = kept.value() else { return Err("expected filtered records".into()); };
+    let kept = tt.call(
+        "filter",
+        support::arguments(complaint, support::records(reviews)),
+        RequestEnvironment::default(),
+    )?;
+    let RequestValue::Filtered(rows) = kept.value() else {
+        return Err("expected filtered records".into());
+    };
     let mut out = std::io::stdout().lock();
     for row in rows {
         writeln!(out, "{}", support::original(row.original())?)?;

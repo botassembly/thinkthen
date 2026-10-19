@@ -3,8 +3,8 @@ use conformance_backend::{Backend, CASES};
 use serde::Deserialize;
 use serde_json::{Value, json, value::RawValue};
 use thinkthen::{
-    BatchSetting, Engine, Request, RequestEnvironment, RequestFeed, RequestInput, RequestSessionRead,
-    RequestSessionResult, RequestSessionWaitInterest,
+    BatchSetting, Engine, Request, RequestEnvironment, RequestFeed, RequestInput,
+    RequestSessionRead, RequestSessionResult, RequestSessionWaitInterest,
 };
 
 #[derive(Deserialize)]
@@ -340,7 +340,13 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
             let request = request(case, collection)?;
             let expected: Value =
                 serde_json::from_str(&expected(case, collection)?.to_string()).map_err(failure)?;
-            let call = engine.call(&case.verb, request.call.arguments.clone(), RequestEnvironment::default()).map_err(failure)?;
+            let call = engine
+                .call(
+                    &case.verb,
+                    request.call.arguments.clone(),
+                    RequestEnvironment::default(),
+                )
+                .map_err(failure)?;
             let answer: Value =
                 serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
                     .map_err(failure)?;
@@ -348,13 +354,37 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
             if collection {
                 let mut arguments = request.call.arguments.clone();
                 let items = match arguments.input {
-                    RequestInput::Records { items } | RequestInput::Units { items } | RequestInput::Entities { items } => items,
-                    RequestInput::Text { text, images } => vec![thinkthen::RequestItem::from_json(&json!({"original":{"kind":"text","text":text},"images":images}).to_string()).map_err(failure)?],
+                    RequestInput::Records { items }
+                    | RequestInput::Units { items }
+                    | RequestInput::Entities { items } => items,
+                    RequestInput::Text { text, images } => vec![
+                        thinkthen::RequestItem::from_json(
+                            &json!({"original":{"kind":"text","text":text},"images":images})
+                                .to_string(),
+                        )
+                        .map_err(failure)?,
+                    ],
                     _ => return Err("unexpected fixture input".into()),
                 };
-                arguments.input = RequestInput::Feed { name: "caller".into(), framing: Default::default(), reading: Default::default(), images: vec![] };
-                let call = engine.call(&case.verb, arguments, RequestEnvironment { controls: Default::default(), feed: Some(RequestFeed::new("caller", items.into_iter().map(Ok))) }).map_err(failure)?;
-                let answer: Value = serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?).map_err(failure)?;
+                arguments.input = RequestInput::Feed {
+                    name: "caller".into(),
+                    framing: Default::default(),
+                    reading: Default::default(),
+                    images: vec![],
+                };
+                let call = engine
+                    .call(
+                        &case.verb,
+                        arguments,
+                        RequestEnvironment {
+                            controls: Default::default(),
+                            feed: Some(RequestFeed::new("caller", items.into_iter().map(Ok))),
+                        },
+                    )
+                    .map_err(failure)?;
+                let answer: Value =
+                    serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
+                        .map_err(failure)?;
                 assert_eq!(answer, expected, "fed {id}");
             }
             let packet = terminal(&engine, request)?;

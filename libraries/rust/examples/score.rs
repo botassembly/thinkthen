@@ -19,9 +19,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Please update my mailing address when you can.",
         "Nobody can log in to the site right now.",
     ] {
-        let call = tt.call("score", support::arguments(urgency.clone(), support::text(text)), RequestEnvironment::default())?;
-        let RequestValue::Scores(rows) = call.value() else { return Err("expected scores".into()); };
-        writeln!(out, "{} {text}", rows.first().ok_or("missing score")?.result().value())?;
+        let call = tt.call(
+            "score",
+            support::arguments(urgency.clone(), support::text(text)),
+            RequestEnvironment::default(),
+        )?;
+        let RequestValue::Scores(rows) = call.value() else {
+            return Err("expected scores".into());
+        };
+        writeln!(
+            out,
+            "{} {text}",
+            rows.first().ok_or("missing score")?.result().value()
+        )?;
     }
     Ok(())
 }

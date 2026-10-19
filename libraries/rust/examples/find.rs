@@ -14,8 +14,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Refunds are issued within 30 days of purchase.",
         "Shipping is free on orders over $50.",
     ];
-    let found = tt.call("find", support::arguments(deadline, support::records(policy)), RequestEnvironment::default())?;
-    let RequestValue::Found(result) = found.value() else { return Err("expected found unit".into()); };
+    let found = tt.call(
+        "find",
+        support::arguments(deadline, support::records(policy)),
+        RequestEnvironment::default(),
+    )?;
+    let RequestValue::Found(result) = found.value() else {
+        return Err("expected found unit".into());
+    };
     let value = result.selected().map(support::original).transpose()?;
     writeln!(std::io::stdout().lock(), "{:?}", value)?;
     Ok(())
