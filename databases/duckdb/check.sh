@@ -5,6 +5,7 @@
 set -eu
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/duckdb
 tools_group=duckdb
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)

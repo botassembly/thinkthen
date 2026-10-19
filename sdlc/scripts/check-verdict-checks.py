@@ -27,12 +27,20 @@ def main():
     assert unknown.returncode == 2 and unknown.stderr.strip() == 'go: unknown profile', unknown
     missing = run(['sh', 'libraries/go/check.sh'], dict(os.environ, THINKTHEN_ARTIFACT='/absent/package'))
     assert missing.returncode == 1 and 'missing input THINKTHEN_ARTIFACT' in missing.stdout, missing
+    for surface in ('sqlite', 'postgresql'):
+        unknown = run(['sh', f'databases/{surface}/check.sh'],
+                      dict(os.environ, THINKTHEN_TEST_PROFILE='unknown', THINKTHEN_ARTIFACT='/absent/package'))
+        assert unknown.returncode == 2 and unknown.stdout == '', unknown
+        assert unknown.stderr == f'{surface}: unknown THINKTHEN_TEST_PROFILE: unknown\n', unknown
     with tempfile.TemporaryDirectory(prefix='thinkthen-check-inputs-') as temporary:
         directory = Path(temporary)
         package = directory / 'package'
         package.touch()
         inputs = [('libraries/go', name, False) for name in
                   ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND')]
+        inputs += [(f'databases/{surface}', name, False)
+                   for surface in ('duckdb', 'sqlite', 'postgresql')
+                   for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_C_ARTIFACT', 'THINKTHEN_COMMAND')]
         inputs += [('libraries/dart', 'THINKTHEN_DART_ARTIFACT', False),
                    ('libraries/cobol', 'THINKTHEN_C_HEADER', False),
                    ('libraries/cobol', 'THINKTHEN_C_LIBRARY', False),
