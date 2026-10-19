@@ -5,6 +5,7 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+. sdlc/scripts/compiler-isolation
 # ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard

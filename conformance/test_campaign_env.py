@@ -116,7 +116,7 @@ exit 2
                            check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertEqual(rows, [{'stage': 'routine',
-                                     'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
+                                     'settings': {'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
                                                   'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted'}}])
             with (scripts / 'test-full-cases').open('a') as stream:
                 stream.write('\npython3 conformance/not-a-real-helper.py\n')
@@ -130,6 +130,36 @@ exit 2
             self.assertTrue({'compiler', 'smoke', 'full', 'parity'} <= {row['stage'] for row in rows})
             for row in rows:
                 self.assertEqual(row['settings'], expected, row['stage'])
+
+            # Reuse the command probes at each routine rung's first build-tool
+            # boundary. Stop there so this regression never builds the product.
+            (tools / 'uname').write_text('#!/bin/sh\necho Darwin\n')
+            (tools / 'mustmatch').write_text('#!/bin/sh\nexit 0\n')
+            (tools / 'mustmatch').chmod(0o755)
+            (tools / 'cargo').write_text(
+                '#!/bin/sh\n[ "$*" != "nextest --version" ] || exit 0\n'
+                f'{python} "{probe}" compiler\nexit 91\n')
+            (tools / 'python3').write_text(
+                f'#!/bin/sh\n{python} "{probe}" compiler\nexit 91\n')
+            routine_env = env | {'THINKTHEN_RESOLVED_TOOLS': env['THINKTHEN_RESOLVED_TOOLS'] + ',spec'}
+            for rung, arguments in (('test', []), ('test-stress', ['--check']),
+                                    ('package', []), ('lint', []), ('spec', [])):
+                with self.subTest(rung=rung):
+                    (root / 'probes.jsonl').write_text('')
+                    result = subprocess.run(['sh', str(scripts / rung), *arguments],
+                                            cwd=root, env=routine_env, stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT)
+                    self.assertEqual(result.returncode, 91, result.stdout.decode())
+                    rows = [json.loads(line) for line in
+                            (root / 'probes.jsonl').read_text().splitlines()]
+                    routine = {'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
+                               'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted'}
+                    # Package retains the caller's flags; the other rungs sanitize
+                    # them through allow-list. Isolation must change neither policy.
+                    if rung == 'package':
+                        routine |= {key: value for key, value in env.items()
+                                    if key in expected and key not in routine}
+                    self.assertEqual(rows, [{'stage': 'compiler', 'settings': routine}])
 
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
         from importlib.util import module_from_spec, spec_from_file_location

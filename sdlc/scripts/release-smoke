@@ -24,6 +24,7 @@ case ${1:-} in --source-packages) source_packages=1; shift ;; --command) command
 DIR=$(CDPATH='' cd -- "$1" && pwd)
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+. sdlc/scripts/compiler-isolation
 unset THINKTHEN_API_KEY
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
