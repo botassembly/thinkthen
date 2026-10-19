@@ -761,7 +761,11 @@ def check_c_calls(output):
         raise Refusal('c-example-call-count')
     for call, (function, values) in zip(calls, wanted):
         answer = call.get('answer', {})
-        if (answer.get('function') != function or answer.get('value') != values
+        actual = answer.get('value')
+        matches = (isinstance(actual, list) and len(actual) == len(values)
+                   and all(type(got) is type(want) and got == want
+                           for got, want in zip(actual, values)))
+        if (answer.get('function') != function or not matches
                 or call.get('facts', {}).get('records') != len(values)):
             raise Refusal('c-example-answer-or-facts')
 

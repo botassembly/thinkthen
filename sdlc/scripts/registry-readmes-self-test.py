@@ -62,7 +62,7 @@ class PackageText(unittest.TestCase):
                  for function, values in [('decide', [True, False, None]),
                                           ('choose', ['billing', 'shipping', 'account'])]]
         readmes.check_c_calls('\n'.join(map(json.dumps, calls)))
-        for replacement in (False, {'value': [True, False, None]}, '\"value\":[true,false,null]'):
+        for replacement in (False, [1, 0, None], {'value': [True, False, None]}, '\"value\":[true,false,null]'):
             changed = json.loads(json.dumps(calls))
             changed[0]['answer']['value'] = replacement
             changed[0]['value'] = {'nested': [True, False, None]}
