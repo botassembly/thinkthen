@@ -38,6 +38,7 @@ impl Failure {
             | Self::Transport(_)
             | Self::Status(_)
             | Self::TokenLimit
+            | Self::RequestTooLarge { .. }
             | Self::ReplyTooLarge(_)
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
@@ -90,6 +91,8 @@ mod tests {
             Failure::Transport(TransportKind::Timeout),
             Failure::Status(503),
             Failure::TokenLimit,
+            Failure::TokenLimit.with_size_advice(super::super::SizeAdvice::Text),
+            Failure::Status(413).with_size_advice(super::super::SizeAdvice::Batches),
             Failure::ReplyTooLarge(12),
             Failure::Reply(DecodeError::NoModel),
             Failure::ModelsDiffer(Some(("one".into(), "two".into()))),

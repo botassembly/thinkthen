@@ -44,7 +44,6 @@ pub(crate) enum SizeAdvice {
     Text,
     Batches,
     Candidates,
-    Entities,
     Backend,
 }
 
@@ -54,7 +53,6 @@ impl SizeAdvice {
             Self::Text => "shorten the text",
             Self::Batches => "shorten the text or set a lower --max-request-bytes",
             Self::Candidates => "shorten the text or use fewer candidates",
-            Self::Entities => "shorten the text or use fewer entities",
             Self::Backend => "use a backend with a larger input limit",
         }
     }
