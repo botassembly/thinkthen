@@ -100,8 +100,7 @@ fn question_schema(tool: Tool, canonical: &Value) -> Value {
         Tool::Filter | Tool::Rank => Tool::Decide,
         _ => tool,
     };
-    let name = serde_json::to_value(function).unwrap_or(Value::Null);
-    let name = name.as_str().unwrap_or_default();
+    let name = function.name();
     let reference = format!("#/$defs/Authored_{name}");
     let definition = canonical
         .pointer("/$defs/RequestDefinition/anyOf")
