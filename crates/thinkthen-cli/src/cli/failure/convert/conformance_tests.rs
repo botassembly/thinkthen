@@ -72,7 +72,14 @@ fn actual_public_status_and_cancel_errors_keep_their_command_mapping() {
     let error = engine
         .decide(&question, "Refund me.")
         .expect_err("status refusal");
-    assert!(matches!(error.diagnostic(), Some(D::Status(422))));
+    match error.diagnostic() {
+        Some(D::Range { first, last, cause }) => {
+            assert_eq!(first, 0);
+            assert_eq!(last, 0);
+            assert!(matches!(*cause, D::Status(422)));
+        }
+        diagnostic => panic!("status refusal lost its native range: {diagnostic:?}"),
+    }
     let failure = Failure::from(error);
     assert!(matches!(failure, Failure::Status(422, false)));
     let mut diagnostic = Vec::new();
