@@ -160,8 +160,15 @@ def refinement(schema, source, definitions):
 
 def json_alternatives(schema, definitions):
     """Resolve native bare-value alternatives by disjoint JSON kinds."""
+    if schema is True or schema == {}:
+        return [{}]
     if '$ref' in schema:
         source = definitions[schema['$ref'].removeprefix('#/$defs/')]
+        if object_variants(source, definitions):
+            return [schema]
+        maps = enum_map_union(source, definitions)
+        if maps:
+            return list(maps['primitive_schemas'].values())
         alternatives = json_alternatives(source, definitions)
         return alternatives if alternatives and len(alternatives) > 1 else [schema]
     if 'anyOf' in schema:
@@ -195,6 +202,78 @@ def native_value_union(schema, definitions):
             'nullable_json': 'null' in selected}
 
 
+def enum_map_union(schema, definitions):
+    """Declare an enum or maps of that enum through the existing host union IR."""
+    alternatives = schema.get('anyOf', [])
+    if len(alternatives) < 2:
+        return None
+    states = [item for item in alternatives if '$ref' in item]
+    if len(states) != 1 or set(states[0]) != {'$ref'}:
+        return None
+    state = states[0]
+    source = definitions[state['$ref'].removeprefix('#/$defs/')]
+    values = source.get('oneOf', source.get('anyOf', []))
+    if not (values and all(item.get('type') == 'string' and isinstance(item.get('const'), str)
+                           for item in values)):
+        return None
+    maps = [item for item in alternatives if item != state]
+    general = {'type': 'object', 'additionalProperties': state}
+    if general not in maps:
+        return None
+    # Numeric-key occurrence maps are a subset of the named-member map. Both
+    # carry the same native enum, so their declaration needs only one map arm.
+    if any(item != general and not (
+            set(item) <= {'type', 'additionalProperties', 'patternProperties'}
+            and item.get('type') == 'object' and item.get('additionalProperties') is False
+            and item.get('patternProperties')
+            and all(value == state for value in item['patternProperties'].values()))
+           for item in maps):
+        return None
+    metadata = {key: schema[key] for key in ('title', 'description') if key in schema}
+    return {**metadata, 'primitive_variants': ['string', 'object'],
+            'primitive_schemas': {'string': state, 'object': general}}
+
+
+def declaration_union(schema, definitions):
+    """Retain untagged value alternatives, including overlapping array shapes."""
+    if isinstance(schema.get('type'), list):
+        schema = {'anyOf': [{**schema, 'type': kind} for kind in schema['type']]}
+    if 'anyOf' not in schema or object_variants(schema, definitions):
+        return None
+    alternatives = json_alternatives(schema, definitions)
+    if not alternatives:
+        return None
+    selected, kinds = {}, {}
+    for alternative in alternatives:
+        source = definitions[alternative['$ref'].removeprefix('#/$defs/')] if '$ref' in alternative else alternative
+        if source is True or source == {}:
+            return {}
+        kind = source.get('type')
+        if kind is None and object_variants(source, definitions):
+            kind = 'object'
+        if kind is None:
+            values = source.get('oneOf', [])
+            if values and all(item.get('type') == 'string' for item in values):
+                kind = 'string'
+        if not isinstance(kind, str):
+            return None
+        if alternative in selected.values():
+            continue
+        tag = kind
+        index = 2
+        while tag in selected:
+            tag = kind + str(index)
+            index += 1
+        selected[tag] = alternative
+        kinds[tag] = kind
+    if len(selected) < 2:
+        return None
+    if set(kinds.values()) == {'integer', 'string'}:
+        return None
+    return {'primitive_variants': list(selected), 'primitive_schemas': selected,
+            'primitive_kinds': kinds, 'nullable_json': 'null' in kinds.values()}
+
+
 def normalize(value):
     """Remove only redundant singleton type syntax throughout the source graph."""
     if isinstance(value, list):
@@ -208,17 +287,36 @@ def normalize(value):
     return result
 
 
-def lift_inline(definitions):
+def answer_definitions(definitions):
+    """Find native answer declarations through their Rust-owned probability tags."""
+    pending = [key for key, source in definitions.items()
+               if any('x-probability-mode' in item
+                      for item in source.get('oneOf', []))]
+    selected = set()
+    while pending:
+        key = pending.pop()
+        if key not in selected:
+            selected.add(key)
+            pending.extend(references(definitions[key]))
+    return selected
+
+
+def lift_inline(definitions, answers):
     """Name titled objects and nested alternatives from their schema source."""
     definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
-    def visit(value, path):
+    def visit(value, path, answer):
         if isinstance(value, list):
-            return [visit(child, path + '_' + str(index)) for index, child in enumerate(value)]
+            return [visit(child, path + '_' + str(index), answer) for index, child in enumerate(value)]
         if not isinstance(value, dict):
             return value
-        if object_variants(value, definitions) or (value.get("title") and "properties" in value):
+        kinds = value.get('type')
+        nullable_item = (answer and path.endswith(('_items', '_additionalProperties')) and
+                         ((isinstance(kinds, list) and 'null' in kinds) or
+                          any(item.get('type') == 'null' for item in value.get('anyOf', []))))
+        if (object_variants(value, definitions) or nullable_item or
+                (value.get("title") and "properties" in value)):
             identity = json.dumps(value, sort_keys=True)
             if identity not in seen:
                 key = value.get('title', path)
@@ -228,27 +326,32 @@ def lift_inline(definitions):
                 if key not in definitions:
                     definitions[key] = value
                     pending.append(key)
+            if answer:
+                answers.add(seen[identity])
             return {'$ref': '#/$defs/' + seen[identity]}
-        return {key: visit(child, path + '_' + key) for key, child in value.items()}
+        return {key: visit(child, path + '_' + key, answer) for key, child in value.items()}
     while pending:
         key = pending.pop()
         source = definitions[key]
-        definitions[key] = {member: visit(value, key + '_' + member)
+        definitions[key] = {member: visit(value, key + '_' + member, key in answers)
                             for member, value in source.items()}
     return definitions
 
 
 def prepare(definitions):
     """Derive reusable tagged object definitions without a target member inventory."""
-    definitions = lift_inline(definitions)
+    answers = answer_definitions(definitions)
+    definitions = lift_inline(definitions, answers)
     result = {}
     for key, source in definitions.items():
         if 'allOf' in source:
             if not all(refinement(item, source, definitions) for item in source['allOf']):
                 raise ValueError('object intersections need an explicit typed representation')
             source = {key: value for key, value in source.items() if key != 'allOf'}
-        native = native_value_union(source, definitions)
-        if native:
+        native = native_value_union(source, definitions) or enum_map_union(source, definitions)
+        if native is None and key in answers:
+            native = declaration_union(source, definitions)
+        if native is not None:
             result[key] = native
             continue
         variants = object_variants(source, definitions)

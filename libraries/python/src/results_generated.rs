@@ -85,6 +85,79 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             value,
         ),
         "completeAnswerId" => plain(py, value),
+        "completeAnswerResolution" => plain(py, value),
+        "completeAnswerResolutions" => {
+            if value.is_object() {
+                mapping(py, value, |value| {
+                    convert(py, "completeAnswerResolution", value)
+                })
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape" => plain(py, value),
+        "completeAnswerShape10" => plain(py, value),
+        "completeAnswerShape10_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape11" => plain(py, value),
+        "completeAnswerShape11_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape12" => plain(py, value),
+        "completeAnswerShape12_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape13" => {
+            if value.is_object() {
+                convert(py, "completeSettledRecognition", value)
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape13_anyOf_1_items" => {
+            if value.is_object() {
+                convert(py, "completeSettledRecognition", value)
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape14" => plain(py, value),
+        "completeAnswerShape14_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape15" => {
+            if value.is_object() {
+                mapping(py, value, |value| {
+                    convert(py, "completeSettledJudgment", value)
+                })
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape15_anyOf_1_items" => {
+            if value.is_object() {
+                mapping(py, value, |value| {
+                    convert(py, "completeSettledJudgment", value)
+                })
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape2" => plain(py, value),
+        "completeAnswerShape3" => plain(py, value),
+        "completeAnswerShape4" => plain(py, value),
+        "completeAnswerShape4_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape5" => {
+            if value.is_object() {
+                mapping(py, value, |value| {
+                    convert(py, "completeAnswerResolution", value)
+                })
+            } else {
+                plain(py, value)
+            }
+        }
+        "completeAnswerShape6" => plain(py, value),
+        "completeAnswerShape6_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape7" => plain(py, value),
+        "completeAnswerShape7_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape8" => plain(py, value),
+        "completeAnswerShape8_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape9" => plain(py, value),
+        "completeAnswerShape9_anyOf_1_items" => plain(py, value),
+        "completeAnswerShape_anyOf_1_items" => plain(py, value),
         "completeAnswers" => object(py, "NativeAnswers", "completeAnswers", value),
         "completeAtomic_Array_of_string" => object(
             py,
@@ -437,6 +510,42 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             "completeSendBudgetDenial_before_retry",
             value,
         ),
+        "completeSettledDecision" => plain(py, value),
+        "completeSettledJudgment" => plain(py, value),
+        "completeSettledOriginal" => plain(py, value),
+        "completeSettledRecognition" => {
+            if value.get("entities").is_some()
+                && value.get("mode").is_none()
+                && value.get("proposals").is_none()
+            {
+                return convert(py, "completeSettledRecognition_entities", value);
+            }
+            if value.get("mode").is_some()
+                && value.get("proposals").is_some()
+                && value.get("entities").is_none()
+            {
+                return convert(py, "completeSettledRecognition_mode_proposals", value);
+            }
+            Err(crate::defect(
+                py,
+                "native result has no generated alternative",
+            ))
+        }
+        "completeSettledRecognition_entities" => object(
+            py,
+            "NativeSettledRecognitionEntities",
+            "completeSettledRecognition_entities",
+            value,
+        ),
+        "completeSettledRecognition_mode_proposals" => object(
+            py,
+            "NativeSettledRecognitionModeProposals",
+            "completeSettledRecognition_mode_proposals",
+            value,
+        ),
+        "completeSettledRelations" => array(py, value, |value| {
+            convert(py, "completerelatedEntityEdge", value)
+        }),
         "completeStopCause" => plain(py, value),
         "completeStopped" => object(py, "NativeStopped", "completeStopped", value),
         "completeStringRoot" => object(py, "NativeStringRoot", "completeStringRoot", value),
@@ -980,6 +1089,102 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             "completesessionRelationEdge",
             value,
         ),
+        "completesettledAnswer" => {
+            if value.get("function").and_then(Value::as_str) == Some("decide") {
+                return convert(py, "completesettledAnswer_decide", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("choose") {
+                return convert(py, "completesettledAnswer_choose", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("tag") {
+                return convert(py, "completesettledAnswer_tag", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("score") {
+                return convert(py, "completesettledAnswer_score", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("filter") {
+                return convert(py, "completesettledAnswer_filter", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("rank") {
+                return convert(py, "completesettledAnswer_rank", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("find") {
+                return convert(py, "completesettledAnswer_find", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("recognize") {
+                return convert(py, "completesettledAnswer_recognize", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("relate") {
+                return convert(py, "completesettledAnswer_relate", value);
+            }
+            if value.get("function").and_then(Value::as_str) == Some("annotate") {
+                return convert(py, "completesettledAnswer_annotate", value);
+            }
+            Err(crate::defect(
+                py,
+                "native result has no generated alternative",
+            ))
+        }
+        "completesettledAnswer_annotate" => object(
+            py,
+            "NativeSettledAnswerAnnotate",
+            "completesettledAnswer_annotate",
+            value,
+        ),
+        "completesettledAnswer_choose" => object(
+            py,
+            "NativeSettledAnswerChoose",
+            "completesettledAnswer_choose",
+            value,
+        ),
+        "completesettledAnswer_decide" => object(
+            py,
+            "NativeSettledAnswerDecide",
+            "completesettledAnswer_decide",
+            value,
+        ),
+        "completesettledAnswer_filter" => object(
+            py,
+            "NativeSettledAnswerFilter",
+            "completesettledAnswer_filter",
+            value,
+        ),
+        "completesettledAnswer_find" => object(
+            py,
+            "NativeSettledAnswerFind",
+            "completesettledAnswer_find",
+            value,
+        ),
+        "completesettledAnswer_rank" => object(
+            py,
+            "NativeSettledAnswerRank",
+            "completesettledAnswer_rank",
+            value,
+        ),
+        "completesettledAnswer_recognize" => object(
+            py,
+            "NativeSettledAnswerRecognize",
+            "completesettledAnswer_recognize",
+            value,
+        ),
+        "completesettledAnswer_relate" => object(
+            py,
+            "NativeSettledAnswerRelate",
+            "completesettledAnswer_relate",
+            value,
+        ),
+        "completesettledAnswer_score" => object(
+            py,
+            "NativeSettledAnswerScore",
+            "completesettledAnswer_score",
+            value,
+        ),
+        "completesettledAnswer_tag" => object(
+            py,
+            "NativeSettledAnswerTag",
+            "completesettledAnswer_tag",
+            value,
+        ),
         "completesourceRelationEndpoint" => object(
             py,
             "NativeSourceRelationEndpoint",
@@ -1292,6 +1497,9 @@ pub(crate) fn field(
             convert(py, "completeBoundaryProposal", value)
         }),
         ("completeBoundaryProposal", "end") => plain(py, value),
+        ("completeBoundaryProposal", "file") => plain(py, value),
+        ("completeBoundaryProposal", "first_line") => plain(py, value),
+        ("completeBoundaryProposal", "last_line") => plain(py, value),
         ("completeBoundaryProposal", "length") => plain(py, value),
         ("completeBoundaryProposal", "probability") => plain(py, value),
         ("completeBoundaryProposal", "start") => plain(py, value),
@@ -1304,6 +1512,7 @@ pub(crate) fn field(
                 convert(py, "completeFacts", value)
             }
         }
+        ("completeCallError", "resolution") => convert(py, "completeAnswerResolution", value),
         ("completeEntityDocument", "kind") => plain(py, value),
         ("completeEntityDocument", "name") => plain(py, value),
         ("completeError", "estimated_input_denial") => {
@@ -1670,6 +1879,18 @@ pub(crate) fn field(
         ("completeSendBudgetDenial_before_first_send", "kind") => plain(py, value),
         ("completeSendBudgetDenial_before_retry", "kind") => plain(py, value),
         ("completeSendBudgetDenial_before_retry", "last_status") => plain(py, value),
+        ("completeSettledRecognition_entities", "entities") => {
+            array(py, value, |value| convert(py, "completeentity", value))
+        }
+        ("completeSettledRecognition_entities", "relations") => {
+            array(py, value, |value| convert(py, "completeentityEdge", value))
+        }
+        ("completeSettledRecognition_mode_proposals", "mode") => {
+            convert(py, "completeBoundaryMode", value)
+        }
+        ("completeSettledRecognition_mode_proposals", "proposals") => array(py, value, |value| {
+            convert(py, "completeBoundaryProposal", value)
+        }),
         ("completeStopped", "at") => plain(py, value),
         ("completeStopped", "cause") => convert(py, "completeStopCause", value),
         ("completeStopped", "retryable") => plain(py, value),
@@ -2242,6 +2463,13 @@ pub(crate) fn field(
         ("completesessionPacket_tag_row", "value") => {
             convert(py, "completeAtomic_Array_of_string", value)
         }
+        ("completesessionPacket_terminal", "answer") => {
+            if value.is_null() {
+                plain(py, value)
+            } else {
+                convert(py, "completesettledAnswer", value)
+            }
+        }
         ("completesessionPacket_terminal", "facts") => {
             if value.is_null() {
                 plain(py, value)
@@ -2257,6 +2485,9 @@ pub(crate) fn field(
             }
         }
         ("completesessionPacket_terminal", "kind") => plain(py, value),
+        ("completesessionPacket_terminal", "resolution") => {
+            convert(py, "completeAnswerResolution", value)
+        }
         ("completesessionProbabilities_named", "kind") => plain(py, value),
         ("completesessionProbabilities_named", "value") => array(py, value, |value| {
             convert(py, "completesessionNamedProbability", value)
@@ -2364,6 +2595,94 @@ pub(crate) fn field(
         ("completesessionRelationEdge", "relation") => plain(py, value),
         ("completesessionRelationEdge", "source") => convert(py, "completeEntityDocument", value),
         ("completesessionRelationEdge", "target") => convert(py, "completeEntityDocument", value),
+        ("completesettledAnswer_annotate", "function") => plain(py, value),
+        ("completesettledAnswer_annotate", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_annotate", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_annotate", "probability") => {
+            convert(py, "completeAnswerShape2", value)
+        }
+        ("completesettledAnswer_annotate", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_annotate", "value") => convert(py, "completeAnswerShape15", value),
+        ("completesettledAnswer_choose", "function") => plain(py, value),
+        ("completesettledAnswer_choose", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_choose", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_choose", "probability") => {
+            convert(py, "completeAnswerShape2", value)
+        }
+        ("completesettledAnswer_choose", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_choose", "value") => convert(py, "completeAnswerShape6", value),
+        ("completesettledAnswer_decide", "function") => plain(py, value),
+        ("completesettledAnswer_decide", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_decide", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_decide", "probability") => {
+            convert(py, "completeAnswerShape2", value)
+        }
+        ("completesettledAnswer_decide", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_decide", "value") => convert(py, "completeAnswerShape", value),
+        ("completesettledAnswer_filter", "function") => plain(py, value),
+        ("completesettledAnswer_filter", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_filter", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_filter", "probability") => {
+            convert(py, "completeAnswerShape10", value)
+        }
+        ("completesettledAnswer_filter", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_filter", "value") => convert(py, "completeAnswerShape9", value),
+        ("completesettledAnswer_find", "function") => plain(py, value),
+        ("completesettledAnswer_find", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_find", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_find", "probability") => convert(py, "completeAnswerShape2", value),
+        ("completesettledAnswer_find", "resolution") => convert(py, "completeAnswerShape5", value),
+        ("completesettledAnswer_find", "value") => convert(py, "completeAnswerShape12", value),
+        ("completesettledAnswer_rank", "function") => plain(py, value),
+        ("completesettledAnswer_rank", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_rank", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_rank", "probability") => {
+            convert(py, "completeAnswerShape10", value)
+        }
+        ("completesettledAnswer_rank", "resolution") => convert(py, "completeAnswerShape5", value),
+        ("completesettledAnswer_rank", "value") => convert(py, "completeAnswerShape11", value),
+        ("completesettledAnswer_recognize", "function") => plain(py, value),
+        ("completesettledAnswer_recognize", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_recognize", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_recognize", "probability") => {
+            convert(py, "completeAnswerShape10", value)
+        }
+        ("completesettledAnswer_recognize", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_recognize", "value") => convert(py, "completeAnswerShape13", value),
+        ("completesettledAnswer_relate", "function") => plain(py, value),
+        ("completesettledAnswer_relate", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_relate", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_relate", "probability") => {
+            convert(py, "completeAnswerShape10", value)
+        }
+        ("completesettledAnswer_relate", "resolution") => {
+            convert(py, "completeAnswerShape5", value)
+        }
+        ("completesettledAnswer_relate", "value") => convert(py, "completeAnswerShape14", value),
+        ("completesettledAnswer_score", "function") => plain(py, value),
+        ("completesettledAnswer_score", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_score", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_score", "probability") => {
+            convert(py, "completeAnswerShape2", value)
+        }
+        ("completesettledAnswer_score", "resolution") => convert(py, "completeAnswerShape5", value),
+        ("completesettledAnswer_score", "value") => convert(py, "completeAnswerShape8", value),
+        ("completesettledAnswer_tag", "function") => plain(py, value),
+        ("completesettledAnswer_tag", "index") => convert(py, "completeAnswerShape4", value),
+        ("completesettledAnswer_tag", "pick") => convert(py, "completeAnswerShape3", value),
+        ("completesettledAnswer_tag", "probability") => convert(py, "completeAnswerShape2", value),
+        ("completesettledAnswer_tag", "resolution") => convert(py, "completeAnswerShape5", value),
+        ("completesettledAnswer_tag", "value") => convert(py, "completeAnswerShape7", value),
         ("completesourceRelationEndpoint", "file") => plain(py, value),
         ("completesourceRelationEndpoint", "first_line") => plain(py, value),
         ("completesourceRelationEndpoint", "kind") => plain(py, value),
@@ -2429,5 +2748,15 @@ pub(crate) fn has_value(kind: &str) -> bool {
             | "completesessionProbabilities_named"
             | "completesessionProbabilities_yes_no"
             | "completesessionQuestionDetail"
+            | "completesettledAnswer_annotate"
+            | "completesettledAnswer_choose"
+            | "completesettledAnswer_decide"
+            | "completesettledAnswer_filter"
+            | "completesettledAnswer_find"
+            | "completesettledAnswer_rank"
+            | "completesettledAnswer_recognize"
+            | "completesettledAnswer_relate"
+            | "completesettledAnswer_score"
+            | "completesettledAnswer_tag"
     )
 }

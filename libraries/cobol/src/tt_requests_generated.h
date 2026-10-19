@@ -2511,6 +2511,9 @@ struct thinkthen_cobol_ReceiptBoundaryProposalList {
 };
 struct thinkthen_cobol_ReceiptBoundaryProposal {
     uint64_t end;
+    thinkthen_cobol_ReceiptUtf8Presence file;
+    thinkthen_cobol_ReceiptU64Presence first_line;
+    thinkthen_cobol_ReceiptU64Presence last_line;
     uint64_t length;
     double probability;
     uint64_t start;

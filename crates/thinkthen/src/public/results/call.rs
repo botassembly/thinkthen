@@ -179,6 +179,8 @@ impl Facts {
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
 pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
+    #[cfg_attr(test, serde(skip_serializing_if = "Option::is_none"))]
+    answer: Option<Box<super::SettledAnswer>>,
     #[cfg_attr(test, schemars(skip))]
     results: R,
     #[cfg_attr(test, schemars(skip))]
@@ -195,9 +197,12 @@ impl<T: Serialize, R: Serialize, P: Serialize> Serialize for Call<T, R, P> {
             .facts
             .complete()
             .ok_or_else(|| serde::ser::Error::custom("a completed call has no identity"))?;
-        let mut document =
-            serializer.serialize_struct("Call", if self.projected { 4 } else { 2 })?;
+        let fields = usize::from(self.answer.is_some()) + if self.projected { 4 } else { 2 };
+        let mut document = serializer.serialize_struct("Call", fields)?;
         document.serialize_field("value", &self.value)?;
+        if let Some(answer) = &self.answer {
+            document.serialize_field("answer", answer)?;
+        }
         if self.projected {
             document.serialize_field("probability", &self.probability)?;
             document.serialize_field("results", &self.results)?;
@@ -220,6 +225,7 @@ impl<T> Call<T> {
     pub(crate) const fn new(value: T, facts: Facts) -> Self {
         Self {
             value,
+            answer: None,
             facts,
             results: (),
             probability: None,
@@ -229,6 +235,17 @@ impl<T> Call<T> {
 }
 
 impl<T, R, P> Call<T, R, P> {
+    /// The Rust-settled answer of a canonical native request.
+    #[must_use]
+    pub fn answer(&self) -> Option<&super::SettledAnswer> {
+        self.answer.as_deref()
+    }
+
+    pub(crate) fn with_answer(mut self, answer: super::SettledAnswer) -> Self {
+        self.answer = Some(Box::new(answer));
+        self
+    }
+
     /// Canonical complete records retained by this call.
     #[must_use]
     pub const fn results(&self) -> &R {
@@ -244,15 +261,29 @@ impl<T, R, P> Call<T, R, P> {
     pub(crate) fn project<U, S, Q>(
         self,
         project: impl FnOnce(T) -> Result<(U, S, Q), Error>,
-    ) -> Result<Call<U, S, Q>, Error> {
+    ) -> Result<Call<U, S, Q>, Error>
+    where
+        S: super::settled_carriers::SettledCarrier,
+    {
         match project(self.value) {
-            Ok((value, results, probability)) => Ok(Call {
-                value,
-                results,
-                probability,
-                facts: self.facts,
-                projected: true,
-            }),
+            Ok((value, results, probability)) => {
+                let answer = match self.answer {
+                    Some(answer) => answer,
+                    None => Box::new(
+                        results
+                            .settled_answer()
+                            .map_err(|error| error.with_facts(self.facts.clone()))?,
+                    ),
+                };
+                Ok(Call {
+                    value,
+                    answer: Some(answer),
+                    results,
+                    probability,
+                    facts: self.facts,
+                    projected: true,
+                })
+            }
             Err(error) => Err(error.with_facts(self.facts)),
         }
     }
@@ -278,6 +309,7 @@ impl<T, R, P> Call<T, R, P> {
     pub(crate) fn map<U>(self, map: impl FnOnce(T) -> U) -> Call<U, R, P> {
         Call {
             value: map(self.value),
+            answer: self.answer,
             facts: self.facts,
             results: self.results,
             probability: self.probability,
@@ -292,6 +324,7 @@ impl<T, R, P> Call<T, R, P> {
         match map(self.value) {
             Ok(value) => Ok(Call {
                 value,
+                answer: self.answer,
                 facts: self.facts,
                 results: self.results,
                 probability: self.probability,

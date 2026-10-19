@@ -123,7 +123,7 @@ if [ "$mode" = swift-zig ]; then
 	done
 	zig_version=$(tar -xOzf "$dir/$second" ./build.zig.zon | sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p')
 	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
-	python3 "$repo/conformance/children/native_guard.py" "$dir/$second" || fail 'Zig archive contains private bytes'
+	python3 "$repo/conformance/children/privacy.py" "$dir/$second" || fail 'Zig archive contains private bytes'
 fi
 # Read recursively copied inputs independently from the committed source tree.
 source_members() {

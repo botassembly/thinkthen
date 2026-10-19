@@ -9,6 +9,7 @@ tools_group=lint
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+. sdlc/scripts/compiler-isolation
 # Recursive deletion and test usage stay within owned scratch folders.
 scratch_lint
 usage_lint

@@ -154,15 +154,20 @@ pub const SessionPacket = union(enum) {
 };
 
 pub const SessionPacketTerminal = struct {
+    answer: Presence(SettledAnswer),
     facts: Presence(Facts),
     failure: Presence(CallError),
     kind: []const u8,
+    resolution: AnswerResolution,
     extensions: Map(Value),
 };
+
+pub const AnswerResolution = enum { resolved, unresolved, failed };
 
 pub const CallError = struct {
     @"error": Error,
     facts: Presence(Facts),
+    resolution: AnswerResolution,
     extensions: Map(Value),
 };
 
@@ -254,6 +259,352 @@ pub const EstimatedInputDenialInitialRequest = struct {
     extensions: Map(Value),
 };
 
+pub const SettledAnswer = union(enum) {
+    decide: SettledAnswerDecide,
+    choose: SettledAnswerChoose,
+    tag: SettledAnswerTag,
+    score: SettledAnswerScore,
+    filter: SettledAnswerFilter,
+    rank: SettledAnswerRank,
+    find: SettledAnswerFind,
+    recognize: SettledAnswerRecognize,
+    relate: SettledAnswerRelate,
+    annotate: SettledAnswerAnnotate,
+};
+
+pub const SettledAnswerAnnotate = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape15),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape15 = union(enum) {
+    object: Map(SettledJudgment),
+    null_value,
+    array: []const AnswerShape15AnyOf1Items,
+};
+
+pub const AnswerShape15AnyOf1Items = union(enum) {
+    object: Map(SettledJudgment),
+    null_value,
+};
+
+pub const SettledJudgment = union(enum) {
+    boolean: bool,
+    null_value,
+    string: []const u8,
+    number: f64,
+    array: []const []const u8,
+};
+
+pub const AnswerShape5 = union(enum) {
+    string: AnswerResolution,
+    object: Map(AnswerResolution),
+    array: []const AnswerResolutions,
+};
+
+pub const AnswerResolutions = union(enum) {
+    string: AnswerResolution,
+    object: Map(AnswerResolution),
+};
+
+pub const AnswerShape2 = union(enum) {
+    number: f64,
+    null_value,
+    array: []const AnswerShape8AnyOf1Items,
+};
+
+pub const AnswerShape8AnyOf1Items = union(enum) {
+    number: f64,
+    null_value,
+};
+
+pub const AnswerShape3 = union(enum) {
+    string: []const u8,
+    null_value,
+    array: []const AnswerShape6AnyOf1Items,
+};
+
+pub const AnswerShape6AnyOf1Items = union(enum) {
+    string: []const u8,
+    null_value,
+};
+
+pub const AnswerShape4 = union(enum) {
+    integer: u64,
+    null_value,
+    array: []const AnswerShape4AnyOf1Items,
+};
+
+pub const AnswerShape4AnyOf1Items = union(enum) {
+    integer: u64,
+    null_value,
+};
+
+pub const SettledAnswerRelate = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape10),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape14),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape14 = union(enum) {
+    array: SettledRelations,
+    null_value,
+    array2: []const AnswerShape14AnyOf1Items,
+};
+
+pub const AnswerShape14AnyOf1Items = union(enum) {
+    array: SettledRelations,
+    null_value,
+};
+
+pub const SettledRelations = []const RelatedEntityEdge;
+
+pub const RelatedEntityEdge = struct {
+    either: Presence(bool),
+    probability: f64,
+    relation: []const u8,
+    source: RelationEndpoint,
+    target: RelationEndpoint,
+    extensions: Map(Value),
+};
+
+pub const RelationEndpoint = union(enum) {
+    related_entity: RelationEndpointRelatedEntity,
+    source: RelationEndpointSource,
+};
+
+pub const RelationEndpointSource = struct {
+    file: Presence([]const u8),
+    first_line: Presence(u64),
+    kind: []const u8,
+    last_line: Presence(u64),
+    name: []const u8,
+    ordinal: u64,
+    record: Presence(Value),
+    extensions: Map(Value),
+};
+
+pub const RelationEndpointRelatedEntity = struct {
+    kind: []const u8,
+    name: []const u8,
+    extensions: Map(Value),
+};
+
+pub const AnswerShape10 = union(enum) {
+    array: []const AnswerShape8AnyOf1Items,
+    null_value,
+    array2: []const AnswerShape10AnyOf1Items,
+};
+
+pub const AnswerShape10AnyOf1Items = union(enum) {
+    array: []const AnswerShape8AnyOf1Items,
+    null_value,
+};
+
+pub const SettledAnswerRecognize = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape10),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape13),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape13 = union(enum) {
+    object: SettledRecognition,
+    null_value,
+    array: []const AnswerShape13AnyOf1Items,
+};
+
+pub const AnswerShape13AnyOf1Items = union(enum) {
+    object: SettledRecognition,
+    null_value,
+};
+
+pub const SettledRecognition = union(enum) {
+    entities: SettledRecognitionEntities,
+    mode_proposals: SettledRecognitionModeProposals,
+};
+
+pub const SettledRecognitionModeProposals = struct {
+    mode: BoundaryMode,
+    proposals: []const BoundaryProposal,
+    extensions: Map(Value),
+};
+
+pub const BoundaryProposal = struct {
+    end: u64,
+    file: Presence([]const u8),
+    first_line: Presence(u64),
+    last_line: Presence(u64),
+    length: u64,
+    probability: f64,
+    start: u64,
+    text: []const u8,
+    extensions: Map(Value),
+};
+
+pub const BoundaryMode = enum { boundary_only };
+
+pub const SettledRecognitionEntities = struct {
+    entities: []const Entity,
+    relations: Presence([]const EntityEdge),
+    extensions: Map(Value),
+};
+
+pub const EntityEdge = struct {
+    either: Presence(bool),
+    probability: f64,
+    relation: []const u8,
+    source: Entity,
+    target: Entity,
+    extensions: Map(Value),
+};
+
+pub const Entity = struct {
+    end: u64,
+    file: Presence([]const u8),
+    first_line: Presence(u64),
+    kind: []const u8,
+    last_line: Presence(u64),
+    length: u64,
+    start: u64,
+    strength: f64,
+    text: []const u8,
+    extensions: Map(Value),
+};
+
+pub const SettledAnswerFind = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape12),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape12 = Value;
+
+pub const SettledAnswerRank = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape10),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape11),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape11 = union(enum) {
+    array: []const u64,
+    null_value,
+    array2: []const AnswerShape11AnyOf1Items,
+};
+
+pub const AnswerShape11AnyOf1Items = union(enum) {
+    array: []const u64,
+    null_value,
+};
+
+pub const SettledAnswerFilter = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape10),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape9),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape9 = union(enum) {
+    array: []const SettledOriginal,
+    null_value,
+    array2: []const AnswerShape9AnyOf1Items,
+};
+
+pub const AnswerShape9AnyOf1Items = union(enum) {
+    array: []const SettledOriginal,
+    null_value,
+};
+
+pub const SettledOriginal = Value;
+
+pub const SettledAnswerScore = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape8),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape8 = union(enum) {
+    number: f64,
+    null_value,
+    array: []const AnswerShape8AnyOf1Items,
+};
+
+pub const SettledAnswerTag = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape7),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape7 = union(enum) {
+    array: []const []const u8,
+    null_value,
+    array2: []const AnswerShape7AnyOf1Items,
+};
+
+pub const AnswerShape7AnyOf1Items = union(enum) {
+    array: []const []const u8,
+    null_value,
+};
+
+pub const SettledAnswerChoose = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape6),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape6 = union(enum) {
+    string: []const u8,
+    null_value,
+    array: []const AnswerShape6AnyOf1Items,
+};
+
+pub const SettledAnswerDecide = struct {
+    function: []const u8,
+    index: Presence(AnswerShape4),
+    pick: Presence(AnswerShape3),
+    probability: Presence(AnswerShape2),
+    resolution: AnswerShape5,
+    value: Presence(AnswerShape),
+    extensions: Map(Value),
+};
+
+pub const AnswerShape = Value;
+
 pub const SessionPacketObservation = struct {
     function: RequestFunction,
     kind: []const u8,
@@ -328,28 +679,6 @@ pub const RecognitionEdgeDocument = struct {
     relation: []const u8,
     source: Entity,
     target: Entity,
-    extensions: Map(Value),
-};
-
-pub const Entity = struct {
-    end: u64,
-    file: Presence([]const u8),
-    first_line: Presence(u64),
-    kind: []const u8,
-    last_line: Presence(u64),
-    length: u64,
-    start: u64,
-    strength: f64,
-    text: []const u8,
-    extensions: Map(Value),
-};
-
-pub const BoundaryProposal = struct {
-    end: u64,
-    length: u64,
-    probability: f64,
-    start: u64,
-    text: []const u8,
     extensions: Map(Value),
 };
 
@@ -746,37 +1075,6 @@ pub const Relation = struct {
     extensions: Map(Value),
 };
 
-pub const RelatedEntityEdge = struct {
-    either: Presence(bool),
-    probability: f64,
-    relation: []const u8,
-    source: RelationEndpoint,
-    target: RelationEndpoint,
-    extensions: Map(Value),
-};
-
-pub const RelationEndpoint = union(enum) {
-    related_entity: RelationEndpointRelatedEntity,
-    source: RelationEndpointSource,
-};
-
-pub const RelationEndpointSource = struct {
-    file: Presence([]const u8),
-    first_line: Presence(u64),
-    kind: []const u8,
-    last_line: Presence(u64),
-    name: []const u8,
-    ordinal: u64,
-    record: Presence(Value),
-    extensions: Map(Value),
-};
-
-pub const RelationEndpointRelatedEntity = struct {
-    kind: []const u8,
-    name: []const u8,
-    extensions: Map(Value),
-};
-
 pub const Version = enum { @"thinkthen.result/2" };
 
 pub const RelateQuestionDocument = struct {
@@ -988,20 +1286,9 @@ pub const RecognizeModeProposals = struct {
     extensions: Map(Value),
 };
 
-pub const BoundaryMode = enum { boundary_only };
-
 pub const RecognizeEntities = struct {
     entities: []const Entity,
     relations: Presence([]const EntityEdge),
-    extensions: Map(Value),
-};
-
-pub const EntityEdge = struct {
-    either: Presence(bool),
-    probability: f64,
-    relation: []const u8,
-    source: Entity,
-    target: Entity,
     extensions: Map(Value),
 };
 
@@ -1613,6 +1900,12 @@ pub fn readSessionPacket(a: std.mem.Allocator, v: c.thinkthen_complete_session_p
 
 pub fn readSessionPacketTerminal(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_terminal_v1) anyerror!SessionPacketTerminal {
     return .{
+        .answer = switch (v.answer.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readSettledAnswer(a, v.answer.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
         .facts = switch (v.facts.presence) {
             0 => .missing,
             1 => .null_value,
@@ -1626,7 +1919,18 @@ pub fn readSessionPacketTerminal(a: std.mem.Allocator, v: c.thinkthen_complete_s
             else => return error.InvalidNativeDiscriminator,
         },
         .kind = try a.dupe(u8, text(v.kind)),
+        .resolution = try readAnswerResolution(a, v.resolution[0]),
         .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerResolution(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolution_v1) anyerror!AnswerResolution {
+    _ = a;
+    return switch (v.kind) {
+        1 => .resolved,
+        2 => .unresolved,
+        3 => .failed,
+        else => error.InvalidNativeDiscriminator,
     };
 }
 
@@ -1639,6 +1943,7 @@ pub fn readCallError(a: std.mem.Allocator, v: c.thinkthen_complete_call_error_v1
             2 => .{ .value = try readFacts(a, v.facts.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
+        .resolution = try readAnswerResolution(a, v.resolution[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
@@ -1849,6 +2154,961 @@ pub fn readEstimatedInputDenialInitialRequest(a: std.mem.Allocator, v: c.thinkth
     };
 }
 
+pub fn readSettledAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_v1) anyerror!SettledAnswer {
+    return switch (v.kind) {
+        1 => .{ .decide = try readSettledAnswerDecide(a, v.data.decide[0]) },
+        2 => .{ .choose = try readSettledAnswerChoose(a, v.data.choose[0]) },
+        3 => .{ .tag = try readSettledAnswerTag(a, v.data.tag[0]) },
+        4 => .{ .score = try readSettledAnswerScore(a, v.data.score[0]) },
+        5 => .{ .filter = try readSettledAnswerFilter(a, v.data.filter[0]) },
+        6 => .{ .rank = try readSettledAnswerRank(a, v.data.rank[0]) },
+        7 => .{ .find = try readSettledAnswerFind(a, v.data.find[0]) },
+        8 => .{ .recognize = try readSettledAnswerRecognize(a, v.data.recognize[0]) },
+        9 => .{ .relate = try readSettledAnswerRelate(a, v.data.relate[0]) },
+        10 => .{ .annotate = try readSettledAnswerAnnotate(a, v.data.annotate[0]) },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerAnnotate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_annotate_v1) anyerror!SettledAnswerAnnotate {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape15(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape15(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15_v1) anyerror!AnswerShape15 {
+    return switch (v.kind) {
+        1 => .{ .object = blk: {
+            const entries = try a.alloc(Map(SettledJudgment).Entry, v.data.object.len);
+            for (entries, 0..) |*out, i| {
+                const entry = v.data.object.data[i];
+                out.* = .{ .key = try a.dupe(u8, text(entry.name)), .value = try readSettledJudgment(a, entry.value[0]) };
+            }
+            break :blk .{ .entries = entries };
+        } },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape15AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape15AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape15AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15_any_of_1_items_v1) anyerror!AnswerShape15AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .object = blk: {
+            const entries = try a.alloc(Map(SettledJudgment).Entry, v.data.object.len);
+            for (entries, 0..) |*out, i| {
+                const entry = v.data.object.data[i];
+                out.* = .{ .key = try a.dupe(u8, text(entry.name)), .value = try readSettledJudgment(a, entry.value[0]) };
+            }
+            break :blk .{ .entries = entries };
+        } },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_settled_judgment_v1) anyerror!SettledJudgment {
+    return switch (v.kind) {
+        1 => .{ .boolean = v.data.boolean != 0 },
+        2 => .null_value,
+        3 => .{ .string = try a.dupe(u8, text(v.data.string)) },
+        4 => .{ .number = v.data.number },
+        5 => .{ .array = blk: {
+            const items = try a.alloc([]const u8, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try a.dupe(u8, text(entry));
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape5(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_5_v1) anyerror!AnswerShape5 {
+    return switch (v.kind) {
+        1 => .{ .string = try readAnswerResolution(a, v.data.string[0]) },
+        2 => .{ .object = blk: {
+            const entries = try a.alloc(Map(AnswerResolution).Entry, v.data.object.len);
+            for (entries, 0..) |*out, i| {
+                const entry = v.data.object.data[i];
+                out.* = .{ .key = try a.dupe(u8, text(entry.name)), .value = try readAnswerResolution(a, entry.value[0]) };
+            }
+            break :blk .{ .entries = entries };
+        } },
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerResolutions, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerResolutions(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerResolutions(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolutions_v1) anyerror!AnswerResolutions {
+    return switch (v.kind) {
+        1 => .{ .string = try readAnswerResolution(a, v.data.string[0]) },
+        2 => .{ .object = blk: {
+            const entries = try a.alloc(Map(AnswerResolution).Entry, v.data.object.len);
+            for (entries, 0..) |*out, i| {
+                const entry = v.data.object.data[i];
+                out.* = .{ .key = try a.dupe(u8, text(entry.name)), .value = try readAnswerResolution(a, entry.value[0]) };
+            }
+            break :blk .{ .entries = entries };
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape2(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_2_v1) anyerror!AnswerShape2 {
+    return switch (v.kind) {
+        1 => .{ .number = v.data.number },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape8AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape8AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_any_of_1_items_v1) anyerror!AnswerShape8AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .number = v.data.number },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape3(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_3_v1) anyerror!AnswerShape3 {
+    return switch (v.kind) {
+        1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape6AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape6AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape6AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6_any_of_1_items_v1) anyerror!AnswerShape6AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape4(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_v1) anyerror!AnswerShape4 {
+    return switch (v.kind) {
+        1 => .{ .integer = v.data.integer },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape4AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape4AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape4AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_any_of_1_items_v1) anyerror!AnswerShape4AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .integer = v.data.integer },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerRelate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_relate_v1) anyerror!SettledAnswerRelate {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape10(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape14(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape14(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14_v1) anyerror!AnswerShape14 {
+    return switch (v.kind) {
+        1 => .{ .array = try readSettledRelations(a, v.data.array[0]) },
+        2 => .null_value,
+        3 => .{ .array2 = blk: {
+            const items = try a.alloc(AnswerShape14AnyOf1Items, v.data.array2.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array2.data[i];
+                out.* = try readAnswerShape14AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape14AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14_any_of_1_items_v1) anyerror!AnswerShape14AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .array = try readSettledRelations(a, v.data.array[0]) },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledRelations(a: std.mem.Allocator, v: c.thinkthen_complete_settled_relations_v1) anyerror!SettledRelations {
+    return blk: {
+        const items = try a.alloc(RelatedEntityEdge, v.value.len);
+        for (items, 0..) |*out, i| {
+            const entry = v.value.data[i];
+            out.* = try readRelatedEntityEdge(a, entry[0]);
+        }
+        break :blk items;
+    };
+}
+
+pub fn readRelatedEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity_edge_v1) anyerror!RelatedEntityEdge {
+    return .{
+        .either = switch (v.either.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.either.value != 0 },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = v.probability,
+        .relation = try a.dupe(u8, text(v.relation)),
+        .source = try readRelationEndpoint(a, v.source[0]),
+        .target = try readRelationEndpoint(a, v.target[0]),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readRelationEndpoint(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_v1) anyerror!RelationEndpoint {
+    return switch (v.kind) {
+        1 => .{ .related_entity = try readRelationEndpointRelatedEntity(a, v.data.related_entity[0]) },
+        2 => .{ .source = try readRelationEndpointSource(a, v.data.source[0]) },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readRelationEndpointSource(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_source_v1) anyerror!RelationEndpointSource {
+    return .{
+        .file = switch (v.file.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.file.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .first_line = switch (v.first_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.first_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .kind = try a.dupe(u8, text(v.kind)),
+        .last_line = switch (v.last_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.last_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .name = try a.dupe(u8, text(v.name)),
+        .ordinal = v.ordinal,
+        .record = switch (v.record.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readValue(a, v.record.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readRelationEndpointRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_related_entity_v1) anyerror!RelationEndpointRelatedEntity {
+    return .{
+        .kind = try a.dupe(u8, text(v.kind)),
+        .name = try a.dupe(u8, text(v.name)),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape10(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10_v1) anyerror!AnswerShape10 {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape8AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        3 => .{ .array2 = blk: {
+            const items = try a.alloc(AnswerShape10AnyOf1Items, v.data.array2.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array2.data[i];
+                out.* = try readAnswerShape10AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape10AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10_any_of_1_items_v1) anyerror!AnswerShape10AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape8AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_recognize_v1) anyerror!SettledAnswerRecognize {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape10(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape13(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape13(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13_v1) anyerror!AnswerShape13 {
+    return switch (v.kind) {
+        1 => .{ .object = try readSettledRecognition(a, v.data.object[0]) },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape13AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape13AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape13AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13_any_of_1_items_v1) anyerror!AnswerShape13AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .object = try readSettledRecognition(a, v.data.object[0]) },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_v1) anyerror!SettledRecognition {
+    return switch (v.kind) {
+        1 => .{ .entities = try readSettledRecognitionEntities(a, v.data.entities[0]) },
+        2 => .{ .mode_proposals = try readSettledRecognitionModeProposals(a, v.data.mode_proposals[0]) },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledRecognitionModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_mode_proposals_v1) anyerror!SettledRecognitionModeProposals {
+    return .{
+        .mode = try readBoundaryMode(a, v.mode[0]),
+        .proposals = blk: {
+            const items = try a.alloc(BoundaryProposal, v.proposals.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.proposals.data[i];
+                out.* = try readBoundaryProposal(a, entry[0]);
+            }
+            break :blk items;
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readBoundaryProposal(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_proposal_v1) anyerror!BoundaryProposal {
+    return .{
+        .end = v.end,
+        .file = switch (v.file.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.file.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .first_line = switch (v.first_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.first_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .last_line = switch (v.last_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.last_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .length = v.length,
+        .probability = v.probability,
+        .start = v.start,
+        .text = try a.dupe(u8, text(v.text)),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readBoundaryMode(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_mode_v1) anyerror!BoundaryMode {
+    _ = a;
+    return switch (v.kind) {
+        1 => .boundary_only,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledRecognitionEntities(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_entities_v1) anyerror!SettledRecognitionEntities {
+    return .{
+        .entities = blk: {
+            const items = try a.alloc(Entity, v.entities.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.entities.data[i];
+                out.* = try readEntity(a, entry[0]);
+            }
+            break :blk items;
+        },
+        .relations = switch (v.relations.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = blk: {
+                const items = try a.alloc(EntityEdge, v.relations.value.len);
+                for (items, 0..) |*out, i| {
+                    const entry = v.relations.value.data[i];
+                    out.* = try readEntityEdge(a, entry[0]);
+                }
+                break :blk items;
+            } },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge_v1) anyerror!EntityEdge {
+    return .{
+        .either = switch (v.either.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.either.value != 0 },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = v.probability,
+        .relation = try a.dupe(u8, text(v.relation)),
+        .source = try readEntity(a, v.source[0]),
+        .target = try readEntity(a, v.target[0]),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readEntity(a: std.mem.Allocator, v: c.thinkthen_complete_entity_v1) anyerror!Entity {
+    return .{
+        .end = v.end,
+        .file = switch (v.file.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.file.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .first_line = switch (v.first_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.first_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .kind = try a.dupe(u8, text(v.kind)),
+        .last_line = switch (v.last_line.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.last_line.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .length = v.length,
+        .start = v.start,
+        .strength = v.strength,
+        .text = try a.dupe(u8, text(v.text)),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readSettledAnswerFind(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_find_v1) anyerror!SettledAnswerFind {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape12(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape12(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_12_v1) anyerror!AnswerShape12 {
+    return try readValue(a, v.value[0]);
+}
+
+pub fn readSettledAnswerRank(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_rank_v1) anyerror!SettledAnswerRank {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape10(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape11(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape11(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11_v1) anyerror!AnswerShape11 {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(u64, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = entry;
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        3 => .{ .array2 = blk: {
+            const items = try a.alloc(AnswerShape11AnyOf1Items, v.data.array2.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array2.data[i];
+                out.* = try readAnswerShape11AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape11AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11_any_of_1_items_v1) anyerror!AnswerShape11AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(u64, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = entry;
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerFilter(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_filter_v1) anyerror!SettledAnswerFilter {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape10(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape9(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape9(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9_v1) anyerror!AnswerShape9 {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(SettledOriginal, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readSettledOriginal(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        3 => .{ .array2 = blk: {
+            const items = try a.alloc(AnswerShape9AnyOf1Items, v.data.array2.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array2.data[i];
+                out.* = try readAnswerShape9AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape9AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9_any_of_1_items_v1) anyerror!AnswerShape9AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc(SettledOriginal, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readSettledOriginal(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledOriginal(a: std.mem.Allocator, v: c.thinkthen_complete_settled_original_v1) anyerror!SettledOriginal {
+    return try readValue(a, v.value[0]);
+}
+
+pub fn readSettledAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_score_v1) anyerror!SettledAnswerScore {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape8(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape8(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_v1) anyerror!AnswerShape8 {
+    return switch (v.kind) {
+        1 => .{ .number = v.data.number },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape8AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_tag_v1) anyerror!SettledAnswerTag {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape7(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape7(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7_v1) anyerror!AnswerShape7 {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc([]const u8, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try a.dupe(u8, text(entry));
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        3 => .{ .array2 = blk: {
+            const items = try a.alloc(AnswerShape7AnyOf1Items, v.data.array2.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array2.data[i];
+                out.* = try readAnswerShape7AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readAnswerShape7AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7_any_of_1_items_v1) anyerror!AnswerShape7AnyOf1Items {
+    return switch (v.kind) {
+        1 => .{ .array = blk: {
+            const items = try a.alloc([]const u8, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try a.dupe(u8, text(entry));
+            }
+            break :blk items;
+        } },
+        2 => .null_value,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerChoose(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_choose_v1) anyerror!SettledAnswerChoose {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape6(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape6(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6_v1) anyerror!AnswerShape6 {
+    return switch (v.kind) {
+        1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
+        2 => .null_value,
+        3 => .{ .array = blk: {
+            const items = try a.alloc(AnswerShape6AnyOf1Items, v.data.array.len);
+            for (items, 0..) |*out, i| {
+                const entry = v.data.array.data[i];
+                out.* = try readAnswerShape6AnyOf1Items(a, entry[0]);
+            }
+            break :blk items;
+        } },
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readSettledAnswerDecide(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_decide_v1) anyerror!SettledAnswerDecide {
+    return .{
+        .function = try a.dupe(u8, text(v.function)),
+        .index = switch (v.index.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape4(a, v.index.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .pick = switch (v.pick.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape3(a, v.pick.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .probability = switch (v.probability.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape2(a, v.probability.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .resolution = try readAnswerShape5(a, v.resolution[0]),
+        .value = switch (v.value.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readAnswerShape(a, v.value.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readAnswerShape(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_v1) anyerror!AnswerShape {
+    return try readValue(a, v.value[0]);
+}
+
 pub fn readSessionPacketObservation(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_observation_v1) anyerror!SessionPacketObservation {
     return .{
         .function = try readRequestFunction(a, v.function[0]),
@@ -1989,47 +3249,6 @@ pub fn readRecognitionEdgeDocument(a: std.mem.Allocator, v: c.thinkthen_complete
         .relation = try a.dupe(u8, text(v.relation)),
         .source = try readEntity(a, v.source[0]),
         .target = try readEntity(a, v.target[0]),
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readEntity(a: std.mem.Allocator, v: c.thinkthen_complete_entity_v1) anyerror!Entity {
-    return .{
-        .end = v.end,
-        .file = switch (v.file.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try a.dupe(u8, text(v.file.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .first_line = switch (v.first_line.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.first_line.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .kind = try a.dupe(u8, text(v.kind)),
-        .last_line = switch (v.last_line.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.last_line.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .length = v.length,
-        .start = v.start,
-        .strength = v.strength,
-        .text = try a.dupe(u8, text(v.text)),
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readBoundaryProposal(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_proposal_v1) anyerror!BoundaryProposal {
-    return .{
-        .end = v.end,
-        .length = v.length,
-        .probability = v.probability,
-        .start = v.start,
-        .text = try a.dupe(u8, text(v.text)),
         .extensions = try readObject(a, v.extensions),
     };
 }
@@ -3146,71 +4365,6 @@ pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) a
     };
 }
 
-pub fn readRelatedEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity_edge_v1) anyerror!RelatedEntityEdge {
-    return .{
-        .either = switch (v.either.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.either.value != 0 },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .probability = v.probability,
-        .relation = try a.dupe(u8, text(v.relation)),
-        .source = try readRelationEndpoint(a, v.source[0]),
-        .target = try readRelationEndpoint(a, v.target[0]),
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readRelationEndpoint(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_v1) anyerror!RelationEndpoint {
-    return switch (v.kind) {
-        1 => .{ .related_entity = try readRelationEndpointRelatedEntity(a, v.data.related_entity[0]) },
-        2 => .{ .source = try readRelationEndpointSource(a, v.data.source[0]) },
-        else => error.InvalidNativeDiscriminator,
-    };
-}
-
-pub fn readRelationEndpointSource(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_source_v1) anyerror!RelationEndpointSource {
-    return .{
-        .file = switch (v.file.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try a.dupe(u8, text(v.file.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .first_line = switch (v.first_line.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.first_line.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .kind = try a.dupe(u8, text(v.kind)),
-        .last_line = switch (v.last_line.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.last_line.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .name = try a.dupe(u8, text(v.name)),
-        .ordinal = v.ordinal,
-        .record = switch (v.record.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readValue(a, v.record.value[0]) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readRelationEndpointRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_related_entity_v1) anyerror!RelationEndpointRelatedEntity {
-    return .{
-        .kind = try a.dupe(u8, text(v.kind)),
-        .name = try a.dupe(u8, text(v.name)),
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
 pub fn readVersion(a: std.mem.Allocator, v: c.thinkthen_complete_version_v1) anyerror!Version {
     _ = a;
     return switch (v.kind) {
@@ -3806,14 +4960,6 @@ pub fn readRecognizeModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readBoundaryMode(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_mode_v1) anyerror!BoundaryMode {
-    _ = a;
-    return switch (v.kind) {
-        1 => .boundary_only,
-        else => error.InvalidNativeDiscriminator,
-    };
-}
-
 pub fn readRecognizeEntities(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_entities_v1) anyerror!RecognizeEntities {
     return .{
         .entities = blk: {
@@ -3837,22 +4983,6 @@ pub fn readRecognizeEntities(a: std.mem.Allocator, v: c.thinkthen_complete_recog
             } },
             else => return error.InvalidNativeDiscriminator,
         },
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge_v1) anyerror!EntityEdge {
-    return .{
-        .either = switch (v.either.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.either.value != 0 },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .probability = v.probability,
-        .relation = try a.dupe(u8, text(v.relation)),
-        .source = try readEntity(a, v.source[0]),
-        .target = try readEntity(a, v.target[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
@@ -5267,7 +6397,34 @@ pub const Types = struct {
     pub const Answer = @import("results_generated.zig").Answer;
     pub const AnswerChoice = @import("results_generated.zig").AnswerChoice;
     pub const AnswerId = @import("results_generated.zig").AnswerId;
+    pub const AnswerResolution = @import("results_generated.zig").AnswerResolution;
+    pub const AnswerResolutions = @import("results_generated.zig").AnswerResolutions;
     pub const AnswerScore = @import("results_generated.zig").AnswerScore;
+    pub const AnswerShape = @import("results_generated.zig").AnswerShape;
+    pub const AnswerShape10 = @import("results_generated.zig").AnswerShape10;
+    pub const AnswerShape10AnyOf1Items = @import("results_generated.zig").AnswerShape10AnyOf1Items;
+    pub const AnswerShape11 = @import("results_generated.zig").AnswerShape11;
+    pub const AnswerShape11AnyOf1Items = @import("results_generated.zig").AnswerShape11AnyOf1Items;
+    pub const AnswerShape12 = @import("results_generated.zig").AnswerShape12;
+    pub const AnswerShape13 = @import("results_generated.zig").AnswerShape13;
+    pub const AnswerShape13AnyOf1Items = @import("results_generated.zig").AnswerShape13AnyOf1Items;
+    pub const AnswerShape14 = @import("results_generated.zig").AnswerShape14;
+    pub const AnswerShape14AnyOf1Items = @import("results_generated.zig").AnswerShape14AnyOf1Items;
+    pub const AnswerShape15 = @import("results_generated.zig").AnswerShape15;
+    pub const AnswerShape15AnyOf1Items = @import("results_generated.zig").AnswerShape15AnyOf1Items;
+    pub const AnswerShape2 = @import("results_generated.zig").AnswerShape2;
+    pub const AnswerShape3 = @import("results_generated.zig").AnswerShape3;
+    pub const AnswerShape4 = @import("results_generated.zig").AnswerShape4;
+    pub const AnswerShape4AnyOf1Items = @import("results_generated.zig").AnswerShape4AnyOf1Items;
+    pub const AnswerShape5 = @import("results_generated.zig").AnswerShape5;
+    pub const AnswerShape6 = @import("results_generated.zig").AnswerShape6;
+    pub const AnswerShape6AnyOf1Items = @import("results_generated.zig").AnswerShape6AnyOf1Items;
+    pub const AnswerShape7 = @import("results_generated.zig").AnswerShape7;
+    pub const AnswerShape7AnyOf1Items = @import("results_generated.zig").AnswerShape7AnyOf1Items;
+    pub const AnswerShape8 = @import("results_generated.zig").AnswerShape8;
+    pub const AnswerShape8AnyOf1Items = @import("results_generated.zig").AnswerShape8AnyOf1Items;
+    pub const AnswerShape9 = @import("results_generated.zig").AnswerShape9;
+    pub const AnswerShape9AnyOf1Items = @import("results_generated.zig").AnswerShape9AnyOf1Items;
     pub const AnswerTag = @import("results_generated.zig").AnswerTag;
     pub const AnswerYesNo = @import("results_generated.zig").AnswerYesNo;
     pub const Answers = @import("results_generated.zig").Answers;
@@ -5421,6 +6578,23 @@ pub const Types = struct {
     pub const SessionQuestionDetail = @import("results_generated.zig").SessionQuestionDetail;
     pub const SessionRecognition = @import("results_generated.zig").SessionRecognition;
     pub const SessionRelationEdge = @import("results_generated.zig").SessionRelationEdge;
+    pub const SettledAnswer = @import("results_generated.zig").SettledAnswer;
+    pub const SettledAnswerAnnotate = @import("results_generated.zig").SettledAnswerAnnotate;
+    pub const SettledAnswerChoose = @import("results_generated.zig").SettledAnswerChoose;
+    pub const SettledAnswerDecide = @import("results_generated.zig").SettledAnswerDecide;
+    pub const SettledAnswerFilter = @import("results_generated.zig").SettledAnswerFilter;
+    pub const SettledAnswerFind = @import("results_generated.zig").SettledAnswerFind;
+    pub const SettledAnswerRank = @import("results_generated.zig").SettledAnswerRank;
+    pub const SettledAnswerRecognize = @import("results_generated.zig").SettledAnswerRecognize;
+    pub const SettledAnswerRelate = @import("results_generated.zig").SettledAnswerRelate;
+    pub const SettledAnswerScore = @import("results_generated.zig").SettledAnswerScore;
+    pub const SettledAnswerTag = @import("results_generated.zig").SettledAnswerTag;
+    pub const SettledJudgment = @import("results_generated.zig").SettledJudgment;
+    pub const SettledOriginal = @import("results_generated.zig").SettledOriginal;
+    pub const SettledRecognition = @import("results_generated.zig").SettledRecognition;
+    pub const SettledRecognitionEntities = @import("results_generated.zig").SettledRecognitionEntities;
+    pub const SettledRecognitionModeProposals = @import("results_generated.zig").SettledRecognitionModeProposals;
+    pub const SettledRelations = @import("results_generated.zig").SettledRelations;
     pub const StopCause = @import("results_generated.zig").StopCause;
     pub const Stopped = @import("results_generated.zig").Stopped;
     pub const StringRoot = @import("results_generated.zig").StringRoot;

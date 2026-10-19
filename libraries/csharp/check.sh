@@ -17,6 +17,7 @@ dotnet=$(command -v dotnet || true)
 [ -x "$dotnet" ] || exit 1
 command -v python3 >/dev/null 2>&1 || exit 1
 python3 "$here/tests/toolchains.py"
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 python3 "$here/tests/generate_fixture_questions.py" --check
 python3 "$root/sdlc/generators/results/generate.py" --inputs --check
 python3 "$root/sdlc/generators/results/generate.py" --bridge --check

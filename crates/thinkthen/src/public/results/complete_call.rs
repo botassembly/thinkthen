@@ -39,6 +39,7 @@ impl ErrorSnapshot<'_> {
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
 pub struct CompleteError<'a> {
+    resolution: super::AnswerResolution,
     error: ErrorSnapshot<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     facts: Option<CompleteFacts<'a>>,
@@ -48,6 +49,7 @@ impl Error {
     #[must_use]
     pub fn complete(&self) -> CompleteError<'_> {
         CompleteError {
+            resolution: super::AnswerResolution::Failed,
             error: ErrorSnapshot {
                 kind: self.kind(),
                 message: self.detail().message(),
@@ -61,6 +63,11 @@ impl Error {
     }
 }
 impl CompleteError<'_> {
+    /// A failed invocation supplies no answer, even when a completed prefix exists.
+    #[must_use]
+    pub const fn resolution(&self) -> &super::AnswerResolution {
+        &self.resolution
+    }
     /// The safe native failure fields.
     #[must_use]
     pub const fn error(&self) -> &ErrorSnapshot<'_> {

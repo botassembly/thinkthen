@@ -9,6 +9,7 @@ tools_group=spec
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+. sdlc/scripts/compiler-isolation
 
 # ADR 0113: the binary and every demo write a scratch usage folder, which the exit removes.
 . sdlc/scripts/scratch.sh

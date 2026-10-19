@@ -2049,6 +2049,7 @@
       "name": "native-result2-admission-usage",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "usage",
           "message": "Safe native failure.",
@@ -2065,6 +2066,7 @@
       "name": "native-result2-admission-local",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "local",
           "message": "Safe native failure.",
@@ -2081,6 +2083,7 @@
       "name": "native-result2-admission-backend",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "backend",
           "message": "Safe native failure.",
@@ -2097,6 +2100,7 @@
       "name": "native-result2-admission-cancelled",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "cancelled",
           "message": "Safe native failure.",
@@ -2113,6 +2117,7 @@
       "name": "native-result2-admission-deadline",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "deadline",
           "message": "Safe native failure.",
@@ -2129,6 +2134,7 @@
       "name": "native-result2-admission-defect",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "defect",
           "message": "Safe native failure.",
@@ -2142,9 +2148,27 @@
       "schema_only": true
     },
     {
+      "name": "native-result2-failure-missing-resolution",
+      "definition": "completeCall",
+      "response": {
+        "error": {
+          "kind": "usage",
+          "message": "Safe native failure.",
+          "retryable": false,
+          "stopped": {
+            "cause": "usage",
+            "retryable": false
+          }
+        }
+      },
+      "schema_only": true,
+      "response_valid": false
+    },
+    {
       "name": "native-result2-started-status-failure",
       "definition": "completeCall",
       "response": {
+        "resolution": "failed",
         "error": {
           "kind": "backend",
           "message": "Safe status failure.",

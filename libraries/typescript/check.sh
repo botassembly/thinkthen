@@ -39,18 +39,7 @@ public_types() {
     done
 }
 
-# Full qualification installs one real package, then runs isolated family members.
-if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
-    [ -x "$node_bin" ] || exit 1
-    sh build-addon.sh
-    # Keep the exact installed input for release-pack --reuse after scratch cleanup.
-    mkdir -p target/pack
-    npm pack --offline --pack-destination target/pack >/dev/null
-    version=$(node -p 'require("./package.json").version')
-    THINKTHEN_ARTIFACT=$PWD/target/pack/thinkthen-$version.tgz
-    [ -f "$THINKTHEN_ARTIFACT" ] || fail 'npm pack did not retain the release package'
-fi
-if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ] || [ "$profile" = full ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
     case $(uname -s):$(uname -m) in
@@ -63,6 +52,20 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; 
     command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 1; }
     [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
     [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
+fi
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
+# Full qualification installs one real package, then runs isolated family members.
+if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    [ -x "$node_bin" ] || exit 1
+    sh build-addon.sh
+    # Keep the exact installed input for release-pack --reuse after scratch cleanup.
+    mkdir -p target/pack
+    npm pack --offline --pack-destination target/pack >/dev/null
+    version=$(node -p 'require("./package.json").version')
+    THINKTHEN_ARTIFACT=$PWD/target/pack/thinkthen-$version.tgz
+    [ -f "$THINKTHEN_ARTIFACT" ] || fail 'npm pack did not retain the release package'
+fi
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
         scratch_dir project
         cp -R "$THINKTHEN_PARITY_PREPARED/tests" "$project/tests"

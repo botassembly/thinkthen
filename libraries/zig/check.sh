@@ -13,6 +13,8 @@ root=$(CDPATH= cd -- "$here/../.." && pwd)
 zig=$(command -v zig || true)
 [ -x "$zig" ] || exit 1
 for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
+export THINKTHEN_ZIG="$zig"
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 mkdir -p "$here/target/cache" "$here/target/scratch" "$here/target/artifacts"
@@ -31,6 +33,7 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT="$here/target/artifacts/thinkthen-zig-$version-x86_64-unknown-linux-gnu.tar.gz"
     export THINKTHEN_ARTIFACT
 fi
+python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     smoke_guard
     . "$root/sdlc/scripts/installed.sh"
@@ -43,5 +46,4 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$root/conformance/children/native_guard.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"

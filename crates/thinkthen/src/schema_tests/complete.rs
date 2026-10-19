@@ -158,12 +158,14 @@ fn locations(definitions: &mut Map<String, Value>) {
             .expect("properties");
         properties.extend(fields.clone());
     }
-    definitions
-        .get_mut("completeentity")
-        .expect("recognized entity")["properties"]
-        .as_object_mut()
-        .expect("entity properties")
-        .extend(fields);
+    for name in ["completeentity", "completeBoundaryProposal"] {
+        definitions
+            .get_mut(name)
+            .expect("located recognition value")["properties"]
+            .as_object_mut()
+            .expect("recognition value properties")
+            .extend(fields.clone());
+    }
     strict::graph(definitions, "sourceRelationEndpoint");
     for endpoint in ["source", "target"] {
         definitions

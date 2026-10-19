@@ -39,7 +39,7 @@ export CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 export GOCACHE="${GOCACHE:-$repo/target/go/cache}" GOMODCACHE="${GOMODCACHE:-$repo/target/go/modcache}"
 "$python_bin" "$repo/sdlc/generators/results/generate.py" --target go --check
-"$python_bin" fixtures/guard.py .
+"$python_bin" "$repo/conformance/children/privacy.py" --sources . --include '*.go' --include '*.md' --include '*.mod' --include '*.hpp' --include '*.cpp' --include '*.txt' --include '*.in' --exclude 'fixtures/*' --exclude '*/fixtures/*' --artifact-env
 test -z "$(gofmt -l .)"
 . "$repo/sdlc/scripts/installed.sh"
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

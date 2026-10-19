@@ -9,12 +9,13 @@ use crate::core::{self, AnswerId, ResultIdentity};
 use crate::public::{Answer, Error, Usage};
 
 macro_rules! complete {
-    ($name:ident, $doc:literal, $value:ty) => {
+    ($name:ident, $doc:literal, $value:ty $(, $extra:ident: $extra_type:ty)*) => {
         #[doc = $doc]
         #[derive(Clone, PartialEq)]
         pub struct $name {
             pub(crate) canonical: core::CompleteAtomic,
             pub(crate) value: $value,
+            $(pub(crate) $extra: $extra_type,)*
         }
 
         impl $name {
@@ -126,7 +127,7 @@ complete!(
 complete!(
     CompleteFilter,
     "One filter occurrence, including rejected observations.",
-    bool
+    bool, input: Option<Box<crate::QuestionInput>>
 );
 
 impl CompleteDecision {

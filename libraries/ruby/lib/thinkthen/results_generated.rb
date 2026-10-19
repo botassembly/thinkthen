@@ -165,6 +165,9 @@ module ThinkThen
     end
     class NativeBoundaryProposal < Native::Result
       define_method('end') { self['end'] }
+      define_method('file') { self['file'] }
+      define_method('first_line') { self['first_line'] }
+      define_method('last_line') { self['last_line'] }
       define_method('length') { self['length'] }
       define_method('probability') { self['probability'] }
       define_method('start') { self['start'] }
@@ -173,6 +176,7 @@ module ThinkThen
     class NativeCallError < Native::Result
       define_method('error') { self['error'] }
       define_method('facts') { self['facts'] }
+      define_method('resolution') { self['resolution'] }
     end
     class NativeEntityDocument < Native::Result
       define_method('kind') { self['kind'] }
@@ -453,6 +457,14 @@ module ThinkThen
     class NativeSendBudgetDenialBeforeRetry < Native::Result
       define_method('kind') { self['kind'] }
       define_method('last_status') { self['last_status'] }
+    end
+    class NativeSettledRecognitionEntities < Native::Result
+      define_method('entities') { self['entities'] }
+      define_method('relations') { self['relations'] }
+    end
+    class NativeSettledRecognitionModeProposals < Native::Result
+      define_method('mode') { self['mode'] }
+      define_method('proposals') { self['proposals'] }
     end
     class NativeStopped < Native::Result
       define_method('at') { self['at'] }
@@ -850,9 +862,11 @@ module ThinkThen
       define_method('value') { self['value'] }
     end
     class NativeSessionPacketTerminal < Native::Result
+      define_method('answer') { self['answer'] }
       define_method('facts') { self['facts'] }
       define_method('failure') { self['failure'] }
       define_method('kind') { self['kind'] }
+      define_method('resolution') { self['resolution'] }
     end
     class NativeSessionProbabilitiesNamed < Native::Result
       define_method('kind') { self['kind'] }
@@ -900,6 +914,86 @@ module ThinkThen
       define_method('relation') { self['relation'] }
       define_method('source') { self['source'] }
       define_method('target') { self['target'] }
+    end
+    class NativeSettledAnswerAnnotate < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerChoose < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerDecide < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerFilter < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerFind < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerRank < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerRecognize < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerRelate < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerScore < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
+    end
+    class NativeSettledAnswerTag < Native::Result
+      define_method('function') { self['function'] }
+      define_method('index') { self['index'] }
+      define_method('pick') { self['pick'] }
+      define_method('probability') { self['probability'] }
+      define_method('resolution') { self['resolution'] }
+      define_method('value') { self['value'] }
     end
     class NativeSourceRelationEndpoint < Native::Result
       define_method('file') { self['file'] }

@@ -96,6 +96,7 @@ impl Engine {
                 )
                 .map_err(|_| super::wrong())?,
                 found: public,
+                inputs: inputs.to_vec(),
                 sources: inputs
                     .iter()
                     .map(|input| super::physical_source(input))
