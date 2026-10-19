@@ -23,8 +23,6 @@ use crate::core::text::ModelName;
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::drops_any;
-#[cfg(test)]
-pub(crate) use crate::core::adapters::systemone::request::drops_detail;
 pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
@@ -158,18 +156,6 @@ pub(crate) enum DecodeError {
     /// The response carries an answer name the request did not send.
     #[error("the response carries an unexpected answer name")]
     UnexpectedAnswer,
-}
-
-/// The wire type one question travels as. The backend check names its
-/// one-question probes by it.
-#[cfg(test)]
-pub(crate) const fn wire_type(question: &crate::core::question::Question) -> &'static str {
-    use crate::core::question::Question;
-    match question {
-        Question::Decide { .. } | Question::Tag { .. } => "noul",
-        Question::Choose { .. } => "choice",
-        Question::Score { .. } => "score",
-    }
 }
 
 /// The name a question carries on the wire: `q1` onward, in plan order.

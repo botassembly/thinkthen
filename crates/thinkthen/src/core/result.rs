@@ -355,12 +355,6 @@ impl NamedValues {
         self.0
     }
 
-    /// Keep named values in question-set order.
-    #[must_use]
-    #[cfg(test)]
-    pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {
-        Self(values)
-    }
 }
 impl Serialize for NamedValues {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

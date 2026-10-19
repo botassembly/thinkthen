@@ -13,16 +13,6 @@ pub(crate) struct Find {
 }
 
 impl Find {
-    #[cfg(test)]
-    pub(crate) fn display_question<'a>(
-        &'a self,
-        declarations: &'a crate::core::declaration::QuestionMetadata,
-    ) -> impl Serialize + 'a {
-        crate::core::declaration::SemanticReadableQuestion::semantic(
-            &self.reading.question,
-            declarations,
-        )
-    }
 
     pub(crate) fn profile(&self) -> Option<&str> {
         self.reading.question.profile()

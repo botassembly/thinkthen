@@ -13,8 +13,6 @@ pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
 mod timing;
-#[cfg(test)]
-pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
 pub(crate) use files::open_read;

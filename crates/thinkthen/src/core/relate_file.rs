@@ -5,7 +5,6 @@ use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
-#[cfg(test)]
 use crate::core::recognize_file::parse_typed_cut;
 use crate::core::recognize_file::{parse_json_cut, parse_relations, rule_side};
 use crate::core::{
@@ -290,11 +289,6 @@ impl RelateSpec {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) const fn fields(&self) -> &RelateFields {
-        &self.fields
-    }
-
     /// The resolved question; line input has no pointers, so `fields` is null.
     pub(crate) fn question(&self, lines: bool) -> RelateQuestion<'_> {
         RelateQuestion {
@@ -312,11 +306,6 @@ impl RelateSpec {
 
     pub(crate) const fn kind_field(&self) -> &Pointer {
         &self.fields.kind
-    }
-
-    #[cfg(test)]
-    pub(crate) const fn presence(&self) -> RelatePresence {
-        self.presence
     }
 }
 

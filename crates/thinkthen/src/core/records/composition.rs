@@ -60,23 +60,6 @@ impl Reading {
 }
 
 impl Reading {
-    #[cfg(test)]
-    pub(crate) fn with_item_schema(
-        mut self,
-        schema: Option<crate::core::InputDeclaration>,
-    ) -> Self {
-        self.item_schema = schema.into_iter().collect();
-        self
-    }
-    #[cfg(test)]
-    pub(crate) fn with_item_schemas(mut self, schemas: Vec<crate::core::InputDeclaration>) -> Self {
-        self.item_schema = schemas;
-        self
-    }
-    #[cfg(test)]
-    pub(crate) const fn declares_item(&self) -> bool {
-        !self.item_schema.is_empty()
-    }
     pub(super) fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
         let selected = self.selected_unchecked(record)?;
         if !self.item_schema.is_empty() {

@@ -1,12 +1,8 @@
 //! Ordered live correlation, exact distributions and name-free saved answers.
 use crate::core::adapters::built_in::DecodeError;
-#[cfg(test)]
-use crate::core::adapters::built_in::response::Decoded;
 use crate::core::answer::{Distribution, DistributionError};
 use crate::core::probability::Probability;
 use crate::core::{Answer, Json, ModelName, Question, ReportedUsage};
-#[cfg(test)]
-use crate::core::{Plan, Reply};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
@@ -218,40 +214,6 @@ pub(crate) fn split(
         usage,
         answers,
     })
-}
-#[cfg(test)]
-pub(crate) fn decode_observed(plan: &Plan, body: &[u8]) -> Decoded {
-    let decoders = plan
-        .questions()
-        .iter()
-        .flat_map(crate::core::pack::decoders)
-        .collect::<Vec<_>>();
-    match split(&decoders, body) {
-        Err((error, usage)) => Decoded {
-            usage,
-            reply: Err(error),
-        },
-        Ok(split) => {
-            let stored = split
-                .answers
-                .iter()
-                .map(|v| v.as_deref().map_err(DecodeError::cause))
-                .collect::<Vec<_>>();
-            let reply = crate::core::pack::read_for(
-                super::super::ApiType::Decisions,
-                plan.questions(),
-                &stored,
-                split.model.as_str(),
-            )
-            .map(|outcomes| {
-                Reply::new(split.model, outcomes, None).with_reported_usage(split.usage)
-            });
-            Decoded {
-                usage: split.usage,
-                reply,
-            }
-        }
-    }
 }
 /// Raw exchanges are correlated against their own original sent question order.
 pub(crate) fn validate_exchange(request: &[u8], response: &[u8]) -> Result<(), DecodeError> {

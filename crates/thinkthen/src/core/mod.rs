@@ -40,8 +40,6 @@ mod question_file;
 mod question_set;
 mod recognition_result;
 mod recognize;
-#[cfg(test)]
-pub(crate) use recognize::example_file;
 pub(crate) use recognize::{ExamplesError, render_examples, selected_examples};
 pub use recognize::{
     RecognitionExample, RecognitionExampleEntity, RecognitionExampleText, RecognitionMode,
@@ -97,8 +95,6 @@ pub use crate::core::question_file::QuestionRole;
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key,
 };
-#[cfg(test)]
-pub(crate) use crate::core::question_file::{Resolved, Sources, pointers};
 pub(crate) use crate::core::question_file::Source;
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
@@ -109,14 +105,10 @@ pub(crate) use crate::core::recognize::{
 pub(crate) use crate::core::recognize_file::{
     RecognizeConfigError, RecognizeSpec, recognize_sha256,
 };
-#[cfg(test)]
-pub(crate) use crate::core::recognize_file::{RecognizeKinds, rule_side};
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{EntitySetError, RelateConfigError, RelateSpec, inline_rule};
-#[cfg(test)]
-pub(crate) use crate::core::relate_file::RelateFields;
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
     pair_edges, plan_pairs, plan_relate, reaches_cut, relate_edge,
@@ -149,8 +141,6 @@ pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::Threshold;
-#[cfg(test)]
-pub(crate) use crate::core::threshold::{Outcome, ThresholdError};
 pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
 pub use result::complete::MemberIdentity;
 pub use result::{Observation, Origin, QuestionSource, ResultIdentity};

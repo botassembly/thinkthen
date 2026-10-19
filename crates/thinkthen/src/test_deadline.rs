@@ -9,9 +9,6 @@ use child::{run, wait};
 pub(crate) use run::output;
 pub(crate) use wait::finish;
 
-mod support;
-#[cfg(unix)]
-pub(crate) use support::park_for_signal;
 
 /// Read the whole `{}` request before replying. A socket closed with unread
 /// bytes resets the connection, and on Windows the reset can reach the client

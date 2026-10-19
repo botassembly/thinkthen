@@ -163,28 +163,3 @@ pub(crate) fn selected_examples(
         .map(examples_of)
         .transpose()
 }
-
-#[cfg(test)]
-pub(crate) fn example_file(text: &str) -> Result<Vec<RecognitionExample>, ExamplesError> {
-    let lines: Vec<_> = text
-        .lines()
-        .filter(|line| !line.trim().is_empty())
-        .collect();
-    let jsonl = lines
-        .first()
-        .is_some_and(|line| matches!(line.trim_start().chars().next(), Some('{' | '"')));
-    lines
-        .into_iter()
-        .enumerate()
-        .map(|(at, line)| {
-            if jsonl {
-                serde_json::from_str(line).map_err(|_| ExamplesError {
-                    example: Some(at + 1),
-                    cause: ExampleError::Shape,
-                })
-            } else {
-                Ok(RecognitionExample::Brackets(line.to_owned()))
-            }
-        })
-        .collect()
-}

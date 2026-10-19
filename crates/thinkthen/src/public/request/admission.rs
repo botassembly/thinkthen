@@ -15,32 +15,6 @@ pub struct AdmittedRequest {
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
-    #[cfg(test)]
-    pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
-        let args = self.request.call.arguments_mut();
-        args.input = RequestInput::Feed {
-            name: name.to_owned(),
-            framing: super::RequestFraming::Document,
-            reading: crate::ReaderOptions::default(),
-            images: Vec::new(),
-        };
-        args.options.field = None;
-        args.options.context_field = None;
-        args.options.options_field = None;
-        args.options.examples_field = None;
-        args.options.seed_spans_field = None;
-        self
-    }
-
-    #[cfg(test)]
-    pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
-        let definition = self.resolve_question_for(Some(self.request.call.function()))?;
-        if self.definition.is_none() {
-            self.admit_inline(&definition)?;
-        }
-        self.definition = Some(definition.clone());
-        Ok(definition)
-    }
 
     /// Retain a saved definition read and parsed by an authorized host.
     ///

@@ -112,21 +112,9 @@ impl<'a> Cancel<'a> {
             ..self.clone()
         }
     }
-    #[cfg(test)]
-    pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
-        Self {
-            invocation: invocation::Context::new(surface),
-            ..self.clone()
-        }
-    }
 
     pub(crate) fn invocation(&self) -> Result<&invocation::Invocation, error::Error> {
         self.invocation.get()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
-        self.invocation.call_id()
     }
 
     pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
@@ -183,23 +171,12 @@ impl<'a> Cancel<'a> {
         self.fired.store(true, Ordering::Release);
     }
 
-    #[cfg(test)]
-    pub(crate) fn reset(&self) {
-        self.fired.store(false, Ordering::Release);
-    }
-
     pub(crate) fn flag(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.fired)
     }
 
     pub(crate) fn fired(&self) -> bool {
         self.fired.load(Ordering::Acquire)
-    }
-
-    /// Share this stop flag with one call that ends at `deadline`.
-    #[cfg(test)]
-    pub(crate) const fn deadline(&self) -> Option<Deadline> {
-        self.deadline
     }
 
     pub(crate) fn with_deadline(&self, deadline: Option<Deadline>) -> Self {

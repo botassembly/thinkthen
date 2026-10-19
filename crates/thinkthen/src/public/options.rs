@@ -72,10 +72,6 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
-    #[cfg(test)]
-    pub(crate) fn from_flag(flag: Arc<AtomicBool>) -> Self {
-        Self(flag)
-    }
 
     /// A token that has not fired.
     #[must_use]

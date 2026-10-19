@@ -73,16 +73,6 @@ impl Engine {
         Err(Error::defect("whole-set preview lost its admitted definition"))
     }
 
-    #[cfg(test)]
-    pub(crate) fn plan_annotation_request<'a>(
-        &self,
-        request: &'a AdmittedRequest,
-        environment: RequestEnvironment<'a>,
-    ) -> Result<(crate::core::PlanSummary, usize, Vec<usize>), Error> {
-        let (summary, _, count, groups) = self.preview_request(request, environment, true)?;
-        Ok((summary, count, groups))
-    }
-
     fn preview_request<'a>(
         &self,
         request: &'a AdmittedRequest,
@@ -256,46 +246,6 @@ impl AdmittedRequest {
             _ => return Err(Error::usage("find plan requires a find question")),
         };
         engine.preview_find_records(question, rows, controls)
-    }
-    #[cfg(test)]
-    pub(crate) fn plan_recognition<'a>(
-        &'a self,
-        backend: &crate::core::Backend,
-        profile: Option<&crate::core::BackendProfile>,
-        environment: RequestEnvironment<'a>,
-        limit: usize,
-    ) -> Result<crate::public::complete::recognize::RecognitionPreview, Error> {
-        let (definition, rows, controls) = route_preview(self, environment)?;
-        let ask = match &definition {
-            RequestDefinition::Recognition(ask) => ask,
-            RequestDefinition::Recognize(file) => file.question(),
-            _ => {
-                return Err(Error::usage(
-                    "recognize plan requires a recognition question",
-                ));
-            }
-        };
-        crate::public::complete::recognize::preview_recognition(
-            backend,
-            profile,
-            ask,
-            rows,
-            controls.context_text(),
-            limit,
-        )
-    }
-    #[cfg(test)]
-    pub(crate) fn plan_relations<'a>(
-        &'a self,
-        backend: &crate::core::Backend,
-        profile: Option<&crate::core::BackendProfile>,
-        environment: RequestEnvironment<'a>,
-    ) -> Result<crate::public::complete::relate::RelationPreview, Error> {
-        let (definition, rows, controls) = route_preview(self, environment)?;
-        let RequestDefinition::Relate(ask) = definition else {
-            return Err(Error::usage("relate plan requires a relation question"));
-        };
-        crate::public::complete::relate::preview_relations(backend, profile, &ask, rows, &controls)
     }
 }
 

@@ -114,17 +114,6 @@ impl ApiType {
             }
         }
     }
-    #[cfg(test)]
-    pub(crate) fn decode_observed(
-        self,
-        plan: &crate::core::Plan,
-        body: &[u8],
-    ) -> systemone::response::Decoded {
-        match self {
-            Self::Primary => systemone::decode_observed(plan, body),
-            Self::Decisions => openai::decode_observed(plan, body),
-        }
-    }
     pub(crate) fn canonical_question(self, text: &str) -> Option<(String, crate::core::Question)> {
         match self {
             Self::Primary => systemone::canonical_question(text),

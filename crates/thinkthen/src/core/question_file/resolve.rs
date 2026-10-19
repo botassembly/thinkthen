@@ -80,10 +80,6 @@ pub(crate) struct Resolved {
 }
 
 impl Resolved {
-    #[cfg(test)]
-    pub(crate) const fn metadata(&self) -> &crate::core::declaration::QuestionMetadata {
-        &self.metadata
-    }
     /// The question to ask, or `None` when each record carries its own options.
     #[must_use]
     pub(crate) const fn question(&self) -> Option<&Question> {
@@ -141,36 +137,9 @@ pub(crate) struct Sources {
 }
 
 impl Sources {
-    #[cfg(test)]
-    pub(crate) const fn for_find(on: Source, model: Source) -> Self {
-        Self {
-            verb: None,
-            question: Source::File,
-            yes: Source::Default,
-            no: Source::Default,
-            labels: Source::Default,
-            threshold: Source::Default,
-            takes_threshold: false,
-            on,
-            model,
-        }
-    }
-    /// True when a question file settled the question, which a plan names.
-    #[must_use]
-    #[cfg(test)]
-    pub(crate) const fn question_is_from_file(&self) -> bool {
-        matches!(self.question, Source::File)
-    }
 
     pub(crate) const fn model_is_default(&self) -> bool {
         matches!(self.model, Source::Default)
-    }
-
-    #[must_use]
-    #[cfg(test)]
-    pub(crate) const fn with_configuration_model(mut self) -> Self {
-        self.model = Source::Configuration;
-        self
     }
 }
 

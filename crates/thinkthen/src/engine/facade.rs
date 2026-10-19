@@ -13,8 +13,6 @@ use std::time::Duration;
 #[cfg(test)]
 use crate::core::Plan;
 use crate::core::recording::Digest;
-#[cfg(test)]
-use crate::core::recording::Exchange as Recorded;
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value,
 };
@@ -22,8 +20,6 @@ use crate::core::{
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
 use crate::engine::http::Client;
-#[cfg(test)]
-use crate::engine::http::Exchange;
 use crate::engine::process::Guarded;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
@@ -396,57 +392,6 @@ impl Engine {
             selection,
             answered,
         })
-    }
-
-    /// Send one plan as one request with no store, as `check` does, which
-    /// reads and writes no cache (`specification/check.md`). The send runs
-    /// on an engine worker, so a host signal never lands in its socket read.
-    #[cfg(test)]
-    pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
-        self.check_plan(plan)?;
-        let body = self
-            .backend
-            .api_type()
-            .encode(plan)
-            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
-        let state = self.state(cancel)?;
-        let transport = self.transport(&state);
-        let digest = Recorded::new(self.backend.url(), &body).digest();
-        let cancel = cancel
-            .with_process_budget(transport.send_budget.clone())
-            .with_attempt_digest(digest.as_str());
-        if let Some(stop) = cancel.stop() {
-            return Err(stop);
-        }
-        cancel.key_lookup();
-        let key = self.key()?;
-        let exchange = Exchange {
-            headers: &[],
-            url: self.backend.url().as_str(),
-            body: &body,
-            key: &key,
-            max_retries: transport.max_retries,
-            retry_wait: transport.retry_wait,
-        };
-        let answered = crate::engine::workers::on_worker(&cancel, || {
-            transport.client.post_marked_with_retry(
-                &exchange,
-                &cancel,
-                transport.usage,
-                |_| (),
-                || (),
-            )
-        })?;
-        let decoded = self
-            .backend
-            .api_type()
-            .decode_observed(plan, &answered.body);
-        transport.usage.live_reply(decoded.usage);
-        cancel.live_reply(decoded.usage);
-        let reply = decoded.reply.map_err(Error::from)?;
-        transport.usage.answered_by(reply.model());
-        cancel.answered_by(reply.model().as_str());
-        Ok(reply)
     }
 
     pub(super) fn transport<'a>(&self, state: &'a State) -> Transport<'a> {

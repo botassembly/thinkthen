@@ -90,13 +90,3 @@ pub(crate) const BUILT_INS: [BuiltIn; 7] = [
         descriptions: Descriptions::Authored,
     },
 ];
-
-/// The named text workaround, with the existing Ollama sentence retained.
-#[cfg(test)]
-pub(crate) fn dropped_detail(name: Option<&str>) -> &'static str {
-    if name == Some("mlx") {
-        "backend `mlx` sends each description object as its `what` text, a temporary workaround for the Strands server schema, so its other fields are left out"
-    } else {
-        "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out"
-    }
-}

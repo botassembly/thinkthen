@@ -29,12 +29,6 @@ impl Atomic {
         self.meta.cached
     }
 
-    #[cfg(test)]
-    pub(crate) fn clear_batch_metadata(&mut self) {
-        self.meta.batch_setting = None;
-        self.meta.batch_warning = None;
-    }
-
     pub(crate) const fn question(&self) -> &crate::core::Question {
         &self.question
     }

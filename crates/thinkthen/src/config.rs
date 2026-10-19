@@ -182,10 +182,6 @@ impl Config {
     pub(crate) const fn shared(&self) -> bool {
         self.shared
     }
-    #[cfg(test)]
-    pub(crate) const fn has_model(&self) -> bool {
-        self.model.is_some()
-    }
     pub(crate) const fn has_cache(&self) -> bool {
         self.cache.is_some()
     }
