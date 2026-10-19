@@ -12,6 +12,7 @@ import unittest
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 from conformance import parity
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 
 
 class CampaignEnvironment(unittest.TestCase):
@@ -85,7 +86,7 @@ exit 2
                 executable = tools / name
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
-            env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
+            env = child_env(home=root / 'home') | {'PATH': fixture_path(tools),
                    'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
@@ -238,7 +239,7 @@ if '--message-format=json' in sys.argv:
                     private.mkdir(exist_ok=True)
                     receipt = root / 'capture.jsonl'
                     receipt.write_text('')
-                    env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
+                    env = child_env(home=private) | {'PATH': fixture_path(tools),
                            'HOME': str(private), 'THINKTHEN_TOOLCHAINS': str(cache),
                            'THINKTHEN_HEAVY_LOCK_HELD': '/tmp/thinkthen-heavy.lock',
                            'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
