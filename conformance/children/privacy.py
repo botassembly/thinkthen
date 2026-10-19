@@ -3,7 +3,6 @@ import argparse
 import fnmatch
 import gzip
 import io
-import json
 import os
 from pathlib import Path
 import re
@@ -13,7 +12,7 @@ import tarfile
 import zipfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'build-tools/results'))
-from sources import load_manifest, classification, generated_paths, source_owners, tracked_files
+from sources import classification, generated_paths, load_manifest, source_owners, tracked_files
 
 PRIVATE = re.compile(rb'(?P<home_path>/home/)|(?P<users_path>/Users/)|(?P<auth_file>auth\.json)|'
                      rb'(?P<private_key>-----BEGIN PRIVATE KEY-----)|(?P<canary>tt-canary-)|'

@@ -31,6 +31,8 @@ def load_manifest(path):
         data = json.loads(entry.read_text())
         for section in ('libraries', 'databases'):
             manifest[section].update(data.get(section, {}))
+    if not manifest['libraries']:
+        raise ValueError('no library surface entries: ' + str(path.with_suffix('')))
     return manifest
 
 
