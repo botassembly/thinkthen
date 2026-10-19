@@ -21,3 +21,15 @@ Milestone: 0.2.1
 The extension registers its functions with `SQLITE_DIRECTONLY` (`databases/sqlite/src/scalars.rs`, `budget.rs`, `catalog.rs`, `files.rs`), so SQLite refuses them in triggers, views, CHECK constraints and defaults. A user building a demo hit `unsafe use of thinkthen_choose()` on an `AFTER INSERT` trigger. The guard protects someone who opens a database file another person wrote, so it blocks the main use, labeling records ahead of time, to protect a rare one, and SQLite's standard `trusted_schema` setting already covers that rare case. Ian, 2026-10-19, asked for schema use to work by default. An opt-in trusted entry point exists on main since 0422 but needs a special load call nobody finds.
 
 PostgreSQL and DuckDB get the same check once their own trigger behavior is measured.
+
+## Amendment, 2026-10-19
+
+PostgreSQL 16 already allows the functions in triggers: a `BEFORE INSERT` plpgsql trigger calling `thinkthen_choose` and `thinkthen_tag` labeled five rows matching the SQLite answers, and later filters made no requests. PostgreSQL needs no code change. This ticket adds one short "Label rows as they arrive" example to both the SQLite and PostgreSQL guides, replayed like other documentation examples. The PostgreSQL example shows what a reader otherwise trips on:
+
+- `CREATE EXTENSION` revokes public execute, so the example grants execute to the application role.
+- Options pass by name as `settings => ...`, since the third positional argument is the members.
+- `thinkthen_tag` returns `text[]`.
+- The key comes from the server's environment, not the client session.
+- A failed model call fails the `INSERT`; the example says so and shows the choice between letting it fail and catching the error to leave the label empty.
+
+Changes add `databases/postgresql/README.md`.
