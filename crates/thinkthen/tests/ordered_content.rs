@@ -145,3 +145,37 @@ fn caller_text_and_table_io_causes_are_explicit_and_normal_errors_withhold_them(
     assert_caller_io(&error);
     assert!(table.next().is_none());
 }
+
+#[test]
+fn raw_cut_units_keep_the_native_overread_bound_and_abandon_unterminated_tails() {
+    use std::{cell::Cell, io::{BufRead, Read}, rc::Rc};
+    use thinkthen::{FileReader, RawRecord, ReaderOptions, RecordReading, RequestFraming};
+    struct Counted<'a> { bytes: &'a [u8], consumed: Rc<Cell<usize>> }
+    impl Read for Counted<'_> {
+        fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+            let count = output.len().min(self.bytes.len());
+            output[..count].copy_from_slice(&self.bytes[..count]);
+            self.consume(count);
+            Ok(count)
+        }
+    }
+    impl BufRead for Counted<'_> {
+        fn fill_buf(&mut self) -> std::io::Result<&[u8]> { Ok(self.bytes) }
+        fn consume(&mut self, count: usize) {
+            self.bytes = &self.bytes[count..];
+            self.consumed.set(self.consumed.get() + count);
+        }
+    }
+    let mut bytes = vec![0xff; RawRecord::max_bytes() + 3];
+    bytes.extend_from_slice(b"\nnext\n");
+    let consumed = Rc::new(Cell::new(0));
+    let mut reader = FileReader::new("input", Counted { bytes: &bytes, consumed: consumed.clone() }, ReaderOptions::default()).unwrap();
+    let raw = reader.next_bytes().unwrap().unwrap();
+    assert_eq!(raw.record.len(), RawRecord::max_bytes() + 2);
+    assert_eq!(consumed.get(), RawRecord::max_bytes() + 2);
+    let error = RecordReading::new(&[], None, None).unwrap()
+        .read_original(&raw.record, RequestFraming::Lines).unwrap_err();
+    assert!(error.to_string().contains("over 16 MiB"));
+    assert!(reader.next_bytes().is_none());
+    assert_eq!(consumed.get(), RawRecord::max_bytes() + 2);
+}
