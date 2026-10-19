@@ -7,19 +7,19 @@ def ungroup(expression):
     return expression[1:-1] if expression.startswith('(') and expression.endswith(')') else expression
 
 
-def predicate(schema, definitions, expression, target, depth=0):
+def predicate(schema, definitions, expression, target, depth=0, array_item=None):
     if schema is True or schema == {}:
         return 'true'
     if '$ref' in schema:
         return predicate(definitions[schema['$ref'].split('/')[-1]], definitions,
-                         expression, target, depth)
+                         expression, target, depth, array_item)
     alternatives = (list(schema.get('primitive_schemas', {}).values()) or
                     schema.get('anyOf', schema.get('oneOf', [])))
     kinds = schema.get('type')
     if isinstance(kinds, list):
         alternatives = [{**schema, 'type': kind} for kind in kinds]
     if alternatives:
-        terms = list(dict.fromkeys(predicate(item, definitions, expression, target, depth)
+        terms = list(dict.fromkeys(predicate(item, definitions, expression, target, depth, array_item)
                                    for item in alternatives))
         if 'true' in terms:
             return 'true'
@@ -53,12 +53,15 @@ def predicate(schema, definitions, expression, target, depth=0):
         raise ValueError('unknown declaration predicate target')
     if kinds == 'array':
         item = f'union_item_{depth}'
-        inner = predicate(schema.get('items', {}), definitions, item, target, depth + 1)
+        element = schema.get('items', {})
+        inner = predicate(element, definitions, item, target, depth + 1, array_item)
         if inner == 'true':
             return check
         if target == 'csharp':
             return f'({check} && {expression}.EnumerateArray().All({item} => {inner}))'
         if target == 'rust':
+            if array_item:
+                return f'{expression}.array().is_ok_and(|items| items.iter().all({array_item(element)}))'
             return f'({check} && {expression}.array().is_ok_and(|items| items.iter().all(|{item}| {ungroup(inner)})))'
         if target == 'java':
             return f'({check} && ((List<?>){expression}).stream().allMatch({item} -> {inner}))'
