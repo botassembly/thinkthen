@@ -41,6 +41,7 @@ class PinnedDownloads(unittest.TestCase):
                 self.send_response(200)
                 self.send_header('Content-Encoding', encoding)
                 self.send_header('Content-Length', str(len(body)))
+                self.send_header("Connection", "close")
                 self.end_headers()
                 self.wfile.write(body)
 
