@@ -42,7 +42,7 @@ packaged=${CARGO_TARGET_DIR:-target}/package
 mkdir -p "$packaged"
 head -c 4194304 /dev/urandom \
     >"$packaged/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
-rm -f -- "$packaged"/thinkthen-*.crate
+rm -f -- "$packaged"/thinkthen-*.crate "$packaged"/thinkthen-cli-*.crate
 # The conformance backend remains test-only and never ships.
 cargo package --locked --offline --allow-dirty --package thinkthen
 cargo package --locked --offline --allow-dirty --no-verify --package thinkthen-cli \
@@ -115,7 +115,8 @@ test -z "$(ls -A "$isolated/empty")" \
 
 cargo rustc --locked --offline --release --package thinkthen --lib --no-default-features --features bundled-sqlite \
     -- --print cfg | grep -Fx 'panic="unwind"' >/dev/null
-RUSTFLAGS='-C panic=abort' cargo rustc --locked --offline --release --package thinkthen-cli \
-    --bin thinkthen -- --print cfg | grep -Fx 'panic="abort"' >/dev/null
+# Match the unchanged release-pack command and workspace release profile.
+cargo rustc --locked --offline --release --package thinkthen-cli \
+    --bin thinkthen -- --print cfg | grep -Fx 'panic="unwind"' >/dev/null
 
 printf '%s\n' 'package: library graph, package tree, doctests, panic strategies, and unpacked catalog pass'

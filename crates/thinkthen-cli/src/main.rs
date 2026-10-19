@@ -6,6 +6,9 @@
 use std::process::ExitCode;
 use thinkthen::*;
 
+#[cfg(test)]
+mod schema_tests;
+
 mod cli;
 mod mcp;
 mod statistics;

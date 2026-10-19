@@ -454,12 +454,12 @@ jobs:
           save()
           try:
               if stage == 'core':
-                  run('cli-fresh',['cargo','build','--locked','--offline','--package','thinkthen','--bin','thinkthen','-j2'])
+                  run('cli-fresh',['cargo','build','--locked','--offline','--package','thinkthen-cli','--bin','thinkthen','-j2'])
                   shutil.copy2(root/'target/debug/thinkthen',out/'thinkthen')
                   run('test',['bash','sdlc/scripts/test'])
                   run('lint',['bash','sdlc/scripts/lint'])
                   run('polars-nextest',['bash','-c','. sdlc/scripts/scratch.sh; usage_home; export THINKTHEN_API_KEY=sk-polars-loopback THINKTHEN_BASE_URL=http://127.0.0.1:9/v1; cargo nextest run --profile default --locked --offline --package thinkthen --features polars --test polars'],extra={'CARGO_TARGET_DIR':str(root/'target/polars')})
-                  run('polars-clippy',['cargo','clippy','--locked','--offline','--package','thinkthen','--features','polars','--lib','--bins','--test','polars','--','-D','warnings'],extra={'CARGO_TARGET_DIR':str(root/'target/polars')})
+                  run('polars-clippy',['cargo','clippy','--locked','--offline','--package','thinkthen','--features','polars','--lib','--test','polars','--','-D','warnings'],extra={'CARGO_TARGET_DIR':str(root/'target/polars')})
                   run('polars-clippy-nodefault',['cargo','clippy','--locked','--offline','--package','thinkthen','--features','polars','--no-default-features','--lib','--','-D','warnings'],extra={'CARGO_TARGET_DIR':str(root/'target/polars')})
                   native=root/'target/debug/libthinkthen_c.so'; static=root/'target/debug/libthinkthen_c.a'; header=root/'libraries/c/include/thinkthen.h'
                   run('native-c',['cargo','build','--locked','--offline','--manifest-path','libraries/c/Cargo.toml','--lib','-j2'])
@@ -589,7 +589,7 @@ jobs:
                       'python3 libraries/c/tests/installed-session.py ${GATE_OUTPUT}/native-current.tar.gz\n'
                   )],extra={'GATE_OUTPUT':str(out)})
               elif stage == 'functional':
-                  run('cli-fresh', ['cargo', 'build', '--locked', '--offline', '--package', 'thinkthen', '--bin', 'thinkthen', '-j2'])
+                  run('cli-fresh', ['cargo', 'build', '--locked', '--offline', '--package', 'thinkthen-cli', '--bin', 'thinkthen', '-j2'])
                   # Prepare the same optimized Polars artifacts before the consumer's existing clock starts.
                   run('polars-prepare', ['sh', '-c', (
                       'set -eu; REPO=$PWD; . sdlc/scripts/full-compiler; unset CARGO_INCREMENTAL; '
