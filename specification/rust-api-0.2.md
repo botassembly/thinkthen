@@ -242,12 +242,23 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+fn CompleteRank::score(&self) -> Option<f64>
+fn EngineBuilder::select_throttle(self, u8) -> Result<EngineBuilder, Error>
+fn FileReader::next_bytes(&mut self) -> Option<Result<SourceRecord<Vec<u8>>, Error>>
+fn RecordReading::compose_images(&self, ImageEvidence) -> Result<RecordInput<QuestionInput>, Error>
+fn RecordReading::read_annotation_document(&self, &[u8]) -> Result<RawRecord, Error>
+fn RecordReading::read_document(&self, &[u8]) -> Result<RecordInput<RecordEvidence>, Error>
+fn RecordReading::read_original(&self, &[u8], RequestFraming) -> Result<RawRecord, Error>
+fn storage_writable_by_another(&Path) -> bool
+ErrorDiagnostic::InputJson
+ErrorDiagnostic::InputJson::column: usize
+ErrorDiagnostic::InputJson::line: usize
 struct PreparedRequest<'a>
 PreparedRequest::digest: &'a str
 PreparedRequest::body: &'a [u8]
-impl Clone for PreparedRequest<'_>
-impl Copy for PreparedRequest<'_>
-impl Debug for PreparedRequest<'_>
+impl Clone for PreparedRequest
+impl Copy for PreparedRequest
+impl Debug for PreparedRequest
 struct RecognitionPlan
 RecognitionPlan::pieces: usize
 RecognitionPlan::name_requests_upper_bound: usize
@@ -266,13 +277,13 @@ PlannedRelation::either: bool
 PlannedRelation::method: RelationMethod
 PlannedRelation::logical_questions: usize
 PlannedRelation::request_count: usize
-impl Clone for PlannedRelation<'_>
-impl Copy for PlannedRelation<'_>
-impl Debug for PlannedRelation<'_>
+impl Clone for PlannedRelation
+impl Copy for PlannedRelation
+impl Debug for PlannedRelation
 struct RelationPlan<'a>
-impl Clone for RelationPlan<'_>
-impl Copy for RelationPlan<'_>
-impl Debug for RelationPlan<'_>
+impl Clone for RelationPlan
+impl Copy for RelationPlan
+impl Debug for RelationPlan
 const fn RelationPlan::entity_count(&self) -> usize
 fn RelationPlan::rules(&self) -> impl ExactSizeIterator<Item = PlannedRelation<'_>>
 fn PlanEstimate::prepared_requests(&self) -> impl ExactSizeIterator<Item = PreparedRequest<'_>>
@@ -370,13 +381,14 @@ fn validate_pointer(&str) -> Result<(), Error>
 fn EngineBuilder::from_config() -> Result<EngineBuilder, Error>
 ResolvedSettings::key_variables: Vec<String>
 RequestSessionFeedOptions::retain_success_on_cancel: bool
-RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>
+RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>
 RequestSessionFeedOptions::incremental_recognition: bool
 RequestSessionFeedOptions::input_pause: Option<Duration>
-fn CallOptions::on_missing_annotation_pointer(self, &'a (dyn Fn(usize, &str) -> bool + Sync)) -> Self
+const fn CallOptions::on_missing_annotation_pointer(self, &'a (dyn Fn(usize, &str) -> bool + Sync)) -> CallOptions<'a>
 fn find_candidate_count_range(bool) -> RangeInclusive<usize>
 fn PlanEstimate::combine(&self, &PlanEstimate) -> Result<PlanEstimate, Error>
-ErrorDiagnostic::MissingPointer { pointer: &'a str }
+ErrorDiagnostic::MissingPointer
+ErrorDiagnostic::MissingPointer::pointer: &'a str
 fn QuestionContent::member(self, &str) -> Option<QuestionContent<'a>>
 fn QuestionContent::element(self, usize) -> Option<QuestionContent<'a>>
 fn QuestionContent::fields(self) -> Option<impl ExactSizeIterator<Item = (&'a str, QuestionContent<'a>)> + 'a>
@@ -385,7 +397,7 @@ fn QuestionContent::number(self) -> Option<&'a Number>
 const fn QuestionContent::boolean(self) -> Option<bool>
 fn QuestionContent::pointer(self, &str) -> Result<Option<QuestionContent<'a>>, Error>
 const fn request_schema() -> &'static str
-const RequestFunction::ALL: [RequestFunction; 10]
+const RequestFunction::ALL: [Self; 10]
 fn RequestFunction::allows_option(self, &str) -> bool
 const fn RequestFunction::images(self) -> bool
 fn EngineBuilder::configuration_shared(&self) -> bool
@@ -398,11 +410,11 @@ impl PartialEq for RelationIdentityMode
 RelationIdentityMode::Records
 RelationIdentityMode::Lines
 fn RequestDefinition::question_sha256(&self) -> Result<String, Error>
-fn RequestDefinition::relation_sha256(&self, mode: RelationIdentityMode) -> Result<String, Error>
+fn RequestDefinition::relation_sha256(&self, RelationIdentityMode) -> Result<String, Error>
 struct ParsedJson
 impl Clone for ParsedJson
 impl Debug for ParsedJson
-fn ParsedJson::from_json(text: &str) -> Result<Self, Error>
+fn ParsedJson::from_json(&str) -> Result<ParsedJson, Error>
 fn ParsedJson::content(&self) -> QuestionContent<'_>
 enum JsonFailure
 impl Clone for JsonFailure
@@ -457,7 +469,7 @@ ErrorDiagnostic::Configuration::message: &'a str
 ErrorDiagnostic::Transport(TransportFailure)
 ErrorDiagnostic::Status(u16)
 ErrorDiagnostic::Provider
-ErrorDiagnostic::Provider::cause: Box<ErrorDiagnostic<'a>>
+ErrorDiagnostic::Provider::cause: Box<Self>
 ErrorDiagnostic::Provider::provider: ProviderFailure<'a>
 ErrorDiagnostic::SendBudget(SendBudgetDenial)
 ErrorDiagnostic::EstimatedInput
@@ -502,7 +514,7 @@ ErrorDiagnostic::RecognitionRelationLimit(String)
 ErrorDiagnostic::Range
 ErrorDiagnostic::Range::first: usize
 ErrorDiagnostic::Range::last: usize
-ErrorDiagnostic::Range::cause: Box<ErrorDiagnostic<'a>>
+ErrorDiagnostic::Range::cause: Box<Self>
 ErrorDiagnostic::PartialReply
 ErrorDiagnostic::PartialReply::first: usize
 ErrorDiagnostic::PartialReply::last: usize
@@ -566,7 +578,7 @@ struct CacheSettings
 impl Clone for CacheSettings
 impl Debug for CacheSettings
 fn CompleteAnnotationMember::leader(&self) -> Option<&str>
-fn CallOptions::shared_state_groups(self) -> Self
+const fn CallOptions::shared_state_groups(self) -> CallOptions<'a>
 fn EngineBuilder::cache_settings(&self) -> CacheSettings
 CacheSettings::configuration_shared: bool
 CacheSettings::cache_enabled: bool
@@ -943,7 +955,7 @@ contain no additional body, stay out of Debug/schema/serde, and do not change eq
 The backend check retains its command-owned closed four-probe request count separately.
 
 `CallOptions::on_missing_annotation_pointer(&dyn Fn(usize, &str) -> bool + Sync)` and
-`RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>`
+`RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>`
 retain the existing ordinary annotation callback. The default is absent. Only missing
 question-set `on` pointers reach it; zero-based original ordinal and exact selector are
 borrowed for the callback. True skips the whole original; false or panic preserves its
