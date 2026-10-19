@@ -36,6 +36,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
 
+`Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -212,7 +214,117 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
-fn Error::with_source(self, impl std::error::Error + Send + Sync + 'static) -> Self
+enum ErrorDiagnostic<'a>
+impl Debug for ErrorDiagnostic
+fn Error::diagnostic(&self) -> Option<ErrorDiagnostic<'_>>
+ErrorDiagnostic::Transport(TransportFailure)
+ErrorDiagnostic::Status(u16)
+ErrorDiagnostic::Provider
+ErrorDiagnostic::Provider::cause: Box<ErrorDiagnostic<'a>>
+ErrorDiagnostic::Provider::provider: ProviderFailure<'a>
+ErrorDiagnostic::SendBudget(SendBudgetDenial)
+ErrorDiagnostic::EstimatedInput
+ErrorDiagnostic::EstimatedInput::reason: &'a EstimatedInputDenial
+ErrorDiagnostic::EstimatedInput::images: bool
+ErrorDiagnostic::TokenLimit
+ErrorDiagnostic::ReplyTooLarge(u64)
+ErrorDiagnostic::Reply(String)
+ErrorDiagnostic::ReplayMiss(&'a str)
+ErrorDiagnostic::StoreAmbiguous
+ErrorDiagnostic::StoreHotJournal
+ErrorDiagnostic::StoreVersion(&'a str)
+ErrorDiagnostic::Entry
+ErrorDiagnostic::Entry::name: &'a str
+ErrorDiagnostic::Entry::reason: &'a str
+ErrorDiagnostic::RecordingStorage
+ErrorDiagnostic::RecordingForbidden
+ErrorDiagnostic::RecordingPathIsFile
+ErrorDiagnostic::DefaultCachePrivate
+ErrorDiagnostic::UsageUnreadable(&'a str)
+ErrorDiagnostic::CacheEntry
+ErrorDiagnostic::Defect(&'static str)
+ErrorDiagnostic::Usage(&'static str)
+ErrorDiagnostic::ProfileLimit
+ErrorDiagnostic::ProfileLimit::profile: &'a str
+ErrorDiagnostic::ProfileLimit::dimension: &'static str
+ErrorDiagnostic::ProfileLimit::limit: usize
+ErrorDiagnostic::ProfileLimit::actual: usize
+ErrorDiagnostic::Cancelled
+ErrorDiagnostic::Deadline(String)
+ErrorDiagnostic::NoKey(&'a str)
+ErrorDiagnostic::WidthActive(String)
+ErrorDiagnostic::ModelsDiffer(Option<(&'a str, &'a str)>)
+ErrorDiagnostic::UsageOverflow
+ErrorDiagnostic::RecognitionKinds
+ErrorDiagnostic::RecognitionExamples(String)
+ErrorDiagnostic::RecognitionLogical
+ErrorDiagnostic::TextTooLong
+ErrorDiagnostic::TextTooLong::bytes: usize
+ErrorDiagnostic::TextTooLong::limit: usize
+ErrorDiagnostic::RecognitionRelationLimit(String)
+ErrorDiagnostic::Range
+ErrorDiagnostic::Range::first: usize
+ErrorDiagnostic::Range::last: usize
+ErrorDiagnostic::Range::cause: Box<ErrorDiagnostic<'a>>
+ErrorDiagnostic::PartialReply
+ErrorDiagnostic::PartialReply::first: usize
+ErrorDiagnostic::PartialReply::last: usize
+ErrorDiagnostic::PartialReply::cause: Option<String>
+ErrorDiagnostic::Context
+ErrorDiagnostic::Context::initial: bool
+ErrorDiagnostic::Context::dimension: &'static str
+ErrorDiagnostic::Context::limit: usize
+ErrorDiagnostic::Context::actual: usize
+ErrorDiagnostic::Context::profile: Option<&'a str>
+ErrorDiagnostic::RelationEntityCount(usize)
+ErrorDiagnostic::ModelControl
+ErrorDiagnostic::ModelBlank
+ErrorDiagnostic::Pointer
+ErrorDiagnostic::Pointer::option: &'static str
+ErrorDiagnostic::Pointer::selector: &'a str
+ErrorDiagnostic::Pointer::reason: String
+ErrorDiagnostic::Batch
+ErrorDiagnostic::AnnotationThreshold
+ErrorDiagnostic::QuestionUnreadable(String)
+ErrorDiagnostic::QuestionTooLarge
+ErrorDiagnostic::QuestionNotUtf8
+ErrorDiagnostic::Question
+ErrorDiagnostic::Question::message: String
+ErrorDiagnostic::Question::from_file: bool
+ErrorDiagnostic::QuestionSet(String)
+ErrorDiagnostic::Reading(String)
+ErrorDiagnostic::Record(String)
+ErrorDiagnostic::InvalidUtf8
+ErrorDiagnostic::Rendering(String)
+ErrorDiagnostic::RecognitionConfiguration
+ErrorDiagnostic::RecognitionConfiguration::message: String
+ErrorDiagnostic::RecognitionConfiguration::from_file: bool
+ErrorDiagnostic::RelationConfiguration
+ErrorDiagnostic::RelationConfiguration::message: String
+ErrorDiagnostic::RelationConfiguration::from_file: bool
+ErrorDiagnostic::EntitySet(String)
+struct ProviderFailure<'a>
+impl Debug for ProviderFailure
+impl Clone for ProviderFailure
+impl Copy for ProviderFailure
+ProviderFailure::backend: &'static str
+ProviderFailure::quota: bool
+ProviderFailure::alternate_backend_hint: bool
+ProviderFailure::error_type: Option<&'a str>
+ProviderFailure::code: Option<&'a str>
+enum TransportFailure
+TransportFailure::Timeout
+TransportFailure::NameLookup
+TransportFailure::Refused
+TransportFailure::PrematureClose
+TransportFailure::Tls
+TransportFailure::Other
+impl Debug for TransportFailure
+impl Clone for TransportFailure
+impl Copy for TransportFailure
+impl Eq for TransportFailure
+impl PartialEq for TransportFailure
+fn Error::with_source(self, impl Error + Send + Sync + 'static) -> Error
 struct ResolvedSettings
 impl Debug for ResolvedSettings
 impl Clone for ResolvedSettings
@@ -283,8 +395,8 @@ struct RequestDescriptor
 RequestDescriptor::item: RequestItem
 RequestDescriptor::source: Option<RequestSource>
 impl Debug for RequestDescriptor
-fn CallOptions::retained_attachment_limit(self, usize) -> Result<Self, Error>
-fn RequestFeed::from_descriptors(impl Into<String>, Vec<RequestDescriptor>) -> Self
+fn CallOptions::retained_attachment_limit(self, usize) -> Result<CallOptions<'a>, Error>
+fn RequestFeed::from_descriptors(impl Into<String>, Vec<RequestDescriptor>) -> RequestFeed<'a>
 fn Error::completed(&self) -> Option<&RequestValue>
 const fn RequestFunction::name(self) -> &'static str
 RequestCall::arguments: RequestArguments

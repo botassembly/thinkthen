@@ -298,7 +298,6 @@ fn pointed(source: Source, key: &str) -> String {
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn origin(&self) -> Source {
         match self {
             Self::Blank { origin, .. }
@@ -308,9 +307,10 @@ impl QuestionFileError {
             | Self::BandOnChoose(origin)
             | Self::BandOnTag(origin)
             | Self::RuleOnScore(origin)
-            | Self::BandOnFilter(origin)
             | Self::RuleOnRank(origin)
             | Self::BandOnRank(origin) => *origin,
+            #[cfg(any(feature = "cli", test))]
+            Self::BandOnFilter(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.
             Self::VerbMismatch { .. } => Source::CommandLine,

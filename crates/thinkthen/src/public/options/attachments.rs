@@ -2,7 +2,7 @@
 use super::CallOptions;
 use crate::Error;
 
-impl CallOptions<'_> {
+impl<'a> CallOptions<'a> {
     /// Bound the total compressed attachment bytes retained by a named call.
     /// Inline bytes are preflighted before admission clones them. Deferred files
     /// share one budget and each occurrence counts, including repeated paths.

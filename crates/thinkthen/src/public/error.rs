@@ -3,6 +3,8 @@
 use serde::Serialize;
 pub(crate) mod diagnostic;
 mod stopped;
+mod presentation;
+pub use presentation::{ErrorDiagnostic, ProviderFailure, TransportFailure};
 pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
@@ -433,7 +435,6 @@ fn message(error: &EngineError) -> String {
             return format!("{file} uses an old store format; delete it");
         }
         EngineError::Entry(..) => "the cache or recording folder holds a malformed entry",
-        #[cfg(any(feature = "cli", test))]
         EngineError::CacheEntry => "the cache or recording folder holds a malformed entry",
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingForbidden => {

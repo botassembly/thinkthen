@@ -107,7 +107,8 @@ pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key,
 };
 #[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::question_file::{Resolved, Source, Sources, pointers};
+pub(crate) use crate::core::question_file::{Resolved, Sources, pointers};
+pub(crate) use crate::core::question_file::Source;
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
     Asked, NameOdds, Odds, Piece, PieceOdds, RecognizedName, TAGS, TagRow, decode as found_names,
