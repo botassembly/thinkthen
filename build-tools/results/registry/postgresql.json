@@ -1,0 +1,12 @@
+[
+  {
+    "mode": "results",
+    "path": "databases/postgresql/src/native/results_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "databases/postgresql/src/native/functions_generated.rs",
+    "producer": "results"
+  }
+]

@@ -22,7 +22,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import fixture_path
+from sdlc.scripts.tools import fixture_path, load_manifest
 
 
 def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
@@ -127,7 +127,7 @@ esac
             '<?xml version="1.0"?><plist version="1.0"><dict>'
             '<key>Version</key><string>15.0</string></dict></plist>')
         manifest = REPO / 'sdlc/tools.json'
-        openssl_version = json.loads(manifest.read_text())['tools']['ruby']['openssl_version']
+        openssl_version = load_manifest(manifest)['tools']['ruby']['openssl_version']
         log = root / "calls"
         env = os.environ.copy()
         env.update(PATH=fixture_path(bin_dir), HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
@@ -1058,9 +1058,9 @@ def parameter_cases():
         root = Path(temporary)
         for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
             (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'hosted-candidate.py'):
+        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'tools.py', 'hosted-candidate.py'):
             (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
-        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
+        (root / 'sdlc/tools.json').write_text(json.dumps(load_manifest()))
         (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),

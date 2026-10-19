@@ -1,5 +1,7 @@
 """The outputs owned by the schema generators, grouped by producer invocation."""
 from dataclasses import dataclass
+import json
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -10,61 +12,10 @@ class Output:
     producer: str = 'results'
 
 
-def group(target, mode, base, *names):
-    return tuple(Output(target, mode, base + name) for name in names)
-
-
-OUTPUTS = (
-    *(Output('duckdb', 'receipt-types',
-             'databases/duckdb/cpp/src/receipt_types_generated' + suffix + '.hpp',
-             'databases/duckdb/tools/receipt_types.py')
-      for suffix in ('', '_1', '_2', '_3', '_4')),
-    Output('duckdb', 'request-helpers',
-           'databases/duckdb/cpp/src/request_helpers_generated.hpp',
-           'databases/duckdb/tools/request_helpers.py'),
-    *group('sqlite', 'results', 'databases/sqlite/src/', 'receipt_generated.rs'),
-    *group('postgresql', 'results', 'databases/postgresql/src/native/',
-           'results_generated.rs', 'functions_generated.rs'),
-    *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/ffi/', 'operations_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/ffi/session/', 'operations_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/ffi/native_request/', 'operations_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/session/', 'primitives_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/ffi/carriers/', 'layouts_generated.rs'),
-    *group('c', 'operations', 'libraries/c/src/ffi/current/', 'operations_generated.rs'),
-    *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
-    Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
-    *group('csharp', 'results', 'build-tools/results/csharp/', 'CompleteFacts.g.cs'),
-    *group('csharp', 'inputs', 'libraries/csharp/src/', 'RequestInputs.g.cs'),
-    *group('csharp', 'bridge', 'libraries/csharp/src/', 'NativeBridge.g.cs', 'NamedCalls.g.cs'),
-    *group('r', 'results', 'libraries/r/thinkthen/src/rust/src/', 'results_generated.rs'),
-    *group('python', 'inputs', 'libraries/python/thinkthen/', '_named_generated.py'),
-    *group('r', 'inputs', 'libraries/r/thinkthen/R/', 'inputs-generated.R'),
-    *group('python', 'results', 'libraries/python/src/', 'results_generated.rs'),
-    *group('python', 'results', 'libraries/python/thinkthen/', '_native_results.py', '_native_results.pyi'),
-    *group('zig', 'results', 'libraries/zig/src/', 'plan_generated.zig', 'results_generated.zig'),
-    *group('zig', 'inputs', 'libraries/zig/src/', 'request_generated.zig', 'calls_generated.zig', 'request_codec_generated.zig'),
-    *group('ruby', 'results', 'libraries/ruby/lib/thinkthen/', 'results_generated.rb'),
-    *group('ruby', 'results', 'libraries/ruby/src/ffi/', 'results_generated.rs'),
-    *group('ruby', 'results', 'libraries/ruby/sig/thinkthen/', 'results_generated.rbs'),
-    *group('typescript', 'results', 'libraries/typescript/', 'results_generated.js', 'results_generated.d.ts'),
-    *group('go', 'results', 'libraries/go/', 'owned_results_generated.go'),
-    *group('php', 'results', 'libraries/php/src/session/', 'results_generated.php', 'ffi_generated.h', 'constants_generated.php', 'inputs_generated.php'),
-    *group('cpp', 'results', 'libraries/cpp/include/thinkthen/', 'results_generated.hpp'),
-    *group('cpp', 'inputs', 'libraries/cpp/include/thinkthen/', 'inputs_generated.hpp', 'calls_generated.hpp'),
-    *group('dart', 'results', 'libraries/dart/lib/src/session/', 'results_generated.dart'),
-    *group('dart', 'inputs', 'libraries/dart/lib/src/session/', 'inputs_generated.dart', 'calls_generated.dart'),
-    *group('dart', 'bridge', 'libraries/dart/lib/src/session/', 'abi_generated.dart'),
-    *group('ada', 'results', 'libraries/ada/src/', 'thinkthen-requests.ads', 'thinkthen-sessions-calls.ads', 'thinkthen-sessions-calls.adb', 'thinkthen-session_c.ads', 'thinkthen-native_sessions.ads', 'thinkthen-native_sessions.adb', 'thinkthen-requests-native.ads', 'thinkthen-requests-native.adb', 'thinkthen_kinds.ads', 'thinkthen_kinds.adb', 'thinkthen-persistence.ads', 'thinkthen-persistence.adb', 'thinkthen-values.ads', 'thinkthen-values.adb', 'thinkthen-answers.ads', 'thinkthen-answers.adb', 'thinkthen-native_values.ads', 'thinkthen-native_values.adb', 'thinkthen-inputs.ads', 'thinkthen-inputs.adb', 'thinkthen-inputs-native.ads', 'thinkthen-inputs-native.adb', 'thinkthen-inputs-calls.ads', 'thinkthen-inputs-calls.adb'),
-    *group('objc', 'results', 'libraries/objective-c/Sources/Foundation/', 'TTResults.g.h', 'TTResults.g.m'),
-    *group('swift', 'results', 'libraries/swift/Sources/ThinkThen/', 'ResultsGenerated.swift'),
-    *group('swift', 'inputs', 'libraries/swift/Sources/ThinkThen/', 'InputsGenerated.swift'),
-    *group('swift', 'bridge', 'libraries/swift/Sources/ThinkThen/', 'ABIGenerated.swift'),
-    *group('swift', 'bridge', 'libraries/swift/Sources/CThinkThen/', 'bridge.c'),
-    *group('cobol', 'results', 'libraries/cobol/', 'src/tt_requests_generated.h', 'src/tt_requests_generated.c', 'copybooks/tt-native-generated.cpy', 'native-helpers.json'),
-    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NativeResults.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
-    *group('jvm', 'results', 'libraries/jvm/session/kotlin/', 'UsagePersistence.kt', 'KotlinNamedCalls.kt'),
-    *group('jvm', 'results', 'libraries/jvm/session/scala/', 'UsagePersistence.scala', 'ScalaNamedCalls.scala'),
+OUTPUTS = tuple(
+    Output(source.stem, **entry)
+    for source in sorted(Path(__file__).with_suffix('').glob('*.json'))
+    for entry in json.loads(source.read_text())
 )
 
 

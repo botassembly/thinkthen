@@ -29,7 +29,7 @@ export function omissions(authority, catalog, readme) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-  const errors = omissions(...['databases/duckdb/tools/version.env', 'site/src/data/catalog.mjs', 'databases/duckdb/README.md']
+  const errors = omissions(...['databases/duckdb/tools/version.env', 'site/src/data/catalog/duckdb.mjs', 'databases/duckdb/README.md']
     .map((name) => fs.readFileSync(path.join(repo, name), 'utf8')));
   if (errors.length) { console.error(errors.join('\n')); process.exit(1); }
   console.log('DuckDB public versions cover the build list');

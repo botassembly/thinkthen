@@ -415,8 +415,8 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache, stage == 'smoke')
     if stage in ('core', 'functional', 'coverage'):
-        manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
         tools = runpy.run_path(str(ROOT / 'sdlc/scripts/tools.py'))
+        manifest = tools['load_manifest']()
         check.tools(tools['commands'](('install',), host='linux'))
         check.tools(('ld', 'objcopy', 'ar', 'mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
         pins = manifest['tools']

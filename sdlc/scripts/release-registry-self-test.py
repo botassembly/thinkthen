@@ -421,6 +421,7 @@ def apple_package_cases():
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, destination)
+        shutil.copytree(REPO / 'sdlc/scripts/release-pack.d', root / 'sdlc/scripts/release-pack.d')
         (root / '.gitignore').write_text('target/\nlibraries/swift/CThinkThen.xcframework/\n')
         subprocess.run(['git', 'init', '-q', str(root)], check=True)
         subprocess.run(['git', 'add', '.'], cwd=root, check=True)

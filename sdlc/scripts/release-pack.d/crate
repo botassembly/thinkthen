@@ -1,0 +1,6 @@
+# The thinkthen crate as cargo publishes it. Rust Polars is its `polars` feature.
+part_crate() {
+	committed crate
+	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen
+	keep "$stage/crate-target/package/thinkthen-$V.crate"
+}

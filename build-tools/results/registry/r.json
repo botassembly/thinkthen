@@ -1,0 +1,12 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/r/thinkthen/src/rust/src/results_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/r/thinkthen/R/inputs-generated.R",
+    "producer": "results"
+  }
+]
