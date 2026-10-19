@@ -69,15 +69,6 @@ impl Engine {
         Err(Error::defect("whole-set preview lost its admitted definition"))
     }
 
-    pub(crate) fn plan_request_summary<'a>(
-        &self,
-        request: &'a AdmittedRequest,
-        environment: RequestEnvironment<'a>,
-    ) -> Result<(crate::core::PlanSummary, bool), Error> {
-        let (summary, dropped, _, _) = self.preview_request(request, environment, false)?;
-        Ok((summary, dropped))
-    }
-
     #[cfg(test)]
     pub(crate) fn plan_annotation_request<'a>(
         &self,

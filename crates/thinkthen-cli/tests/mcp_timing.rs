@@ -211,5 +211,5 @@ fn paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_ov
     std::fs::remove_dir_all(home).unwrap();
 }
 
-#[path = "support/api.rs"]
+#[path = "../../thinkthen/tests/support/api.rs"]
 mod api;

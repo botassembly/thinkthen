@@ -108,7 +108,13 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
                 }),
                 RequestRecoveringRead::Pending => {
                     assert!(Instant::now() < until, "recovering session did not settle");
-                    session.wait(RequestSessionWaitInterest::Settlement, until.saturating_duration_since(Instant::now()));
+                    assert!(matches!(
+                        session.wait(
+                            RequestSessionWaitInterest::Settlement,
+                            until.saturating_duration_since(Instant::now()),
+                        ),
+                        RequestSessionReady::Result | RequestSessionReady::End
+                    ));
                 }
                 RequestRecoveringRead::End => break,
             }
