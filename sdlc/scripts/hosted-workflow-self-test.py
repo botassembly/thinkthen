@@ -1050,7 +1050,7 @@ def smoke_family_cases():
         root = Path(temporary).resolve()
         scripts = root / 'sdlc/scripts'
         scripts.mkdir(parents=True)
-        for name in ('release-smoke', 'scratch.sh', 'verdict.sh', 'compiler-isolation'):
+        for name in ('release-smoke', 'scratch.sh', 'verdict.sh', 'check_verdict.py', 'compiler-isolation'):
             (scripts / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
         (scripts / 'installed.sh').write_text('backend_start() { scratch_dir backend; port=1; }\n')
         (root / 'crates/thinkthen').mkdir(parents=True)
@@ -1079,7 +1079,7 @@ def smoke_family_cases():
             info = tarfile.TarInfo('data.tar.gz')
             info.size = len(payload.getvalue())
             archive.addfile(info, io.BytesIO(payload.getvalue()))
-        for archive in bundle.iterdir():
+        for archive in list(bundle.iterdir()):
             (bundle / (archive.name + '.sha256')).write_text(
                 hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
         home = root / 'home'
