@@ -6,7 +6,7 @@
 use serde::Serialize;
 
 use thinkthen::{CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, FailureCause,
-    PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord, Request, RequestArguments,
+    Error, ErrorKind, PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord, Request, RequestArguments,
     RequestEnvironment, RequestInput, RequestOptions, RequestQuestion};
 use crate::render::json_line;
 
@@ -48,26 +48,28 @@ pub(crate) struct Probe {
 }
 
 /// Prepare the four fixed, typed probes through the native public call family.
-pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Option<Vec<Probe>> {
+pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Result<Vec<Probe>, Error> {
     let names = ["noul", "choice", "score", "mixed"];
     PROBES.iter().zip(names).map(|((structured, set), name)| {
         let arguments = RequestArguments {
-            question: RequestQuestion::Definition { value: QuestionSet::from_json(set).ok()?.into() },
+            question: RequestQuestion::Definition { value: QuestionSet::from_json(set).map_err(|_| broken_probe())?.into() },
             input: if *structured {
-                RequestInput::Json { value: RawRecord::json(OBJECT).ok()?, images: vec![] }
+                RequestInput::Json { value: RawRecord::json(OBJECT).map_err(|_| broken_probe())?, images: vec![] }
             } else {
                 RequestInput::Text { text: TEXT.into(), images: vec![] }
             },
             options: RequestOptions::default(),
         };
-        let request = Request::named("annotate", arguments.clone()).ok()?.admit().ok()?;
+        let request = Request::named("annotate", arguments.clone()).and_then(Request::admit).map_err(|_| broken_probe())?;
         let plan = engine.plan_request(&request, RequestEnvironment {
             controls: CallOptions::new().shared_state_groups(), feed: None,
-        }).ok()?;
-        Some(Probe { name, arguments, drops_detail: plan.drops_detail(), plan,
+        })?;
+        Ok(Probe { name, arguments, drops_detail: plan.drops_detail(), plan,
             warning: detail_warning(backend_name) })
     }).collect()
 }
+
+fn broken_probe() -> Error { Error::new(ErrorKind::Defect, "a check probe no longer parses") }
 
 #[derive(Serialize)]
 struct Said<'a> { model: &'a str, answers: Vec<Outcome>, usage: Option<ReplyUsage> }
