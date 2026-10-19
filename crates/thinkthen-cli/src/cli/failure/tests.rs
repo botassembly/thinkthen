@@ -82,7 +82,7 @@ fn no_plan_document_debug_line_shows_the_evidence() {
         }}
     }}"#)).expect("request").admit().expect("admitted request");
     let plan = engine.plan_request(&request, thinkthen::RequestEnvironment::default()).expect("plan");
-    let body = plan.prepared_requests().next().expect("prepared body").body.to_vec();
+    let body = plan.first_body().expect("prepared body").to_vec();
     let document = crate::plan_document::PlanDocument::of_body(&settings, body).expect("a plan document");
     let shown = format!("{document:?} {document:#?}");
     assert!(!shown.contains(EVIDENCE), "{shown}");
@@ -92,9 +92,9 @@ mod diagnostics;
 
 #[test]
 fn native_backend_causes_keep_command_status_and_sentence() {
-    let listener = conformance_backend::Listener::serving(vec![
-        conformance_backend::Canned::status(302, "{}"),
-    ]).expect("loopback redirect");
+    let listener = conformance_backend::Listener::answering(|_| {
+        conformance_backend::Canned::status(302, "{}")
+    }).expect("loopback redirect");
     let engine = crate::Engine::builder()
         .base_url(listener.base()).expect("loopback address")
         .api_key("command-error-fixture").expect("fixture key")

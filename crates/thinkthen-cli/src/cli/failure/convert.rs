@@ -15,7 +15,7 @@ impl From<Error> for Failure {
             return failure;
         }
         match error.diagnostic() {
-            Some(D::Json(_) | D::Threshold(_) | D::Profile { .. }) => {
+            Some(D::Json(_) | D::Profile { .. }) => {
                 Self::Native(error.kind(), error.to_string())
             }
             Some(diagnostic) => diagnostic_failure(diagnostic, error.retryable()),
@@ -119,7 +119,7 @@ fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
         D::QuestionJson { failure, from_file } => F::Question {
             message: super::json::question(failure), from_file,
         },
-        D::Threshold(error) => F::Native(ErrorKind::Usage, error.to_string()),
+        D::Threshold(error) => F::Native(ErrorKind::Usage, format!("--threshold: {error}")),
         D::Profile { failure, from_file } => F::Native(
             if from_file { ErrorKind::Local } else { ErrorKind::Usage },
             format!("the profile JSON {}", super::profile::reason(failure)),
