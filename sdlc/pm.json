@@ -56,5 +56,5 @@
       "state": "settled"
     }
   ],
-  "ticketsGate": "sh -c 'export PATH=\"/opt/zerobrew/opt/rustup/bin:$HOME/.local/share/thinkthen-0589/python/bin:$HOME/.local/share/thinkthen-0589/toolchain/bin:$HOME/.cargo/bin:$PATH\"; TMPDIR=\"$(python3 -c \"import pathlib, tempfile; print(pathlib.Path(tempfile.gettempdir()).resolve())\")\" && export TMPDIR && sdlc/scripts/lint && sdlc/scripts/test'"
+  "ticketsGate": "sdlc/scripts/job sdlc/scripts/lint && sdlc/scripts/job sdlc/scripts/test"
 }
