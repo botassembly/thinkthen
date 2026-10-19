@@ -18,6 +18,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0582](../sdlc/tickets/0582-one-sql-details-route-per-function.md) adds a separate recovering Request path. `RequestRecoveredRow` retains its original ordinal, canonical successful records or safe error, and the typed logical failure cause when present. Invalid eager input refuses before sending; runtime record failures can remain alongside completed records. Rank, find and relate retain one whole-set invocation. Ordinary Request values and packet shapes retain their existing contracts.
 
+[0612](../sdlc/tickets/0612-answers-in-the-packet.md) adds Rust-owned settled answers to calls and final session packets. `SettledAnswer` fixes each function's value and probability types. `AnswerShape` preserves scalar and collection inputs, and the resolution types retain unresolved readings, failed occurrences and failed annotation members. The opaque original, decision, recognition and relation carriers expose their admitted native values without reading caller evidence again.
+
 [0628](../sdlc/tickets/0628-one-session-queue.md) makes recovery a mode of the shared session queue. `RequestRecoveringSession` delegates ownership to its inner `RequestSession`, whose destructor cancels without joining the worker. The worker retains the shared queue until it settles. The recovering wrapper no longer implements `Drop` itself.
 
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
@@ -353,4 +355,62 @@ type RequestFunction::Err = Error
 type ScoreCall = Call<f64, Vec<CompleteScore>>
 type SetRankCall<T> = Call<Vec<usize>, Vec<CompleteRecord<T, CompleteSetRank>>, Vec<Option<f64>>>
 type TagCall<C> = Call<Vec<C>, Vec<CompleteTags>>
+AnswerResolution::Failed
+AnswerResolution::Resolved
+AnswerResolution::Unresolved
+AnswerResolutions::Members(BTreeMap<String, AnswerResolution>)
+AnswerResolutions::Occurrences(BTreeMap<usize, AnswerResolution>)
+AnswerResolutions::State(AnswerResolution)
+AnswerShape::Collection(Vec<T>)
+AnswerShape::Scalar(T)
+RequestSessionTerminal::answer: Option<SettledAnswer>
+RequestSessionTerminal::resolution: AnswerResolution
+Settled::index: AnswerShape<Option<usize>>
+Settled::pick: AnswerShape<Option<String>>
+Settled::probability: AnswerShape<Option<P>>
+Settled::resolution: AnswerShape<AnswerResolutions>
+Settled::value: AnswerShape<Option<T>>
+SettledAnswer::Annotate(Settled<BTreeMap<String, SettledJudgment>, Option<f64>>)
+SettledAnswer::Choose(Settled<Option<String>, Option<f64>>)
+SettledAnswer::Decide(Settled<SettledDecision, Option<f64>>)
+SettledAnswer::Filter(Settled<Vec<SettledOriginal>, Vec<Option<f64>>>)
+SettledAnswer::Find(Settled<Option<SettledOriginal>, Option<f64>>)
+SettledAnswer::Rank(Settled<Vec<usize>, Vec<Option<f64>>>)
+SettledAnswer::Recognize(Settled<SettledRecognition, Vec<Option<f64>>>)
+SettledAnswer::Relate(Settled<SettledRelations, Vec<Option<f64>>>)
+SettledAnswer::Score(Settled<f64, Option<f64>>)
+SettledAnswer::Tag(Settled<Vec<String>, Option<f64>>)
+SettledJudgment::Choice(Option<String>)
+SettledJudgment::Decision(Option<bool>)
+SettledJudgment::Score(f64)
+SettledJudgment::Tags(Vec<String>)
+const fn CompleteError::resolution(&self) -> &AnswerResolution
+const fn SettledDecision::primitive(&self) -> Option<bool>
+const fn SettledRecognition::source_value(&self) -> Option<&SourceRecognition>
+const fn SettledRecognition::value(&self) -> &Recognized
+enum AnswerResolution
+enum AnswerResolutions
+enum AnswerShape<T>
+enum SettledAnswer
+enum SettledJudgment
+fn Call::answer(&self) -> Option<&SettledAnswer>
+fn SettledDecision::authored(&self) -> Option<QuestionContent<'_>>
+fn SettledOriginal::original(&self) -> &QuestionInput
+fn SettledRelations::source_edges(&self) -> Option<&[SourceRelationEdge]>
+fn SettledRelations::value(&self) -> &[Edge]
+impl Serialize for AnswerResolution
+impl Serialize for AnswerResolutions
+impl Serialize for AnswerShape
+impl Serialize for Settled
+impl Serialize for SettledAnswer
+impl Serialize for SettledDecision
+impl Serialize for SettledJudgment
+impl Serialize for SettledOriginal
+impl Serialize for SettledRecognition
+impl Serialize for SettledRelations
+struct Settled<T, P>
+struct SettledDecision
+struct SettledOriginal
+struct SettledRecognition
+struct SettledRelations
 ```
