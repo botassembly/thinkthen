@@ -63,12 +63,20 @@ scan() {
 	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
 }
 
-# The command: its version line by path, then the no-key block with it first on PATH.
-command_check() {
+# Installed usage checks need the shipped command even when another family
+# owns the job. Unpack it once without running the command family's consumers.
+command_unpack() {
 	prefix=$(mktemp -d "$backend/command.XXXXXX") || return 1
 	tar -xzf "$1" -C "$prefix"
 	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
 		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
+	THINKTHEN_COMMAND=$prefix/thinkthen
+	export THINKTHEN_COMMAND
+}
+
+# The command: its version line by path, then the no-key block with it first on PATH.
+command_check() {
+	command_unpack "$1" || return 1
 	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
 	awk '/^```/ { if (inside) { if (hit) { printf "%s", block; exit } inside = 0; next } inside = 1; block = ""; hit = 0; next }
 		inside { block = block $0 "\n"; if (index($0, "--replay recording")) hit = 1 }' "$README" >"$backend/block"
@@ -101,9 +109,6 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
 	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
-	# Installed surface usage checks read totals with this same shipped command.
-	THINKTHEN_COMMAND=$prefix/thinkthen
-	export THINKTHEN_COMMAND
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.
@@ -265,7 +270,7 @@ for file in "$DIR"/*; do
     esac
 	seen="$seen $surface"
 	case $surface in
-	command) family=command ;;
+	command) family=command; command_archive=$file ;;
 	libraries/go | libraries/cpp) family=go-cpp ;;
 	libraries/swift | libraries/zig) family=swift-zig ;;
 	libraries/php | libraries/dart) family=php-dart ;;
@@ -274,6 +279,7 @@ for file in "$DIR"/*; do
 	databases/postgresql) family=postgresql$major ;;
 	*) family=${surface##*/} ;;
 	esac
+	if [ "$selected_family" = all ] || [ "$selected_family" = "$family" ]; then selected_seen=1; fi
 	set -- "$@" "$surface" "$file" "$family" "${major:-}"
 done
 # Every file the release holds for this target is here.
@@ -285,12 +291,15 @@ for want in $pg_families command libraries/c databases/sqlite databases/duckdb d
 done
 # No selected consumer runs until the whole bundle passes validation.
 [ "$failed" = 0 ] || exit "$failed"
+if [ "$selected_family" != all ]; then
+	[ -n "$selected_seen" ] || { echo "release-smoke: FAIL selected family $selected_family has no consumer"; exit 1; }
+	if [ "$selected_family" != command ]; then command_unpack "$command_archive" || exit 1; fi
+fi
 while [ "$#" -gt 0 ]; do
 	surface=$1 file=$2 family=$3 major=$4
 	shift 4
 	name=${file##*/}
 	[ "$selected_family" = all ] || [ "$selected_family" = "$family" ] || continue
-	selected_seen=1
 	set +e
 	if [ "$surface" = command ]; then
 		command_check "$file"
@@ -317,7 +326,6 @@ while [ "$#" -gt 0 ]; do
 	verdict "$surface $name" "$code" || failed=1
 done
 if [ "$selected_family" != all ]; then
-	[ -n "$selected_seen" ] || { echo "release-smoke: FAIL selected family $selected_family has no consumer"; failed=1; }
 	echo "release-smoke: selected family $selected_family only; complete smoke requires every workflow family"
 fi
 exit "$failed"

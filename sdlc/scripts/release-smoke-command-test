@@ -128,7 +128,7 @@ root, bundle = map(Path, sys.argv[2:4])
 version, target = sys.argv[4:6]
 root.mkdir()
 stage_checkout(Path(sys.argv[1]), root)
-stub_other_surfaces(root, {'databases/sqlite'})
+stub_other_surfaces(root, {'databases/sqlite', 'databases/postgresql'})
 payload = b'installed fixture'
 def tar(path, members, mode='w:gz'):
     packed = tarfile.open(fileobj=path, mode=mode) if isinstance(path, io.BytesIO) else tarfile.open(path, mode)
@@ -154,16 +154,41 @@ cat >"$work/repo/databases/sqlite/check.sh" <<-'EOF'
 	[ "$("$THINKTHEN_COMMAND" status --json)" = '{"usage":{"total":{"requests_sent":17}}}' ]
 	echo 'installed SQLite totals used the extracted command'
 EOF
+cat >"$work/repo/databases/postgresql/check.sh" <<-'EOF'
+	#!/bin/sh
+	set -eu
+	[ -f "$THINKTHEN_ARTIFACT" ]
+	COMMAND=${THINKTHEN_COMMAND:-${CARGO_TARGET_DIR:-target}/debug/thinkthen}
+	[ -x "$COMMAND" ]
+	[ "$("$COMMAND" status --json)" = '{"usage":{"total":{"requests_sent":17}}}' ]
+	echo "installed PostgreSQL $1 totals used the extracted command"
+EOF
 (cd "$work/good/dir" && for file in *.tar.gz *.tgz *.whl *.gem; do
     sha256 "$file" >"$file.sha256"
 done)
-set +e
-CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/target}" \
-    THINKTHEN_COMMAND="$work/no-development-cli" THINKTHEN_README="$work/good.md" \
-	sh "$work/repo/sdlc/scripts/release-smoke" "$work/good/dir" >"$work/out" 2>&1
-code=$?
-set -e
-[ "$code" = 0 ] || { cat "$work/out" >&2; echo "release-smoke command: complete bundle wanted exit 0, got $code" >&2; exit 1; }
-grep -Fqx 'installed SQLite totals used the extracted command' "$work/out" || { cat "$work/out" >&2; exit 1; }
-grep -Fqx "surfaces: pass databases/sqlite thinkthen-sqlite-$version-$target.tar.gz" "$work/out" || { cat "$work/out" >&2; exit 1; }
+for family in all sqlite postgresql16 postgresql17 postgresql18; do
+    set +e
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/target}" THINKTHEN_RELEASE_SMOKE_FAMILY=$family \
+        THINKTHEN_COMMAND="$work/no-development-cli" THINKTHEN_README="$work/good.md" \
+        sh "$work/repo/sdlc/scripts/release-smoke" "$work/good/dir" >"$work/out" 2>&1
+    code=$?
+    set -e
+    [ "$code" = 0 ] || { cat "$work/out" >&2; echo "release-smoke command: complete $family bundle wanted exit 0, got $code" >&2; exit 1; }
+    case $family in
+    all | sqlite)
+        grep -Fqx 'installed SQLite totals used the extracted command' "$work/out" || { cat "$work/out" >&2; exit 1; }
+        grep -Fqx "surfaces: pass databases/sqlite thinkthen-sqlite-$version-$target.tar.gz" "$work/out" || { cat "$work/out" >&2; exit 1; } ;;
+    postgresql*)
+        major=${family#postgresql}
+        grep -Fqx "installed PostgreSQL $major totals used the extracted command" "$work/out" || { cat "$work/out" >&2; exit 1; }
+        [ "$(grep -c 'installed PostgreSQL' "$work/out")" = 1 ] || { cat "$work/out" >&2; exit 1; } ;;
+    esac
+    if [ "$family" != all ]; then
+        if grep -q -e 'surfaces: pass command' -e 'the no-key block printed' "$work/out"; then
+            cat "$work/out" >&2
+            echo "release-smoke command: $family ran command-family checks" >&2
+            exit 1
+        fi
+    fi
+done
 echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home, DuckDB upstream path, backend and token cap cases pinned'

@@ -1067,7 +1067,8 @@ def smoke_family_cases():
         scripts = root / 'sdlc/scripts'
         # Only the isolated consumer leaf and external compiler/backend processes
         # are controlled. All release scripts and their dependencies stay real.
-        (root / 'libraries/c/check.sh').write_text('echo selected-c\nexit "${FAKE_EXIT:-0}"\n')
+        (root / 'libraries/c/check.sh').write_text('[ -x "${THINKTHEN_COMMAND:-}" ] || exit 95\n'
+                                                   'echo selected-c\nexit "${FAKE_EXIT:-0}"\n')
         tools = root / 'fixture-tools'
         tools.mkdir()
         cargo = tools / 'cargo'
@@ -1088,9 +1089,12 @@ def smoke_family_cases():
         archive_names += [f'thinkthen-{version}-fixture.tar.gz', 'thinkthen-first-run.tar.gz', f'thinkthen-{version}.tgz']
         for name in archive_names:
             with tarfile.open(bundle / name, 'w:gz') as archive:
-                info = tarfile.TarInfo('payload')
-                info.size = 7
-                archive.addfile(info, io.BytesIO(b'fixture'))
+                command_archive = name == f'thinkthen-{version}-fixture.tar.gz'
+                data = f'#!/bin/sh\necho thinkthen {version}\n'.encode() if command_archive else b'fixture'
+                info = tarfile.TarInfo('thinkthen' if command_archive else 'payload')
+                info.mode = 0o755 if command_archive else 0o644
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
         with zipfile.ZipFile(bundle / f'thinkthen-{version}.whl', 'w') as archive:
             archive.writestr('payload', 'fixture')
         with tarfile.open(bundle / f'thinkthen-{version}.gem', 'w') as archive:
