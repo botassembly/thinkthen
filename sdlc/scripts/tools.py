@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -20,17 +21,20 @@ SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin'
 def download(url, path, sha256=None):
     """Save HTTP representation bytes before checking a pinned content digest."""
     request = urllib.request.Request(url, headers={'Accept-Encoding': 'identity'})
-    digest = hashlib.sha256()
-    with urllib.request.urlopen(request, timeout=60) as response, path.open('wb') as output:
-        encoding = response.headers.get('Content-Encoding', 'identity').strip().lower()
-        if encoding not in ('identity', 'gzip'):
-            raise RuntimeError('unsupported download content encoding: ' + encoding)
-        with gzip.GzipFile(fileobj=response) if encoding == 'gzip' else response as source:
-            for part in iter(lambda: source.read(1024 * 1024), b''):
-                output.write(part)
-                digest.update(part)
-    if sha256 is not None and digest.hexdigest() != sha256:
-        raise RuntimeError('download checksum differs from tools.json')
+    with tempfile.TemporaryDirectory(prefix='.' + path.name + '-', dir=path.parent) as temporary:
+        staged = Path(temporary) / 'download'
+        digest = hashlib.sha256()
+        with urllib.request.urlopen(request, timeout=60) as response, staged.open('wb') as output:
+            encoding = response.headers.get('Content-Encoding', 'identity').strip().lower()
+            if encoding not in ('identity', 'gzip'):
+                raise RuntimeError('unsupported download content encoding: ' + encoding)
+            with gzip.GzipFile(fileobj=response) if encoding == 'gzip' else response as source:
+                for part in iter(lambda: source.read(1024 * 1024), b''):
+                    output.write(part)
+                    digest.update(part)
+        if sha256 is not None and digest.hexdigest() != sha256:
+            raise RuntimeError('download checksum differs from tools.json')
+        staged.replace(path)
 
 
 def run(argv, env, **kwargs):

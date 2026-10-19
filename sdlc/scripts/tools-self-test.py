@@ -23,18 +23,21 @@ from sdlc.scripts.tools import download
 
 
 class PinnedDownloads(unittest.TestCase):
-    def test_identity_and_gzip_preserve_key_bytes_and_refuse_tampering(self):
+    def test_identity_and_gzip_preserve_representation_and_clean_up_failures(self):
         keys = b'-----BEGIN PGP PUBLIC KEY BLOCK-----\nfixture keys\n'
+        contents = {'keys': keys, 'archive': gzip.compress(b'archive contents')}
         pin = hashlib.sha256(keys).hexdigest()
         requests = []
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
                 requests.append(self.headers.get('Accept-Encoding'))
-                encoding, tampered = self.path.strip('/').split('/')
-                body = keys + (b'tampered' if tampered == 'yes' else b'')
+                encoding, tampered, kind = self.path.strip('/').split('/')
+                body = contents[kind] + (b'tampered' if tampered == 'yes' else b'')
                 if encoding == 'gzip':
                     body = gzip.compress(body)
+                    if tampered == 'malformed':
+                        body = body[:-4]
                 self.send_response(200)
                 self.send_header('Content-Encoding', encoding)
                 self.send_header('Content-Length', str(len(body)))
@@ -44,27 +47,43 @@ class PinnedDownloads(unittest.TestCase):
             def log_message(self, *_):
                 pass
 
+        failures = [('identity/yes', pin, RuntimeError, 'checksum'),
+                    ('gzip/yes', pin, RuntimeError, 'checksum'),
+                    ('identity/no', '0' * 64, RuntimeError, 'checksum'),
+                    ('gzip/no', '0' * 64, RuntimeError, 'checksum'),
+                    ('gzip/malformed', pin, EOFError, 'end-of-stream'),
+                    ('unknown/no', pin, RuntimeError, 'unsupported.*encoding')]
         with HTTPServer(('127.0.0.1', 0), Handler) as server:
             thread = threading.Thread(target=server.serve_forever)
             thread.start()
             try:
                 with tempfile.TemporaryDirectory(prefix='pinned-download-') as folder:
-                    output = Path(folder) / 'keys.asc'
-                    for encoding in ('identity', 'gzip'):
-                        url = f'http://127.0.0.1:{server.server_port}/{encoding}/'
-                        with self.subTest(encoding=encoding):
-                            download(url + 'no', output, pin)
-                            self.assertEqual(output.read_bytes(), keys)
-                            with self.assertRaisesRegex(RuntimeError, 'checksum'):
-                                download(url + 'yes', output, pin)
-                            with self.assertRaisesRegex(RuntimeError, 'checksum'):
-                                download(url + 'no', output, '0' * 64)
-                    with self.assertRaisesRegex(RuntimeError, 'unsupported.*encoding'):
-                        download(f'http://127.0.0.1:{server.server_port}/unknown/no', output, pin)
+                    folder = Path(folder)
+                    output = folder / 'download'
+                    base = f'http://127.0.0.1:{server.server_port}/'
+                    for kind, expected in contents.items():
+                        for encoding in ('identity', 'gzip'):
+                            with self.subTest(kind=kind, encoding=encoding):
+                                download(base + encoding + '/no/' + kind, output,
+                                         hashlib.sha256(expected).hexdigest())
+                                self.assertEqual(output.read_bytes(), expected)
+                                self.assertEqual(list(folder.iterdir()), [output])
+                    for existing in (False, True):
+                        for route, checksum, error, message in failures:
+                            with self.subTest(existing=existing, route=route, checksum=checksum):
+                                output.unlink(missing_ok=True)
+                                if existing:
+                                    output.write_bytes(keys)
+                                with self.assertRaisesRegex(error, message):
+                                    download(base + route + '/keys', output, checksum)
+                                self.assertEqual(list(folder.iterdir()), [output] if existing else [])
+                                if existing:
+                                    self.assertEqual(output.read_bytes(), keys)
             finally:
                 server.shutdown()
                 thread.join()
-        self.assertEqual(requests, ['identity'] * 7)
+        expected_requests = len(contents) * 2 + len(failures) * 2
+        self.assertEqual(requests, ['identity'] * expected_requests)
 
 
 class ToolResolution(unittest.TestCase):
