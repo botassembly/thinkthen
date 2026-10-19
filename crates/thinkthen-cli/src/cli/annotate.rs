@@ -207,7 +207,7 @@ impl<'a> Judging<'a> {
         Ok(Self {
             context: asking::context::shared(arguments.batching.context.as_deref())?,
             context_field: arguments.batching.context_field.clone(),
-            streams: common.framing() != Framing::Document,
+            streams: !matches!(common.framing(), Framing::Document),
             continue_missing: arguments.on_error.is_some(),
             engine,
             common,

@@ -541,8 +541,18 @@ fn image_composition_keeps_the_whole_set_and_refuses_record_projection_controls(
     assert!(row.context.is_none() && row.options.is_none() && row.examples.is_none() && row.seed_spans.is_none());
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener, "liquid", "d1");
-    let question = Question::decide("Same?").unwrap().cut();
-    let plan = engine.plan(&question, [row.original]).unwrap();
+    let request = thinkthen::Request::for_function(thinkthen::RequestFunction::Decide,
+        thinkthen::RequestArguments {
+            question: thinkthen::RequestQuestion::Text { text: "Same?".to_owned() },
+            input: thinkthen::RequestInput::Text {
+                text: images.text().unwrap().to_owned(),
+                images: images.images().iter().map(|image| thinkthen::RequestImage::Bytes {
+                    media: image.media(), bytes: image.bytes().to_vec(),
+                }).collect(),
+            },
+            options: thinkthen::RequestOptions::default(),
+        }).admit().unwrap();
+    let plan = engine.plan_request(&request, thinkthen::RequestEnvironment::default()).unwrap();
     let body: Value = serde_json::from_slice(plan.first_body().unwrap()).unwrap();
     let encoded = body["images"].as_array().unwrap();
     assert_eq!(encoded.len(), 3);

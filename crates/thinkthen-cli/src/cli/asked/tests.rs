@@ -48,7 +48,7 @@ fn caller_setup_tiers_preserve_the_saved_definition_and_native_preview() {
     std::fs::remove_file(path).unwrap();
     assert!(admitted.resolve_question().is_ok());
     let listener = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok("{}")).unwrap();
-    let engine = crate::EngineBuilder::new().base_url(&listener.base()).unwrap()
+    let engine = crate::Engine::builder().base_url(&listener.base()).unwrap()
         .api_key("fixture-key").unwrap().no_cache().build().unwrap();
     let plan = engine.plan_request(&admitted, crate::RequestEnvironment::default()).unwrap();
     assert_eq!(plan.records(), 1);

@@ -80,62 +80,42 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
     }
     macro_rules! row {
         ($rows:expr) => {{
-            let mut rows = $rows.into_iter();
-            let one = rows
-                .next()
-                .ok_or_else(|| Error::new(crate::ErrorKind::Defect, "defect: one input produced no result"))?;
-            if rows.next().is_some() {
-                return Err(Error::new(crate::ErrorKind::Defect, "defect: one input produced extra results"));
+            match $rows.as_slice() {
+                [one] => single_reply(&call, one, failed),
+                rows => Err(Error::new(crate::ErrorKind::Defect, if rows.is_empty() {
+                    "defect: one input produced no result"
+                } else { "defect: one input produced extra results" }).with_facts(call.facts().clone())),
             }
-            Ok(one)
         }};
     }
-    // Map the existing typed value without changing native facts or input carriers.
+    // MCP selects one retained complete row for scalar input. The native answer
+    // and complete facts remain borrowed from the original completed call.
     match call.value() {
-        RequestValue::Decisions(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Decisions(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
-        RequestValue::Choices(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Choices(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
-        RequestValue::Tags(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Tags(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
-        RequestValue::Scores(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Scores(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
-        RequestValue::Annotations(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Annotations(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
-        RequestValue::Recognized(_) => reply(
-            call.try_map(|v| match v {
-                RequestValue::Recognized(rows) => row!(rows),
-                _ => Err(Error::new(crate::ErrorKind::Defect, "defect: result kind changed")),
-            })?,
-            failed,
-        ),
+        RequestValue::Decisions(rows) => row!(rows),
+        RequestValue::Choices(rows) => row!(rows),
+        RequestValue::Tags(rows) => row!(rows),
+        RequestValue::Scores(rows) => row!(rows),
+        RequestValue::Annotations(rows) => row!(rows),
+        RequestValue::Recognized(rows) => row!(rows),
         _ => reply(call, failed),
     }
+}
+fn single_reply<T: Serialize>(call: &Call<RequestValue>, value: &T, failed: bool) -> Result<NativeReply, Error> {
+    #[derive(Serialize)]
+    struct Scalar<'a, T> {
+        value: &'a T,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        answer: Option<&'a crate::SettledAnswer>,
+        facts: crate::CompleteFacts<'a>,
+    }
+    let facts = call.facts().complete().ok_or_else(||
+        Error::new(crate::ErrorKind::Defect, "defect: a completed call has no identity")
+            .with_facts(call.facts().clone()))?;
+    Ok(NativeReply {
+        object: NativeObject::new(&Scalar { value, answer: call.answer(), facts })
+            .map_err(|_| Error::new(crate::ErrorKind::Defect, "defect: native complete call could not be written"))?,
+        failed,
+    })
 }
 fn reply<T: Serialize>(call: Call<T>, failed: bool) -> Result<NativeReply, Error> {
     Ok(NativeReply {

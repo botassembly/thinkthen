@@ -233,7 +233,7 @@ fn details_carry_every_probability_and_request_metadata() {
         .iter()
         .map(|request| crate::support::digest(listener.url(), &request.body))
         .collect();
-    let expected = include_str!("../../fixtures/recognize-detailed.json")
+    let expected = include_str!("../../../../thinkthen/tests/fixtures/recognize-detailed.json")
         .replace("$VERSION", env!("CARGO_PKG_VERSION"))
         .replace("$URL", listener.url())
         .replace("$REQUESTS", &Value::from(keys).to_string())

@@ -339,10 +339,10 @@ impl RankProgress {
     fn observe(&mut self, event: crate::OwnedRecordObservation) {
         match event {
             crate::OwnedRecordObservation::Question { detail, .. } => {
-                self.live |= detail.question_sources().iter()
+                self.live |= detail.detail().question_sources().iter()
                     .any(|source| source.origin() == crate::Origin::Live);
                 if self.failure.is_none() {
-                    self.failure = self.models.check_sources(detail.question_sources().iter()).err();
+                    self.failure = self.models.check_sources(detail.detail().question_sources().iter()).err();
                 }
             }
             crate::OwnedRecordObservation::Row { .. } => {

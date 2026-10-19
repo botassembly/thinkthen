@@ -93,7 +93,7 @@ pub(crate) fn run(
             if common.images() {
                 environment.request_size_selected(tiers.request_size)
             } else {
-                !per_document || common.framing() != Framing::Document
+                !per_document || !matches!(common.framing(), Framing::Document)
             }
         })
         .map(|tiers| environment.request_size(tiers.request_size))

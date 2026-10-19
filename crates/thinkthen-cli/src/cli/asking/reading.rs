@@ -14,7 +14,7 @@ pub(super) fn read_by(
 ) -> Result<Reading, Failure> {
     let on = settled.on.clone();
     let asked = common.framing();
-    if asked != Framing::Document
+    if !matches!(asked, Framing::Document)
         || !keeping.streams_only()
         || common.unit.as_deref() == Some("file")
     {

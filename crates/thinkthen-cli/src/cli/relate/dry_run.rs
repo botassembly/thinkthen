@@ -98,7 +98,7 @@ pub(super) fn write(
         key_env: context.key_env,
         backend_profile: context.profile,
         framing: context.framing,
-        fields: (context.framing != Framing::Lines).then_some(context.fields),
+        fields: (!matches!(context.framing, Framing::Lines)).then_some(context.fields),
         from: context.from,
         entity_count: prepared.entity_count(),
         logical_questions: relations.iter().map(|item| item.logical_questions).sum(),

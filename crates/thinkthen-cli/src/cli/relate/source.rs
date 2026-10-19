@@ -19,7 +19,7 @@ impl Sources {
         let source = self
             .occurrences
             .get(ordinal)
-            .ok_or_else(|| crate::Error::defect("relate lost an occurrence"))?;
+            .ok_or_else(|| crate::Error::new(crate::ErrorKind::Defect, "defect: relate lost an occurrence"))?;
         crate::SourceLocation::new(
             source.file.clone().unwrap_or_default(),
             source.first_line,

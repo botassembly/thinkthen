@@ -52,6 +52,9 @@ unwrap_used = "deny"
 wildcard_imports = "warn"
 
 [dev-dependencies]
+base64 = "=0.22.1"
+sha2 = { version = "0.11", default-features = false }
+rusqlite = { version = "=0.40.2", default-features = false }
 conformance-backend = { path = "../../conformance/backend" }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
 # Ticket 0372: the CA bundle test serves its own TLS. Already in the lock.

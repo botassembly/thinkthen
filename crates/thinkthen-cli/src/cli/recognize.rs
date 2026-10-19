@@ -82,7 +82,7 @@ pub(crate) fn run(
     let admitted = crate::Request::for_function(crate::RequestFunction::Recognize, request_arguments).admit()?;
     let framing = if arguments.common.input.len() > 1
         && arguments.common.unit.is_none()
-        && arguments.common.framing() == Framing::Document
+        && matches!(arguments.common.framing(), Framing::Document)
     {
         Framing::Lines
     } else {

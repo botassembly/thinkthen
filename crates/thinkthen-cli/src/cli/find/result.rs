@@ -80,5 +80,5 @@ fn details(found: &crate::CompleteFound<crate::QuestionInput>, authored_model: O
         else { fields.retain(|(name, _)| name != "model"); }
     }
     question.1 = crate::saved_json::Json::made(crate::saved_json::Kind::Object(fields));
-    json_line(&crate::saved_json::Json::made(crate::saved_json::Kind::Object(members)))
+    json_line(&crate::saved_json::Json::made(crate::saved_json::Kind::Object(members))).map_err(Failure::from)
 }

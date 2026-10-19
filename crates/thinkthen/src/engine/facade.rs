@@ -10,8 +10,6 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[cfg(test)]
-use crate::core::Plan;
 use crate::core::recording::Digest;
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value,

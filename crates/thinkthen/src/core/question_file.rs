@@ -443,8 +443,6 @@ mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;
 pub(crate) use crate::core::question_file::resolve::{Cutting, Typed, resolve};
-#[cfg(test)]
-pub(crate) use crate::core::question_file::resolve::{Resolved, Sources};
 use fields::{labels_in, meaning, model_in, pointers_in, question_text, threshold_in};
 use profile::profile_in;
 

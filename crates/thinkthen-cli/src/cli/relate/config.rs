@@ -80,9 +80,9 @@ pub(super) fn settle(arguments: &RelateArguments, admitted: &mut AdmittedRequest
         }
     }
     let framing = if arguments.common.input.len() > 1 && arguments.common.unit.is_none()
-        && arguments.common.framing() == Framing::Document { Framing::Lines }
+        && matches!(arguments.common.framing(), Framing::Document) { Framing::Lines }
         else { arguments.common.framing() };
-    if framing == Framing::Lines && (!arguments.common.field.is_empty() || arguments.kind_field.is_some()) {
+    if matches!(framing, Framing::Lines) && (!arguments.common.field.is_empty() || arguments.kind_field.is_some()) {
         return Err(Failure::Usage("--lines takes neither --field nor --kind-field"));
     }
     let top = authored.as_ref();

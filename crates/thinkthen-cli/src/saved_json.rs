@@ -115,6 +115,7 @@ impl Serialize for Json {
 #[derive(Debug)]
 pub(crate) struct Pointer(String);
 impl Pointer {
+    pub(crate) fn as_str(&self) -> &str { &self.0 }
     pub(crate) fn new(text: impl Into<String>) -> Result<Self, Error> {
         let text = text.into();
         thinkthen::validate_pointer(&text)?;

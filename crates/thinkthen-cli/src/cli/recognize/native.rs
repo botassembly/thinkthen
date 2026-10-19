@@ -150,7 +150,7 @@ pub(super) fn run(
                     }
                     Some(crate::asking::native_reader::Read::Item(Ok((ordinal, frame)))) => {
                         compose(ordinal, frame).map_err(|error| FeedRead::Failed(
-                            super::examples::at_record(error, ordinal).into_error().at_record(ordinal)))
+                            super::examples::at_record(error, ordinal).into_error()))
                     }
                     _ => Err(FeedRead::End),
                 }
@@ -271,7 +271,7 @@ fn located_line(
     if streams {
         json_line(&RecordValue { input: record, value }).map_err(Failure::from)
     } else {
-        crate::cli::intake::source_value(text, &json_line(&value)?, position)
+        crate::cli::intake::source_value(&text, &json_line(&value)?, position)
     }
 }
 

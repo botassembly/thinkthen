@@ -28,8 +28,6 @@ pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join
 pub(crate) use crate::core::adapters::systemone::response::decode;
 pub(crate) use crate::core::adapters::systemone::response::{decode_answers, decode_questions};
 
-#[cfg(test)]
-pub(crate) use crate::core::adapters::systemone::response::decode_observed;
 
 /// The name this adapter answers to, in the recording key and the entry.
 ///
