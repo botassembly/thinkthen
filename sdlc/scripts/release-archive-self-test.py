@@ -19,6 +19,8 @@ import zipfile
 
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import child_env
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
@@ -323,7 +325,8 @@ end
             archives.append(archive)
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
-        env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        # Keep the routine gate's declared tools while dropping ambient credentials.
+        env = child_env(home=root, LC_ALL="C")
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)
         wanted = template.replace("$version", version)
