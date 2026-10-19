@@ -8990,6 +8990,7 @@
 78 tt-n-edefect-k value 6.
 78 tt-n-elocal-k value 4.
 78 tt-n-eusage-k value 1.
+78 tt-n-interface-number-k value 1.
 78 tt-n-load-atomic-v1-k value 1.
 78 tt-n-load-dynamic-choose-v1-k value 3.
 78 tt-n-load-find-v1-k value 8.
