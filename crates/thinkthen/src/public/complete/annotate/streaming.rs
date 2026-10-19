@@ -16,6 +16,24 @@ struct Original<T> {
     prepared: Prepared,
     missing_pointer: bool,
 }
+impl<T> Original<T> {
+    fn prepared(&self, barrier: &AtomicBool) -> Prepared {
+        // Arm only when this actual input is fed, never while an eager reader
+        // preflights later originals before the pull starts.
+        if self.missing_pointer {
+            barrier.store(true, Ordering::Release);
+        }
+        Prepared {
+            explicit_context: self.prepared.explicit_context,
+            text: Text {
+                at: self.prepared.text.at,
+                input: self.prepared.text.input.clone(),
+            },
+            context: self.prepared.context.clone(),
+        }
+    }
+}
+
 impl Engine {
     pub(crate) fn annotate_stream<'a, I, T>(
         &self,
@@ -116,19 +134,7 @@ impl Engine {
             asker,
             records,
             Box::new(move |_, original: &Original<T>| {
-                // Arm only when this actual input is fed, never while an eager
-                // reader preflights later originals before the pull starts.
-                if original.missing_pointer {
-                    preparing_barrier.store(true, Ordering::Release);
-                }
-                Ok(Prepared {
-                    explicit_context: original.prepared.explicit_context,
-                    text: Text {
-                        at: original.prepared.text.at,
-                        input: original.prepared.text.input.clone(),
-                    },
-                    context: original.prepared.context.clone(),
-                })
+                Ok(original.prepared(&preparing_barrier))
             }),
             Box::new(move |stop, at, original, row| {
                 let original = match original {

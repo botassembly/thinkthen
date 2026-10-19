@@ -122,10 +122,10 @@ impl Queue {
         }
         if let Err(error) = controls.reader_admission() {
             state.intake_closed = true;
-            return Read::Item(Err(error));
+            return Read::Item(Box::new(Err(error)));
         }
         if let Some(item) = state.input.take() {
-            return Read::Item(Ok(item));
+            return Read::Item(Box::new(Ok(item)));
         }
         if let Some(failure) = &mut state.finish {
             let error = match failure {
@@ -133,7 +133,7 @@ impl Queue {
                 Finish::Native(error) => error.take(),
             };
             state.intake_closed = true;
-            return error.map_or(Read::End, |error| Read::Item(Err(error)));
+            return error.map_or(Read::End, |error| Read::Item(Box::new(Err(error))));
         }
         Read::Pending
     }
@@ -292,7 +292,7 @@ impl Queue {
             match self.take_input(&mut state, controls) {
                 super::session_input::Read::Item(item) => {
                     self.notify();
-                    return Some(item);
+                    return Some(*item);
                 }
                 super::session_input::Read::End => {
                     self.notify();

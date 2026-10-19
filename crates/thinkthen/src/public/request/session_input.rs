@@ -4,7 +4,7 @@ use crate::{CallOptions, Error};
 
 pub(super) enum Read {
     Pending,
-    Item(Result<RequestSessionDescriptor, Error>),
+    Item(Box<Result<RequestSessionDescriptor, Error>>),
     End,
 }
 
@@ -49,7 +49,7 @@ impl Logical {
                 );
                 return (true, false, false);
             }
-            Read::Item(value) => value.and_then(|value| self.decoder.descriptor(value)),
+            Read::Item(value) => (*value).and_then(|value| self.decoder.descriptor(value)),
         };
         match result {
             Ok(None) => (false, false, true),

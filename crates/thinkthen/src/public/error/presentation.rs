@@ -326,10 +326,6 @@ impl Error {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one exhaustive native-cause projection keeps diagnostic facts together"
-)]
 fn engine(error: &Native) -> ErrorDiagnostic<'_> {
     use ErrorDiagnostic as D;
     match error {
@@ -500,35 +496,39 @@ mod input_json_tests {
                 (crate::core::Framing::Document, true),
                 (crate::core::Framing::Jsonl, false),
             ] {
-                let reading = crate::core::Reading::new(
-                    framing,
-                    vec![crate::core::Pointer::new("/evidence").expect("pointer")],
-                )
-                .expect("reading");
-                let cause = reading.record(text.as_bytes()).expect_err("malformed JSON");
-                let error = Error::refused(cause);
-                let diagnostic = error.diagnostic().expect("retained native cause");
-                let (line, column) = match diagnostic {
-                    ErrorDiagnostic::InputJson { line, column } if document => (line, column),
-                    ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column })
-                        if !document =>
-                    {
-                        (line, column)
-                    }
-                    other => panic!("unexpected diagnostic: {other:?}"),
-                };
-                assert_eq!(line, if text.is_empty() { 1 } else { 2 });
-                assert_eq!(column == 0, text.is_empty());
-                for shown in [
-                    format!("{error:?}"),
-                    error.to_string(),
-                    format!("{:?}", error.diagnostic()),
-                    serde_json::to_string(&error.complete()).expect("safe error document"),
-                ] {
-                    assert!(!shown.contains(marker));
-                }
-                assert!(std::error::Error::source(&error).is_none());
+                assert_safe_syntax(&text, framing, document, marker);
             }
         }
     }
+    fn assert_safe_syntax(text: &str, framing: crate::core::Framing, document: bool, marker: &str) {
+        let reading = crate::core::Reading::new(
+            framing,
+            vec![crate::core::Pointer::new("/evidence").expect("pointer")],
+        )
+        .expect("reading");
+        let cause = reading.record(text.as_bytes()).expect_err("malformed JSON");
+        let error = Error::refused(cause);
+        let diagnostic = error.diagnostic().expect("retained native cause");
+        let (line, column) = match diagnostic {
+            ErrorDiagnostic::InputJson { line, column } if document => (line, column),
+            ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column })
+                if !document =>
+            {
+                (line, column)
+            }
+            other => panic!("unexpected diagnostic: {other:?}"),
+        };
+        assert_eq!(line, if text.is_empty() { 1 } else { 2 });
+        assert_eq!(column == 0, text.is_empty());
+        for shown in [
+            format!("{error:?}"),
+            error.to_string(),
+            format!("{:?}", error.diagnostic()),
+            serde_json::to_string(&error.complete()).expect("safe error document"),
+        ] {
+            assert!(!shown.contains(marker));
+        }
+        assert!(std::error::Error::source(&error).is_none());
+    }
+
 }

@@ -32,6 +32,8 @@ pub(crate) fn continue_annotation(
     catch_unwind(AssertUnwindSafe(|| callback(ordinal, pointer))).unwrap_or(false)
 }
 
+type AnnotationContinuation<'a> = &'a (dyn Fn(usize, &str) -> bool + Sync);
+
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
 
@@ -123,7 +125,7 @@ pub struct CallOptions<'a> {
     pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) shared_state_groups: bool,
-    pub(in crate::public) annotation_missing: Option<&'a (dyn Fn(usize, &str) -> bool + Sync)>,
+    pub(in crate::public) annotation_missing: Option<AnnotationContinuation<'a>>,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
     // entity admission without wire controls.

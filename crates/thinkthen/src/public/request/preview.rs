@@ -145,12 +145,7 @@ impl Engine {
             super::inline::validate_composed(&reading_definition, options, &row)
                 .map_err(|error| error.at_record(at))?;
             if annotation && let RequestDefinition::Annotate(set) = &definition {
-                dropped |= set.0.questions().iter().any(|question| {
-                    crate::core::adapters::built_in::drops_detail_of(
-                        engine.backend().descriptions(),
-                        question.question(),
-                    )
-                });
+                dropped |= annotation_drops_detail(&engine, set);
                 return crate::public::complete::annotation_preview_asks(
                     &engine, set, row, &controls, at,
                 )
@@ -293,4 +288,13 @@ fn route_preview<'a>(
         Ok(row)
     });
     Ok((definition, Box::new(rows), controls))
+}
+
+fn annotation_drops_detail(engine: &crate::engine::facade::Engine, set: &crate::QuestionSet) -> bool {
+    set.0.questions().iter().any(|question| {
+        crate::core::adapters::built_in::drops_detail_of(
+            engine.backend().descriptions(),
+            question.question(),
+        )
+    })
 }

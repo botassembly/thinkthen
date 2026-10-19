@@ -299,45 +299,7 @@ fn admit_options(
             Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
         })?;
     }
-    if options.instructions.is_some() || options.entity_definition.is_some() {
-        if function != Function::Recognize {
-            return Err(Error::usage("recognition wording belongs to recognize"));
-        }
-        for value in [&options.instructions, &options.entity_definition]
-            .into_iter()
-            .flatten()
-        {
-            crate::core::QuestionText::new(value).map_err(Error::refused)?;
-        }
-    }
-    if let Some(limit) = options.max_text_bytes {
-        if function != Function::Recognize {
-            return Err(Error::usage("max text bytes belongs to recognize"));
-        }
-        if limit == 0 {
-            return Err(Error::usage("max text bytes must be positive"));
-        }
-    }
-    if options.mode.is_some() && function != Function::Recognize {
-        return Err(Error::usage("mode belongs to recognize"));
-    }
-    if let Some(rule) = &options.relation_threshold
-        && (function != Function::Recognize || !rule.native()?.is_cut())
-    {
-        return Err(Error::usage("relation threshold is a recognize single cut"));
-    }
-    if let Some(value) = options.snippet_pieces {
-        usize::try_from(value)
-            .map_err(|_| Error::usage("snippet pieces must be representable by the host"))?;
-    }
-    if let Some(mode) = options.mode {
-        mode.validate_controls(
-            false,
-            options.relation_threshold.is_some(),
-            &options.stage_context.clone().unwrap_or_default(),
-        )
-        .map_err(Error::refused)?;
-    }
+    admit_recognition_controls(function, options)?;
     if let Some(rule) = &options.threshold {
         if !function.allows_option("threshold") {
             return Err(Error::usage("this function does not accept this threshold")
@@ -390,6 +352,49 @@ fn admit_options(
         crate::CallOptions::new().deadline_ms(ms)?;
     }
     admit_pointers(options)
+}
+
+fn admit_recognition_controls(function: Function, options: &RequestOptions) -> Result<(), Error> {
+    if options.instructions.is_some() || options.entity_definition.is_some() {
+        if function != Function::Recognize {
+            return Err(Error::usage("recognition wording belongs to recognize"));
+        }
+        for value in [&options.instructions, &options.entity_definition]
+            .into_iter()
+            .flatten()
+        {
+            crate::core::QuestionText::new(value).map_err(Error::refused)?;
+        }
+    }
+    if let Some(limit) = options.max_text_bytes {
+        if function != Function::Recognize {
+            return Err(Error::usage("max text bytes belongs to recognize"));
+        }
+        if limit == 0 {
+            return Err(Error::usage("max text bytes must be positive"));
+        }
+    }
+    if options.mode.is_some() && function != Function::Recognize {
+        return Err(Error::usage("mode belongs to recognize"));
+    }
+    if let Some(rule) = &options.relation_threshold
+        && (function != Function::Recognize || !rule.native()?.is_cut())
+    {
+        return Err(Error::usage("relation threshold is a recognize single cut"));
+    }
+    if let Some(value) = options.snippet_pieces {
+        usize::try_from(value)
+            .map_err(|_| Error::usage("snippet pieces must be representable by the host"))?;
+    }
+    if let Some(mode) = options.mode {
+        mode.validate_controls(
+            false,
+            options.relation_threshold.is_some(),
+            &options.stage_context.clone().unwrap_or_default(),
+        )
+        .map_err(Error::refused)?;
+    }
+    Ok(())
 }
 
 fn admit_pointers(options: &RequestOptions) -> Result<(), Error> {
