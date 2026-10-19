@@ -65,7 +65,8 @@ ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
     # Ticket 0372: rustls serves the CA bundle test's own TLS.
     "thinkthen": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
-    "thinkthen-cli": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
+    # Command integration tests own their cache fixtures, hashes and image encoding.
+    "thinkthen-cli": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook", "rusqlite", "sha2", "base64"},
     "conformance-backend": set(),
     "thinkthen-host": set(),
 }
