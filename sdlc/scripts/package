@@ -85,6 +85,15 @@ CARGO_TARGET_DIR="$built" THINKTHEN_TEST_BACKEND="$REPO/target/debug/conformance
     python3 libraries/rust/check.py "$REPO" "$source" >"$isolated/native-source.log"
 cp "$isolated/install/bin/thinkthen" "$isolated/thinkthen"
 scratch_remove "$source" && scratch_remove "$built"
+# Qualify the same installed executable through the existing command entrypoints.
+# The source/build folders that produced it are already gone.
+. sdlc/scripts/installed.sh
+backend_start
+unset THINKTHEN_CONFORMANCE_IDS
+sh conformance/check-cli.sh "$port" "$isolated/thinkthen" 3>&-
+sh sdlc/scripts/spec "$isolated/thinkthen" 3>&-
+THINKTHEN_COMMAND="$isolated/thinkthen" \
+    cargo test --locked --offline --package thinkthen-cli --test mcp_stdio 3>&-
 names='band calibration compare cost counts monitor score sweep triage trials'
 (
 	cd -- "$isolated/empty"
