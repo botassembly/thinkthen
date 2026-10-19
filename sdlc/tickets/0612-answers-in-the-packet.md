@@ -18,6 +18,8 @@ Reviews: revision f3658c9, accept
 
 Reviews: revision 85768f1, accept
 
+Reviews: revision e36fd80, accept
+
 ## Outcome
 
 - The final packet of every call carries the call's settled answer, computed in Rust: the bare value (scalar, collection or aggregate, following the caller's input shape), the probability, the pick or selected index, and the resolution state. Resolution separates an unresolved answer from a failed answer.
