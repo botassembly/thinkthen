@@ -317,7 +317,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
-        Failure::Status(413) => (4, status::too_large(false, SizeAdvice::Text)),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Provider { cause, diagnostic } => provider_message(cause, diagnostic),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
@@ -375,6 +374,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     }
     Some(match failure {
         Failure::Table(error) => table_message(error),
+        Failure::Status(413) => (4, status::too_large(false, SizeAdvice::Text)),
         Failure::TokenLimit => (4, status::too_large(true, SizeAdvice::Text)),
         Failure::RequestTooLarge { tokens, advice } => (4, status::too_large(*tokens, *advice)),
         Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
