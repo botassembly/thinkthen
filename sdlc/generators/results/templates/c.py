@@ -1,7 +1,7 @@
 """Complete immutable C packet views from the shared Rust-derived schema IR."""
 import json
 import re
-from union_shapes import predicate
+from union_shapes import predicate, ungroup
 
 
 def ident(value):
@@ -200,7 +200,7 @@ class Target:
             for kind in source['primitive_variants']:
                 schema = source.get('primitive_schemas', {}).get(kind, {'type': kind})
                 typ, read = ('u32', '0') if kind == 'null' else self.shape(schema, key + '_' + kind, 'node')
-                alternatives.append((kind, predicate(schema, self.definitions, 'node', 'rust'), typ, read))
+                alternatives.append((kind, ungroup(predicate(schema, self.definitions, 'node', 'rust')), typ, read))
             self.union(key, alternatives)
         elif 'enum' in source:
             self.structure(name, [('kind', 'u32')])

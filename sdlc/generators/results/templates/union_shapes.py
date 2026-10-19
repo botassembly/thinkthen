@@ -2,6 +2,11 @@
 import json
 
 
+def ungroup(expression):
+    """Remove one outer group where the target syntax already supplies one."""
+    return expression[1:-1] if expression.startswith('(') and expression.endswith(')') else expression
+
+
 def predicate(schema, definitions, expression, target, depth=0):
     if schema is True or schema == {}:
         return 'true'
@@ -14,8 +19,11 @@ def predicate(schema, definitions, expression, target, depth=0):
     if isinstance(kinds, list):
         alternatives = [{**schema, 'type': kind} for kind in kinds]
     if alternatives:
-        return '(' + ' || '.join(predicate(item, definitions, expression, target, depth)
-                                 for item in alternatives) + ')'
+        terms = list(dict.fromkeys(predicate(item, definitions, expression, target, depth)
+                                   for item in alternatives))
+        if 'true' in terms:
+            return 'true'
+        return terms[0] if len(terms) == 1 else '(' + ' || '.join(terms) + ')'
     if 'variants' in schema or 'properties' in schema:
         kinds = 'object'
     if kinds is None and isinstance(schema.get('const'), str):
@@ -46,10 +54,12 @@ def predicate(schema, definitions, expression, target, depth=0):
     if kinds == 'array':
         item = f'union_item_{depth}'
         inner = predicate(schema.get('items', {}), definitions, item, target, depth + 1)
+        if inner == 'true':
+            return check
         if target == 'csharp':
             return f'({check} && {expression}.EnumerateArray().All({item} => {inner}))'
         if target == 'rust':
-            return f'({check} && {expression}.array().is_ok_and(|items| items.iter().all(|{item}| {inner})))'
+            return f'({check} && {expression}.array().is_ok_and(|items| items.iter().all(|{item}| {ungroup(inner)})))'
         if target == 'java':
             return f'({check} && ((List<?>){expression}).stream().allMatch({item} -> {inner}))'
         return f'({check} && (^BOOL {{ for (id {item} in (NSArray *){expression}) {{ if (!({inner})) return NO; }} return YES; }})())'
