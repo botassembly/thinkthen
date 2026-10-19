@@ -4,6 +4,8 @@ The repository gate and its hand-run support scripts.
 
 Launch every targeted check through `pm job run TICKET SHA -- sdlc/scripts/job CHECK [ARG...]`. Developer briefs use this form too. The job entrypoint resolves the declared tools, selects the pinned Python and resolves `TMPDIR` before executing the command with its original arguments and exit status. Keep PATH, Python and TMPDIR setup in this entrypoint; job commands need no environment setup. The routine landing command lives in `../pm.json` under `ticketsGate`.
 
+The routine command is `sdlc/scripts/job sdlc/scripts/gate`. The existing `gate` runs lint and tests through `linux-check` in the pinned Linux container, then runs the native tests on macOS for Apple-only behavior. The job entrypoint supplies the environment for that routing.
+
 The entrypoint uses the command's basename as its initial tool group when that name is a group, library or database declared in the manifest. Other commands start with the manifest's `common` tools. Checks still own their scoped requirements through `resolved-tools`. In particular, `job sdlc/scripts/lint` selects the full `lint` group and refuses a missing declared compiler before starting lint.
 
 [`../tools.json`](../tools.json) declares gate and library tools, versions and supported platforms. Native test and library checks also enter through `resolved-tools`. The resolver starts with system folders, installs macOS tools under the checkout’s ignored `.tools` folder, and refuses all missing tools together before starting the requested command. Dependency caches may be reused; executable tool paths come from the job folder. Every selected tool must satisfy the manifest's admission rules on the current host.

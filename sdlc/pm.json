@@ -56,5 +56,5 @@
       "state": "settled"
     }
   ],
-  "ticketsGate": "sdlc/scripts/job sdlc/scripts/lint && sdlc/scripts/job sdlc/scripts/test"
+  "ticketsGate": "sdlc/scripts/job sdlc/scripts/gate"
 }
