@@ -114,21 +114,38 @@ expect 1 'release-smoke: the no-key block sent 1 requests to the loopback backen
 plant cap-ignored true : :
 expect 1 "release-smoke: the token cap exited 4 with ''" cap-ignored good
 
-# Exercise the ordinary release dispatch after command_check, with no development CLI.
-# Only the surface body is planted; the release driver, backend and extracted CLI are real.
-mkdir -p "$work/repo/sdlc/scripts" "$work/repo/databases/sqlite"
-for entry in "$repo"/* "$repo"/.[!.]*; do
-	[ -e "$entry" ] || continue
-	case ${entry##*/} in sdlc|databases) continue ;; esac
-	ln -s "$entry" "$work/repo/${entry##*/}"
-done
-for entry in "$repo/sdlc"/*; do
-	[ "${entry##*/}" = scripts ] || ln -s "$entry" "$work/repo/sdlc/${entry##*/}"
-done
-for entry in "$repo/sdlc/scripts"/*; do
-	[ "${entry##*/}" = release-smoke ] || ln -s "$entry" "$work/repo/sdlc/scripts/${entry##*/}"
-done
-cp "$repo/sdlc/scripts/release-smoke" "$work/repo/sdlc/scripts/"
+# Exercise ordinary release dispatch with a complete bundle and no development CLI.
+# Keep the real checkout and driver; isolate unrelated consumer leaves only.
+python3 - "$repo" "$work/repo" "$work/good/dir" "$version" "$target" <<'PYFIXTURE'
+import io
+from pathlib import Path
+import sys
+import tarfile
+import zipfile
+sys.path.insert(0, sys.argv[1])
+from conformance.source_fixtures import stage_checkout, stub_other_surfaces
+root, bundle = map(Path, sys.argv[2:4])
+version, target = sys.argv[4:6]
+root.mkdir()
+stage_checkout(Path(sys.argv[1]), root)
+stub_other_surfaces(root, {'databases/sqlite'})
+payload = b'installed fixture'
+def tar(path, members, mode='w:gz'):
+    packed = tarfile.open(fileobj=path, mode=mode) if isinstance(path, io.BytesIO) else tarfile.open(path, mode)
+    with packed as archive:
+        for name, data in members.items():
+            entry = tarfile.TarInfo(name)
+            entry.size = len(data)
+            archive.addfile(entry, io.BytesIO(data))
+for family in ('c', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18'):
+    tar(bundle / f'thinkthen-{family}-{version}-{target}.tar.gz', {'payload': payload})
+tar(bundle / f'thinkthen-{version}.tgz', {'payload': payload})
+with zipfile.ZipFile(bundle / f'thinkthen-{version}.whl', 'w') as archive:
+    archive.writestr('payload', payload)
+data = io.BytesIO()
+tar(data, {'payload': payload})
+tar(bundle / f'thinkthen-{version}.gem', {'data.tar.gz': data.getvalue()}, mode='w')
+PYFIXTURE
 cat >"$work/repo/databases/sqlite/check.sh" <<-'EOF'
 	#!/bin/sh
 	set -eu
@@ -137,14 +154,16 @@ cat >"$work/repo/databases/sqlite/check.sh" <<-'EOF'
 	[ "$("$THINKTHEN_COMMAND" status --json)" = '{"usage":{"total":{"requests_sent":17}}}' ]
 	echo 'installed SQLite totals used the extracted command'
 EOF
-tar -czf "$work/good/dir/thinkthen-sqlite-$version-$target.tar.gz" -C "$work/good/sample" thinkthen-first-run
-(cd "$work/good/dir" && sha256 "thinkthen-sqlite-$version-$target.tar.gz" >"thinkthen-sqlite-$version-$target.tar.gz.sha256")
+(cd "$work/good/dir" && for file in *.tar.gz *.tgz *.whl *.gem; do
+    sha256 "$file" >"$file.sha256"
+done)
 set +e
-THINKTHEN_COMMAND="$work/no-development-cli" THINKTHEN_README="$work/good.md" \
+CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/target}" \
+    THINKTHEN_COMMAND="$work/no-development-cli" THINKTHEN_README="$work/good.md" \
 	sh "$work/repo/sdlc/scripts/release-smoke" "$work/good/dir" >"$work/out" 2>&1
 code=$?
 set -e
-[ "$code" = 1 ] || { cat "$work/out" >&2; echo "release-smoke command: partial bundle wanted exit 1, got $code" >&2; exit 1; }
+[ "$code" = 0 ] || { cat "$work/out" >&2; echo "release-smoke command: complete bundle wanted exit 0, got $code" >&2; exit 1; }
 grep -Fqx 'installed SQLite totals used the extracted command' "$work/out" || { cat "$work/out" >&2; exit 1; }
 grep -Fqx "surfaces: pass databases/sqlite thinkthen-sqlite-$version-$target.tar.gz" "$work/out" || { cat "$work/out" >&2; exit 1; }
 echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home, DuckDB upstream path, backend and token cap cases pinned'

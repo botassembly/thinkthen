@@ -25,6 +25,8 @@ import yaml
 from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
@@ -360,10 +362,8 @@ def jvm_contract_cases():
     """Read scalar fields and propagate inventory failures through the workflow steps."""
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
-        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, root / name)
-        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        stage_checkout(REPO, root)
+        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output"), "RUNNER_TEMP": str(root)}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
         for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
@@ -385,7 +385,7 @@ def jvm_contract_cases():
                 result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
                                         cwd=root, env=env, capture_output=True, text=True)
                 if broken:
-                    assert result.returncode != 0 and "invalid literal for int()" in result.stderr, result
+                    assert result.returncode != 0 and "invalid literal for int()" in result.stdout + result.stderr, result
                     assert output.read_text() == "", output.read_text()
                 else:
                     assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
