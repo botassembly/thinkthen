@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision bd47e44, accept
+
 ## Outcome
 
 - Changes: `site/public/install.sh`, `site/public/install.ps1`, `site/package.json`, `site/scripts/copy-installers.mjs`, `sdlc/scripts/versions`, `sdlc/scripts/windows-installer-test.py`, `sdlc/planning/release-process.md`.
