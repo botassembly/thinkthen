@@ -287,6 +287,7 @@ def host_functions(code, family):
         literals = (r'(?:br|r)(?P<hashes>\#*)"[\s\S]*?"(?P=hashes)|'
                     r'"(?:\\[\s\S]|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
     functions = set()
+    named_requests = {}
     if family == 'cobol':
         # Match CALL operands before masking other literals, including DISPLAY text.
         operands = r'\bCALL\s+["\'](?:thinkthen_|tt_)' + FUNCTION_NAMES + r'["\'](?=\s+USING\b)'
@@ -305,6 +306,14 @@ def host_functions(code, family):
                     functions.add(function)
             except (ValueError, TypeError, KeyError):
                 pass
+            # A blocking call's literal name belongs to its explicit request record.
+            # Count it only when that exact record is passed to the exported call.
+            declaration = re.search(r'\bthinkthen_named_request_v1\s+(\w+)\s*=\s*\{\s*\.function\s*=\s*\{\s*$',
+                                    code[:token.start()])
+            if declaration:
+                name = json.loads(token[0])
+                if isinstance(name, str) and re.fullmatch(FUNCTION_NAMES, name):
+                    named_requests[declaration[1]] = name
         return ' '
     if family == 'crate':
         # Rust block comments nest, and their contents are never string tokens.
@@ -328,6 +337,10 @@ def host_functions(code, family):
         code = ''.join(pieces)
     else:
         code = re.sub(literals + '|' + comments, mask, code)
+    if family == 'c':
+        for request in re.findall(r'\bthinkthen_run_call\s*\(\s*[^,;]+,\s*&\s*(\w+)\s*,', code):
+            if request in named_requests:
+                functions.add(named_requests[request])
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
     generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?\']+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''

@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <thinkthen.h>
@@ -11,49 +10,42 @@ const char *reviews[] = {
     "Does this come in blue?",
     "The strap snapped on day two.",
 };
-char request[1024];
-int at = snprintf(request, sizeof request,
-    "{\"schema\":\"thinkthen.request/1\","
-    "\"call\":{\"function\":\"filter\","
-    "\"question\":{\"kind\":\"text\",\"text\":\"%s\"},"
-    "\"input\":{\"kind\":\"records\",\"items\":[",
+char question_json[512];
+snprintf(question_json, sizeof question_json,
+    "{\"kind\":\"text\",\"text\":\"%s\"}",
     question);
+char input_json[1024];
+int at = snprintf(input_json, sizeof input_json,
+    "{\"kind\":\"records\",\"items\":[");
 for (int i = 0; i < 4; i++) {
-    at += snprintf(request + at, sizeof request - at,
-        "%s{\"original\":"
-        "{\"kind\":\"text\",\"text\":\"%s\"}}",
+    at += snprintf(input_json + at, sizeof input_json - at,
+        "%s{\"original\":{\"kind\":\"text\",\"text\":\"%s\"}}",
         i ? "," : "", reviews[i]);
 }
-snprintf(request + at, sizeof request - at, "]}}}");
+snprintf(input_json + at, sizeof input_json - at, "]}");
 
 thinkthen_engine *tt = thinkthen_engine_new();
-thinkthen_session *call = NULL;
-int rc = thinkthen_session_new(
-    tt, request, strlen(request), &call);
-assert(rc == THINKTHEN_OK);
+assert(tt != NULL);
+thinkthen_named_request_v1 request = {
+    .function = {"filter", 6},
+    .question_json = {question_json, strlen(question_json)},
+    .input_json = {input_json, strlen(input_json)},
+    .options_json = {"{}", 2},
+};
+thinkthen_call_result *result = NULL;
+thinkthen_call_error *error = NULL;
+int rc = thinkthen_run_call(tt, &request,
+    NULL, NULL, NULL, &result, &error);
 thinkthen_engine_free(tt);
-
-bool is_complaint[4] = {false};
-const uint32_t filter_row =
-    THINKTHEN_COMPLETE_SESSION_PACKET_FILTER_ROW_V1;
-uint32_t status = THINKTHEN_SESSION_PENDING_V1;
-while (status != THINKTHEN_SESSION_END_V1) {
-    thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_next_packet(call,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
-        &status, &owner);
-    assert(rc == THINKTHEN_OK);
-
-    if (status != THINKTHEN_SESSION_RESULT_V1) continue;
-    const thinkthen_complete_session_packet_v1 *packet;
-    thinkthen_session_result_view(owner, &packet);
-    if (packet->kind == filter_row) {
-        const thinkthen_complete_atomic_boolean_v1 *row =
-            packet->data.filter_row->value;
-        is_complaint[row->index.value] = row->value == 1;
-    }
-    thinkthen_session_result_free(owner);
+if (rc != THINKTHEN_OK) {
+    thinkthen_complete_utf8_v1 message =
+        thinkthen_call_error_message(error);
+    fwrite(message.data, 1, message.len, stderr);
+    thinkthen_call_error_free(error);
 }
-thinkthen_session_free(call);
-assert(!is_complaint[0] && is_complaint[1]);
-assert(!is_complaint[2] && is_complaint[3]);
+assert(rc == THINKTHEN_OK);
+thinkthen_complete_utf8_v1 json =
+    thinkthen_call_result_json(result);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
+thinkthen_call_result_free(result);

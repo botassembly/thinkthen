@@ -10,63 +10,42 @@ const char *names[][2] = {
     {"iPhone", "product"},
     {"Kindle", "product"},
 };
-char request[1024];
-int at = snprintf(request, sizeof request,
-    "{\"schema\":\"thinkthen.request/1\","
-    "\"call\":{\"function\":\"relate\","
-    "\"question\":{\"kind\":\"file\",\"path\":\"%s\"},"
-    "\"input\":{\"kind\":\"entities\",\"items\":[",
+char question_json[512];
+snprintf(question_json, sizeof question_json,
+    "{\"kind\":\"file\",\"path\":\"%s\"}",
     relations);
+char input_json[1024];
+int at = snprintf(input_json, sizeof input_json,
+    "{\"kind\":\"entities\",\"items\":[");
 for (int i = 0; i < 4; i++) {
-    at += snprintf(request + at, sizeof request - at,
-        "%s{\"original\":{\"kind\":\"json\",\"value\":"
-        "{\"name\":\"%s\",\"kind\":\"%s\"}}}",
+    at += snprintf(input_json + at, sizeof input_json - at,
+        "%s{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"%s\",\"kind\":\"%s\"}}}",
         i ? "," : "", names[i][0], names[i][1]);
 }
-snprintf(request + at, sizeof request - at, "]}}}");
+snprintf(input_json + at, sizeof input_json - at, "]}");
 
 thinkthen_engine *tt = thinkthen_engine_new();
-thinkthen_session *call = NULL;
-int rc = thinkthen_session_new(
-    tt, request, strlen(request), &call);
-assert(rc == THINKTHEN_OK);
+assert(tt != NULL);
+thinkthen_named_request_v1 request = {
+    .function = {"relate", 6},
+    .question_json = {question_json, strlen(question_json)},
+    .input_json = {input_json, strlen(input_json)},
+    .options_json = {"{}", 2},
+};
+thinkthen_call_result *result = NULL;
+thinkthen_call_error *error = NULL;
+int rc = thinkthen_run_call(tt, &request,
+    NULL, NULL, NULL, &result, &error);
 thinkthen_engine_free(tt);
-
-char who_makes[256] = "";
-const uint32_t relate_aggregate =
-    THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1;
-uint32_t status = THINKTHEN_SESSION_PENDING_V1;
-while (status != THINKTHEN_SESSION_END_V1) {
-    thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_next_packet(call,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
-        &status, &owner);
-    assert(rc == THINKTHEN_OK);
-
-    if (status != THINKTHEN_SESSION_RESULT_V1) continue;
-    const thinkthen_complete_session_packet_v1 *packet;
-    thinkthen_session_result_view(owner, &packet);
-    if (packet->kind == relate_aggregate) {
-        const thinkthen_complete_relation_v1 *edges =
-            packet->data.relate_aggregate->value;
-        for (size_t i = 0; i < edges->value.len; i++) {
-            const thinkthen_complete_related_entity_edge_v1
-                *edge = edges->value.data[i];
-            thinkthen_complete_utf8_v1 company =
-                edge->source->data.related_entity->name;
-            thinkthen_complete_utf8_v1 product =
-                edge->target->data.related_entity->name;
-            size_t end = strlen(who_makes);
-            snprintf(who_makes + end,
-                sizeof who_makes - end,
-                "%.*s makes %.*s. ",
-                (int)company.len, company.data,
-                (int)product.len, product.data);
-        }
-    }
-    thinkthen_session_result_free(owner);
+if (rc != THINKTHEN_OK) {
+    thinkthen_complete_utf8_v1 message =
+        thinkthen_call_error_message(error);
+    fwrite(message.data, 1, message.len, stderr);
+    thinkthen_call_error_free(error);
 }
-thinkthen_session_free(call);
-assert(strcmp(who_makes,
-    "Apple makes iPhone. "
-    "Amazon makes Kindle. ") == 0);
+assert(rc == THINKTHEN_OK);
+thinkthen_complete_utf8_v1 json =
+    thinkthen_call_result_json(result);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
+thinkthen_call_result_free(result);

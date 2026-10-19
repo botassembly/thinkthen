@@ -9,43 +9,37 @@ const char *teams =
     "\"shipping\":\"Parcels and delivery.\","
     "\"account\":\"Logins and passwords.\"}";
 const char *parcel = "My parcel went to the wrong address.";
-char request[1024];
-snprintf(request, sizeof request,
-    "{\"schema\":\"thinkthen.request/1\","
-    "\"call\":{\"function\":\"choose\","
-    "\"question\":{\"kind\":\"definition\",\"value\":"
-    "{\"choose\":\"%s\",\"options\":%s}},"
-    "\"input\":{\"kind\":\"text\",\"text\":\"%s\"}}}",
-    question, teams, parcel);
+char question_json[512];
+snprintf(question_json, sizeof question_json,
+    "{\"kind\":\"definition\",\"value\":{\"choose\":\"%s\",\"options\":%s}}",
+    question, teams);
+char input_json[512];
+snprintf(input_json, sizeof input_json,
+    "{\"kind\":\"text\",\"text\":\"%s\"}",
+    parcel);
 
 thinkthen_engine *tt = thinkthen_engine_new();
-thinkthen_session *call = NULL;
-int rc = thinkthen_session_new(
-    tt, request, strlen(request), &call);
-assert(rc == THINKTHEN_OK);
+assert(tt != NULL);
+thinkthen_named_request_v1 request = {
+    .function = {"choose", 6},
+    .question_json = {question_json, strlen(question_json)},
+    .input_json = {input_json, strlen(input_json)},
+    .options_json = {"{}", 2},
+};
+thinkthen_call_result *result = NULL;
+thinkthen_call_error *error = NULL;
+int rc = thinkthen_run_call(tt, &request,
+    NULL, NULL, NULL, &result, &error);
 thinkthen_engine_free(tt);
-
-char team[64] = "";
-const uint32_t choose_row =
-    THINKTHEN_COMPLETE_SESSION_PACKET_CHOOSE_ROW_V1;
-uint32_t status = THINKTHEN_SESSION_PENDING_V1;
-while (status != THINKTHEN_SESSION_END_V1) {
-    thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_next_packet(call,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
-        &status, &owner);
-    assert(rc == THINKTHEN_OK);
-
-    if (status != THINKTHEN_SESSION_RESULT_V1) continue;
-    const thinkthen_complete_session_packet_v1 *packet;
-    thinkthen_session_result_view(owner, &packet);
-    if (packet->kind == choose_row) {
-        thinkthen_complete_utf8_v1 name =
-            packet->data.choose_row->value->value.value;
-        snprintf(team, sizeof team, "%.*s",
-            (int)name.len, name.data);
-    }
-    thinkthen_session_result_free(owner);
+if (rc != THINKTHEN_OK) {
+    thinkthen_complete_utf8_v1 message =
+        thinkthen_call_error_message(error);
+    fwrite(message.data, 1, message.len, stderr);
+    thinkthen_call_error_free(error);
 }
-thinkthen_session_free(call);
-assert(strcmp(team, "shipping") == 0);
+assert(rc == THINKTHEN_OK);
+thinkthen_complete_utf8_v1 json =
+    thinkthen_call_result_json(result);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
+thinkthen_call_result_free(result);
