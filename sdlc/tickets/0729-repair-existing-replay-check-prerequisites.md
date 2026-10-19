@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision d5074d4, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/settings`, `demos/46-find-unused-recording-entries/`.
