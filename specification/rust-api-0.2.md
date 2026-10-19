@@ -971,7 +971,7 @@ output before acknowledging, and declines/cancels after a failed output operatio
 record cause; it authorizes no recovery and exposes no record content. Error kind,
 facts, ordinary serialization and all existing result packet shapes stay unchanged.
 
-`RequestSessionFeedOptions::incremental_ranking` defaults to false. Ordinary rank sessions may opt in to the existing native streaming rank intake. Default sessions validate the whole set before sending. Opted-in sessions may send completed batches before a later invalid record; ranked output still waits for the whole set and failures retain actual send facts. Other functions and general recovering sessions refuse the option before source access. The CLI opts in to preserve its existing send behavior. This adds no packet, C, MCP or language-binding field.
+`RequestSessionFeedOptions::incremental_ranking` defaults to false. Ordinary rank sessions with a caller-supplied feed may opt in to the existing native streaming rank intake. Default sessions validate the whole set before sending. Opted-in sessions may send completed batches before a later invalid record; ranked output still waits for the whole set and failures retain actual send facts. Inline and source input, other functions and general recovering sessions refuse the option before source access. The CLI opts in to preserve its existing send behavior. This adds no packet, C, MCP or language-binding field.
 
 `RequestSessionFeedOptions::incremental_recognition` defaults to false. Ordinary
 recognition sessions may opt in to immediate nonempty native recognition

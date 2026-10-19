@@ -250,7 +250,7 @@ pub struct RequestSessionFeedOptions {
     pub incremental_recognition: bool,
     /// Rank records as they arrive through the existing native streaming path.
     /// Defaults to false, preserving whole-set admission before provider sends.
-    /// Only ordinary rank sessions admit this option; ranked output still waits
+    /// Only ordinary rank sessions with a caller-supplied feed admit this option; output waits
     /// for the complete set and a later invalid record retains actual send facts.
     pub incremental_ranking: bool,
     /// Override the native open-batch input pause for a caller-supplied feed.
@@ -508,7 +508,8 @@ impl Engine {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(&queue), &options))
             }
-            _ if options.input_pause.is_some()
+            _ if options.incremental_ranking
+                || options.input_pause.is_some()
                 || options.eager
                 || options.image_inputs
                 || options.all_filter_results
