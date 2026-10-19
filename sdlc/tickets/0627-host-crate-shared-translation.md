@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0626, 0643
 
+Reviews: revision fdac724, accept
+
 ## Outcome
 
 - The host crate holds only translations shared by two or more hosts (the C library and the three database extensions), each with docs and `Debug`.
