@@ -135,3 +135,28 @@ fn recognition_admits_caller_defined_values_and_refuses_blank_customization() {
         }
     }
 }
+
+#[test]
+fn question_sets_default_to_version_one_inline_and_in_saved_files() {
+    let versioned = r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#;
+    let unversioned = r#"{"questions":{"refund":{"decide":"Refund?"}}}"#;
+    let expected = QuestionSet::from_json(versioned).expect("explicit version one");
+    assert_eq!(
+        QuestionSet::from_json(unversioned).expect("implicit version one"),
+        expected
+    );
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("question-set-version");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let path = written(&folder, "implicit.json", unversioned.as_bytes());
+    assert_eq!(QuestionSet::load(&path).expect("saved implicit version"), expected);
+    for version in ["2", r#""1""#] {
+        let invalid = versioned.replacen("1", version, 1);
+        let inline = QuestionSet::from_json(&invalid).expect_err("invalid version");
+        assert_eq!(inline.kind(), ErrorKind::Usage);
+        assert_eq!(inline.to_string(), "`version` is the number 1");
+        let path = written(&folder, "invalid.json", invalid.as_bytes());
+        let saved = QuestionSet::load(&path).expect_err("saved invalid version");
+        assert_eq!(saved.kind(), ErrorKind::Local);
+        assert_eq!(saved.to_string(), inline.to_string());
+    }
+}
