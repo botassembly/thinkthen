@@ -1,6 +1,6 @@
 //! Command-owned profile-file wording from closed public classifications.
 use std::path::Path;
-use crate::{Error, ErrorDiagnostic, ProfileFailure};
+use thinkthen::{Error, ErrorDiagnostic, ProfileFailure};
 
 pub(super) fn message(path: &Path, error: &Error) -> (u8, String) {
     let reason = match error.diagnostic() {
@@ -10,7 +10,7 @@ pub(super) fn message(path: &Path, error: &Error) -> (u8, String) {
     (5, format!("the profile file `{}` {reason}", path.display()))
 }
 
-fn reason(failure: ProfileFailure) -> String {
+pub(super) fn reason(failure: ProfileFailure) -> String {
     match failure {
         ProfileFailure::Json(_) => "is not valid JSON".to_owned(),
         ProfileFailure::Object => "is one JSON object".to_owned(),
@@ -41,7 +41,7 @@ mod tests {
             (format!(r#"{{"schema":"thinkthen.backend-profile/2","name":"safe","max_questions":1,"image_profile":{{"id":"{secret}"}}}}"#), "image_profile holds an admitted `id` and an explicit nonblank `model_alias` only"),
         ];
         for (text, expected) in cases {
-            let error = crate::Engine::builder().profile_json(&text).unwrap_err();
+            let error = thinkthen::Engine::builder().profile_json(&text).unwrap_err();
             let (code, shown) = message(Path::new("profile.json"), &error);
             assert_eq!(code, 5);
             assert_eq!(shown, format!("the profile file `profile.json` {expected}"));

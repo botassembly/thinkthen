@@ -1,7 +1,6 @@
 //! Fixed local recording diagnostics.
 
 use super::Failure;
-use crate::core::RecordError;
 
 /// Closed, command-owned labels for a request that strict replay could not find.
 #[derive(Clone, Copy, Debug)]
@@ -58,10 +57,11 @@ impl Failure {
     }
 
     /// Name invalid text by its framing while preserving every other record error.
-    pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
-        match error {
-            RecordError::NotUtf8 => Self::InvalidUtf8 { record: streamed },
-            other => Self::Record(other),
+    pub(crate) fn record(error: thinkthen::Error, streamed: bool) -> Self {
+        if matches!(error.diagnostic(), Some(thinkthen::ErrorDiagnostic::InvalidUtf8)) {
+            Self::InvalidUtf8 { record: streamed }
+        } else {
+            Self::from(error)
         }
     }
 }

@@ -12,10 +12,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
     let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
     let cases = [
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
-        Failure::Status(401),
+        Failure::Status(401, false),
         Failure::Transport(TransportKind::Refused),
-        Failure::Record(RecordError::NotUtf8),
-        Failure::Record(RecordError::TooLarge),
+        Failure::InvalidUtf8 { record: false },
+        Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
         Failure::QuestionMiss {
             key: "abc".to_owned(),
             context: None,
@@ -27,7 +27,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             replayed: 0,
             recording: false,
             held: false,
-            cause: Box::new(Failure::Record(RecordError::TooLarge)),
+            cause: Box::new(Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned())),
         },
         Failure::Stopped {
             at: 2,
@@ -35,7 +35,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             replayed: 0,
             recording: false,
             held: true,
-            cause: Box::new(Failure::Record(RecordError::TooLarge)),
+            cause: Box::new(Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned())),
         },
         Failure::QuietOverKept("filter"),
         Failure::RawOverKept("rank"),
@@ -51,12 +51,12 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             path: "safe-profile.json".into(),
             error: crate::Engine::builder().profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"INVALID","max_questions":1}"#).unwrap_err(),
         },
-        Failure::ProfileLimit(ProfileLimit {
-            name: ProfileName::new("safe-profile").expect("safe name"),
-            kind: LimitKind::EvidenceBytes,
+        Failure::ProfileLimit {
+            profile: "safe-profile".to_owned(),
+            dimension: "evidence bytes",
             limit: 1,
             actual: EVIDENCE.len(),
-        }),
+        },
         Failure::Recognize(super::super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
         Failure::UsedManifestUnreadable,
@@ -111,7 +111,7 @@ fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
 
     for (status, phrase) in cases {
         let mut written = Vec::new();
-        report(&Failure::Status(status), &mut written);
+        report(&Failure::Status(status, false), &mut written);
         let message = String::from_utf8(written).expect("a diagnostic is text");
         assert_eq!(
             message,
@@ -120,7 +120,7 @@ fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
     }
 
     let mut written = Vec::new();
-    report(&Failure::Status(418), &mut written);
+    report(&Failure::Status(418, false), &mut written);
     let message = String::from_utf8(written).expect("a diagnostic is text");
     assert_eq!(message, "thinkthen: the backend answered with status 418\n");
 }
@@ -140,7 +140,7 @@ fn common_request_statuses_give_fixed_actions() {
     for (status, expected) in cases {
         let mut written = Vec::new();
         assert_eq!(
-            report(&Failure::Status(status), &mut written),
+            report(&Failure::Status(status, false), &mut written),
             ExitCode::from(4)
         );
         assert_eq!(
@@ -194,8 +194,8 @@ fn transport_kinds_give_fixed_actions() {
 #[test]
 fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
     let cases = [
-        (Failure::Record(RecordError::NotUtf8), 5, "not valid UTF-8"),
-        (Failure::Status(503), 4, "status 503"),
+        (Failure::InvalidUtf8 { record: false }, 5, "not valid UTF-8"),
+        (Failure::Status(503, true), 4, "status 503"),
         (Failure::NoKey("THINKTHEN_API_KEY".to_owned()), 4, "unset"),
         (Failure::Defect("a plan asks nothing"), 70, "defect"),
         (Failure::FindCount { none: false }, 2, "2 to 255"),
@@ -217,7 +217,7 @@ fn every_failure_reaches_its_own_exit_code_and_says_what_stopped() {
 #[test]
 fn cancellation_is_typed_and_silent_except_for_a_stopped_summary() {
     assert!(matches!(
-        Failure::from(EngineError::Cancelled),
+        Failure::from(thinkthen::Error::new(thinkthen::ErrorKind::Cancelled, "caller cancelled")),
         Failure::Cancelled
     ));
 
@@ -232,13 +232,13 @@ fn stopped_counts_use_record_only_at_one() {
         (
             1,
             1,
-            Failure::Record(RecordError::TooLarge),
+            Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
             "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
         ),
         (
             2,
             0,
-            Failure::Record(RecordError::TooLarge),
+            Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
             "thinkthen: stopped at record 3; 2 records finished, 0 records from a recording\n",
         ),
         (
@@ -265,4 +265,22 @@ fn stopped_counts_use_record_only_at_one() {
         assert_eq!(said == summary, cancelled);
         assert!(said.ends_with(summary), "{said}");
     }
+}
+
+#[test]
+fn caller_sources_keep_the_command_failure_shape_and_counts() {
+    let failure = Failure::Stopped {
+        at: 7,
+        finished: 2,
+        replayed: 1,
+        recording: true,
+        held: true,
+        cause: Box::new(Failure::TokenLimit.with_size_advice(super::super::SizeAdvice::Batches)),
+    };
+    let expected = super::super::sentence(&failure);
+    let error = failure.into_error();
+    let recovered = Failure::from(error);
+    assert_eq!(super::super::sentence(&recovered), expected);
+    assert!(matches!(recovered, Failure::Stopped { at: 7, finished: 2, replayed: 1, held: true, cause, .. }
+        if matches!(*cause, Failure::RequestTooLarge { tokens: true, advice: super::super::SizeAdvice::Batches })));
 }

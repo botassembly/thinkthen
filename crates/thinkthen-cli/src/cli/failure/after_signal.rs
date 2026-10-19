@@ -3,6 +3,7 @@
 use std::io::Write;
 
 use super::{Failure, recognize};
+const NAME: &str = "thinkthen";
 
 impl Failure {
     /// Replace only a backend cause with the signal's stop.
@@ -36,7 +37,7 @@ impl Failure {
             }
             Self::Provider { .. }
             | Self::Transport(_)
-            | Self::Status(_)
+            | Self::Status(..)
             | Self::TokenLimit
             | Self::RequestTooLarge { .. }
             | Self::ReplyTooLarge(_)
@@ -74,7 +75,7 @@ pub(super) fn stopped(
     let _unwritten = writeln!(
         writer,
         "{}: stopped by a signal; {finished} {noun} finished{recording_clause}{withheld}",
-        crate::core::NAME
+        NAME
     );
     130
 }
@@ -83,25 +84,24 @@ pub(super) fn stopped(
 mod tests {
     //! Stays: private diagnostic and signal mappings must withhold secrets and preserve cancellation counts.
     use super::*;
-    use crate::core::adapters::built_in::DecodeError;
-    use crate::engine::error::TransportKind;
+    use thinkthen::TransportFailure as TransportKind;
 
     fn backend() -> Vec<Failure> {
         vec![
             Failure::Transport(TransportKind::Timeout),
-            Failure::Status(503),
+            Failure::Status(503, true),
             Failure::TokenLimit,
             Failure::TokenLimit.with_size_advice(super::super::SizeAdvice::Text),
-            Failure::Status(413).with_size_advice(super::super::SizeAdvice::Batches),
+            Failure::Status(413, false).with_size_advice(super::super::SizeAdvice::Batches),
             Failure::ReplyTooLarge(12),
-            Failure::Reply(DecodeError::NoModel),
+            Failure::Reply("the response names no model".to_owned()),
             Failure::ModelsDiffer(Some(("one".into(), "two".into()))),
             Failure::UsageOverflow,
             Failure::PartialReply { first: 1, last: 2 },
             Failure::Recognize(recognize::Error::LogicalQuestion),
             Failure::BatchFailed {
                 last: 2,
-                cause: Box::new(Failure::Status(503)),
+                cause: Box::new(Failure::Status(503, true)),
             },
         ]
     }

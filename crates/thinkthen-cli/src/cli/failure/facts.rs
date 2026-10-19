@@ -41,13 +41,13 @@ impl Stopped {
             Failure::Cancelled => ("cancelled", None, false),
             Failure::NoKey(_) => ("no_key", None, false),
             Failure::Transport(_) => ("transport", None, false),
-            Failure::Status(413) | Failure::TokenLimit | Failure::RequestTooLarge { .. } => {
+            Failure::Status(413, _) | Failure::TokenLimit | Failure::RequestTooLarge { .. } => {
                 ("too_large", None, false)
             }
-            Failure::Status(status) => (
+            Failure::Status(status, retryable) => (
                 "status",
                 Some(*status),
-                crate::engine::error::retried_status(*status),
+                *retryable,
             ),
             Failure::Reply(_) | Failure::ReplyTooLarge(_) | Failure::PartialReply { .. } => {
                 ("reply", None, false)
