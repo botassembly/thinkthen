@@ -33,40 +33,50 @@ const BUSY: Duration = Duration::from_secs(30);
 
 /// What one prune selects before the size trim.
 #[derive(Debug)]
-pub(crate) struct Prune {
-    pub(crate) max_size: u64,
-    pub(crate) older_than: Option<Duration>,
-    pub(crate) answered_by_other_than: Option<String>,
+pub struct Prune {
+    /// Maximum allocated bytes to retain after other selections.
+    pub max_size: u64,
+    /// Select answers older than this duration from the current time.
+    pub older_than: Option<Duration>,
+    /// Select answers whose reported model differs from this exact model.
+    pub answered_by_other_than: Option<String>,
 }
 
 /// The answers one prune chose, oldest first, and what stays.
 #[derive(Debug, Default)]
-pub(crate) struct Selection {
+pub struct Selection {
     /// Each chosen answer's question key, in deletion order.
-    pub(crate) keys: Vec<Vec<u8>>,
-    pub(crate) bytes: u64,
-    pub(crate) kept: u64,
-    pub(crate) kept_bytes: u64,
+    pub keys: Vec<Vec<u8>>,
+    /// Allocated bytes selected for removal.
+    pub bytes: u64,
+    /// Answers outside the selection.
+    pub kept: u64,
+    /// Allocated bytes outside the selection.
+    pub kept_bytes: u64,
 }
 
 /// What a committed prune removed and what remains.
 #[derive(Debug, Default)]
-pub(crate) struct Pruned {
-    pub(crate) removed: u64,
-    pub(crate) removed_bytes: u64,
-    pub(crate) remaining: u64,
-    pub(crate) remaining_bytes: u64,
+pub struct Pruned {
+    /// Answers removed.
+    pub removed: u64,
+    /// Allocated bytes removed.
+    pub removed_bytes: u64,
+    /// Answers retained.
+    pub remaining: u64,
+    /// Allocated bytes retained.
+    pub remaining_bytes: u64,
 }
 
 /// What `status` counts in a cache folder.
 #[derive(Debug, Default)]
-pub(crate) struct Counts {
+pub struct Counts {
     /// Answers in `thinkthen.sqlite`.
-    pub(crate) answers: u64,
+    pub answers: u64,
     /// The file's allocated bytes.
-    pub(crate) bytes: u64,
+    pub bytes: u64,
     /// Old digest-named entries; admitted folders have none.
-    pub(crate) old_entries: u64,
+    pub old_entries: u64,
 }
 
 /// One stored answer as prune weighs it.

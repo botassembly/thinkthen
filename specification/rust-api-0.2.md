@@ -28,6 +28,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0639](../sdlc/tickets/0639-split-cli-and-mcp-crates.md) keeps MCP execution in the existing `Engine::call` family. `CallOptions::retained_attachment_limit` bounds aggregate retained compressed attachment bytes; inline preflight precedes admission clones. `RequestDescriptor` and `RequestFeed::from_descriptors` retain deferred whole-file originals, whole-feed structural admission and eager composition under one attachment budget. Descriptor admission precedes question resolution, source reads and sends; every repeated image occurrence charges the budget. `Error::completed` exposes only the actual completed prefix of a failed call. This explicit access can expose sensitive originals; Debug, Display, complete error serialization and standard error sources omit it. These supported transport operations avoid exposing private engine or domain modules. Ian can overturn these API details.
 
+The same ticket exposes the existing explicit cache maintenance operations for `cache convert`, `cache unused`, `cache prune` and offline status counts. The caller owns the named directory and parses command options. The library keeps store locking, ownership checks, current-time capture, selection rules and failure classification. `CacheCounts`, `CacheConversion`, `CachePruneOptions`, `CachePruneSelection` and `CachePruned` are reexports of the existing store values; they add no second implementation or maintenance capability.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -204,6 +206,40 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+struct CacheCounts
+CacheCounts::answers: u64
+CacheCounts::bytes: u64
+CacheCounts::old_entries: u64
+impl Debug for CacheCounts
+impl Default for CacheCounts
+struct CacheConversion
+CacheConversion::answers: usize
+impl Debug for CacheConversion
+impl Default for CacheConversion
+struct CachePruneOptions
+CachePruneOptions::max_size: u64
+CachePruneOptions::older_than: Option<Duration>
+CachePruneOptions::answered_by_other_than: Option<String>
+impl Debug for CachePruneOptions
+struct CachePruneSelection
+CachePruneSelection::keys: Vec<Vec<u8>>
+CachePruneSelection::bytes: u64
+CachePruneSelection::kept: u64
+CachePruneSelection::kept_bytes: u64
+impl Debug for CachePruneSelection
+impl Default for CachePruneSelection
+struct CachePruned
+CachePruned::removed: u64
+CachePruned::removed_bytes: u64
+CachePruned::remaining: u64
+CachePruned::remaining_bytes: u64
+impl Debug for CachePruned
+impl Default for CachePruned
+fn cache_counts(&Path, bool) -> Result<CacheCounts, Error>
+fn cache_unused(&Path, &HashSet<String>) -> Result<Vec<String>, Error>
+fn convert_cache(&Path) -> Result<CacheConversion, Error>
+fn preview_cache_prune(&Path, &CachePruneOptions) -> Result<CachePruneSelection, Error>
+fn prune_cache(&Path, &CachePruneOptions) -> Result<CachePruned, Error>
 struct RequestDescriptor
 RequestDescriptor::item: RequestItem
 RequestDescriptor::source: Option<RequestSource>

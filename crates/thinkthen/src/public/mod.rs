@@ -2,6 +2,9 @@
 //!
 //! Callers own an explicit [`Engine`] and its typed native results.
 
+mod maintenance;
+pub use maintenance::*;
+
 mod images;
 mod request;
 pub use images::{
