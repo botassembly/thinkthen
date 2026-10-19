@@ -24,7 +24,16 @@ Reviews: revision 2e52b33, accept
 
 ## Outcome
 
-thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-class decision models in your code, whatever model, language or database you use. ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. A first-time Python developer, DuckDB analyst or agent builder can say in one minute what they get, whether it works in their setup and what to paste. Every sample runs on the 0.2 release. Nothing goes live on thinkthen.dev, any registry or the DuckDB PR before Ian approves it.
+- Changes: `site/`, `README.md`.
+- thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-class decision models in your code, whatever model, language or database you use. ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. A first-time Python developer, DuckDB analyst or agent builder can say in one minute what they get, whether it works in their setup and what to paste. Every sample runs on the 0.2 release. Nothing goes live on thinkthen.dev, any registry or the DuckDB PR before Ian approves it.
+
+### Proof
+
+- `npm run build` and every language replay pass on the release commit.
+- The fresh-reader test passes on every page and text listed above.
+- Ian approves the public texts.
+- After Ian's go, thinkthen.dev serves the 0.2 home page, and a sample of old addresses forward to their new pages.
+- The site build runs on the M5: `pm job run --machine m5 0575 SHA --memory 8 -- npm --prefix site run build`.
 
 ## Evidence
 
@@ -37,7 +46,7 @@ thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-c
   - thinkthen.dev still shows the 0.1 site.
   - Ian ruled on 2026-10-13 that Jev, SystemOne, TypeSafe and OpenAI are public names to use often for search.
 - Keeps: replayed samples as smoke tests, the Markdown twins and llms files, the site's build checks, and the old-address redirects.
-- Changes:
+- Steps:
   - Merge main into `docs/0.2-refresh` now, and again from `ticket/0543-final` as each wave lands. Rerun `npm run build` and every language replay after each merge.
   - Remove the temporary word-check allow entries.
   - Name Jev, SystemOne, TypeSafe, OpenAI and local models often in page text, titles and descriptions.
@@ -46,11 +55,6 @@ thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-c
   - Run the fresh-reader page test: a fresh agent given one page plays each reader and must succeed. Run it on the home page, one function page, one language page and the DuckDB page, and on every public text outside the site: each registry README from 0578, the DuckDB README page, the DuckDB descriptor's `extended_description` and the PR description from 0577. Fix what fails. The PM brings passing texts to Ian for approval of the exact words.
   - Land the branch on main with the 0.2 release. Deploy thinkthen.dev from main after Ian's go.
   - Stop the old preview processes once the new owner's preview runs.
-- Proof:
-  - `npm run build` and every language replay pass on the release commit.
-  - The fresh-reader test passes on every page and text listed above.
-  - Ian approves the public texts.
-  - After Ian's go, thinkthen.dev serves the 0.2 home page, and a sample of old addresses forward to their new pages.
 - Defers: paid promotion, live-model demos, and fine-tuning, GEPA, proxy and hosted-service pages.
 
 ## Progress
