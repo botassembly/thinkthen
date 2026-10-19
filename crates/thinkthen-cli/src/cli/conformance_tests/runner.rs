@@ -1,3 +1,4 @@
+//! Stays: the private stopped-report projection must preserve command exit and diagnostic behavior for public errors.
 //! Public errors without typed diagnostics retain the command fallback for each shared kind.
 //! Native scheduler injection lives with the library's private scheduler tests.
 

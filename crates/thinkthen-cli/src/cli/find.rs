@@ -322,6 +322,7 @@ fn framing(common: &Common) -> Framing {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command candidate reading must preserve count boundaries and refusal precedence.
     use super::*;
     use std::{io::{self, BufRead}, sync::{Arc, atomic::{AtomicUsize, Ordering}}};
     struct Counted { bytes: Vec<u8>, at: usize, consumed: Arc<AtomicUsize> }

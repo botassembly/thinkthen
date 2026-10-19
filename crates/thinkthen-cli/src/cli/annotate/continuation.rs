@@ -50,6 +50,7 @@ impl Drop for Continuation {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private bounded continuation acknowledgment must release on cancel and receiver drop.
     use super::*;
 
     #[test]

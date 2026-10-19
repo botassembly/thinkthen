@@ -1,3 +1,4 @@
+//! Stays: unreachable native fault projections need direct private diagnostic conversion while public producers cover reachable cases.
 //! Native invariant faults cannot be requested through the command surface.
 //! The library proves their actual retained public projections; these tests
 //! pin the command's conversion of those projections without an injection API.

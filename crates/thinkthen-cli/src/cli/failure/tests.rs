@@ -1,3 +1,4 @@
+//! Stays: command-owned diagnostic rendering and source retention need direct failure construction and secrecy checks.
 //! Command diagnostic and signal mappings withhold secrets and preserve counts.
 use super::{Failure, report};
 use thinkthen::TransportFailure as TransportKind;

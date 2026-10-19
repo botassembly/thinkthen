@@ -30,6 +30,7 @@ pub(super) fn inline(arguments: &RelateArguments) -> Result<Relate, Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command relation parsing must preserve saved definitions and typed override precedence.
     use super::*;
     use clap::Parser as _;
     use crate::cli::args::{Cli, Command};

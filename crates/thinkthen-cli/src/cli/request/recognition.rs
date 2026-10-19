@@ -94,6 +94,7 @@ fn kinds(arguments: &RecognizeArguments) -> Result<Vec<(String, Option<Descripti
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command recognition parsing must preserve overrides and original example validation.
     use super::*;
     use clap::Parser as _;
     use crate::cli::args::{Cli, Command};

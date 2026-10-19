@@ -95,9 +95,13 @@ VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev", "openai", "l
 # endpoint path.
 ADAPTERS = "crates/thinkthen/src/core/adapters.rs"
 # Ticket 0020 moved the last of them, so no file outside the adapters folder
-# holds a vendor word and the allowance is empty. A file added here would need
-# a ticket saying why a vendor word cannot live behind the adapter.
-SEAM_ALLOWED: dict[str, set[str]] = {}
+# holds a vendor word except these command-owned compatibility labels. Ticket
+# 0639 retains the published help default and check row names across the split;
+# neither selects an adapter nor describes a wire request.
+SEAM_ALLOWED: dict[str, set[str]] = {
+    "crates/thinkthen-cli/src/cli/args.rs": {"jev"},
+    "crates/thinkthen-cli/src/probes.rs": {"noul"},
+}
 
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",
@@ -1617,7 +1621,7 @@ CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
 def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
                             crate_paths: set[tuple[str, ...]] = CATALOG_CRATE_PATHS,
                             super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS,
-                            prefix: bool = False) -> list[str]:
+                            prefix: bool = False, public_paths: set[tuple[str, ...]] = frozenset()) -> list[str]:
     """Name every capability or owner a read-only command source reaches.
 
     A path is allowed when it is an allowed path, or with `prefix` when one is its prefix.
@@ -1637,7 +1641,7 @@ def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
             held.add("uses " + "::".join(path))
         elif path[:1] == ("super",) and not allowed(path, super_paths):
             held.add("uses " + "::".join(path))
-        elif path and path[0] not in CATALOG_ROOTS:
+        elif path and path[0] not in CATALOG_ROOTS and path not in public_paths:
             held.add("uses " + "::".join(path))
     for place, token in enumerate(tokens[:-1]):
         if token in {"crate", "super"} and tokens[place + 1] == "::" and not any(
@@ -1719,7 +1723,16 @@ MEASURE_WRITES = {
     "remove_dir", "remove_dir_all", "rename", "copy", "set_permissions", "write", "hard_link",
     "soft_link", "symlink",
 }
-MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
+MEASURE_CRATE_PATHS = {
+    ("crate", "statistics"), ("crate", "saved_json"),
+    ("crate", "cli", "measure"), ("crate", "failure", "Failure"),
+}
+MEASURE_PUBLIC_PATHS = {
+    ("thinkthen", name) for name in (
+        "Threshold", "ThresholdError", "Engine", "ErrorDiagnostic",
+        "RelationIdentityMode", "RequestDefinition",
+    )
+}
 ROUTER = "crates/thinkthen-cli/src/cli/mod.rs"
 
 
@@ -1729,7 +1742,7 @@ def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
     Only the writer may call its exact in-place write or new-output publication primitives.
     """
     held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
-                                       prefix=True))
+                                       prefix=True, public_paths=MEASURE_PUBLIC_PATHS))
     tokens = rust_tokens(text)
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
@@ -1784,6 +1797,8 @@ def check_measure_policy() -> None:
         "signal_hook::flag::register(2, flag)",
         'std::process::Command::new("jq")',
         "crate::engine::request()",
+        "use thinkthen::EngineBuilder;",
+        "use thinkthen::Request;",
         "crate::cli::edge::Environment::read()",
         "std::fs::write(path, bytes)",
         "use std::fs::remove_file;",
@@ -1805,7 +1820,9 @@ def check_measure_policy() -> None:
     controls = (
         "std::fs::read(path)",
         "std::io::stdin().lock()",
-        "use crate::core::measure::key::Key;",
+        "use crate::statistics::key::Key;",
+        "use crate::saved_json::Pointer;",
+        "use thinkthen::{Threshold, RequestDefinition};",
         "use crate::cli::measure::{Cause, Refusal, read};",
         "use crate::failure::Failure;",
         "use clap::{Args, ValueEnum};",
@@ -2087,9 +2104,9 @@ def check_facade() -> None:
 WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
-    "crates/thinkthen/src/windows/console/ffi.rs": "windows",
+    "crates/thinkthen-cli/src/windows/console/ffi.rs": "windows",
     "crates/thinkthen-cli/src/mcp/input/windows/ffi.rs": "windows",
-    "crates/thinkthen-cli/tests/windows/ffi.rs": "all(windows, test)",
+    "crates/thinkthen/src/windows/test_support/ffi.rs": "all(windows, test)",
 }
 
 
@@ -2249,7 +2266,7 @@ def check_seam() -> None:
         # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
         # a file under tests/ is an integration test. Both are tests.
         if (relative.startswith(adapter) or "/tests/" in relative
-                or "/conformance_tests/" in relative
+                or "/conformance_tests/" in relative or "/command_conformance_tests/" in relative
                 or relative.endswith(("/tests.rs", "_tests.rs"))):
             continue
         allowed = SEAM_ALLOWED.get(relative, frozenset())

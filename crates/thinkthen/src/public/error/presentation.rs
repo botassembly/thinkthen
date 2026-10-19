@@ -413,6 +413,7 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
 
 #[cfg(test)]
 mod input_json_tests {
+    //! Stays: native document and JSONL parser causes require direct classification and secrecy assertions.
     use super::*;
 
     #[test]

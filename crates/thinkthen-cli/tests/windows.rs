@@ -4,13 +4,13 @@
 #![allow(clippy::panic, reason = "failed native fixtures stop the test")]
 #[path = "../../thinkthen/src/test_deadline/child.rs"]
 mod child;
-#[path = "windows/ffi.rs"]
+#[path = "../../thinkthen/src/windows/test_support/ffi.rs"]
 mod ffi;
 #[path = "windows/interrupt.rs"]
 mod interrupt;
 #[path = "windows/privacy.rs"]
 mod privacy;
-#[path = "windows/process.rs"]
+#[path = "../../thinkthen/src/windows/test_support/process.rs"]
 mod process;
 #[path = "windows/remaining.rs"]
 mod remaining;

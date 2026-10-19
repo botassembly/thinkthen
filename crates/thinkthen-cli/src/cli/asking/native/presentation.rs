@@ -117,6 +117,7 @@ pub(super) fn without_batch(value: &impl Serialize) -> Result<String, Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command plan presentation must preserve native counts and withhold authored evidence.
     use super::*;
 
     #[test]

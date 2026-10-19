@@ -1,3 +1,4 @@
+//! Stays: native HTTP and saved-result carriers require direct construction to prove that Debug withholds credentials and evidence.
 //! Native carrier secrecy assertions moved from the command failure tests.
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{QuestionSetError, Url};

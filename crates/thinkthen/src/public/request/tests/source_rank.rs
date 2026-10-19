@@ -1,3 +1,4 @@
+//! Stays: public record-feed rank admission needs controlled sources and exact native prefix and accounting observations.
 //! Original-byte admission must precede selected evidence and leave the refused tail unread.
 
 #[test]

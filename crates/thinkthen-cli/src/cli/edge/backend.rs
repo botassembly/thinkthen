@@ -73,6 +73,7 @@ impl Environment {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command-owned route selection must preserve backend and address precedence.
     use super::*;
     #[test]
     fn backend_check_requires_an_explicit_address_before_explicit_model_validation() {

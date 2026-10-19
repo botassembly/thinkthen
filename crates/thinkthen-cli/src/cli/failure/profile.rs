@@ -25,6 +25,7 @@ pub(super) fn reason(failure: ProfileFailure) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: command profile advice must preserve the existing exact sentences and safe fields.
     use super::*;
 
     #[test]

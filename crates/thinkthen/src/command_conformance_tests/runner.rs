@@ -1,3 +1,4 @@
+//! Stays: native scheduler fault injection cannot be requested through the public execution API.
 //! Native scheduler fault injection stays because callers cannot request an invariant
 //! failure, a native cancellation token, or an expired native deadline.
 

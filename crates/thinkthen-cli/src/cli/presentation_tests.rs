@@ -1,3 +1,4 @@
+//! Stays: command-owned argument admission and output rendering need direct dispatch with controlled input and writers.
 //! Command hints use retained typed parser facts, never diagnostic sentences.
 use super::*;
 use clap::Parser as _;

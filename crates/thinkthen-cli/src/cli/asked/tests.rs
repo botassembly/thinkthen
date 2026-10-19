@@ -1,3 +1,4 @@
+//! Stays: the command-owned asked-question representation must preserve authored order and selection without exposing native internals.
 //! Native file admission and command source labels share one retained definition.
 use super::*;
 use std::sync::atomic::{AtomicU64, Ordering};
