@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -182,8 +183,13 @@ if '--message-format=json' in sys.argv:
                       'target':{'name':'conformance-backend'},
                       'executable':str(Path.cwd() / 'target/debug/conformance-backend')}))
 ''')
-            (tools / 'git').write_text(f'#!{sys.executable}\nimport pathlib,sys\n'
-                                      'print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n')
+            real_git = shutil.which('git')
+            (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
+                                      'if len(sys.argv) == 5 and sys.argv[1] == "-C" and '
+                                      'sys.argv[3] == "rev-parse" and sys.argv[4].endswith("^{commit}"):\n'
+                                      '    print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n'
+                                      f'else:\n    os.execv({real_git!r}, [{real_git!r}, *sys.argv[1:]])\n')
+            (tools / 'python3').symlink_to(sys.executable)
             (root / 'probe.py').write_text(capture)
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for path in (tools / 'cargo', tools / 'make', tools / 'git', tools / 'uname'):
