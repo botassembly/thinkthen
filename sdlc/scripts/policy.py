@@ -53,26 +53,28 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "base64", "image", "jpeg-decoder", "clap", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
-        "signal-hook", "thiserror", "ureq",
+        "arc-swap", "base64", "image", "jpeg-decoder", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
+        "thiserror", "ureq",
     },
+    "thinkthen-cli": {"thinkthen", "clap", "serde", "serde_json", "signal-hook"},
     "conformance-backend": {"serde", "serde_json"},
     "thinkthen-host": {"thinkthen", "serde_json"},
 }
-ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "thinkthen-cli": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
     # Ticket 0372: rustls serves the CA bundle test's own TLS.
     "thinkthen": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
+    "thinkthen-cli": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
     "conformance-backend": set(),
     "thinkthen-host": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.
-ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "thinkthen-cli": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, and dependency tables as the crate.
-MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend", "thinkthen-host": "crates/thinkthen-host"}
+MEMBERS = {"thinkthen": "crates/thinkthen", "thinkthen-cli": "crates/thinkthen-cli", "conformance-backend": "conformance/backend", "thinkthen-host": "crates/thinkthen-host"}
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 sys.path.insert(0, str(REPO / "sdlc/generators/results"))
 from registry import generated_paths
@@ -151,7 +153,10 @@ ACCEPTED_CRATE_ROOT_ATTRIBUTES = {
         "#![cfg_attr(not(test), forbid(clippy::disallowed_macros))]",
         "#![forbid(clippy::allow_attributes_without_reason)]",
     ),
-    "crates/thinkthen/src/main.rs": ("#![forbid(unsafe_code)]",),
+    "crates/thinkthen-cli/src/main.rs": (
+        "#![cfg_attr(not(windows), forbid(unsafe_code))]",
+        "#![cfg_attr(windows, deny(unsafe_code))]",
+    ),
     "crates/thinkthen/src/lib.rs": (
         "#![cfg_attr(not(windows), forbid(unsafe_code))]",
         "#![cfg_attr(windows, deny(unsafe_code))]",
@@ -254,11 +259,11 @@ def check_workspace() -> None:
     manifest = read_toml("Cargo.toml")
     workspace = manifest.get("workspace", {})
     if workspace.get("members") != list(MEMBERS.values()):
-        fail("workspace", "the command, conformance backend and shared host crate are the workspace members")
+        fail("workspace", "the library, command, conformance backend and shared host crate are the workspace members")
     if workspace.get("exclude") != ["conformance/consumer", "libraries", "databases"]:
         fail("workspace", "the consumer and every binding folder are their own workspaces (ADR 0047)")
-    if workspace.get("default-members") != ["crates/thinkthen"]:
-        fail("workspace", "a plain root build compiles thinkthen alone (ADR 0047)")
+    if workspace.get("default-members") != ["crates/thinkthen", "crates/thinkthen-cli"]:
+        fail("workspace", "a plain root build compiles the library and command")
     if workspace.get("resolver") != "3":
         fail("workspace", "resolver is 3")
     package = workspace.get("package", {})
@@ -353,7 +358,7 @@ def check_member(name: str) -> dict:
     """Hold one member to the shared lints, license, and dependency tables."""
     manifest = read_toml(f"{MEMBERS[name]}/Cargo.toml")
     package = manifest.get("package", {})
-    if name == "thinkthen":
+    if name in ("thinkthen", "thinkthen-cli"):
         for failure in thinkthen_lint_failures(manifest):
             fail("lints", failure)
     elif manifest.get("lints") != INHERITED:
@@ -362,7 +367,7 @@ def check_member(name: str) -> dict:
         if package.get(field) != INHERITED:
             fail("workspace", f"{name} inherits the workspace {field}")
     # versions holds the command crate's publish flag to its release state (ticket 0376).
-    if name != "thinkthen" and package.get("publish") is not False:
+    if name not in ("thinkthen", "thinkthen-cli") and package.get("publish") is not False:
         fail("workspace", f"{name} is not publishable")
     if package.get("license") != "MIT":
         fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
@@ -402,9 +407,14 @@ def check_crates() -> None:
         "features": ["pthread", "signal"],
     }:
         fail("dependencies", "tests add only the pthread feature to nix")
-    binary = manifest.get("bin", [])
-    if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
-        fail("workspace", "the binary requires the cli feature")
+    command = check_member("thinkthen-cli")
+    check_windows_manifest(command)
+    if manifest.get("bin") or (REPO / "crates/thinkthen/src/main.rs").exists():
+        fail("workspace", "the library crate contains no binary target")
+    if command.get("bin") != [{"name": "thinkthen", "path": "src/main.rs"}] or command.get("features"):
+        fail("workspace", "the separate command crate keeps the thinkthen binary without a cli feature")
+    if command.get("dependencies", {}).get("thinkthen") != {"version": f"={VERSION}", "path": "../thinkthen"}:
+        fail("dependencies", "the command depends on the released public library by version and local path")
     for failure in feature_failures(manifest):
         fail("dependencies", failure)
     for plant in (
@@ -414,6 +424,7 @@ def check_crates() -> None:
         {"host-sqlite": ["rusqlite/bundled"]},
         {"polars": ["dep:polars", "dep:polars-core", "polars/lazy"]},
         {"default": ["cli"]},
+        {"cli": ["dep:clap", "dep:signal-hook"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
             fail("dependencies", f"the planted features {plant} are refused")
@@ -448,14 +459,14 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "signal-hook", "polars", "polars-core"}:
-        held.append("exactly the command dependencies and pinned Polars features are optional")
+    if optional != {"polars", "polars-core"}:
+        held.append("only the pinned Polars dependencies are optional in the library")
     if manifest.get("features") != {
-        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:signal-hook"],
+        "default": ["bundled-sqlite"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"],
         "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
-        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy and the bundled SQLite, "
+        held.append("the library defaults to bundled SQLite, polars selects its two pinned crates with lazy and bundled SQLite, "
                     "bundled-sqlite bundles rusqlite's SQLite, and host-sqlite adds nothing")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
@@ -2428,11 +2439,11 @@ GRAPH_PLANTS = (
     ('[build-dependencies]', 'clap = "4.6.7"'),
 )
 GRAPH_FILES = (
-    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "crates/thinkthen-cli/Cargo.toml", "conformance/backend/Cargo.toml",
     "crates/thinkthen-host/Cargo.toml",
 )
 GRAPH_STUBS = (
-    "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
+    "crates/thinkthen/src/lib.rs", "crates/thinkthen-cli/src/main.rs",
     "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
     "crates/thinkthen-host/src/lib.rs",
 )

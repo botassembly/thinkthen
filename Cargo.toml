@@ -2,7 +2,7 @@
 members = ["crates/thinkthen", "crates/thinkthen-cli", "conformance/backend", "crates/thinkthen-host"]
 # Ticket 0086: the external consumer is its own workspace, built by the test rung.
 # ADR 0047: each binding under `libraries` or `databases` is its own workspace
-# too, and a plain `cargo build` here compiles `thinkthen` alone.
+# too. A plain `cargo build` compiles the library and the separate command.
 exclude = ["conformance/consumer", "libraries", "databases"]
 default-members = ["crates/thinkthen", "crates/thinkthen-cli"]
 resolver = "3"
