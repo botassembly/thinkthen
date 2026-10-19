@@ -37,6 +37,7 @@ Release smoke jobs on the Intel macOS runner ran into the six-hour cap while han
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: Fresh review accepts ed9716bfb after the complete hosted-workflow self-test, global workflows, children and policy passed in M5job1792421328845-87188; routing fixtures now read actual manifest pins and isolate deferred legacy Ruby setup, while production hosted Ruby readers remain incompatible until0620, and the standalone closing gate is next.
 
 ## Amendment, 2026-10-18
 
