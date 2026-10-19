@@ -9,6 +9,8 @@ mod located_filter;
 mod native_feed;
 #[path = "request_contract/preview.rs"]
 mod preview;
+#[path = "request_contract/shared_state.rs"]
+mod shared_state;
 #[path = "request_contract/overrides.rs"]
 mod overrides;
 #[path = "request_contract/identity.rs"]

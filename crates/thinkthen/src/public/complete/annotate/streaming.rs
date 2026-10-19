@@ -65,6 +65,7 @@ impl Engine {
         let mut packing = pull::packing(setting, false, false);
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
+            shared_state_groups: options.shared_state_groups,
             recover_missing: false,
             require_usable_groups: true,
             engine: Arc::clone(&engine),
@@ -84,6 +85,7 @@ impl Engine {
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
+            shared_state_groups: options.shared_state_groups,
             recover_missing: recover.is_some(),
             require_usable_groups: true,
             engine: Arc::clone(&engine),

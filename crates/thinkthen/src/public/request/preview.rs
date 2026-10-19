@@ -16,6 +16,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
+        environment.controls.admit_preparation(request.request.call.function())?;
         if matches!(request.request.call.function(), RequestFunction::Recognize | RequestFunction::Relate) {
             return self.plan_whole_request(request, environment);
         }
@@ -141,7 +142,7 @@ impl Engine {
                     &engine,
                     set,
                     row,
-                    controls.context_text(),
+                    &controls,
                     at,
                 )
                 .map_err(|error| error.at_record(at));

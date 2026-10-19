@@ -118,6 +118,7 @@ pub struct CallOptions<'a> {
     pub(in crate::public) attachment_limit: Option<super::request::transport::TransportAttachmentLimit>,
     pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
+    pub(in crate::public) shared_state_groups: bool,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
     // entity admission without wire controls.
@@ -275,6 +276,25 @@ impl<'a> CallOptions<'a> {
     pub const fn batch(mut self, setting: BatchSetting) -> Self {
         self.batch = Some(setting);
         self
+    }
+
+    /// Prepare each annotation group with its admitted evidence as the shared
+    /// state and its original questions unchanged. The default quotes evidence
+    /// into ordinary annotation questions instead. Preview and execution use the
+    /// same native packing, limits, adapter, decoding and accounting.
+    /// This applies only to annotation requests; other functions refuse before
+    /// reading question files, sources or feeds. No encoded request is accepted.
+    #[must_use]
+    pub const fn shared_state_groups(mut self) -> Self {
+        self.shared_state_groups = true;
+        self
+    }
+
+    pub(in crate::public) fn admit_preparation(&self, function: crate::RequestFunction) -> Result<(), Error> {
+        if self.shared_state_groups && function != crate::RequestFunction::Annotate {
+            return Err(Error::usage("shared-state groups require an annotation request"));
+        }
+        Ok(())
     }
 
     /// Share nonblank text as context for an eligible many-record request.

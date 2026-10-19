@@ -16,6 +16,7 @@ impl Engine {
         let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
         let engine = Arc::clone(&self.inner);
         let asker = Annotations {
+            shared_state_groups: options.shared_state_groups,
             recover_missing: true,
             require_usable_groups: false,
             engine: Arc::clone(&engine),
@@ -74,6 +75,7 @@ impl Engine {
         let mut packing = pull::packing(setting, false, true);
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
+            shared_state_groups: options.shared_state_groups,
             recover_missing: false,
             require_usable_groups: false,
             engine: Arc::clone(&engine),
@@ -91,6 +93,7 @@ impl Engine {
         });
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
+            shared_state_groups: options.shared_state_groups,
             recover_missing: false,
             require_usable_groups: false,
             engine: Arc::clone(&engine),

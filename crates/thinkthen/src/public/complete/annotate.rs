@@ -26,6 +26,7 @@ struct Held<T> {
     context: Option<core::Evidence>,
 }
 struct Annotations {
+    shared_state_groups: bool,
     recover_missing: bool,
     require_usable_groups: bool,
     engine: Arc<facade::Engine>,
@@ -38,6 +39,7 @@ impl Annotations {
         group_done: impl FnMut(usize, usize),
     ) -> Result<Vec<Ask>, Error> {
         let asks = Annotating::new(&self.engine, self.set.clone())
+            .shared_state_groups(self.shared_state_groups)
             .with_typed_context(input.context.as_ref(), input.explicit_context)
             .asks_with_groups(&input.text, group_done)?;
         if input.context.is_some() {
@@ -215,10 +217,10 @@ pub(super) fn preview_asks(
     engine: &Arc<facade::Engine>,
     set: &QuestionSet,
     record: RecordInput<crate::QuestionInput>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
     at: usize,
 ) -> Result<(Vec<crate::core::pack::Ask>, bool), Error> {
-    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let (_, input) = prepare_record(&set.0, record, options.context_text(), at)?;
     let dropped = set.0.questions().iter().any(|q| {
         crate::core::adapters::built_in::drops_detail_of(
             engine.backend().descriptions(),
@@ -226,6 +228,7 @@ pub(super) fn preview_asks(
         )
     });
     let asks = Annotations {
+        shared_state_groups: options.shared_state_groups,
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,
@@ -239,12 +242,13 @@ pub(in crate::public) fn preview_grouped_asks(
     engine: &Arc<facade::Engine>,
     set: &QuestionSet,
     record: RecordInput<crate::QuestionInput>,
-    fallback: Option<&str>,
+    options: &CallOptions<'_>,
     at: usize,
 ) -> Result<Vec<(crate::core::pack::Ask, usize)>, Error> {
-    let (_, input) = prepare_record(&set.0, record, fallback, at)?;
+    let (_, input) = prepare_record(&set.0, record, options.context_text(), at)?;
     let mut groups = Vec::new();
     let asks = Annotations {
+        shared_state_groups: options.shared_state_groups,
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,

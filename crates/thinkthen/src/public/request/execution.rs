@@ -541,6 +541,7 @@ pub(super) fn prepare<'a>(
     controls: CallOptions<'a>,
     image_inputs: bool,
 ) -> Result<Prepared<'a>, Error> {
+    controls.admit_preparation(request.request.call.function())?;
     let options = &request.request.call.arguments().options;
     let context = options
         .context

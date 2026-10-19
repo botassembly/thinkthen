@@ -248,7 +248,7 @@ pub(in crate::public) fn preview_definition_asks(
             dynamic_choose::preview_asks(engine, question, record, options.context_text(), at)
         }
         Definition::Annotate(set) => {
-            annotate::preview_asks(engine, set, record, options.context_text(), at)
+            annotate::preview_asks(engine, set, record, options, at)
         }
         _ => Err(Error::usage("plan requires a record question")),
     }
