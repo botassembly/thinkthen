@@ -3,7 +3,7 @@
 //! Callers own an explicit [`Engine`] and its typed native results.
 
 mod usage;
-pub use usage::{UsageTotals, current_usage_month, read_usage};
+pub use usage::{UsageFailure, UsageFailureCategory, UsageTotals, current_usage_month, read_usage};
 
 mod maintenance;
 pub use maintenance::*;

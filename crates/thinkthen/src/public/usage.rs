@@ -2,6 +2,36 @@
 use crate::{Counters, Error, ErrorKind, engine::usage};
 use std::path::Path;
 
+/// Closed reason retained after the count-only writer stops persisting totals.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UsageFailureCategory {
+    /// A generated usage file contained invalid counts.
+    InvalidContents,
+    /// The local state could not be safely read.
+    UnsafeOrUnreadable,
+}
+
+/// Safe local persistence diagnostic, without an operating-system message or path.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct UsageFailure {
+    /// A generated usage filename; absent when the usage directory itself failed.
+    pub file_name: Option<String>,
+    /// The writer's fixed failure classification.
+    pub category: UsageFailureCategory,
+}
+
+impl UsageFailure {
+    pub(super) fn of((name, category): (String, &'static str)) -> Self {
+        Self {
+            file_name: (name != "usage directory").then_some(name),
+            category: match category {
+                "invalid contents" => UsageFailureCategory::InvalidContents,
+                _ => UsageFailureCategory::UnsafeOrUnreadable,
+            },
+        }
+    }
+}
+
 /// Persisted counts for one month and all recorded months.
 /// These counts contain no questions, evidence, credentials or answer keys.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

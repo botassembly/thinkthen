@@ -36,7 +36,6 @@ impl Clock {
             self.invalid |= self.elapsed.is_none();
         }
     }
-    #[cfg(test)]
     fn total(&self, now: Instant) -> Option<Duration> {
         if self.invalid {
             return None;
@@ -54,7 +53,6 @@ impl Timeline {
         }
         Interval(self)
     }
-    #[cfg(test)]
     pub(super) fn total(&self) -> Option<Duration> {
         self.0.lock().ok()?.total(Instant::now())
     }
@@ -70,6 +68,10 @@ impl Drop for Interval<'_> {
     }
 }
 impl super::Counters {
+    pub(crate) fn http_time(&self) -> Option<Duration> {
+        self.shared.http.total()
+    }
+
     pub(crate) fn http_interval(&self) -> Interval<'_> {
         self.shared.http.enter()
     }

@@ -219,7 +219,6 @@ impl Counters {
     }
 
     /// Only generated usage filenames and fixed categories may reach diagnostics.
-    #[cfg(test)]
     pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
         self.shared.queue.lock().ok()?.failed_file.clone()
     }

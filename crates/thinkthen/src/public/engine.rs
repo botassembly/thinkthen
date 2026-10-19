@@ -202,6 +202,27 @@ impl Engine {
         self.inner.finish_usage_status()
     }
 
+    /// Monotonic union of this engine's HTTP and response-body read intervals.
+    /// Overlapping attempts count once. Missing timing or invalid clock arithmetic
+    /// returns None; an engine without sends has zero elapsed HTTP time.
+    #[must_use]
+    pub fn http_time(&self) -> Option<std::time::Duration> {
+        guarded(|| self.inner.http_time().map_err(Error::from))
+            .ok()
+            .flatten()
+    }
+
+    /// The first retained local usage failure, with no path or OS error text.
+    /// None also covers failures without a retained file classification. Observe
+    /// `usage_persistence` to distinguish those failures from working persistence.
+    #[must_use]
+    pub fn usage_failure(&self) -> Option<crate::UsageFailure> {
+        guarded(|| self.inner.usage_failure().map_err(Error::from))
+            .ok()
+            .flatten()
+            .map(crate::UsageFailure::of)
+    }
+
     /// This engine's totals: the sends, cache answers and tokens of calls
     /// made through it and its clones. Another engine in the same process
     /// counts its own, from zero; add several with `Counters`' `Sum`. A

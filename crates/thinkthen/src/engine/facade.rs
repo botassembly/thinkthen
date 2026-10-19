@@ -335,6 +335,14 @@ impl Engine {
         Ok(self.state(&Cancel::default())?.usage.snapshot())
     }
 
+    pub(crate) fn http_time(&self) -> Result<Option<Duration>, Error> {
+        Ok(self.state(&Cancel::default())?.usage.http_time())
+    }
+
+    pub(crate) fn usage_failure(&self) -> Result<Option<(String, &'static str)>, Error> {
+        Ok(self.state(&Cancel::default())?.usage.failed_file())
+    }
+
     /// Ask one question of one evidence and read the answer under the rule.
     /// Only tests call it; the public calls go through `ask_all`.
     #[cfg(test)]

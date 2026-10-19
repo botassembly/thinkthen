@@ -32,6 +32,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 `current_usage_month` and `read_usage` expose the existing count-only store for offline status. The caller owns the explicit directory and selected month. `UsageTotals` projects the existing public `Counters` for that month and all recorded months. Reads retain shared locking, permissions and safe path-specific failure messages and never change persisted state.
 
+The command's final facts use the existing count-only `Facts` request-size getters and `Engine::http_time`. HTTP time uses the native monotonic union of actual HTTP and body-read intervals, so overlapping sends count once. `Engine::usage_failure` projects only a generated filename, or the fact that the directory failed, and a closed category. It exposes no caller path or operating-system error text. The command owns its one-time persistence warning and retains the existing writer-disable behavior.
+
 `EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
 
 `EngineBuilder::configuration_shared` retains the existing early permission warning without resolving a route. `EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
@@ -224,6 +226,26 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+const fn Facts::largest_request_bytes(&self) -> usize
+const fn Facts::largest_request_estimated_input_tokens(&self) -> Option<u64>
+const fn Facts::token_estimate_method(&self) -> &'static str
+fn Engine::http_time(&self) -> Option<Duration>
+fn Engine::usage_failure(&self) -> Option<UsageFailure>
+struct UsageFailure
+UsageFailure::file_name: Option<String>
+UsageFailure::category: UsageFailureCategory
+impl Clone for UsageFailure
+impl Debug for UsageFailure
+impl Eq for UsageFailure
+impl PartialEq for UsageFailure
+enum UsageFailureCategory
+UsageFailureCategory::InvalidContents
+UsageFailureCategory::UnsafeOrUnreadable
+impl Clone for UsageFailureCategory
+impl Copy for UsageFailureCategory
+impl Debug for UsageFailureCategory
+impl Eq for UsageFailureCategory
+impl PartialEq for UsageFailureCategory
 struct Probability
 enum ProbabilityError
 ProbabilityError::NotFinite
