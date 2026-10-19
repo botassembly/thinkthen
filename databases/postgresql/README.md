@@ -87,10 +87,10 @@ CREATE TABLE messages(id integer PRIMARY KEY, body text, team text, tags text[])
 
 CREATE FUNCTION label_message() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW.team := thinkthen_choose('Which team handles this?', NEW.body,
-    settings => '{"options":["billing","shipping"]}'::json);
-  NEW.tags := thinkthen_tag('What is in this text?', NEW.body,
-    settings => '{"labels":["refund","shipping"]}'::json);
+  NEW.team := (SELECT thinkthen_choose('Which team handles this?', NEW.body,
+    settings => '{"options":["billing","shipping"]}'::json) AS team);
+  NEW.tags := (SELECT thinkthen_tag('What is in this text?', NEW.body,
+    settings => '{"labels":["refund","shipping"]}'::json) AS message_tags);
   RETURN NEW;
 END
 $$;

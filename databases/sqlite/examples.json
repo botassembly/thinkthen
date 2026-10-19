@@ -78,7 +78,7 @@
     "label_rows": {
       "setup": [
         "CREATE TABLE messages(id INTEGER PRIMARY KEY, body TEXT, team TEXT, tags TEXT);",
-        "CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN\n  UPDATE messages SET\n    team = thinkthen_choose('Which team handles this?', NEW.body,\n      '{\"options\":[\"billing\",\"shipping\"]}'),\n    tags = thinkthen_tag('What is in this text?', NEW.body,\n      '{\"labels\":[\"refund\",\"shipping\"]}')\n  WHERE id = NEW.id;\nEND;",
+        "CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN\n  UPDATE messages SET\n    team = (SELECT thinkthen_choose('Which team handles this?', NEW.body,\n      '{\"options\":[\"billing\",\"shipping\"]}') AS team),\n    tags = (SELECT thinkthen_tag('What is in this text?', NEW.body,\n      '{\"labels\":[\"refund\",\"shipping\"]}') AS message_tags)\n  WHERE id = NEW.id;\nEND;",
         "INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');"
       ],
       "sql": "SELECT id, team, tags FROM messages WHERE team = 'billing';",
