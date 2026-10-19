@@ -887,3 +887,7 @@ warning signal, reusing native directory metadata ownership/world-write rules. I
 false for missing paths, files, metadata failures and non-Unix platforms. It is no security
 or storage-validity guarantee. The command retains its private-default exemption, record
 before replay path selection, and warning order before any storage build.
+
+`ErrorDiagnostic::InputJson { line: usize, column: usize }` preserves a retained native
+whole-document syntax cause separately from `RecordJson(JsonFailure)`. Only numeric
+location facts are projected; ordinary error shape, kind, facts and source stay unchanged.

@@ -31,6 +31,14 @@ pub struct ProviderFailure<'a> {
 pub enum ErrorDiagnostic<'a> {
     /// Pure native JSON admission, without quoted input or duplicate paths.
     Json(JsonFailure),
+    /// Syntax refusal while parsing one whole input document as JSON.
+    /// The distinction from record JSON preserves the native producer's framing.
+    InputJson {
+        /// One-based source line.
+        line: usize,
+        /// One-based source column, or zero for empty input.
+        column: usize,
+    },
     /// A record's native JSON admission, preserving safe location facts.
     RecordJson(JsonFailure),
     /// A saved question's native JSON admission.
@@ -388,10 +396,41 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
         return Some(match error {
             crate::core::RecordError::NotUtf8 => D::InvalidUtf8,
             crate::core::RecordError::Json(cause) => D::RecordJson(classification::json(cause)),
-            crate::core::RecordError::InputJson { line, column } => D::RecordJson(JsonFailure::Syntax { line: *line, column: *column }),
+            crate::core::RecordError::InputJson { line, column } => D::InputJson { line: *line, column: *column },
             crate::core::RecordError::Render(cause) => D::Rendering(cause.to_string()),
             _ => D::Record(error.to_string()),
         });
     }
     None
+}
+
+#[cfg(test)]
+mod input_json_tests {
+    use super::*;
+
+    #[test]
+    fn native_document_and_record_readers_keep_distinct_safe_syntax_projections() {
+        let marker = "private-whole-document-marker";
+        for text in [String::new(), format!("{{\n\"{marker}\":?}}") ] {
+            for (framing, document) in [(crate::core::Framing::Document, true), (crate::core::Framing::Jsonl, false)] {
+                let reading = crate::core::Reading::new(framing,
+                    vec![crate::core::Pointer::new("/evidence").expect("pointer")]).expect("reading");
+                let cause = reading.record(text.as_bytes()).expect_err("malformed JSON");
+                let error = Error::refused(cause);
+                let diagnostic = error.diagnostic().expect("retained native cause");
+                let (line, column) = match diagnostic {
+                    ErrorDiagnostic::InputJson { line, column } if document => (line, column),
+                    ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line, column }) if !document => (line, column),
+                    other => panic!("unexpected diagnostic: {other:?}"),
+                };
+                assert_eq!(line, if text.is_empty() { 1 } else { 2 });
+                assert_eq!(column == 0, text.is_empty());
+                for shown in [format!("{error:?}"), error.to_string(), format!("{:?}", error.diagnostic()),
+                    serde_json::to_string(&error.complete()).expect("safe error document")] {
+                    assert!(!shown.contains(marker));
+                }
+                assert!(std::error::Error::source(&error).is_none());
+            }
+        }
+    }
 }
