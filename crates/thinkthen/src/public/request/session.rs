@@ -625,10 +625,7 @@ fn run(
     let environment = RequestEnvironment { controls, feed };
     // The existing release hook selects native incremental rank intake. Session
     // packets own the final result, so discarded originals need no host callback.
-    let release = |_: usize| {};
-    let release = options
-        .incremental_ranking
-        .then_some(&release as &dyn Fn(usize));
+    let release: Option<&dyn Fn(usize)> = options.incremental_ranking.then_some(&|_| {});
     let mut terminal =
         match engine.execute_request_sink(&request, environment, Some(&sink), release, None) {
             Ok(RequestOutcome::Complete(call)) => {
