@@ -10,38 +10,27 @@ use thinkthen::{
 type Fields = BTreeMap<String, Box<RawValue>>;
 pub(super) type Records<'a> =
     Box<dyn Iterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a>;
+/// Ordered host descriptors and call controls; readers stay deferred.
 pub struct Inputs {
     raw: Fields,
-    native_record: Option<thinkthen::RequestItem>,
     native_request: bool,
+    /// Explicit file framing selected by the host.
     pub framing: Option<thinkthen::RequestFraming>,
+    /// Whether the host supplies records incrementally.
     pub incremental: bool,
+    /// Whether native transport attempt observations are requested.
     pub attempts: bool,
+    /// Whether cancellation was requested before execution.
     pub cancelled: bool,
 }
-impl Inputs {
-    /// Carry one native host record without a JSON descriptor or byte array.
-    #[allow(dead_code, reason = "native BLOB complete inputs enter through SQLite")]
-    pub fn from_record(record: thinkthen::RequestItem) -> Self {
-        Self {
-            raw: Fields::new(),
-            native_record: Some(record),
-            native_request: true,
-            framing: None,
-            incremental: false,
-            attempts: false,
-            cancelled: false,
-        }
+impl std::fmt::Debug for Inputs {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Inputs(<withheld>)")
     }
+}
+impl Inputs {
     /// Inspect descriptors only; native route admission precedes file/image readers.
-    #[allow(
-        dead_code,
-        reason = "only SQLite uses shared Request image-route admission before ticket 0500"
-    )]
     pub fn image_inputs(&self) -> Result<bool, Error> {
-        if let Some(record) = &self.native_record {
-            return Ok(!record.images.is_empty());
-        }
         if let Some(files) = self.raw.get("files") {
             let files = fields(files.get())?;
             let options = file_options(&files)?;
@@ -66,20 +55,14 @@ impl Inputs {
         }
         Ok(false)
     }
-    #[allow(
-        dead_code,
-        reason = "only SQLite adopts native request controls before PostgreSQL ticket 0500"
-    )]
+
+    /// Decode native request descriptors while allowing native per-record controls.
     pub fn parse_request(source: &str) -> Result<Self, Error> {
         let mut inputs = Self::parse(source, true)?;
         inputs.native_request = true;
         Ok(inputs)
     }
     /// Advance host readers only after shared request admission and cancellation checks.
-    #[allow(
-        dead_code,
-        reason = "only SQLite defers readers through Request before PostgreSQL ticket 0500"
-    )]
     pub fn deferred_records(&self, reading: Option<&RecordReading>) -> Records<'_> {
         let reading = reading.cloned();
         Box::new(
@@ -91,6 +74,7 @@ impl Inputs {
             }),
         )
     }
+    /// Decode descriptors and enforce the host server-file admission rule.
     pub fn parse(source: &str, server_files: bool) -> Result<Self, Error> {
         let raw = fields(source)?;
         if raw.keys().any(|key| {
@@ -135,7 +119,6 @@ impl Inputs {
         let cancelled = flag("cancelled")?.unwrap_or(false);
         Ok(Self {
             raw,
-            native_record: None,
             native_request: false,
             framing,
             incremental,
@@ -143,13 +126,8 @@ impl Inputs {
             cancelled,
         })
     }
+    /// Compose ordered native records through the selected projection.
     pub fn records(&self, reading: Option<&RecordReading>) -> Result<Records<'_>, Error> {
-        if let Some(record) = &self.native_record {
-            let default = RecordReading::new(&[], None, None)?;
-            return Ok(Box::new(std::iter::once(
-                record.compose_record(reading.unwrap_or(&default)),
-            )));
-        }
         let reading = self.record_reading(reading)?;
         if let Some(files) = self.raw.get("files") {
             return self.file_records(files.get(), reading);
@@ -222,19 +200,6 @@ impl Inputs {
                 .get(),
         )
         .map_err(|_| usage("file paths is a text array"))
-    }
-    /// Retain explicit file selection without opening or advancing its reader.
-    pub fn request_source(&self) -> Result<Option<thinkthen::RequestSource>, Error> {
-        let Some(files) = self.raw.get("files") else {
-            return Ok(None);
-        };
-        let options = file_options(&fields(files.get())?)?;
-        Ok(Some(thinkthen::RequestSource {
-            paths: self.file_paths()?.into_iter().map(Into::into).collect(),
-            reading: options.reading,
-            media: options.media,
-            framing: self.framing,
-        }))
     }
     fn file_records(&self, files: &str, reading: RecordReading) -> Result<Records<'_>, Error> {
         let value = fields(files)?;

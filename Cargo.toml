@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/thinkthen", "conformance/backend"]
+members = ["crates/thinkthen", "conformance/backend", "crates/thinkthen-host"]
 # Ticket 0086: the external consumer is its own workspace, built by the test rung.
 # ADR 0047: each binding under `libraries` or `databases` is its own workspace
 # too, and a plain `cargo build` here compiles `thinkthen` alone.

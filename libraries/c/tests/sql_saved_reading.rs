@@ -98,20 +98,16 @@ fn exercise(verb: &str, authored: &str) -> Result<(), Box<dyn std::error::Error>
     let prepared = Prepared::content(verb, authored)?;
     for source in [false, true] {
         let admitted = if source {
-            sql_request::request_source(
-                &prepared,
-                RequestSource {
+            request(
+                verb,
+                sql_request::definition(&prepared),
+                RequestInput::Source { source: RequestSource {
                     paths: vec![path.clone()],
                     framing: Some(RequestFraming::Jsonl),
                     reading: ReaderOptions::default(),
                     media: ReaderMedia::Text,
-                },
-                RequestOptions {
-                    none: verb == "find",
-                    ..RequestOptions::default()
-                },
+                } },
             )?
-            .admit()?
         } else {
             request(verb, sql_request::definition(&prepared), inline(original)?)?
         };

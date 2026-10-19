@@ -1,5 +1,5 @@
 //! Named typed fields compose native collection data before shared admission.
-use super::Arguments;
+use super::{Arguments, inputs::Inputs};
 use crate::{Failure, complete_native, named, question};
 use rusqlite::types::ValueRef;
 
@@ -81,16 +81,16 @@ pub(super) fn settings(args: &Arguments) -> Result<thinkthen::Settings, Failure>
     question::call_settings(ValueRef::Text(&settings))
 }
 
-pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, thinkthen::Error> {
+pub(super) fn inputs(args: &Arguments) -> Result<Inputs, thinkthen::Error> {
     let image = match args.value("images") {
         ValueRef::Null => args.value("text"),
         value => value,
     };
     if let ValueRef::Blob(bytes) = image {
-        let mut inputs = complete_native::Inputs::from_record(crate::images::complete_record(
+        let mut inputs = Inputs::from_record(crate::images::complete_record(
             bytes,
             args.text("image_text")?,
-        )?);
+        )?)?;
         inputs.attempts = args.flag("attempts")?;
         inputs.incremental = args.flag("incremental")?;
         inputs.cancelled = args.flag("cancelled")?;
@@ -166,7 +166,7 @@ pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, thinkt
     for name in ["incremental", "attempts", "cancelled"] {
         fields.push(format!("\"{name}\":{}", args.flag(name)?));
     }
-    complete_native::Inputs::parse_request(&format!("{{{}}}", fields.join(",")))
+    Inputs::parse_request(&format!("{{{}}}", fields.join(",")))
 }
 
 fn text_field(
@@ -305,7 +305,7 @@ fn source_reading(args: &Arguments, fields: &mut Vec<String>) -> Result<(), Fail
 
 pub(super) fn ordinary_find(
     args: &Arguments,
-    inputs: &mut complete_native::Inputs,
+    inputs: &mut Inputs,
 ) -> Result<(), thinkthen::Error> {
     if args.supplied("request_records") {
         return Ok(());
@@ -313,7 +313,7 @@ pub(super) fn ordinary_find(
     if let Some(text) = args.text("text")? {
         let units = serde_json::from_str::<Vec<String>>(&text)
             .map_err(|_| Failure::usage("find units is a JSON array of text"))?;
-        *inputs = complete_native::Inputs::parse_request(
+        *inputs = Inputs::parse_request(
             &serde_json::json!({"records":units.into_iter()
             .map(|text| serde_json::json!({"text":text})).collect::<Vec<_>>(),
             "attempts":args.flag("attempts")?,"cancelled":args.flag("cancelled")?})
