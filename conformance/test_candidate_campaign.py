@@ -96,9 +96,10 @@ class CandidateSmokes(unittest.TestCase):
             # Rendezvous makes the old four outer reservations deadlock reliably.
             (root / 'compile.py').write_text(
                 'from pathlib import Path\nimport os,subprocess,sys,time\n'
+                'from conformance.children.children import FIXTURE_HANG_TIMEOUT\n'
                 'slot=sys.argv[1]; Path("ready-"+slot).touch()\n'
                 'env={"PATH":os.environ["PATH"]}\n'
-                'deadline=time.monotonic()+5\n'
+                'deadline=time.monotonic()+FIXTURE_HANG_TIMEOUT\n'
                 'while len(list(Path(".").glob("ready-*"))) != 4:\n'
                 ' assert time.monotonic()<deadline, "smoke children did not start"\n'
                 ' time.sleep(0.01)\n'

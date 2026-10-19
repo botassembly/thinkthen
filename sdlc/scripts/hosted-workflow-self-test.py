@@ -894,6 +894,25 @@ def parameter_cases():
         # Run the real candidate guard with the prepared interpreter, not the host launcher.
         (root / 'bin/python3').symlink_to(sys.executable)
         env = {'PATH': fixture_path(root / 'bin'), 'HOME': str(root), 'LANG': 'C.UTF-8'}
+        # Exercise the workflow caller with the real archived, non-executable helper.
+        archived = subprocess.check_output(['git', 'archive', 'HEAD',
+                                            'libraries/swift/build-xcframework.sh'], cwd=REPO)
+        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
+            source.extractall(root, filter='data')
+        release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+        apple = release['jobs']['apple-packages']
+        assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
+                        'Assemble Swift and Foundation from both captured C packages')
+        command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
+        (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
+        for cell in apple['strategy']['matrix']['include']:
+            result = parameter_run(f'Apple assembly target={cell["target"]}',
+                                   ['/bin/sh', '-x', '-c', command], cwd=root,
+                                    env={**env, 'TARGET': cell['target']},
+                                    capture_output=True, text=True)
+            assert result.returncode == 2 and 'Apple native tools are required' in result.stderr, (
+                cell['target'], result.returncode, result.stderr)
+        (root / 'bin/uname').write_text('#!/bin/sh\ncase $1 in -s) echo Darwin ;; *) echo arm64 ;; esac\n')
         for status in (0, 77, 1):
             (root / 'libraries/swift/check.sh').write_text(f'echo selected-swift\nexit {status}\n')
             (root / 'libraries/objective-c/check.sh').write_text('echo WRONG_LANGUAGE\nexit 1\n')

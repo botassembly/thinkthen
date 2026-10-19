@@ -9,10 +9,9 @@ import subprocess
 import sys
 import tempfile
 
-from conformance.children.children import fixture_wait
-
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "conformance/children"))
+from children import fixture_wait
 ERRORS = {'usage': 1, 'backend': 2, 'local': 4, 'cancelled': 5, 'deadline': 3, 'defect': 6}
 
 
