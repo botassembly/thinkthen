@@ -18,7 +18,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types; landed result/1 distinguished | Settled; generated host results implemented |
+| [result.md](result.md) | Bare views, five answer kinds, result/2 IDs, provenance, transport and inactive proxy types | Settled; generated host results implemented |
 | [files.md](files.md) | Explicit text/image readers, located carriers and spans; ordered native/CLI image inputs | Settled for 0.2 |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
@@ -44,7 +44,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
 
-[ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md) fixes the coordinated result/2 and cache/2 target. The generated [result schema](result.schema.json) contains native result/2 definitions alongside retained result/1 compatibility definitions. The [result contract](result.md) distinguishes complete results from compatibility examples and records host adoption limits. The target preserves bare/scalar compatibility, never claims a cache hit or answered model without observations, and reserves proxy types without activating them. It depends on 0449's one-route boundary under ADR 0119; 0443/0444/0445/0450 and the typed carrier tickets own adoption.
+[ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md) fixes the coordinated result/2 and cache/2 target. The generated [result schema](result.schema.json) contains only result/2 detailed definitions. The [result contract](result.md) describes the complete results and current host views. The target preserves bare values, never claims a cache hit or answered model without observations, and reserves proxy types without activating them. It depends on 0449's one-route boundary under ADR 0119; 0443/0444/0445/0450 and the typed carrier tickets own adoption.
 
 ## Status words
 

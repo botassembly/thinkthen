@@ -1,9 +1,0 @@
-{
-  "directory": [
-    "src",
-    "bridge/src"
-  ],
-  "extension": ".rs",
-  "max": 5636,
-  "scope": "handwritten-production"
-}

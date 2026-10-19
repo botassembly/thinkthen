@@ -1,9 +1,0 @@
-{
-  "directory": [
-    "lib",
-    "fallback/lib"
-  ],
-  "extension": ".rb",
-  "max": 331,
-  "scope": "handwritten-production"
-}

@@ -1,5 +1,8 @@
 //! A test child's whole environment, built from nothing, and the names cargo reads.
-#![allow(dead_code, reason = "each test file uses part of the helper")]
+#![allow(
+    dead_code,
+    reason = "test_deadline and integration test crates share child::command, run and wait with different environment helpers"
+)]
 use std::path::{Path, PathBuf};
 use std::process::Command;
 

@@ -94,7 +94,7 @@ impl PlanEstimate {
 }
 
 /// The existing original-byte budget that refused a native whole input.
-/// Hosts can project compatibility diagnostics through [`Error::source_budget_exceeded`].
+/// Hosts can project budget diagnostics through [`Error::source_budget_exceeded`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SourceBudgetExceeded {
     /// Source plan admission exceeded its original-byte budget.

@@ -22,8 +22,8 @@ pub(crate) mod pull;
 pub use pull::RequestRows;
 mod recovered;
 mod recovering;
-mod recovering_session;
-pub use recovering_session::{
+mod session_recovery;
+pub use session_recovery::{
     RequestRecoveringRead, RequestRecoveringResult, RequestRecoveringSession,
 };
 mod result;
