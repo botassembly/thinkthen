@@ -10,6 +10,8 @@ Reviews: revision 3d338bb, accept
 
 Reviews: revision 442b831, accept
 
+Reviews: revision 50a2800, accept
+
 ## Outcome
 
 - Changes: `conformance/consumer/consumer/tests/public/cases.rs`, `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
