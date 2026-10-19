@@ -115,9 +115,9 @@ pub(crate) use crate::core::recognize_file::{RecognizeKinds, rule_side};
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
-pub(crate) use crate::core::relate_file::{EntitySetError, RelateSpec, inline_rule};
+pub(crate) use crate::core::relate_file::{EntitySetError, RelateConfigError, RelateSpec, inline_rule};
 #[cfg(test)]
-pub(crate) use crate::core::relate_file::{RelateConfigError, RelateFields};
+pub(crate) use crate::core::relate_file::RelateFields;
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
     pair_edges, plan_pairs, plan_relate, reaches_cut, relate_edge,
