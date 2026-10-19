@@ -10,6 +10,8 @@ Depends on: 0612, 0628
 
 Reviews: revision de79dcf, accept
 
+Reviews: revision f978867, accept
+
 ## Outcome
 
 - The public Rust library offers one function that runs a named call to completion. It takes a function name, question, input, options, an optional pull-style producer for fed input, and a cancellation handle. It returns the settled call (from 0612) or a typed error.
