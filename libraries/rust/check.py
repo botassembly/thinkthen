@@ -56,7 +56,7 @@ def main():
     if len(sys.argv) > 2:
         command = ['cargo', 'test', '--locked', '--offline', '--manifest-path',
                    str(project / 'Cargo.toml'), '--target-dir', str(target)]
-        subprocess.run([*command, '--test', 'sessions', '--test', 'settled', '--', '--test-threads=1'],
+        subprocess.run([*command, '--test', 'sessions', '--test', 'settled', '--test', 'call', '--', '--test-threads=1'],
                        env={**os.environ, **compiler_env}, check=True)
         if profile == 'stress':
             subprocess.run([*command, '--features', 'session-stress', '--test', 'sessions',

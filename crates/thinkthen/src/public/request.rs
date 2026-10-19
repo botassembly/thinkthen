@@ -1,6 +1,7 @@
 //! One versioned edge contract for native and serialized requests.
 
 mod admission;
+mod call;
 mod column;
 mod question_parts;
 pub use column::{RequestColumn, RequestColumnValues, RequestColumnView};

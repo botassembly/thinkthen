@@ -1,12 +1,16 @@
 # 0629: Add one Rust function that runs a call from start to final result
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0612, 0628
+
+Reviews: revision de79dcf, accept
+
+Reviews: revision f978867, accept
 
 ## Outcome
 
@@ -23,3 +27,10 @@ Depends on: 0612, 0628
 ## Evidence
 
 Every binding writes its own loop to run a call: start a session, push input from a producer, read packets, enforce one reader and one producer, handle closed and cancelled states, notice a missing final packet, and chain the producer's error. Examples: Go `libraries/go/session.go:86-280`, Swift `libraries/swift/Sources/ThinkThen/OwnedSession.swift:15-292`, Dart `libraries/dart/lib/src/session/client.dart:40-140`, Ruby `libraries/ruby/lib/thinkthen/session.rb:100-296`, C# `libraries/csharp/src/OwnedSession.cs:24-111`, PHP `libraries/php/src/session/operation.php:7-101`. The copies already disagree on error text: "Closed session", "client is closed", "operation is closed", and Dart's `StateError('Native owner is closed')`. Go also checks a nil producer itself (`session.go:96`), and so does Ruby (`session.rb:107,128`). All of these rules belong in Rust.
+
+## Progress
+
+- 2026-10-19 started
+- 2026-10-19 next: Implementationafb307004 is pushed with core/control and all-ten plain-fed checks passing in job1792423680791-41766, but jobs1792423680791-41766 and1792424137376-24355 also exposed example fixes and omitted invocation prerequisites, so a fresh developer will run the existing complete Rust entrypoint before installed-proof acceptance.
+- 2026-10-19 next: Fresh review accepts de79dcf11 after the existing complete source and installed Rust entrypoints passed in job1792424425760-48726, including all ten plain-fed functions and producer-error, cancellation and deadline checks; preserve earlier setup-failure receipts and combine the accepted0635 change for one closing gate after the current workflow landing.
+- 2026-10-19 next: Fresh review accepts f978867fc after strict API inventory and full lint passed in M5 job1792425949622-47000; the first combined gate failed because new public declarations were missing from the authoritative inventory despite prose documentation, and the accepted Rust and C pair now takes its complete closing gate with the failed receipt retained.
