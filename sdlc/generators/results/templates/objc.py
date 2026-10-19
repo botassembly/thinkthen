@@ -3,6 +3,7 @@ import json
 import re
 from csharp import shape, enum_values
 from host_answers import aggregate_answers, named_object_fields
+from union_shapes import predicate
 
 ROOTS = ('completesessionPacket', 'completeplan')
 
@@ -119,12 +120,9 @@ def outputs(definitions, version, input_definitions=None, abi=None):
             header += ['@property(nonatomic, readonly) id value;', '@property(nonatomic, readonly) NSString *kind;']
             implementation += ['+ (instancetype)read:(id)value {']
             for kind in source['primitive_variants']:
-                test = {'null': 'value == NSNull.null', 'boolean': 'TTIsBoolean(value)',
-                        'number': '[value isKindOfClass:NSNumber.class] && !TTIsBoolean(value)',
-                        'integer': '[value isKindOfClass:NSNumber.class] && !TTIsBoolean(value)',
-                        'string': '[value isKindOfClass:NSString.class]', 'array': '[value isKindOfClass:NSArray.class]',
-                        'object': '[value isKindOfClass:NSDictionary.class]'}[kind]
-                _, decode = conversion(source.get('primitive_schemas', {}).get(kind, {'type': kind}), definitions)
+                schema = source.get('primitive_schemas', {}).get(kind, {'type': kind})
+                test = predicate(schema, definitions, 'value', 'objc')
+                _, decode = conversion(schema, definitions)
                 implementation += [f'if ({test}) return [[self alloc] initWithFields:@{{@"value":{decode}, @"kind":{literal(kind)}}}];']
             implementation += ['TTInvalidResult(); return nil;', '}', '- (id)value { return self.rawFields[@"value"]; }', '- (NSString *)kind { return self.rawFields[@"kind"]; }']
         header += ['@end']

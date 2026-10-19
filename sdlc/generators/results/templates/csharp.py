@@ -2,6 +2,7 @@
 import json
 import re
 from host_answers import alternative_name
+from union_shapes import predicate
 
 
 def name(value):
@@ -104,18 +105,22 @@ def conversion(schema, definitions, expression='member', depth=0):
     kind = schema.get('type')
     if kind == 'object' and isinstance(schema.get('additionalProperties'), dict):
         value = schema['additionalProperties']
-        if nullable(value):
-            raise ValueError('C# target needs a nullable map value alternative')
         entry = f'entry{depth}'
         element, decode = conversion(value, definitions, entry + '.Value', depth + 1)
+        if nullable(value, definitions) and shape(value) != {}:
+            decode = (f'{entry}.Value.ValueKind == JsonValueKind.Null ? Presence<{element}>.Null : '
+                      f'Presence<{element}>.Present({decode})')
+            element = f'Presence<{element}>'
         return f'IReadOnlyDictionary<string, {element}>', (
             f'new ReadOnlyDictionary<string, {element}>({expression}.EnumerateObject()'
             f'.ToDictionary({entry} => {entry}.Name, {entry} => {decode}, StringComparer.Ordinal))')
     if kind == 'array':
-        if nullable(schema['items']) and shape(schema['items']) != {}:
-            raise ValueError('C# target needs a nullable array item alternative')
         item = f'item{depth}'
         element, decode = conversion(schema['items'], definitions, item, depth + 1)
+        if nullable(schema['items'], definitions) and shape(schema['items']) != {}:
+            decode = (f'{item}.ValueKind == JsonValueKind.Null ? Presence<{element}>.Null : '
+                      f'Presence<{element}>.Present({decode})')
+            element = f'Presence<{element}>'
         return f'IReadOnlyList<{element}>', (
             f'Array.AsReadOnly({expression}.EnumerateArray().Select({item} => {decode}).ToArray())')
     if kind == 'null':
@@ -251,15 +256,13 @@ def render_primitive_union(kind, variants, definitions, schemas):
               '    internal JsonElement ToJson() => document.Clone();\n'
               '    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;\n'
               '    internal string ToJsonString() => document.GetRawText();\n'
-              f'    internal static {kind} Read(JsonElement document) => document.ValueKind switch\n    {{\n']
+              f'    internal static {kind} Read(JsonElement document)\n    {{\n']
     for variant in variants:
-        tokens = {'number': ('Number',), 'integer': ('Number',), 'string': ('String',),
-                  'boolean': ('True', 'False'), 'array': ('Array',),
-                  'object': ('Object',), 'null': ('Null',)}[variant]
-        for token in tokens:
-            chunks.append(f'        JsonValueKind.{token} => new {kind}{name(variant)}(document),\n')
-    chunks.append('        _ => throw new JsonException("Unknown primitive result variant.")\n'
-                  '    };\n}\n\n')
+        schema = schemas.get(variant, {'type': variant})
+        test = predicate(schema, definitions, 'document', 'csharp')
+        chunks.append(f'        if ({test}) return new {kind}{name(variant)}(document);\n')
+    chunks.append('        throw new JsonException("Unknown primitive result variant.");\n'
+                  '    }\n}\n\n')
     for variant in variants:
         native, decode = conversion(schemas.get(variant, {'type': variant}), definitions, 'Document')
         chunks.append(f'public sealed class {kind}{name(variant)} : {kind}\n{{\n'
