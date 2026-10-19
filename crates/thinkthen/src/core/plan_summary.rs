@@ -92,7 +92,7 @@ impl PlanSummary {
         Ok(())
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn records_added(&mut self, count: usize) -> Result<(), PlanTooLarge> {
         self.records = self.records.checked_add(count).ok_or(PlanTooLarge)?;
         Ok(())
@@ -121,7 +121,7 @@ impl PlanSummary {
 
     /// Staged work may need this many later requests after answers arrive;
     /// no body exists yet, so bytes count only the prepared requests.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn possible_requests(&mut self, count: usize) -> Result<(), PlanTooLarge> {
         self.requests = self.requests.checked_add(count).ok_or(PlanTooLarge)?;
         self.upper_bound = true;

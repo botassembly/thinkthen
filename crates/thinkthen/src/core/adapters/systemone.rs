@@ -8,7 +8,7 @@
 //! model a request carries when nothing else names one, and the path the
 //! endpoint sits under. Nothing outside this module names any of the four.
 
-#[cfg(feature = "cli")]
+#[cfg(test)]
 pub(crate) const PLAN_ESTIMATE_NOTE: &str = "token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and the provider reported 5131, about 22% above the estimate";
 
 pub(crate) mod backends;
@@ -22,16 +22,16 @@ use thiserror::Error;
 use crate::core::text::ModelName;
 
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::request::encode;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::request::{drops_any, drops_detail};
 pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
 pub(crate) use crate::core::adapters::systemone::response::{decode_answers, decode_questions};
 
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode_observed;
 
 /// The name this adapter answers to, in the recording key and the entry.
@@ -163,7 +163,7 @@ pub(crate) enum DecodeError {
 
 /// The wire type one question travels as. The backend check names its
 /// one-question probes by it.
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) const fn wire_type(question: &crate::core::question::Question) -> &'static str {
     use crate::core::question::Question;
     match question {

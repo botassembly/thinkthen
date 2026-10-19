@@ -265,7 +265,7 @@ impl Backend {
 
     /// Whether the posting URL names the built-in backend, for its warning.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn is_built_in(&self) -> bool {
         let base = self
             .url

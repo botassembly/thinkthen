@@ -10,10 +10,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use crate::core::Plan;
 use crate::core::recording::Digest;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value,
@@ -22,7 +22,7 @@ use crate::core::{
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
 use crate::engine::http::Client;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use crate::engine::http::Exchange;
 use crate::engine::process::Guarded;
 use crate::engine::usage::{Counters, Counts};
@@ -36,10 +36,10 @@ pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 #[cfg(test)]
 pub(crate) use recognize::Recognized;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use recognize::step_one_context;
 pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition};
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use relate::PreparedRelations;
 pub(crate) use relate::{Execution, Logical, relations};
 
@@ -48,7 +48,6 @@ mod context;
 mod each;
 mod finish;
 #[cfg(test)]
-#[cfg(feature = "cli")]
 mod fork_tests;
 mod recognize;
 mod relate;
@@ -324,7 +323,7 @@ impl Engine {
     }
 
     /// Whether a folder the caller named, rather than the private default, is in use.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) const fn recording(&self) -> bool {
         (self.storage.record.is_some() || self.storage.replay.is_some())
             && !self.storage.private_default
@@ -396,7 +395,7 @@ impl Engine {
     /// Send one plan as one request with no store, as `check` does, which
     /// reads and writes no cache (`specification/check.md`). The send runs
     /// on an engine worker, so a host signal never lands in its socket read.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
         self.check_plan(plan)?;
         let body = self

@@ -66,7 +66,7 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn from_flag(flag: Arc<AtomicBool>) -> Self {
         Self(flag)
     }
@@ -203,13 +203,13 @@ impl<'a> CallOptions<'a> {
         self
     }
 
-    #[cfg(feature = "cli")]
+    #[cfg(test)]
     pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
         self.cli_text_limit = Some(limit);
         self
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) const fn readiness(mut self, reader: &'a readiness::Readiness<'a>) -> Self {
         self.readiness = Some(reader);
         self
@@ -224,7 +224,7 @@ impl<'a> CallOptions<'a> {
 
     // CLI signals retain an earned whole-set answer before the process exits.
     // Public caller cancellation remains dominant unless this private bridge is selected.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) const fn cli_cancel(
         mut self,
         value: &'a CancelToken,

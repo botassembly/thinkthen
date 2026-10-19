@@ -219,6 +219,3 @@ pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Fail
 
 #[cfg(test)]
 pub(crate) mod width_tests;
-
-#[cfg(test)]
-pub(crate) mod ordered;

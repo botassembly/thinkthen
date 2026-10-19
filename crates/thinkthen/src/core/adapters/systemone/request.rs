@@ -143,7 +143,7 @@ impl<'de> serde::Deserialize<'de> for Criteria {
 /// # Errors
 ///
 /// Returns [`EncodeError`] when the body cannot be written as JSON.
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     let parts = parts(plan)?;
     if let Some(images) = plan.images() {
@@ -294,7 +294,7 @@ fn sent(form: Descriptions, held: Option<&Json>) -> Result<Option<Json>, EncodeE
 
 /// Whether sending this plan turns a description object or list into text,
 /// which `check` and `--plan` report (ADR 0115 section 4).
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) fn drops_detail(plan: &Plan) -> bool {
     plan.questions()
         .iter()

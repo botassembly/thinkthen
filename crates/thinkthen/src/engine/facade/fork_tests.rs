@@ -20,7 +20,7 @@ use std::{env, fs};
 use conformance_backend::Backend as Loopback;
 
 use super::{Engine, Key, Settings, Storage};
-use crate::cli::schedule::width_tests::{child, in_child_at};
+use crate::test_deadline::isolated::{child, in_child_at};
 use crate::core::adapters::built_in;
 use crate::core::{Backend, Evidence, Plan, Question, QuestionText};
 use crate::engine::error::Error;

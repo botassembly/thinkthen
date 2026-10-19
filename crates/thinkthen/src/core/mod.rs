@@ -40,7 +40,7 @@ mod question_file;
 mod question_set;
 mod recognition_result;
 mod recognize;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use recognize::example_file;
 pub(crate) use recognize::{ExamplesError, render_examples, selected_examples};
 pub use recognize::{
@@ -69,12 +69,12 @@ mod threshold;
 
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::backend::BackendError;
 pub(crate) use crate::core::backend::named::{self, Named};
 pub(crate) use crate::core::backend::{Backend, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE};
 pub(crate) use crate::core::backend_profile::LimitKind;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::backend_profile::ProfileError;
 pub(crate) use crate::core::backend_profile::{BackendProfile, ProfileLimit, ProfileName};
 pub(crate) use crate::core::batch::{BatchError, BatchRecord, Setting};
@@ -98,7 +98,7 @@ pub use crate::core::question_file::QuestionRole;
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Typed, Verb, resolve, safe_key,
 };
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::question_file::{Resolved, Sources, pointers};
 pub(crate) use crate::core::question_file::Source;
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
@@ -110,13 +110,13 @@ pub(crate) use crate::core::recognize::{
 pub(crate) use crate::core::recognize_file::{
     RecognizeConfigError, RecognizeSpec, recognize_sha256,
 };
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::recognize_file::{RecognizeKinds, rule_side};
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{EntitySetError, RelateSpec, inline_rule};
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::relate_file::{RelateConfigError, RelateFields};
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
@@ -126,7 +126,7 @@ pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{
     AnswerOutcome, BackendFailure, BackendFailureCause, FailedValue, Reply,
 };
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::result::RecordValue;
 pub(crate) use crate::core::result::complete::Atomic as CompleteAtomic;
 pub(crate) use crate::core::result::complete::Find as CompleteFind;
@@ -150,7 +150,7 @@ pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::Threshold;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use crate::core::threshold::{Outcome, ThresholdError};
 pub use identity::{AnswerId, CallId, FailureId, IdentityError, ObservationId, SdkRequestId};
 pub use result::complete::MemberIdentity;

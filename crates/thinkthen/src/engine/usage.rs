@@ -13,7 +13,7 @@ pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
 mod timing;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
@@ -160,7 +160,7 @@ impl Counters {
 
     /// Wait for the writer, giving all remaining usage-lock acquisitions one
     /// finalization deadline. Other filesystem operations remain unbounded.
-    #[cfg(any(test, feature = "cli"))]
+    #[cfg(test)]
     pub(crate) fn finish(&self) -> bool {
         self.finish_status() == UsagePersistence::Failed
     }
@@ -219,7 +219,7 @@ impl Counters {
     }
 
     /// Only generated usage filenames and fixed categories may reach diagnostics.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
         self.shared.queue.lock().ok()?.failed_file.clone()
     }

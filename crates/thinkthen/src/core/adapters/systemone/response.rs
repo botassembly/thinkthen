@@ -110,7 +110,7 @@ struct ResponseUsage {
 
 mod observed;
 
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use observed::decode_observed;
 pub(crate) use observed::{Decoded, decode_answers};
 

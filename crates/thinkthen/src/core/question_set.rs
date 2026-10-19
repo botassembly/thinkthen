@@ -147,7 +147,7 @@ impl NamedQuestion {
     }
     /// Read the normalized evidence pointers.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn on(&self) -> &[Pointer] {
         &self.on
     }
@@ -246,7 +246,7 @@ impl QuestionSet {
 
     /// The name of the first question, in file order, that reads a part.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn first_part(&self) -> Option<&str> {
         self.questions
             .iter()

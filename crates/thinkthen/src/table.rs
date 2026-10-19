@@ -10,13 +10,7 @@ use csv_core::{ReadFieldResult, Reader, ReaderBuilder};
 #[derive(Debug)]
 pub(crate) enum ReadError {
     Input(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads the retained IO cause; native maps it to a safe local error"
-            )
-        )]
+        #[expect(dead_code, reason = "native table failures retain the reader IO cause without printing caller text")]
         std::io::Error,
     ),
     Table(Error),

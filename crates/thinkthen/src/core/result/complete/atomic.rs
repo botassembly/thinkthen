@@ -29,7 +29,7 @@ impl Atomic {
         self.meta.cached
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn clear_batch_metadata(&mut self) {
         self.meta.batch_setting = None;
         self.meta.batch_warning = None;

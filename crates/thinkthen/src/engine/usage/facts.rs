@@ -2,7 +2,7 @@
 
 use std::sync::PoisonError;
 
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use crate::core::Prices;
 use crate::core::{ModelName, ReportedSum, ReportedUsage};
 
@@ -10,7 +10,7 @@ use super::{Counters, Counts};
 
 #[derive(Debug)]
 pub(super) struct State {
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     records: u64,
     largest_request_bytes: usize,
     largest_request_estimated_input_tokens: Option<u64>,
@@ -19,14 +19,14 @@ pub(super) struct State {
     model: Option<ModelName>,
     mixed_models: bool,
     pub(super) token_sum_valid: bool,
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     prices: Option<Prices>,
 }
 
 impl Default for State {
     fn default() -> Self {
         Self {
-            #[cfg(any(feature = "cli", test))]
+            #[cfg(test)]
             records: 0,
             largest_request_bytes: 0,
             largest_request_estimated_input_tokens: Some(0),
@@ -35,17 +35,17 @@ impl Default for State {
             model: None,
             mixed_models: false,
             token_sum_valid: true,
-            #[cfg(any(feature = "cli", test))]
+            #[cfg(test)]
             prices: None,
         }
     }
 }
 
 /// One command's process counters and reply presence facts.
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) struct Snapshot {
     pub(crate) counts: Counts,
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) records: u64,
     pub(crate) largest_request_bytes: usize,
     pub(crate) largest_request_estimated_input_tokens: Option<u64>,
@@ -75,13 +75,13 @@ impl Counters {
         self.held_model_mismatch
             .store(true, std::sync::atomic::Ordering::Release);
     }
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn has_held_model_mismatch(&self) -> bool {
         self.held_model_mismatch
             .load(std::sync::atomic::Ordering::Acquire)
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn set_prices(&self, prices: Option<Prices>) {
         self.shared
             .queue
@@ -91,7 +91,7 @@ impl Counters {
             .prices = prices;
     }
     /// Count an accepted command row, including one filtered from output.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn record_done(&self) {
         let mut queue = self
             .shared
@@ -136,7 +136,7 @@ impl Counters {
     }
 
     /// Read one consistent snapshot for the final command line.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn run_snapshot(&self) -> Snapshot {
         let lock = self.shared.queue.lock();
         let poisoned = lock.is_err();
@@ -152,7 +152,7 @@ impl Counters {
         Snapshot {
             http_time: self.shared.http.total(),
             counts: queue.totals,
-            #[cfg(any(feature = "cli", test))]
+            #[cfg(test)]
             records: queue.facts.records,
             largest_request_bytes: queue.facts.largest_request_bytes,
             largest_request_estimated_input_tokens: queue

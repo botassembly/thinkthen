@@ -112,7 +112,7 @@ impl<'a> Cancel<'a> {
             ..self.clone()
         }
     }
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
         Self {
             invocation: invocation::Context::new(surface),
@@ -124,7 +124,7 @@ impl<'a> Cancel<'a> {
         self.invocation.get()
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
         self.invocation.call_id()
     }
@@ -183,7 +183,7 @@ impl<'a> Cancel<'a> {
         self.fired.store(true, Ordering::Release);
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn reset(&self) {
         self.fired.store(false, Ordering::Release);
     }
@@ -197,7 +197,7 @@ impl<'a> Cancel<'a> {
     }
 
     /// Share this stop flag with one call that ends at `deadline`.
-    #[cfg(feature = "cli")]
+    #[cfg(test)]
     pub(crate) const fn deadline(&self) -> Option<Deadline> {
         self.deadline
     }

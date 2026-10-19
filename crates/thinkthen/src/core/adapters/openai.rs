@@ -3,7 +3,7 @@ mod request;
 mod response;
 pub(crate) use super::systemone::request::Parts;
 pub(crate) use request::{canonical_question, input, join, parts};
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use response::decode_observed;
 pub(crate) use response::{reported_model, split, stored, validate_exchange};
 pub(crate) const NAME: &str = "openai-decisions";

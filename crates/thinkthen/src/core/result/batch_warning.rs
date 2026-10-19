@@ -1,13 +1,13 @@
 //! The saved batch setting that differs from this run's setting.
 
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::Serialize;
 
 use crate::core::batch::Setting;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 use crate::core::json::Json;
 
 /// One batch setting in the documented number-or-`max` JSON form.
@@ -32,7 +32,7 @@ impl BatchSetting {
     /// The settings named by result metadata: `meta.batch_setting`. A line naming none adds
     /// none, so an empty set means the setting is unknown. An invalid setting
     /// gives back its line and the member that named it.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn in_results(
         lines: &[(usize, Json)],
     ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
@@ -50,7 +50,7 @@ impl BatchSetting {
         Ok(settings)
     }
 
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn listed(settings: &BTreeSet<Self>) -> String {
         let mut names: Vec<String> = settings.iter().map(ToString::to_string).collect();
         match names.pop() {

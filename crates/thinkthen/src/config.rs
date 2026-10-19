@@ -182,7 +182,7 @@ impl Config {
     pub(crate) const fn shared(&self) -> bool {
         self.shared
     }
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) const fn has_model(&self) -> bool {
         self.model.is_some()
     }
