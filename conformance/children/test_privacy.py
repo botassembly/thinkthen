@@ -1,7 +1,9 @@
 """Privacy checks follow indexed source and explicit shipping membership."""
 import gzip
 import io
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import struct
 import sys
@@ -12,6 +14,7 @@ import zipfile
 
 from conformance.children import privacy
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout
 
 
 class PrivacyTests(unittest.TestCase):
@@ -74,6 +77,60 @@ class PrivacyTests(unittest.TestCase):
                         self.assertEqual(result.returncode, 1)
                         self.assertIn('private pattern in distribution.txt', result.stderr)
                     path.unlink()
+
+    def test_generated_archives_refuse_private_bytes_before_installing(self):
+        repo = Path(__file__).resolve().parents[2]
+        for surface, profile in (('rust', 'stress'), ('zig', 'smoke')):
+            with self.subTest(surface=surface), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary) / 'checkout'
+                root.mkdir()
+                stage_checkout(repo, root)
+                tools = root / 'bin'
+                tools.mkdir(exist_ok=True)
+                (tools / 'python3').symlink_to(sys.executable)
+                marker = root / 'installed-private-archive'
+                tar = tools / 'tar'
+                tar.write_text('#!/bin/sh\n'
+                               'if [ "$1" = -xzf ]; then touch "$INSTALL_MARKER"; fi\n'
+                               'exec "$REAL_TAR" "$@"\n')
+                tar.chmod(0o755)
+                env = child_env(home=root / 'home', PATH=str(tools) + ':' + os.environ.get('PATH', os.defpath),
+                                THINKTHEN_RESOLVED_TOOLS=surface, THINKTHEN_TEST_PROFILE=profile,
+                                INSTALL_MARKER=str(marker), REAL_TAR=shutil.which('tar'),
+                                THINKTHEN_BASE_URL='http://127.0.0.1:1', THINKTHEN_CACHE=str(root / 'cache'))
+                if surface == 'rust':
+                    archive = root / 'hostile.crate'
+                    with tarfile.open(archive, 'w:gz') as bundle:
+                        member = tarfile.TarInfo('thinkthen-0.2.0/private.txt')
+                        member.size = len(b'PRIVATE_KEY_MARKER')
+                        bundle.addfile(member, io.BytesIO(b'PRIVATE_KEY_MARKER'))
+                    cargo = tools / 'cargo'
+                    cargo.write_text('#!' + sys.executable + '\n'
+                                     'import os, pathlib, shutil, tomllib\n'
+                                     'root = pathlib.Path(os.environ["ROUTE_ROOT"])\n'
+                                     'version = tomllib.loads((root / "crates/thinkthen/Cargo.toml").read_text())["package"]["version"]\n'
+                                     'target = root / "target/package"\n'
+                                     'target.mkdir(parents=True, exist_ok=True)\n'
+                                     'shutil.copyfile(root / "hostile.crate", target / f"thinkthen-{version}.crate")\n')
+                    cargo.chmod(0o755)
+                    env['ROUTE_ROOT'] = str(root)
+                    (root / 'libraries/rust/check.py').write_text('raise SystemExit("installed consumer reached")\n')
+                else:
+                    # The real Zig packager copies the selected native installation.
+                    with (root / 'sdlc/scripts/installed.sh').open('a') as script:
+                        script.write('\nnative_install() {\n'
+                                     'mkdir -p "$2/include" "$2/lib"\n'
+                                     'printf "public header" > "$2/include/thinkthen.h"\n'
+                                     'printf "PRIVATE_KEY_MARKER" > "$2/lib/libthinkthen.a"\n}\n')
+                    (root / 'sdlc/generators/results/generate.py').write_text('')
+                    zig = tools / 'zig'
+                    zig.write_text('#!/bin/sh\n[ "$1" = fmt ] || exit 9\n')
+                    zig.chmod(0o755)
+                result = subprocess.run(['sh', str(root / f'libraries/{surface}/check.sh')],
+                                        cwd=root, env=env, capture_output=True, text=True, timeout=90)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn('private pattern in thinkthen-', result.stderr)
+                self.assertFalse(marker.exists(), result.stdout + result.stderr)
 
     def test_crate_fixture_allowances_keep_other_rules_and_paths_active(self):
         repo = Path(__file__).resolve().parents[2]
