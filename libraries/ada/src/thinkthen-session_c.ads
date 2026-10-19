@@ -22,7 +22,71 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_COMPLETE_ANNOTATION_VALUE_SCORE_V1 : constant := 3;
    K_THINKTHEN_COMPLETE_ANNOTATION_VALUE_TAGS_V1 : constant := 4;
    K_THINKTHEN_COMPLETE_ANSWER_CHOICE_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_ANSWER_SCORE_V1 : constant := 4;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_ANSWER_TAG_V1 : constant := 3;
    K_THINKTHEN_COMPLETE_ANSWER_YES_NO_V1 : constant := 1;
    K_THINKTHEN_COMPLETE_ATTEMPT_OUTCOME_OK_V1 : constant := 1;
@@ -134,6 +198,23 @@ private package Thinkthen.Session_C is
    K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 : constant := 18;
    K_THINKTHEN_COMPLETE_SESSION_PROBABILITIES_NAMED_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_SESSION_PROBABILITIES_YES_NO_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE_V1 : constant := 10;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER_V1 : constant := 5;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND_V1 : constant := 7;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK_V1 : constant := 6;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE_V1 : constant := 8;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE_V1 : constant := 9;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE_V1 : constant := 4;
+   K_THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY_V1 : constant := 5;
+   K_THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL_V1 : constant := 2;
+   K_THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER_V1 : constant := 4;
+   K_THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING_V1 : constant := 3;
+   K_THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES_V1 : constant := 1;
+   K_THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS_V1 : constant := 2;
    K_THINKTHEN_COMPLETE_STOP_CAUSE_BACKEND_V1 : constant := 8;
    K_THINKTHEN_COMPLETE_STOP_CAUSE_CANCELLED_V1 : constant := 9;
    K_THINKTHEN_COMPLETE_STOP_CAUSE_DEADLINE_V1 : constant := 10;
@@ -2692,6 +2773,9 @@ private package Thinkthen.Session_C is
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_boundary_proposal_v1 is record
       c_end : aliased Interfaces.Unsigned_64;
+      file : aliased thinkthen_complete_utf8_presence_v1;
+      first_line : aliased thinkthen_complete_u64_presence_v1;
+      last_line : aliased thinkthen_complete_u64_presence_v1;
       length : aliased Interfaces.Unsigned_64;
       probability : aliased double;
       start : aliased Interfaces.Unsigned_64;
@@ -3449,6 +3533,751 @@ private package Thinkthen.Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            integer : aliased Interfaces.Unsigned_64;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_4_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_4_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_4_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            integer : aliased Interfaces.Unsigned_64;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_4_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_4_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_4_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_4_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_4_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_6_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_6_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_3_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_6_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_3_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_3_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_3_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_3_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            number : aliased double;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_8_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_8_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_2_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            number : aliased double;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_2_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_2_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_2_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_2_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_resolution_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_resolution_map_entry_v1 is record
+      name : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_answer_resolution_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_resolution_map_v1 is record
+      data : access constant thinkthen_complete_answer_resolution_map_entry_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_resolutions_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            string : access constant thinkthen_complete_answer_resolution_v1;
+         when others =>
+            object : aliased thinkthen_complete_answer_resolution_map_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_resolutions_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_resolutions_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_resolutions_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_5_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            string : access constant thinkthen_complete_answer_resolution_v1;
+         when 1 =>
+            object : aliased thinkthen_complete_answer_resolution_map_v1;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_resolutions_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_5_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_5_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_decide_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_6_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_6_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_6_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_6_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_6_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_6_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_choose_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_6_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_string_list_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_7_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_7_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_7_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_string_list_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            array2 : aliased thinkthen_complete_answer_shape_7_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_7_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_7_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_7_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_7_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_tag_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_7_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_8_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            number : aliased double;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_8_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_8_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_8_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_score_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_8_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_10_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_10_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_10_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            array2 : aliased thinkthen_complete_answer_shape_10_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_10_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_10_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_10_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_10_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_original_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_original_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_settled_original_list_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_9_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_9_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_9_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_settled_original_list_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            array2 : aliased thinkthen_complete_answer_shape_9_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_9_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_9_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_9_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_9_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_filter_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_10_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_9_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_integer_list_v1 is record
+      data : access Interfaces.Unsigned_64;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_integer_list_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_11_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_11_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_11_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : aliased thinkthen_complete_integer_list_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            array2 : aliased thinkthen_complete_answer_shape_11_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_11_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_11_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_11_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_11_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_rank_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_10_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_11_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_12_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_12_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_12_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_find_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_12_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_recognition_entities_v1 is record
+      entities : aliased thinkthen_complete_entity_list_v1;
+      relations : aliased thinkthen_complete_entity_edge_list_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_recognition_mode_proposals_v1 is record
+      mode : access constant thinkthen_complete_boundary_mode_v1;
+      proposals : aliased thinkthen_complete_boundary_proposal_list_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_recognition_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            entities : access constant thinkthen_complete_settled_recognition_entities_v1;
+         when others =>
+            mode_proposals : access constant thinkthen_complete_settled_recognition_mode_proposals_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_settled_recognition_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_settled_recognition_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            object : access constant thinkthen_complete_settled_recognition_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_13_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_13_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_13_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            object : access constant thinkthen_complete_settled_recognition_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_13_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_13_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_13_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_13_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_13_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_recognize_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_10_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_13_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_relations_v1 is record
+      value : aliased thinkthen_complete_related_entity_edge_list_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : access constant thinkthen_complete_settled_relations_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_14_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_14_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_14_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            c_array : access constant thinkthen_complete_settled_relations_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            array2 : aliased thinkthen_complete_answer_shape_14_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_14_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_14_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_14_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_14_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_relate_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_10_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_14_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_judgment_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            boolean : aliased Interfaces.Unsigned_32;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when 2 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when 3 =>
+            number : aliased double;
+         when others =>
+            c_array : aliased thinkthen_complete_string_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_settled_judgment_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_settled_judgment_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_judgment_map_entry_v1 is record
+      name : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_settled_judgment_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_judgment_map_v1 is record
+      data : access constant thinkthen_complete_settled_judgment_map_entry_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            object : aliased thinkthen_complete_settled_judgment_map_v1;
+         when others =>
+            c_null : aliased Interfaces.Unsigned_32;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_15_any_of_1_items_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_15_any_of_1_items_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_15_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            object : aliased thinkthen_complete_settled_judgment_map_v1;
+         when 1 =>
+            c_null : aliased Interfaces.Unsigned_32;
+         when others =>
+            c_array : aliased thinkthen_complete_answer_shape_15_any_of_1_items_list_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_answer_shape_15_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_answer_shape_15_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_answer_shape_15_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_answer_shape_15_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_annotate_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      index : aliased thinkthen_complete_answer_shape_4_presence_v1;
+      pick : aliased thinkthen_complete_answer_shape_3_presence_v1;
+      probability : aliased thinkthen_complete_answer_shape_2_presence_v1;
+      resolution : access constant thinkthen_complete_answer_shape_5_v1;
+      value : aliased thinkthen_complete_answer_shape_15_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            decide : access constant thinkthen_complete_settled_answer_decide_v1;
+         when 1 =>
+            choose : access constant thinkthen_complete_settled_answer_choose_v1;
+         when 2 =>
+            tag : access constant thinkthen_complete_settled_answer_tag_v1;
+         when 3 =>
+            score : access constant thinkthen_complete_settled_answer_score_v1;
+         when 4 =>
+            filter : access constant thinkthen_complete_settled_answer_filter_v1;
+         when 5 =>
+            rank : access constant thinkthen_complete_settled_answer_rank_v1;
+         when 6 =>
+            find : access constant thinkthen_complete_settled_answer_find_v1;
+         when 7 =>
+            recognize : access constant thinkthen_complete_settled_answer_recognize_v1;
+         when 8 =>
+            relate : access constant thinkthen_complete_settled_answer_relate_v1;
+         when others =>
+            annotate : access constant thinkthen_complete_settled_answer_annotate_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_settled_answer_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_settled_answer_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_settled_answer_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_settled_answer_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_facts_v1 is record
       attempts : aliased thinkthen_complete_attempt_list_presence_v1;
       cache_answers : aliased Interfaces.Unsigned_64;
@@ -3581,6 +4410,7 @@ private package Thinkthen.Session_C is
    type thinkthen_complete_call_error_v1 is record
       error : access constant thinkthen_complete_error_v1;
       facts : aliased thinkthen_complete_facts_presence_v1;
+      resolution : access constant thinkthen_complete_answer_resolution_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
@@ -3590,9 +4420,11 @@ private package Thinkthen.Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_session_packet_terminal_v1 is record
+      answer : aliased thinkthen_complete_settled_answer_presence_v1;
       facts : aliased thinkthen_complete_facts_presence_v1;
       failure : aliased thinkthen_complete_call_error_presence_v1;
       kind : aliased thinkthen_complete_utf8_v1;
+      resolution : access constant thinkthen_complete_answer_resolution_v1;
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;

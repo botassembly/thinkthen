@@ -183,6 +183,9 @@ final class BoundaryOdds extends Node {
 }
 final class BoundaryProposal extends Node {
     /** @return Presence<int|string> */ public function end(): Presence { return $this->field('end'); }
+    /** @return Presence<string> */ public function file(): Presence { return $this->field('file'); }
+    /** @return Presence<int|string> */ public function first_line(): Presence { return $this->field('first_line'); }
+    /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
     /** @return Presence<int|string> */ public function length(): Presence { return $this->field('length'); }
     /** @return Presence<int|float> */ public function probability(): Presence { return $this->field('probability'); }
     /** @return Presence<int|string> */ public function start(): Presence { return $this->field('start'); }
@@ -191,6 +194,7 @@ final class BoundaryProposal extends Node {
 final class CallError extends Node {
     /** @return Presence<Error> */ public function error(): Presence { return $this->field('error'); }
     /** @return Presence<Facts> */ public function facts(): Presence { return $this->field('facts'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
 }
 final class EntityDocument extends Node {
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
@@ -490,6 +494,14 @@ final class SendBudgetDenialBeforeFirstSend extends Node {
 final class SendBudgetDenialBeforeRetry extends Node {
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
     /** @return Presence<int|string> */ public function last_status(): Presence { return $this->field('last_status'); }
+}
+final class SettledRecognitionEntities extends Node {
+    /** @return Presence<list<Entity>> */ public function entities(): Presence { return $this->field('entities'); }
+    /** @return Presence<list<EntityEdge>> */ public function relations(): Presence { return $this->field('relations'); }
+}
+final class SettledRecognitionModeProposals extends Node {
+    /** @return Presence<string> */ public function mode(): Presence { return $this->field('mode'); }
+    /** @return Presence<list<BoundaryProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
 }
 final class Stopped extends Node {
     /** @return Presence<int|string> */ public function at(): Presence { return $this->field('at'); }
@@ -888,9 +900,11 @@ final class SessionPacketTagRow extends Node {
     /** @return Presence<TagResult> */ public function value(): Presence { return $this->field('value'); }
 }
 final class SessionPacketTerminal extends Node {
+    /** @return Presence<SettledAnswerDecide|SettledAnswerChoose|SettledAnswerTag|SettledAnswerScore|SettledAnswerFilter|SettledAnswerRank|SettledAnswerFind|SettledAnswerRecognize|SettledAnswerRelate|SettledAnswerAnnotate|null> */ public function answer(): Presence { return $this->field('answer'); }
     /** @return Presence<Facts> */ public function facts(): Presence { return $this->field('facts'); }
     /** @return Presence<CallError> */ public function failure(): Presence { return $this->field('failure'); }
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
 }
 final class SessionProbabilitiesNamed extends Node {
     /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
@@ -940,6 +954,86 @@ final class SessionRelationEdge extends Node {
     /** @return Presence<EntityDocument> */ public function target(): Presence { return $this->field('target'); }
     public function sourceName(): string { return $this->source->name; }
     public function targetName(): string { return $this->target->name; }
+}
+final class SettledAnswerAnnotate extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerChoose extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerDecide extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerFilter extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerFind extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerRank extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerRecognize extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerRelate extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerScore extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
+}
+final class SettledAnswerTag extends Node {
+    /** @return Presence<string> */ public function function(): Presence { return $this->field('function'); }
+    /** @return Presence<mixed> */ public function index(): Presence { return $this->field('index'); }
+    /** @return Presence<mixed> */ public function pick(): Presence { return $this->field('pick'); }
+    /** @return Presence<mixed> */ public function probability(): Presence { return $this->field('probability'); }
+    /** @return Presence<mixed> */ public function resolution(): Presence { return $this->field('resolution'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
 }
 final class SourceRelationEndpoint extends Node {
     /** @return Presence<string|null> */ public function file(): Presence { return $this->field('file'); }
@@ -1154,6 +1248,236 @@ final class Decoder
     {
         return self::text($native->value);
     }
+    private static function readAnswerResolution(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => 'resolved',
+            2 => 'unresolved',
+            3 => 'failed',
+            default => throw new \LogicException('invalid native enum'),
+        };
+    }
+    private static function readAnswerResolutions(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readAnswerResolution($native->data->string[0]),
+            2 => self::mapping($native->data->object, fn($v) => self::readAnswerResolution($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
+    private static function readAnswerShape10(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::readAnswerShape8AnyOf1Items($v[0])),
+            2 => null,
+            3 => self::sequence($native->data->array2, fn($v) => self::readAnswerShape10AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape10AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::readAnswerShape8AnyOf1Items($v[0])),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape11(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::unsigned($v)),
+            2 => null,
+            3 => self::sequence($native->data->array2, fn($v) => self::readAnswerShape11AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape11AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::unsigned($v)),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape12(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
+    private static function readAnswerShape12AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
+    private static function readAnswerShape13(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledRecognition($native->data->object[0]),
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape13AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape13AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledRecognition($native->data->object[0]),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape14(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledRelations($native->data->array[0]),
+            2 => null,
+            3 => self::sequence($native->data->array2, fn($v) => self::readAnswerShape14AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape14AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledRelations($native->data->array[0]),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape15(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::mapping($native->data->object, fn($v) => self::readSettledJudgment($v[0])),
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape15AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape15AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::mapping($native->data->object, fn($v) => self::readSettledJudgment($v[0])),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape2(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => $native->data->number,
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape8AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape3(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::text($native->data->string),
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape6AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape4(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::unsigned($native->data->integer),
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape4AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape4AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::unsigned($native->data->integer),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape5(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readAnswerResolution($native->data->string[0]),
+            2 => self::mapping($native->data->object, fn($v) => self::readAnswerResolution($v[0])),
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerResolutions($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape6(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::text($native->data->string),
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape6AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape6AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::text($native->data->string),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape7(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::text($v)),
+            2 => null,
+            3 => self::sequence($native->data->array2, fn($v) => self::readAnswerShape7AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape7AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::text($v)),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape8(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => $native->data->number,
+            2 => null,
+            3 => self::sequence($native->data->array, fn($v) => self::readAnswerShape8AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape8AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => $native->data->number,
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape9(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::readSettledOriginal($v[0])),
+            2 => null,
+            3 => self::sequence($native->data->array2, fn($v) => self::readAnswerShape9AnyOf1Items($v[0])),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShape9AnyOf1Items(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::sequence($native->data->array, fn($v) => self::readSettledOriginal($v[0])),
+            2 => null,
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readAnswerShapeAnyOf1Items(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
     private static function readAnswers(\FFI\CData $native): mixed
     {
         $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
@@ -1307,6 +1631,9 @@ final class Decoder
     {
         $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
         $values['end'] = self::unsigned($native->end);
+        if ($native->file->presence !== 0) $values['file'] = $native->file->presence === 1 ? null : (self::text($native->file->value));
+        if ($native->first_line->presence !== 0) $values['first_line'] = $native->first_line->presence === 1 ? null : (self::unsigned($native->first_line->value));
+        if ($native->last_line->presence !== 0) $values['last_line'] = $native->last_line->presence === 1 ? null : (self::unsigned($native->last_line->value));
         $values['length'] = self::unsigned($native->length);
         $values['probability'] = $native->probability;
         $values['start'] = self::unsigned($native->start);
@@ -1318,6 +1645,7 @@ final class Decoder
         $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
         $values['error'] = self::readError($native->error[0]);
         if ($native->facts->presence !== 0) $values['facts'] = $native->facts->presence === 1 ? null : (self::readFacts($native->facts->value[0]));
+        $values['resolution'] = self::readAnswerResolution($native->resolution[0]);
         return new \ThinkThen\Results\CallError($values);
     }
     private static function readCallId(\FFI\CData $native): mixed
@@ -1897,6 +2225,51 @@ final class Decoder
         $values['kind'] = self::text($native->kind);
         $values['last_status'] = self::unsigned($native->last_status);
         return new \ThinkThen\Results\SendBudgetDenialBeforeRetry($values);
+    }
+    private static function readSettledDecision(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
+    private static function readSettledJudgment(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => (bool)($native->data->boolean),
+            2 => null,
+            3 => self::text($native->data->string),
+            4 => $native->data->number,
+            5 => self::sequence($native->data->array, fn($v) => self::text($v)),
+            default => throw new \LogicException('invalid native value'),
+        };
+    }
+    private static function readSettledOriginal(\FFI\CData $native): mixed
+    {
+        return self::jsonValue($native->value[0]);
+    }
+    private static function readSettledRecognition(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledRecognitionEntities($native->data->entities[0]),
+            2 => self::readSettledRecognitionModeProposals($native->data->mode_proposals[0]),
+            default => throw new \LogicException('invalid native discriminator'),
+        };
+    }
+    private static function readSettledRecognitionEntities(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['entities'] = self::sequence($native->entities, fn($v) => self::readEntity($v[0]));
+        if ($native->relations->presence !== 0) $values['relations'] = $native->relations->presence === 1 ? null : (self::sequence($native->relations->value, fn($v) => self::readEntityEdge($v[0])));
+        return new \ThinkThen\Results\SettledRecognitionEntities($values);
+    }
+    private static function readSettledRecognitionModeProposals(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['mode'] = self::readBoundaryMode($native->mode[0]);
+        $values['proposals'] = self::sequence($native->proposals, fn($v) => self::readBoundaryProposal($v[0]));
+        return new \ThinkThen\Results\SettledRecognitionModeProposals($values);
+    }
+    private static function readSettledRelations(\FFI\CData $native): mixed
+    {
+        return self::sequence($native->value, fn($v) => self::readRelatedEntityEdge($v[0]));
     }
     private static function readStopCause(\FFI\CData $native): mixed
     {
@@ -2663,9 +3036,11 @@ final class Decoder
     private static function readSessionPacketTerminal(\FFI\CData $native): mixed
     {
         $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        if ($native->answer->presence !== 0) $values['answer'] = $native->answer->presence === 1 ? null : (self::readSettledAnswer($native->answer->value[0]));
         if ($native->facts->presence !== 0) $values['facts'] = $native->facts->presence === 1 ? null : (self::readFacts($native->facts->value[0]));
         if ($native->failure->presence !== 0) $values['failure'] = $native->failure->presence === 1 ? null : (self::readCallError($native->failure->value[0]));
         $values['kind'] = self::text($native->kind);
+        $values['resolution'] = self::readAnswerResolution($native->resolution[0]);
         return new \ThinkThen\Results\SessionPacketTerminal($values);
     }
     private static function readSessionProbabilities(\FFI\CData $native): mixed
@@ -2737,6 +3112,132 @@ final class Decoder
         $values['source'] = self::readEntityDocument($native->source[0]);
         $values['target'] = self::readEntityDocument($native->target[0]);
         return new \ThinkThen\Results\SessionRelationEdge($values);
+    }
+    private static function readSettledAnswer(\FFI\CData $native): mixed
+    {
+        return match ($native->kind) {
+            1 => self::readSettledAnswerDecide($native->data->decide[0]),
+            2 => self::readSettledAnswerChoose($native->data->choose[0]),
+            3 => self::readSettledAnswerTag($native->data->tag[0]),
+            4 => self::readSettledAnswerScore($native->data->score[0]),
+            5 => self::readSettledAnswerFilter($native->data->filter[0]),
+            6 => self::readSettledAnswerRank($native->data->rank[0]),
+            7 => self::readSettledAnswerFind($native->data->find[0]),
+            8 => self::readSettledAnswerRecognize($native->data->recognize[0]),
+            9 => self::readSettledAnswerRelate($native->data->relate[0]),
+            10 => self::readSettledAnswerAnnotate($native->data->annotate[0]),
+            default => throw new \LogicException('invalid native discriminator'),
+        };
+    }
+    private static function readSettledAnswerAnnotate(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape15($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerAnnotate($values);
+    }
+    private static function readSettledAnswerChoose(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape6($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerChoose($values);
+    }
+    private static function readSettledAnswerDecide(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerDecide($values);
+    }
+    private static function readSettledAnswerFilter(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape10($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape9($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerFilter($values);
+    }
+    private static function readSettledAnswerFind(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape12($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerFind($values);
+    }
+    private static function readSettledAnswerRank(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape10($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape11($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerRank($values);
+    }
+    private static function readSettledAnswerRecognize(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape10($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape13($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerRecognize($values);
+    }
+    private static function readSettledAnswerRelate(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape10($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape14($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerRelate($values);
+    }
+    private static function readSettledAnswerScore(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape8($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerScore($values);
+    }
+    private static function readSettledAnswerTag(\FFI\CData $native): mixed
+    {
+        $values = (array)self::mapping($native->extensions, fn($v) => self::jsonValue($v[0]));
+        $values['function'] = self::text($native->function);
+        if ($native->index->presence !== 0) $values['index'] = $native->index->presence === 1 ? null : (self::readAnswerShape4($native->index->value[0]));
+        if ($native->pick->presence !== 0) $values['pick'] = $native->pick->presence === 1 ? null : (self::readAnswerShape3($native->pick->value[0]));
+        if ($native->probability->presence !== 0) $values['probability'] = $native->probability->presence === 1 ? null : (self::readAnswerShape2($native->probability->value[0]));
+        $values['resolution'] = self::readAnswerShape5($native->resolution[0]);
+        if ($native->value->presence !== 0) $values['value'] = $native->value->presence === 1 ? null : (self::readAnswerShape7($native->value->value[0]));
+        return new \ThinkThen\Results\SettledAnswerTag($values);
     }
     private static function readSourceRelationEndpoint(\FFI\CData $native): mixed
     {

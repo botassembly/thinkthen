@@ -44,14 +44,14 @@ CREATE TYPE thinkthen_place AS ("end" numeric, "start" numeric);
 CREATE TYPE thinkthen_relation_probabilities AS ("probability" double precision, "relation" text, "source" thinkthen_place, "target" thinkthen_place);
 CREATE TYPE thinkthen_token_probabilities AS ("end" numeric, "start" numeric, "tags" thinkthen_named_probability[]);
 CREATE TYPE thinkthen_selected_span AS ("end" numeric, "start" numeric);
-CREATE TYPE thinkthen_boundary_reading AS ("end" numeric, "kept" boolean, "kind" text, "length" numeric, "probability" double precision, "selected" thinkthen_selected_span, "span_probability" double precision, "start" numeric, "strength" double precision, "text" text);
+CREATE TYPE thinkthen_boundary_reading AS ("end" numeric, "file" text, "first_line" numeric, "kept" boolean, "kind" text, "last_line" numeric, "length" numeric, "probability" double precision, "selected" thinkthen_selected_span, "span_probability" double precision, "start" numeric, "strength" double precision, "text" text);
 CREATE TYPE thinkthen_recognition_probabilities AS ("names" thinkthen_entity_probabilities[], "pairs" thinkthen_relation_probabilities[], "pieces" thinkthen_token_probabilities[], "proposals" thinkthen_boundary_reading[]);
 CREATE TYPE thinkthen_kind_description AS ("name" text, "value" jsonb, "value_present" boolean);
 CREATE TYPE thinkthen_relation_rule AS ("either" boolean, "name" text, "reads" text, "single" boolean, "source" text, "target" text);
 CREATE TYPE thinkthen_recognition_stage_context AS ("boundary" text, "kind_edge" text, "relation" text);
 CREATE TYPE thinkthen_recognition_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "entity_definition" jsonb, "entity_definition_present" boolean, "instructions" jsonb, "instructions_present" boolean, "item_schema" thinkthen_input_declaration, "kinds" thinkthen_kind_description[], "label_details" thinkthen_label[], "mode" text, "model" text, "name" text, "on" text[], "profile" text, "relation_threshold" thinkthen_threshold, "relations" thinkthen_relation_rule[], "snippet_pieces" bigint, "stage_context" thinkthen_recognition_stage_context, "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
 CREATE TYPE thinkthen_entity AS ("end" numeric, "file" text, "first_line" numeric, "kind" text, "last_line" numeric, "length" numeric, "start" numeric, "strength" double precision, "text" text);
-CREATE TYPE thinkthen_boundary_proposal AS ("end" numeric, "length" numeric, "probability" double precision, "start" numeric, "text" text);
+CREATE TYPE thinkthen_boundary_proposal AS ("end" numeric, "file" text, "first_line" numeric, "last_line" numeric, "length" numeric, "probability" double precision, "start" numeric, "text" text);
 CREATE TYPE thinkthen_entity_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_entity, "target" thinkthen_entity);
 CREATE TYPE thinkthen_recognized_value AS ("entities" thinkthen_entity[], "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_entity_edge[]);
 CREATE TYPE thinkthen_recognized AS ("answer" thinkthen_recognition_probabilities, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_recognition_question, "schema" text, "source" thinkthen_source_location, "value" thinkthen_recognized_value);
@@ -2750,6 +2750,21 @@ pub(super) fn convert(
                     .set_by_name("end", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
+            let held = value.get("file");
+            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("file", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("first_line");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("first_line", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
             let held = value.get("kept");
             let converted: Option<bool> = held.and_then(Value::as_bool);
             if let Some(converted) = converted {
@@ -2762,6 +2777,14 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("kind", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("last_line");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             let held = value.get("length");
@@ -3306,6 +3329,29 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("end", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("file");
+            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("file", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("first_line");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("first_line", converted)
+                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
+            }
+            let held = value.get("last_line");
+            let converted: Option<pgrx::AnyNumeric> =
+                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
+            if let Some(converted) = converted {
+                tuple
+                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             let held = value.get("length");

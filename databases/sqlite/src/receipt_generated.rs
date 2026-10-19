@@ -240,6 +240,18 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
                 shape: Shape::Scalar(Scalar::Unsigned),
             },
             Field {
+                name: "file",
+                shape: Shape::Scalar(Scalar::Text),
+            },
+            Field {
+                name: "first_line",
+                shape: Shape::Scalar(Scalar::Unsigned),
+            },
+            Field {
+                name: "last_line",
+                shape: Shape::Scalar(Scalar::Unsigned),
+            },
+            Field {
                 name: "length",
                 shape: Shape::Scalar(Scalar::Unsigned),
             },
@@ -266,12 +278,24 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
                 shape: Shape::Scalar(Scalar::Unsigned),
             },
             Field {
+                name: "file",
+                shape: Shape::Scalar(Scalar::Text),
+            },
+            Field {
+                name: "first_line",
+                shape: Shape::Scalar(Scalar::Unsigned),
+            },
+            Field {
                 name: "kept",
                 shape: Shape::Scalar(Scalar::Boolean),
             },
             Field {
                 name: "kind",
                 shape: Shape::Scalar(Scalar::Text),
+            },
+            Field {
+                name: "last_line",
+                shape: Shape::Scalar(Scalar::Unsigned),
             },
             Field {
                 name: "length",
@@ -2726,4 +2750,4 @@ pub(crate) const PROJECTIONS: &[Projection] = &[
         ],
     },
 ];
-pub(crate) const COLUMN_COUNT: usize = 1275;
+pub(crate) const COLUMN_COUNT: usize = 1287;

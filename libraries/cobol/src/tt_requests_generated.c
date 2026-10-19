@@ -6789,6 +6789,9 @@ thinkthen_cobol_ReceiptBoundaryProposal *out) {
     int code=0;
     (void)a;
     out->end=input->end;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
     out->length=input->length;
     out->probability=input->probability;
     out->start=input->start;

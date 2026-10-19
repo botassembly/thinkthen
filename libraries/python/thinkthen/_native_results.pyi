@@ -321,6 +321,12 @@ class NativeBoundaryProposal(_NativeResult):
     @property
     def end(self) -> int: ...
     @property
+    def file(self) -> str: ...
+    @property
+    def first_line(self) -> int: ...
+    @property
+    def last_line(self) -> int: ...
+    @property
     def length(self) -> int: ...
     @property
     def probability(self) -> float: ...
@@ -335,6 +341,8 @@ class NativeCallError(_NativeResult):
     def error(self) -> NativeError: ...
     @property
     def facts(self) -> Union[NativeFacts]: ...
+    @property
+    def resolution(self) -> NativeAnswerResolution: ...
 
 class NativeEntityDocument(_NativeResult):
     __slots__ = ()
@@ -855,6 +863,20 @@ class NativeSendBudgetDenialBeforeRetry(_NativeResult):
     def kind(self) -> Literal["before_retry"]: ...
     @property
     def last_status(self) -> int: ...
+
+class NativeSettledRecognitionEntities(_NativeResult):
+    __slots__ = ()
+    @property
+    def entities(self) -> list[NativeEntity]: ...
+    @property
+    def relations(self) -> list[NativeEntityEdge]: ...
+
+class NativeSettledRecognitionModeProposals(_NativeResult):
+    __slots__ = ()
+    @property
+    def mode(self) -> NativeBoundaryMode: ...
+    @property
+    def proposals(self) -> list[NativeBoundaryProposal]: ...
 
 class NativeStopped(_NativeResult):
     __slots__ = ()
@@ -1583,11 +1605,15 @@ class NativeSessionPacketTagRow(_NativeResult):
 class NativeSessionPacketTerminal(_NativeResult):
     __slots__ = ()
     @property
+    def answer(self) -> Union[NativeSettledAnswer, None]: ...
+    @property
     def facts(self) -> Union[NativeFacts]: ...
     @property
     def failure(self) -> Union[NativeCallError]: ...
     @property
     def kind(self) -> Literal["terminal"]: ...
+    @property
+    def resolution(self) -> NativeAnswerResolution: ...
 
 class NativeSessionProbabilitiesNamed(_NativeResult):
     __slots__ = ()
@@ -1678,6 +1704,156 @@ class NativeSessionRelationEdge(_NativeResult):
     @property
     def target(self) -> NativeEntityDocument: ...
 
+class NativeSettledAnswerAnnotate(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["annotate"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape15: ...
+
+class NativeSettledAnswerChoose(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["choose"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape6: ...
+
+class NativeSettledAnswerDecide(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["decide"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape: ...
+
+class NativeSettledAnswerFilter(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["filter"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape10: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape9: ...
+
+class NativeSettledAnswerFind(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["find"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape12: ...
+
+class NativeSettledAnswerRank(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["rank"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape10: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape11: ...
+
+class NativeSettledAnswerRecognize(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["recognize"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape10: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape13: ...
+
+class NativeSettledAnswerRelate(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["relate"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape10: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape14: ...
+
+class NativeSettledAnswerScore(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["score"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape8: ...
+
+class NativeSettledAnswerTag(_NativeResult):
+    __slots__ = ()
+    @property
+    def function(self) -> Literal["tag"]: ...
+    @property
+    def index(self) -> NativeAnswerShape4: ...
+    @property
+    def pick(self) -> NativeAnswerShape3: ...
+    @property
+    def probability(self) -> NativeAnswerShape2: ...
+    @property
+    def resolution(self) -> NativeAnswerShape5: ...
+    @property
+    def value(self) -> NativeAnswerShape7: ...
+
 class NativeSourceRelationEndpoint(_NativeResult):
     __slots__ = ()
     @property
@@ -1720,6 +1896,53 @@ NativeAnnotationValue = Union[
     NativeAnnotationValueFailed,
 ]
 NativeAnswerId = str
+NativeAnswerResolution = Union[
+    Literal["resolved"], Literal["unresolved"], Literal["failed"]
+]
+NativeAnswerResolutions = Union[
+    NativeAnswerResolution, dict[str, NativeAnswerResolution]
+]
+NativeAnswerShape = Any
+NativeAnswerShape10 = Union[
+    list[NativeAnswerShape8AnyOf1Items], None, list[NativeAnswerShape10AnyOf1Items]
+]
+NativeAnswerShape10AnyOf1Items = Union[list[NativeAnswerShape8AnyOf1Items], None]
+NativeAnswerShape11 = Union[list[int], None, list[NativeAnswerShape11AnyOf1Items]]
+NativeAnswerShape11AnyOf1Items = Union[list[int], None]
+NativeAnswerShape12 = Any
+NativeAnswerShape12AnyOf1Items = Any
+NativeAnswerShape13 = Union[
+    NativeSettledRecognition, None, list[NativeAnswerShape13AnyOf1Items]
+]
+NativeAnswerShape13AnyOf1Items = Union[NativeSettledRecognition, None]
+NativeAnswerShape14 = Union[
+    NativeSettledRelations, None, list[NativeAnswerShape14AnyOf1Items]
+]
+NativeAnswerShape14AnyOf1Items = Union[NativeSettledRelations, None]
+NativeAnswerShape15 = Union[
+    dict[str, NativeSettledJudgment], None, list[NativeAnswerShape15AnyOf1Items]
+]
+NativeAnswerShape15AnyOf1Items = Union[dict[str, NativeSettledJudgment], None]
+NativeAnswerShape2 = Union[float, None, list[NativeAnswerShape8AnyOf1Items]]
+NativeAnswerShape3 = Union[str, None, list[NativeAnswerShape6AnyOf1Items]]
+NativeAnswerShape4 = Union[int, None, list[NativeAnswerShape4AnyOf1Items]]
+NativeAnswerShape4AnyOf1Items = Union[int, None]
+NativeAnswerShape5 = Union[
+    NativeAnswerResolution,
+    dict[str, NativeAnswerResolution],
+    list[NativeAnswerResolutions],
+]
+NativeAnswerShape6 = Union[str, None, list[NativeAnswerShape6AnyOf1Items]]
+NativeAnswerShape6AnyOf1Items = Union[str, None]
+NativeAnswerShape7 = Union[list[str], None, list[NativeAnswerShape7AnyOf1Items]]
+NativeAnswerShape7AnyOf1Items = Union[list[str], None]
+NativeAnswerShape8 = Union[float, None, list[NativeAnswerShape8AnyOf1Items]]
+NativeAnswerShape8AnyOf1Items = Union[float, None]
+NativeAnswerShape9 = Union[
+    list[NativeSettledOriginal], None, list[NativeAnswerShape9AnyOf1Items]
+]
+NativeAnswerShape9AnyOf1Items = Union[list[NativeSettledOriginal], None]
+NativeAnswerShapeAnyOf1Items = Any
 NativeBatch = Union[int, Literal["max"]]
 NativeBoundaryMode = Literal["boundary_only"]
 NativeCallId = str
@@ -1781,6 +2004,13 @@ NativeSendBudgetDenial = Union[
     NativeSendBudgetDenialBeforeAdditionalSend,
     NativeSendBudgetDenialBeforeRetry,
 ]
+NativeSettledDecision = Any
+NativeSettledJudgment = Union[bool, None, str, float, list[str]]
+NativeSettledOriginal = Any
+NativeSettledRecognition = Union[
+    NativeSettledRecognitionEntities, NativeSettledRecognitionModeProposals
+]
+NativeSettledRelations = list[NativeRelatedEntityEdge]
 NativeStopCause = Union[
     Literal["usage"],
     Literal["local"],
@@ -1869,6 +2099,18 @@ NativeSessionPacket = Union[
 ]
 NativeSessionProbabilities = Union[
     NativeSessionProbabilitiesYesNo, NativeSessionProbabilitiesNamed
+]
+NativeSettledAnswer = Union[
+    NativeSettledAnswerDecide,
+    NativeSettledAnswerChoose,
+    NativeSettledAnswerTag,
+    NativeSettledAnswerScore,
+    NativeSettledAnswerFilter,
+    NativeSettledAnswerRank,
+    NativeSettledAnswerFind,
+    NativeSettledAnswerRecognize,
+    NativeSettledAnswerRelate,
+    NativeSettledAnswerAnnotate,
 ]
 NativeThreshold = Union[float, str]
 NativeValue = Union[bool, None, str, list[str], float]
