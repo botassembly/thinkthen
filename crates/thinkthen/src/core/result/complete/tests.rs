@@ -116,7 +116,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     let canonical = super::Find {
         declarations: Default::default(),
         identity: base.identity,
-        compatibility: find.result(None, find.select(&answer).unwrap(), base.meta),
+        reading: find.result(None, find.select(&answer).unwrap(), base.meta),
     };
     let document = json_line(&canonical).unwrap();
     assert!(document.starts_with(&format!(
@@ -124,11 +124,6 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
         "a".repeat(64),
     )));
     assert!(!document.contains("confidence"));
-    assert!(
-        json_line(&canonical.compatibility).unwrap().starts_with(
-            r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find""#,
-        )
-    );
 }
 
 #[test]
@@ -154,7 +149,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         }],
         reported_usage: Some(crate::core::ReportedUsage::new(Some(0), None)),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
-        compatibility: AnnotatedEntry::Answered(AnnotatedAnswer::new(
+        reading: AnnotatedEntry::Answered(AnnotatedAnswer::new(
             Value::YesNo(None),
             question.clone(),
             answer,
@@ -171,7 +166,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         }],
         reported_usage: None,
         identity: MemberIdentity::Failed(crate::core::FailureId::new("d".repeat(64)).unwrap()),
-        compatibility: AnnotatedEntry::Failed(AnnotatedFailure::new(
+        reading: AnnotatedEntry::Failed(AnnotatedFailure::new(
             question,
             BackendFailure::new(BackendFailureCause::MissingProbability),
             "failure-key".into(),
@@ -200,7 +195,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let mismatched = AnnotationMember {
         declarations: Default::default(),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
-        compatibility: failed.compatibility,
+        reading: failed.reading,
         threshold: failed.threshold,
         sources: failed.sources,
         observations: failed.observations,

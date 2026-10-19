@@ -8,14 +8,15 @@ case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_
 if [ "$profile" = routine ]; then
     export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/../../conformance/routine-ids.txt}"
 fi
-if [ "$profile" = stress ]; then
-    echo 'rust: not run: no port load campaign'
-    exit 77
-fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
 root=$(CDPATH= cd ../.. && pwd)
+if [ "$profile" = stress ] && [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+    cargo package --locked --offline --no-verify --manifest-path "$root/crates/thinkthen/Cargo.toml" -p thinkthen
+    version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/crates/thinkthen/Cargo.toml" | head -n 1)
+    THINKTHEN_ARTIFACT="$root/target/package/thinkthen-$version.crate"
+fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
     scratch_dir installed

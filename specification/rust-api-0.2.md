@@ -6,23 +6,29 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 - [0550](../sdlc/tickets/0550-binding-defects-from-adversarial-review.md) adds `RequestReaderFailure::Producer`, `RequestDecodeCause` and `Error::request_decode_cause` for typed producer and admission failures. Its usage-counter change retires `Engine::finish_usage` and retains `finish_usage_status`.
 - [0551](../sdlc/tickets/0551-one-named-request-constructor.md) adds the shared `Request` constructors, `RequestFunction` parsing and definition/input selection, and component JSON decoders. Its approved corrective constructor `Request::named_from_json` appears in [the input contract](types.md). The sixth [0558 amendment](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) keeps these component decoders through one private helper.
-- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply`. Complete decision, choice, tag and score carriers retain scalar result/1 JSON through `to_scalar_json` and single-text output without scheduler batch metadata through `to_unbatched_scalar_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
+- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply`. Complete decision, choice, tag and score carriers serialize result/2 through `to_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
 - [0553](../sdlc/tickets/0553-python-r-host-request-residue.md) moves question construction, label rules and nullable columns behind Rust request APIs. Its accepted revision `aae01270d365676386c2b195dccbd51bb584d291` includes `RequestQuestion::inline`, `RequestQuestion::labels`, `RequestColumn`, `RequestColumnValues` and `RequestColumnView` with their declared methods and fields.
 - [0554](../sdlc/tickets/0554-engine-methods-build-requests.md) admits native calls through `Request`. Accepted revision `018d71671b851391aa92a5fd29057a61d46fad81` includes `RequestRows`, `Engine::execute_request_rows`, and the original-preserving `CompleteRecord::map_original` and `CompleteFound::map_original` projections. [The record contract](records.md) documents that native row path. These are the existing six row variants referenced by 0558; this delta adds no rank, rank-set, find or relate row variant.
 - [0556](../sdlc/tickets/0556-blocking-session-read.md) adds `RequestSession::wait`, `RequestSessionWaitInterest` and `RequestSessionReady` to replace binding polls with native readiness waits.
 - [0558 and its six amendments](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) retire the unpublished complete, fallible-record and image wrappers below. The third and fourth amendments permit private production primitives with unchanged ownership tests. The fifth amendment retires `decide_many_complete_with` after its unchanged ownership test moves to existing `RequestRows::Decisions(batch).into_call()`.
 
-[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires all twelve shipped bulk wrappers. Their behavioral tests use the existing Request row carriers. Exact packed Details and original-serialization assertions use the private primitive called by the Polars frame path, under the accepted private-production exception. The delta retires `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` after their last external production callers retired. Released rank, find and annotation methods retain their production primitives; fallible input and complete relation tests use existing Request carriers. The sixth amendment keeps the source ceiling unchanged; the declarations below retain the approved source ceiling.
+[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires all twelve shipped bulk wrappers. Their behavioral tests use the existing Request row carriers. Exact packed Details and original-serialization assertions use the private primitive called by the Polars frame path, under the accepted private-production exception. The delta retires `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` after their last external production callers retired. Released rank, find and annotation methods retain their production primitives; fallible input and complete relation tests use existing Request carriers.
 
 [0581](../sdlc/tickets/0581-one-result-per-library-call.md) makes each Rust function return one typed `Call<T, R, P>` with `value()`, `probability()`, `results()` and `facts()`. Scalar decide uses `Option<bool>`; unresolved readings use `None`. Filter and annotate collect their existing streams. Rank returns original indexes and find returns an optional original unit. Filter and find require `Clone` to retain originals in both the answer and canonical records. The function-specific call aliases keep these signatures readable. All probability projections read the existing canonical results.
 
 [0582](../sdlc/tickets/0582-one-sql-details-route-per-function.md) adds a separate recovering Request path. `RequestRecoveredRow` retains its original ordinal, canonical successful records or safe error, and the typed logical failure cause when present. Invalid eager input refuses before sending; runtime record failures can remain alongside completed records. Rank, find and relate retain one whole-set invocation. Ordinary Request values and packet shapes retain their existing contracts.
+
+[0628](../sdlc/tickets/0628-one-session-queue.md) makes recovery a mode of the shared session queue. `RequestRecoveringSession` delegates ownership to its inner `RequestSession`, whose destructor cancels without joining the worker. The worker retains the shared queue until it settles. The recovering wrapper no longer implements `Drop` itself.
 
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
 
 ```text
+fn CompleteDecision::to_scalar_json(&self) -> Result<String, Error>
+fn CompleteChoice::to_scalar_json(&self) -> Result<String, Error>
+fn CompleteTags::to_scalar_json(&self) -> Result<String, Error>
+fn CompleteScore::to_scalar_json(&self) -> Result<String, Error>
 RequestCall::Annotate(RequestArguments)
 RequestCall::Choose(RequestArguments)
 RequestCall::Decide(RequestArguments)
@@ -320,7 +326,6 @@ fn RequestSession::try_push_with<E: From<Error>>(&self, impl FnOnce() -> Result<
 fn RequestSession::wait(&self, RequestSessionWaitInterest, Duration) -> RequestSessionReady
 fn Tally::run<T, R, P>(&self, impl FnOnce() -> Result<Call<T, R, P>, Error>) -> Result<Call<T, R, P>, Error>
 impl Display for SourceBudgetExceeded
-impl Drop for RequestRecoveringSession
 impl Error for SourceBudgetExceeded
 impl From<(Question, RecordReading)> for RequestDefinition
 impl From<(Recognize, RecordReading)> for RequestDefinition

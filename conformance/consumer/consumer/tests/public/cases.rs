@@ -241,9 +241,13 @@ fn loaded(
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(answer.value()), bare)?;
+            same(
+                "result primitive",
+                &json!(decision(answer.results()[0].value())),
+                bare,
+            )?;
             return complete(
                 question,
-                &scalar(&answer.results()[0].to_scalar_json().map_err(said)?)?,
                 &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &success["answers"][0],
                 base,
@@ -305,9 +309,9 @@ fn single(
     question: &str,
 ) -> Checked {
     let expected = &success["answers"][0];
-    let (typed, details, full) = atomic(engine, asked, text)?;
-    same("bare", &details["value"], &expected["bare"])?;
-    complete(question, &details, &full, expected, base)?;
+    let (typed, primitive, full) = atomic(engine, asked, text)?;
+    same("result primitive", &primitive, &expected["bare"])?;
+    complete(question, &full, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
@@ -336,7 +340,6 @@ fn single(
 /// Check complete values from the written question, independently of typed values.
 fn complete(
     question: &str,
-    details: &Value,
     full: &Value,
     expected: &Value,
     base: &str,
@@ -352,7 +355,7 @@ fn complete(
         &full["value"],
         meaning.unwrap_or(&expected["bare"]),
     )?;
-    detailed(details, full, expected, base)
+    detailed(full, expected, base)
 }
 
 /// With `one`, the case names one record, and every answer reads it.
@@ -494,14 +497,14 @@ fn scalar(written: &str) -> Checked<Value> {
     serde_json::from_str(written).map_err(|error| error.to_string())
 }
 
-/// Read the primitive and both serialized views from the same completed call.
+/// Read both primitive accessors and result/2 JSON from the same completed call.
 fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value, Value)> {
-    let (value, written, complete) = match asked.kind() {
+    let (value, primitive, written) = match asked.kind() {
         QuestionKind::Decide => {
             let call = engine.decide(asked, text).map_err(said)?;
             (
                 json!(call.value()),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                json!(decision(call.results()[0].value())),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -509,7 +512,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.score(asked, text).map_err(said)?;
             (
                 json!(call.value()),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                json!(call.results()[0].value()),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
@@ -518,28 +521,28 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             let call = engine.choose(&typed, text).map_err(said)?;
             (
                 json!(call.value().map(|team| team.label())),
-                call.results()[0].to_scalar_json().map_err(said)?,
+                json!(call.results()[0].value()),
                 call.results()[0].to_json().map_err(said)?,
             )
         }
         QuestionKind::Tag => match asked.clone().into_tag::<Mark>() {
             Ok(typed) => {
                 let call = engine.tag(&typed, text).map_err(said)?;
-                let written = call.results()[0].to_scalar_json().map_err(said)?;
-                let complete = call.results()[0].to_json().map_err(said)?;
-                (tags(call.into_value()), written, complete)
+                let written = call.results()[0].to_json().map_err(said)?;
+                let primitive = json!(call.results()[0].value());
+                (tags(call.into_value()), primitive, written)
             }
             Err(_) => {
                 let typed = asked.clone().into_tag::<Word>().map_err(said)?;
                 let call = engine.tag(&typed, text).map_err(said)?;
-                let written = call.results()[0].to_scalar_json().map_err(said)?;
-                let complete = call.results()[0].to_json().map_err(said)?;
-                (tags(call.into_value()), written, complete)
+                let written = call.results()[0].to_json().map_err(said)?;
+                let primitive = json!(call.results()[0].value());
+                (tags(call.into_value()), primitive, written)
             }
         },
         _ => return Err("one atomic question required".to_owned()),
     };
-    Ok((value, scalar(&written)?, scalar(&complete)?))
+    Ok((value, primitive, scalar(&written)?))
 }
 
 /// Typed tags as the shared cases spell them.

@@ -22,15 +22,17 @@ use thiserror::Error;
 use crate::core::text::ModelName;
 
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
+#[cfg(any(feature = "cli", test))]
 pub(crate) use crate::core::adapters::systemone::request::encode;
-pub(crate) use crate::core::adapters::systemone::request::{
-    drops_any, drops_detail, drops_detail_of, join, parts,
-};
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::adapters::systemone::request::{drops_any, drops_detail};
+pub(crate) use crate::core::adapters::systemone::request::{drops_detail_of, join, parts};
 #[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::response::decode;
-pub(crate) use crate::core::adapters::systemone::response::{
-    decode_answers, decode_observed, decode_questions,
-};
+pub(crate) use crate::core::adapters::systemone::response::{decode_answers, decode_questions};
+
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::adapters::systemone::response::decode_observed;
 
 /// The name this adapter answers to, in the recording key and the entry.
 ///
@@ -161,6 +163,7 @@ pub(crate) enum DecodeError {
 
 /// The wire type one question travels as. The backend check names its
 /// one-question probes by it.
+#[cfg(any(feature = "cli", test))]
 pub(crate) const fn wire_type(question: &crate::core::question::Question) -> &'static str {
     use crate::core::question::Question;
     match question {

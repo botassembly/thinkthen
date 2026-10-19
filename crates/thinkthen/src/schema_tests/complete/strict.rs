@@ -1,4 +1,4 @@
-//! Keep the compatibility schema graph intact while closing the complete readers.
+//! Derive closed result/2 definitions from the serializer graph.
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 

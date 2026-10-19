@@ -1,14 +1,20 @@
 # 0625: Turn dead-code warnings back on for library builds and drop stale excuses
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 59d0254, accept
+
 Reviews: revision cfe4c79, accept
 
 Reviews: revision adef2d4, accept
+
+Reviews: revision 06063c0, accept
+
+Reviews: revision 9d24d67, accept
 
 ## Outcome
 
@@ -35,3 +41,6 @@ Dead-code exceptions also point at work that already landed:
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The separated core is fresh-accepted at59d0254, but main prerequisite fixtures failed first on canonical temporary paths and then rehearsal signing; the independently reviewed path/diagnostic repair is held for the existing short-GPG-socket fixture fix and its full main gate, after which core landing unlocks0612 without waiting on the container.
+- 2026-10-18 landed ee35a8cf6c71b8ed5f05c35d715606106db76cdd; next: The shared native main-gate path, diagnostics and signing-fixture prerequisite passed the complete gate in 1792350462792-89152 and is pushed on main; gate the separately accepted core batch next, then land it and start 0612 immediately.
+- 2026-10-18 next: The core main gate passed all 2037 Rust and 21 installed consumer tests before two stale stress-selection expectations failed; the isolated expectation repair is fresh-accepted at 9d24d67c4 and all 58 focused fixtures now pass, so rerun the full main gate before landing the core batch.

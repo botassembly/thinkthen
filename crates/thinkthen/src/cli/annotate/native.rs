@@ -292,7 +292,7 @@ fn receive(
             .question_sources()
             .iter()
             .all(|source| source.origin() != crate::core::Origin::Live);
-        let values = canonical.compatibility.value().clone().into_values();
+        let values = canonical.reading.value().clone().into_values();
         let mut printed = Some(if judging.details() {
             json_line(canonical)?
         } else if judging.streams() && !original.record.is_object() {

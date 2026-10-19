@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tomllib
 
@@ -29,6 +30,7 @@ def main():
         project = installed / 'consumer'
         manifest = tomllib.loads((project / 'Cargo.toml').read_text())
         manifest['dependencies']['thinkthen']['path'] = str(crate)
+        manifest['dev-dependencies']['conformance-backend']['path'] = str(root / 'conformance/backend')
         (project / 'Cargo.toml').write_text('\n'.join(
             json.dumps(key) + ' = ' + toml_value(value)
             for key, value in manifest.items()) + '\n')
@@ -45,9 +47,23 @@ def main():
         os.environ['CARGO_TARGET_DIR'] = str(Path(backend).parents[1])
     sys.path.insert(0, str(root / 'conformance/children'))
     from native_fixture import run
-    return bool(run('rust', [str(binary)], root,
-                    rust_manifest=project / 'Cargo.toml',
-                    extra_env={'RUSTUP_TOOLCHAIN': compiler}))
+    compiler_env = {'RUSTUP_TOOLCHAIN': compiler}
+    profile = os.environ.get('THINKTHEN_TEST_PROFILE', 'routine')
+    if profile != 'stress' and run('rust', [str(binary)], root,
+                                 rust_manifest=project / 'Cargo.toml',
+                                 extra_env=compiler_env):
+        return True
+    if len(sys.argv) > 2:
+        command = ['cargo', 'test', '--locked', '--offline', '--manifest-path',
+                   str(project / 'Cargo.toml'), '--target-dir', str(target)]
+        subprocess.run([*command, '--test', 'sessions', '--', '--test-threads=1'],
+                       env={**os.environ, **compiler_env}, check=True)
+        if profile == 'stress':
+            subprocess.run([*command, '--features', 'session-stress', '--test', 'sessions',
+                            'repeated_session_contention_never_loses_wake_or_settlement',
+                            '--', '--exact', '--test-threads=1'],
+                           env={**os.environ, **compiler_env}, check=True)
+    return False
 
 
 if __name__ == '__main__':

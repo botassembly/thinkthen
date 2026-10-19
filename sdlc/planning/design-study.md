@@ -26,7 +26,7 @@ The seven captures were written in this order. None of it was built. None of it 
 | Add columns | CSV and TSV input with JSONL enrichment through `annotate` |
 | JSON from a decider | The technique under all of it. Code finds candidates, the decider picks, code copies the pick |
 
-The surface grew ninefold across three chats with no code behind it. This repository keeps a size ceiling that makes every line cost. Version one has to be small, and each later family has to arrive with a real use.
+The surface grew ninefold across three chats with no code behind it. Code review judges source size and requires each added behavior to earn its place. Version one has to be small, and each later family has to arrive with a real use.
 
 ## 3. What the captures agree on
 

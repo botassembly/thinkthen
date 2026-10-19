@@ -99,7 +99,21 @@ impl From<ReadFailure> for io::Error {
 
 #[derive(Debug)]
 pub(crate) struct Totals {
+    #[cfg_attr(
+        all(not(feature = "cli"), not(test)),
+        expect(
+            dead_code,
+            reason = "cli::usage reports durable month totals; Counters::check_readable reads only storage validity"
+        )
+    )]
     pub(crate) month: Counts,
+    #[cfg_attr(
+        all(not(feature = "cli"), not(test)),
+        expect(
+            dead_code,
+            reason = "cli::usage reports durable total counts; Counters::check_readable reads only storage validity"
+        )
+    )]
     pub(crate) total: Counts,
 }
 

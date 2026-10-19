@@ -1,5 +1,5 @@
 //! Public wrappers construct native Requests; canonical and native bridges enter
-//! execute -> prepare -> Validated -> private scheduling -> compatibility projection.
+//! execute -> prepare -> Validated -> private scheduling -> result projection.
 //! Private dispatch never calls public per-function wrappers. SQL row recovery and
 //! typed entities retain distinct private modes under this same execution owner.
 use super::RequestOutcome::Complete as complete;
@@ -219,7 +219,7 @@ impl Engine {
 }
 /// All entry points construct a Request and enter this owner. It prepares the
 /// definition once, then validates each occurrence before private scheduling.
-/// Public compatibility projections never participate in private dispatch.
+/// Public result projections never participate in private dispatch.
 pub(super) fn execute<'a, I, T, R>(
     engine: &Engine,
     request: &AdmittedRequest,
