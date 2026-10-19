@@ -39,6 +39,22 @@ fn run_fault(case: &super::Case, expected: &str) {
     assert_eq!(cause.kind().as_str(), expected, "{}", case.id);
     let public = crate::Error::from(cause);
     assert_eq!(public.kind().name(), expected, "{}", case.id);
+    use crate::ErrorDiagnostic as D;
+    match (injection.as_str(), public.diagnostic()) {
+        ("invalid_arguments", Some(D::Usage(message))) => {
+            assert_eq!(message, "injected invalid arguments");
+        }
+        ("response_refusal", Some(D::Status(status))) => assert_eq!(status, 422),
+        ("recording_read_failure", Some(D::RecordingStorage))
+        | ("cancel_token", Some(D::Cancelled)) => {}
+        ("expired_deadline", Some(D::Deadline(message))) => {
+            assert_eq!(message, "the deadline of 0 s passed before the call answered");
+        }
+        ("internal_invariant_failure", Some(D::Defect(message))) => {
+            assert_eq!(message, "injected invariant failure");
+        }
+        (injection, diagnostic) => panic!("{injection} lost its diagnostic: {diagnostic:?}"),
+    }
 }
 
 fn injected(name: &str) -> EngineError {

@@ -1,4 +1,4 @@
-//! Shared fault kinds cross the public error boundary into command diagnostics.
+//! Public errors without typed diagnostics retain the command fallback for each shared kind.
 //! Native scheduler injection lives with the library's private scheduler tests.
 
 use super::{CASES, Document, command};
@@ -6,7 +6,7 @@ use crate::failure::{Failure, report};
 use thinkthen::{Error, ErrorKind};
 
 #[test]
-fn shared_fault_cases_cross_the_command_mapping() {
+fn shared_fault_kinds_without_diagnostics_cross_the_command_fallback() {
     let document: Document = serde_json::from_str(CASES).expect("shared document");
     for case in &document.cases {
         if let Some(expected) = &case.expect.error {
@@ -44,7 +44,7 @@ fn run_fault(case: &super::Case, expected: &str) {
     let _code = report(&failure, &mut diagnostic);
     assert!(
         !diagnostic.is_empty(),
-        "{} crossed the CLI mapping",
+        "{} crossed the CLI fallback",
         case.id
     );
 }
