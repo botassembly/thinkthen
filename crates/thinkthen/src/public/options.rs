@@ -24,6 +24,12 @@ use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation}
 
 pub(crate) type AnnotationRecovery<'a> = Option<&'a dyn Fn(usize, &str) -> bool>;
 
+pub(crate) fn continue_annotation(
+    callback: &dyn Fn(usize, &str) -> bool, ordinal: usize, pointer: &str,
+) -> bool {
+    catch_unwind(AssertUnwindSafe(|| callback(ordinal, pointer))).unwrap_or(false)
+}
+
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
 
@@ -119,6 +125,7 @@ pub struct CallOptions<'a> {
     pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) shared_state_groups: bool,
+    pub(in crate::public) annotation_missing: Option<&'a (dyn Fn(usize, &str) -> bool + Sync)>,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
     // entity admission without wire controls.
@@ -179,6 +186,7 @@ impl<'a> CallOptions<'a> {
             recognition_text_limit: None,
             eager_inputs: false,
             shared_state_groups: false,
+            annotation_missing: None,
             pending_inputs: false,
             scalar_input: false,
             recovery_rows: false,
@@ -276,7 +284,34 @@ impl<'a> CallOptions<'a> {
         self
     }
 
+    /// Continue an ordinary Request only when a question-set `on` pointer is absent.
+    /// The callback receives the zero-based original ordinal and the actual pointer,
+    /// borrowed only for this invocation. It runs on the synchronous call thread,
+    /// or the native worker for an owned session. True skips this whole original;
+    /// false or a panic retains the original native missing-pointer failure.
+    /// Other readers, command projections, providers and unusable groups remain
+    /// terminal. Defaults to no continuation. General row recovery is incompatible.
+    /// The callback runs without queue or scheduler locks and must not wait for its
+    /// own invocation or session. It is never a request/result sink.
+    #[must_use]
+    pub const fn on_missing_annotation_pointer(
+        mut self, callback: &'a (dyn Fn(usize, &str) -> bool + Sync),
+    ) -> Self {
+        self.annotation_missing = Some(callback);
+        self
+    }
+
+    pub(in crate::public) fn admit_recovery(&self) -> Result<(), Error> {
+        if self.annotation_missing.is_some() {
+            return Err(Error::usage("annotation pointer continuation cannot accompany general row recovery"));
+        }
+        Ok(())
+    }
+
     pub(in crate::public) fn admit_preparation(&self, function: crate::RequestFunction) -> Result<(), Error> {
+        if self.annotation_missing.is_some() && function != crate::RequestFunction::Annotate {
+            return Err(Error::usage("missing annotation pointer continuation requires an annotation request"));
+        }
         if self.shared_state_groups && function != crate::RequestFunction::Annotate {
             return Err(Error::usage("shared-state groups require an annotation request"));
         }

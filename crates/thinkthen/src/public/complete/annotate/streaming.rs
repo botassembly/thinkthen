@@ -128,7 +128,7 @@ impl Engine {
                 if let Err(crate::engine::pipeline::Failed::Asker(error)) = &row
                     && let Some(pointer) = error.missed_pointer()
                     && let Some(recover) = recover
-                    && recover(at, pointer)
+                    && crate::public::options::continue_annotation(recover, at, pointer)
                 {
                     return Ok(None);
                 }

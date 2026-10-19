@@ -157,6 +157,8 @@ impl Engine {
         release: Option<&dyn Fn(usize)>,
         recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
+        let recover = recover.or(environment.controls.annotation_missing
+            .map(|callback| callback as &dyn Fn(usize, &str) -> bool));
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
         let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
@@ -204,7 +206,7 @@ impl Engine {
                 } else {
                     Box::new(rows)
                 };
-                controls.eager_inputs = eager && sink.is_some();
+                controls.eager_inputs = eager && (sink.is_some() || recover.is_some());
                 dispatch(
                     &engine,
                     request.request.call.function(),
@@ -833,7 +835,7 @@ fn dispatch<'a>(
     release: Option<&dyn Fn(usize)>,
     recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
-    if !eager && function.streams() {
+    if (!eager || recover.is_some()) && function.streams() {
         let rows = super::pull::dispatch(
             engine,
             function,

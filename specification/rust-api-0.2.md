@@ -934,3 +934,19 @@ relation and annotation-group detail views are cleared because no single constit
 represents the combined invocation. Description-loss disclosure is ORed. Hidden counters
 contain no additional body, stay out of Debug/schema/serde, and do not change equality.
 The backend check retains its command-owned closed four-probe request count separately.
+
+`CallOptions::on_missing_annotation_pointer(&dyn Fn(usize, &str) -> bool + Sync)` and
+`RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>`
+retain the existing ordinary annotation callback. The default is absent. Only missing
+question-set `on` pointers reach it; zero-based original ordinal and exact selector are
+borrowed for the callback. True skips the whole original; false or panic preserves its
+native failure. Ordinary usable-group and whole-row checks stay unchanged. Other
+functions, previews and general recovering sessions refuse the policy before input.
+The owned form retains its Arc on the native worker and omits it from Debug. Invocation
+holds no queue or scheduler lock. Callers must not wait on the same session and must
+release their own waits on cancellation, output failure, disposal or receiver shutdown.
+The command uses a bounded private event and acknowledgement channel, drains prior
+output before acknowledging, and declines/cancels after a failed output operation.
+`ErrorDiagnostic::MissingPointer { pointer: &str }` directly borrows the retained native
+record cause; it authorizes no recovery and exposes no record content. Error kind,
+facts, ordinary serialization and all existing result packet shapes stay unchanged.

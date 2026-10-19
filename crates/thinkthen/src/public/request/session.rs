@@ -221,8 +221,17 @@ pub enum RequestSessionReady {
 }
 
 /// Owned session controls, separate from canonical Request JSON.
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
 pub struct RequestSessionFeedOptions {
+    /// Owned ordinary annotation pointer policy, defaulting to no continuation.
+    /// The worker calls this only for an absent question-set `on` pointer, with
+    /// zero-based original ordinal and pointer borrowed for the callback. True
+    /// skips that original; false or panic retains its native failure. It runs
+    /// without queue/scheduler locks. Never wait on this same session, and release
+    /// caller waits on cancellation or receiver shutdown. General recovering
+    /// sessions and other functions refuse this policy before reading input.
+    #[expect(clippy::type_complexity, reason = "the owned narrow callback retains the ordinary annotation policy without a result or sink facade")]
+    pub on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>,
     /// Retain an otherwise successful native result when cancellation arrives
     /// during final settlement. Active work still stops on cancellation.
     /// Defaults to false: ordinary caller cancellation takes precedence over success.
@@ -236,6 +245,16 @@ pub struct RequestSessionFeedOptions {
     pub all_filter_results: bool,
     /// Replace the prepared record projection with an owned native reading.
     pub record_reading: Option<crate::RecordReading>,
+}
+
+impl std::fmt::Debug for RequestSessionFeedOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RequestSessionFeedOptions")
+            .field("retain_success_on_cancel", &self.retain_success_on_cancel)
+            .field("eager", &self.eager).field("image_inputs", &self.image_inputs)
+            .field("all_filter_results", &self.all_filter_results)
+            .field("record_reading", &self.record_reading).finish()
+    }
 }
 
 /// One session with bounded intake and owned unread output.
@@ -422,6 +441,14 @@ impl Engine {
         options: RequestSessionFeedOptions,
         mode: Mode,
     ) -> Result<RequestSession, Error> {
+        if options.on_missing_annotation_pointer.is_some() {
+            if request.call.function() != super::RequestFunction::Annotate {
+                return Err(Error::usage("missing annotation pointer continuation requires an annotation request"));
+            }
+            if matches!(mode, Mode::Recovering) {
+                return Err(Error::usage("annotation pointer continuation cannot accompany general row recovery"));
+            }
+        }
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
@@ -521,14 +548,12 @@ fn run(
         }
         _ => None,
     };
-    let environment = RequestEnvironment {
-        controls: CallOptions::new()
-            .surface(surface)
-            .cancel(&queue.cancel)
-            .retain_success_on_cancel(options.retain_success_on_cancel)
-            .observe(&observer),
-        feed,
-    };
+    let mut controls = CallOptions::new().surface(surface).cancel(&queue.cancel)
+        .retain_success_on_cancel(options.retain_success_on_cancel).observe(&observer);
+    if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
+        controls = controls.on_missing_annotation_pointer(callback);
+    }
+    let environment = RequestEnvironment { controls, feed };
     let mut terminal =
         match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
             Ok(RequestOutcome::Complete(call)) => {

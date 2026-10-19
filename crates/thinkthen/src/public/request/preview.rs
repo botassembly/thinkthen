@@ -17,6 +17,9 @@ impl Engine {
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
         environment.controls.admit_preparation(request.request.call.function())?;
+        if environment.controls.annotation_missing.is_some() {
+            return Err(Error::usage("annotation pointer continuation applies only to execution"));
+        }
         if matches!(request.request.call.function(), RequestFunction::Recognize | RequestFunction::Relate) {
             return self.plan_whole_request(request, environment);
         }

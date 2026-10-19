@@ -88,6 +88,12 @@ pub enum ErrorDiagnostic<'a> {
     TokenLimit,
     /// A response exceeded the configured byte ceiling.
     ReplyTooLarge(u64),
+    /// An actual absent record selector. This exposes the authored selector,
+    /// never the original record. It does not itself authorize continuation.
+    MissingPointer {
+        /// Exact pointer retained by the native record refusal.
+        pointer: &'a str,
+    },
     /// A fixed safe response-decoding sentence, never raw parser input.
     Reply(String),
     /// Strict replay could not find this generated question key.
@@ -394,6 +400,7 @@ fn refusal(cause: &(dyn std::any::Any + Send + Sync), kind: ErrorKind) -> Option
     }
     if let Some(error) = cause.downcast_ref::<crate::core::RecordError>() {
         return Some(match error {
+            crate::core::RecordError::Missed(pointer) => D::MissingPointer { pointer },
             crate::core::RecordError::NotUtf8 => D::InvalidUtf8,
             crate::core::RecordError::Json(cause) => D::RecordJson(classification::json(cause)),
             crate::core::RecordError::InputJson { line, column } => D::InputJson { line: *line, column: *column },

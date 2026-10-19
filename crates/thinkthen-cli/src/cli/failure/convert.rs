@@ -106,6 +106,7 @@ fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
         D::QuestionSet(message) => F::QuestionSet(message.into()),
         D::Reading(message) => F::Reading(message),
         D::Record(message) => F::Record(message),
+        D::MissingPointer { pointer } => F::Record(format!("the record holds nothing at `{pointer}`")),
         D::InvalidUtf8 => F::InvalidUtf8 { record: false },
         D::Rendering(message) => F::Native(ErrorKind::Defect, format!("defect: {message}")),
         D::RecognitionConfiguration { message, from_file } => F::Recognize(super::recognize::Error::Config { file: from_file, error: message }),
