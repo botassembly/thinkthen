@@ -1034,6 +1034,7 @@ def smoke_family_cases():
     assert len(cells) == len({(cell['target'], cell['family']) for cell in cells})
     assert {target: {cell['family'] for cell in cells if cell['target'] == target}
             for target in expected} == expected
+    assert smoke['timeout-minutes'] == '${{ matrix.job_minutes }}'
     assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
     assert 'smoke' in release['jobs']['draft']['needs']
     selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
@@ -1043,7 +1044,7 @@ def smoke_family_cases():
     logs = next(step for step in smoke['steps'] if step.get('name') == 'Retain available smoke logs')
     assert logs['if'] == 'always()' and '${{ matrix.family }}' in logs['with']['name']
     for cell in cells:
-        assert 0 < cell['consumer_minutes'] < cell['minutes'] < 356
+        assert 0 < cell['consumer_minutes'] < cell['minutes'] < cell['job_minutes'] <= 360
     # Use real archive/checksum/scan/completeness code with local consumer exits.
     # This keeps the installed execution outside-in while avoiding tool builds.
     with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-family-') as temporary:

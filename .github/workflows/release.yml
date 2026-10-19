@@ -45,23 +45,23 @@ jobs:
       matrix:
         include:
           # Passed 5146s; run/job 39066497222/117495205500; ceil(2x/60).
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, minutes: 172, setup_minutes: 172, pack_minutes: 172}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, minutes: 172, job_minutes: 177, setup_minutes: 172, pack_minutes: 172}
           # Passed 4513s; run/job 39102241482/117600734565; ceil(2x/60).
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, minutes: 151, setup_minutes: 5, pack_minutes: 146}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, minutes: 151, job_minutes: 156, setup_minutes: 5, pack_minutes: 146}
           # Passed 4581s; run/job 39102241482/117600734572; ceil(2x/60).
-          - {target: aarch64-apple-darwin, runner: macos-15, minutes: 153, setup_minutes: 58, pack_minutes: 94}
+          - {target: aarch64-apple-darwin, runner: macos-15, minutes: 153, job_minutes: 158, setup_minutes: 58, pack_minutes: 94}
           # Passed 3h28m22s (12502s); run/job 39102241482/117600734673.
           # 2x needs 417m; GitHub-hosted jobs cap at 360m. Keep the existing cap.
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, minutes: 360, setup_minutes: 199, pack_minutes: 215}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, minutes: 360, job_minutes: 360, setup_minutes: 199, pack_minutes: 215}
           # Passed 1514s; run/job 39102241482/117600734615; ceil(2x/60).
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025, minutes: 51, setup_minutes: 2, pack_minutes: 48}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, minutes: 51, job_minutes: 56, setup_minutes: 2, pack_minutes: 48}
     # Passing setup/pack seconds from the same jobs above:
     # ARM Linux124/4371; ARM Mac1711/2814; Intel Mac5957/6436; Windows46/1431.
     # Linux x86 retains its complete-job bound for either step.
     # Uploads are best effort if the runner or entire job is cancelled.
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.minutes + (matrix.minutes < 360 && 5 || 0) }}
+    timeout-minutes: ${{ matrix.job_minutes }}
     permissions: {contents: read}
     env:
       MACOSX_DEPLOYMENT_TARGET: '15.0'
@@ -400,78 +400,78 @@ jobs:
         include:
           # Provisional 2x component bound: 4714s setup + 3673s consumer.
           # Jobs: 117533117689: setup and complete installed bundle.
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: command, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: c, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: python, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: typescript, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ruby, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: sqlite, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: duckdb, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql16, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql17, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql18, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: installers, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: go-cpp, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: swift-zig, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: php-dart, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ada-objective-c-cobol, minutes: 280, consumer_minutes: 123}
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: managed, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: command, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: c, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: python, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: typescript, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ruby, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: sqlite, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: duckdb, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql16, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql17, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql18, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: installers, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: go-cpp, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: swift-zig, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: php-dart, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ada-objective-c-cobol, minutes: 280, job_minutes: 285, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: managed, minutes: 280, job_minutes: 285, consumer_minutes: 123}
           # Examples have no passing current measurement; retain prior 360m cap until 0691.
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: examples, minutes: 355, consumer_minutes: 350}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: examples, minutes: 355, job_minutes: 360, consumer_minutes: 350}
           # Provisional 2x component bound: 4620s setup + 2095s consumer.
           # Jobs: 117533117655: setup and complete installed bundle.
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: command, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: c, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: python, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: typescript, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: ruby, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: sqlite, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: duckdb, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql16, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql17, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql18, minutes: 224, consumer_minutes: 70}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: installers, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: command, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: c, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: python, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: typescript, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: ruby, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: sqlite, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: duckdb, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql16, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql17, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql18, minutes: 224, job_minutes: 229, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: installers, minutes: 224, job_minutes: 229, consumer_minutes: 70}
           # Provisional 2x component bound: 4025s setup + 731s consumer.
           # Jobs: 117533117652: setup and passing PG16 interval; legacy DuckDB bundle314s at 112104778598.
-          - {target: aarch64-apple-darwin, runner: macos-15, family: command, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: c, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: python, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: typescript, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: ruby, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: sqlite, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: duckdb, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql16, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql17, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql18, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: installers, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: swift-zig, minutes: 159, consumer_minutes: 25}
-          - {target: aarch64-apple-darwin, runner: macos-15, family: ada-objective-c-cobol, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: command, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: c, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: python, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: typescript, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: ruby, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: sqlite, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: duckdb, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql16, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql17, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql18, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: installers, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: swift-zig, minutes: 159, job_minutes: 164, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: ada-objective-c-cobol, minutes: 159, job_minutes: 164, consumer_minutes: 25}
           # Examples have no passing current measurement; retain prior 360m cap until 0691.
-          - {target: aarch64-apple-darwin, runner: macos-15, family: examples, minutes: 355, consumer_minutes: 350}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: examples, minutes: 355, job_minutes: 360, consumer_minutes: 350}
           # Provisional 2x component bound: 8750s setup + 1256s consumer.
           # Jobs: 117417603551: setup and passing Python interval; legacy DuckDB bundle527s at 112104778577.
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: command, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: c, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: python, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: typescript, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ruby, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: sqlite, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: duckdb, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql16, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql17, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql18, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: installers, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: swift-zig, minutes: 334, consumer_minutes: 42}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ada-objective-c-cobol, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: command, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: c, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: python, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: typescript, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ruby, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: sqlite, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: duckdb, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql16, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql17, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql18, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: installers, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: swift-zig, minutes: 334, job_minutes: 339, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ada-objective-c-cobol, minutes: 334, job_minutes: 339, consumer_minutes: 42}
           # Examples have no passing current measurement; retain prior 360m cap until 0691.
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: examples, minutes: 355, consumer_minutes: 350}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: examples, minutes: 355, job_minutes: 360, consumer_minutes: 350}
           # Provisional 2x component bound: 50s setup + 459s consumer.
           # Jobs: 117417603566: setup;117533117658: passing command/crate step.
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-c, minutes: 17, consumer_minutes: 16}
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-command, minutes: 17, consumer_minutes: 16}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-c, minutes: 17, job_minutes: 22, consumer_minutes: 16}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-command, minutes: 17, job_minutes: 22, consumer_minutes: 16}
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.minutes + 5 }}
+    timeout-minutes: ${{ matrix.job_minutes }}
     permissions: {contents: read, actions: read}
     env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
     steps:
