@@ -43,3 +43,4 @@ The fixtures also build PATH from tool lists typed inline: there are 15 `for too
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: The full gate exposed database routes omitted from the earlier library-only guard table; fresh review accepts4973fd113 after all three database guards and PostgreSQL shell ordering were repaired, portable cases and extended guard checks passed on M5, and the failed d612720 receipt remains retained before one closing gate.
