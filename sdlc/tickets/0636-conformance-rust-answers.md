@@ -26,3 +26,4 @@ The conformance suite is strong. `conformance/cases.json` lists 29 consumers wit
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: PM accepts closed-engine proof as a session safely outliving its original engine with owned result and error lifetimes; shared conformance adds no freed-pointer test or close API, and disposed-wrapper errors remain each language phase3 idiom checks.
