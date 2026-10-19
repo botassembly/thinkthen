@@ -10,6 +10,12 @@ const FILE: &str = concat!(
     "/../../specification/result.schema.json"
 );
 
+// The native transparent Record derives its unconstrained JSON as an object
+// schema. Preserve that exact declaration without exposing its private type.
+pub(crate) fn record(_: &mut schemars::SchemaGenerator) -> Schema {
+    schemars::json_schema!({})
+}
+
 #[test]
 fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
     let mut generator = SchemaSettings::draft2020_12()
@@ -38,7 +44,7 @@ fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
     );
     let committed = std::fs::read_to_string(FILE).expect("committed result schema");
     let mut committed: Value = serde_json::from_str(&committed).expect("result schema JSON");
-    let mut changed = false;
+    let mut changed = Vec::new();
     for (name, schema) in definitions {
         let destination = committed["$defs"]
             .as_object_mut()
@@ -46,11 +52,11 @@ fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
             .get_mut(&name)
             .expect("committed command definition");
         if *destination != schema {
-            changed = true;
+            changed.push(format!("{name}: committed={destination}, derived={schema}"));
             *destination = schema;
         }
     }
-    if changed && std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1") {
+    if !changed.is_empty() && std::env::var_os("THINKTHEN_WRITE_SCHEMA").is_some_and(|value| value == "1") {
         std::fs::write(
             FILE,
             serde_json::to_string_pretty(&committed).expect("schema text") + "\n",
@@ -58,7 +64,7 @@ fn the_committed_command_schemas_are_the_ones_the_rust_types_derive() {
         .expect("rewrite command schema definitions");
     }
     assert!(
-        !changed,
-        "generated command schemas differ; run THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests, then rewrite and rerun the library schema tests"
+        changed.is_empty(),
+        "generated command schemas differ; run THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests, then rewrite and rerun the library schema tests; differences: {}", changed.join("; ")
     );
 }
