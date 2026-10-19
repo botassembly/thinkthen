@@ -44,32 +44,39 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Passed5146s; run/job39066497222/117495205500; ceil(2x/60).
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, minutes: 172}
-          # Passed4513s; run/job39102241482/117600734565; ceil(2x/60).
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, minutes: 151}
-          # Passed4581s; run/job39102241482/117600734572; ceil(2x/60).
-          - {target: aarch64-apple-darwin, runner: macos-15, minutes: 153}
-          # Passed3h28m22s (12502s); run/job39102241482/117600734673.
-          # 2x needs417m; GitHub-hosted jobs cap at360m. Keep the existing cap.
-          - {target: x86_64-apple-darwin, runner: macos-15-intel, minutes: 360}
-          # Passed1514s; run/job39102241482/117600734615; ceil(2x/60).
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025, minutes: 51}
+          # Passed 5146s; run/job 39066497222/117495205500; ceil(2x/60).
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, minutes: 172, setup_minutes: 172, pack_minutes: 172}
+          # Passed 4513s; run/job 39102241482/117600734565; ceil(2x/60).
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, minutes: 151, setup_minutes: 5, pack_minutes: 146}
+          # Passed 4581s; run/job 39102241482/117600734572; ceil(2x/60).
+          - {target: aarch64-apple-darwin, runner: macos-15, minutes: 153, setup_minutes: 58, pack_minutes: 94}
+          # Passed 3h28m22s (12502s); run/job 39102241482/117600734673.
+          # 2x needs 417m; GitHub-hosted jobs cap at 360m. Keep the existing cap.
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, minutes: 360, setup_minutes: 199, pack_minutes: 215}
+          # Passed 1514s; run/job 39102241482/117600734615; ceil(2x/60).
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, minutes: 51, setup_minutes: 2, pack_minutes: 48}
+    # Passing setup/pack seconds from the same jobs above:
+    # ARM Linux124/4371; ARM Mac1711/2814; Intel Mac5957/6436; Windows46/1431.
+    # Linux x86 retains its complete-job bound for either step.
+    # Uploads are best effort if the runner or entire job is cancelled.
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: ${{ matrix.minutes }}
+    timeout-minutes: ${{ matrix.minutes + (matrix.minutes < 360 && 5 || 0) }}
     permissions: {contents: read}
     env:
       MACOSX_DEPLOYMENT_TARGET: '15.0'
     steps:
       - name: Keep Windows line endings as committed
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: git config --global core.autocrlf false
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - name: Isolate Windows default folders
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
           set -eu
           printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
@@ -84,14 +91,20 @@ jobs:
         with: {node-version: '22.22.3'}
       - name: Select x64 MSVC
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
       - name: Install and check the pinned host tools
+        timeout-minutes: ${{ matrix.setup_minutes }}
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow host-setup "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          sdlc/scripts/release-workflow host-setup "$TARGET"
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
           jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
           echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
@@ -100,13 +113,19 @@ jobs:
       - name: Select managed language tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
       - name: Check every prepared build input
         env: {TARGET: "${{ matrix.target }}"}
-        run: python3 sdlc/scripts/hosted-preflight.py build "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          python3 sdlc/scripts/hosted-preflight.py build "$TARGET"
       - name: Build and pack the target
+        timeout-minutes: ${{ matrix.pack_minutes }}
         env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}", PYO3_PYTHON: "${{ steps.python-floor.outputs.python-path }}"}
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
           set -eu
           mkdir -p release-files
           if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
@@ -148,7 +167,9 @@ jobs:
       - name: Pack the built Mac DuckDB hosts
         if: runner.os == 'macOS'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow duckdb-host-pack duckdb-hosts "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-build.log") 2>&1
+          sdlc/scripts/release-workflow duckdb-host-pack duckdb-hosts "$TARGET" "$SHA"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: matrix.target != 'x86_64-pc-windows-msvc'
         with:
@@ -168,6 +189,14 @@ jobs:
           name: provenance-x86
           path: ${{ runner.temp }}/thinkthen-provenance-x86/
           if-no-files-found: error
+          retention-days: 7
+      - name: Retain available build logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-logs-${{ matrix.target }}
+          path: ${{ runner.temp }}/release-build.log
+          if-no-files-found: warn
           retention-days: 7
 
   apple-packages:
@@ -361,7 +390,7 @@ jobs:
 
   smoke:
     needs: [resolve, build, apple-packages, wheels, npm-pack, gems, crate]
-    # Historic setup includes DuckDB compilation removed by0613. These bounds
+    # Historic setup includes DuckDB compilation removed by 0613. These bounds
     # deliberately retain that measured cost; they are not new setup timings.
     # Source jobs: https://github.com/botassembly/thinkthen/actions/jobs/JOB_ID
     # 0691 measures each complete new job before replacing these provisional bounds.
@@ -387,7 +416,7 @@ jobs:
           - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: php-dart, minutes: 280, consumer_minutes: 123}
           - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ada-objective-c-cobol, minutes: 280, consumer_minutes: 123}
           - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: managed, minutes: 280, consumer_minutes: 123}
-          # Examples have no passing current measurement; retain prior360m cap until0691.
+          # Examples have no passing current measurement; retain prior 360m cap until 0691.
           - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: examples, minutes: 355, consumer_minutes: 350}
           # Provisional 2x component bound: 4620s setup + 2095s consumer.
           # Jobs: 117533117655: setup and complete installed bundle.
@@ -403,7 +432,7 @@ jobs:
           - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql18, minutes: 224, consumer_minutes: 70}
           - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: installers, minutes: 224, consumer_minutes: 70}
           # Provisional 2x component bound: 4025s setup + 731s consumer.
-          # Jobs: 117533117652: setup and passing PG16 interval; legacy DuckDB bundle314s at112104778598.
+          # Jobs: 117533117652: setup and passing PG16 interval; legacy DuckDB bundle314s at 112104778598.
           - {target: aarch64-apple-darwin, runner: macos-15, family: command, minutes: 159, consumer_minutes: 25}
           - {target: aarch64-apple-darwin, runner: macos-15, family: c, minutes: 159, consumer_minutes: 25}
           - {target: aarch64-apple-darwin, runner: macos-15, family: python, minutes: 159, consumer_minutes: 25}
@@ -417,10 +446,10 @@ jobs:
           - {target: aarch64-apple-darwin, runner: macos-15, family: installers, minutes: 159, consumer_minutes: 25}
           - {target: aarch64-apple-darwin, runner: macos-15, family: swift-zig, minutes: 159, consumer_minutes: 25}
           - {target: aarch64-apple-darwin, runner: macos-15, family: ada-objective-c-cobol, minutes: 159, consumer_minutes: 25}
-          # Examples have no passing current measurement; retain prior360m cap until0691.
+          # Examples have no passing current measurement; retain prior 360m cap until 0691.
           - {target: aarch64-apple-darwin, runner: macos-15, family: examples, minutes: 355, consumer_minutes: 350}
           # Provisional 2x component bound: 8750s setup + 1256s consumer.
-          # Jobs: 117417603551: setup and passing Python interval; legacy DuckDB bundle527s at112104778577.
+          # Jobs: 117417603551: setup and passing Python interval; legacy DuckDB bundle527s at 112104778577.
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: command, minutes: 334, consumer_minutes: 42}
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: c, minutes: 334, consumer_minutes: 42}
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: python, minutes: 334, consumer_minutes: 42}
@@ -434,7 +463,7 @@ jobs:
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: installers, minutes: 334, consumer_minutes: 42}
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: swift-zig, minutes: 334, consumer_minutes: 42}
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ada-objective-c-cobol, minutes: 334, consumer_minutes: 42}
-          # Examples have no passing current measurement; retain prior360m cap until0691.
+          # Examples have no passing current measurement; retain prior 360m cap until 0691.
           - {target: x86_64-apple-darwin, runner: macos-15-intel, family: examples, minutes: 355, consumer_minutes: 350}
           # Provisional 2x component bound: 50s setup + 459s consumer.
           # Jobs: 117417603566: setup;117533117658: passing command/crate step.
