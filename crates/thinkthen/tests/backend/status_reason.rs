@@ -427,8 +427,7 @@ fn assert_size_advice(
             (0..expected_requests)
                 .map(|_| Canned::status(status, body))
                 .collect(),
-        )
-        ?;
+        )?;
         let mut arguments = arguments.to_vec();
         arguments.extend([
             "--url",
@@ -442,8 +441,7 @@ fn assert_size_advice(
             &arguments,
             &[("THINKTHEN_API_KEY", "fixture-key")],
             evidence.as_bytes(),
-        )
-        ?;
+        )?;
         let said = crate::harness::said(&output);
         assert_eq!(output.status.code(), Some(4), "{arguments:?}: {said}");
         assert!(output.stdout.is_empty(), "{arguments:?}");
@@ -458,18 +456,20 @@ fn assert_size_advice(
             ""
         };
         let sentence = format!("{reason}; {advice}{provider}");
-        let expected = if status == 413
-            && command == "annotate"
-            && arguments.contains(&"--lines")
-        {
+        let expected = if status == 413 && command == "annotate" && arguments.contains(&"--lines") {
             format!(
                 "thinkthen: stopped at record 1; the request for records 1 to 1 failed: {sentence}; 0 records finished"
             )
         } else {
             format!("thinkthen: {sentence}")
         };
-        assert_eq!(said.lines().next(), Some(expected.as_str()), "{arguments:?}");
-        let facts: serde_json::Value = serde_json::from_str(said.lines().last().ok_or("failure facts are required")?)?;
+        assert_eq!(
+            said.lines().next(),
+            Some(expected.as_str()),
+            "{arguments:?}"
+        );
+        let facts: serde_json::Value =
+            serde_json::from_str(said.lines().last().ok_or("failure facts are required")?)?;
         assert_eq!(
             facts.get("stopped"),
             Some(&serde_json::json!({"at":1,"cause":"too_large","retryable":false})),
