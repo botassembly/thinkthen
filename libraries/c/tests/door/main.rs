@@ -57,7 +57,9 @@ const ASAN_OPTIONS: &str = if cfg!(target_os = "macos") {
 };
 
 fn consumer_name(source: &Path) -> String {
-    let relative = source.strip_prefix(crate_dir()).unwrap_or(source);
+    let relative = source
+        .strip_prefix(crate_dir())
+        .unwrap_or_else(|_| source.file_name().map_or(source, Path::new));
     relative.to_string_lossy().replace(['/', '\\'], "-")
 }
 
