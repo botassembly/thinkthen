@@ -7,8 +7,8 @@ use std::process::ExitCode;
 use serde::Serialize;
 
 use crate::cli::intake::{Data, Intake};
-use crate::core::adapters::built_in;
-use crate::core::{Backend, BackendProfile, Description, Reading, RecognizeSpec};
+use crate::{Engine, Recognize, ResolvedSettings};
+use crate::cli::reading::Reading;
 use crate::render::json_line;
 use crate::edge;
 use crate::failure::Failure;
@@ -71,9 +71,8 @@ struct From {
 
 #[derive(Debug)]
 pub(super) struct Question<'a> {
-    pub(super) spec: &'a RecognizeSpec,
+    pub(super) spec: &'a Recognize,
     pub(super) from_file: bool,
-    pub(super) limit: usize,
     /// The first key variable of the selected backend.
     pub(super) key_env: &'a str,
     pub(super) backend_name: Option<&'a str>,
@@ -87,13 +86,12 @@ pub(super) fn run(
     reading: &Reading,
     admitted: crate::AdmittedRequest,
     source: Intake,
-    (backend, profile): (&Backend, Option<&BackendProfile>),
+    (backend, environment): (&ResolvedSettings, &crate::edge::Environment),
     question: Question<'_>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let Question {
         spec,
-        limit,
         context,
         context_field,
         examples_field,
@@ -116,88 +114,60 @@ pub(super) fn run(
                     .map_err(|error| Failure::record(error, reading.streams()))?,
             };
             let mut native = composition
-                .compose(crate::RawRecord(std::sync::Arc::new(record.clone())))
+                .compose(record.clone())
                 .map_err(Failure::from)?;
             native.context = crate::asking::context::record(
                 &record,
                 *context_field,
-                spec.metadata.context_schema.as_ref(),
+                spec.reading().context_schema(),
             )?;
             Ok(native.map_original(crate::QuestionInput::Record))
         })
-        .map(|row| {
-            row.map_err(|cause| {
-                crate::Error::usage("the CLI reader failed").with_diagnostic(
-                    crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(cause)),
-                )
-            })
-        });
-    let admitted = admitted.with_composed_feed("cli-recognize-plan");
-    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
-    if let Some(context) = *context {
-        controls = controls.context(context);
-    }
-    let preview = admitted
-        .plan_recognition(
-            backend,
-            profile,
-            crate::RequestEnvironment {
-                controls,
-                feed: Some(crate::RequestFeed::from_records(
-                    "cli-recognize-plan",
-                    records,
-                )),
-            },
-            *limit,
-        )
-        .map_err(Failure::from)?;
+        .map(|row| row.map_err(Failure::into_error));
+    let request = super::native::request(admitted, *context).admit()?;
+    // Plans use the same captured provider and size selection without reading answers.
+    let engine: Engine = environment.take_builder()?.no_cache().build()?;
+    let preview = engine.plan_request(&request, crate::RequestEnvironment {
+        controls: crate::CallOptions::new().surface(crate::Surface::Cli),
+        feed: Some(crate::RequestFeed::from_records("cli-recognize", records)),
+    })?;
     print(preview, backend, question, writer)
 }
 
 fn print(
-    preview: crate::public::complete::recognize::RecognitionPreview,
-    backend: &Backend,
+    preview: crate::PlanEstimate,
+    backend: &ResolvedSettings,
     question: Question<'_>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let Question {
-        spec,
         from_file,
         key_env,
         backend_name,
         ..
     } = question;
-    let Some(first) = preview.first else {
+    let Some(first) = preview.recognition() else {
         return Ok(ExitCode::SUCCESS);
     };
     let pieces = first.pieces;
-    let name_bound = first.names;
-    let relation_bound = first.relations;
-    let requests = first
-        .requests
-        .into_iter()
+    let name_bound = first.name_requests_upper_bound;
+    let relation_bound = first.relation_pairs_upper_bound;
+    let requests = preview
+        .prepared_requests()
         .map(|request| {
             Ok(Request {
-                digest: request.digest.as_str().to_owned(),
+                digest: request.digest.to_owned(),
                 bytes: request.body.len(),
-                body_utf8: String::from_utf8(request.body)
+                body_utf8: String::from_utf8(request.body.to_vec())
                     .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
             })
         })
         .collect::<Result<Vec<_>, Failure>>()?;
-    crate::cli::check::say_dropped_detail(
-        built_in::drops_any(
-            backend.descriptions(),
-            spec.kinds
-                .iter()
-                .filter_map(|(_, held)| held.as_ref().map(Description::as_json)),
-        ),
-        backend_name,
-    )?;
+    crate::cli::check::say_dropped_detail(preview.drops_detail(), backend_name)?;
     let report = DryRun {
         schema: "thinkthen.recognize-plan/2",
-        url: backend.url().as_str(),
-        model: backend.model().as_str(),
+        url: &backend.url,
+        model: &backend.model,
         key_env,
         from: from_file.then_some(From { question: "file" }),
         pieces,
@@ -208,10 +178,7 @@ fn print(
         requests,
     };
     edge::write_line(&mut *writer, &json_line(&report)?)?;
-    let counts = preview
-        .summary
-        .counts()
-        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    let counts = crate::cli::plan_counts::Counts::from(&preview);
     edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
 }
@@ -220,8 +187,7 @@ fn print(
 mod tests {
     //! Stays: dry-run probability accounting requires direct numeric boundary checks.
     use super::{DryRun, Request};
-    use crate::core::{KEY_VAR};
-use crate::render::json_line;
+    use crate::render::json_line;
 
     #[test]
     #[allow(
@@ -235,7 +201,7 @@ use crate::render::json_line;
             schema: "thinkthen.recognize-plan/2",
             url,
             model: "local-1",
-            key_env: KEY_VAR,
+            key_env: "THINKTHEN_API_KEY",
 
             from: None,
             pieces: 1,

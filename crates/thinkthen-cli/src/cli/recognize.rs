@@ -6,9 +6,10 @@ use std::process::ExitCode;
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::cli::intake::Intake;
-use crate::core::{ModelName, Reading};
-use crate::edge::{self, Environment};
-use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
+use crate::cli::reading::Reading;
+use crate::RequestFraming as Framing;
+use crate::edge::Environment;
+use crate::Engine;
 use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
@@ -22,14 +23,13 @@ mod source;
 struct Running<'a> {
     common: &'a Common,
     environment: &'a Environment,
-    max_text_bytes: usize,
     engine: Engine,
     mismatch: profile::Mismatch,
     context: Option<String>,
     context_field: Option<String>,
     examples_field: Option<String>,
     seed_spans_field: Option<String>,
-    cancel: crate::engine::Cancel<'static>,
+    recording: bool,
 }
 
 #[expect(
@@ -39,13 +39,13 @@ struct Running<'a> {
 pub(crate) fn run(
     arguments: &RecognizeArguments,
     environment: &Environment,
-    mut admitted: crate::AdmittedRequest,
+    admitted: crate::AdmittedRequest,
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     arguments.common.check_plan_name()?;
     if let Some(pointer) = arguments.examples_field.as_deref() {
-        crate::core::Pointer::new(pointer)
+        crate::RecordReading::new(&[pointer], None, None)
             .map_err(|_| Failure::Usage("--examples-field needs a valid JSON Pointer"))?;
         if !arguments.common.jsonl && !arguments.common.csv && !arguments.common.tsv {
             return Err(Failure::Usage(
@@ -54,7 +54,7 @@ pub(crate) fn run(
         }
     }
     if let Some(pointer) = arguments.seed_spans_field.as_deref() {
-        crate::core::Pointer::new(pointer)
+        crate::RecordReading::new(&[pointer], None, None)
             .map_err(|_| Failure::Usage("--seed-spans-field needs a valid JSON Pointer"))?;
         if !arguments.common.jsonl && !arguments.common.csv && !arguments.common.tsv {
             return Err(Failure::Usage(
@@ -62,40 +62,37 @@ pub(crate) fn run(
             ));
         }
     }
-    let mut spec = config::settle(arguments, Some(&mut admitted))?;
+    let (mut question, admitted) = config::settle(arguments, admitted)?;
     let context = asking::context::shared(arguments.context.as_deref())?;
-    examples::shared(arguments.examples.as_deref(), &mut spec)?;
-    crate::public::RecordReading::new(&[], arguments.context_field.as_deref(), None)
+    examples::shared(arguments.examples.as_deref(), &mut question)?;
+    let spec = question.reading();
+    crate::RecordReading::new(&[], arguments.context_field.as_deref(), None)
         .map_err(|_| Failure::Usage("--context-field needs a valid JSON Pointer"))?;
-    let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
     let pointers = if arguments.common.field.is_empty() {
-        spec.on.clone()
+        spec.on().map(str::to_owned).collect::<Vec<_>>()
     } else {
-        let fields = arguments
-            .common
-            .field
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<_>>();
-        crate::core::pointers(&fields, crate::core::Source::CommandLine, "field")?
+        let fields = arguments.common.field.iter().map(String::as_str).collect::<Vec<_>>();
+        crate::RecordReading::new(&fields, None, None)?;
+        arguments.common.field.clone()
     };
-    if let Some(model) = arguments.common.model.as_deref() {
-        spec.model = Some(edge::model_flag(model)?);
-    }
-    *admitted.cli_definition().map_err(Failure::from)? = crate::Recognize(spec.clone()).into();
+    let has_on = spec.on().next().is_some();
+    let mut request_arguments = admitted.request().call.arguments().clone();
+    request_arguments.question = crate::RequestQuestion::Definition { value: question.clone().into() };
+    request_arguments.options.max_text_bytes = arguments.max_text_bytes;
+    let admitted = crate::Request::for_function(crate::RequestFunction::Recognize, request_arguments).admit()?;
     let framing = if arguments.common.input.len() > 1
         && arguments.common.unit.is_none()
-        && arguments.common.framing() == crate::core::Framing::Document
+        && arguments.common.framing() == Framing::Document
     {
-        crate::core::Framing::Lines
+        Framing::Lines
     } else {
         arguments.common.framing()
     };
     let reading =
-        Reading::new(framing, pointers)?.with_item_schema(spec.metadata.item_schema.clone());
+        Reading::new(framing, pointers)?.with_item_schema(spec.item_schema().cloned());
     schedule::jobs_of(arguments.common.jobs, reading.streams(), environment)?;
     if (arguments.common.located() || arguments.common.input.len() > 1)
-        && (!spec.on.is_empty()
+        && (has_on
             || arguments.common.jsonl
             || arguments.common.csv
             || arguments.common.tsv
@@ -105,19 +102,15 @@ pub(crate) fn run(
             "located recognize needs text units without JSON fields or table framing",
         ));
     }
-    let source = Intake::new(&arguments.common, &reading, input, !spec.on.is_empty())?;
+    let source = Intake::new(&arguments.common, &reading, input, has_on)?;
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
-    let backend = environment
-        .resolve(
-            arguments.common.backend.as_deref(),
-            arguments.common.url.as_deref(),
-            spec.model.as_ref().map(ModelName::as_str),
-        )?
-        .with_request_size(request_size);
-    environment.warn_request_size(&backend)?;
-    let selected_profile = profile::read(&arguments.common, environment, &backend)?;
-    let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
-
+    let backend = environment.resolve(
+        arguments.common.backend.as_deref(), arguments.common.url.as_deref(),
+        arguments.common.model.as_deref().or(spec.model()),
+    )?;
+    environment.set_request_size(request_size)?;
+    environment.warn_request_size(&backend, request_size)?;
+    profile::read(&arguments.common, environment)?;
     if arguments.common.dry_run {
         let folders = Folders::of(&arguments.common, environment)?;
         if folders.named() {
@@ -127,15 +120,14 @@ pub(crate) fn run(
             &reading,
             admitted,
             source,
-            (&backend, selected_profile.as_ref()),
+            (&backend, environment),
             dry_run::Question {
-                spec: &spec,
+                spec: &question,
                 from_file: arguments
                     .kinds
                     .first()
                     .is_some_and(|kind| kind.starts_with('@')),
-                limit: max_text_bytes,
-                key_env: environment.key_variable(),
+                key_env: &backend.key_variable,
                 backend_name: environment.named(),
                 context: context.as_deref(),
                 context_field: arguments.context_field.as_deref(),
@@ -146,31 +138,23 @@ pub(crate) fn run(
         );
     }
 
+    let folders = Folders::of(&arguments.common, environment)?;
+    let recording = folders.reported();
+    let engine = crate::cli::construction::engine(
+        &arguments.common, environment, folders, arguments.common.jobs,
+    )?;
+    let mismatch = profile::Mismatch::new(spec.profile(), engine.profile_name());
     let running = Running {
-        common: &arguments.common,
-        environment,
-        max_text_bytes,
-        engine: asking::engine(
-            &arguments.common,
-            environment,
-            Folders::of(&arguments.common, environment)?,
-            backend,
-            selected_profile,
-            arguments.common.jobs,
-        )?
-        .with_aggregate_context(context.clone()),
-        mismatch,
-        context,
+        common: &arguments.common, environment, engine, mismatch, context,
         context_field: arguments.context_field.clone(),
         examples_field: arguments.examples_field.clone(),
-        seed_spans_field: arguments.seed_spans_field.clone(),
-        cancel: environment.cancel().with_storage_scope(),
+        seed_spans_field: arguments.seed_spans_field.clone(), recording,
     };
     native::run(
         &running,
         admitted,
         &reading,
-        &spec,
+        &question,
         source,
         &mut schedule::Output::streaming(&mut writer),
     )
