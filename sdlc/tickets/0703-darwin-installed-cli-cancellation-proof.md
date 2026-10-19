@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 349a19a, accept
+
 ## Outcome
 
 - The installed command's held-call cancellation check runs honestly on macOS and proves its supported cancellation behavior, including signal handling, held-provider release, terminal draining, facts and absence of a later-input suffix.
