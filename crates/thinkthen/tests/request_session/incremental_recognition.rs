@@ -47,7 +47,13 @@ fn recognition_can_publish_before_feed_eof_without_replaying_its_prefix() {
         assert_eq!(rows(&packets), if later_failure { vec![0] } else { vec![0, 1] });
         let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else { panic!("terminal") };
         assert_eq!(terminal.error.is_some(), later_failure);
-        assert!(terminal.answer.is_some());
+        let Some(SettledAnswer::Recognize(answer)) = &terminal.answer else { panic!("recognition settlement") };
+        let AnswerShape::Collection(values) = &answer.value else { panic!("feed keeps a collection") };
+        let AnswerShape::Collection(probabilities) = &answer.probability else { panic!("aligned probabilities") };
+        let expected = if later_failure { 1 } else { 2 };
+        assert_eq!(values.len(), expected, "terminal prefix contains every emitted row once");
+        assert_eq!(probabilities.len(), expected);
+        assert!(values.iter().all(Option::is_some));
         assert_eq!(terminal.facts.as_ref().unwrap().records(), if later_failure { 1 } else { 2 });
         assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), listener.requests().len() as u64);
     }
