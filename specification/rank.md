@@ -29,7 +29,7 @@ It also prints no order while an earlier record or batch is still waiting for a 
 The CLI and Rust crate accept a saved version-one set of named decide questions:
 
 ```json
-{"version":1,"questions":{"billing":{"decide":"Does this explain the billing problem?"},"recovery":{"decide":"Does this explain how to recover?"}}}
+{"questions":{"billing":{"decide":"Does this explain the billing problem?"},"recovery":{"decide":"Does this explain how to recover?"}}}
 ```
 
 Save it as `search.json` and run `thinkthen rank @search.json --top 5 < passages.txt`. Names follow annotate's lowercase letter, digit and underscore grammar and keep their authored order. Only decide members are admitted. Empty sets, score and other kinds, duplicate or unknown keys, authored top-level or member `threshold`, and every authored member `on` are refused at exit 5. Even an explicit default cut, `"on":""` or `"on":[""]` is refused before normalization. Top-level `batch` and calibration `profile` retain their usual meanings. Nested batch, model and profile settings remain prohibited. The command reads the question file once, capped at 1 MiB, and never retries a failed parse as another grammar. Plain question text remains literal.

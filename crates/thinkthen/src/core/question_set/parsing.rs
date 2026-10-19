@@ -19,6 +19,7 @@ pub(super) fn parse(text: &str, rank: bool) -> Result<QuestionSet, QuestionSetEr
         }
     }
     match value.member("version") {
+        None => {}
         Some(Json::Number(number)) if number.as_u64() == Some(1) => {}
         _ => {
             return Err(QuestionSetError::Shape {

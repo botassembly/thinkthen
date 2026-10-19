@@ -18,7 +18,6 @@ With no record framing flag and no `--field`, `annotate` tries to parse the whol
 
 ```json
 {
-  "version": 1,
   "threshold": "0.1:0.9",
   "profile": "jev",
   "questions": {
@@ -32,6 +31,8 @@ With no record framing flag and no `--field`, `annotate` tries to parse the whol
 Score values follow [score.md](score.md#what-it-prints): the probability-weighted position uses zero-based numbering even when the question asks for a 1 to 5 rating.
 
 Each entry has the shape of one question file, and [question-file.md](question-file.md) holds that grammar once. A question has exactly one of `decide`, `choose`, `tag`, or `score`, and its value is the question text, as a string, an object, or a list. A `decide` question takes `true` and `false`, the two values that say what each side means. `options` and `labels` are lists or ordered maps from label to description. `levels` is a list, lowest first, or an ordered map from each name to its description. `threshold` follows the command-line rule for its verb, so a `choose` question takes a single cut alone. A question name is not empty and uses only lowercase letters, digits, and underscores. An unknown key anywhere in the file is an error. A set without the required `questions` object says that the wrapper is missing before it reports any unknown top-level key.
+
+The optional top-level `version` defaults to 1. When present, it must be the number 1; any other number or type is refused.
 
 The top-level `threshold` applies to every `decide` question that names none. The optional top-level `profile` names the backend profile used to calibrate the set's thresholds. `version`, `threshold`, `profile`, `batch`, and `questions` are the only top-level keys. The optional top-level `batch` is `"max"` or a positive whole number. It selects the record-stream batch size after the flag and environment tiers and stays outside `questions_sha256`. A nested question cannot carry `batch`. A nested question cannot carry another profile. The set holds no backend address, model, output path, or format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 

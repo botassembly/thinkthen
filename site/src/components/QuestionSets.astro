@@ -21,7 +21,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
 
   <h3 id="top-level">The top level</h3>
   <ul>
-    <li><code>version</code> is the number 1.</li>
+    <li><code>version</code> is optional and defaults to 1. When present, it must be the number 1.</li>
     <li><code>questions</code> holds the questions, each under its name.</li>
     <li><code>threshold</code> applies to every <code>decide</code> question that names none. Here <code>urgent</code> takes the band 0.2:0.8.</li>
     <li><code>profile</code> names the backend profile the thresholds were set for.</li>

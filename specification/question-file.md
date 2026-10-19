@@ -189,7 +189,7 @@ The canonical form is not the `question` field of a result. That field prints a 
 
 ## The digest of a question set
 
-`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
+`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. An omitted input `version` defaults to 1. The canonical object always has `version` set to 1, optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
 
 ```json
 {"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}

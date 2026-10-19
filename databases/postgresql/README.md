@@ -49,6 +49,18 @@ Find's question is nonblank literal text, including a literal `@`. Its ordered `
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
+Save the named questions in `form.json`. The optional question-set `version` defaults to 1:
+
+```json
+{
+  "questions": {
+    "wants_refund": {"decide": "Does the customer ask for a refund?"},
+    "team": {"choose": "Which team owns this?", "options": ["billing", "shipping", "account"]},
+    "urgency": {"score": "How urgent is this?", "levels": ["Routine.", "Soon.", "Immediate."]}
+  }
+}
+```
+
 `check.sh` runs this sample:
 
 ```sql
