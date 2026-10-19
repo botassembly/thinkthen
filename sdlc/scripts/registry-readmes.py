@@ -185,15 +185,30 @@ def check_package(family, path, root=REPO):
             raise Refusal('missing-or-repeated-nupkg')
         check_nupkg(files[nested[0]], root)
     else:
-        prefix = {'crate': 'thinkthen-' + version(root) + '/', 'r': 'thinkthen/', 'typescript': 'package/', 'flutter': 'flutter/'}.get(family, '')
+        command_source = False
+        if family == 'crate':
+            package = tomllib.loads(unique_suffix(files, 'Cargo.toml').decode())['package']
+            if package['name'] not in ('thinkthen', 'thinkthen-cli'):
+                raise Refusal('unknown-rust-package')
+            command_source = package['name'] == 'thinkthen-cli'
+            prefix = package['name'] + '-' + version(root) + '/'
+        else:
+            prefix = {'r': 'thinkthen/', 'typescript': 'package/', 'flutter': 'flutter/'}.get(family, '')
         name = prefix + 'README.md'
         if name not in files:
             raise Refusal('missing-or-repeated-member: ' + name)
-        check_readme(family, files[name], root)
+        check_readme('command' if command_source else family, files[name], root)
         if family == 'typescript':
             check_description(family, json.loads(unique_suffix(files, 'package.json'))['description'], root)
         elif family == 'crate':
-            check_description(family, tomllib.loads(files[prefix + 'Cargo.toml'].decode())['package']['description'], root)
+            actual = package['description']
+            if command_source:
+                check_text(actual.encode(), version(root))
+                wanted = tomllib.loads((root / 'crates/thinkthen-cli/Cargo.toml').read_text())['package']['description']
+                if actual != wanted:
+                    raise Refusal('description-source-mismatch: command crate')
+            else:
+                check_description(family, actual, root)
         elif family == 'php':
             check_description(family, json.loads(unique_suffix(files, 'composer.json'))['description'], root)
         elif family == 'jvm':
@@ -419,6 +434,10 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
     candidates = []
     for path in packages.iterdir():
         if not path.is_file() or path.name.endswith('.sha256') or path.name.startswith('thinkthen-first-run'):
+            continue
+        # Rust examples consume the library archive. The command source archive
+        # is installed and replayed by the existing crate smoke entrypoint.
+        if family == 'crate' and path.name.startswith('thinkthen-cli-'):
             continue
         try:
             if archive_family(path) == family:

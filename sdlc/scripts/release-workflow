@@ -906,7 +906,11 @@ crate-smoke)
 	crate=$crate_dir/thinkthen-$version.crate
 	[ -f "$crate" ] || fail "missing packed crate $crate"
 	tar -xzf "$crate" -C "$work"
-	cargo install --locked --offline --path "$work/thinkthen-$version" --root "$work/install"
+	command_crate=$crate_dir/thinkthen-cli-$version.crate
+	[ -f "$command_crate" ] || fail "missing packed command crate $command_crate"
+	tar -xzf "$command_crate" -C "$work"
+	cargo install --locked --offline --path "$work/thinkthen-cli-$version" --root "$work/install" \
+		--config "patch.crates-io.thinkthen.path=\"$work/thinkthen-$version\""
 	tar -xzf "$sample_dir/thinkthen-first-run.tar.gz" -C "$work"
 	mkdir -p "$work/home/.cache" "$work/home/.config" "$work/home/.local/share"
 	answer=$(env -i HOME="$work/home" XDG_CACHE_HOME="$work/home/.cache" \

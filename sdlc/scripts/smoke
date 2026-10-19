@@ -87,7 +87,7 @@ fi
 usage_guard
 # Its own target folder keeps the nextest build beside it from replacing these binaries mid-run.
 python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline --quiet --target-dir target/smoke \
-	--package conformance-backend --bin conformance-backend --package thinkthen --bin thinkthen
+	--package conformance-backend --bin conformance-backend --package thinkthen-cli --bin thinkthen
 scratch_dir bin
 cp target/smoke/debug/thinkthen target/smoke/debug/conformance-backend "$bin/"
 if [ "$#" -eq 0 ]; then

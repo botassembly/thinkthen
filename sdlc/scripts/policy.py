@@ -1588,7 +1588,7 @@ def check_core_policy() -> None:
 # else. It names no file, environment, network, clock, process, thread, or
 # signal API, reaches no other command module, and uses only `clap` outside
 # the standard library.
-CATALOG = "crates/thinkthen/src/cli/transform.rs"
+CATALOG = "crates/thinkthen-cli/src/cli/transform.rs"
 CATALOG_BANNED_WORDS = {
     "fs", "env", "net", "time", "process", "thread", "os", "stdin", "Stdin",
     "Command", "File", "OpenOptions", "TcpStream", "UdpSocket", "Instant", "SystemTime",
@@ -1691,13 +1691,13 @@ def check_catalog_policy() -> None:
 # standard error. Each may open a file, and nothing else the catalog refuses. A token check
 # cannot prove which paths it opens; review checks that.
 MEASURE = (
-    "crates/thinkthen/src/cli/measure.rs",
-    "crates/thinkthen/src/cli/audit.rs",
-    "crates/thinkthen/src/cli/diff.rs",
-    "crates/thinkthen/src/cli/audit/write.rs",
+    "crates/thinkthen-cli/src/cli/measure.rs",
+    "crates/thinkthen-cli/src/cli/audit.rs",
+    "crates/thinkthen-cli/src/cli/diff.rs",
+    "crates/thinkthen-cli/src/cli/audit/write.rs",
 )
 # Tickets 0125 and 0256: this writer owns in-place writes and new-output publication.
-MEASURE_WRITER = "crates/thinkthen/src/cli/audit/write.rs"
+MEASURE_WRITER = "crates/thinkthen-cli/src/cli/audit/write.rs"
 MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
 MEASURE_WRITES = {
@@ -1706,7 +1706,7 @@ MEASURE_WRITES = {
     "soft_link", "symlink",
 }
 MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
-ROUTER = "crates/thinkthen/src/cli/mod.rs"
+ROUTER = "crates/thinkthen-cli/src/cli/mod.rs"
 
 
 def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
@@ -1875,10 +1875,10 @@ def check_doors() -> None:
     for failure in door_failures(sources):
         fail("doors", failure)
     plants = (
-        ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
         ("crates/thinkthen/src/engine/http/other.rs", "ureq::post(url).send(body)"),
-        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
+        ("crates/thinkthen-cli/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
         ("crates/thinkthen/src/engine/width_tests.rs", "&super::limits::PROCESS_LIMITS"),
         (WIDTH_DOOR, "fn second() -> &'static Limits { &PROCESS_LIMITS }"),
         ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
@@ -1888,11 +1888,11 @@ def check_doors() -> None:
         if not door_failures({**sources, relative: changed}):
             fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
     controls = (
-        ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
-        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_LIMITS";'),
+        ("crates/thinkthen-cli/src/cli/find.rs", "// ureq stays in the HTTP module"),
+        ("crates/thinkthen-cli/src/cli/find.rs", 'const NOTE: &str = "PROCESS_LIMITS";'),
         ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
         ("crates/thinkthen/src/engine/host_signal_tests.rs", "signal_hook::flag::register"),
-        ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),
+        ("crates/thinkthen-cli/src/cli/file_size.rs", "signal_hook::flag::register"),
     )
     for relative, text in controls:
         changed = rust_tokens(text_sources.get(relative, "") + "\n" + text)
@@ -1904,8 +1904,8 @@ def check_doors() -> None:
 # judgments admit and execute public Requests; CLI host conversion retains
 # private construction, cancellation, error, accounting and maintenance types.
 FACADE = "crates/thinkthen/src/engine/facade.rs"
-CLI = "crates/thinkthen/src/cli/"
-MCP = "crates/thinkthen/src/mcp/"
+CLI = "crates/thinkthen-cli/src/cli/"
+MCP = "crates/thinkthen-cli/src/mcp/"
 MAINTENANCE = {CLI + "cache.rs", CLI + "status.rs"}
 HOST_ENGINE = frozenset({
     "Cancel", "Deadline", "Width", "Widths", "WidthActive", "backoff", "error",
@@ -2017,17 +2017,17 @@ def check_facade() -> None:
     for failure in facade_failures(sources):
         fail("facade", failure)
     plants = (
-        ("crates/thinkthen/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
         ("crates/thinkthen/src/engine/request.rs",
          "#[cfg(test)] mod t {}\nfn pool() -> Client { Client::new(Duration::ZERO, true) }"),
-        ("crates/thinkthen/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
-        ("crates/thinkthen/src/cli/annotate.rs",
+        ("crates/thinkthen-cli/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
+        ("crates/thinkthen-cli/src/cli/annotate.rs",
          "use crate::engine::{facade, annotate_schedule as grouped};"),
-        ("crates/thinkthen/src/cli/asking.rs",
+        ("crates/thinkthen-cli/src/cli/asking.rs",
          "fn f() { crate::engine::recorder::Recorder::of(None, None); }"),
-        ("crates/thinkthen/src/cli/asking.rs", "use crate::engine::{self as low};"),
-        ("crates/thinkthen/src/cli/relate.rs", "use crate::engine::*;"),
-        ("crates/thinkthen/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
+        ("crates/thinkthen-cli/src/cli/asking.rs", "use crate::engine::{self as low};"),
+        ("crates/thinkthen-cli/src/cli/relate.rs", "use crate::engine::*;"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
         (LIBRARY_ROOT, "pub(crate) use engine::{http, recorder};"),
     )
     for relative, text in plants:
@@ -2047,11 +2047,11 @@ def check_facade() -> None:
         if not facade_failures({relative: rust_tokens(text)}):
             fail("facade", f"the planted private judgment import {text!r} is refused")
     controls = (
-        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::Engine;"),
-        ("crates/thinkthen/src/cli/judge.rs", "use crate::schedule::Output;"),
-        ("crates/thinkthen/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "use crate::engine::facade::Engine;"),
+        ("crates/thinkthen-cli/src/cli/judge.rs", "use crate::schedule::Output;"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
         ("crates/thinkthen/src/engine/http/tests.rs", "Client::new(Duration::ZERO, false)"),
-        ("crates/thinkthen/src/cli/failure/tests.rs",
+        ("crates/thinkthen-cli/src/cli/failure/tests.rs",
          "crate::engine::http::Client::new(Duration::ZERO, false)"),
         ("crates/thinkthen/src/engine/http.rs",
          "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
@@ -2074,7 +2074,7 @@ WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
     "crates/thinkthen/src/windows/console/ffi.rs": "windows",
-    "crates/thinkthen/src/mcp/input/windows/ffi.rs": "windows",
+    "crates/thinkthen-cli/src/mcp/input/windows/ffi.rs": "windows",
     "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
 }
 
@@ -2155,7 +2155,7 @@ def check_windows_unsafe() -> None:
             fail("unsafe", f"{relative}: the reviewed FFI leaf exists")
     for failure in windows_unsafe_failures(sources):
         fail("unsafe", failure)
-    for relative in ("crates/thinkthen/src/cli/planted.rs", "crates/thinkthen/src/engine/planted.rs",
+    for relative in ("crates/thinkthen-cli/src/cli/planted.rs", "crates/thinkthen/src/engine/planted.rs",
                      "crates/thinkthen/src/unrelated/ffi.rs", "crates/thinkthen/tests/planted.rs"):
         for text, cause in (("unsafe fn planted() {}", "unsafe outside the reviewed Windows FFI leaves"),
                             ('#![allow(unsafe_code, reason = "planted")]\n', "unsafe lint allowance"),

@@ -242,12 +242,17 @@ def main():
         python_smoke(args.platform, env, version, root)
         if args.crate_dir:
             wanted = args.crate_dir / f"thinkthen-{version}.crate"
-            if list(args.crate_dir.glob("*.crate")) != [wanted] or wanted.is_symlink():
+            command_crate = args.crate_dir / f"thinkthen-cli-{version}.crate"
+            expected = {wanted, command_crate}
+            if set(args.crate_dir.glob("*.crate")) != expected or any(path.is_symlink() for path in expected):
                 raise RuntimeError("packed Rust crate inventory differs from the resolved version")
-            with tarfile.open(wanted) as archive:
-                archive.extractall(root / "source", filter="data")
+            for package in (wanted, command_crate):
+                with tarfile.open(package) as archive:
+                    archive.extractall(root / "source", filter="data")
+            library = root / f"source/thinkthen-{version}"
             run(["cargo", "install", "--locked", "--offline", "--path",
-                 str(root / f"source/thinkthen-{version}"), "--root", str(root / "crate"),
+                 str(root / f"source/thinkthen-cli-{version}"), "--root", str(root / "crate"),
+                 "--config", 'patch.crates-io.thinkthen.path=' + json.dumps(str(library)),
                  "--target", COMMAND.TARGET], env, timeout=1800)
             smoke(root / "crate/bin/thinkthen.exe", sample, env, version)
 

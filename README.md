@@ -58,7 +58,7 @@ On a Mac, Homebrew works too:
 brew install botassembly/thinkthen/thinkthen
 ```
 
-With Rust installed, `cargo install thinkthen` builds the command from crates.io. [Start](https://thinkthen.dev/start/) covers every other route, and [Languages](https://thinkthen.dev/languages/) and [Databases](https://thinkthen.dev/databases/) cover each of the 24 bindings.
+With Rust installed, `cargo install thinkthen-cli` builds the command from crates.io. [Start](https://thinkthen.dev/start/) covers every other route, and [Languages](https://thinkthen.dev/languages/) and [Databases](https://thinkthen.dev/databases/) cover each of the 24 bindings.
 
 A live run needs a backend. A hosted backend needs a key. [Models](https://thinkthen.dev/models/) shows how to point ThinkThen at TypeSafe or another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
 

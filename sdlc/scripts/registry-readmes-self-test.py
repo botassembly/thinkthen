@@ -415,6 +415,12 @@ class PackageText(unittest.TestCase):
                 prefix + '/README.md': readmes.source('crate').read_bytes(),
                 prefix + '/src/transforms/README.md': b'Bundled transform documentation',
                 prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen/Cargo.toml').read_bytes()})
+            command_prefix = 'thinkthen-cli-' + readmes.version()
+            command_source = packages / (command_prefix + '.crate')
+            archive(command_source, {
+                command_prefix + '/README.md': readmes.source('command').read_bytes(),
+                command_prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen-cli/Cargo.toml').read_bytes()})
+            readmes.check_package('crate', command_source)
             crate = readmes.unpack_example_package('crate', packages, tree / 'installed-crate')
             self.assertEqual(crate, tree / 'installed-crate' / prefix)
             self.assertTrue((crate / 'Cargo.toml').is_file())

@@ -234,7 +234,7 @@ part_command() {
 			eval "flags=\${CFLAGS_$target_var:-}"
 			export "CFLAGS_$target_var=${flags:+$flags }-DSQLITE_DISABLE_LFS"
 		;; esac
-		cargo build --locked --quiet --release --package thinkthen --target "$command_target"
+		cargo build --locked --quiet --release --package thinkthen-cli --target "$command_target"
 		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen$suffix
 	fi
 	folder=$(fresh command)
@@ -653,6 +653,9 @@ part_crate() {
 	committed crate
 	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen
 	keep "$stage/crate-target/package/thinkthen-$V.crate"
+	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen-cli \
+		--config "patch.crates-io.thinkthen.path=\"$REPO/crates/thinkthen\""
+	keep "$stage/crate-target/package/thinkthen-cli-$V.crate"
 }
 
 # The R source package with its crates vendored, built as the R check builds it: from a git archive tree.

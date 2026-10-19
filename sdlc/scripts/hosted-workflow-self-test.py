@@ -1004,6 +1004,7 @@ def preflight_cases():
             (platform / (name + '.sha256')).write_text(digest + '  ' + name + '\n')
         (root / 'crate-dist').mkdir()
         (root / 'crate-dist' / f'thinkthen-{version}.crate').write_bytes(b'fixture crate')
+        (root / 'crate-dist' / f'thinkthen-cli-{version}.crate').write_bytes(b'fixture command crate')
         smoke = [sys.executable, str(helper), 'smoke', 'x86_64-pc-windows-msvc']
         ready = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr

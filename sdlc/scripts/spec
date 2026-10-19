@@ -29,7 +29,7 @@ fi
 # Both paths replay these same pages and demo runners.
 case $# in
 0)
-    cargo build --locked --quiet --package thinkthen
+    cargo build --locked --quiet --package thinkthen-cli
     command_dir="$REPO/target/debug"
     ;;
 1)
