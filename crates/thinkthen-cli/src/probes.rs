@@ -5,16 +5,10 @@
 
 use serde::Serialize;
 
-use crate::core::adapters::built_in::{self, wire_name, wire_type};
-use crate::core::answer::Answer;
-use crate::core::json::Json;
-use crate::core::plan::{Descriptions, Plan};
-use crate::core::question::Question;
-use crate::core::question_set::QuestionSet;
+use thinkthen::{CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, FailureCause,
+    PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord, Request, RequestArguments,
+    RequestEnvironment, RequestInput, RequestOptions, RequestQuestion};
 use crate::render::json_line;
-use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
-use crate::core::result::Usage;
-use crate::core::text::{Evidence, ModelName};
 
 const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 const OBJECT: &str = r#"{"note":"The parcel arrived on Tuesday.","box":"intact"}"#;
@@ -47,75 +41,86 @@ const NO_USAGE: &str =
 /// sending it turns a description object into text.
 pub(crate) struct Probe {
     pub(crate) name: &'static str,
-    pub(crate) plan: Plan,
+    pub(crate) arguments: RequestArguments,
+    pub(crate) plan: PlanEstimate,
     pub(crate) drops_detail: bool,
     pub(crate) warning: &'static str,
 }
 
-/// The four probes for one model and description form. `None` means a fixed
-/// probe no longer parses, and only a defect can cause it.
-pub(crate) fn probes(
-    model: &ModelName,
-    descriptions: Descriptions,
-    backend_name: Option<&str>,
-) -> Option<Vec<Probe>> {
-    let object = Evidence::structured(Json::parse(OBJECT).ok()?).ok()?;
-    let text = Evidence::new(TEXT).ok()?;
-    let probe = |(structured, set): &(bool, &str)| {
-        let questions = QuestionSet::parse(set).ok()?.questions().to_vec();
-        let questions = questions.into_iter().map(|named| named.question().clone());
-        let evidence = if *structured { &object } else { &text };
-        let plan = Plan::new(
-            evidence.clone(),
-            model.clone(),
-            descriptions,
-            questions.collect(),
-        )
-        .ok()?;
-        let name = match plan.questions() {
-            [one] => wire_type(one),
-            _ => "mixed",
+/// Prepare the four fixed, typed probes through the native public call family.
+pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Option<Vec<Probe>> {
+    let names = ["noul", "choice", "score", "mixed"];
+    PROBES.iter().zip(names).map(|((structured, set), name)| {
+        let arguments = RequestArguments {
+            question: RequestQuestion::Definition { value: QuestionSet::from_json(set).ok()?.into() },
+            input: if *structured {
+                RequestInput::Json { value: RawRecord::json(OBJECT).ok()?, images: vec![] }
+            } else {
+                RequestInput::Text { text: TEXT.into(), images: vec![] }
+            },
+            options: RequestOptions::default(),
         };
-        let drops_detail = built_in::drops_detail(&plan);
-        Some(Probe {
-            name,
-            plan,
-            drops_detail,
-            warning: detail_warning(backend_name),
-        })
-    };
-    PROBES.iter().map(probe).collect()
+        let request = Request::named("annotate", arguments.clone()).ok()?.admit().ok()?;
+        let plan = engine.plan_request(&request, RequestEnvironment {
+            controls: CallOptions::new().shared_state_groups(), feed: None,
+        }).ok()?;
+        Some(Probe { name, arguments, drops_detail: plan.drops_detail(), plan,
+            warning: detail_warning(backend_name) })
+    }).collect()
 }
 
-/// One decoded reply as the report prints it.
 #[derive(Serialize)]
-struct Said<'a> {
-    model: &'a ModelName,
-    answers: Vec<Outcome<'a>>,
-    usage: Option<Usage>,
+struct Said<'a> { model: &'a str, answers: Vec<Outcome>, usage: Option<ReplyUsage> }
+#[derive(Serialize)]
+struct ReplyUsage { input_tokens: u64, output_tokens: u64 }
+fn usage(reply: &CompleteAnnotated) -> Option<ReplyUsage> {
+    let usage = reply.meta().usage()?;
+    Some(ReplyUsage { input_tokens: usage.input_tokens()?, output_tokens: usage.output_tokens()? })
 }
-
-/// One logical answer, or the failure marker a result prints for it.
 #[derive(Serialize)]
 #[serde(untagged)]
-enum Outcome<'a> {
-    Answered(&'a Answer),
-    Failed(FailedValue),
+enum Outcome { Answered(Answer), Failed { failed: Failure } }
+#[derive(Serialize)]
+struct Failure { kind: &'static str, cause: FailureCause }
+#[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum Answer {
+    YesNo { probability: f64 },
+    Choice { pick: String, probabilities: Odds, #[serde(skip_serializing_if = "Option::is_none")] confidence: Option<f64> },
+    Tag { probabilities: Odds },
+    Score { level: String, probabilities: Odds, #[serde(skip_serializing_if = "Option::is_none")] confidence: Option<f64> },
+}
+struct Odds(Vec<(String, f64)>);
+impl Serialize for Odds {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(name, probability)| (name, probability)))
+    }
+}
+fn outcome(member: CompleteAnnotationMember<'_>) -> Option<Outcome> {
+    if let Some(cause) = member.failure() {
+        return Some(Outcome::Failed { failed: Failure { kind: "backend", cause } });
+    }
+    let answer = match member.probabilities()? {
+        Probabilities::YesNo { yes } => Answer::YesNo { probability: yes },
+        Probabilities::Named(values) => {
+            let probabilities = Odds(values.into_iter().map(|value| (value.name().to_owned(), value.probability())).collect());
+            let confidence = member.confidence();
+            match member.question().kind() {
+                QuestionKind::Choose => Answer::Choice { pick: member.leader()?.to_owned(), probabilities, confidence },
+                QuestionKind::Score => Answer::Score { level: member.leader()?.to_owned(), probabilities, confidence },
+                QuestionKind::Tag => Answer::Tag { probabilities },
+                _ => return None,
+            }
+        }
+    };
+    Some(Outcome::Answered(answer))
 }
 
-/// The `reply PROBE JSON` line: the model the reply names, each logical
-/// answer in plan order, and the usage. It prints what the decoder kept and
-/// never the raw bytes, and the JSON writer escapes every control character.
-pub(crate) fn reply_line(probe: &Probe, reply: &Reply) -> Option<String> {
-    let answers = reply.outcomes().iter().map(|outcome| match outcome {
-        AnswerOutcome::Answered(answer) => Outcome::Answered(answer),
-        AnswerOutcome::Failed(failure) => Outcome::Failed(FailedValue::new(*failure)),
-    });
-    let said = Said {
-        model: reply.model(),
-        answers: answers.collect(),
-        usage: reply.usage(),
-    };
+/// Render retained native answers; no provider bytes or inferred leaders enter output.
+pub(crate) fn reply_line(probe: &Probe, reply: &CompleteAnnotated) -> Option<String> {
+    let metadata = reply.meta();
+    let said = Said { model: metadata.model(),
+        answers: reply.members().map(outcome).collect::<Option<Vec<_>>>()?, usage: usage(reply) };
     Some(format!("reply {} {}", probe.name, json_line(&said).ok()?))
 }
 
@@ -142,22 +147,21 @@ impl Report {
     }
 
     /// A probe's reply was decoded: grade each answer in wire order.
-    pub(crate) fn replied(&mut self, probe: &Probe, reply: &Reply) {
+    pub(crate) fn replied(&mut self, probe: &Probe, reply: &CompleteAnnotated) {
         self.reached();
         let mut place = 0;
         let mut findings = Vec::new();
-        for (question, outcome) in probe.plan.questions().iter().zip(reply.outcomes()) {
-            let width = match question {
-                Question::Tag { labels, .. } => labels.count(),
-                _ => 1,
-            };
-            findings.extend(graded(question, outcome, place, width));
+        for member in reply.members() {
+            let width = if member.question().kind() == QuestionKind::Tag {
+                member.question().options().count()
+            } else { 1 };
+            findings.extend(graded(&member, place, width));
             place += width;
         }
         findings.extend(dropped(probe));
         self.set(probe.name, findings);
         let warned = self.row("usage").is_some_and(|held| !held.is_empty());
-        let warning = (warned || reply.usage().is_none()).then(|| (false, NO_USAGE.to_owned()));
+        let warning = (warned || usage(reply).is_none()).then(|| (false, NO_USAGE.to_owned()));
         self.set("usage", warning.into_iter().collect());
     }
 
@@ -255,28 +259,19 @@ const fn level(critical: bool) -> &'static str {
 
 /// One answer's finding: a failed logical question named by its wire range,
 /// or a choice or score answer that carries no confidence.
-fn graded(
-    question: &Question,
-    outcome: &AnswerOutcome,
-    place: usize,
-    width: usize,
-) -> Option<Finding> {
-    let first = wire_name(place);
-    let answer = match outcome {
-        AnswerOutcome::Answered(answer) => answer,
-        AnswerOutcome::Failed(failure) => {
-            let cause = json_line(&FailedValue::new(*failure).cause()).unwrap_or_default();
-            let named = match width {
-                1 => format!("question `{first}`"),
-                _ => format!("questions `{first}` to `{}`", wire_name(place + width - 1)),
-            };
-            let cause = cause.trim_matches('"');
-            return Some((true, format!("the answer to {named} failed as `{cause}`")));
-        }
-    };
+fn graded(member: &CompleteAnnotationMember<'_>, place: usize, width: usize) -> Option<Finding> {
+    let first = format!("q{}", place + 1);
+    if let Some(failure) = member.failure() {
+        let cause = json_line(&failure).unwrap_or_default();
+        let named = match width {
+            1 => format!("question `{first}`"),
+            _ => format!("questions `{first}` to `q{}`", place + width),
+        };
+        return Some((true, format!("the answer to {named} failed as `{}`", cause.trim_matches('"'))));
+    }
     let said = format!("the answer to question `{first}` carries no confidence");
-    let graded = matches!(question, Question::Choose { .. } | Question::Score { .. });
-    (graded && answer.confidence().is_none()).then_some((false, said))
+    let graded = matches!(member.question().kind(), QuestionKind::Choose | QuestionKind::Score);
+    (graded && member.confidence().is_none()).then_some((false, said))
 }
 
 /// Existing command advice for adapters that flatten authored descriptions.
