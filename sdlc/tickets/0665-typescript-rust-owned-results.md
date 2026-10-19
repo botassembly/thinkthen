@@ -6,16 +6,16 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0629, 0664, 0688, 0689
+Depends on: 0629, 0664, 0688, 0689, 0727
 
 ## Outcome
 
-- Changes: `libraries/typescript/src/`, `libraries/typescript/native.js`, `libraries/typescript/native.d.ts`, `libraries/typescript/results_generated.js`, `libraries/typescript/results_generated.d.ts`, `libraries/typescript/tests/`, `build-tools/results/templates/typescript.py`, `build-tools/results/generate.py`, `build-tools/results/registry.py`, `build-tools/results/answer_rules.py`.
+- Changes: `libraries/typescript/src/`, `libraries/typescript/native.js`, `libraries/typescript/native.d.ts`, `libraries/typescript/results_generated.js`, `libraries/typescript/results_generated.d.ts`, `libraries/typescript/tests/`, `build-tools/results/templates/typescript.py`, `build-tools/results/generate.py`, `build-tools/results/registry.py`, `build-tools/results/legacy/typescript.txt`.
 - The addon takes JavaScript values and calls `Engine::call`, the Rust run function from 0629. It builds results by mapping the 0689 value tree, so answer fields come from the core.
 - The JavaScript polling loop in `Operation` around `poll` and its private closed, reader and producer error text are deleted. Async calls run the run function on a napi worker and cancel through its handle.
 - `callResult`, `callResolution`, the JSON parsers in `results_generated.js` and the `dump` input serializer in `native.js` are deleted. The generator stops emitting the JavaScript readers; the generated `.d.ts` declarations remain.
 - Presence stays distinct from null in the declarations.
-- `templates/typescript.py` leaves the `LEGACY_FILES` exceptions in `build-tools/results/answer_rules.py`.
+- `templates/typescript.py` leaves this language's exception file `build-tools/results/legacy/typescript.txt`.
 - This changes no public Rust API in `crates/thinkthen`, so `specification/rust-api-0.2.md` is untouched. If the work needs a new public Rust declaration, it updates that file's Authority entry and Added block in the same change.
 
 ### Proof
@@ -26,6 +26,7 @@ Depends on: 0629, 0664, 0688, 0689
 
 ## Evidence
 
+- After 0727 lands, this language's answer-rule exceptions live in `build-tools/results/legacy/typescript.txt` and its surface entry in `conformance/library-surface/typescript.json`. This ticket edits only those two files, so it does not collide with other languages' call tickets.
 - The contract asks for a "Direct Rust addon; no hand-copied JSON readers" (`libraries/BINDING-AUTHOR.md`, TypeScript table).
 - The package passes JSON strings in both directions instead. `dump` in `libraries/typescript/native.js` serializes and checks every input in JavaScript. `Operation.next` calls `poll` on the native session (`NativeSession::poll` in `src/request_node.rs`) and decodes its text with `readJson` and `readPacket`. `Client.plan` does the same through `requestPlan`.
 - Results are rebuilt by 4,771 lines of generated JavaScript readers in `results_generated.js`, from `build-tools/results/templates/typescript.py` through the TypeScript branch of `build-tools/results/generate.py`. They include a second copy of the per-function value and probability projection (`callResult`) and resolution tracking (`callResolution`).

@@ -6,17 +6,17 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0688
+Depends on: 0688, 0727
 
 ## Outcome
 
-- Changes: `libraries/objective-c/Sources/Foundation/ThinkThen.m`, `libraries/objective-c/Sources/Foundation/ThinkThenFoundation.h`, `libraries/objective-c/Sources/Foundation/TTResult.h`, `libraries/objective-c/Sources/Foundation/TTResult.m`, `libraries/objective-c/Sources/Foundation/TTResultPrivate.h`, `libraries/objective-c/Sources/Foundation/TTResults.g.h`, `libraries/objective-c/Sources/Foundation/TTResults.g.m`, `build-tools/results/templates/objc.py`, `build-tools/results/templates/objc_calls.py`, `build-tools/results/answer_rules.py`, `conformance/library-surface.json`, `libraries/objective-c/checks/FoundationCases.m`, `libraries/objective-c/checks/FoundationConsumer.m`, `libraries/objective-c/checks/foundation_installed.py`, `libraries/objective-c/README.md`, `libraries/objective-c/README-PUBLIC.md`, `site/examples/functions/*/objective-c.m`.
+- Changes: `libraries/objective-c/Sources/Foundation/ThinkThen.m`, `libraries/objective-c/Sources/Foundation/ThinkThenFoundation.h`, `libraries/objective-c/Sources/Foundation/TTResult.h`, `libraries/objective-c/Sources/Foundation/TTResult.m`, `libraries/objective-c/Sources/Foundation/TTResultPrivate.h`, `libraries/objective-c/Sources/Foundation/TTResults.g.h`, `libraries/objective-c/Sources/Foundation/TTResults.g.m`, `build-tools/results/templates/objc.py`, `build-tools/results/templates/objc_calls.py`, `build-tools/results/legacy/objc.txt`, `conformance/library-surface/objc.json`, `libraries/objective-c/checks/FoundationCases.m`, `libraries/objective-c/checks/FoundationConsumer.m`, `libraries/objective-c/checks/foundation_installed.py`, `libraries/objective-c/README.md`, `libraries/objective-c/README-PUBLIC.md`, `site/examples/functions/*/objective-c.m`.
 - `ThinkThen.m` calls `thinkthen_run_call` for every named call.
 - `TTCall` exposes the final answer, probability, pick and resolution from the canonical Call JSON that `thinkthen_call_result_json` returns, through generated accessors.
 - The hand-written number conversion in the `objc.py` template and the `TTCallValue` and `TTCallProbability` projection that `objc_calls.py` generates are deleted.
 - `TTSession`, the `TTTask` tick loop and their private closed, reader and producer error text are deleted. Async calls run the call on one dispatch queue worker and cancel through a `thinkthen_call_cancel` token.
-- `build-tools/results/templates/objc.py` and `build-tools/results/templates/objc_calls.py` leave `LEGACY_FILES` in `build-tools/results/answer_rules.py`.
-- The public surface change updates the `objc` entry in `conformance/library-surface.json` (`TTSession`, `TTTask`, `TTCall`) in the same change. Both READMEs and the ten site function samples change with the result accessors.
+- `build-tools/results/templates/objc.py` and `build-tools/results/templates/objc_calls.py` leave this language's exception file `build-tools/results/legacy/objc.txt`.
+- The public surface change updates the `objc` entry in `conformance/library-surface/objc.json` (`TTSession`, `TTTask`, `TTCall`) in the same change. Both READMEs and the ten site function samples change with the result accessors.
 
 ### Proof
 
@@ -26,6 +26,7 @@ Depends on: 0688
 
 ## Evidence
 
+- After 0727 lands, this language's answer-rule exceptions live in `build-tools/results/legacy/objc.txt` and its surface entry in `conformance/library-surface/objc.json`. This ticket edits only those two files, so it does not collide with other languages' call tickets.
 - `libraries/objective-c/Sources/Foundation/ThinkThen.m` drives `thinkthen_session_new_with_surface`, `thinkthen_session_try_push`, `thinkthen_session_try_read`, `thinkthen_session_wait` and `thinkthen_session_result_view` through `TTSession` and `TTTask`. Its errors come from the per-thread `thinkthen_session_error_view`. 0638 landed `thinkthen_run_call` with independent result and error owners.
 - `build-tools/results/templates/objc.py` converts decimal text to `NSDecimalNumber` by hand, and `objc_calls.py` generates `TTCallValue` and `TTCallProbability` from `host_answers.call_results`. Both templates are in `LEGACY_FILES` in `build-tools/results/answer_rules.py`.
 - Objective-C maps numbers and answers by hand, and that mapping thrashed whenever the core result shape changed: five commits on decimal-range number conversion (6e7b37620, 4a22a18ea, 86b7857dc, 2d512ee33, a44dc2295), about eight on the filter answer accessor (e0c9359d3 through 0d16adfe8), and repeated reshaping of call value and probability (d8e403036, c32c2ad3f, 1d5c7285c).

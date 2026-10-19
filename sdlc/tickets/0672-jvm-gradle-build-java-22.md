@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0673, 0688
+Depends on: 0615, 0618, 0688
 
 ## Outcome
 
@@ -24,6 +24,7 @@ Depends on: 0615, 0618, 0673, 0688
 
 ## Evidence
 
+- Order (coordinator, 2026-10-19): this packaging ticket lands before the call ticket 0673, so 0673 can prove its named calls on the M5 through the Gradle and Maven consumers in `tests/package_check.py`.
 - **No standard build tool.** `libraries/jvm/build-session.py` calls `javac`, `kotlinc` and `scalac` directly, found through `THINKTHEN_JDK_HOME`, `THINKTHEN_KOTLIN_HOME` and `THINKTHEN_SCALA_HOME`, and `libraries/jvm/tests/toolchains.py` maps `THINKTHEN_SESSION_JDK_HOME` onto `THINKTHEN_JDK_HOME`. `sdlc/scripts/release-workflow` builds the release JARs through `build.sh` and checks them with `tests/package_check.py --session`.
 - **Java version.** `pom.xml` sets `thinkthen.session.jdk` to 22, and `toolchains.py` reads it as `JDK_FLOOR`. Java's foreign-function API became final in Java 22; on Java 21 it is a preview feature that needs `--enable-preview`, which no library can require of its callers. `sdlc/tools.json` pins only Temurin 25. The floor is a minimum host version and stays under `sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md`.
 - **Missing dependencies.** The pom declares the native classifier JARs and only optional coroutines. It declares no Kotlin or Scala standard library, and the Scala classes carry no Scala-version suffix.

@@ -6,17 +6,17 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 0678, 0682, 0683, 0686
+Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 0678, 0682, 0683, 0686, 0727
 
 ## Outcome
 
-- Changes: `build-tools/results/templates/host_answers.py`, `build-tools/results/answer_rules.py`.
+- Changes: `build-tools/results/templates/host_answers.py`, `build-tools/results/answer_rules.py`, `build-tools/results/legacy/`.
 - `build-tools/results/templates/host_answers.py` and any template section left that derives a call's answer are deleted.
-- The `LEGACY_FILES` exception list in `build-tools/results/answer_rules.py` is deleted, so the check refuses answer rules in every template and library file with no exception.
+- The per-language exception folder `build-tools/results/legacy/` from 0727 and the code in `build-tools/results/answer_rules.py` that reads it are deleted, so the check refuses answer rules in every template and library file with no exception.
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0711 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py --self-test && python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --check'` passes. Before the change the check still carries `LEGACY_FILES`.
+- On the M5: `pm job run --machine m5 0711 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py --self-test && python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --check'` passes. Before the change the check still reads exception files.
 - Done once by hand and not committed: a planted `probability = yes * no` line in any template fails the check.
 - `sdlc/scripts/lint` passes once at closure on the M5.
 
