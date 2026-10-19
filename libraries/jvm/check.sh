@@ -10,6 +10,7 @@ fi
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 # Resolve the supported compiler floor before any native build or package work.
 python3 "$here/tests/toolchains.py" --stable
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     package=$THINKTHEN_PARITY_PREPARED/package
 elif [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

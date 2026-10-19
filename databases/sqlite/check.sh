@@ -45,6 +45,7 @@ if [ "$suffix" = dylib ]; then
 		not_run "no SQLite 3.49.0 amalgamation with the pinned hashes in $old"
 fi
 cargo fetch --locked --offline --quiet 2>/dev/null || not_run "the cargo cache lacks a locked crate"
+"$python" ../../conformance/children/privacy.py --sources . --public --artifact-env
 host=$(SQLITE_AMALGAMATION=$source SQLITE_OLD_AMALGAMATION=$old sh tests/host_sqlite.sh)
 export THINKTHEN_SQLITE_CLI="$host/sqlite3"
 if [ "$suffix" = dylib ]; then

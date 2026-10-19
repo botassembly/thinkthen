@@ -95,6 +95,7 @@ stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
 [ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] ||
   not_run "the prefix's stamp does not match toolchain.env; move the prefix aside and $setup"
 
+python3 "$repo/conformance/children/privacy.py" --sources . --public --artifact-env
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).

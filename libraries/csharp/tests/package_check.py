@@ -19,22 +19,17 @@ PROJECT = ET.parse(ROOT / "ThinkThen.csproj").getroot()
 README = ROOT / next(member.attrib["Include"] for member in PROJECT.findall("./ItemGroup/None")
                      if member.attrib.get("Pack") == "true" and member.attrib.get("PackagePath") == PROJECT.findtext("./PropertyGroup/PackageReadmeFile"))
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
-from native_guard import normalized_bytes
+from privacy import check_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
 MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
 NATIVE = Path(os.environ.get("THINKTHEN_NATIVE_ASSET", ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"))
 NUPKG = ROOT / f"target/scratch/managed/Botassembly.ThinkThen.{VERSION}.nupkg"
 ARCHIVE = ROOT / f"target/artifacts/thinkthen-c-{VERSION}-x86_64-linux-gnu.tar.gz"
-BAD = (b"tt-canary-290", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
-
-
-def safe(label, data):
-    assert not any(token in normalized_bytes(data) for token in BAD), f"private pattern in {label}"
 
 
 def inspect(header, package, native, expected=None):
@@ -50,7 +45,7 @@ def inspect(header, package, native, expected=None):
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
         assert bundle.read("README.md") == README.read_bytes(), "stale package README"
         for name in members:
-            safe(name, name.encode() + bundle.read(name))
+            check_bytes(name, name.encode() + bundle.read(name))
     with tarfile.open(fileobj=io.BytesIO(native), mode="r:gz") as bundle:
         files = {member.name: member for member in bundle}
         assert "./lib/libthinkthen.so" in files and "./lib/libthinkthen.so.0" in files
@@ -273,9 +268,9 @@ def main():
     tampered = rewrite_tar(native)
     fail("tampered-native-member", lambda: inspect(header, package, tampered))
     fail("tampered-native-hash", lambda: inspect(header, package, tampered, receipt))
-    safe("remapped-native", b"/build/host/workspace/source.rs")
-    fail("old-home-remap", lambda: safe("plant", b"/build/home/workspace/source.rs"))
-    fail("private-byte", lambda: safe("plant", b"/home/private/file"))
+    check_bytes("remapped-native", b"/build/host/workspace/source.rs")
+    fail("old-home-remap", lambda: check_bytes("plant", b"/build/home/workspace/source.rs"))
+    fail("private-byte", lambda: check_bytes("plant", b"/home/private/file"))
     secret_zip = rewrite_zip(package, "README.md", b"tt-canary-290")
     fail("compressed-private-byte", lambda: inspect(header, secret_zip, native))
     print("C# local packages: source members, hash receipt, header version, managed secrecy and planted negatives PASS")

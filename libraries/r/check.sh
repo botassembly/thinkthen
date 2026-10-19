@@ -30,6 +30,7 @@ done
 export R_LIBS=$libs
 Rscript --vanilla -e 'stopifnot(getRversion() >= "4.2", packageVersion("jsonlite") >= "2.0.0")' ||
   not_run "R or jsonlite prerequisites are missing"
+python3 "$root/conformance/children/privacy.py" --sources . --public --artifact-env
 python3 "$root/sdlc/generators/results/generate.py" --target r --check
 python3 "$root/sdlc/generators/results/generate.py" --target r --inputs --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

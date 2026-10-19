@@ -8,6 +8,7 @@ case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_
 if [ "$profile" = routine ]; then
     export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/../../conformance/routine-ids.txt}"
 fi
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home

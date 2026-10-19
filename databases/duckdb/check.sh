@@ -44,6 +44,7 @@ select_host() {
 }
 for version in $DUCKDB_VERSIONS; do select_host "$version"; done
 select_host "$DEFAULT_VERSION"
+python3 "$HERE/../../conformance/children/privacy.py" --sources "$HERE" --public --artifact-env
 if [ -n "${CHECK_SETUP_ONLY:-}" ]; then echo "setup ok"; exit 0; fi
 PORT=${1:?check.sh takes the loopback port}
 # Shared rule 6: no suite sees a real key or a remote address. The replay smoke keeps the
