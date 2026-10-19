@@ -1,7 +1,5 @@
 """Select declared stress cases before running registered surface checks."""
 import os
-import json
-import platform
 from pathlib import Path
 import shutil
 import subprocess
@@ -35,19 +33,19 @@ class StressSelection(unittest.TestCase):
             (surface / 'Cargo.toml').touch()
             (surface / 'check.sh').write_text(
                 'echo "$1" >> "$FIXTURE_ROOT/calls"\n'
-                'case $1 in 16) exit "$CODE16" ;; 18) exit "$CODE18" ;; esac\n')
+                'case $1 in 16) exit "$CODE16" ;; 17) exit "$CODE17" ;; 18) exit "$CODE18" ;; esac\n')
             env = child_env(home=root / 'home', PATH=str(root / 'bin') + os.pathsep + os.environ['PATH'], FIXTURE_ROOT=str(root))
             env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
-            for first, last in ((1, 77), (77, 1), (77, 77), (0, 77)):
-                with self.subTest(first=first, last=last):
+            for first, middle, last in ((1, 0, 77), (77, 0, 1), (77, 77, 77), (0, 0, 77), (0, 77, 0)):
+                with self.subTest(first=first, middle=middle, last=last):
                     calls = root / 'calls'
                     calls.write_text('')
                     result = subprocess.run(['sh', str(scripts / 'surfaces')], cwd=root,
-                                            env=env | {'CODE16': str(first), 'CODE18': str(last)},
+                                            env=env | {'CODE16': str(first), 'CODE17': str(middle), 'CODE18': str(last)},
                                             capture_output=True, text=True)
-                    self.assertEqual(calls.read_text().splitlines(), ['16', '18'],
+                    self.assertEqual(calls.read_text().splitlines(), ['16', '17', '18'],
                                      result.stdout + result.stderr)
-                    self.assertEqual(result.returncode, int(1 in (first, last)),
+                    self.assertEqual(result.returncode, 1,
                                      result.stdout + result.stderr)
 
     def test_actual_registry_excludes_unsupported_php_and_requires_selected_checks(self):
@@ -90,12 +88,8 @@ class StressSelection(unittest.TestCase):
             subprocess.run(['git', 'add', 'libraries'], cwd=root, env=env, check=True)
             unsupported = subprocess.run(['sh', str(php)], env=env,
                                          capture_output=True, text=True)
-            arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
-            host = platform.system().lower() + '-' + arch
-            manifest = json.loads((root / 'sdlc/tools.json').read_text())
-            supported = host in manifest['libraries']['php']['check_platforms']
-            self.assertEqual(unsupported.returncode, 1 if supported else 77, unsupported.stdout + unsupported.stderr)
-            self.assertIn('no stress gate' if supported else 'not run', unsupported.stdout)
+            self.assertEqual(unsupported.returncode, 1, unsupported.stdout + unsupported.stderr)
+            self.assertEqual(unsupported.stdout.strip(), 'php: not run: no stress gate')
             for failed in ('', 'libraries/typescript'):
                 with self.subTest(failed=failed):
                     calls = root / 'calls'

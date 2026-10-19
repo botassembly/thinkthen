@@ -2,10 +2,11 @@
 # The Ruby surface's check (ticket 0112). The surface rung passes its
 # loopback port as $1. Each test starts its own 0092 backend from the binary
 # the rung built, so the slide sample and the tests leave the rung's backend
-# alone. Exit 77 means no host toolchain: the rung reports "not run".
+# alone. Missing tools fail the gate.
 set -eu
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/ruby
 tools_group=ruby
 [ "${THINKTHEN_RUBY_MINOR:-4.0}" != 3.4 ] || tools_group=ruby34
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
@@ -20,7 +21,7 @@ usage_home
 LIMIT=$repo/sdlc/scripts/time-limit
 
 fail() { echo "check ruby: $*" >&2; exit 1; }
-not_run() { echo "check ruby: not run: $*"; exit 77; }
+not_run() { echo "check ruby: not run: $*"; exit 1; }
 # Ticket 0394: a macOS gem names no macOS version, so a Ruby on any macOS
 # version takes it. RubyGems matches arm64-darwin-24 only to darwin 24.
 gem_platform() {
@@ -62,7 +63,6 @@ if [ -z "${THINKTHEN_RUBY_MINOR:-}" ] && [ "$profile" != routine ]; then
     fi
     case $code in
       0) ;;
-      77) [ "$failed" -ne 0 ] || failed=77 ;;
       *) failed=$code ;;
     esac
   done

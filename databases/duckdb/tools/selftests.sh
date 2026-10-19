@@ -55,7 +55,7 @@ set +e
 said=$(THINKTHEN_DUCKDB_CLI=/nonexistent/duckdb sh "$ROOT/check.sh" 1)
 code=$?
 set -e
-[ "$code" -eq 77 ] && [ "$said" = "not run: the DuckDB v1.5.6 toolchain is missing; run databases/duckdb/tools/setup.sh --fetch" ] ||
+[ "$code" -eq 1 ] && [ "$said" = "not run: the DuckDB v1.5.6 toolchain is missing; run databases/duckdb/tools/setup.sh --fetch" ] ||
 	fail "a missing CLI read exit $code: $said"
 echo "ok   check.sh sets up from three folders and reports not run without its CLI"
 
