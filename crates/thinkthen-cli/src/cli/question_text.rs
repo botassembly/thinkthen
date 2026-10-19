@@ -28,15 +28,23 @@ pub(crate) fn reference(
     path: &Path,
     unopened: fn(io::Error) -> Failure,
 ) -> Result<String, Failure> {
-    use crate::public::named_question::{Reference, named_text};
-    let Some(value) = path.to_str() else {
-        return read(path, unopened);
-    };
-    match Reference::of_path(value)
-        .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned()))?
-    {
-        Reference::Path(path) => read(&path, unopened),
-        Reference::Name(name) => named_text(&name)
-            .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned())),
-    }
+    let Some(value) = path.to_str() else { return read(path, unopened) };
+    let reference = crate::QuestionFileReference::reference(&format!("@{value}"))
+        .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned()))?;
+    let text = selected_text(&reference, unopened)?;
+    reference.parse(&text, crate::QuestionRole::Set, |text| Ok(text.to_owned()))
+        .map_err(Failure::from)
+}
+
+/// Read the selected spelling once while retaining the native named-root check.
+/// The caller then admits these exact bytes with the selected native file role.
+pub(crate) fn selected_text(
+    reference: &crate::QuestionFileReference,
+    unopened: fn(io::Error) -> Failure,
+) -> Result<String, Failure> {
+    let Some(root) = reference.named_root() else { return read(reference.path(), unopened) };
+    let unavailable = || Failure::NamedQuestion("the named question is unavailable".to_owned());
+    let target = reference.path().canonicalize().map_err(|_| unavailable())?;
+    if !target.starts_with(root) || !target.is_file() { return Err(unavailable()); }
+    read(&target, unopened).map_err(|_| unavailable())
 }
