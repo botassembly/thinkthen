@@ -7,7 +7,7 @@ use super::pieces::Piece;
 use crate::core::question::LabelsError;
 use crate::core::{Description, Labels, Question, QuestionText, RecognizeSpec};
 
-/// The admitted caller width, or the shared compatibility default.
+/// The admitted caller width, or the shared default width.
 fn width(spec: Option<&RecognizeSpec>) -> usize {
     let value = spec.map_or(RecognizeSpec::DEFAULT_SNIPPET_PIECES, |s| s.snippet_pieces);
     usize::try_from(value).unwrap_or(usize::MAX)

@@ -18,6 +18,7 @@ pub enum RecognitionMode {
 }
 impl RecognitionMode {
     pub(crate) const BOUNDARY_USAGE: &'static str = "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context";
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const USAGE: &'static str = "recognize mode is whole or boundary_only";
     pub(crate) fn parse(text: &str) -> Option<Self> {
         match text {
@@ -48,7 +49,9 @@ mod questions;
 
 use bilou::best_of;
 pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
-pub(crate) use examples::{ExamplesError, example_file, render_examples, selected_examples};
+#[cfg(any(feature = "cli", test))]
+pub(crate) use examples::example_file;
+pub(crate) use examples::{ExamplesError, render_examples, selected_examples};
 pub use examples::{RecognitionExample, RecognitionExampleEntity, RecognitionExampleText};
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{

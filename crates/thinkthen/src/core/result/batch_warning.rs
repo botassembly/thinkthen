@@ -1,11 +1,13 @@
 //! The saved batch setting that differs from this run's setting.
 
+#[cfg(any(feature = "cli", test))]
 use std::collections::BTreeSet;
 use std::fmt;
 
 use serde::Serialize;
 
 use crate::core::batch::Setting;
+#[cfg(any(feature = "cli", test))]
 use crate::core::json::Json;
 
 /// One batch setting in the documented number-or-`max` JSON form.
@@ -27,10 +29,10 @@ impl From<Setting> for BatchSetting {
 }
 
 impl BatchSetting {
-    /// The settings named by result metadata: `meta.batch_setting`, or an
-    /// older saved row's `meta.batch.setting`. A line naming neither adds
+    /// The settings named by result metadata: `meta.batch_setting`. A line naming none adds
     /// none, so an empty set means the setting is unknown. An invalid setting
     /// gives back its line and the member that named it.
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn in_results(
         lines: &[(usize, Json)],
     ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
@@ -39,17 +41,16 @@ impl BatchSetting {
             let Some(meta) = row.member("meta") else {
                 continue;
             };
-            let (named, member) = match (meta.member("batch_setting"), meta.member("batch")) {
-                (Some(setting), _) => (Some(setting), "meta.batch_setting"),
-                (None, Some(batch)) => (batch.member("setting"), "meta.batch.setting"),
-                (None, None) => continue,
+            let Some(named) = meta.member("batch_setting") else {
+                continue;
             };
-            let setting = named.and_then(Setting::of_json).ok_or((*line, member))?;
+            let setting = Setting::of_json(named).ok_or((*line, "meta.batch_setting"))?;
             settings.insert(setting.into());
         }
         Ok(settings)
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn listed(settings: &BTreeSet<Self>) -> String {
         let mut names: Vec<String> = settings.iter().map(ToString::to_string).collect();
         match names.pop() {

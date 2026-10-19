@@ -12,11 +12,7 @@ use schemars::transform::RecursiveTransform;
 use serde_json::{Map, Value, json};
 
 use crate::cli::annotate::error_row::Row;
-use crate::cli::relate::result::Details;
-use crate::core::{
-    AnnotateResult, DecisionResult, FindResult, NamedValues, RecordValue, RelationEdge,
-    RelationEntity, Value as Bare,
-};
+use crate::core::{NamedValues, RecordValue, RelationEdge, RelationEntity, Value as Bare};
 use crate::engine::facade::Recognized;
 use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson};
 
@@ -27,7 +23,7 @@ use crate::public::{CallReply, Counters, ErrorKind, Picked, PlanEstimate, Questi
 #[schemars(rename = "callError")]
 #[expect(
     dead_code,
-    reason = "the schema reads the fields; no surface builds one"
+    reason = "schema_tests::register derives the callError contract without constructing values"
 )]
 struct CallError {
     kind: ErrorKind,
@@ -110,27 +106,13 @@ fn generated(reference: &str) -> String {
             "relate",
             json!({"type": "object", "required": ["edges"], "properties": {"edges": edges}}),
         ),
-        ("details", any_of(&["decisionDetails", "findDetails"])),
-        (
-            "detailed",
-            any_of(&["details", "annotateDetails", "relateDetails"]),
-        ),
+        ("detailed", any_of(&["completeDetailed"])),
     ];
     register(&mut generator);
     complete::register(&mut generator);
     let mut definitions: Map<String, Value> = generator.take_definitions(true);
     complete::finish(&mut definitions);
-    let decision = definitions
-        .get_mut("decisionDetails")
-        .expect("decision details");
-    paired(decision);
-    // The C interface's record rows always carry the record they answered.
-    let mut record = decision.clone();
-    record["required"]
-        .as_array_mut()
-        .expect("required")
-        .push("input".into());
-    for (name, schema) in named.into_iter().chain([("callRecordDetails", record)]) {
+    for (name, schema) in named {
         assert!(
             definitions.insert(name.to_owned(), schema).is_none(),
             "{name} is named twice"
@@ -143,7 +125,7 @@ fn generated(reference: &str) -> String {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": if reference == "completeCall" { "urn:thinkthen:complete-call" } else { "urn:thinkthen:result" },
         "title": "thinkthen native results",
-        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a scalar result against its verb's definition; scalar definitions describe result/1 and complete definitions describe result/2 and its call envelope."),
+        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a scalar result against its verb's definition; complete definitions describe result/2 and its call envelope."),
         "$ref": format!("#/$defs/{reference}"),
         "$defs": definitions,
     });
@@ -154,10 +136,6 @@ fn register(generator: &mut schemars::SchemaGenerator) {
     // Each result type below is a named definition.
     let _registered = [
         generator.subschema_for::<Recognized>(),
-        generator.subschema_for::<DecisionResult>(),
-        generator.subschema_for::<FindResult>(),
-        generator.subschema_for::<AnnotateResult>(),
-        generator.subschema_for::<Details<'_>>(),
         generator.subschema_for::<RecordValue<Bare>>(),
         generator.subschema_for::<Row<'_>>(),
         generator.subschema_for::<Counters>(),

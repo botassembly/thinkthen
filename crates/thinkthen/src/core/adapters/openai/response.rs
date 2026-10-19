@@ -1,8 +1,12 @@
 //! Ordered live correlation, exact distributions and name-free saved answers.
-use crate::core::adapters::built_in::{DecodeError, response::Decoded};
+use crate::core::adapters::built_in::DecodeError;
+#[cfg(any(feature = "cli", test))]
+use crate::core::adapters::built_in::response::Decoded;
 use crate::core::answer::{Distribution, DistributionError};
 use crate::core::probability::Probability;
-use crate::core::{Answer, Json, ModelName, Plan, Question, Reply, ReportedUsage};
+use crate::core::{Answer, Json, ModelName, Question, ReportedUsage};
+#[cfg(any(feature = "cli", test))]
+use crate::core::{Plan, Reply};
 use serde::{Deserialize, Serialize};
 use serde_json::value::RawValue;
 use std::collections::BTreeSet;
@@ -215,6 +219,7 @@ pub(crate) fn split(
         answers,
     })
 }
+#[cfg(any(feature = "cli", test))]
 pub(crate) fn decode_observed(plan: &Plan, body: &[u8]) -> Decoded {
     let decoders = plan
         .questions()
