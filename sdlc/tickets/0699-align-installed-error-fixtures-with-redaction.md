@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0624
 
+Reviews: revision fdac724, accept
+
 ## Outcome
 
 Installed backend-error checks expect the public allow-listed diagnostic established by 0624 and prove that unrelated provider text remains withheld. No product behavior, public names, types or diagnostic policy changes.
