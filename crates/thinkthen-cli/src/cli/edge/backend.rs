@@ -75,7 +75,7 @@ impl Environment {
 mod tests {
     use super::*;
     #[test]
-    fn backend_check_requires_an_explicit_address_before_the_model_or_key() {
+    fn backend_check_requires_an_explicit_address_before_explicit_model_validation() {
         let environment = Environment::default();
         let failure = environment.resolve_for_check(None, None, Some("bad\nmodel"), "named address required").unwrap_err();
         assert_eq!(crate::failure::sentence(&failure), (2, "named address required".to_owned()));
