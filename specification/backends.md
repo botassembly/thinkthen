@@ -138,16 +138,18 @@ After the last allowed attempt, a refused status exits 4; with `--max-retries 0`
 | Status | Phrase |
 | --- | --- |
 | 400 | the backend refused the request; check `--model` and the request size |
-| 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes; shorten the text, or set a lower `--max-request-bytes` or `max_request_bytes` with `--profile`. The status reads `400 (max_tokens_exceeded)` |
+| 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes. The status reads `400 (max_tokens_exceeded)`; the remedy follows the request shape below |
 | 302 | the redirect was not followed; use the final `--url` directly |
 | 401 | the key was refused |
 | 402 | the account has no credit |
 | 403 | the key may not use this model or address |
 | 404 | nothing answers at this address |
-| 413 | the backend refused the request as too large; shorten the text, or set a lower `--max-request-bytes` or `max_request_bytes` with `--profile` |
+| 413 | the backend refused the request as too large; the remedy follows the request shape below |
 | 422 | the backend refused the request as malformed or too large |
 | 429 after the allowed attempts | the backend's rate limit was reached after the allowed attempts; try again later or change `--max-retries` |
 | 500, 502, 503, 504, 520, 521, 522, 523, 524, or 529 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
+
+A too-large refusal suggests shortening the text. Record batches, recognition stages and relation plans also suggest lowering `--max-request-bytes`, because their planners can split requests. `find` suggests fewer candidates instead, because its complete set must leave together. Whole-document judging and annotation requests suggest only shorter text. Image inputs and the fixed probes in backend checks suggest a backend with a larger input limit.
 
 A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. For a request holding two or more records, the stopped-run line names the records that request held. A missing host says to check `--url` and the network. An opening connection or name-lookup failure gets one immediate retry before any judging-request bytes are sent. Every transport failure after those bytes may have been sent fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. A TLS connection or certificate failure names certificate trust and advises checking `--url`. Every other transport failure says to check `--url` and the network.
 

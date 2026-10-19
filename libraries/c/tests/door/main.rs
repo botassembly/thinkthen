@@ -199,9 +199,9 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).replace("\r\n", "\n")
 }
 
-/// The documented session caller reads terminal facts through owned packet views.
+/// The documented caller reads its complete result through owned JSON.
 #[test]
-fn the_session_example_prints_its_terminal_facts() {
+fn the_example_prints_its_complete_call() {
     let backend = Backend::start().expect("loopback");
     let output = run(
         &compile(&crate_dir().join("examples/session.c")),
@@ -209,7 +209,11 @@ fn the_session_example_prints_its_terminal_facts() {
         b"",
     );
     successful(&output);
-    assert_eq!(text(&output.stdout), "records=1 requests=1\n");
+    let call: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("complete call JSON");
+    assert_eq!(call["facts"]["records"], 1);
+    assert_eq!(call["facts"]["requests_sent"], 1);
+    assert!(call.get("value").is_some());
     assert_eq!(backend.count(), 1);
 }
 

@@ -192,7 +192,8 @@ fn send(
     };
     let error_can_continue =
         !matches!(&error, Error::Provider { diagnostic, .. } if diagnostic.quota);
-    let (_, sentence) = failure::sentence(&Failure::from(error));
+    let (_, sentence) =
+        failure::sentence(&Failure::from(error).with_size_advice(failure::SizeAdvice::Backend));
     match gate {
         Some(gate) => report.stopped(probe, gate, sentence),
         None => report.failed(probe, sentence),

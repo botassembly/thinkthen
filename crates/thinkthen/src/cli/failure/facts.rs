@@ -41,7 +41,9 @@ impl Stopped {
             Failure::Cancelled => ("cancelled", None, false),
             Failure::NoKey(_) => ("no_key", None, false),
             Failure::Transport(_) => ("transport", None, false),
-            Failure::Status(413) | Failure::TokenLimit => ("too_large", None, false),
+            Failure::Status(413) | Failure::TokenLimit | Failure::RequestTooLarge { .. } => {
+                ("too_large", None, false)
+            }
             Failure::Status(status) => (
                 "status",
                 Some(*status),
