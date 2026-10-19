@@ -1019,6 +1019,97 @@ def preflight_cases():
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 
+def smoke_family_cases():
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    smoke = release['jobs']['smoke']
+    cells = smoke['strategy']['matrix']['include']
+    base = set('command c python typescript ruby sqlite duckdb postgresql16 postgresql17 postgresql18 installers'.split())
+    expected = {
+        'x86_64-unknown-linux-gnu': base | set('go-cpp swift-zig php-dart ada-objective-c-cobol managed examples'.split()),
+        'aarch64-unknown-linux-gnu': base,
+        'aarch64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-pc-windows-msvc': {'windows-c', 'windows-command'},
+    }
+    assert len(cells) == len({(cell['target'], cell['family']) for cell in cells})
+    assert {target: {cell['family'] for cell in cells if cell['target'] == target}
+            for target in expected} == expected
+    assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
+    assert 'smoke' in release['jobs']['draft']['needs']
+    selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
+    assert selected['env']['THINKTHEN_RELEASE_SMOKE_FAMILY'] == '${{ matrix.family }}'
+    assert selected['env']['THINKTHEN_TEST_PROFILE'] == 'full'
+    assert selected['timeout-minutes'] == '${{ matrix.consumer_minutes }}'
+    logs = next(step for step in smoke['steps'] if step.get('name') == 'Retain available smoke logs')
+    assert logs['if'] == 'always()' and '${{ matrix.family }}' in logs['with']['name']
+    for cell in cells:
+        assert 0 < cell['consumer_minutes'] < cell['minutes'] < 356
+    # Use real archive/checksum/scan/completeness code with local consumer exits.
+    # This keeps the installed execution outside-in while avoiding tool builds.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-family-') as temporary:
+        root = Path(temporary).resolve()
+        scripts = root / 'sdlc/scripts'
+        scripts.mkdir(parents=True)
+        for name in ('release-smoke', 'scratch.sh', 'verdict.sh', 'compiler-isolation'):
+            (scripts / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
+        (scripts / 'installed.sh').write_text('backend_start() { scratch_dir backend; port=1; }\n')
+        (root / 'crates/thinkthen').mkdir(parents=True)
+        (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
+        (root / 'libraries/c').mkdir(parents=True)
+        (root / 'libraries/c/check.sh').write_text('echo selected-c\nexit "${FAKE_EXIT:-0}"\n')
+        bundle = root / 'bundle'
+        bundle.mkdir()
+        import zipfile
+        archive_names = ['thinkthen-' + family + '-0.2.0-fixture.tar.gz' for family in
+                         ('c', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18')]
+        archive_names += ['thinkthen-0.2.0-fixture.tar.gz', 'thinkthen-first-run.tar.gz', 'thinkthen-0.2.0.tgz']
+        for name in archive_names:
+            with tarfile.open(bundle / name, 'w:gz') as archive:
+                info = tarfile.TarInfo('payload')
+                info.size = 7
+                archive.addfile(info, io.BytesIO(b'fixture'))
+        with zipfile.ZipFile(bundle / 'thinkthen-0.2.0.whl', 'w') as archive:
+            archive.writestr('payload', 'fixture')
+        with tarfile.open(bundle / 'thinkthen-0.2.0.gem', 'w') as archive:
+            payload = io.BytesIO()
+            with tarfile.open(fileobj=payload, mode='w:gz') as data:
+                info = tarfile.TarInfo('payload')
+                info.size = 7
+                data.addfile(info, io.BytesIO(b'fixture'))
+            info = tarfile.TarInfo('data.tar.gz')
+            info.size = len(payload.getvalue())
+            archive.addfile(info, io.BytesIO(payload.getvalue()))
+        for archive in bundle.iterdir():
+            (bundle / (archive.name + '.sha256')).write_text(
+                hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+        home = root / 'home'
+        home.mkdir()
+        env = {'PATH': os.environ['PATH'], 'HOME': str(home), 'TMPDIR': str(root),
+               'THINKTHEN_RELEASE_SMOKE_FAMILY': 'c', 'LANG': 'C.UTF-8'}
+        command = ['/bin/sh', str(scripts / 'release-smoke'), str(bundle)]
+        def run(extra=None):
+            return subprocess.run(command, cwd=root, env={**env, **(extra or {})},
+                                  capture_output=True, text=True, timeout=5)
+        good = run()
+        assert good.returncode == 0 and good.stdout.count('selected-c') == 1, good
+        assert 'selected family c only' in good.stdout and 'surfaces: pass command' not in good.stdout
+        for status in ('1', '77'):
+            bad = run({'FAKE_EXIT': status})
+            assert bad.returncode == 1 and 'surfaces: FAIL libraries/c' in bad.stdout, bad
+        unknown = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'c; exit 0'})
+        assert unknown.returncode == 2 and 'unknown family' in unknown.stderr, unknown
+        absent = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'managed'})
+        assert absent.returncode == 1 and 'selected family managed has no consumer' in absent.stdout, absent
+        archive = bundle / 'thinkthen-sqlite-0.2.0-fixture.tar.gz'
+        archive.write_bytes(b'corrupt unselected archive')
+        corrupt = run()
+        assert corrupt.returncode == 1 and 'its .sha256 is missing or does not match' in corrupt.stdout, corrupt
+        archive.unlink()
+        (bundle / (archive.name + '.sha256')).unlink()
+        missing = run()
+        assert missing.returncode == 1 and 'FAIL databases/sqlite (DIR holds no file for it)' in missing.stdout, missing
+
+
 def parameter_run(case, command, **kwargs):
     print(f'hosted parameter: {case}', file=sys.stderr, flush=True)
     started = time.monotonic()
@@ -1105,6 +1196,7 @@ def parameter_cases():
             assert 'selected-swift' not in result.stdout
 
 
+smoke_family_cases()
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
 shared_host_routing_cases()

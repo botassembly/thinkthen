@@ -44,14 +44,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
-          - {target: aarch64-apple-darwin, runner: macos-15}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel}
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025}
+          # Passed5146s; run/job39066497222/117495205500; ceil(2x/60).
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, minutes: 172}
+          # Passed4513s; run/job39102241482/117600734565; ceil(2x/60).
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, minutes: 151}
+          # Passed4581s; run/job39102241482/117600734572; ceil(2x/60).
+          - {target: aarch64-apple-darwin, runner: macos-15, minutes: 153}
+          # Passed3h28m22s (12502s); run/job39102241482/117600734673.
+          # 2x needs417m; GitHub-hosted jobs cap at360m. Keep the existing cap.
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, minutes: 360}
+          # Passed1514s; run/job39102241482/117600734615; ceil(2x/60).
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, minutes: 51}
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 360
+    timeout-minutes: ${{ matrix.minutes }}
     permissions: {contents: read}
     env:
       MACOSX_DEPLOYMENT_TARGET: '15.0'
@@ -355,29 +361,102 @@ jobs:
 
   smoke:
     needs: [resolve, build, apple-packages, wheels, npm-pack, gems, crate]
+    # Historic setup includes DuckDB compilation removed by0613. These bounds
+    # deliberately retain that measured cost; they are not new setup timings.
+    # Source jobs: https://github.com/botassembly/thinkthen/actions/jobs/JOB_ID
+    # 0691 measures each complete new job before replacing these provisional bounds.
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04}
-          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
-          - {target: aarch64-apple-darwin, runner: macos-15}
-          - {target: x86_64-apple-darwin, runner: macos-15-intel}
-          - {target: x86_64-pc-windows-msvc, runner: windows-2025}
+          # Provisional 2x component bound: 4714s setup + 3673s consumer.
+          # Jobs: 117533117689: setup and complete installed bundle.
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: command, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: c, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: python, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: typescript, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ruby, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: sqlite, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: duckdb, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql16, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql17, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: postgresql18, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: installers, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: go-cpp, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: swift-zig, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: php-dart, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: ada-objective-c-cobol, minutes: 280, consumer_minutes: 123}
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: managed, minutes: 280, consumer_minutes: 123}
+          # Examples have no passing current measurement; retain prior360m cap until0691.
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04, family: examples, minutes: 355, consumer_minutes: 350}
+          # Provisional 2x component bound: 4620s setup + 2095s consumer.
+          # Jobs: 117533117655: setup and complete installed bundle.
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: command, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: c, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: python, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: typescript, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: ruby, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: sqlite, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: duckdb, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql16, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql17, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: postgresql18, minutes: 224, consumer_minutes: 70}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm, family: installers, minutes: 224, consumer_minutes: 70}
+          # Provisional 2x component bound: 4025s setup + 731s consumer.
+          # Jobs: 117533117652: setup and passing PG16 interval; legacy DuckDB bundle314s at112104778598.
+          - {target: aarch64-apple-darwin, runner: macos-15, family: command, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: c, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: python, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: typescript, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: ruby, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: sqlite, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: duckdb, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql16, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql17, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: postgresql18, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: installers, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: swift-zig, minutes: 159, consumer_minutes: 25}
+          - {target: aarch64-apple-darwin, runner: macos-15, family: ada-objective-c-cobol, minutes: 159, consumer_minutes: 25}
+          # Examples have no passing current measurement; retain prior360m cap until0691.
+          - {target: aarch64-apple-darwin, runner: macos-15, family: examples, minutes: 355, consumer_minutes: 350}
+          # Provisional 2x component bound: 8750s setup + 1256s consumer.
+          # Jobs: 117417603551: setup and passing Python interval; legacy DuckDB bundle527s at112104778577.
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: command, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: c, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: python, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: typescript, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ruby, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: sqlite, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: duckdb, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql16, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql17, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: postgresql18, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: installers, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: swift-zig, minutes: 334, consumer_minutes: 42}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: ada-objective-c-cobol, minutes: 334, consumer_minutes: 42}
+          # Examples have no passing current measurement; retain prior360m cap until0691.
+          - {target: x86_64-apple-darwin, runner: macos-15-intel, family: examples, minutes: 355, consumer_minutes: 350}
+          # Provisional 2x component bound: 50s setup + 459s consumer.
+          # Jobs: 117417603566: setup;117533117658: passing command/crate step.
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-c, minutes: 17, consumer_minutes: 16}
+          - {target: x86_64-pc-windows-msvc, runner: windows-2025, family: windows-command, minutes: 17, consumer_minutes: 16}
     defaults: {run: {shell: bash}}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 360
+    timeout-minutes: ${{ matrix.minutes + 5 }}
     permissions: {contents: read, actions: read}
     env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
     steps:
       - name: Keep Windows line endings as committed
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: git config --global core.autocrlf false
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          git config --global core.autocrlf false
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - name: Isolate Windows default folders
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           set -eu
           printf 'APPDATA=%s\\thinkthen-appdata\\Roaming\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
           printf 'LOCALAPPDATA=%s\\thinkthen-appdata\\Local\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
@@ -396,13 +475,18 @@ jobs:
       - name: Restore the built DuckDB hosts
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow duckdb-host-unpack duckdb-hosts "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow duckdb-host-unpack duckdb-hosts "$TARGET" "$SHA"
       - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
-        run: sdlc/scripts/release-workflow host-setup "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow host-setup "$TARGET"
       - name: Read the JVM runtime floor
         id: jvm-contract
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           jdk=$(python3 sdlc/scripts/package-inventory.py jvm --field jdk)
           echo "jdk=$jdk" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
@@ -411,30 +495,44 @@ jobs:
       - name: Select installed language tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: python3 sdlc/scripts/release-language-tools.py smoke "$RUNNER_TEMP/thinkthen-language-smoke" "$SHA" --acquire
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          python3 sdlc/scripts/release-language-tools.py smoke "$RUNNER_TEMP/thinkthen-language-smoke" "$SHA" --acquire
       - name: Check and install pinned Go/C++ consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RUNNER_TEMP/thinkthen-go"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RUNNER_TEMP/thinkthen-go"
       - name: Check and install pinned Swift/Zig consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow swift-zig-tools "$TARGET" "$RUNNER_TEMP/thinkthen-zig"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow swift-zig-tools "$TARGET" "$RUNNER_TEMP/thinkthen-zig"
       - name: Check and install pinned PHP/Dart consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RUNNER_TEMP/thinkthen-dart"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RUNNER_TEMP/thinkthen-dart"
       - name: Check Ada, GNU Objective-C and COBOL consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
       - name: Check selected managed consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
-        run: sdlc/scripts/release-workflow managed-tools "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow managed-tools "$TARGET"
       - name: Select x64 MSVC
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          python3 sdlc/scripts/release-msvc.py >> "$GITHUB_ENV"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: 'platform-${{ matrix.target }}', path: platform}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -456,52 +554,90 @@ jobs:
         with: {name: r-package, path: r-dist}
       - name: Check every prepared installed smoke input
         env: {TARGET: "${{ matrix.target }}"}
-        run: python3 sdlc/scripts/hosted-preflight.py smoke "$TARGET"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          python3 sdlc/scripts/hosted-preflight.py smoke "$TARGET"
       - name: Require the selected Go/C++ family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"
       - name: Require the selected Swift/Zig family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow swift-zig-gate platform "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow swift-zig-gate platform "$TARGET" "$SHA"
       - name: Require the selected PHP/Dart family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
       - name: Require the selected Ada/Objective-C/COBOL family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
       - name: Require the selected managed family and original receipts
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
-        run: sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
-      - env: {THINKTHEN_TEST_PROFILE: full, TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
-        if: matrix.target != 'x86_64-pc-windows-msvc'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
+      - env: {THINKTHEN_RELEASE_SMOKE_FAMILY: '${{ matrix.family }}', THINKTHEN_TEST_PROFILE: full, TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
+        if: matrix.target != 'x86_64-pc-windows-msvc' && matrix.family != 'examples' && matrix.family != 'installers'
+        timeout-minutes: ${{ matrix.consumer_minutes }}
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
           sdlc/scripts/release-smoke smoke-files
+          if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = command ]; then
+            sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+          fi
+      - name: Qualify the installers
+        if: matrix.family == 'installers'
+        timeout-minutes: ${{ matrix.consumer_minutes }}
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
-          sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
       - name: Replay public package examples on the prepared host
-        if: matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'
+        timeout-minutes: ${{ matrix.consumer_minutes }}
+        if: matrix.family == 'examples'
         env: {TARGET: "${{ matrix.target }}"}
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
           cp crate-dist/*.crate smoke-files/
           if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then cp r-dist/* smoke-files/; fi
           sdlc/scripts/release-workflow public-examples "$TARGET" smoke-files
       - name: Validate and consume the downloaded Windows C archive
-        if: matrix.target == 'x86_64-pc-windows-msvc'
+        timeout-minutes: ${{ matrix.consumer_minutes }}
+        if: matrix.family == 'windows-c'
         run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
           set -eu
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
           python3 sdlc/scripts/release-windows-c.py check "platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
           python3 sdlc/scripts/release-windows-c-smoke.py "platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
       - name: Prove the Windows installer and smoke the command and packed Rust crate
-        if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist
+        timeout-minutes: ${{ matrix.consumer_minutes }}
+        if: matrix.family == 'windows-command'
+        run: |
+          exec > >(tee -a "$RUNNER_TEMP/release-smoke.log") 2>&1
+          python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist
+      - name: Retain available smoke logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smoke-logs-${{ matrix.target }}-${{ matrix.family }}
+          path: ${{ runner.temp }}/release-smoke.log
+          if-no-files-found: warn
+          retention-days: 7
 
   draft:
     needs: [resolve, smoke, registries, windows-sdks]
