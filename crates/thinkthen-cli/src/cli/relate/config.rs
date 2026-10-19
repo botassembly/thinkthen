@@ -45,7 +45,9 @@ pub(super) fn settle(arguments: &RelateArguments, admitted: &mut AdmittedRequest
         let text = crate::cli::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
         let relation = reference.parse(&text, crate::QuestionFileRole::Relate, Relate::from_records_json)
             .map_err(|error| {
-                if error.detail().message() == "the question file uses another function" {
+                // Reference admission reserves Usage for an unambiguous role
+                // mismatch; saved parser/name/content failures are Local.
+                if error.kind() == crate::ErrorKind::Usage {
                     Failure::Relate(crate::failure::relate::Error::Config {
                         file: true, error: "the question file holds another command's question".to_owned(),
                     })

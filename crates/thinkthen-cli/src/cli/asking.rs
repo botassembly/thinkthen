@@ -7,7 +7,7 @@ use std::io::Read;
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
 
-use crate::{BatchSetting as Setting, Engine, InputDeclaration, QuestionKind, RequestFraming as Framing, ResolvedSettings};
+use crate::{BatchSetting as Setting, InputDeclaration, QuestionKind, RequestFraming as Framing, ResolvedSettings};
 use crate::cli::asked::Resolved;
 use crate::cli::reading::Reading;
 use crate::schedule::Outcome;
@@ -31,14 +31,6 @@ mod reading;
 use context::Context;
 pub(crate) use folders::Folders;
 use reading::read_by;
-
-/// Build the one engine a command calls, from what the command resolved.
-///
-/// `width` is the `--jobs` a record command registered, or `None`.
-pub(crate) fn engine(common: &Common, environment: &Environment, folders: Folders,
-    width: Option<u8>) -> Result<Engine, Failure> {
-    crate::cli::construction::engine(common, environment, folders, width)
-}
 
 /// Where one record's question comes from.
 ///
