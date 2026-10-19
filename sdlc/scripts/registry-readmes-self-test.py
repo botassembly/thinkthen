@@ -22,6 +22,9 @@ spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__)
 readmes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(readmes)
 
+sys.path.insert(0, str(readmes.REPO))
+from conformance.source_fixtures import stage_checkout
+
 
 REAL_RUN_BUILD = readmes.run_build
 
@@ -548,16 +551,9 @@ class PackageText(unittest.TestCase):
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
                                env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
-            for name in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/fetch.sh',
-                         'crates/thinkthen/Cargo.toml', 'libraries/ruby/toolchain.env',
-                         'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
-                         'databases/duckdb/tools/version.env'):
-                path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(readmes.REPO / name, path)
+            stage_checkout(readmes.REPO, root)
             home = root / 'home'
-            ruby_pins = (root / 'libraries/ruby/toolchain.env').read_text()
-            prepared = [home / '.cache/thinkthen-toolchains/ruby' / pin / 'bin'
-                        for pin in readmes.re.findall(r'(?m)^RUBY_\d+_VERSION=(.*)$', ruby_pins)]
+            prepared = [root / 'resolved/ruby/bin']
             sqlite = root / 'sqlite'
             duckdb_pin = readmes.re.search(r'(?m)^DUCKDB_ROUTINE_RELEASE=(.*)$',
                                           (root / 'databases/duckdb/tools/version.env').read_text())[1]
@@ -574,14 +570,15 @@ class PackageText(unittest.TestCase):
                     executable.chmod(0o755)
                     if binary == 'ruby' and folder != wrong:
                         (folder.parent / 'thinkthen-toolchain.stamp').touch()
-            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True)
+            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True, exist_ok=True)
             host.write_text('#!/bin/sh\nprintf "%s\\n" ' + readmes.json.dumps(str(sqlite)) + '\n')
             checker = root / 'sdlc/scripts/registry-readmes.py'
             checker.write_text('import subprocess\nfor name in ("ruby", "sqlite3", "duckdb"):\n'
                                '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
             done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
                                    'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
-                                  env={'PATH': str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
+                                  env={'PATH': os.pathsep.join((str(prepared[0]), str(wrong), os.environ['PATH'])),
+                                       'HOME': str(home)},
                                   capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
