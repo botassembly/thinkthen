@@ -28,6 +28,13 @@ class PublicSurface(unittest.TestCase):
             entry = entries / 'python.json'
             original = (ROOT / 'conformance/library-surface/python.json').read_text()
             entry.write_text(original)
+            remaining = entries / 'c.json'
+            remaining_source = (ROOT / 'conformance/library-surface/c.json').read_text()
+            remaining.write_text(remaining_source)
+            (root / 'specification').symlink_to(ROOT / 'specification', target_is_directory=True)
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
             subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=folder))
             subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=folder))
             def refused(diagnostic):
@@ -38,9 +45,11 @@ class PublicSurface(unittest.TestCase):
                 self.assertIn(diagnostic, result.stderr)
             entry.unlink()
             refused('python.json')
+            remaining.unlink()
             entries.rmdir()
             refused('missing library surface entries:')
             entries.mkdir()
+            remaining.write_text(remaining_source)
             entry.write_text('{}')
             refused('invalid library surface entry:')
             entry.write_text(json.dumps({'libraries': {'go': {}}}))
