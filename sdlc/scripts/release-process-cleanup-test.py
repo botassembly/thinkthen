@@ -17,6 +17,8 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import fixture_wait
 
+CONTROLLED_TIMEOUT = 1
+
 SCRIPTS = Path(__file__).resolve().parent
 
 
@@ -397,11 +399,11 @@ def windows_source_oracles():
     with mock.patch.object(BOUNDED.os, 'name', 'nt'), mock.patch.object(BOUNDED, 'Path', type(SCRIPTS)):
         with mock.patch.object(runpy, 'run_path', return_value={'Job': lambda: job}):
             with mock.patch.object(subprocess, 'Popen', return_value=fake_child) as spawn:
-                refused(lambda: BOUNDED.capture(['cl.exe'], env={}, timeout=1), 'job assignment refused')
+                refused(lambda: BOUNDED.capture(['cl.exe'], env={}, timeout=CONTROLLED_TIMEOUT), 'job assignment refused')
     assert spawn.call_args.kwargs['creationflags'] == 4 and spawn.call_args.kwargs['start_new_session'] is False
     job.close.assert_called_once()
     fake_child.kill.assert_called_once()
-    fake_child.wait.assert_called_once_with(timeout=5)
+    fake_child.wait.assert_called_once_with(timeout=BOUNDED.KILL_REAP_TIMEOUT)
 
 
 def main():

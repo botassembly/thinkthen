@@ -96,6 +96,8 @@ def fixture_wait(child):
         return child.wait(timeout=FIXTURE_HANG_TIMEOUT)
     except subprocess.TimeoutExpired as error:
         child.kill()
+        if child.stdin is not None and child.stdin.closed:
+            child.stdin = None
         try:
             error.stdout, error.stderr = child.communicate(timeout=FIXTURE_HANG_TIMEOUT)
         except subprocess.TimeoutExpired:

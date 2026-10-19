@@ -18,7 +18,7 @@ import sys
 import tempfile
 
 import c_parity
-from children import child_env
+from children import child_env, fixture_communicate
 import parity
 from signals import observe_signals
 
@@ -330,7 +330,7 @@ def drain_observed_signal(args, stdin, home, env, backend, signum, observation):
             time.sleep(0.01)
         backend.process.stdin.write("release\n")
         backend.process.stdin.flush()
-        stdout, stderr = child.communicate(timeout=30)
+        stdout, stderr = fixture_communicate(child)
         return subprocess.CompletedProcess(args, child.returncode, stdout, stderr)
     finally:
         if child.poll() is None:

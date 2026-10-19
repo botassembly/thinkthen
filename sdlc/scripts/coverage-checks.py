@@ -22,6 +22,8 @@ import coverage_installed_c_hosts
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import FIXTURE_HANG_TIMEOUT, fixture_run, fixture_wait
 
+CONTROLLED_TIMEOUT = 0.3
+
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
@@ -418,7 +420,7 @@ else:
             for capture in (False, True):
                 with self.assertRaisesRegex(RuntimeError, r'timed out \(exit -9\)'):
                     DRIVER['command']([sys.executable, '-c', script], root, os.environ,
-                                      root / 'timeout.log', capture=capture, timeout=0.3)
+                                      root / 'timeout.log', capture=capture, timeout=CONTROLLED_TIMEOUT)
                 child = int((root / 'child.pid').read_text())
                 with self.assertRaises(ProcessLookupError):
                     os.kill(child, 0)
