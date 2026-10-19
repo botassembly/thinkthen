@@ -8,6 +8,8 @@ Depends on: 0727
 
 Reviews: revision 440c8ba, accept
 
+Reviews: revision 17afdd9, accept
+
 ## Outcome
 
 - Changes: `sdlc/tools.json`, `sdlc/tools/`, `sdlc/scripts/tools.py`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-pack.d/`, `build-tools/results/registry.py`, `build-tools/results/registry/`, `site/src/data/catalog.mjs`, `site/src/data/catalog/`.
