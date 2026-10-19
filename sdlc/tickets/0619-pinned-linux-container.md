@@ -37,6 +37,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: Clean extraction dad2b4ac5 has source review with execution proof pending; existing PM answers2-4 in the0619-container-prerequisites mail authorize Ubuntu checks, distribution-only manylinux, recipe and manifest plus actual image IDs, and Yellow13.5GiB while M5 and hosted retain their manifest limits, so reconcile the older ticket wording before container qualification.
 
 ## Amendment, 2026-10-18
 
