@@ -83,7 +83,7 @@ fn descriptor(raw: &str, incremental: bool, cancelled: bool) -> Result<Value, Er
     }
     let value = json!({"files":files,"incremental":incremental,"cancelled":cancelled});
     // This validates only controls; the host still owns all metadata and handles.
-    complete_native::Inputs::parse(&value.to_string(), true)?;
+    complete_native::Inputs::parse(&value.to_string())?;
     Ok(value)
 }
 

@@ -278,7 +278,7 @@ for file in "$DIR"/*; do
 		code=$?
 	fi
 	set -e
-	verdict release "$surface $name" "$code" || failed=1
+	verdict "$surface $name" "$code" || failed=1
 done
 # Every file the release holds for this target is here.
 pg_families='postgresql16 postgresql17 postgresql18'

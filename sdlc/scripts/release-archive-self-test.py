@@ -1092,10 +1092,10 @@ def main():
             actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
         if actual != commit:
             raise AssertionError("launcher passed a tar from another source commit")
-        fake_go = fake_bin / "fake-go"
+        fake_go = fake_bin / "go"
         fake_go.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_GO_VERSION\"\n")
         fake_go.chmod(0o755)
-        no_python = fake_bin / "no-python"
+        no_python = fake_bin / "python3"
         no_python.write_text("#!/bin/sh\nexit 1\n")
         no_python.chmod(0o755)
         for version, diagnostic in (
@@ -1105,12 +1105,12 @@ def main():
             ("go version go1.22.12 linux/amd64", "Python jsonschema is unavailable"),
             ("go version go1.27.1 linux/amd64", "Python jsonschema is unavailable"),
         ):
-            version_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
-                                        "THINKTHEN_PYTHON_BIN": str(no_python),
+            version_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+                                        "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
                                         "FAKE_GO_VERSION": version}
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
-        installed_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
-                                      "THINKTHEN_PYTHON_BIN": str(no_python),
+        installed_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+                                      "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
                                       "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
                                       "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
         for family in ("go", "cpp"):

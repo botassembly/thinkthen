@@ -1,6 +1,9 @@
 //! Plain aggregate arguments retain the ordinary call's admitted request.
 use crate::call;
+use crate::complete_native::defect;
 use pgrx::prelude::*;
+use serde_json::Value;
+use thinkthen::RequestOutcome;
 use thinkthen::{
     Error, Request, RequestArguments, RequestDefinition, RequestEnvironment, RequestFunction,
     RequestInput, RequestItem, RequestQuestion,
@@ -60,7 +63,7 @@ pub(super) fn run(
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .into_iter()
             .collect::<Result<Vec<_>, _>>()?;
-        let rows = thinkthen_host::sql_request::project_outcome(function, outcome, observations)?;
+        let rows = project_outcome(function, outcome, observations)?;
         Ok(super::Execution {
             value: serde_json::json!({"rows": rows}),
         })
@@ -203,4 +206,49 @@ pub(super) fn annotate(
         vec![crate::request::document(input.to_owned())?],
         controls,
     )
+}
+
+/// Project an ordinary SQL call without changing its aggregate input semantics.
+fn project_outcome(
+    function: RequestFunction,
+    outcome: RequestOutcome,
+    observations: Vec<Value>,
+) -> Result<Vec<Value>, Error> {
+    let (result, facts, failure) = match outcome {
+        RequestOutcome::Complete(call) => {
+            let facts = serde_json::to_value(call.facts().complete()).map_err(|_| defect())?;
+            (call.into_value(), facts, None)
+        }
+        RequestOutcome::Failed { completed, error } => {
+            if matches!(
+                error.kind(),
+                thinkthen::ErrorKind::Cancelled
+                    | thinkthen::ErrorKind::Deadline
+                    | thinkthen::ErrorKind::Defect
+            ) {
+                return Err(error);
+            }
+            let failed = crate::complete_native::failure(&error);
+            (
+                completed,
+                failed.get("facts").cloned().unwrap_or(Value::Null),
+                failed.get("error").cloned(),
+            )
+        }
+    };
+    let mut carrier = serde_json::json!({"native":{"value":serde_json::to_value(&result).map_err(|_| defect())?,"facts":facts},"observations":observations});
+    let restore_values = failure.is_none() || function != RequestFunction::Find;
+    if let Some(failure) = failure {
+        crate::complete_native::put(
+            carrier.get_mut("native").ok_or_else(defect)?,
+            "error",
+            failure,
+        )?;
+    }
+    let mut rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
+    // An aggregate find failure owns no completed row or probability.
+    if restore_values {
+        thinkthen_host::sql_request::typed_values(&result, &mut rows)?;
+    }
+    Ok(rows)
 }

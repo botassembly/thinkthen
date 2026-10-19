@@ -23,7 +23,7 @@ DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 class PlatformCommandEvidence(unittest.TestCase):
     def test_platform_commands_refuse_a_foreign_host_and_native_slice(self):
-        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--platform']
+        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--platform']
         foreign = 'apple' if sys.platform == 'linux' else 'linux'
         result = subprocess.run([*command, foreign], capture_output=True)
         self.assertEqual(result.returncode, 1)
@@ -41,7 +41,7 @@ class PlatformCommandEvidence(unittest.TestCase):
                              totals=dict(mapped_nonblank=100, **{name: 50 for name in names}))
                         for platform_name, names in (('linux', expected - {'installed-objective-c'}),
                                                     ('apple', {'installed-swift', 'installed-objective-c'}))]
-            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--join', *map(str, paths)]
+            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--join', *map(str, paths)]
             for payload, path in zip(payloads, paths):
                 path.write_text(json.dumps(payload))
             self.assertEqual(subprocess.run(command, capture_output=True).returncode, 0)
@@ -210,8 +210,18 @@ class ManagedToolAvailability(unittest.TestCase):
             def command(args, cwd, env, log, **kwargs):
                 # XCFramework assembly requires macOS; package validation below is real.
                 framework = Path(args[args.index('-output') + 1])
-                framework.mkdir()
-                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+                arch = platform.machine()
+                identifier = 'macos-' + arch
+                slice = framework / identifier
+                slice.mkdir(parents=True)
+                library = Path(args[args.index('-library') + 1])
+                shutil.copy2(library, slice / library.name)
+                shutil.copytree(args[args.index('-headers') + 1], slice / 'Headers')
+                metadata = dict(CFBundlePackageType='XFWK', XCFrameworkFormatVersion='1.0',
+                                AvailableLibraries=[dict(LibraryIdentifier=identifier,
+                                    LibraryPath=library.name, HeadersPath='Headers',
+                                    SupportedArchitectures=[arch], SupportedPlatform='macos')])
+                (framework / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             context = dict(root=checkout, run=run, env={}, command=command,
                            missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)
@@ -415,7 +425,7 @@ else:
     def test_real_exit_and_diagnostics_survive(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for code, exception, message in ((77, DRIVER['MissingTool'], 'see'),
+            for code, exception, message in ((77, RuntimeError, 'see'),
                                              (4, RuntimeError, 'exit 4'),
                                              (-signal.SIGTERM, RuntimeError, 'exit -15')):
                 script = f"import os, sys; print('diagnostic', flush=True); "
@@ -541,7 +551,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                 return f'SF:{source}\nDA:1,1\n' + ('DA:2,0\n' if unavailable in objects else '')
             context = DRIVER['measure'].__globals__
             with patch.dict(context, ROOT=root, export=export):
-                for release, code in ((False, 77), (True, 1)):
+                for release, code in ((False, 1), (True, 1)):
                     if release:
                         for collection in installed:
                             shutil.rmtree(root / collection['name'])
@@ -549,7 +559,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                         DRIVER['measure'](root, {}, root, executable, [], [], installed, 'fixture',
                                           time.monotonic(), False)
                     with patch.dict(DRIVER['entry'].__globals__, main=main), patch.object(
-                            sys, 'argv', ['coverage'] + (['--release'] if release else [])):
+                            sys, 'argv', ['coverage'] + ([])):
                         self.assertEqual(DRIVER['entry'](), code)
                     result = json.loads((root / 'totals.json').read_text())
                     records = root / 'sdlc/records/coverage'

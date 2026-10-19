@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from inputs import HERE, PLATFORMS, authority, selected, versions
-from release_pack_cases import REPO, copy_packer, pack, reject_lane_cleanup
+from release_pack_cases import CARGO, REPO, child_env, copy_packer, pack, reject_lane_cleanup
 from validate_inputs import archive_tree
 
 TARGET = 'x86_64-unknown-linux-gnu'
@@ -42,10 +42,10 @@ class Cases(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.home = self.root / 'home'
         self.home.mkdir()
-        self.env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(self.home), 'LC_ALL': 'C.UTF-8',
-                    'PYTHONDONTWRITEBYTECODE': '1', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
-                    'CARGO_NET_OFFLINE': 'true', 'RUSTC_WRAPPER': '', 'THINKTHEN_API_KEY': 'sk-loopback-0403-fixture',
-                    'THINKTHEN_BASE_URL': BACKEND}
+        self.env = child_env(keep=CARGO, home=self.home, LC_ALL='C.UTF-8',
+                             PYTHONDONTWRITEBYTECODE='1', GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL='/dev/null',
+                             CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+                             THINKTHEN_API_KEY='sk-loopback-0403-fixture', THINKTHEN_BASE_URL=BACKEND)
 
 
     def tearDown(self):
@@ -60,9 +60,13 @@ class Cases(unittest.TestCase):
         entry = ['/bin/sh', str(HERE.parent / 'check.sh'), '9000']
         result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid'})
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn('unknown THINKTHEN_TEST_PROFILE', result.stderr)
+        self.assertEqual(result.stdout, '', 'an invalid profile started tool setup')
+        self.assertEqual(result.stderr, 'duckdb: unknown THINKTHEN_TEST_PROFILE: invalid\n')
         for profile in ('routine', 'full', 'stress', 'smoke'):
+            # The prepared PATH and compiler sentinel belong to this missing-host
+            # fixture. It exercises host refusal, without provisioning gate tools.
             result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                 'THINKTHEN_RESOLVED_TOOLS': 'duckdb',
                                  'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
             self.assertEqual(result.returncode, 77, result.stderr)
             self.assertIn('toolchain is missing', result.stdout)

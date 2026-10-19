@@ -1,9 +1,11 @@
 #!/bin/sh
 # Rung 3: the compiled binary against the executable pages in spec/ and every green demo.
 set -eu
+tools_group=spec
+. "$(dirname -- "$0")/resolved-tools"
 
 # Sanitize the environment inherited by build tools.
-. "$(dirname -- "$0")/heavy-lock"
+. "$(dirname -- "$0")/allow-list"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"

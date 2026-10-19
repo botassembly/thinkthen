@@ -165,8 +165,9 @@ apple-check)
 	export THINKTHEN_ARTIFACT
 	# Only a completed check qualifies. A missing tool or package (77) fails.
 	sh "libraries/$4/check.sh" && code=0 || code=$?
+	REPO=$repo
 	. sdlc/scripts/verdict.sh
-	verdict release "libraries/$4" "$code"
+	verdict "libraries/$4" "$code"
 	;;
 source-capture)
 	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
@@ -674,7 +675,7 @@ php-dart-tools)
 	dart_bin=$dart
 	printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
 	[ -z "${GATE_OUTPUT:-}" ] || git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
-	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
 	;;
 swift-zig-tools)
 	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'

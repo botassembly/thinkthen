@@ -423,7 +423,7 @@ def linux_coverage_destination_case():
         resolved = path if path == Path('/home') or Path('/home') in path.parents else path.resolve()
         with patch.dict(driver['main'].__globals__, tools=lambda: {}, installed_helpers=lambda: []), \
                 patch.object(sys, 'platform', 'linux'), \
-                patch.object(sys, 'argv', ['coverage', '--release', '--platform', 'linux', '--output', output]), \
+                patch.object(sys, 'argv', ['coverage', '--platform', 'linux', '--output', output]), \
                 patch.object(subprocess, 'check_output', side_effect=['0' * 40, b'']), \
                 patch.object(Path, 'resolve', return_value=resolved), \
                 patch.object(Path, 'mkdir', side_effect=AcceptedOutput) as create:
@@ -869,8 +869,9 @@ def parameter_cases():
         root = Path(temporary)
         for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
             (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'hosted-candidate.py'):
+        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'hosted-candidate.py'):
             (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
+        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
         (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),

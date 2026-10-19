@@ -1,11 +1,13 @@
 #!/bin/sh
 set -eu
+case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 1 ;; *) exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/ada
+tools_group=ada
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
-case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) exit 77 ;; esac
-case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
 for tool in gprbuild gnatmake gcc python3 nm node; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "Ada gate missing $tool" >&2; exit 77; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "Ada gate missing $tool" >&2; exit 1; }
 done
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home

@@ -1,4 +1,4 @@
-# Sourced by heavy-lock and lint (ticket 0133). The rung and every child it
+# Sourced by the build rungs and lint (ticket 0133). The rung and every child it
 # starts see only the names below. A developer's unrelated service key never
 # reaches cargo, a build script, a test binary, or a surface check.
 # CARGO_TARGET_DIR is left off, so every rung builds in the lane's own target
@@ -9,8 +9,8 @@ for name in $(awk 'BEGIN { for (name in ENVIRON) print name }'); do
 	GITHUB_ACTIONS | RUNNER_ENVIRONMENT) ;;
 	PATH | HOME | PWD | LANG | LC_ALL | TMPDIR | XDG_CONFIG_HOME | XDG_RUNTIME_DIR | XDG_CACHE_HOME | XDG_STATE_HOME) ;;
 	CARGO_BUILD_JOBS | CARGO_HOME | RUSTUP_HOME | RUSTUP_TOOLCHAIN | RUSTC_WRAPPER | SCCACHE_CONF | R_LIBS_USER | PUB_CACHE | UV_CACHE_DIR | UV_PYTHON_INSTALL_DIR | npm_config_cache) ;;
-	THINKTHEN_TOOLCHAINS | THINKTHEN_SESSION_JDK_HOME | THINKTHEN_DUCKDB_CLI | SQLITE_AMALGAMATION) ;;
-	THINKTHEN_PRIVATE_NAMES | THINKTHEN_PUBLISH_ROOT | THINKTHEN_MACOS_APPLE_CHECKS) ;;
+	THINKTHEN_RESOLVED_TOOLS | THINKTHEN_TOOLCHAINS | THINKTHEN_SESSION_JDK_HOME | THINKTHEN_DUCKDB_CLI | SQLITE_AMALGAMATION) ;;
+	THINKTHEN_PRIVATE_NAMES | THINKTHEN_PUBLISH_ROOT) ;;
 	*)
         # macOS sh cannot unset a name containing punctuation. Remove it before
         # restarting the entry script; ordinary names remain shell-local work.

@@ -1,18 +1,20 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in
- routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 77 ;;
+ routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 1 ;;
  *) echo 'Zig: unknown test profile' >&2; exit 2 ;;
 esac
-zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
-[ -x "$zig" ] || exit 77
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/zig
+tools_group=zig
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+root=$(CDPATH= cd -- "$here/../.." && pwd)
+zig=$(command -v zig || true)
+[ -x "$zig" ] || exit 1
+for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
 export THINKTHEN_ZIG="$zig"
-for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
-export PATH="$(dirname "$zig"):$PATH"
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 mkdir -p "$here/target/cache" "$here/target/scratch" "$here/target/artifacts"

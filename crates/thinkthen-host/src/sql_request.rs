@@ -1,90 +1,17 @@
-//! SQLite host arguments enter the native shared Request without serialization.
-use crate::complete_native::{Inputs, Prepared, defect};
+//! Shared SQL request definitions, observations and row recovery.
+use crate::complete_native::{Prepared, defect};
 mod rows;
-pub use rows::{project_carrier, project_outcome, project_value, typed_values};
+pub use rows::{project_carrier, typed_values};
 use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
     AdmittedRequest, CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request,
     RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed, RequestInput,
-    RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
+    RequestOptions, RequestQuestion, RequestValue, Surface,
 };
 
-pub fn run(
-    engine: &Engine,
-    prepared: &Prepared,
-    request: &AdmittedRequest,
-    inputs: Inputs,
-    options: CallOptions<'_>,
-    surface: Surface,
-) -> Value {
-    let cancelled = thinkthen::CancelToken::new();
-    if inputs.cancelled {
-        cancelled.cancel();
-    }
-    let events = Mutex::new(Vec::new());
-    let observer = |event: RecordObservation<'_>| {
-        events
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(
-                observation(&event, request.request().call.function())
-                    .unwrap_or_else(|error| crate::complete_native::failure(&error)),
-            );
-    };
-    let options = options
-        .surface(surface)
-        .attempts(inputs.attempts)
-        .observe(&observer);
-    let options = if inputs.cancelled {
-        options.cancel(&cancelled)
-    } else {
-        options
-    };
-    let result = (|| {
-        let feed = if matches!(
-            request.request().call.arguments().input,
-            RequestInput::Feed { .. }
-        ) {
-            let reading = request.record_reading()?;
-            let records = inputs.deferred_records(prepared.reading().or(Some(&reading)));
-            let feed = RequestFeed::from_records("sqlite", records);
-            let feed = if matches!(prepared, Prepared::Filter(_)) {
-                feed.with_all_filter_results()
-            } else {
-                feed
-            };
-            let feed = if inputs.image_inputs()? {
-                feed.with_image_inputs()
-            } else {
-                feed
-            };
-            let feed = if inputs.incremental {
-                feed
-            } else {
-                feed.eager()
-            };
-            Some(feed)
-        } else {
-            None
-        };
-        let outcome = engine.execute_request(
-            request,
-            RequestEnvironment {
-                controls: options,
-                feed,
-            },
-        )?;
-        render(outcome)
-    })();
-    let native = result.unwrap_or_else(|error| crate::complete_native::failure(&error));
-    let events = events
-        .into_inner()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-    crate::complete_native::carrier(native, Value::Array(events))
-}
-
-fn observation(
+/// Serialize a borrowed SQL observation with its native question detail.
+pub fn observation(
     event: &RecordObservation<'_>,
     function: thinkthen::RequestFunction,
 ) -> Result<Value, Error> {
@@ -102,6 +29,7 @@ fn observation(
     Ok(value)
 }
 
+/// Translate a prepared SQL question into its native request definition.
 pub fn definition(prepared: &Prepared) -> RequestDefinition {
     match prepared {
         Prepared::Atomic(q) => RequestDefinition::Atomic(q.clone()),
@@ -116,10 +44,7 @@ pub fn definition(prepared: &Prepared) -> RequestDefinition {
     }
 }
 
-pub fn admit(prepared: &Prepared) -> Result<AdmittedRequest, Error> {
-    request(prepared, RequestOptions::default())?.admit()
-}
-
+/// Construct the shared SQL named-feed request with explicit call options.
 pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, Error> {
     request_input(
         prepared,
@@ -133,16 +58,8 @@ pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, 
     )
 }
 
-/// Build an explicit file request using the existing native source reader.
-pub fn request_source(
-    prepared: &Prepared,
-    source: thinkthen::RequestSource,
-    options: RequestOptions,
-) -> Result<Request, Error> {
-    request_input(prepared, RequestInput::Source { source }, options)
-}
-
-fn request_input(
+/// Construct a native request for a prepared SQL definition and input.
+pub fn request_input(
     prepared: &Prepared,
     input: RequestInput,
     options: RequestOptions,
@@ -173,57 +90,6 @@ fn request_input(
     };
     Ok(Request::for_function(function, args))
 }
-fn render(outcome: RequestOutcome) -> Result<Value, Error> {
-    match outcome {
-        RequestOutcome::Complete(call) => {
-            let mut value = serde_json::to_value(&call).map_err(|_| defect())?;
-            supplement(&mut value, call.value())?;
-            Ok(value)
-        }
-        RequestOutcome::Failed { completed, error } => {
-            let mut value = crate::complete_native::failure(&error);
-            supplement(&mut value, &completed)?;
-            crate::complete_native::put(
-                &mut value,
-                "completed",
-                serde_json::to_value(completed).map_err(|_| defect())?,
-            )?;
-            Ok(value)
-        }
-    }
-}
-pub fn supplement(value: &mut Value, result: &RequestValue) -> Result<(), Error> {
-    macro_rules! rows {
-        ($rows:expr) => {
-            crate::complete_native::put(
-                value,
-                "ordinals",
-                json!($rows.iter().map(|row| row.ordinal()).collect::<Vec<_>>()),
-            )
-        };
-    }
-    match result {
-        RequestValue::Decisions(v) => rows!(v),
-        RequestValue::Choices(v) => rows!(v),
-        RequestValue::Tags(v) => rows!(v),
-        RequestValue::Scores(v) => rows!(v),
-        RequestValue::Filtered(v) => rows!(v),
-        RequestValue::Ranked(v) => rows!(v),
-        RequestValue::SetRanked(v) => rows!(v),
-        RequestValue::Annotations(v) => rows!(v),
-        RequestValue::Recognized(v) => rows!(v),
-        RequestValue::Found(v) => crate::complete_native::put(
-            value,
-            "selection",
-            json!(match v.selection() {
-                thinkthen::FindSelection::None => None,
-                thinkthen::FindSelection::Unit(at) => Some(at),
-            }),
-        ),
-        RequestValue::Related(_) => Ok(()),
-    }
-}
-
 /// Execute SQL records with row recovery while retaining canonical call facts.
 pub fn run_records_recovering<'a>(
     engine: &Engine,
@@ -253,7 +119,8 @@ pub fn run_feed_recovering(
     recover(engine, prepared, request, Some(feed), controls, surface)
 }
 
-fn recover(
+/// Execute an optional SQL feed with native row recovery and call facts.
+pub fn recover(
     engine: &Engine,
     prepared: &Prepared,
     request: &AdmittedRequest,
@@ -351,53 +218,6 @@ fn recover(
     crate::complete_native::put(&mut carrier, "rows", json!(rows))?;
     crate::complete_native::put(&mut carrier, "observations", json!(events))?;
     Ok(carrier)
-}
-
-/// Decode SQL-owned readers only after admission, then use shared row recovery.
-pub fn run_recovering(
-    engine: &Engine,
-    prepared: &Prepared,
-    request: &AdmittedRequest,
-    inputs: Inputs,
-    controls: CallOptions<'_>,
-    surface: Surface,
-) -> Result<Value, Error> {
-    let cancelled = thinkthen::CancelToken::new();
-    if inputs.cancelled {
-        cancelled.cancel();
-    }
-    let controls = controls.attempts(inputs.attempts);
-    let controls = if inputs.cancelled {
-        controls.cancel(&cancelled)
-    } else {
-        controls
-    };
-    if matches!(
-        request.request().call.arguments().input,
-        RequestInput::Source { .. }
-    ) {
-        return recover(engine, prepared, request, None, controls, surface);
-    }
-    let reading = request.record_reading()?;
-    let name = match &request.request().call.arguments().input {
-        RequestInput::Feed { name, .. } => name.as_str(),
-        _ => "sql",
-    };
-    let feed = RequestFeed::from_records(
-        name,
-        inputs.deferred_records(prepared.reading().or(Some(&reading))),
-    );
-    let feed = if inputs.image_inputs()? {
-        feed.with_image_inputs()
-    } else {
-        feed
-    };
-    let feed = if inputs.incremental {
-        feed
-    } else {
-        feed.eager()
-    };
-    run_feed_recovering(engine, prepared, request, feed, controls, surface)
 }
 
 /// Retain one whole-call refusal with only metadata the actual error owns.

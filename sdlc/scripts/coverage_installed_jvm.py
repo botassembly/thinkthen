@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+from tools import commands
 import sys
 
 COLLECTIONS = tuple(
@@ -15,7 +16,7 @@ def prepare(context):
     root, run = context['root'], context['run']
     command, missing = context['command'], context['missing_tool']
     env = dict(context['env'])
-    for tool in ('bwrap', 'python3'):
+    for tool in commands(['jvm']):
         if not shutil.which(tool, path=env.get('PATH')):
             raise missing(f'installed JVM collection needs {tool}')
     jdk = os.environ.get('THINKTHEN_SESSION_JDK_HOME')
