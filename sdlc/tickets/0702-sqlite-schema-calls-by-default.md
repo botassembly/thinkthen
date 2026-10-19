@@ -25,6 +25,7 @@ PostgreSQL and DuckDB get the same check once their own trigger behavior is meas
 ## Progress
 
 - 2026-10-19 started
+- 2026-10-19 next: M5 job1792441346673-6901 at00ad4697d passed installed SQLite schema and trigger zero-send cases plus policy, clippy, unit tests, builds, privacy and exports, while corrected formatting0f94fe89b awaits checks and proof still needs the correctly named red library, correct example working directory, unsupported native filename disposition and PostgreSQL prerequisites, with new machine work queued behind0619 and0636.
 
 ## Amendment, 2026-10-19
 
