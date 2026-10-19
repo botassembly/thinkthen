@@ -13,6 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--docker', default='docker', help='host Docker executable captured before tool PATH isolation')
 parser.add_argument('checks', nargs='+', choices=('lint', 'test', 'test-full-cases', 'package', 'test-stress', 'prepare'))
 args = parser.parse_args()
 if 'prepare' in args.checks and args.checks != ['prepare']:
@@ -43,10 +44,10 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
         destination = context / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / relative, destination)
-    subprocess.run(['docker', 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
+    subprocess.run([args.docker, 'build', '--rm', '--force-rm', '--memory', str(memory) + 'g',
                     '--cpu-period', '100000', '--cpu-quota', str(pin['cpus'] * 100000), '--platform', 'linux/' + ('amd64' if arch == 'x86_64' else 'arm64'),
                     '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
-image = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
+image = subprocess.check_output([args.docker, 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
 print('linux-check: image=' + image + ' base=' + base, flush=True)
 if args.checks == ['prepare']:
     raise SystemExit(0)
@@ -66,7 +67,7 @@ for name in ('sccache', 'pip-cache', 'uv-cache', 'python', 'config', 'cache'):
     folder = owned / name
     folder.mkdir(exist_ok=True)
     cache_mounts += ['-v', str(folder) + ':' + manifest['linux_prefix'] + '/' + name]
-command = ['docker', 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
+command = [args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
            '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
            '--security-opt', 'seccomp=unconfined', '--security-opt', 'apparmor=unconfined',
            '--security-opt', 'systempaths=unconfined', '--user', str(os.getuid()) + ':' + str(os.getgid()),

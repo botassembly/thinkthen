@@ -341,8 +341,14 @@ class LinuxSourceIdentity(unittest.TestCase):
                               + '    log.write(json.dumps(sys.argv[1:]) + "\\n")\n'
                               + 'if sys.argv[1] == "image": print("sha256:test")\n')
             docker.chmod(0o755)
-            env['PATH'] = str(binary) + os.pathsep + env['PATH']
-            command = [sys.executable, str(root / 'sdlc/scripts/linux-check'), 'test']
+            isolated = root / 'isolated-bin'
+            isolated.mkdir()
+            (isolated / 'docker').write_text('#!/bin/sh\nexit 97\n')
+            (isolated / 'docker').chmod(0o755)
+            env['PATH'] = str(isolated) + os.pathsep + env['PATH']
+            # The host Docker executable remains callable after tool PATH isolation.
+            command = [sys.executable, str(root / 'sdlc/scripts/linux-check'),
+                       '--docker', str(docker), 'test']
             first = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
             source = next(root.glob('.linux-*/src')).resolve()
