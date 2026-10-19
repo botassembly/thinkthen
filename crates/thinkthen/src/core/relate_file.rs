@@ -221,7 +221,6 @@ impl RelateSpec {
         })
     }
 
-    #[cfg(test)]
     pub(crate) fn override_threshold(&mut self, value: &str) -> Result<(), RelateConfigError> {
         self.threshold = parse_typed_cut(Some(value)).map_err(|_| RelateConfigError::Threshold)?;
         Ok(())

@@ -218,7 +218,6 @@ impl<'a> CallOptions<'a> {
         self
     }
 
-    #[cfg(test)]
     pub(crate) const fn readiness(mut self, reader: &'a readiness::Readiness<'a>) -> Self {
         self.readiness = Some(reader);
         self
