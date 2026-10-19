@@ -38,6 +38,7 @@ Release smoke jobs on the Intel macOS runner ran into the six-hour cap while han
 
 - 2026-10-18 started
 - 2026-10-19 next: Fresh review accepts ed9716bfb after the complete hosted-workflow self-test, global workflows, children and policy passed in M5job1792421328845-87188; routing fixtures now read actual manifest pins and isolate deferred legacy Ruby setup, while production hosted Ruby readers remain incompatible until0620, and the standalone closing gate is next.
+- 2026-10-19 next: The standalone closing gate at af70f418d failed after105.4s through the same stale shared sccache temporary directory as0612, with receiptc0f6f86a902e226cf0275260233a689b33f2e02e retained; accepted workflow checks remain green and the shared compiler-isolation repair will land before the next native closing run.
 
 ## Amendment, 2026-10-18
 
