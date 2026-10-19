@@ -33,7 +33,7 @@ class DarwinSignalObservation(unittest.TestCase):
             probe = home / 'signal-probe'
             source = Path(__file__).parent / 'children/signal_observer_probe.c'
             subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
-                            '-o', str(probe)], env=env, check=True, capture_output=True, text=True)
+                            '-o', str(probe)], env=env, check=True, text=True)
             observation = SignalObservation(home, env)
             self.addCleanup(observation.close)
             for signum in (signal.SIGINT, signal.SIGTERM):

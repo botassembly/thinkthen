@@ -2,7 +2,6 @@
 #define _DARWIN_C_SOURCE
 #include <errno.h>
 #include <fcntl.h>
-#include <mach-o/dyld-interposing.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -88,4 +87,10 @@ static int observe_sigaction(int signum, const struct sigaction *action,
     return result;
 }
 
-DYLD_INTERPOSE(observe_sigaction, sigaction)
+/* The loader consumes this section; no private SDK header is required. */
+__attribute__((used)) static const struct {
+    const void *replacement;
+    const void *original;
+} interposition __attribute__((section("__DATA,__interpose"))) = {
+    (const void *)&observe_sigaction, (const void *)&sigaction
+};

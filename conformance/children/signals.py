@@ -14,7 +14,7 @@ class SignalObservation:
         source = Path(__file__).with_name('signal_observer.c')
         subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-dynamiclib',
                         str(source), '-o', str(library)], env=env, check=True,
-                       capture_output=True, text=True)
+                       text=True)
         self.reader, self.writer = os.pipe()
         os.set_blocking(self.writer, False)
         self.options = {'env': {**env, 'DYLD_INSERT_LIBRARIES': str(library),
