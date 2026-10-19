@@ -57,7 +57,7 @@ try:
     finally:
         schema_server.close()
     before = len(server.requests)
-    preview = subprocess.run([binary, 'plan', scratch, scratch], env=env, capture_output=True, text=True)
+    preview = subprocess.run([binary, 'plan', scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
     assert preview.returncode == 0, (preview.stdout, preview.stderr)
     assert json.loads(preview.stdout) and len(server.requests) == before, preview.stdout
     print('CPP_INSTALLED_PLAN_PASS requests=0')
@@ -78,7 +78,7 @@ try:
         qpath.write_text(json.dumps(question))
         ipath.write_text(json.dumps(original))
         before_plan = len(server.requests)
-        planned = subprocess.run([binary, 'plan-' + verb, qpath, ipath], env=env, capture_output=True, text=True)
+        planned = subprocess.run([binary, 'plan-' + verb, qpath, ipath], env=env, capture_output=True, text=True, timeout=5)
         assert planned.returncode == 0 and len(server.requests) == before_plan, (verb, planned.returncode, planned.stdout, planned.stderr)
         if verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank'):
             plan = json.loads(planned.stdout)
@@ -162,7 +162,7 @@ try:
         print('CPP_INSTALLED_EDGE_PASS',mode)
     for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 1)):
         before = len(server.requests)
-        result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True)
+        result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0 and result.stdout.strip() == ('cardinality-pass judgments=0' if sends == 0 else 'cardinality-pass judgments=2'), (mode, result.returncode, result.stdout, result.stderr)
         assert len(server.requests) == before + sends, (mode, len(server.requests), before)
         if sends:

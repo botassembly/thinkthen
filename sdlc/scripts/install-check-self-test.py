@@ -21,8 +21,8 @@ from install_check_channels import download, python, rust, maven, c, INSTALLERS,
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
 from inputs import selected as duckdb_identity, versions as duckdb_versions
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from conformance.children.children import fixture_run
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'conformance/children'))
+from children import fixture_run
 
 
 class ZipInstallation(unittest.TestCase):
