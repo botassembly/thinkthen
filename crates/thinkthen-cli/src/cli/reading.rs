@@ -44,6 +44,8 @@ impl Reading {
         self
     }
 
+    pub(crate) const fn is_default(&self) -> bool { self.default }
+
     pub(crate) fn fields(&self) -> &[String] {
         &self.fields
     }
