@@ -67,11 +67,9 @@ impl<'connection> Catalog<'connection> {
             "description": "List registered ThinkThen functions, argument counts and descriptions as JSON without judging evidence."
         }));
         let descriptions = Value::Array(self.entries.into_inner()).to_string();
-        self.connection.create_scalar_function(
-            NAME,
-            0,
-            FunctionFlags::SQLITE_UTF8,
-            move |_| Ok(descriptions.clone()),
-        )
+        self.connection
+            .create_scalar_function(NAME, 0, FunctionFlags::SQLITE_UTF8, move |_| {
+                Ok(descriptions.clone())
+            })
     }
 }
