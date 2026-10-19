@@ -1,11 +1,11 @@
 //! Minimal production function calls; decoded empty results are valid answers.
 
-use crate::public::{
+use thinkthen::{
     Annotated, CallOptions, ChooseQuestion, Engine, Entity, Error, Kind, Question, QuestionSet,
     Recognize, Relate, TagQuestion,
 };
 
-crate::choices! { enum Day { Monday => "Monday", Tuesday => "Tuesday" } }
+thinkthen::choices! { enum Day { Monday => "Monday", Tuesday => "Tuesday" } }
 
 pub(super) const ROWS: [(&str, &str); 10] = [
     ("decide", "function decide"),
@@ -21,14 +21,13 @@ pub(super) const ROWS: [(&str, &str); 10] = [
 ];
 
 pub(super) fn check(
-    inner: &crate::engine::facade::Engine,
+    engine: &Engine,
     environment: &crate::cli::edge::Environment,
     report: &mut crate::probes::Report,
 ) -> Result<(), crate::failure::Failure> {
-    use crate::public::AttemptObservation;
+    use thinkthen::AttemptObservation;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    let engine = Engine::for_check(inner);
     let interrupted = || environment.cancel().fired();
     for (name, row) in ROWS {
         let stopped = AtomicBool::new(false);
@@ -40,7 +39,7 @@ pub(super) fn check(
         let options = CallOptions::new()
             .interrupt(&interrupted)
             .observe_attempt(&observe);
-        let failure = match run(&engine, name, options) {
+        let failure = match run(engine, name, options) {
             Ok(()) => None,
             Err(error) => {
                 if let Some(reason) = error.estimated_input_denial() {
@@ -127,8 +126,8 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
                     .iter()
                     .any(|held| matches!(held.value(), Annotated::Failed(_)))
                 {
-                    return Err(Error::of(
-                        crate::public::ErrorKind::Backend,
+                    return Err(Error::new(
+                        thinkthen::ErrorKind::Backend,
                         "the backend failed an annotation question",
                     ));
                 }
@@ -146,7 +145,7 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
             let entities = [Entity::new("Ada", "person")?, Entity::new("Bo", "person")?];
             engine.relate_with(&ask, entities, options).map(|_| ())
         }
-        _ => Err(Error::defect(
+        _ => Err(Error::new(thinkthen::ErrorKind::Defect,
             "an unknown function reached the backend check",
         )),
     }

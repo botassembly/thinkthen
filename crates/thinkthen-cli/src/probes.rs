@@ -81,7 +81,7 @@ pub(crate) fn probes(
             name,
             plan,
             drops_detail,
-            warning: built_in::backends::dropped_detail(backend_name),
+            warning: detail_warning(backend_name),
         })
     };
     PROBES.iter().map(probe).collect()
@@ -277,4 +277,13 @@ fn graded(
     let said = format!("the answer to question `{first}` carries no confidence");
     let graded = matches!(question, Question::Choose { .. } | Question::Score { .. });
     (graded && answer.confidence().is_none()).then_some((false, said))
+}
+
+/// Existing command advice for adapters that flatten authored descriptions.
+pub(crate) fn detail_warning(name: Option<&str>) -> &'static str {
+    if name == Some("mlx") {
+        "backend `mlx` sends each description object as its `what` text, a temporary workaround for the Strands server schema, so its other fields are left out"
+    } else {
+        "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out"
+    }
 }

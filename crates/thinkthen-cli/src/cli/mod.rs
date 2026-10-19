@@ -9,6 +9,7 @@ mod audit;
 pub(crate) mod cache;
 mod check;
 mod construction;
+mod plan_counts;
 mod diff;
 pub(crate) mod display;
 pub(crate) mod edge;

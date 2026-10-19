@@ -1,14 +1,13 @@
 //! Preview admitted native requests before any function check sends.
 
 use super::{RELATE, TEXT, choice, decision, score, tags};
-use crate::core::{self, PlanSummary};
-use crate::engine::facade::Engine;
+use thinkthen::{Engine, PlanEstimate};
+use crate::cli::plan_counts::Counts;
 use crate::failure::Failure;
 use crate::{RequestEnvironment as Environment, RequestInput as Input};
 
 /// One line per function and the bound before retries and refusal splits.
-pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usize), Failure> {
-    let engine = crate::public::Engine::for_check(inner);
+pub(in crate::cli::check) fn prepare(engine: &Engine) -> Result<(Vec<String>, usize), Failure> {
     let decide = decision().map_err(invalid)?;
     let definitions = [
         (
@@ -20,13 +19,13 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
         (
             "choose",
             crate::RequestFunction::Choose,
-            choice().map_err(invalid)?.0.into(),
+            choice().map_err(invalid)?.into(),
             false,
         ),
         (
             "tag",
             crate::RequestFunction::Tag,
-            tags().map_err(invalid)?.0.into(),
+            tags().map_err(invalid)?.into(),
             false,
         ),
         (
@@ -53,8 +52,8 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let mut summaries = Vec::new();
     for (name, call, definition, native_error) in definitions {
         let request = admitted(call, definition, text(TEXT))?;
-        let (summary, _) = engine
-            .plan_request_summary(&request, Environment::default())
+        let summary = engine
+            .plan_request(&request, Environment::default())
             .map_err(|error| {
                 if native_error {
                     Failure::from(error)
@@ -64,12 +63,25 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
             })?;
         summaries.push((name, summary));
     }
-    staged(inner, &engine, decide, &mut summaries)?;
+    staged(engine, decide, &mut summaries)?;
     let mut requests = 0;
     let lines = summaries
         .into_iter()
         .map(|(name, summary)| {
-            let counts = summary.counts().map_err(|_| invalid(()))?;
+            let mut counts = Counts::from(&summary);
+            // These fixed whole-set checks historically count one probe input,
+            // independently of its candidate/entity count. Native preparation
+            // still supplies every body byte and accounting estimate.
+            if matches!(name, "find" | "relate") {
+                counts.records = 1;
+                counts.upper_bound = false;
+            }
+            if name == "recognize" {
+                // The fixed check presents one possible kind request after its
+                // native boundary bodies, as specification/check.md defines.
+                counts.requests = summary.prepared_requests().len().checked_add(1).ok_or_else(|| invalid(()))?;
+                counts.upper_bound = true;
+            }
             requests += counts.requests;
             Ok(format!(
                 "function-plan {name} {}",
@@ -81,10 +93,9 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
 }
 
 fn staged(
-    inner: &Engine,
-    engine: &crate::Engine,
+    engine: &Engine,
     decide: crate::Question,
-    summaries: &mut Vec<(&'static str, PlanSummary)>,
+    summaries: &mut Vec<(&'static str, PlanEstimate)>,
 ) -> Result<(), Failure> {
     let find = admitted(
         crate::RequestFunction::Find,
@@ -95,13 +106,8 @@ fn staged(
             items: vec![item(TEXT), item("The box was intact.")],
         },
     )?;
-    let (_, summary) = find
-        .plan_find(engine, Environment::default())
-        .map_err(Failure::from)?;
-    summaries.push((
-        "find",
-        probe_summary(inner.backend(), summary.first_body().into_iter(), 0)?,
-    ));
+    let summary = engine.plan_request(&find, Environment::default()).map_err(Failure::from)?;
+    summaries.push(("find", summary));
     let annotation = admitted(
         crate::RequestFunction::Annotate,
         crate::QuestionSet::builder()
@@ -112,8 +118,8 @@ fn staged(
             .into(),
         text(TEXT),
     )?;
-    let (summary, _, _) = engine
-        .plan_annotation_request(&annotation, Environment::default())
+    let summary = engine
+        .plan_request(&annotation, Environment::default())
         .map_err(Failure::from)?;
     summaries.push(("annotate", summary));
     let recognition = admitted(
@@ -126,24 +132,7 @@ fn staged(
             .into(),
         text("Ada"),
     )?;
-    let preview = recognition
-        .plan_recognition(
-            inner.backend(),
-            inner.profile(),
-            Environment::default(),
-            crate::core::MAX_RECORD_BYTES,
-        )
-        .map_err(Failure::from)?;
-    let first = preview
-        .first
-        .ok_or(Failure::Defect("a check preview has no first request"))?;
-    // specification/check.md counts one fixed probe and one possible kind request
-    // for its single-token name; native preparation owns the admitted body bytes.
-    let summary = probe_summary(
-        inner.backend(),
-        first.requests.iter().map(|request| request.body.as_slice()),
-        1,
-    )?;
+    let summary = engine.plan_request(&recognition, Environment::default()).map_err(Failure::from)?;
     summaries.push(("recognize", summary));
     let relation = admitted(
         crate::RequestFunction::Relate,
@@ -152,17 +141,7 @@ fn staged(
             items: vec![entity("Ada")?, entity("Bo")?],
         },
     )?;
-    let preview = relation
-        .plan_relations(inner.backend(), inner.profile(), Environment::default())
-        .map_err(Failure::from)?;
-    let summary = probe_summary(
-        inner.backend(),
-        preview
-            .requests
-            .iter()
-            .map(|request| request.body.as_slice()),
-        0,
-    )?;
+    let summary = engine.plan_request(&relation, Environment::default()).map_err(Failure::from)?;
     summaries.push(("relate", summary));
     Ok(())
 }
@@ -210,24 +189,6 @@ fn entity(name: &str) -> Result<crate::RequestItem, Failure> {
             .map_err(invalid)?,
     });
     Ok(item)
-}
-
-fn probe_summary<'a>(
-    backend: &core::Backend,
-    bodies: impl Iterator<Item = &'a [u8]>,
-    adaptive: usize,
-) -> Result<PlanSummary, Failure> {
-    let mut summary = PlanSummary::new(adaptive > 0).with_accounting(backend.accounting());
-    summary.record().map_err(|_| invalid(()))?;
-    for body in bodies {
-        summary.request(body).map_err(|_| invalid(()))?;
-    }
-    if adaptive > 0 {
-        summary
-            .possible_requests(adaptive)
-            .map_err(|_| invalid(()))?;
-    }
-    Ok(summary)
 }
 
 fn invalid<T>(_error: T) -> Failure {

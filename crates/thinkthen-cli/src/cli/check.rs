@@ -160,7 +160,7 @@ pub(crate) fn say_dropped_detail(dropped: bool, name: Option<&str>) -> Result<()
         writeln!(
             std::io::stderr().lock(),
             "thinkthen: {}",
-            built_in::backends::dropped_detail(name)
+            crate::probes::detail_warning(name)
         )
         .map_err(Failure::Output)?;
     }
