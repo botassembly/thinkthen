@@ -12,6 +12,8 @@ Reviews: revision cc87266, accept
 
 Reviews: revision cc87266, accept
 
+Reviews: revision c46a66a, accept
+
 ## Outcome
 
 - Changes: `.github/workflows/gate.yml`, `.github/workflows/release.yml`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/release-registry-self-test.py`, `sdlc/scripts/release-smoke`, `sdlc/scripts/release-smoke-command-test`.
