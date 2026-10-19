@@ -4,26 +4,27 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use crate::core::adapters::built_in::DecodeError;
-use crate::core::{BackendError, PointerError, ProfileLimit, QuestionFileError, QuestionSetError, ReadingError, RecordError, Source};
+use thinkthen::{ErrorKind, TransportFailure as TransportKind};
 use crate::render::RenderError;
-
-use crate::engine::error::{TransportKind, reply_too_large};
-use crate::table;
 
 mod after_signal;
 pub(crate) mod context;
 mod convert;
+mod source;
+mod message;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
 mod profile;
+mod provider;
+mod json;
 pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
 pub(crate) use status::SizeAdvice;
 mod stopped;
 
+const NAME: &str = "thinkthen";
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 const RUN_MODELS_DIFFER: &str =
     "the replies for one filter or rank run named different model versions; pin --model and rerun";
@@ -34,20 +35,25 @@ const UNNAMED: &str = "defect: a usage error with no sentence";
 /// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
-    Native(crate::ErrorKind, String),
+    Native(ErrorKind, String),
     /// A safe native named-question loading refusal.
     NamedQuestion(String),
     /// The flags and the environment name no backend.
-    Backend(BackendError),
+    Backend(String),
     OpenProfile {
         path: PathBuf,
         error: io::Error,
     },
     Profile {
         path: PathBuf,
-        error: crate::Error,
+        error: thinkthen::Error,
     },
-    ProfileLimit(ProfileLimit),
+    ProfileLimit {
+        profile: String,
+        dimension: &'static str,
+        limit: usize,
+        actual: usize,
+    },
     /// A shared context file or its batch could not be used.
     Context(context::Error),
     Relate(relate::Error),
@@ -55,13 +61,13 @@ pub(crate) enum Failure {
     QuietWithDetails,
     RawWithAnotherView,
     /// The question file, or a value beside it, was refused.
-    Question(QuestionFileError),
+    Question { message: String, from_file: bool },
     /// The file the question was to be read from could not be opened.
     OpenQuestionFile(io::Error),
     /// The question file or question set holds more than 1 MiB.
     QuestionFileTooLarge,
     /// The question set was refused.
-    QuestionSet(QuestionSetError),
+    QuestionSet(message::QuestionSet),
     /// The question-set file could not be opened.
     OpenQuestionSet(io::Error),
     /// One input object already holds a question name.
@@ -77,9 +83,9 @@ pub(crate) enum Failure {
     /// Safe numeric image admission/decoder refusal, with no input bytes.
     Image(String),
     /// Estimated input admission refused this final encoded body.
-    EstimatedInput(crate::public::EstimatedInputDenial),
+    EstimatedInput(thinkthen::EstimatedInputDenial),
     /// `--jobs` differs from the width this process already selected.
-    WidthActive(crate::engine::WidthActive),
+    WidthActive(String),
     /// `--option` was given beside a list of options on the command line.
     OptionWithList,
     /// `--label` was given beside positional labels.
@@ -95,9 +101,9 @@ pub(crate) enum Failure {
     /// `--quiet` was given to `tag`, whose list has no exit-code spelling.
     TagQuiet,
     /// The framing and the pointers cannot act together.
-    Reading(ReadingError),
+    Reading(String),
     /// A pointer is not a JSON Pointer, and the message names the one typed.
-    Pointer(&'static str, String, PointerError),
+    Pointer(&'static str, String, String),
     /// `--options` was given beside a list of options on the command line.
     OptionsWithList,
     /// `--options` was given where no record holds a pointer to follow.
@@ -105,9 +111,9 @@ pub(crate) enum Failure {
     /// An answer was asked to reach the exit code where no answer can.
     QuietOverRecords,
     /// One record could not become the evidence of one request.
-    Record(RecordError),
+    Record(String),
     /// A CSV or TSV header or record broke its table rule.
-    Table(table::Error),
+    Table(thinkthen::Error),
     /// The file the records were to be read from could not be opened.
     OpenInput(io::Error),
     /// `--input` named a directory rather than a file.
@@ -156,10 +162,10 @@ pub(crate) enum Failure {
     /// The backend could not be reached at all.
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
-    Status(u16),
+    Status(u16, bool),
     Provider {
         cause: Box<Self>,
-        diagnostic: crate::engine::error::ProviderDiagnostic,
+        diagnostic: provider::Diagnostic,
     },
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
@@ -171,7 +177,7 @@ pub(crate) enum Failure {
     /// The reply passed its request's limit of this many bytes and was not kept.
     ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
-    Reply(DecodeError),
+    Reply(String),
     /// The two recording options named two different folders.
     TwoFolders,
     /// A plan sends nothing, so it has nothing to record or to replay.
@@ -231,7 +237,7 @@ impl Failure {
                     advice,
                 }
             }
-            Self::Status(413) => {
+            Self::Status(413, _) => {
                 *self = Self::RequestTooLarge {
                     tokens: false,
                     advice,
@@ -279,35 +285,28 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         return code;
     }
     if let Some((code, message)) = recording::message(failure) {
-        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        let _unwritten = writeln!(writer, "{NAME}: {message}");
         return code;
     }
     if let Some((code, message)) = recognize::message(failure) {
-        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        let _unwritten = writeln!(writer, "{NAME}: {message}");
         return code;
     }
     if let Some((code, message)) = special_failure(failure) {
-        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        let _unwritten = writeln!(writer, "{NAME}: {message}");
         return code;
     }
     let (code, message): (u8, String) = match failure {
         Failure::Backend(error) => (2, error.to_string()),
-        Failure::Question(error) => (
-            match error.origin() {
-                // A file value is local failure 5. A value the user typed
-                // is a usage error, as it has always been.
-                Source::File => 5,
-                _ => 2,
-            },
-            error.to_string(),
+        Failure::Question { message, from_file } => (
+            if *from_file { 5 } else { 2 },
+            message.clone(),
         ),
         Failure::OpenQuestionFile(error) => {
             (5, format!("the question file could not be opened: {error}"))
         }
         Failure::Reading(error) => (2, error.to_string()),
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
-        Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
-        Failure::Record(RecordError::Render(error)) => (70, format!("defect: {error}")),
         Failure::Record(error) => (2, error.to_string()),
         Failure::Table(_) => (70, "defect: a table failure was not reported".to_owned()),
         Failure::NoKey(variable) => (
@@ -316,7 +315,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
-        Failure::Status(status) => (4, status::said(*status)),
+        Failure::Status(status, _) => (4, status::said(*status)),
         Failure::Provider { cause, diagnostic } => provider_message(cause, diagnostic),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::QuestionMiss { .. }
@@ -360,7 +359,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         other => (2, refused(other).unwrap_or(UNNAMED).to_owned()),
     };
     // A diagnostic that cannot be written changes neither the failure nor its code.
-    let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+    let _unwritten = writeln!(writer, "{NAME}: {message}");
     code
 }
 
@@ -373,7 +372,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     }
     Some(match failure {
         Failure::Table(error) => table_message(error),
-        Failure::Status(413) => (4, status::too_large(false, SizeAdvice::Text)),
+        Failure::Status(413, _) => (4, status::too_large(false, SizeAdvice::Text)),
         Failure::TokenLimit => (4, status::too_large(true, SizeAdvice::Text)),
         Failure::RequestTooLarge { tokens, advice } => (4, status::too_large(*tokens, *advice)),
         Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
@@ -381,15 +380,9 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         Failure::Profile { path, error } => {
             profile::message(path, error)
         }
-        Failure::ProfileLimit(limit) => (
+        Failure::ProfileLimit { profile, dimension, limit, actual } => (
             2,
-            format!(
-                "profile {} allows at most {} {}; this request has {}",
-                limit.name.as_str(),
-                limit.limit,
-                limit.kind.words(),
-                limit.actual
-            ),
+            format!("profile {profile} allows at most {limit} {dimension}; this request has {actual}"),
         ),
         Failure::QuestionFileTooLarge => (5, "the question file is too large".to_owned()),
         Failure::QuestionSet(error) => (5, error.to_string()),
@@ -532,13 +525,13 @@ const fn transport_message(kind: TransportKind) -> &'static str {
 #[cfg(test)]
 mod tests;
 
-fn report_estimated(reason: crate::public::EstimatedInputDenial, writer: &mut dyn Write) -> u8 {
-    let _unwritten = writeln!(writer, "{} usage: {reason}", crate::core::NAME);
+fn report_estimated(reason: thinkthen::EstimatedInputDenial, writer: &mut dyn Write) -> u8 {
+    let _unwritten = writeln!(writer, "{NAME} usage: {reason}");
     2
 }
 
-fn table_message(error: &table::Error) -> (u8, String) {
-    (if error.input_failure() { 5 } else { 2 }, error.to_string())
+fn table_message(error: &thinkthen::Error) -> (u8, String) {
+    (if error.kind() == ErrorKind::Local { 5 } else { 2 }, error.to_string())
 }
 
 fn profile_open_message(path: &std::path::Path, error: &io::Error) -> (u8, String) {
@@ -557,12 +550,12 @@ fn native_failure(failure: &Failure) -> Option<(u8, String)> {
     };
     Some((
         match kind {
-            crate::ErrorKind::Usage => 2,
-            crate::ErrorKind::Backend => 4,
-            crate::ErrorKind::Local => 5,
-            crate::ErrorKind::Cancelled => 130,
-            crate::ErrorKind::Deadline => 4,
-            crate::ErrorKind::Defect => 70,
+            ErrorKind::Usage => 2,
+            ErrorKind::Backend => 4,
+            ErrorKind::Local => 5,
+            ErrorKind::Cancelled => 130,
+            ErrorKind::Deadline => 4,
+            ErrorKind::Defect => 70,
         },
         message.clone(),
     ))
@@ -574,14 +567,18 @@ pub(crate) fn sentence(failure: &Failure) -> (u8, String) {
     let code = say(failure, &mut bytes);
     let text = String::from_utf8_lossy(&bytes);
     let text = text.trim_end();
-    let prefix = format!("{}: ", crate::core::NAME);
+    let prefix = format!("{NAME}: ");
     (code, text.strip_prefix(&prefix).unwrap_or(text).to_owned())
 }
 
 fn provider_message(
     cause: &Failure,
-    diagnostic: &crate::engine::error::ProviderDiagnostic,
+    diagnostic: &provider::Diagnostic,
 ) -> (u8, String) {
     let (code, text) = sentence(cause);
     (code, diagnostic.sentence(text))
+}
+
+fn reply_too_large(limit: u64) -> String {
+    format!("the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again")
 }

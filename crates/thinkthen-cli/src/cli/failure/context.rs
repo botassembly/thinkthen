@@ -2,7 +2,6 @@
 
 use std::io;
 
-use crate::core::{LimitKind, ProfileName};
 use crate::failure::Failure;
 
 #[derive(Debug)]
@@ -13,10 +12,10 @@ pub(crate) enum Error {
     StructuredQuestion,
     OverLimit {
         initial: bool,
-        kind: LimitKind,
+        dimension: &'static str,
         limit: usize,
         actual: usize,
-        profile: Option<ProfileName>,
+        profile: Option<String>,
     },
 }
 
@@ -29,12 +28,12 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
         Error::NotUtf8 => (5, "--context is not UTF-8 text".to_owned()),
         Error::Empty => (2, "--context names an empty file".to_owned()),
         Error::StructuredQuestion => (2, "--context needs a question written as text; a question written as JSON cannot quote a record".to_owned()),
-        Error::OverLimit { initial, kind, limit, actual, profile } => {
+        Error::OverLimit { initial, dimension, limit, actual, profile } => {
             let message = if let Some(profile) = profile {
                 if *initial {
-                    format!("--context: profile {} allows at most {limit} {}; the context's request has {actual}", profile.as_str(), kind.words())
+                    format!("--context: profile {} allows at most {limit} {}; the context's request has {actual}", profile, dimension)
                 } else {
-                    format!("--context: profile {} allows at most {limit} {}; this record and the context make {actual}", profile.as_str(), kind.words())
+                    format!("--context: profile {} allows at most {limit} {}; this record and the context make {actual}", profile, dimension)
                 }
             } else if *initial {
                 format!("--context: the context and the question make a request of {actual} bytes, over the request size of {limit} bytes; raise --max-request-bytes or shorten the context")

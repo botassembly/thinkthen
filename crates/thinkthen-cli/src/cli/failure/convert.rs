@@ -1,264 +1,131 @@
-//! The conversions that carry each lower error into one command failure.
+//! Public diagnostic facts become command-owned wording and failure shapes.
 
 use super::Failure;
-use crate::core::adapters::built_in::DecodeError;
-use crate::core::{BackendError, QuestionFileError, QuestionSetError, ReadingError, RecordError};
-use crate::render::RenderError;
-use crate::engine::error::Error as EngineError;
+use thinkthen::{ConfigurationFailure, Error, ErrorDiagnostic as D, ErrorKind};
 
-impl From<crate::config::ConfigError> for Failure {
-    fn from(error: crate::config::ConfigError) -> Self {
-        if let Some(message) = error.price {
-            Self::Usage(message)
-        } else {
-            Self::Configuration(error.message.into_owned())
-        }
-    }
-}
-
-impl From<BackendError> for Failure {
-    fn from(error: BackendError) -> Self {
-        Self::Backend(error)
-    }
-}
-
-impl From<QuestionFileError> for Failure {
-    fn from(error: QuestionFileError) -> Self {
-        Self::Question(error)
-    }
-}
-
-impl From<QuestionSetError> for Failure {
-    fn from(error: QuestionSetError) -> Self {
-        Self::QuestionSet(error)
-    }
-}
-
-impl From<DecodeError> for Failure {
-    fn from(error: DecodeError) -> Self {
-        Self::Reply(error)
-    }
-}
-
-impl From<ReadingError> for Failure {
-    fn from(error: ReadingError) -> Self {
-        Self::Reading(error)
-    }
-}
-
-impl From<RecordError> for Failure {
-    fn from(error: RecordError) -> Self {
-        Self::Record(error)
-    }
-}
-
-impl From<RenderError> for Failure {
-    fn from(error: RenderError) -> Self {
+impl From<crate::render::RenderError> for Failure {
+    fn from(error: crate::render::RenderError) -> Self {
         Self::Render(error)
     }
 }
 
-impl From<EngineError> for Failure {
-    fn from(error: EngineError) -> Self {
-        match error {
-            EngineError::Provider { cause, diagnostic } => Self::Provider {
-                cause: Box::new(Self::from(*cause)),
-                diagnostic,
-            },
-            EngineError::Transport(message) => Self::Transport(message),
-            EngineError::Status(status) => Self::Status(status),
-            EngineError::SendBudgetFirst => Self::Usage("the process send budget was spent"),
-            EngineError::SendBudgetAdditional => {
-                Self::Usage("the process send budget was spent before another request")
+impl From<Error> for Failure {
+    fn from(error: Error) -> Self {
+        if let Some(failure) = super::source::take(&error) {
+            return failure;
+        }
+        match error.diagnostic() {
+            Some(D::Json(_) | D::Threshold(_) | D::Profile { .. }) => {
+                Self::Native(error.kind(), error.to_string())
             }
-            EngineError::SendBudgetRetry(_) => {
-                Self::Usage("the process send budget was spent before a retry")
-            }
-            EngineError::EstimatedInput(reason) => Self::EstimatedInput(reason),
-            EngineError::ImageEstimatedInput(reason) => Self::Image(reason.to_string().replace(
-                "encoded-body-bytes-908-v1",
-                "text-bytes-908-plus-image-tiles-v1",
-            )),
-            EngineError::TokenLimit => Self::TokenLimit,
-            EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
-            EngineError::Reply(error) => Self::Reply(error),
-            EngineError::QuestionMiss(key) => Self::QuestionMiss { key, context: None },
-            EngineError::StoreAmbiguous => Self::StoreAmbiguous,
-            EngineError::StoreHotJournal => Self::StoreHotJournal,
-            EngineError::StoreVersion(file) => Self::StoreVersion(file),
-            EngineError::Entry(name, message) => Self::Entry(name, message),
-            EngineError::RecordingStorage => Self::RecordingStorage,
-            EngineError::RecordingForbidden => Self::RecordingForbidden,
-            EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
-            EngineError::UsageUnreadable(sentence) => Self::UsageUnreadable(sentence),
-            EngineError::CacheEntry => Self::CacheEntry,
-            EngineError::Defect(message) => Self::Defect(message),
-            EngineError::Usage(message) => Self::Usage(message),
-            EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
-            EngineError::Cancelled => Self::Cancelled,
-            EngineError::Deadline(_) => Self::Defect("an unavailable deadline reached the command"),
-            EngineError::NoKey(variable) => Self::NoKey(variable),
-            EngineError::WidthActive(active) => Self::WidthActive(active),
-            EngineError::ModelsDiffer(models) => Self::ModelsDiffer(models),
-            EngineError::UsageOverflow => Self::UsageOverflow,
-            EngineError::RecognizeKinds => Self::Recognize(super::recognize::Error::Config {
-                file: false,
-                error: crate::core::RecognizeConfigError::Kinds,
-            }),
-            EngineError::RecognitionExamples(error) => {
-                Self::Recognize(super::recognize::Error::Examples {
-                    record: None,
-                    error,
-                })
-            }
-            EngineError::RecognizeLogical => {
-                Self::Recognize(super::recognize::Error::LogicalQuestion)
-            }
-            EngineError::TextTooLong { bytes, limit } => {
-                Self::Recognize(super::recognize::Error::TextTooLong { bytes, limit })
-            }
-            EngineError::RecognizeRelationNames { count, limit } => {
-                Self::Recognize(super::recognize::Error::RelationLimit(
-                    crate::engine::error::relation_names_message(count, limit),
-                ))
-            }
-            EngineError::RecognizeRelationQuestions {
-                names,
-                count,
-                limit,
-            } => Self::Recognize(super::recognize::Error::RelationLimit(
-                crate::engine::error::relation_questions_message(names, count, limit),
-            )),
+            Some(diagnostic) => diagnostic_failure(diagnostic, error.retryable()),
+            None if error.kind() == ErrorKind::Cancelled => Self::Cancelled,
+            None => Self::Native(error.kind(), error.to_string()),
         }
     }
 }
 
-impl From<crate::Error> for Failure {
-    fn from(mut error: crate::Error) -> Self {
-        use crate::public::error::diagnostic::Diagnostic;
-        match error.take_diagnostic() {
-            Some(Diagnostic::Engine(cause)) => Self::from(cause),
-            Some(Diagnostic::EngineRange { cause, first, last }) => {
-                let cause = Self::from(cause);
-                match cause {
-                    Self::Transport(_)
-                    | Self::Status(_)
-                    | Self::Provider { .. }
-                    | Self::TokenLimit
-                    | Self::Reply(_)
-                        if last > first =>
-                    {
-                        Self::BatchFailed {
-                            last: last.saturating_add(1),
-                            cause: Box::new(cause),
-                        }
-                    }
-                    other => other,
-                }
+#[expect(clippy::too_many_lines, reason = "one exhaustive public diagnostic projection keeps command failure mappings together")]
+fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
+    use Failure as F;
+    match diagnostic {
+        D::Transport(kind) => F::Transport(kind),
+        D::Status(status) => F::Status(status, retryable),
+        D::Provider { cause, provider } => F::Provider {
+            cause: Box::new(diagnostic_failure(*cause, retryable)),
+            diagnostic: super::provider::Diagnostic::from(provider),
+        },
+        D::SendBudget(reason) => F::Usage(match reason {
+            thinkthen::SendBudgetDenial::BeforeFirstSend => "the process send budget was spent",
+            thinkthen::SendBudgetDenial::BeforeAdditionalSend => "the process send budget was spent before another request",
+            thinkthen::SendBudgetDenial::BeforeRetry { .. } => "the process send budget was spent before a retry",
+        }),
+        D::EstimatedInput { reason, images: false } => F::EstimatedInput(*reason),
+        D::EstimatedInput { reason, images: true } => F::Image(reason.to_string().replace(
+            "encoded-body-bytes-908-v1", "text-bytes-908-plus-image-tiles-v1",
+        )),
+        D::TokenLimit => F::TokenLimit,
+        D::ReplyTooLarge(limit) => F::ReplyTooLarge(limit),
+        D::Reply(message) => F::Reply(message),
+        D::ReplayMiss(key) => F::QuestionMiss { key: key.to_owned(), context: None },
+        D::StoreAmbiguous => F::StoreAmbiguous,
+        D::StoreHotJournal => F::StoreHotJournal,
+        D::StoreVersion(file) => F::StoreVersion(file.to_owned()),
+        D::Entry { name, reason } => F::Entry(name.to_owned(), reason.to_owned()),
+        D::RecordingStorage => F::RecordingStorage,
+        D::RecordingForbidden => F::RecordingForbidden,
+        D::RecordingPathIsFile => F::RecordingPathIsFile,
+        D::DefaultCachePrivate => F::DefaultCachePrivate,
+        D::UsageUnreadable(message) => F::UsageUnreadable(message.to_owned()),
+        D::CacheEntry => F::CacheEntry,
+        D::Defect(message) => F::Defect(message),
+        D::Usage(message) => F::Usage(message),
+        D::ProfileLimit { profile, dimension, limit, actual } => F::ProfileLimit {
+            profile: profile.to_owned(), dimension, limit, actual,
+        },
+        D::Cancelled => F::Cancelled,
+        D::Deadline(_) => F::Defect("an unavailable deadline reached the command"),
+        D::NoKey(variable) => F::NoKey(variable.to_owned()),
+        D::WidthActive(message) => F::WidthActive(message),
+        D::ModelsDiffer(models) => F::ModelsDiffer(models.map(|(a,b)| (a.to_owned(), b.to_owned()))),
+        D::UsageOverflow => F::UsageOverflow,
+        D::RecognitionKinds => F::Recognize(super::recognize::Error::Config {
+            file: false,
+            error: "recognize takes distinct, nonblank kinds".to_owned(),
+        }),
+        D::RecognitionExamples(error) => F::Recognize(super::recognize::Error::Examples { record: None, error }),
+        D::RecognitionLogical => F::Recognize(super::recognize::Error::LogicalQuestion),
+        D::TextTooLong { bytes, limit } => F::Recognize(super::recognize::Error::TextTooLong { bytes, limit }),
+        D::RecognitionRelationLimit(message) => F::Recognize(super::recognize::Error::RelationLimit(message)),
+        D::Range { first, last, cause } => {
+            let cause = diagnostic_failure(*cause, retryable);
+            match cause {
+                F::Transport(_) | F::Status(..) | F::Provider { .. } | F::TokenLimit | F::Reply(_) if last > first =>
+                    F::BatchFailed { last: last.saturating_add(1), cause: Box::new(cause) },
+                other => other,
             }
-            Some(Diagnostic::PartialReply { first, last, .. }) => Self::PartialReply {
-                first: first.saturating_add(1),
-                last: last.saturating_add(1),
-            },
-            Some(Diagnostic::Context {
-                initial,
-                kind,
-                limit,
-                actual,
-                profile,
-            }) => Self::Context(super::context::Error::OverLimit {
-                initial,
-                kind,
-                limit,
-                actual,
-                profile,
-            }),
-            Some(Diagnostic::CliInput(cause)) => *cause,
-            Some(Diagnostic::RelationEntityCount(count)) => {
-                Self::Relate(super::relate::Error::TooMany { count })
-            }
-            Some(Diagnostic::Model(cause)) => Self::Usage(match cause {
-                crate::core::BlankTextError::ModelControl => {
-                    "--model holds no control character or white space but a plain space"
-                }
-                _ => "--model is text, not white space",
-            }),
-            Some(Diagnostic::Pointer(option, typed, cause)) => Self::Pointer(option, typed, cause),
-            Some(Diagnostic::Batch) => {
-                Self::Usage("--batch takes max or a whole number of at least 1")
-            }
-            Some(Diagnostic::ThresholdFunction(crate::RequestFunction::Annotate)) => Self::Usage(
-                "--threshold belongs to each question in the question set; `annotate` takes no command-level threshold",
-            ),
-            Some(Diagnostic::QuestionRead(cause)) => match cause {
-                crate::QuestionFileError::Unreadable(cause) => Self::OpenQuestionFile(cause),
-                crate::QuestionFileError::TooLarge => Self::QuestionFileTooLarge,
-                crate::QuestionFileError::NotUtf8 => Self::OpenQuestionFile(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "stream did not contain valid UTF-8",
-                )),
-            },
-            Some(Diagnostic::Refusal(cause)) => refusal(cause, error),
-            _ if error.kind() == crate::ErrorKind::Cancelled => Self::Cancelled,
-            _ => Self::Native(error.kind(), error.detail().message().to_owned()),
         }
-    }
-}
-
-fn refusal(mut cause: Box<dyn std::any::Any + Send + Sync>, error: crate::Error) -> Failure {
-    macro_rules! take {
-        ($kind:ty) => {
-            cause = match cause.downcast::<$kind>() {
-                Ok(cause) => return Failure::from(*cause),
-                Err(cause) => cause,
-            };
-        };
-    }
-    cause = match cause.downcast::<crate::core::ExamplesError>() {
-        Ok(error) => {
-            return Failure::Recognize(super::recognize::Error::Examples {
-                record: None,
-                error: *error,
-            });
-        }
-        Err(cause) => cause,
-    };
-    cause = match cause.downcast::<crate::core::RelateConfigError>() {
-        Ok(cause) => {
-            return Failure::Relate(super::relate::Error::Config {
-                file: error.kind() == crate::ErrorKind::Local,
-                error: *cause,
-            });
-        }
-        Err(cause) => cause,
-    };
-    cause = match cause.downcast::<crate::core::RecognizeConfigError>() {
-        Ok(cause) => {
-            return Failure::Recognize(super::recognize::Error::Config {
-                file: error.kind() == crate::ErrorKind::Local,
-                error: *cause,
-            });
-        }
-        Err(cause) => cause,
-    };
-    cause = match cause.downcast::<crate::core::EntitySetError>() {
-        Ok(cause) => return Failure::Relate(super::relate::Error::Entities(*cause)),
-        Err(cause) => cause,
-    };
-    take!(crate::core::QuestionFileError);
-    take!(crate::core::QuestionSetError);
-    take!(crate::core::ReadingError);
-    take!(crate::core::RecordError);
-    let _cause = cause;
-    Failure::Native(error.kind(), error.detail().message().to_owned())
-}
-
-impl From<crate::table::ReadError> for Failure {
-    fn from(error: crate::table::ReadError) -> Self {
-        match error {
-            crate::table::ReadError::Input(error) => Self::Input(error),
-            crate::table::ReadError::Table(error) => Self::Table(error),
-        }
+        D::PartialReply { first, last, .. } => F::PartialReply {
+            first: first.saturating_add(1), last: last.saturating_add(1),
+        },
+        D::Context { initial, dimension, limit, actual, profile } => F::Context(super::context::Error::OverLimit {
+            initial, dimension, limit, actual, profile: profile.map(str::to_owned),
+        }),
+        D::RelationEntityCount(count) => F::Relate(super::relate::Error::TooMany { count }),
+        D::ModelControl => F::Usage("--model holds no control character or white space but a plain space"),
+        D::ModelBlank => F::Usage("--model is text, not white space"),
+        D::Pointer { option, selector, reason } => F::Pointer(option, selector.to_owned(), reason),
+        D::Batch => F::Usage("--batch takes max or a whole number of at least 1"),
+        D::AnnotationThreshold => F::Usage("--threshold belongs to each question in the question set; `annotate` takes no command-level threshold"),
+        D::QuestionUnreadable(message) => F::OpenQuestionFile(std::io::Error::other(message)),
+        D::QuestionTooLarge => F::QuestionFileTooLarge,
+        D::QuestionNotUtf8 => F::OpenQuestionFile(std::io::Error::new(
+            std::io::ErrorKind::InvalidData, "stream did not contain valid UTF-8",
+        )),
+        D::Question { message, from_file } => F::Question { message, from_file },
+        D::QuestionSet(message) => F::QuestionSet(message.into()),
+        D::Reading(message) => F::Reading(message),
+        D::Record(message) => F::Record(message),
+        D::InvalidUtf8 => F::InvalidUtf8 { record: false },
+        D::Rendering(message) => F::Native(ErrorKind::Defect, format!("defect: {message}")),
+        D::RecognitionConfiguration { message, from_file } => F::Recognize(super::recognize::Error::Config { file: from_file, error: message }),
+        D::RelationConfiguration { message, from_file } => F::Relate(super::relate::Error::Config { file: from_file, error: message }),
+        D::EntitySet(message) => F::Relate(super::relate::Error::Entities(message)),
+        D::Json(failure) | D::RecordJson(failure) => F::Record(super::json::record(failure)),
+        D::InputJson { line, column } => F::Record(format!(
+            "the input is not valid JSON: the JSON at line {line} column {column} is not one"
+        )),
+        D::QuestionJson { failure, from_file } => F::Question {
+            message: super::json::question(failure), from_file,
+        },
+        D::Threshold(error) => F::Native(ErrorKind::Usage, error.to_string()),
+        D::Profile { failure, from_file } => F::Native(
+            if from_file { ErrorKind::Local } else { ErrorKind::Usage },
+            format!("the profile JSON {}", super::profile::reason(failure)),
+        ),
+        D::Configuration { failure, message } => F::Native(
+            if failure == ConfigurationFailure::Prices { ErrorKind::Usage } else { ErrorKind::Local },
+            message.to_owned(),
+        ),
     }
 }

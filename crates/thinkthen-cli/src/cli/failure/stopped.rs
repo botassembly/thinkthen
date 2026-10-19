@@ -3,7 +3,7 @@
 use std::io::Write;
 
 use super::{Failure, after_signal, say};
-use crate::core::NAME;
+const NAME: &str = "thinkthen";
 
 pub(super) fn report(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     let Failure::Stopped {

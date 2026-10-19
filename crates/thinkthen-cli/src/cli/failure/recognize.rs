@@ -6,11 +6,11 @@ use super::Failure;
 pub(crate) enum Error {
     Examples {
         record: Option<usize>,
-        error: crate::core::ExamplesError,
+        error: String,
     },
     Config {
         file: bool,
-        error: crate::core::RecognizeConfigError,
+        error: String,
     },
     LogicalQuestion,
     /// A `--kind` entry holds no `=`.
