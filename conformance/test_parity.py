@@ -77,7 +77,8 @@ class NativeFixtureEnvironment(unittest.TestCase):
 
 class BindingCaseTiers(unittest.TestCase):
     def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
-        from sdlc.generators.results.templates.host_answers import scalar_input_selectors
+        sys.path.insert(0, str(parity.ROOT / 'build-tools/results/templates'))
+        from host_answers import scalar_input_selectors
         definitions = {
             'RequestInput': {'variants': [('Text', None), ('Json', None), ('Feed', None)]},
             'Text': {'properties': {'kind': {'const': 'text'}, 'text': {'type': 'string'}}, 'required': ['kind', 'text']},

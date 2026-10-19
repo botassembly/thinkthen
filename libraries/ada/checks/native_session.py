@@ -15,7 +15,7 @@ from children import child_env
 from session_values import cases, construct, definitions
 
 PACKAGE = ROOT / 'libraries/ada'
-subprocess.run([sys.executable, str(ROOT / 'sdlc/generators/results/generate.py'), '--target', 'ada', '--check'], env=child_env(), check=True)
+subprocess.run([sys.executable, str(ROOT / 'build-tools/results/generate.py'), '--target', 'ada', '--check'], env=child_env(), check=True)
 with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     work = Path(temporary)
     installed = work / 'installed package'

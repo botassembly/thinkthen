@@ -37,4 +37,4 @@ Set a hosted key with `THINKTHEN_API_KEY`. [Backend setup](https://thinkthen.dev
 
 ## Build and check
 
-The generated input, result and native bridge checks run through `sdlc/generators/results/generate.py`. `check.sh` installs a versioned package into an unrelated consumer and checks typed answers, failure ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.
+The generated input, result and native bridge checks run through `build-tools/results/generate.py`. `check.sh` installs a versioned package into an unrelated consumer and checks typed answers, failure ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.
