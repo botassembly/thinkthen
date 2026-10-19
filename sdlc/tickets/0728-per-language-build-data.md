@@ -26,3 +26,7 @@ Reviews: revision 17afdd9, accept
 ## Evidence
 
 After 0727, the ticket review of 2026-10-19 found more shared files that make language tickets collide: `sdlc/scripts/release-pack` (12 tickets), `sdlc/tools.json` (11), `build-tools/results/registry.py` (7), `site/src/data/catalog.mjs` (7). Each ticket edits only its own language's part, but one shared file forces them to land one after another and blocks batching. Smaller overlaps between two or three tickets (`sdlc/scripts/children`, `release-workflow`, `build-lines.mjs` and a few coverage scripts) land in sequence and need no split. This lands right after 0727 and before the first phase 3 batch.
+
+## Progress
+
+- 2026-10-19 started
