@@ -50,7 +50,8 @@ MARKERS = {
     # settlement of a native Result is a mechanical error conversion instead.
     'call settlement': re.compile(r'\bsettle\s*\([^\n)]*\b(?:function|verb|input)\b'),
     'probability arithmetic': re.compile(
-        r'\b(?:probability|probabilities|chance|odds)\s*(?::=|=)\s*[^\n;]*\s[+*/-]\s'),
+        r'\b(?:probability|probabilities|chance|odds)\s*'
+        r'(?::\s*[^=\n;]+)?\s*(?:[+*/-]=|(?::=|=)\s*[^\n;]*[+*/-])'),
     # Reading a span-probability field for a declaration/codec is mechanical.
     # Selecting a proposal's odds joins observations into an answer.
     'span probability join': re.compile(
@@ -59,7 +60,24 @@ MARKERS = {
 }
 
 
+def self_test():
+    pattern = MARKERS['probability arithmetic']
+    for source in ('probability = yes * no', 'probability=yes*no',
+                   'probability: float = yes/no', 'chance: Double = yes-no',
+                   'odds := yes+no', 'probability *= observation'):
+        if not pattern.search(source):
+            raise AssertionError(f'probability arithmetic escaped: {source}')
+    for source in ('probability: float', 'probability = packet.probability',
+                   'probabilities: list[float]', 'chance = nativeChance()'):
+        if pattern.search(source):
+            raise AssertionError(f'mechanical declaration refused: {source}')
+    print('answer rules: arithmetic marker regressions pass')
+    return 0
+
+
 def main():
+    if sys.argv[1:] == ['--self-test']:
+        return self_test()
     manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
     candidates = {path for path in tracked_files(ROOT / 'libraries')
                   if path.suffix in EXTENSIONS

@@ -78,6 +78,7 @@ python3 sdlc/scripts/recognize-keys
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
 # Ticket 0459: the target C compiler measures every public carrier and signature.
+python3 build-tools/results/answer_rules.py --self-test
 python3 build-tools/results/answer_rules.py
 python3 build-tools/results/generate.py --all --check
 python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
