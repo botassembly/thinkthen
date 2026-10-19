@@ -74,7 +74,7 @@ fn shared_state_retains_decoded_failed_members_and_observes_them_before_completi
         })).unwrap();
         let engine = engine(&listener);
         let events = Mutex::new(Vec::new());
-        let observe = |event| match event {
+        let observe = |event: RecordObservation<'_>| match event {
             RecordObservation::Question { member, .. } => events.lock().unwrap().push(member.unwrap().to_owned()),
             RecordObservation::Row { .. } => events.lock().unwrap().push("row".into()),
         };
@@ -115,7 +115,7 @@ fn shared_state_retains_decoded_failed_members_and_observes_them_before_completi
 #[test]
 fn annotation_leaders_retain_native_answers_before_thresholds_and_weighted_readings() {
     for (distribution, confidence) in [(r#"{"z":0.6,"a":0.4}"#, "0.8"), (r#"{"z":0.5,"a":0.5}"#, "0.7")] {
-        let body = format!(r#"{{"model":"fixed","answers":{{"q1":{{"type":"choice","probabilities":{distribution},"confidence":{confidence}}},"q2":{{"type":"score","probabilities":{{"low":0.4,"high":0.6}}}},"q3":{{"type":"noul","noul":0.9}},"q4":{{"type":"noul","noul":0.8}}}}}}"#);
+        let body = format!(r#"{{"model":"fixed","answers":{{"q1":{{"type":"choice","probabilities":{distribution},"confidence":{confidence}}},"q2":{{"type":"score","probabilities":{{"0":0.4,"1":0.6}}}},"q3":{{"type":"noul","noul":0.9}},"q4":{{"type":"noul","noul":0.8}}}}}}"#);
         let listener = Listener::answering(move |_| Canned::ok(&body)).unwrap();
         let set = QuestionSet::from_json(r#"{"version":1,"questions":{"pick":{"choose":"Which?","options":["z","a"],"threshold":0.9},"score":{"score":"How?","levels":["low","high"]},"yes":{"decide":"Fits?"},"tag":{"tag":"Tags?","labels":["x"]}}}"#).unwrap();
         let arguments = args(set.into(), RequestInput::Text { text: "evidence".into(), images: vec![] });
