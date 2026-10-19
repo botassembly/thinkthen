@@ -12,6 +12,7 @@ use std::path::PathBuf;
 
 mod atomic;
 mod relations;
+mod recognition;
 
 #[expect(
     clippy::too_many_lines,
@@ -136,7 +137,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                     }
                 } else {
                     RequestQuestion::Definition {
-                        value: super::recognize::request_definition(a)?.into(),
+                        value: recognition::inline(a)?.into(),
                     }
                 };
             let mut options = options(&a.common, None, None);
@@ -159,6 +160,8 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 .relation_threshold
                 .as_ref()
                 .map(|rule| crate::RequestThreshold::Rule(rule.clone()));
+            options.instructions = a.instructions.clone();
+            options.entity_definition = a.entity_definition.clone();
             options.context_field = a.context_field.clone();
             options.examples_field = a.examples_field.clone();
             options.seed_spans_field = a.seed_spans_field.clone();
