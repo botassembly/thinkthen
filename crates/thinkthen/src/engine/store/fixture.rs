@@ -252,10 +252,13 @@ impl Entries {
             let (mut answer, state) = row.map_err(|_| super::versioned::invalid())?;
             {
                 let key = bytes_of(&answer.key).ok_or_else(super::versioned::invalid)?;
-                let (adapter, id, batch): (String, String, Option<u32>) = connection.query_row(
-                    "SELECT adapter, observation_id, batch_size FROM answers WHERE key=?1", [key.as_slice()],
-                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-                ).map_err(storage)?;
+                let (adapter, id, batch): (String, String, Option<u32>) = connection
+                    .query_row(
+                        "SELECT adapter, observation_id, batch_size FROM answers WHERE key=?1",
+                        [key.as_slice()],
+                        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                    )
+                    .map_err(storage)?;
                 answer.adapter = Some(adapter);
                 answer.observation_id = Some(
                     crate::core::ObservationId::new(id).map_err(|_| super::versioned::invalid())?,

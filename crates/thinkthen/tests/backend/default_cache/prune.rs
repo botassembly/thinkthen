@@ -366,7 +366,8 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
         let text: String = text
             .lines()
             .map(|line| {
-                let mut value: serde_json::Value = serde_json::from_str(line).expect("fixture line");
+                let mut value: serde_json::Value =
+                    serde_json::from_str(line).expect("fixture line");
                 if value.get("key").is_some() {
                     let answer = value.as_object_mut().expect("answer");
                     answer.remove("observation_id");

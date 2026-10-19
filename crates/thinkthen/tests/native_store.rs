@@ -84,14 +84,7 @@ fn stored_metadata(db: &Connection) -> (String, String, String, Option<u32>) {
     db.query_row(
         "SELECT lower(hex(key)),adapter,observation_id,batch_size FROM answers",
         [],
-        |row| {
-            Ok((
-                row.get(0)?,
-                row.get(1)?,
-                row.get(2)?,
-                row.get(3)?,
-            ))
-        },
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )
     .unwrap()
 }
