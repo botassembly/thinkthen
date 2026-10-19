@@ -626,29 +626,25 @@ fn run(
     // The existing release hook selects native incremental rank intake. Session
     // packets own the final result, so discarded originals need no host callback.
     let release: Option<&dyn Fn(usize)> = options.incremental_ranking.then_some(&|_| {});
-    let mut terminal =
-        match engine.execute_request_sink(&request, environment, Some(&sink), release, None) {
-            Ok(RequestOutcome::Complete(call)) => {
-                let facts = call.facts().clone();
-                queue.close_intake();
-                sink(call.into_value());
-                RequestSessionTerminal {
-                    facts: Some(facts),
-                    answer: None,
-                    resolution: crate::AnswerResolution::Resolved,
-                    error: None,
-                }
+    let outcome = engine.execute_request_sink(&request, environment, Some(&sink), release, None);
+    queue.close_intake();
+    let mut terminal = match outcome {
+        Ok(RequestOutcome::Complete(call)) => {
+            let facts = call.facts().clone();
+            sink(call.into_value());
+            RequestSessionTerminal {
+                facts: Some(facts),
+                answer: None,
+                resolution: crate::AnswerResolution::Resolved,
+                error: None,
             }
-            Ok(RequestOutcome::Failed { completed, error }) => {
-                queue.close_intake();
-                sink(completed);
-                RequestSessionTerminal::failed(error)
-            }
-            Err(error) => {
-                queue.close_intake();
-                RequestSessionTerminal::failed(error)
-            }
-        };
+        }
+        Ok(RequestOutcome::Failed { completed, error }) => {
+            sink(completed);
+            RequestSessionTerminal::failed(error)
+        }
+        Err(error) => RequestSessionTerminal::failed(error),
+    };
     if function == super::RequestFunction::Recognize && !options.incremental_recognition {
         queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
             recognized.into_inner(),
