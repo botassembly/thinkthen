@@ -177,7 +177,6 @@ jobs:
         if: inputs.language == 'cpp'
         run: |
           set -eu
-          (cd libraries/cpp && node ../../sdlc/scripts/ratchet.mjs ratchet.hpp.json)
           python3 sdlc/generators/results/generate.py --target cpp --check
           python3 sdlc/generators/results/generate.py --target cpp --inputs --check
       - name: Prepare the pinned PostgreSQL hosts

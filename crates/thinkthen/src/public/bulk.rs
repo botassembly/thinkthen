@@ -6,7 +6,7 @@ pub(in crate::public) use complete::count_message;
 #[cfg(test)]
 mod details;
 pub(crate) mod observation;
-pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
+pub(crate) use annotate_observation::observe_annotated;
 pub(crate) mod annotation;
 
 use crate::core;

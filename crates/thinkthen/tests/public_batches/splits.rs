@@ -72,17 +72,18 @@ fn named_groups_pack_two_rows_and_keep_ordered_observations() {
 }
 
 #[test]
-fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
+fn a_failed_group_stops_after_the_usable_prefix() {
     let _serial = serial();
-    // One request holds every record's two groups: q1 and q2 for the first
-    // record, q3 and q4 for the second, q5 and q6 for the third.
+    // Each record has two questions on /a and one on /b. The first record
+    // has a usable answer in each group; the second has none on /a even
+    // though /b succeeds. The third must never be published.
     let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"jev-latest","answers":{"q2":{"type":"noul","noul":0.9},"q5":{"type":"noul","noul":0.9},"q6":{"type":"noul","noul":0.9}}}"#)
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q2":{"type":"noul","noul":0.9},"q3":{"type":"noul","noul":0.9},"q6":{"type":"noul","noul":0.9},"q7":{"type":"noul","noul":0.9},"q8":{"type":"noul","noul":0.9},"q9":{"type":"noul","noul":0.9}}}"#)
     })
     .expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"a":{"decide":"Group A?","on":"/a"},"b":{"decide":"Group B?","on":"/b"}}}"#,
+        r#"{"version":1,"questions":{"a":{"decide":"First A?","on":"/a"},"a_again":{"decide":"Second A?","on":"/a"},"b":{"decide":"Group B?","on":"/b"}}}"#,
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());
@@ -107,11 +108,15 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
                     .iter()
                     .map(thinkthen::NamedAnnotation::name)
                     .collect::<Vec<_>>(),
-                ["a", "b"]
+                ["a", "a_again", "b"]
             );
             assert!(matches!(values[0].value(), thinkthen::Annotated::Failed(_)));
             assert_eq!(
                 values[1].value(),
+                &thinkthen::Annotated::Decision(Answer::Yes)
+            );
+            assert_eq!(
+                values[2].value(),
                 &thinkthen::Annotated::Decision(Answer::Yes)
             );
             completed.lock().expect("completed rows").push(index);
@@ -127,7 +132,7 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
     ];
     let error = engine
         .annotate_with(&set, records, CallOptions::new().observe(&observe))
-        .expect_err("no usable sibling after the valid prefix");
+        .expect_err("a wholly failed group stops before publishing sibling answers");
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(*completed.lock().expect("completed rows"), [0]);
     assert_eq!(
@@ -141,10 +146,9 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
         *seen.lock().expect("events"),
         [
             (0, "a".to_owned(), true),
+            (0, "a_again".to_owned(), false),
             (0, "b".to_owned(), false),
             (0, "row".to_owned(), false),
-            (1, "a".to_owned(), true),
-            (1, "b".to_owned(), true),
         ]
     );
 }

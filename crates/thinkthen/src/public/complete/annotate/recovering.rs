@@ -39,15 +39,13 @@ impl Engine {
             rejected,
             |ordinal, held, row| {
                 let outcome =
-                    complete_row(&engine, &questions.0, &stop, &held, (ordinal, false), row).map(
-                        |result| {
-                            RequestValue::Annotations(vec![CompleteRecord {
-                                original: held.original,
-                                ordinal,
-                                result,
-                            }])
-                        },
-                    );
+                    complete_row(&engine, &questions.0, &stop, &held, ordinal, row).map(|result| {
+                        RequestValue::Annotations(vec![CompleteRecord {
+                            original: held.original,
+                            ordinal,
+                            result,
+                        }])
+                    });
                 crate::public::request::recovery_row(ordinal, outcome)
                     .map(|row| row.with_cause(None))
             },
@@ -133,21 +131,14 @@ impl Engine {
                             .at_record(at));
                     }
                 };
-                let outcome = complete_row(
-                    &engine,
-                    &questions.0,
-                    stop,
-                    &original.held,
-                    (at, false),
-                    row,
-                )
-                .map(|result| {
-                    RequestValue::Annotations(vec![CompleteRecord {
-                        original: original.held.original,
-                        ordinal: at,
-                        result,
-                    }])
-                });
+                let outcome = complete_row(&engine, &questions.0, stop, &original.held, at, row)
+                    .map(|result| {
+                        RequestValue::Annotations(vec![CompleteRecord {
+                            original: original.held.original,
+                            ordinal: at,
+                            result,
+                        }])
+                    });
                 crate::public::request::recovery_row(at, outcome).map(Some)
             }),
         ))

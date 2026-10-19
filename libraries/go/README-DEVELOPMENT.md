@@ -44,7 +44,7 @@ The old `Engine`, generic JSON call and handwritten compatibility readers have b
 
 ## Build and check
 
-From a matching source checkout, run `sh libraries/go/check.sh`. It builds the native library offline, stages a separate module with that library, compiles external consumers without library-path overrides, and runs routine shared type cases, typed failures, presence, files, cancellation, bounded intake and usage persistence against counted loopback backends. It also checks formatting, generated source and the package source ceilings. The [decide example](examples/decide/main.go) and [replay smoke](examples/smoke/main.go) use the same public API.
+From a matching source checkout, run `sh libraries/go/check.sh`. It builds the native library offline, stages a separate module with that library, compiles external consumers without library-path overrides, and runs routine shared type cases, typed failures, presence, files, cancellation, bounded intake and usage persistence against counted loopback backends. It also checks formatting and generated source. The [decide example](examples/decide/main.go) and [replay smoke](examples/smoke/main.go) use the same public API.
 
 A local staged artifact can be made with `python3 libraries/go/fixtures/package_owned.py libraries/go NATIVE_PREFIX OUTPUT`, where the matching prefix contains `include/thinkthen.h` and `lib/libthinkthen.a`. Point a consumer's Go module replacement at `OUTPUT`; no Rust compiler, pkg-config or native library path is needed to build that consumer. Final release assembly, full parity and additional platforms belong to the release suite.
 

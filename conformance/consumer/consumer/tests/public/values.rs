@@ -91,11 +91,11 @@ pub(crate) fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
     }
 }
 
-pub(crate) fn detailed(details: &Value, complete: &Value, expected: &Value, base: &str) -> Checked {
+pub(crate) fn detailed(details: &Value, expected: &Value, base: &str) -> Checked {
     let wanted = &expected["details"];
     let answer = &wanted["answer"];
-    let actual = details.get("answer").ok_or("scalar answer is missing")?;
-    let meta = details.get("meta").ok_or("scalar metadata is missing")?;
+    let actual = details.get("answer").ok_or("complete answer is missing")?;
+    let meta = details.get("meta").ok_or("complete metadata is missing")?;
     for field in ["probability", "probabilities", "level"] {
         if let Some(value) = answer.get(field) {
             same(field, actual.get(field).unwrap_or(&Value::Null), value)?;
@@ -121,21 +121,13 @@ pub(crate) fn detailed(details: &Value, complete: &Value, expected: &Value, base
     }
     let requests: Vec<String> = serde_json::from_value(
         meta.get("requests")
-            .ok_or("scalar requests are missing")?
+            .ok_or("complete requests are missing")?
             .clone(),
     )
     .map_err(|error| error.to_string())?;
     keyed_requests(&requests, &wanted["requests"])?;
     let served = json!(format!("{base}/systemone"));
-    same("url", meta.get("url").unwrap_or(&Value::Null), &served)?;
-    same(
-        "line url",
-        complete
-            .get("meta")
-            .and_then(|meta| meta.get("url"))
-            .unwrap_or(&Value::Null),
-        &served,
-    )
+    same("url", meta.get("url").unwrap_or(&Value::Null), &served)
 }
 
 /// A row lists its own question keys, in order, out of the keys of the

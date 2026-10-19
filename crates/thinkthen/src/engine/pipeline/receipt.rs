@@ -104,7 +104,7 @@ pub(crate) struct RowUsage {
 }
 
 impl RowUsage {
-    /// Add one complete compatibility share.
+    /// Add one complete token share.
     #[cfg(test)]
     pub(crate) fn add(&mut self, share: Option<Usage>) {
         self.add_reported(share.map(crate::core::ReportedUsage::from_complete));
@@ -118,7 +118,7 @@ impl RowUsage {
         self.sum.total().map_err(|()| Error::UsageOverflow)
     }
 
-    /// Full compatibility usage remains absent unless both dimensions are known.
+    /// Complete token usage remains absent unless both dimensions are known.
     pub(crate) fn total(self) -> Result<Option<Usage>, Error> {
         Ok(self
             .reported()?

@@ -3,7 +3,7 @@
 use serde::{Serialize, Serializer};
 
 use super::{CompleteMeta, ResultIdentity};
-use crate::core::{Answer, DecisionResult, Usage};
+use crate::core::{Answer, Usage};
 mod set_rank;
 
 /// The complete canonical document for decide, choose, tag, score, filter or rank.
@@ -24,26 +24,12 @@ pub(crate) struct Atomic {
 }
 
 impl Atomic {
-    /// Temporary result/1 bridge for database callers that still require scalar details.
-    pub(crate) fn scalar_details(&self, input: Option<crate::core::Record>) -> DecisionResult {
-        let row = DecisionResult::new(
-            self.value.clone(),
-            self.question.clone(),
-            self.answer.clone(),
-            self.threshold,
-            self.meta.clone(),
-        );
-        match input {
-            Some(input) => row.with_input(input),
-            None => row,
-        }
-    }
-
     #[cfg(test)]
     pub(crate) const fn cached(&self) -> bool {
         self.meta.cached
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(crate) fn clear_batch_metadata(&mut self) {
         self.meta.batch_setting = None;
         self.meta.batch_warning = None;
