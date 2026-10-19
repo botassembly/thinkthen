@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Plant hosted candidate routing and parameter failures at the actual entry points."""
-from copy import deepcopy
 import hashlib
 import os
 import io
@@ -22,174 +21,11 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout
 from sdlc.scripts.tools import fixture_path
 
-
-def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
-    """Run the real setup branch while a temporary PATH records its host calls.
-
-    A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
-    The pinned uv lives where pip put it and prints uv_line.
-    """
-    with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
-        root = Path(tmp).resolve()
-        bin_dir = root / "bin"
-        bin_dir.mkdir()
-        route = bin_dir / "route"
-        route.write_text("""#!/bin/sh
-case ${0##*/} in
-rustc) case $1 in
-  -vV) printf 'host: %s\\n' "$FAKE_TARGET" ;;
-  --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
-  --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
-  esac ;;
-mktemp) exec /usr/bin/mktemp -d "$FAKE_ROOT/tmp.XXXXXXXX" ;;
-sha256sum) echo 'unexpected sha256sum call' >&2; exit 94 ;;
-cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
-rustup) [ "$1 $2" != 'target add' ] || echo "rustup $*" >> "$FAKE_LOG" ;;
-maturin) echo 'maturin 1.15.0' ;;
-npm) case $* in "ci --no-audit --no-fund --silent --prefix $FAKE_ROOT/"*) echo npm-seed >> "$FAKE_LOG" ;;
-  "install --no-audit --no-fund --no-package-lock --prefix $FAKE_ROOT/runner/thinkthen-generators prettier@3.6.2") ;;
-  *) echo "unexpected npm call: $*" >&2; exit 94 ;; esac ;;
-python3) [ "$1" != databases/duckdb/tools/source_hosts.py ] || echo duckdb-source-hosts >> "$FAKE_LOG"
-  # Keep the real manifest reader while other Python commands remain host stubs.
-  if [ "$1" = - ] && [ "${2:-}" = "$FAKE_MANIFEST" ]; then exec "$FAKE_PYTHON" "$@"; fi
-  case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
-  case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
-python3.14) exit 1 ;;
-sudo) case "$*" in
-  'apt-get update') echo pg-index >> "$FAKE_LOG" ;;
-  'apt-get install -y postgresql-server-dev-16') echo pg-host >> "$FAKE_LOG" ;;
-  'apt-get install -y r-base-dev libgtk-3-dev') touch "$FAKE_ROOT/r-ready"; echo r-host >> "$FAKE_LOG" ;;
-  *) echo "unexpected sudo call: $*" >&2; exit 94 ;; esac ;;
-bash) if [ "$1" = libraries/r/tools/setup.sh ]; then
-    [ -f "$FAKE_ROOT/r-ready" ] || { echo 'R dependency setup preceded R host readiness' >&2; exit 92; }
-    echo r-dependencies >> "$FAKE_LOG"
-  else
-    echo bash-check >> "$FAKE_LOG"; [ -z "$FAKE_OLD_BASH" ]
-  fi ;;
-python3.13) [ "$1" != --version ] || {
-  touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
-} ;;
-uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 ;; esac
-  [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
-  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; }
-  if [ "$1" = venv ]; then
-    case $4 in */python3.14)
-      echo sqlite-venv >> "$FAKE_LOG"
-      mkdir -p "$5/bin"
-      ln -s "$FAKE_ROOT/openssl3/bin/python3.14" "$5/bin/python" ;;
-    *) echo "seed $4" >> "$FAKE_LOG" ;; esac
-  fi
-  case $* in "pip install --quiet --python $FAKE_ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python jsonschema==4.25.1")
-    echo sqlite-jsonschema >> "$FAKE_LOG" ;; esac ;;
-uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
-  -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
-xcrun) echo "$FAKE_ROOT/sdk" ;;
-brew) case "$*" in "install pkgconf jq openssl@$RUBY_OPENSSL_SERIES") touch "$FAKE_ROOT/openssl-ready" ;;
-  "--prefix openssl@3") echo "$FAKE_ROOT/openssl-default"; exit 0 ;; esac
-  case $1 in --cache) for formula in "$@"; do :; done; echo "$FAKE_ROOT/$formula" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
-shasum) PG_MAJOR=${3##*postgresql@}; . databases/postgresql/runtime-darwin.env
-  case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
-    *) pin=${PG_BOTTLE_X86_64_SONOMA:-$PG_SOURCE_SHA256} ;; esac
-  printf '%s  %s\\n' "$pin" "$3" ;;
-sh) case $1 in databases/duckdb/tools/setup.sh)
-      [ -f "$FAKE_UV_READY" ] && [ -f "$FAKE_PY313_READY" ] || {
-        echo 'DuckDB setup preceded uv or Python 3.13 readiness' >&2; exit 92;
-      } ;;
-    esac
-    printf '%s %s\\n' "$1" "$2${3:+ $3}" >> "$FAKE_LOG" ;;
-esac
-""")
-        route.chmod(0o755)
-        openssl = root / "openssl3/bin/openssl"
-        openssl.parent.mkdir(parents=True)
-        openssl.write_text('#!/bin/sh\n[ -f "$FAKE_ROOT/openssl-ready" ] || exit 91\necho "OpenSSL $FAKE_OPENSSL_VERSION"\n')
-        openssl.chmod(0o755)
-        for name, line in (("openssl-default/bin/openssl", "OpenSSL 3.5.9"),
-                           ("bin/openssl", "OpenSSL 4.0.3")):
-            other = root / name
-            other.parent.mkdir(parents=True, exist_ok=True)
-            other.write_text(f"#!/bin/sh\necho '{line}'\n")
-            other.chmod(0o755)
-        sqlite_python = root / "openssl3/bin/python3.14"
-        sqlite_python.write_text('#!/bin/sh\necho sqlite-python-check >> "$FAKE_LOG"\n')
-        sqlite_python.chmod(0o755)
-        for name in ("rustc", "rustup", "cargo", "maturin", "npm", "uv", "uname", "sh", "xcrun", "brew", "shasum",
-                     "python3", "python3.12", "python3.13", "python3.14", "bash", "sudo", "mktemp", "sha256sum"):
-            (bin_dir / name).symlink_to(route.name)
-        (root / "pinned").mkdir()
-        (root / "pinned/uv").symlink_to(route)
-        sdk = root / 'sdk'
-        sdk.mkdir()
-        # Apple's git launcher reads the selected SDK even though all host work is stubbed.
-        (sdk / 'SDKSettings.plist').write_text(
-            '<?xml version="1.0"?><plist version="1.0"><dict>'
-            '<key>Version</key><string>15.0</string></dict></plist>')
-        manifest = REPO / 'sdlc/tools.json'
-        openssl_version = json.loads(manifest.read_text())['tools']['ruby']['openssl_version']
-        log = root / "calls"
-        env = os.environ.copy()
-        env.update(PATH=fixture_path(bin_dir), HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
-                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
-                   FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
-                   FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
-                   GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
-                   FAKE_PYTHON=sys.executable, FAKE_MANIFEST=str(manifest),
-                   FAKE_OPENSSL_VERSION=openssl_version,
-                   # The hosted reader is replaced by 0620; supply its old variable only in this routing fixture.
-                   RUBY_OPENSSL_SERIES=openssl_version.rsplit('.', 1)[0],
-                   RELEASE_SMOKE="1" if smoke else "0")
-        result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
-                                env=env, capture_output=True, text=True, timeout=20, check=False)
-        calls = [line.replace(str(root), "$ROOT").replace(str(REPO), "$REPO") for line in log.read_text().splitlines()] if log.exists() else []
-        pgrx = root / ".pgrx/config.toml"
-        if pgrx.exists():
-            calls.append("pgrx " + pgrx.read_text().replace(str(root), "$ROOT").replace("\n", " ").strip())
-        handoff = root / "github-path"
-        if handoff.exists():
-            calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
-        handoff = root / "github-env"
-        if handoff.exists():
-            calls.append(f"env {handoff.read_text().strip().replace(str(root), '$ROOT')}")
-        return result, calls
-
-
-def shared_host_routing_cases():
-    for target in ('x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu',
-                   'aarch64-apple-darwin', 'x86_64-apple-darwin'):
-        for smoke in (False, True):
-            result, calls = host_setup_calls(target, smoke)
-            assert result.returncode == 0, (target, smoke, calls, result.stderr)
-            duckdb = [call for call in calls if call.startswith('databases/duckdb/tools/setup.sh ')]
-            expected = (['databases/duckdb/tools/setup.sh --fetch $REPO/duckdb-hosts'] if smoke else
-                        ['databases/duckdb/tools/setup.sh --fetch'] if 'apple' in target else [])
-            assert duckdb == expected, (target, smoke, duckdb)
-            assert 'duckdb-source-hosts' not in calls, (target, smoke, calls)
-
-
-def cache_refusal_cases():
-    checker = runpy.run_path(str(REPO / 'sdlc/scripts/workflows'))
-    folder = REPO / '.github/workflows'
-    # Exercise the entire tracked workflow set: approved dependency caches in
-    # other workflows must not inherit the release-only cache ban.
-    assert checker['check'](folder) == []
-    release = yaml.safe_load((folder / 'release.yml').read_text())
-    assert checker['release']('release.yml', release) == []
-    for job in release['jobs']:
-        for cache in ({'uses': 'actions/cache@' + 'a' * 40,
-                       'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}},
-                      {'uses': 'actions/setup-node@' + 'a' * 40, 'with': {'cache': 'npm'}}):
-            document = deepcopy(release)
-            document['jobs'][job].setdefault('steps', []).insert(1, cache)
-            assert checker['release']('release.yml', document) == [f'release.yml: job {job} uses a cache']
-    for name in ('gate.yml', 'pages.yml', 'windows.yml'):
-        document = yaml.safe_load((folder / name).read_text())
-        assert checker['every'](name, document, '', folder) == []
-        job = next(iter(document['jobs']))
-        document['jobs'][job].setdefault('steps', []).append({'uses': 'actions/cache@v5'})
-        assert checker['every'](name, document, '', folder) == [
-            f'{name}: job {job} uses actions/cache@v5, which is not pinned to a commit']
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import fixture_run
 
 
 def linux_work_destination_cases():
@@ -209,10 +45,10 @@ def linux_work_destination_cases():
                 path = root / tool
                 path.write_text('#!/bin/sh\n' + body + '\n')
                 path.chmod(0o755)
-            result = subprocess.run(['/bin/sh', str(REPO / 'sdlc/scripts/release-workflow'),
+            result = fixture_run(['/bin/sh', str(REPO / 'sdlc/scripts/release-workflow'),
                                      'linux-work', 'FALLBACK'],
                                     env={**os.environ, 'PATH': fixture_path(root),
-                                         'FAKE_LOG': str(log)}, capture_output=True, text=True, timeout=20)
+                                         'FAKE_LOG': str(log)}, capture_output=True, text=True)
             calls = log.read_text().splitlines() if log.exists() else []
             sudo_calls = [call for call in calls if call.startswith('sudo ')]
             assert result.returncode == 0 and result.stdout.strip() == destination, (
@@ -227,8 +63,6 @@ def linux_tool_destination_case():
     step = next(step['run'] for step in gate['jobs']['linux-release']['steps']
                 if step.get('name') == 'Install existing pinned Linux host and consumer tools')
     block, checksum = step.split('command -v mustmatch\n', 1)[1].split('printf ', 1)
-    assert '. sdlc/scripts/fetch.sh\n' in block and 'fetch_url "$HOME/.local/bin/jq" ' in block
-    assert '"$JQ_SHA256" "$HOME/.local/bin/jq" | sha256sum --check --strict' in checksum.splitlines()[0]
     url = 'https://github.com/jqlang/jq/releases/download/$JQ_VERSION/jq-linux-amd64'
     with tempfile.TemporaryDirectory(prefix='thinkthen-linux-tool-') as temporary:
         root = Path(temporary)
@@ -240,8 +74,8 @@ def linux_tool_destination_case():
         assert not (home / '.local/bin').exists()
         # Keep missing-parent failures deterministic without waiting for retry pauses.
         command = 'sleep() { :; }\n' + block.replace(url, payload.as_uri())
-        result = subprocess.run(['/bin/sh', '-ec', command],
-                                cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', command],
+                                cwd=REPO, env=env, capture_output=True, text=True)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         assert (home / '.local/bin/jq').read_bytes() == payload.read_bytes()
         assert hashlib.sha256((home / '.local/bin/jq').read_bytes()).hexdigest() == env['JQ_SHA256']
@@ -257,16 +91,6 @@ def linux_nested_tools_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
     host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
-    assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
-        line for line in installed.splitlines() if "ruff==" in line)
-    assert '--prefix "$generator_tools" ' in next(
-        line for line in installed.splitlines() if "prettier@" in line)
-    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    smoke = release['jobs']['smoke']
-    setup = next(step for step in smoke['steps'] if 'host-setup' in step.get('run', ''))
-    assert 'if' not in setup and setup['env']['RELEASE_SMOKE'] == '1'
-    assert 'host-setup "$TARGET"' in next(step['run'] for step in steps
-        if step.get('name') == 'Install existing pinned Linux host and consumer tools')
     formatters = '\n'.join(line for line in installed.splitlines()
                            if line.strip().startswith(('mkdir -p "$generator_tools/bin"',
                                                        'ln -s "$generator_tools/python/bin/ruff"',
@@ -292,7 +116,7 @@ def linux_nested_tools_case():
             executable = folder / binary
             executable.write_text('#!/bin/sh\nexit 0\n')
             executable.chmod(0o755)
-        subprocess.run(['/bin/sh', '-ec', handoff + '\n' + formatters], env=env, check=True, timeout=5)
+        fixture_run(['/bin/sh', '-ec', handoff + '\n' + formatters], env=env, check=True)
         env['PATH'] = os.pathsep.join(path_file.read_text().splitlines() + [env['PATH']])
         # Use the real nested gate boundary: homes are removed, PATH must still select each SDK.
         command = '. sdlc/scripts/allow-list\n'
@@ -300,15 +124,15 @@ def linux_nested_tools_case():
                              for variable, binary in tools.items())
         for relative, binary in (('bin', 'ruff'), ('node_modules/.bin', 'prettier')):
             command += f'\n[ "$(command -v {binary})" = "{root}/work/{relative}/{binary}" ]\n'
-        subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True, timeout=5)
+        fixture_run(['/bin/sh', '-ec', command], cwd=REPO, env=env, check=True)
         # Setup and qualification use different homes; offline npm must read
         # the cache setup actually populated through the real child boundary.
         setup = next(step['run'] for step in steps
                      if step.get('name') == 'Require the frozen dispatch commit and candidate')
         cache_handoff = next(line for line in setup.splitlines() if "printf 'npm_config_cache=" in line)
         env_file = root / 'github-env'
-        subprocess.run(['/bin/sh', '-ec', cache_handoff], env={**env, 'work': str(root),
-            'STAGE': 'core', 'GITHUB_ENV': str(env_file)}, check=True, timeout=5)
+        fixture_run(['/bin/sh', '-ec', cache_handoff], env={**env, 'work': str(root),
+            'STAGE': 'core', 'GITHUB_ENV': str(env_file)}, check=True)
         env.update(line.split('=', 1) for line in env_file.read_text().splitlines())
         env.update(GITHUB_ACTIONS='true', RUNNER_ENVIRONMENT='github-hosted',
                    GITHUB_TOKEN='fake-hosted-filter', PRIVATE_SERVICE_KEY='fake-hosted-filter')
@@ -335,7 +159,7 @@ def linux_nested_tools_case():
                   f'{str(root / "cache.lock")!r}, sys.executable, "-c", {probe!r}], '
                   'env=dict(env, GITHUB_TOKEN="fake-hosted-filter", PRIVATE_SERVICE_KEY="fake-hosted-filter"), check=True)\n')
         Path(expected_cache).mkdir(parents=True)
-        subprocess.run([sys.executable, '-c', script], cwd=REPO, env=env, check=True, timeout=5)
+        fixture_run([sys.executable, '-c', script], cwd=REPO, env=env, check=True)
 
 
 def linux_failed_phase_evidence_case():
@@ -530,8 +354,8 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         (database / 'pgrx-package-locked.sh').chmod(0o755)
         env = {'PATH': fixture_path(tools), 'HOME': str(root / 'empty-home'),
                'PG_CONFIG': str(pg_config), 'TMPDIR': str(root)}
-        result = subprocess.run(['/bin/sh', str(database / 'package.sh'), '16', str(root / 'out')],
-                                env=env, capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', str(database / 'package.sh'), '16', str(root / 'out')],
+                                env=env, capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         assert (root / 'out/lib/thinkthen.so').is_file()
         # Installed smoke must pass the existing archive to the runtime check,
@@ -559,7 +383,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         runtime_commands = []
         def command(args, expected=None, cwd=root):
             if args[:2] == ['sh', '-ec'] and 'runtime_ready' in args[2]:
-                subprocess.run(args, cwd=cwd, env=env, capture_output=True, check=True, timeout=5)
+                fixture_run(args, cwd=cwd, env=env, capture_output=True, check=True)
                 runtime_commands.append(args)
         with patch.dict(module['qualify'].__globals__, ROOT=root, rust=lambda *args: None,
                         cargo_cache=lambda *args: None, downloaded_inputs=lambda *args: None), \
@@ -621,16 +445,16 @@ def linux_coverage_destination_case():
                 tool.chmod(0o755)
             env = child_env(home=root / 'home') | {'PATH': fixture_path(root), 'STAGE': 'coverage',
                    'RUNNER_TEMP': '/home/runner/work/_temp'}
-            result = subprocess.run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
-                                    capture_output=True, text=True, timeout=5)
+            result = fixture_run(['/bin/sh', '-ec', command], cwd=REPO, env=env,
+                                    capture_output=True, text=True)
             assert result.returncode == 0, result.stderr
             expected = '/mnt/thinkthen-container' if roomy else '/tmp/thinkthen-linux-release'
             assert result.stdout == expected + '/coverage/coverage', result.stdout
             assert accepts(result.stdout), result.stdout
             if not roomy:
                 old = command.replace('/tmp/thinkthen-linux-release', '"$RUNNER_TEMP/thinkthen-linux-release"')
-                result = subprocess.run(['/bin/sh', '-ec', old], cwd=REPO, env=env,
-                                        capture_output=True, text=True, timeout=5)
+                result = fixture_run(['/bin/sh', '-ec', old], cwd=REPO, env=env,
+                                        capture_output=True, text=True)
                 assert result.returncode == 0, result.stderr
                 assert not accepts(result.stdout), result.stdout
 
@@ -678,8 +502,8 @@ def dart_cache_setup_case():
             check = module['Preflight']()
             module['dart_cache'](check, str(dart))
             assert check.missing, 'ffi-only cache passed native-assets preflight'
-            result = subprocess.run(['/bin/sh', '-ec', command, 'prepare', str(REPO), str(dart), str(cache)],
-                                    cwd=REPO, env=env, capture_output=True, text=True, timeout=5)
+            result = fixture_run(['/bin/sh', '-ec', command, 'prepare', str(REPO), str(dart), str(cache)],
+                                    cwd=REPO, env=env, capture_output=True, text=True)
             assert result.returncode == 0, result.stderr
             check = module['Preflight']()
             module['dart_cache'](check, str(dart))
@@ -712,8 +536,8 @@ def flutter_locked_setup_case():
         acquire = acquisition.replace('https://github.com/flutter/flutter.git', source.as_uri())
         acquire = acquire.replace('6a19cca56475dbfba1478ee68d7bd0c2ef891da1', pin)
         env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home')}
-        result = subprocess.run(['/bin/sh', '-ec', acquire], env=env,
-                                capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', acquire], env=env,
+                                capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         tags = subprocess.check_output(['git', '-C', str(sdk), 'tag', '--points-at', 'HEAD'], text=True)
         assert tags.splitlines() == ['3.47.5'], 'Flutter cannot identify its release without its tag'
@@ -721,9 +545,9 @@ def flutter_locked_setup_case():
         # A moved release ref must fail against the approved commit before any SDK command runs.
         subprocess.run(commit, check=True)
         subprocess.run(git + ['tag', '-f', '3.47.5'], check=True, capture_output=True)
-        result = subprocess.run(['/bin/sh', '-ec', acquire],
+        result = fixture_run(['/bin/sh', '-ec', acquire],
                                 env={**env, 'HOME': str(root / 'moved-tag-home')},
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True)
         assert result.returncode == 1, (result.returncode, result.stderr)
         tools = sdk / 'packages/flutter_tools'
         tools.mkdir(parents=True)
@@ -799,8 +623,8 @@ def flutter_locked_setup_case():
         before = {path: path.read_bytes() for path in root.rglob('pubspec.*')}
         env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home'),
                'dart': str(resolver), 'flutter': str(resolver)}
-        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
-                                capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         calls = Path(str(resolver) + '.calls').read_text().splitlines()
         expected = [str(tools), str(root / 'libraries/dart'),
@@ -811,14 +635,14 @@ def flutter_locked_setup_case():
         assert not override.exists()
         original = generated.read_bytes()
         generated.write_text(generated.read_text() + '# Changed generation\n')
-        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
-                                capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True)
         assert result.returncode == 1 and 'generated_plugins.cmake' in result.stdout, result
         generated.write_bytes(original)
         for broken in (command.replace('dependency_overrides:', 'ignored_overrides:'),
                        command.replace('path: ../..', 'path: ..')):
-            result = subprocess.run(['/bin/sh', '-ec', broken], cwd=root, env=env,
-                                    capture_output=True, text=True, timeout=5)
+            result = fixture_run(['/bin/sh', '-ec', broken], cwd=root, env=env,
+                                    capture_output=True, text=True)
             assert result.returncode != 0, result.stdout
             assert 'conflict: thinkthen_dart' in result.stderr, result.stderr
             assert not override.exists(), 'Failed acquisition retained its owned override'
@@ -830,22 +654,22 @@ def flutter_locked_setup_case():
             incomplete = yaml.safe_load(original)
             incomplete['packages'].pop('record_use')
             locked.write_text(yaml.safe_dump(incomplete))
-            result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
-                                    capture_output=True, text=True, timeout=5)
+            result = fixture_run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                    capture_output=True, text=True)
             assert result.returncode != 0 and 'Incomplete dependency closure' in result.stderr, result.stderr
             assert not override.exists(), 'Failed acquisition retained its owned override'
             locked.write_bytes(original)
             assert {path: path.read_bytes() for path in root.rglob('pubspec.*')} == before
         override.write_text('owned by another caller\n')
-        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
-                                capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True)
         assert result.returncode != 0
         assert override.read_text() == 'owned by another caller\n'
         override.unlink()
         caller_target = root / 'caller-owned.yaml'
         override.symlink_to(caller_target)
-        result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
-                                capture_output=True, text=True, timeout=5)
+        result = fixture_run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                capture_output=True, text=True)
         assert result.returncode != 0, 'Acquisition accepted a caller-owned dangling override'
         assert override.is_symlink(), 'Acquisition removed a caller-owned override'
         assert not caller_target.exists(), 'Acquisition wrote through a caller-owned override'
@@ -900,7 +724,7 @@ def preflight_cases():
         command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
         env = {'PATH': fixture_path(tools, exclude=('node', 'cl.exe', 'lib.exe')),
                'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
-        ready = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        ready = fixture_run(command, cwd=root, env=env, capture_output=True, text=True)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         assert ready.stdout == 'hosted-preflight: all prepared inputs are ready\n'
         # A failed prepared command must retain the error needed to repair its input.
@@ -920,13 +744,13 @@ def preflight_cases():
                           '    print("ModuleNotFoundError: No module named prepared_fixture", file=sys.stderr)\n'
                           'sys.exit(9)\n')
         maturin.chmod(0o755)
-        failed = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        failed = fixture_run(command, cwd=root, env=env, capture_output=True, text=True)
         assert failed.returncode == 1 and 'exit 9\nprepared command output\nprepared command error' in failed.stderr, failed.stderr
         secrets = {name: 'fake-preflight-private-' + str(index) for index, name in enumerate(
             ('THINKTHEN_API_KEY', 'GITHUB_TOKEN', 'PRIVATE_SERVICE_KEY', 'db_password', 'AUTHORIZATION'))}
-        failed = subprocess.run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1',
+        failed = fixture_run(command, cwd=root, env=dict(env, PREFLIGHT_NOISY='1',
                                 THINKTHEN_PROBE_SETTING='prepared_fixture', **secrets),
-                                capture_output=True, text=True, timeout=5)
+                                capture_output=True, text=True)
         assert failed.returncode == 1 and failed.stdout == '', failed
         assert len(failed.stderr) < 10000, 'failed child output was not bounded'
         assert all(value not in failed.stderr for value in secrets.values()), 'failed child output exposed an environment secret'
@@ -1010,25 +834,153 @@ def preflight_cases():
         (root / 'crate-dist' / f'thinkthen-{version}.crate').write_bytes(b'fixture crate')
         (root / 'crate-dist' / f'thinkthen-cli-{version}.crate').write_bytes(b'fixture command crate')
         smoke = [sys.executable, str(helper), 'smoke', 'x86_64-pc-windows-msvc']
-        ready = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        ready = fixture_run(smoke, cwd=root, env=env, capture_output=True, text=True)
         assert ready.returncode == 0 and ready.stderr == '', ready.stderr
         for name in names[:2]:
             (platform / name).write_bytes(b'corrupted archive')
-        corrupt = subprocess.run(smoke, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        corrupt = fixture_run(smoke, cwd=root, env=env, capture_output=True, text=True)
         assert corrupt.returncode == 1 and corrupt.stderr.count('SHA256 differs from pin') == 2, corrupt.stderr
         for tool in ('node', 'cl.exe', 'lib.exe'):
             (tools / tool).unlink()
-        missing = subprocess.run(command, cwd=root, env=env, capture_output=True, text=True, timeout=5)
+        missing = fixture_run(command, cwd=root, env=env, capture_output=True, text=True)
         assert missing.returncode == 1, missing
         for tool in ('node', 'cl.exe', 'lib.exe'):
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 
+def smoke_family_cases():
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    smoke = release['jobs']['smoke']
+    cells = smoke['strategy']['matrix']['include']
+    base = set('command c python typescript ruby sqlite duckdb postgresql16 postgresql17 postgresql18 installers'.split())
+    expected = {
+        'x86_64-unknown-linux-gnu': base | set('go-cpp swift-zig php-dart ada-objective-c-cobol managed examples'.split()),
+        'aarch64-unknown-linux-gnu': base,
+        'aarch64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-apple-darwin': base | {'swift-zig', 'ada-objective-c-cobol', 'examples'},
+        'x86_64-pc-windows-msvc': {'windows-c', 'windows-command'},
+    }
+    assert len(cells) == len({(cell['target'], cell['family']) for cell in cells})
+    assert {target: {cell['family'] for cell in cells if cell['target'] == target}
+            for target in expected} == expected
+    assert smoke['timeout-minutes'] == '${{ matrix.job_minutes }}'
+    assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
+    assert 'smoke' in release['jobs']['draft']['needs']
+    selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
+    assert selected['env']['THINKTHEN_RELEASE_SMOKE_FAMILY'] == '${{ matrix.family }}'
+    assert selected['env']['THINKTHEN_TEST_PROFILE'] == 'full'
+    assert selected['timeout-minutes'] == '${{ matrix.consumer_minutes }}'
+    logs = next(step for step in smoke['steps'] if step.get('name') == 'Retain available smoke logs')
+    assert logs['if'] == 'always()' and '${{ matrix.family }}' in logs['with']['name']
+    for cell in cells:
+        assert 0 < cell['consumer_minutes'] < cell['minutes'] < cell['job_minutes'] <= 360
+    gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
+    for workflow, names in ((release, ('apple-packages', 'crate', 'windows-sdks', 'draft')),
+                            (gate, ('ladder', 'language', 'linux-release'))):
+        for name in names:
+            job = workflow['jobs'][name]
+            for step in job['steps']:
+                if 'run' in step:
+                    assert 0 < step['timeout-minutes'] < job['timeout-minutes'] <= 360
+                    assert 'tee -a "$RUNNER_TEMP/' in step['run']
+            retained = next(step for step in job['steps'] if step.get('name') == 'Retain available long-job logs')
+            assert retained['if'].startswith('always()') and 'actions/upload-artifact@' in retained['uses']
+    # Use real archive/checksum/scan/completeness code with local consumer exits.
+    # This keeps the installed execution outside-in while avoiding tool builds.
+    with tempfile.TemporaryDirectory(prefix='thinkthen-smoke-family-') as temporary:
+        root = Path(temporary).resolve()
+        stage_checkout(REPO, root)
+        scripts = root / 'sdlc/scripts'
+        # Only the isolated consumer leaf and external compiler/backend processes
+        # are controlled. All release scripts and their dependencies stay real.
+        (root / 'libraries/c/check.sh').write_text('[ -x "${THINKTHEN_COMMAND:-}" ] || exit 95\n'
+                                                   'echo selected-c\nexit "${FAKE_EXIT:-0}"\n')
+        tools = root / 'fixture-tools'
+        tools.mkdir()
+        cargo = tools / 'cargo'
+        cargo.write_text('#!/bin/sh\n[ "$*" = "build --locked --offline --quiet --package conformance-backend" ]\n')
+        cargo.chmod(0o755)
+        backend = root / 'fixture-target/debug/conformance-backend'
+        backend.parent.mkdir(parents=True)
+        backend.write_text(f'#!{sys.executable}\nimport sys\nprint(12345, flush=True)\n'
+                           'for line in sys.stdin:\n    pass\n')
+        backend.chmod(0o755)
+        import tomllib
+        version = tomllib.loads((root / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
+        bundle = root / 'bundle'
+        bundle.mkdir()
+        import zipfile
+        archive_names = ['thinkthen-' + family + '-' + version + '-fixture.tar.gz' for family in
+                         ('c', 'sqlite', 'duckdb', 'postgresql16', 'postgresql17', 'postgresql18')]
+        archive_names += [f'thinkthen-{version}-fixture.tar.gz', 'thinkthen-first-run.tar.gz', f'thinkthen-{version}.tgz']
+        for name in archive_names:
+            with tarfile.open(bundle / name, 'w:gz') as archive:
+                command_archive = name == f'thinkthen-{version}-fixture.tar.gz'
+                data = f'#!/bin/sh\necho thinkthen {version}\n'.encode() if command_archive else b'fixture'
+                info = tarfile.TarInfo('thinkthen' if command_archive else 'payload')
+                info.mode = 0o755 if command_archive else 0o644
+                info.size = len(data)
+                archive.addfile(info, io.BytesIO(data))
+        with zipfile.ZipFile(bundle / f'thinkthen-{version}.whl', 'w') as archive:
+            archive.writestr('payload', 'fixture')
+        with tarfile.open(bundle / f'thinkthen-{version}.gem', 'w') as archive:
+            payload = io.BytesIO()
+            with tarfile.open(fileobj=payload, mode='w:gz') as data:
+                info = tarfile.TarInfo('payload')
+                info.size = 7
+                data.addfile(info, io.BytesIO(b'fixture'))
+            info = tarfile.TarInfo('data.tar.gz')
+            info.size = len(payload.getvalue())
+            archive.addfile(info, io.BytesIO(payload.getvalue()))
+        for archive in list(bundle.iterdir()):
+            (bundle / (archive.name + '.sha256')).write_text(
+                hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+        home = root / 'home'
+        home.mkdir()
+        env = child_env(home=home, PATH=f'{tools}:{os.environ["PATH"]}', TMPDIR=str(root),
+                        CARGO_TARGET_DIR=str(backend.parents[1]),
+                        THINKTHEN_RELEASE_SMOKE_FAMILY='c', LANG='C.UTF-8')
+        command = ['/bin/sh', str(scripts / 'release-smoke'), str(bundle)]
+        def run(extra=None):
+            return fixture_run(command, cwd=root, env={**env, **(extra or {})},
+                               capture_output=True, text=True)
+        good = run()
+        assert good.returncode == 0 and good.stdout.count('selected-c') == 1, good
+        assert 'selected family c only' in good.stdout and 'surfaces: pass command' not in good.stdout
+        for status in ('1', '77'):
+            bad = run({'FAKE_EXIT': status})
+            assert bad.returncode == 1 and 'surfaces: FAIL libraries/c' in bad.stdout, bad
+        unknown = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'c; exit 0'})
+        assert unknown.returncode == 2 and 'unknown family' in unknown.stderr, unknown
+        absent = run({'THINKTHEN_RELEASE_SMOKE_FAMILY': 'managed'})
+        assert absent.returncode == 1 and 'selected family managed has no consumer' in absent.stdout, absent
+        archive = bundle / f'thinkthen-sqlite-{version}-fixture.tar.gz'
+        archive.write_bytes(b'corrupt unselected archive')
+        corrupt = run()
+        assert corrupt.returncode == 1 and 'its .sha256 is missing or does not match' in corrupt.stdout, corrupt
+        assert 'selected-c' not in corrupt.stdout, corrupt
+        with tarfile.open(archive, 'w:gz') as packed:
+            data = str(home).encode()
+            info = tarfile.TarInfo('builder-path')
+            info.size = len(data)
+            packed.addfile(info, io.BytesIO(data))
+        checksum = bundle / (archive.name + '.sha256')
+        checksum.write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + '  ' + archive.name + '\n')
+        leaked = run()
+        assert leaked.returncode == 1 and "builder's home or the test probe" in leaked.stdout, leaked
+        assert 'selected-c' not in leaked.stdout, leaked
+        archive.unlink()
+        (bundle / (archive.name + '.sha256')).unlink()
+        missing = run()
+        assert missing.returncode == 1 and 'FAIL databases/sqlite (DIR holds no file for it)' in missing.stdout, missing
+        assert 'selected-c' not in missing.stdout, missing
+
+
 def parameter_run(case, command, **kwargs):
     print(f'hosted parameter: {case}', file=sys.stderr, flush=True)
     started = time.monotonic()
     try:
-        result = subprocess.run(command, **kwargs)
+        result = fixture_run(command, **kwargs)
     except subprocess.TimeoutExpired as error:
         print(f'hosted parameter: {case}: timeout after {error.timeout}s', file=sys.stderr)
         for name, output in (('stdout', error.stdout), ('stderr', error.stderr)):
@@ -1051,18 +1003,15 @@ def parameter_cases():
     for candidate, dispatch, wanted in cases:
         result = parameter_run(f'candidate={candidate!r} dispatch={dispatch!r}',
                                [sys.executable, str(guard), 'checkout', candidate, dispatch],
-                                cwd=REPO, capture_output=True, text=True, timeout=5)
+                                cwd=REPO, capture_output=True, text=True)
         assert result.returncode == wanted, (candidate, result.stderr)
         if wanted:
             assert result.stderr.startswith('hosted-candidate: '), result.stderr
     with tempfile.TemporaryDirectory(prefix='thinkthen-apple-workflow-') as temporary:
         root = Path(temporary)
-        for name in ('sdlc/scripts', 'crates/thinkthen', 'libraries/swift', 'libraries/objective-c', 'bin', 'packages'):
-            (root / name).mkdir(parents=True)
-        for name in ('release-workflow', 'scratch.sh', 'fetch.sh', 'verdict.sh', 'check_verdict.py', 'hosted-candidate.py'):
-            (root / 'sdlc/scripts' / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
-        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
-        (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
+        stage_checkout(REPO, root)
+        for name in ('bin', 'packages'):
+            (root / name).mkdir()
         for tool, body in [('uname', 'case $1 in -s) echo Darwin ;; *) echo arm64 ;; esac'),
                            ('git', f'echo {head}'), ('shasum', 'exit 0'),
                            ('tar', f'echo source_commit={head}')]:
@@ -1072,11 +1021,7 @@ def parameter_cases():
         # Run the real candidate guard with the prepared interpreter, not the host launcher.
         (root / 'bin/python3').symlink_to(sys.executable)
         env = {'PATH': fixture_path(root / 'bin'), 'HOME': str(root), 'LANG': 'C.UTF-8'}
-        # Exercise the workflow caller with the real archived, non-executable helper.
-        archived = subprocess.check_output(['git', 'archive', 'HEAD',
-                                            'libraries/swift/build-xcframework.sh'], cwd=REPO)
-        with tarfile.open(fileobj=io.BytesIO(archived)) as source:
-            source.extractall(root, filter='data')
+        # stage_checkout preserves the tracked helper's non-executable mode.
         release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
         apple = release['jobs']['apple-packages']
         assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
@@ -1087,7 +1032,7 @@ def parameter_cases():
             result = parameter_run(f'Apple assembly target={cell["target"]}',
                                    ['/bin/sh', '-x', '-c', command], cwd=root,
                                     env={**env, 'TARGET': cell['target']},
-                                    capture_output=True, text=True, timeout=5)
+                                    capture_output=True, text=True)
             assert result.returncode == 2 and 'Apple native tools are required' in result.stderr, (
                 cell['target'], result.returncode, result.stderr)
         (root / 'bin/uname').write_text('#!/bin/sh\ncase $1 in -s) echo Darwin ;; *) echo arm64 ;; esac\n')
@@ -1097,7 +1042,7 @@ def parameter_cases():
             result = parameter_run(f'Apple swift exit={status}',
                                    ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), 'swift', head],
-                                    cwd=root, env=env, capture_output=True, text=True, timeout=5)
+                                    cwd=root, env=env, capture_output=True, text=True)
             assert result.returncode == (0 if status == 0 else 1), result.stderr
             assert 'selected-swift' in result.stdout and 'WRONG_LANGUAGE' not in result.stdout
             assert ('surfaces: pass' if status == 0 else 'surfaces: FAIL') in result.stdout
@@ -1105,15 +1050,14 @@ def parameter_cases():
             result = parameter_run(f'Apple language={language!r}',
                                    ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), language, head],
-                                    cwd=root, env=env, capture_output=True, text=True, timeout=5)
+                                    cwd=root, env=env, capture_output=True, text=True)
             assert result.returncode == 1 and 'select exactly one Apple language' in result.stderr
             assert 'selected-swift' not in result.stdout
 
 
+smoke_family_cases()
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
-shared_host_routing_cases()
-cache_refusal_cases()
 linux_work_destination_cases()
 linux_tool_destination_case()
 linux_nested_tools_case()

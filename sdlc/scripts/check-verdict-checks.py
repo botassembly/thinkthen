@@ -58,7 +58,7 @@ def main():
             assert valid.returncode == baseline.returncode, valid
     if sys.platform == 'darwin':
         go = run(['sh', 'libraries/go/check.sh'])
-        assert go.returncode == 77 and 'sdlc/tools.json libraries.go =' in go.stdout, go
+        assert go.returncode == 77 and 'sdlc/tools/go.json libraries.go =' in go.stdout, go
         caller = run([*helper, 'verdict', 'libraries/go', str(go.returncode)])
         assert caller.returncode == 0 and 'unsupported libraries/go' in caller.stdout, caller
         print(go.stdout + caller.stdout, end='')

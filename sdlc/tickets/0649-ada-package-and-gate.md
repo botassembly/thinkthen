@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/ada/check.sh`, `libraries/ada/thinkthen.gpr`, `libraries/ada/checks/native_session.py`, `libraries/ada/checks/full_case.py`, `libraries/ada/README.md`, `libraries/ada/README-PUBLIC.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`, `site/src/data/catalog.mjs`.
+- Changes: `libraries/ada/check.sh`, `libraries/ada/thinkthen.gpr`, `libraries/ada/checks/native_session.py`, `libraries/ada/checks/full_case.py`, `libraries/ada/README.md`, `libraries/ada/README-PUBLIC.md`, `sdlc/tools/ada.json`, `sdlc/scripts/release-pack.d/ada`, `site/src/data/catalog/ada.mjs`.
 - The gate builds into a folder from the shared scratch helper, not `/tmp/thinkthen-target-ada`, and finds the native library by the platform's file name, not `libthinkthen_c.so`.
 - Ada adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools.json`, beside linux-x86_64.
 - `thinkthen.gpr` selects linker options by target through a scenario variable. The release archive for each supported target carries that target's native library.

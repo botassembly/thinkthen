@@ -187,7 +187,6 @@ fn plant_fixture_reported(
         .map(|(place, ((key, (_, question)), answer))| {
             let place = u64::try_from(place).unwrap_or(0);
             let line = serde_json::json!({
-                "key_version": 2,
                 "adapter": "systemone",
                 "observation_id": key,
                 "key": key,

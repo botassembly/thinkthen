@@ -183,6 +183,15 @@ def inventory():
         if {case['verb'] for case in cases if case['kind'] == kind} != set(parity['functions']):
             raise ValueError(f'{kind}: a required function is missing')
     canonical = {case['id']: case for case in document['cases']}
+    settled_fields = {'function', 'value', 'probability', 'pick', 'index', 'resolution'}
+    for case in canonical.values():
+        if 'success' in case['expect']:
+            settled = case['expect'].get('settled', {})
+            if 'collection' not in settled or set(settled) - {'single', 'collection'}:
+                raise ValueError(f"{case['id']}: missing fixed settled answer")
+            for answer in settled.values():
+                if set(answer) != settled_fields or answer['function'] != case['verb']:
+                    raise ValueError(f"{case['id']}: invalid fixed settled answer")
     types = {case['name'] for case in json.loads((ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']}
     named = json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']
     named_ids = [row['id'] for row in named]

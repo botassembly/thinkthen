@@ -30,6 +30,10 @@ def psql(socket: str, statements: list[str]) -> str:
 
 def main() -> int:
     examples = json.loads(FILE.read_text())["examples"]
+    example = examples['label_rows']
+    documented = (FILE.parent / 'README.md').read_text().split('## Label rows as they arrive\n', 1)[1]
+    documented = documented.split('```sql\n', 1)[1].split('\n```', 1)[0]
+    assert documented == '\n\n'.join([*example['setup'], example['sql']]), 'the guide uses the replayed trigger example'
     failed = 0
     for name, example in examples.items():
         got = psql(sys.argv[1], [*example.get("setup", []), example["sql"]])

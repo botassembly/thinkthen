@@ -1,0 +1,150 @@
+{
+  "libraries": {
+    "python": {
+      "root": "libraries/python",
+      "language": "python",
+      "naming": "snake",
+      "declarations": [
+        "libraries/python/thinkthen/__init__.py",
+        "libraries/python/thinkthen/__init__.pyi",
+        "libraries/python/thinkthen/_calls.pyi",
+        "libraries/python/thinkthen/_inputs.py",
+        "libraries/python/thinkthen/_native_results.pyi",
+        "libraries/python/thinkthen/files.py",
+        "libraries/python/thinkthen/_named_generated.py"
+      ],
+      "option_containers": [
+        "Engine.*"
+      ],
+      "setting_containers": [
+        "Engine.__init__"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "helper_names": {
+        "question_file": "QuestionSource.path",
+        "question_name": "QuestionSource.name",
+        "question_reference": "QuestionSource.reference",
+        "item": "Item",
+        "files": "Files"
+      },
+      "representation_types": [
+        "Absent",
+        "AsyncCalls",
+        "Session",
+        "Call",
+        "UsageStatus"
+      ],
+      "representation_calls": [
+        "read_files"
+      ],
+      "field_adapters": {
+        "QuestionSource": {
+          "contract": "request",
+          "type": "RequestQuestion",
+          "aliases": {
+            "body": "value",
+            "raw": "value",
+            "none": "kind"
+          }
+        },
+        "Image": {
+          "contract": "request",
+          "type": "RequestImage",
+          "aliases": {
+            "data": "bytes"
+          }
+        },
+        "Item": {
+          "contract": "request",
+          "type": "RequestItem",
+          "aliases": {
+            "value": "original",
+            "text": "original",
+            "image_only": "original"
+          }
+        },
+        "Records": {
+          "contract": "request",
+          "type": "RequestInput",
+          "aliases": {
+            "items": "items"
+          }
+        },
+        "Files": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {
+            "jsonl": "framing"
+          }
+        },
+        "FileSelection": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {}
+        },
+        "SourceRecord": {
+          "contract": "result",
+          "type": "completePhysicalSource",
+          "aliases": {
+            "record": "file"
+          }
+        },
+        "read_files": {
+          "contract": "request",
+          "type": "RequestReader",
+          "aliases": {}
+        }
+      },
+      "wrapper_members": {
+        "Result": [
+          "function",
+          "scalar",
+          "detailed",
+          "probability",
+          "details",
+          "facts"
+        ],
+        "Session": [
+          "facts",
+          "terminal"
+        ],
+        "CancelToken": [
+          "cancelled"
+        ],
+        "": [
+          "usage"
+        ]
+      },
+      "question_schema_aliases": {
+        "filter": "decide",
+        "rank": "decide"
+      },
+      "function_containers": [
+        "Engine"
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session",
+        "Call",
+        "CancelToken",
+        "AsyncCalls"
+      ],
+      "representation_owners": [
+        "Result",
+        "Presence",
+        "UsageStatus",
+        "Absent"
+      ]
+    }
+  }
+}

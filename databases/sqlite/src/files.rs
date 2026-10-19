@@ -92,7 +92,7 @@ pub(crate) fn register_span(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     connection.create_scalar_function(
         "thinkthen_span_lines",
         4,
-        FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY,
+        FunctionFlags::SQLITE_UTF8,
         "Return the lines covered by a located text span.",
         |context| Ok(guard("thinkthen_span_lines", || span(context))?),
     )

@@ -56,3 +56,6 @@ env -i THINKTHEN_CACHE="$cache" THINKTHEN_API_KEY=sk-examples-loopback \
     "${CARGO_TARGET_DIR:-target}/debug/examples/slide" >"$cache/out" 2>"$cache/err"
 [ ! -s "$cache/err" ] || { cat -- "$cache/err" >&2; exit 1; }
 diff -u examples/slide.txt "$cache/out"
+
+# Shared answers and native session/call behavior belong to the routine surface.
+python3 check.py "$root"

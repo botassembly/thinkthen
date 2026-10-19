@@ -214,245 +214,14 @@ keep() {
 # fresh NAME: a new folder in the stage, with the mode a plain mkdir gives, which each archive root carries.
 fresh() { fresh=$(mktemp -d "$stage/$1.XXXXXX") && chmod 755 "$fresh" && echo "$fresh"; }
 
-part_command() {
-	suffix=
-	[ "$TARGET" != x86_64-pc-windows-msvc ] || suffix=.exe
-	if [ -n "$reuse" ]; then
-		binary=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen$suffix
-	else
-		case $command_target in *-linux-musl)
-			# Without a musl gcc, clang compiles the bundled SQLite against glibc's headers.
-			# SQLite's large-file define then names open64 and stat64, which musl 1.2.4 and
-			# later no longer export. On a 64-bit target off_t is 64 bits without that define.
-			target_var=$(printf '%s' "$command_target" | tr - _)
-			eval "cc=\${CC_$target_var:-}"
-			if [ -z "$cc" ] && ! command -v "${command_target%%-*}-linux-musl-gcc" >/dev/null &&
-				! { [ "$command_target" = x86_64-unknown-linux-musl ] && command -v musl-gcc >/dev/null; }; then
-				command -v clang >/dev/null || { echo 'release-pack: the static command needs clang or a musl gcc' >&2; exit 1; }
-				export "CC_$target_var=clang"
-			fi
-			eval "flags=\${CFLAGS_$target_var:-}"
-			export "CFLAGS_$target_var=${flags:+$flags }-DSQLITE_DISABLE_LFS"
-		;; esac
-		cargo build --locked --quiet --release --package thinkthen-cli --target "$command_target"
-		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen$suffix
-	fi
-	folder=$(fresh command)
-	cp -- "$binary" "$folder/thinkthen$suffix"
-	cp README.md "$folder/README.md"
-	if [ -n "$suffix" ]; then
-		name=thinkthen-$V-$command_target.zip
-		python3 sdlc/scripts/release-windows-command.py pack "$folder/thinkthen.exe" "$OUT/$name"
-		(cd -- "$OUT" && sha256 "$name" >"$name.sha256")
-	else
-		pack "thinkthen-$V-$command_target.tar.gz" "$folder"
-	fi
-}
-
-# The header, both libraries under the soname layout build.rs sets, and a relocatable .pc.
-part_c() {
-	extension=tar.gz
-	[ "$TARGET" != x86_64-pc-windows-msvc ] || extension=zip
-	expected_archive=$OUT/thinkthen-c-$V-$TARGET.$extension
-	profile=debug
-	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
-	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
-	# the copy there holds the builder's home. --reuse rebuilds it here with the remaps above.
-	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
-	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
-		from=$(built libraries/c)/$profile
-		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$expected_archive"
-		c_built=1
-		return
-	fi
-	from=$(built libraries/c)/$profile
-	folder=$(fresh c)
-	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
-	cp libraries/c/include/thinkthen.h "$folder/include/"
-	sh libraries/c/localize.sh "$from/libthinkthen_c.a" "$folder/lib/libthinkthen.a"
-	if [ "$dl" = dylib ]; then
-		cp -- "$from/libthinkthen_c.dylib" "$folder/lib/libthinkthen.dylib"
-		ln -s libthinkthen.dylib "$folder/lib/libthinkthen.0.dylib"
-		# The rehearsal on macOS measures its static link line (Phase 3).
-		private=
-	else
-		cp -- "$from/libthinkthen_c.so" "$folder/lib/libthinkthen.so"
-		ln -s libthinkthen.so "$folder/lib/libthinkthen.so.0"
-		private='-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc'
-	fi
-	cat >"$folder/lib/pkgconfig/thinkthen.pc" <<-EOF
-		prefix=\${pcfiledir}/../..
-		libdir=\${prefix}/lib
-		includedir=\${prefix}/include
-
-		Name: thinkthen
-		Description: Semantic judgments over text, through the thinkthen engine
-		Version: $V
-		Libs: -L\${libdir} -lthinkthen
-		Libs.private: $private
-		Cflags: -I\${includedir}
-	EOF
-	cp libraries/c/README-PUBLIC.md "$folder/README.md"
-	pack "${expected_archive##*/}" "$folder"
-	c_built=1
-}
-
 part_source_wrapper() {
 	[ "$c_built" = 1 ] || { echo "release-pack: $1 needs c built earlier in this invocation" >&2; exit 1; }
 	c_name=thinkthen-c-$V-$TARGET.tar.gz
 	[ -f "$OUT/$c_name" ] || { echo 'release-pack: C archive is missing' >&2; exit 1; }
 	c_digest=$(sha256 "$OUT/$c_name" | awk '{print $1}')
 	folder=$(fresh "$1")
-	case $1 in
-	go)
-		[ "$TARGET" = x86_64-unknown-linux-gnu ] || { echo 'release-pack: Go requires the qualified Linux amd64 static asset' >&2; exit 1; }
-		scratch_dir go_native
-		tar -xzf "$OUT/$c_name" -C "$go_native" ./include ./lib/libthinkthen.a
-		rmdir "$folder"
-		python3 libraries/go/fixtures/package_owned.py libraries/go "$go_native" "$folder"
-		scratch_remove "$go_native"
-		mkdir -p "$folder/examples/decide"
-		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
-		;;
-cpp)
-		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
-		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
-		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
-		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
-	cp -R libraries/cpp/examples "$folder/examples"
-		;;
-csharp)
-		mkdir -p "$folder/feed"
-		scratch_dir csharp_native
-		tar -xzf "$OUT/$c_name" -C "$csharp_native"
-		native_properties=$(python3 sdlc/scripts/package-inventory.py csharp --target "$TARGET")
-		native_rid=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["rid"])' "$TARGET")
-		native_name=$(printf '%s' "$native_properties" | python3 -c 'import json,sys; print(json.load(sys.stdin)["native"][sys.argv[1]]["file"].split("/")[-1])' "$TARGET")
-		DOTNET_CLI_HOME="$stage/dotnet-home" NUGET_PACKAGES="$stage/nuget" \
-		DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
-		${THINKTHEN_DOTNET:-dotnet} pack libraries/csharp/ThinkThen.csproj -c Release \
-			--source "$folder/feed" -o "$folder" -v quiet \
-			-p:ThinkThenNativeAsset="$csharp_native/lib/$native_name" -p:ThinkThenNativeRid="$native_rid" -p:ThinkThenNativeName="$native_name"
-		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
-		scratch_remove "$csharp_native"
-		rmdir "$folder/feed"
-		# The release workflow's managed pair packs the same four files (ticket 0375).
-		cp libraries/csharp/LICENSE libraries/csharp/README.md "$folder/"
-		;;
-jvm)
-		scratch_dir jvm_out
-		mkdir -p "$jvm_out/native"
-		tar -xzf "$OUT/$c_name" -C "$jvm_out/native"
-		THINKTHEN_JVM_OUT=$jvm_out/product THINKTHEN_JVM_NATIVE="$jvm_out/native/lib/libthinkthen.$dl" THINKTHEN_JVM_TARGET="$TARGET" sh libraries/jvm/build.sh
-		THINKTHEN_JVM_OUT=$jvm_out/product python3 libraries/jvm/tests/package_check.py --session
-		cp -R "$jvm_out/product/examples" "$folder/examples"
-		for file in $(python3 sdlc/scripts/package-inventory.py jvm --target "$TARGET" --field files); do
-			case $file in *.jar|product-inventory.json) cp "$jvm_out/product/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
-		done
-		;;
-swift)
-		mkdir -p "$folder/Examples" "$folder/Sources/CThinkThen/include" \
-			"$folder/Sources/ThinkThen" "$folder/Tests/TypeCase"
-		cp libraries/swift/LICENSE libraries/swift/README.md libraries/swift/Package.swift "$folder/"
-		cp libraries/swift/Examples/main.swift "$folder/Examples/"
-		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
-		cp libraries/swift/Sources/CThinkThen/bridge.c "$folder/Sources/CThinkThen/"
-		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
-		cp libraries/swift/Sources/CThinkThen/include/loader.h "$folder/Sources/CThinkThen/include/"
-		cp libraries/swift/Sources/ThinkThen/*.swift "$folder/Sources/ThinkThen/"
-		case $TARGET in
-		*-apple-darwin)
-			[ -d libraries/swift/CThinkThen.xcframework ] || { echo 'release-pack: Swift needs the matching assembled universal CThinkThen.xcframework' >&2; exit 1; }
-			cp -R libraries/swift/CThinkThen.xcframework "$folder/" ;;
-		*-unknown-linux-gnu)
-			mkdir -p "$folder/Sources/ThinkThen/Native/$TARGET"
-			cp libraries/swift/Sources/ThinkThen/Native/README.txt "$folder/Sources/ThinkThen/Native/"
-			tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$folder/Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ;;
-		*) echo 'release-pack: unsupported Swift native target' >&2; exit 1 ;;
-		esac
-		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
-		;;
-zig)
-		mkdir -p "$folder/examples" "$folder/src"
-		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
-			libraries/zig/build.zig.zon "$folder/"
-		cp libraries/zig/examples/decide.zig "$folder/examples/"
-		cp libraries/zig/src/*.zig "$folder/src/"
-		mkdir -p "$folder/native/$TARGET"
-		tar -xzf "$OUT/$c_name" -C "$folder/native/$TARGET" ./include/thinkthen.h ./lib/libthinkthen.a
-		;;
-php)
-		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json libraries/php/autoload.php "$folder/"
-		cp -R libraries/php/src libraries/php/examples "$folder/"
-        case $TARGET in
-        *-unknown-linux-gnu)
-            mkdir -p "$folder/native"
-            tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$folder/native/libthinkthen.so" ;;
-        *) echo 'release-pack: PHP native package target is unsupported' >&2; exit 1 ;;
-        esac
-		;;
-dart)
-		mkdir -p "$folder"
-		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
-			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock libraries/dart/native-assets.json "$folder/"
-		cp -R libraries/dart/lib libraries/dart/hook libraries/dart/example "$folder/"
-		;;
-flutter)
-		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
-		dart_name=thinkthen-dart-$V-$TARGET.tar.gz
-		[ -f "$OUT/$dart_name" ] || { echo 'release-pack: Dart archive is missing' >&2; exit 1; }
-		dart_digest=$(sha256 "$OUT/$dart_name" | awk '{print $1}')
-		mkdir -p "$folder/flutter/lib" "$folder/flutter/example/lib" \
-			"$folder/flutter/example/linux/flutter" "$folder/flutter/example/linux/runner"
-		cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml "$folder/flutter/"
-		cp -R libraries/dart/flutter/lib/. "$folder/flutter/lib/"
-		cp -R libraries/dart/flutter/linux "$folder/flutter/"
-		cp libraries/dart/flutter/example/.metadata libraries/dart/flutter/example/README.md \
-			libraries/dart/flutter/example/pubspec.yaml libraries/dart/flutter/example/pubspec.lock \
-			libraries/dart/flutter/example/analysis_options.yaml "$folder/flutter/example/"
-		cp libraries/dart/flutter/example/lib/main.dart "$folder/flutter/example/lib/"
-		cp libraries/dart/flutter/example/linux/CMakeLists.txt "$folder/flutter/example/linux/"
-		cp libraries/dart/flutter/example/linux/flutter/CMakeLists.txt \
-			libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h \
-			libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc \
-			libraries/dart/flutter/example/linux/flutter/generated_plugins.cmake \
-			"$folder/flutter/example/linux/flutter/"
-		cp libraries/dart/flutter/example/linux/runner/CMakeLists.txt \
-			libraries/dart/flutter/example/linux/runner/main.cc \
-			libraries/dart/flutter/example/linux/runner/my_application.cc \
-			libraries/dart/flutter/example/linux/runner/my_application.h \
-			"$folder/flutter/example/linux/runner/"
-		;;
-ada)
-		mkdir -p "$folder/src" "$folder/examples" "$folder/native"
-		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include/thinkthen.h ./lib/libthinkthen.a
-		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
-		cp libraries/ada/src/*.ads libraries/ada/src/*.adb "$folder/src/"
-		cp libraries/ada/examples/session_demo.adb "$folder/examples/"
-		;;
-objective-c)
-		mkdir -p "$folder/Sources/Foundation"
-		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
-			libraries/objective-c/source-package.json libraries/objective-c/Package.swift "$folder/"
-		cp libraries/objective-c/Sources/Foundation/* "$folder/Sources/Foundation/"
-		[ -d libraries/swift/CThinkThen.xcframework ] || { echo 'release-pack: Foundation needs the matching assembled universal CThinkThen.xcframework' >&2; exit 1; }
-		cp -R libraries/swift/CThinkThen.xcframework "$folder/"
-		;;
-cobol)
-		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples" "$folder/native"
-		cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
-		cp libraries/cobol/copybooks/tt-native-generated.cpy "$folder/copybooks/"
-		cp libraries/cobol/src/tt_session.h libraries/cobol/src/tt_session.c \
-			libraries/cobol/src/tt_requests_generated.h libraries/cobol/src/tt_requests_generated.c "$folder/src/"
-		cp libraries/cobol/examples/*.cob "$folder/examples/"
-		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include ./lib
-		;;
-	esac
-	case $1 in
-	go) ;;
-	flutter) cp libraries/dart/flutter/README-PUBLIC.md "$folder/flutter/README.md" ;;
-	*) cp "libraries/$1/README-PUBLIC.md" "$folder/README.md" ;;
-	esac
+	wrapper_pack=pack
+	"wrapper_$(printf '%s' "$1" | tr - _)"
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.
 	twins=$(cd -- "$folder" && find . | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sort | uniq -d)
 	[ -z "$twins" ] || { echo "release-pack: $1 holds names that differ only in case: $twins" >&2; exit 1; }
@@ -490,180 +259,18 @@ cobol)
 			}
 		done
 	fi
-	if [ "$1" = dart ]; then
-		python3 - "$folder/native-assets.json" "$OUT/$c_name" "$TARGET" <<'DART_ASSET'
-import hashlib, json, sys, tarfile
-from pathlib import Path
-definition = Path(sys.argv[1])
-manifest = json.loads(definition.read_text())
-assets = [asset for asset in manifest['assets'].values() if asset['target'] == sys.argv[3]]
-if len(assets) != 1:
-    raise SystemExit('release-pack: Dart native target is unsupported')
-asset = assets[0]
-with tarfile.open(sys.argv[2]) as archive:
-    payload = archive.extractfile('./lib/' + asset['file']).read()
-digest = hashlib.sha256(payload).hexdigest()
-if manifest['distribution'] == 'development-only':
-    asset.update(sha256=digest, url=None)
-    definition.write_text(json.dumps(manifest, indent=2) + '\n')
-elif asset['sha256'] != digest:
-    raise SystemExit('release-pack: Dart native asset checksum mismatch')
-DART_ASSET
-	fi
+
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
 	if [ "$1" = flutter ]; then
 		printf 'dart_archive=%s\ndart_sha256=%s\n' "$dart_name" "$dart_digest" >>"$folder/THINKTHEN-PACKAGE-INPUTS"
 	fi
-	if [ "$1" = php ]; then
-		# Composer's Phar extractor refuses a root directory member named '.'.
-		(cd -- "$folder" && COPYFILE_DISABLE=1 tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
-		python3 sdlc/scripts/registry-readmes.py "$1" "$OUT/thinkthen-$1-$V-$TARGET.tar.gz"
-		(cd -- "$OUT" && sha256 "thinkthen-$1-$V-$TARGET.tar.gz" >"thinkthen-$1-$V-$TARGET.tar.gz.sha256")
-	else
-		pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
-	fi
-}
-part_go() { part_source_wrapper go; }
-part_cpp() { part_source_wrapper cpp; }
-part_csharp() { part_source_wrapper csharp; }
-part_jvm() { part_source_wrapper jvm; }
-part_swift() { part_source_wrapper swift; }
-part_zig() { part_source_wrapper zig; }
-part_php() { part_source_wrapper php; }
-part_dart() { part_source_wrapper dart; dart_built=1; }
-part_flutter() { part_source_wrapper flutter; }
-part_ada() { part_source_wrapper ada; }
-part_cobol() { part_source_wrapper cobol; }
-
-part_sqlite() {
-	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
-	folder=$(fresh sqlite)
-	cp -- "$(built databases/sqlite)/release/libthinkthen0.$dl" "$folder/"
-	cp databases/sqlite/README-PUBLIC.md "$folder/README.md"
-	pack "thinkthen-sqlite-$V-$TARGET.tar.gz" "$folder"
-}
-
-# DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
-part_duckdb() {
-	case $TARGET in
-	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin) ;;
-	*) echo "release-pack: no pinned DuckDB C++ package for $TARGET" >&2; exit 77 ;;
-	esac
-	INPUTS_HERE=$REPO/databases/duckdb/tools
-	. "$INPUTS_HERE/inputs.sh"
-	DUCKDB_VERSIONS=$(input_versions)
-	DEFAULT_VERSION=${DUCKDB_VERSIONS%% *}
-	override_version=${THINKTHEN_DUCKDB_VERSION:-$DEFAULT_VERSION}
-	input_select "$override_version" "$TARGET"
-	override_source=${THINKTHEN_DUCKDB_CPP_SOURCE:-}
-	override_static=${THINKTHEN_DUCKDB_CPP_STATIC_DIR:-}
-	folder=$(fresh duckdb)
-	cp LICENSE "$folder/LICENSE.thinkthen"
-	set --
-	for version in $DUCKDB_VERSIONS; do
-	input_select "$version" "$TARGET"
-	THINKTHEN_DUCKDB_VERSION=$version
-	THINKTHEN_DUCKDB_CPP_SOURCE=$TOOLS/source
-	THINKTHEN_DUCKDB_CPP_STATIC_DIR=
-	if [ "$version" = "$override_version" ]; then
-		THINKTHEN_DUCKDB_CPP_SOURCE=${override_source:-$TOOLS/source}
-		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-}
-	fi
-	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
-	if [ -z "$reuse" ]; then
-		sh databases/duckdb/cpp/build.sh
-	fi
-	extension="databases/duckdb/build/artifacts/cpp/$DUCKDB_VERSION/$TARGET/thinkthen.duckdb_extension"
-	[ -f "$extension" ] && [ ! -L "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
-	elf_arch= mac_arch=
-	case $TARGET in
-	x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;
-	aarch64-unknown-linux-gnu) elf_arch=AArch64 ;;
-	aarch64-apple-darwin) mac_arch=arm64 ;;
-	x86_64-apple-darwin) mac_arch=x86_64 ;;
-	esac
-	if [ -n "${elf_arch:-}" ]; then
-		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
-		[ "$machine" = "$elf_arch" ] || { echo "release-pack: DuckDB extension is $machine, not $elf_arch" >&2; exit 1; }
-	fi
-	if [ -n "${mac_arch:-}" ]; then
-		[ "$(lipo -archs "$extension")" = "$mac_arch" ] || {
-			echo "release-pack: $extension is not a single $mac_arch Mach-O" >&2
-			exit 1
-		}
-	fi
-	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$duckdb_metadata_version" "$V"
-	mkdir -p "$folder/$duckdb_metadata_version/$platform"
-	cp "$extension" "$folder/$duckdb_metadata_version/$platform/"
-	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit"
-	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE"
-	done
-	python3 databases/duckdb/cpp/package_notices.py "$folder" "$V" "$@"
-	python3 databases/duckdb/cpp/verify_repository.py "$folder" "$TARGET" "$V"
-	cp databases/duckdb/README-PUBLIC.md "$folder/README.md"
-	find "$folder" -type f -exec chmod 644 {} +
-	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
-}
-
-part_postgresql() {
-    majors='16 17 18'
-    if [ -n "$reuse" ] && [ "${THINKTHEN_TEST_PROFILE:-}" = routine ]; then majors='16 18'; fi
-    for major in $majors; do
-        folder=$(fresh postgresql$major)
-        if [ -n "${PG_CONFIG:-}" ]; then
-            config=$(printf '%s' "$PG_CONFIG" | sed "s|pgsql-[0-9]*/|pgsql-$major/|; s|postgresql@[0-9]*|postgresql@$major|")
-            PG_CONFIG=$config sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
-        else
-            sh databases/postgresql/package.sh ${reuse:+--reuse} "$major" "$folder"
-        fi
-        cp databases/postgresql/README-PUBLIC.md "$folder/README.md"
-        pack "thinkthen-postgresql$major-$V-$TARGET.tar.gz" "$folder"
-    done
-}
-
-part_python() {
-	[ -n "$reuse" ] || sh libraries/python/build-wheel.sh
-	for wheel in libraries/python/target/release-wheel/thinkthen-"$V"-*.whl; do keep "$wheel"; done
-}
-
-part_typescript() {
-	if [ -z "$reuse" ]; then
-		sh libraries/typescript/build-addon.sh
-		mkdir -p libraries/typescript/target/pack
-		(cd libraries/typescript && npm pack --silent --offline --pack-destination target/pack >/dev/null)
-	fi
-	keep "libraries/typescript/target/pack/thinkthen-$V.tgz"
-}
-
-part_ruby() {
-	[ -n "$reuse" ] || sh libraries/ruby/build.sh
-	for gem in libraries/ruby/thinkthen-"$V"-*.gem; do keep "$gem"; done
-	# Ship the platform-independent diagnostic once, alongside Linux x86-64.
-	if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then keep "libraries/ruby/thinkthen-$V.gem"; fi
+	"$wrapper_pack" "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
 }
 
 # The crate and the R package name the commit the manifest names, so they need a clean committed tree.
 committed() {
 	[ -z "$(git status --porcelain)" ] || { echo "release-pack: $1 needs a clean committed tree" >&2; exit 1; }
-}
-
-# The thinkthen crate as cargo publishes it. Rust Polars is its `polars` feature.
-part_crate() {
-	committed crate
-	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen
-	keep "$stage/crate-target/package/thinkthen-$V.crate"
-	CARGO_TARGET_DIR="$stage/crate-target" cargo package --locked --offline --no-verify --quiet --package thinkthen-cli \
-		--config "patch.crates-io.thinkthen.path=\"$REPO/crates/thinkthen\""
-	keep "$stage/crate-target/package/thinkthen-cli-$V.crate"
-}
-
-# The R source package with its crates vendored, built as the R check builds it: from a git archive tree.
-part_r() {
-	committed r
-	tree=$(fresh r-tree)
-	git archive HEAD | tar -x -C "$tree"
-	keep "$(CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$stage/r-target" "$tree/libraries/r/tools/make-tarball.sh" "$(fresh r)")"
 }
 
 # The README's first run: demo 27's input and its one recorded answer. Every target builds this
@@ -706,6 +313,11 @@ with open(out, "wb") as file:
 EOF
 	(cd -- "$OUT" && sha256 thinkthen-first-run.tar.gz >thinkthen-first-run.tar.gz.sha256)
 }
+
+# Step files share the driver's helpers and invocation state.
+for step in "$REPO"/sdlc/scripts/release-pack.d/*; do
+	. "$step"
+done
 
 if [ -n "$apple_wrappers" ]; then
 	[ "$(uname -s)" = Darwin ] || { echo 'release-pack: Apple wrapper assembly requires macOS' >&2; exit 2; }

@@ -68,3 +68,5 @@ PM amendment, 2026-10-14. 0543 gates only landing and deploy; every other change
 PM amendment, 2026-10-14. Work starts per language. A language or database whose 0581 or 0582 lane is merged into the 0543 final branch may have its examples and text rewritten now, on its own lane, without waiting for the other languages. The fresh-reader review still runs once all are done.
 
 Ian approval, 2026-10-14. Ian approved the fresh-reader-accepted public text at 2e52b3334: the registry pages, the DuckDB page, the DuckDB descriptor and the listing PR description. Publishing still waits for his go.
+- 2026-10-19 started
+- 2026-10-19 next: PM assigned the unchanged site replay/build failures measured equally before and after0728 here: retired result/1 audit examples, Linux-specific configuration paths on macOS, BSD wc spacing, system Bash loop and missing DuckDB preparation.

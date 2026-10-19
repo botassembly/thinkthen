@@ -1,0 +1,85 @@
+{
+  "libraries": {
+    "php": {
+      "root": "libraries/php",
+      "language": "php",
+      "naming": "snake",
+      "declarations": [
+        "libraries/php/src/session/*.php"
+      ],
+      "option_containers": [
+        "Options"
+      ],
+      "setting_containers": [
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "fixtures",
+        "examples"
+      ],
+      "helper_names": {
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionNamed",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus",
+        "plan": "Client.plan"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation",
+        "Cancellation"
+      ],
+      "representation_owners": [],
+      "representation_types": [
+        "CallFailure",
+        "Cancellation",
+        "Node"
+      ],
+      "wrapper_members": {
+        "CallFailure": [
+          "facts",
+          "failure"
+        ],
+        "Client": [
+          "images"
+        ],
+        "Completed": [
+          "facts"
+        ],
+        "Node": [
+          "field",
+          "has"
+        ],
+        "Operation": [
+          "poll"
+        ],
+        "Item": [
+          "fields",
+          "original"
+        ],
+        "Presence": [
+          "present"
+        ],
+        "Cancellation": [
+          "cancelled"
+        ],
+        "Result": [
+          "probability"
+        ]
+      },
+      "field_adapters": {
+        "Files": {
+          "contract": "request",
+          "type": "RequestSource"
+        }
+      }
+    }
+  }
+}

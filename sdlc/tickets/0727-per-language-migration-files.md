@@ -1,12 +1,14 @@
 # 0727 — Each language owns its migration entries
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
+Reviews: revision 77112f3, accept
+
 ## Outcome
 
-- Changes: `build-tools/results/answer_rules.py`, `build-tools/results/legacy/`, `conformance/library-surface.json`, `conformance/library-surface/`, the readers of `library-surface.json` under `conformance/` and `sdlc/scripts/`.
+- Changes: `build-tools/results/answer_rules.py`, `build-tools/results/legacy/`, `conformance/library-surface.json`, `conformance/library-surface/`, `conformance/library-surface.py`, `conformance/library-surface-test.py`, `conformance/library-surface-README.md`, `conformance/children/privacy.py`, `build-tools/results/native.py`.
 - The answer-rule exception list moves from one Python set into one small file per language under `build-tools/results/legacy/` (for example `python.txt`). `answer_rules.py` reads the folder.
 - `conformance/library-surface.json` keeps its shared sections (`authority`, `helpers`, `categories`, `exceptions`), and each library's and database's entry moves to its own file under `conformance/library-surface/`. Readers load the folder.
 - The `version` member of `library-surface.json` goes, per the no-version ruling.

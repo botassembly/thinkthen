@@ -1,47 +1,19 @@
 #!/usr/bin/env python3
 """Keep answer computation in Rust while existing host calls migrate."""
-import json
 from pathlib import Path
 import re
 import sys
 
-from sources import EXTENSIONS, production, tracked_files
+from sources import EXTENSIONS, load_manifest, production, tracked_files
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Each language's phase 3 call ticket removes its entries. Ticket 0690 removes
-# the shared helper and this entire exception list. Never add folder exceptions.
-LEGACY_FILES = {
-    'build-tools/results/templates/ada_answers.py',
-    'build-tools/results/templates/ada_call_results.py',
-    'build-tools/results/templates/ada_inputs.py',
-    'build-tools/results/templates/cobol_results.py',
-    'build-tools/results/templates/cpp.py',
-    'build-tools/results/templates/cpp_results.py',
-    'build-tools/results/templates/csharp.py',
-    'build-tools/results/templates/dart.py',
-    'build-tools/results/templates/go.py',
-    'build-tools/results/templates/host_answers.py',
-    'build-tools/results/templates/jvm.py',
-    'build-tools/results/templates/jvm_host.py',
-    'build-tools/results/templates/objc.py',
-    'build-tools/results/templates/objc_calls.py',
-    'build-tools/results/templates/php.py',
-    'build-tools/results/templates/python.py',
-    'build-tools/results/templates/r.py',
-    'build-tools/results/templates/ruby.py',
-    'build-tools/results/templates/ruby_rbs.py',
-    'build-tools/results/templates/swift.py',
-    'build-tools/results/templates/typescript.py',
-    'build-tools/results/templates/zig.py',
-    'libraries/dart/lib/src/session/values.dart',
-    'libraries/go/session.go',
-    'libraries/php/src/session/results.php',
-    'libraries/python/thinkthen/_calls.py',
-    'libraries/python/thinkthen/_pandas_calls.py',
-    'libraries/ruby/lib/thinkthen/session.rb',
-    'libraries/swift/Sources/ThinkThen/CallProjection.swift',
-}
+# Each language's phase 3 call ticket removes its file. Ticket 0711 removes
+# the shared helper and remaining exceptions. Never add folder exceptions.
+def legacy_files():
+    return {line for path in (ROOT / 'build-tools/results/legacy').glob('*.txt')
+            for line in path.read_text().splitlines() if line}
+
 
 MARKERS = {
     'host answer rules': re.compile(r'\b(?:host_answers|callRules|probability_mode|value_projection)\b'),
@@ -79,7 +51,8 @@ def self_test():
 def main():
     if sys.argv[1:] == ['--self-test']:
         return self_test()
-    manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+    manifest = load_manifest(ROOT / 'conformance/library-surface.json')
+    legacy = legacy_files()
     candidates = {path for path in tracked_files(ROOT / 'libraries')
                   if path.suffix in EXTENSIONS
                   and production(path.relative_to(ROOT).as_posix(), manifest)}
@@ -94,11 +67,11 @@ def main():
         for name, pattern in MARKERS.items():
             for match in pattern.finditer(source):
                 found.add(relative)
-                if relative not in LEGACY_FILES:
+                if relative not in legacy:
                     line = source.count('\n', 0, match.start()) + 1
                     failures.append(f'{relative}:{line}: {name}')
     failures.extend(f'{path}: remove obsolete answer-rule exception'
-                    for path in sorted(LEGACY_FILES - found))
+                    for path in sorted(legacy - found))
     if failures:
         print('answer rules: Rust owns call answers\n' + '\n'.join(failures), file=sys.stderr)
         return 1

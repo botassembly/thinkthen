@@ -53,7 +53,7 @@ def main():
                                  rust_manifest=project / 'Cargo.toml',
                                  extra_env=compiler_env):
         return True
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 2 or profile == 'routine':
         command = ['cargo', 'test', '--locked', '--offline', '--manifest-path',
                    str(project / 'Cargo.toml'), '--target-dir', str(target)]
         subprocess.run([*command, '--test', 'sessions', '--test', 'settled', '--test', 'call', '--', '--test-threads=1'],

@@ -12,12 +12,13 @@ self-test plants four changes in the real listing and proves each one fails.
 from __future__ import annotations
 
 import pathlib
-import json
 import re
 import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from sdlc.scripts.tools import load_manifest
 TICKETS = REPO / "sdlc" / "tickets"
 ADR = REPO / "sdlc" / "planning" / "adr" / "0017-libraries-over-one-bound-core.md"
 # Traits a type may carry beyond the block: its prose makes every type Debug and
@@ -287,7 +288,7 @@ def problems(listing: list[str], wanted: set[str]) -> list[str]:
 
 
 def main() -> int:
-    command = ["cargo", '+' + json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['rust-nightly']['version'], "public-api", "--package", "thinkthen", "--no-default-features", "--features", "bundled-sqlite", "-ss"]
+    command = ["cargo", '+' + load_manifest()['tools']['rust-nightly']['version'], "public-api", "--package", "thinkthen", "--no-default-features", "--features", "bundled-sqlite", "-ss"]
     run = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
     if run.returncode != 0:
         print(run.stderr, file=sys.stderr)

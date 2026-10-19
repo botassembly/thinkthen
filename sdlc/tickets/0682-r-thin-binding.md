@@ -6,16 +6,16 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0629, 0688, 0689
+Depends on: 0629, 0688, 0689, 0727, 0728
 
 ## Outcome
 
-- Changes: `libraries/r/thinkthen/src/rust/`, `libraries/r/thinkthen/R/thinkthen.R`, `libraries/r/thinkthen/R/requests.R`, `libraries/r/thinkthen/R/feeds.R`, `libraries/r/thinkthen/R/complete.R`, `libraries/r/thinkthen/R/extendr-wrappers.R`, `libraries/r/thinkthen/NAMESPACE`, `libraries/r/tests/interrupt.R`, `libraries/r/tests/ordinary_interrupt.R`, `build-tools/results/templates/r.py`, `build-tools/results/registry.py`, `build-tools/results/answer_rules.py`.
+- Changes: `libraries/r/thinkthen/src/rust/`, `libraries/r/thinkthen/R/thinkthen.R`, `libraries/r/thinkthen/R/requests.R`, `libraries/r/thinkthen/R/feeds.R`, `libraries/r/thinkthen/R/complete.R`, `libraries/r/thinkthen/R/extendr-wrappers.R`, `libraries/r/thinkthen/NAMESPACE`, `libraries/r/tests/interrupt.R`, `libraries/r/tests/ordinary_interrupt.R`, `build-tools/results/templates/r.py`, `build-tools/results/registry/r.json`, `build-tools/results/legacy/r.txt`.
 - R calls `Engine::call` (the Rust run function from 0629) and builds R values by mapping the 0689 value tree, which carries the final answer, probability, pick and resolution.
 - The string state machine in `src/rust/src/calls.rs` is deleted, along with the hand-written result shaping in `native_results.rs` and its private closed, reader and producer error text. The generated `results_generated.rs` keeps only declarations, or is deleted where the tree makes it unused; the R template and registry entries change to match.
 - The call runs on a worker thread. The R thread checks R's own interrupt polling while it waits and cancels through the run function's handle. `.tt_interrupt` in `thinkthen.R`, which sends the process SIGINT and sleeps, is deleted.
 - The "deadline was renamed deadline_ms" message in `thinkthen.R` is deleted.
-- `build-tools/results/templates/r.py` leaves `LEGACY_FILES` in `build-tools/results/answer_rules.py`.
+- `build-tools/results/templates/r.py` leaves this language's exception file `build-tools/results/legacy/r.txt`.
 - The public R functions keep their names and arguments. The R packet dumper is 0713.
 
 ### Proof
@@ -26,6 +26,7 @@ Depends on: 0629, 0688, 0689
 
 ## Evidence
 
+- After 0727 lands, this language's answer-rule exceptions live in `build-tools/results/legacy/r.txt` and its surface entry in `conformance/library-surface/r.json`. This ticket edits only those two files, so it does not collide with other languages' call tickets.
 R has the largest hand-written Rust layer among the direct bridges: about 1,550 lines in `libraries/r/thinkthen/src/rust/src` (`calls.rs`, `ffi.rs`, `ffi/request.rs`, `ffi/request/inputs.rs`, `request.rs`, `native_results.rs`, `lib.rs`), plus the generated `results_generated.rs` (about 3,200 lines) from `build-tools/results/templates/r.py`.
 
 - **Own state machine.** `Call` in `calls.rs` keeps session state as the strings "unused", "claimed" and "terminal" in `claim`, `settle_early`, `drain` and `accept`, and drives `RequestSession` itself.

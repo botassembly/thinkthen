@@ -103,6 +103,8 @@ def project(packet,verb):
         if e.get('stopped',{}).get('at') is not None:out['stopped_at']=e['stopped']['at']
         return out
     facts=packet['facts'];out={'code':0,'schema':'thinkthen.result/2','call_id':facts['call_id'],'requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'rows':[]}
+    if 'answer' in packet:
+        out['settled'] = packet['answer']
     if 'call_result' in packet:
         out['call_result'] = packet['call_result']
     out.update({k:facts[k] for k in ('records','input_tokens','output_tokens') if k in facts})

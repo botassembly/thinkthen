@@ -5,12 +5,15 @@ import json
 import os
 from pathlib import Path
 import platform
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from sdlc.scripts.tools import load_manifest
 
 
 def unsupported(surface):
-    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    manifest = load_manifest()
     family, _, name = surface.partition('/')
     if family == 'libraries':
         entry = manifest['libraries'].get(name)
@@ -23,7 +26,7 @@ def unsupported(surface):
     arch = {'aarch64': 'arm64'}.get(platform.machine(), platform.machine())
     host = platform.system().lower() + '-' + arch
     if platforms is not None and host not in platforms:
-        return f'sdlc/tools.json {family}.{name} = {json.dumps(entry, sort_keys=True)}; host={host}'
+        return f'sdlc/tools/{name}.json {family}.{name} = {json.dumps(entry, sort_keys=True)}; host={host}'
     return None
 
 

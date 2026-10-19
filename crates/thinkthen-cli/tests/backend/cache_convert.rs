@@ -67,8 +67,8 @@ CREATE TABLE states (id INTEGER PRIMARY KEY, sha256 BLOB NOT NULL UNIQUE, state 
 CREATE TABLE answers (id INTEGER PRIMARY KEY, key BLOB NOT NULL UNIQUE, url TEXT NOT NULL,
   model TEXT NOT NULL, state INTEGER NOT NULL REFERENCES states(id), question TEXT NOT NULL,
   answer TEXT NOT NULL, answered_by TEXT NOT NULL, input_tokens INTEGER, output_tokens INTEGER,
-  taken_at INTEGER NOT NULL, origin TEXT NOT NULL, key_version INTEGER NOT NULL, adapter TEXT NOT NULL, observation_id TEXT NOT NULL, batch_size INTEGER);
-PRAGMA user_version = 2;
+  taken_at INTEGER NOT NULL, origin TEXT NOT NULL, adapter TEXT NOT NULL, observation_id TEXT NOT NULL, batch_size INTEGER);
+PRAGMA user_version = 3;
 ";
 
 fn bytes(hex: &Value) -> Try<Vec<u8>> {
@@ -101,8 +101,8 @@ fn live(
         (&sha, state),
     )?;
     connection.execute(
-        "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin,key_version,adapter,observation_id)
-         VALUES (?1, ?2, ?3, (SELECT id FROM states WHERE sha256 = ?4), ?5, ?6, 'jev-1.13.0', 1, 1, ?7, 'live',2,'systemone',?8)",
+        "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin,adapter,observation_id)
+         VALUES (?1, ?2, ?3, (SELECT id FROM states WHERE sha256 = ?4), ?5, ?6, 'jev-1.13.0', 1, 1, ?7, 'live','systemone',?8)",
         rusqlite::params![
             bytes(&Value::from(key.first().ok_or("one key")?.clone()))?,
             line["url"].as_str(),

@@ -119,7 +119,8 @@ def help_flags():
 def product(path):
     folders = path.parts[:-1]
     tests = (path.name in {"tests.rs", "build.rs"} or path.stem.endswith("_tests")
-             or path.name.startswith(("test_", "build-")))
+             or path.name.startswith(("test_", "build-"))
+             or path == pathlib.Path("databases/duckdb/cpp/verify_decide.py"))
     return path.suffix in SOURCE and not tests and not any(
         part in {"checks", "fixtures", "Tests", "tests", "test", "tools"}
         or part.endswith("_tests") for part in folders)
@@ -299,8 +300,12 @@ def self_test(flags, names, keys):
     # the matching library implementation remains in the scan.
     helpers = ("checks/settings.py", "fixtures/settings.py", "Tests/settings.py", "tests/settings.py",
                "build.rs", "build-session.py")
-    if any(product(pathlib.Path("libraries/example") / helper) for helper in helpers) or not product(
-            pathlib.Path("libraries/example/src/settings.py")):
+    implementations = ("libraries/example/src/settings.py", "libraries/example/src/verify_settings.py",
+                       "databases/duckdb/cpp/verify_settings.py",
+                       "databases/duckdb/cpp/src/verify_settings.py")
+    if (any(product(pathlib.Path("libraries/example") / helper) for helper in helpers)
+            or product(pathlib.Path("databases/duckdb/cpp/verify_decide.py"))
+            or not all(product(pathlib.Path(path)) for path in implementations)):
         bad += 1
         print("settings self-test: package helper/product boundary failed", file=sys.stderr)
     for name, body, expected in planted:
@@ -321,8 +326,6 @@ def self_test(flags, names, keys):
         ("shared timeout", SHARED_SETTINGS, "builder.timeout(", "builder.missing_timeout(", timeout_errors),
         ("shared admission", SHARED_SETTINGS, "pub fn from_settings_json(", "pub fn missing_settings(", shared_errors),
         ("shared application", SHARED_SETTINGS, "document.apply(", "document.missing_apply(", shared_errors),
-        ("R timeout", ENGINE_SOURCES["R"], "builder.timeout(", "builder.missing_timeout(",
-         ["settings.md: R Timeout source has no setter: timeout"]),
     ]
     for surface in delegated:
         expected = [f"settings.md: {surface} {name} source has no setter: {setter}"

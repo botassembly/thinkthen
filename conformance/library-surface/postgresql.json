@@ -1,0 +1,15 @@
+{
+  "databases": {
+    "postgresql": {
+      "root": "databases/postgresql",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ],
+      "test_files": [
+        "src/files_complete_tests.rs"
+      ]
+    }
+  }
+}

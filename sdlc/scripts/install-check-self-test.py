@@ -21,6 +21,9 @@ from install_check_channels import download, python, rust, maven, c, INSTALLERS,
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
 from inputs import selected as duckdb_identity, versions as duckdb_versions
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'conformance/children'))
+from children import fixture_run
+
 
 class ZipInstallation(unittest.TestCase):
     def test_unpack_preserves_safe_unix_executable_modes(self):
@@ -138,9 +141,9 @@ class NativeInstallation(unittest.TestCase):
                             stale.parent.mkdir(parents=True)
                             stale.write_bytes(b'stale library must not be copied')
                         out = root / 'install space'
-                        done = subprocess.run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
+                        done = fixture_run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
                                                shell, str(script), str(repo), str(out), str(script.with_name('scratch.sh'))], cwd=caller,
-                                              env=env, capture_output=True, text=True, timeout=30)
+                                              env=env, capture_output=True, text=True)
                         self.assertEqual(done.stdout, '')
                         self.assertTrue((root / 'build.log').exists(), done)
                         owned = Path((root / 'build.log').read_text())
@@ -671,8 +674,8 @@ class RefusalTable(unittest.TestCase):
             with self.subTest(ref=ref, commit=commit), tempfile.TemporaryDirectory() as own:
                 env = clean_environment(Path(own))
                 env.update(VERSION='0.2.0', REF=ref, SHA=commit)
-                result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
-                                        env=env, cwd=repo, capture_output=True, timeout=10)
+                result = fixture_run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
+                                        env=env, cwd=repo, capture_output=True)
                 self.assertEqual(result.returncode, status)
 
 

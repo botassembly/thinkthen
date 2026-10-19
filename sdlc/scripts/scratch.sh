@@ -118,7 +118,7 @@ usage_link() {
 # the demos check's literal build folder; the Python check's failed venv, a fixed cache prefix and
 # a hash; PostgreSQL's killed run folder, after its name guard, and its literal .runtime/tree; the
 # R tarball's copied .cargo and target, inside its own scratch folder; install.sh, which runs from
-# a pipe and cannot source this file, and must equal site/public/install.sh; demo 16's triage,
+# a pipe and cannot source this file; the site build copies it unchanged; demo 16's triage,
 # a standalone script the page shows, which removes the output folder it made with mkdir; and
 # publish-builds, which removes only an old folder of its own, marked by its manifest. The R
 # package's Makevars.in clean rules ship in its tarball, so they stay outside the scan.

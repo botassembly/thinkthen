@@ -1,0 +1,23 @@
+{
+  "tools": {
+    "sqlite": {
+      "commands": [
+        "sqlite3"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "sqlite"
+      ]
+    }
+  },
+  "databases": {
+    "sqlite": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ]
+  }
+}

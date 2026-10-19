@@ -1,0 +1,69 @@
+{
+  "tools": {
+    "cbindgen": {
+      "commands": [
+        "cbindgen"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "c",
+        "test"
+      ],
+      "provider": "cargo:cbindgen",
+      "version": "0.29.4",
+      "probe": {
+        "argv": [
+          "cbindgen",
+          "--version"
+        ],
+        "contains": "cbindgen {version}"
+      }
+    },
+    "pkgconf": {
+      "commands": [
+        "pkgconf",
+        "pkg-config"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "install",
+        "c"
+      ],
+      "provider": "python-package",
+      "version": "3.0.7.post0",
+      "upstream_version": "3.0.7",
+      "probe": {
+        "argv": [
+          "pkg-config",
+          "--version"
+        ],
+        "contains": "{upstream_version}"
+      }
+    }
+  },
+  "libraries": {
+    "c": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    }
+  }
+}

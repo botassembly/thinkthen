@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0686, 0688
+Depends on: 0686, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/swift/Tests/TypeCase/main.swift`, `libraries/swift/Tests/Dump/main.swift`, `libraries/swift/Tests/fixtures/complete_parity.py`, `libraries/swift/Tests/fixtures/installed.py`, `libraries/swift/Package.swift`, `libraries/swift/check.sh`, `sdlc/scripts/release-pack`, `sdlc/scripts/children`, `sdlc/scripts/coverage_installed_managed.py`.
+- Changes: `libraries/swift/Tests/TypeCase/main.swift`, `libraries/swift/Tests/Dump/main.swift`, `libraries/swift/Tests/fixtures/complete_parity.py`, `libraries/swift/Tests/fixtures/installed.py`, `libraries/swift/Package.swift`, `libraries/swift/check.sh`, `sdlc/scripts/release-pack.d/swift`, `sdlc/scripts/children`, `sdlc/scripts/coverage_installed_managed.py`.
 - One Swift packet dumper over the public API, following the 0642 contract, replaces `Tests/TypeCase/main.swift` and the `session_projection` comparison in `Tests/fixtures/complete_parity.py`. The `ThinkThenTypeCase` target leaves `Package.swift`, and `release-pack` packs the dumper source in its place.
 - The routine profile compares the routine shared cases instead of the single `settings-max-requests-refuses-past-the-limit` case.
 - `sdlc/scripts/children` and the Swift binary names in `sdlc/scripts/coverage_installed_managed.py` follow the change.
