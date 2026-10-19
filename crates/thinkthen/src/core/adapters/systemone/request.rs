@@ -143,7 +143,6 @@ impl<'de> serde::Deserialize<'de> for Criteria {
 /// # Errors
 ///
 /// Returns [`EncodeError`] when the body cannot be written as JSON.
-#[cfg(test)]
 pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
     let parts = parts(plan)?;
     if let Some(images) = plan.images() {

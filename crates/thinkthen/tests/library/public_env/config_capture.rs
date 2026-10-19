@@ -118,7 +118,8 @@ pub(super) fn cache_capture(named: &str) -> Vec<String> {
         "target": cache.cache_target_bytes,
         "target_source": cache.cache_target_source,
         "path_present": cache.cache_path.is_some(),
-    }).to_string(), shown(builder.resolved_settings())];
+    }).to_string(), shown(builder.resolved_settings()),
+        shown(EngineBuilder::from_env().and_then(|builder| builder.resolved_settings()))];
     let builder = builder.cache_at(named).unwrap();
     let cache = builder.cache_settings();
     assert_eq!(cache.cache_path.as_deref(), Some(Path::new(named)));
@@ -132,7 +133,7 @@ pub(super) fn cache_capture(named: &str) -> Vec<String> {
 
 #[test]
 fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_target() {
-    for (tag, route) in [("unknown", r#""backend":"unknown-private-route""#),
+    for (tag, route) in [("unknown", r#""backend":"typesafe""#),
         ("url", r#""url":"invalid-relative-address""#)] {
         let home = folder(&format!("cache-route-{tag}"));
         let config = if cfg!(target_os = "macos") {
@@ -146,7 +147,7 @@ fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_tar
         let written = in_child("cache-only", &[
             ("XDG_CONFIG_HOME", home.to_str().unwrap()), ("HOME", home.to_str().unwrap()),
             ("APPDATA", home.to_str().unwrap()), ("THINKTHEN_API_KEY", "private-unread-key"),
-            ("THINKTHEN_BASE_URL", "irrelevant-invalid-address"),
+            ("THINKTHEN_BACKEND", "unknown-private-route"),
             (ARGUMENT, named.to_str().unwrap()),
         ]);
         for fact in ["\"enabled\":false", "\"platform\":true", "\"path_present\":true",

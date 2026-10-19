@@ -269,7 +269,6 @@ impl Asker for Each<'_> {
 impl Engine {
     /// Admit one fixed request without splitting it, before keys or transport.
     /// `check` validates all its probes this way before sending the first.
-    #[cfg(test)]
     pub(crate) fn check_plan(&self, plan: &Plan) -> Result<(), Error> {
         let Some(profile) = self.profile() else {
             return Ok(());

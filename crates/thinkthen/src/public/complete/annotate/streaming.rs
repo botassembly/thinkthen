@@ -132,10 +132,7 @@ impl Engine {
                 {
                     return Ok(None);
                 }
-                let result = complete_row(
-                    &engine, &questions.0, stop, &original.held, at, row,
-                    options.shared_state_groups,
-                )
+                let result = complete_row(&engine, &questions.0, stop, &original.held, at, row)
                     .map_err(|error| error.at_record(at))?;
                 project(original.held.original, at, result)
             }),

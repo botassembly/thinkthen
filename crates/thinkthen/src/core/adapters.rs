@@ -101,7 +101,6 @@ impl ApiType {
             Self::Decisions => openai::join(state, model, questions),
         }
     }
-    #[cfg(test)]
     pub(crate) fn encode(self, plan: &crate::core::Plan) -> Result<Vec<u8>, EncodeError> {
         match self {
             Self::Primary => systemone::encode(plan),

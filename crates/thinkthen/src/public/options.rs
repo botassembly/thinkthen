@@ -282,10 +282,9 @@ impl<'a> CallOptions<'a> {
     /// Prepare each annotation group with its admitted evidence as the shared
     /// state and its original questions unchanged. The default quotes evidence
     /// into ordinary annotation questions instead. Preview and execution use the
-    /// same native packing, limits, adapter, decoding and accounting. Decoded
-    /// logical member failures remain complete failed-member annotations, even
-    /// when every member fails. Transport, malformed response, admission,
-    /// observer and cancellation errors retain their normal failure behavior.
+    /// same native packing, limits, adapter, decoding and accounting. Partial
+    /// replies retain their usable and failed members. A wholly failed reply
+    /// retains the ordinary native refusal, including its actual call facts.
     /// This applies only to annotation requests; other functions refuse before
     /// reading question files, sources or feeds. No encoded request is accepted.
     #[must_use]

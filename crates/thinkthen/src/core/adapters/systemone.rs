@@ -21,7 +21,6 @@ use thiserror::Error;
 use crate::core::text::ModelName;
 
 pub(crate) use crate::core::adapters::systemone::recorded::canonical_question;
-#[cfg(test)]
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::drops_any;
 #[cfg(test)]

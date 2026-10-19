@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 
-use thinkthen::{CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, FailureCause,
+use thinkthen::{BatchSetting, CallOptions, CompleteAnnotated, CompleteAnnotationMember, Engine, FailureCause,
     Error, ErrorKind, PlanEstimate, Probabilities, QuestionKind, QuestionSet, RawRecord, Request, RequestArguments,
     RequestEnvironment, RequestInput, RequestOptions, RequestQuestion};
 use crate::render::json_line;
@@ -62,7 +62,7 @@ pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Result<Vec<
         };
         let request = Request::named("annotate", arguments.clone()).and_then(Request::admit).map_err(|_| broken_probe())?;
         let plan = engine.plan_request(&request, RequestEnvironment {
-            controls: CallOptions::new().shared_state_groups(), feed: None,
+            controls: CallOptions::new().shared_state_groups().batch(BatchSetting::Max), feed: None,
         })?;
         Ok(Probe { name, arguments, drops_detail: plan.drops_detail(), plan,
             warning: detail_warning(backend_name) })
