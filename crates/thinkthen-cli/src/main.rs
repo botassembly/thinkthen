@@ -8,6 +8,8 @@ use thinkthen::*;
 
 #[cfg(test)]
 mod schema_tests;
+#[cfg(test)]
+mod test_deadline;
 
 mod cli;
 mod mcp;

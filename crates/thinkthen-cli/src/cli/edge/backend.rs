@@ -10,6 +10,20 @@ impl Environment {
         url: Option<&str>,
         model: Option<&str>,
     ) -> Result<ResolvedSettings, Failure> {
+        self.resolve_guarded(backend, url, model, None)
+    }
+
+    /// Check's explicit-address refusal precedes selected credentials and the
+    /// explicit model validator, as its original command admission did.
+    pub(crate) fn resolve_for_check(
+        &self, backend: Option<&str>, url: Option<&str>, model: Option<&str>, no_address: &'static str,
+    ) -> Result<ResolvedSettings, Failure> {
+        self.resolve_guarded(backend, url, model, Some(no_address))
+    }
+
+    fn resolve_guarded(
+        &self, backend: Option<&str>, url: Option<&str>, model: Option<&str>, no_address: Option<&'static str>,
+    ) -> Result<ResolvedSettings, Failure> {
         if let Some(resolved) = self.resolved.get() {
             return Ok(resolved.clone());
         }
@@ -20,6 +34,10 @@ impl Environment {
         self.update_builder(|mut builder| {
             if let Some(backend) = backend { builder = builder.backend(backend)?; }
             if let Some(url) = url { builder = builder.base_url(url)?; }
+            if let Some(message) = no_address
+                && builder.resolved_settings()?.url_source == "built_in" {
+                return Err(crate::Error::new(crate::ErrorKind::Usage, message));
+            }
             if let Some(model) = model { builder = builder.model(model)?; }
             // Selection runs host guards before reading any selected key variable.
             let route = builder.resolved_settings()?;
@@ -50,5 +68,16 @@ impl Environment {
 
     pub(crate) fn named(&self) -> Option<&str> {
         self.resolved.get().and_then(|settings| settings.backend_name.as_deref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn backend_check_requires_an_explicit_address_before_the_model_or_key() {
+        let environment = Environment::default();
+        let failure = environment.resolve_for_check(None, None, Some("bad\nmodel"), "named address required").unwrap_err();
+        assert_eq!(crate::failure::sentence(&failure), (2, "named address required".to_owned()));
     }
 }

@@ -332,16 +332,3 @@ fn arguments(
 fn native(error: crate::Error) -> Failure {
     error.into()
 }
-
-impl crate::Engine {
-    pub(crate) fn execute_cli_request<'a>(
-        &self,
-        request: &'a crate::AdmittedRequest,
-        environment: crate::RequestEnvironment<'a>,
-        sink: &dyn Fn(crate::RequestValue),
-        release: &dyn Fn(usize),
-        recover: crate::public::AnnotationRecovery<'a>,
-    ) -> Result<crate::RequestOutcome, crate::Error> {
-        self.execute_request_sink(request, environment, Some(sink), Some(release), recover)
-    }
-}
