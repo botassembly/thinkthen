@@ -37,3 +37,4 @@ Milestone: 0.2.1
 
 - 2026-10-19 started
 - 2026-10-19 next: PM requires every isolated fixture to start from the manifest resolved PATH and remove only the tool under test, with no hand-built PATH; convert every remaining fixture occurrence in the same repair, preserving fake-command precedence and all missing-tool negative cases before the batched source proof.
+- 2026-10-19 next: Native batch1792436492837-38650 at8d58a653b ran20 entrypoints with15 passes and5 failures, proving both declared pkgconf commands while exposing protected-PATH stat errors, a missing manifest lint group that triggered an unintended provider subtree which was reaped, and an undeclared Python3.12 README launcher, so one shared repair batch precedes fresh review and both image rebuilds.
