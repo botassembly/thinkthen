@@ -16,6 +16,7 @@ import zipfile
 
 from conformance.children import privacy
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout
 
 
@@ -97,7 +98,7 @@ class PrivacyTests(unittest.TestCase):
                                'if [ "$1" = -xzf ]; then touch "$INSTALL_MARKER"; fi\n'
                                'exec "$REAL_TAR" "$@"\n')
                 tar.chmod(0o755)
-                env = child_env(home=root / 'home', PATH=str(tools) + ':' + os.environ.get('PATH', os.defpath),
+                env = child_env(home=root / 'home', PATH=fixture_path(tools),
                                 THINKTHEN_RESOLVED_TOOLS=surface, THINKTHEN_TEST_PROFILE=profile,
                                 INSTALL_MARKER=str(marker), REAL_TAR=shutil.which('tar'),
                                 THINKTHEN_BASE_URL='http://127.0.0.1:1', THINKTHEN_CACHE=str(root / 'cache'))
