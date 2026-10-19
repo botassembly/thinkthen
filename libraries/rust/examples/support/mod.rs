@@ -32,7 +32,9 @@ pub(super) fn records<T: InputEvidence>(values: impl IntoIterator<Item = T>) -> 
             .map(|value| {
                 let original = match value.question_input() {
                     QuestionInput::Text(text) => Some(RequestOriginal::Text { text }),
-                    QuestionInput::Record(value) => Some(RequestOriginal::Json { value: value.original().clone() }),
+                    QuestionInput::Record(value) => Some(RequestOriginal::Json {
+                        value: value.original().clone(),
+                    }),
                     QuestionInput::Images(_) => None,
                 };
                 RequestItem {

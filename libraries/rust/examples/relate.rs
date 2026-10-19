@@ -21,10 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut out = std::io::stdout().lock();
     let call = tt.call(
         "relate",
-        support::arguments(
-            ask,
-            support::records(rules),
-        ),
+        support::arguments(ask, support::records(rules)),
         RequestEnvironment::default(),
     )?;
     let RequestValue::Related(row) = call.value() else {
