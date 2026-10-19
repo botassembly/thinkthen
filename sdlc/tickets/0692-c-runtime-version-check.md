@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0638
 
+Reviews: revision 1f5b049, accept
+
 ## Outcome
 
 - An exported function returns the library's version and interface number. The header documents how a host checks it once at load and refuses a mismatch with a clear error.
