@@ -76,13 +76,7 @@ fn ordinary_annotation_policy_only_skips_the_actual_missing_question_pointer() {
         for permit in [None, Some(false), Some(true)] {
             let listener = Listener::answering(response).unwrap();
             let observed = Arc::new(Mutex::new(Vec::new()));
-            let callback = permit.map(|permit| {
-                let observed = observed.clone();
-                Arc::new(move |ordinal: usize, pointer: &str| {
-                    observed.lock().unwrap().push((ordinal, pointer.to_owned()));
-                    permit
-                }) as Policy
-            });
+            let callback = permit.map(|permit| observing_policy(observed.clone(), permit));
             let session = engine(&listener)
                 .request_session_with_feed_options(annotation(), Surface::Rust, options(callback))
                 .unwrap();
@@ -293,3 +287,10 @@ fn synchronous_call_uses_the_same_narrow_policy_and_refuses_other_controls_befor
 
 #[path = "annotation_missing/ack.rs"]
 mod ack;
+
+fn observing_policy(observed: Arc<Mutex<Vec<(usize, String)>>>, permit: bool) -> Policy {
+    Arc::new(move |ordinal: usize, pointer: &str| {
+        observed.lock().unwrap().push((ordinal, pointer.to_owned()));
+        permit
+    })
+}

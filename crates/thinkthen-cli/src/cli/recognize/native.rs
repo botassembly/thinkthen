@@ -242,16 +242,7 @@ pub(super) fn run(
             }
             continue;
         }
-        let interest = if cancelled {
-            crate::RequestSessionWaitInterest::Settlement
-        } else if input_done {
-            crate::RequestSessionWaitInterest::Result
-        } else {
-            crate::RequestSessionWaitInterest::Input
-        };
-        if session.wait(interest, std::time::Duration::from_millis(50))
-            == crate::RequestSessionReady::End
-        {
+        if crate::asking::native_reader::session_ended(&session, cancelled, input_done) {
             break;
         }
     }

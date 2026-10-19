@@ -96,40 +96,7 @@ fn prepare(
     } else {
         top
     };
-    let (kind, dynamic, context_schema) = match &definition {
-        RequestDefinition::Atomic(question) => {
-            (question.kind(), false, question.context_schema().cloned())
-        }
-        RequestDefinition::Rank(question) => (
-            if member.is_some_and(|value| value.member("score").is_some()) {
-                QuestionKind::Score
-            } else {
-                QuestionKind::Decide
-            },
-            false,
-            question.context_schema().cloned(),
-        ),
-        RequestDefinition::DynamicChoose(question) => (
-            QuestionKind::Choose,
-            true,
-            question.context_schema().cloned(),
-        ),
-        RequestDefinition::RankSet(_) => {
-            let member =
-                member.ok_or(Failure::Defect("admitted rank set lost its first member"))?;
-            let question = crate::Question::from_json(&crate::render::json_line(member)?)?;
-            (
-                QuestionKind::Decide,
-                false,
-                question.context_schema().cloned(),
-            )
-        }
-        _ => {
-            return Err(Failure::Defect(
-                "atomic preparation resolved another function",
-            ));
-        }
-    };
+    let (kind, dynamic, context_schema) = definition_details(&definition, member)?;
     admit_rank_meanings(function, options, rank_set.is_some(), kind)?;
     let key = match kind {
         QuestionKind::Choose => "choose",
@@ -350,4 +317,43 @@ fn admit_rank_meanings(
         }
     }
     Ok(())
+}
+
+fn definition_details(
+    definition: &RequestDefinition, member: Option<&Json>,
+) -> Result<(QuestionKind, bool, Option<InputDeclaration>), Failure> {
+    Ok(match definition {
+        RequestDefinition::Atomic(question) => {
+            (question.kind(), false, question.context_schema().cloned())
+        }
+        RequestDefinition::Rank(question) => (
+            if member.is_some_and(|value| value.member("score").is_some()) {
+                QuestionKind::Score
+            } else {
+                QuestionKind::Decide
+            },
+            false,
+            question.context_schema().cloned(),
+        ),
+        RequestDefinition::DynamicChoose(question) => (
+            QuestionKind::Choose,
+            true,
+            question.context_schema().cloned(),
+        ),
+        RequestDefinition::RankSet(_) => {
+            let member =
+                member.ok_or(Failure::Defect("admitted rank set lost its first member"))?;
+            let question = crate::Question::from_json(&crate::render::json_line(member)?)?;
+            (
+                QuestionKind::Decide,
+                false,
+                question.context_schema().cloned(),
+            )
+        }
+        _ => {
+            return Err(Failure::Defect(
+                "atomic preparation resolved another function",
+            ));
+        }
+    })
 }

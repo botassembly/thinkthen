@@ -176,8 +176,12 @@ impl std::io::Read for FailingReader {
         use std::io::BufRead as _;
         let source = self.fill_buf()?;
         let count = source.len().min(output.len());
-        let destination = output.get_mut(..count).ok_or_else(|| std::io::Error::other("short output buffer"))?;
-        let bytes = source.get(..count).ok_or_else(|| std::io::Error::other("short input buffer"))?;
+        let destination = output
+            .get_mut(..count)
+            .ok_or_else(|| std::io::Error::other("short output buffer"))?;
+        let bytes = source
+            .get(..count)
+            .ok_or_else(|| std::io::Error::other("short input buffer"))?;
         destination.copy_from_slice(bytes);
         self.consume(count);
         Ok(count)

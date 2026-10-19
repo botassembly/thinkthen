@@ -17,14 +17,10 @@ fn listener() -> std::io::Result<Listener> {
 }
 fn engine(listener: &Listener) -> Result<Engine, thinkthen::Error> {
     Engine::builder()
-        .backend("liquid")
-?
-        .model("d1")
-?
-        .base_url(listener.base())
-?
-        .api_key("fake-transport-key")
-?
+        .backend("liquid")?
+        .model("d1")?
+        .base_url(listener.base())?
+        .api_key("fake-transport-key")?
         .no_cache()
         .max_retries(0)
         .build()

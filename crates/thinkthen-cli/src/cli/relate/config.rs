@@ -70,28 +70,7 @@ pub(super) fn settle(
         })
         .transpose()?;
     let document = Json::parse(&crate::render::json_line(&definition)?)?;
-    let saved_fields = document
-        .member("relate")
-        .and_then(|value| value.member("fields"));
-    let field = |name, default: &str| {
-        saved_fields
-            .and_then(|fields| fields.member(name))
-            .and_then(Json::as_str)
-            .unwrap_or(default)
-            .to_owned()
-    };
-    let fields = Fields {
-        name: arguments
-            .common
-            .field
-            .first()
-            .cloned()
-            .unwrap_or_else(|| field("name", "/name")),
-        kind: arguments
-            .kind_field
-            .clone()
-            .unwrap_or_else(|| field("kind", "/kind")),
-    };
+    let fields = selected_fields(arguments, &document);
     // The native authored parser owns override validation and its relation-specific diagnostics.
     if file.is_some()
         && let RequestDefinition::Relate(relation) = &mut definition
@@ -204,4 +183,29 @@ fn setting_sources(
             .is_some_and(|value| value.member("profile").is_some())
             .then_some("file"),
     })
+}
+
+fn selected_fields(arguments: &RelateArguments, document: &Json) -> Fields {
+    let saved_fields = document
+        .member("relate")
+        .and_then(|value| value.member("fields"));
+    let field = |name, default: &str| {
+        saved_fields
+            .and_then(|fields| fields.member(name))
+            .and_then(Json::as_str)
+            .unwrap_or(default)
+            .to_owned()
+    };
+    Fields {
+        name: arguments
+            .common
+            .field
+            .first()
+            .cloned()
+            .unwrap_or_else(|| field("name", "/name")),
+        kind: arguments
+            .kind_field
+            .clone()
+            .unwrap_or_else(|| field("kind", "/kind")),
+    }
 }

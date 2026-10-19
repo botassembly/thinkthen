@@ -1,7 +1,7 @@
 //! Native logical readiness keeps an open producer from holding completed output.
 use super::*;
 
-fn start(listener: &Listener, framing: RequestFraming, pause: Option<Duration>) -> RequestSession {
+fn start(listener: &Listener, framing: RequestFraming, pause: Option<Duration>) -> Result<RequestSession, Error> {
     let mut request = request(RequestInput::Feed {
         name: "ready".to_owned(),
         framing,
@@ -20,9 +20,8 @@ fn start(listener: &Listener, framing: RequestFraming, pause: Option<Duration>) 
                 ..Default::default()
             },
         )
-        .unwrap()
 }
-fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionResult>) {
+fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionResult>) -> Result<(), Error> {
     let mut item = descriptor(text);
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
@@ -30,10 +29,10 @@ fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionRe
             Instant::now() < deadline,
             "input progresses without losing its readiness wake"
         );
-        match session.try_push(item).unwrap() {
-            RequestSessionPush::Accepted => return,
+        match session.try_push(item)? {
+            RequestSessionPush::Accepted => return Ok(()),
             RequestSessionPush::Full(value) => item = value,
-            RequestSessionPush::Closed(_) => panic!("intake closed before its descriptor"),
+            RequestSessionPush::Closed(_) => return Err(Error::new(ErrorKind::Defect, "intake closed before its descriptor")),
         }
         if let RequestSessionRead::Result(packet) = session.try_read() {
             packets.push(packet);
@@ -42,7 +41,7 @@ fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionRe
         assert_ne!(ready, RequestSessionReady::End);
     }
 }
-fn first_row(session: &RequestSession, packets: &mut Vec<RequestSessionResult>) {
+fn first_row(session: &RequestSession, packets: &mut Vec<RequestSessionResult>) -> Result<(), Error> {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !packets
         .iter()
@@ -61,9 +60,10 @@ fn first_row(session: &RequestSession, packets: &mut Vec<RequestSessionResult>) 
                 );
                 assert_ne!(ready, RequestSessionReady::End);
             }
-            RequestSessionRead::End => panic!("producer remains open"),
+            RequestSessionRead::End => return Err(Error::new(ErrorKind::Defect, "producer remains open")),
         }
     }
+    Ok(())
 }
 
 #[test]
@@ -79,12 +79,12 @@ fn first_rows_precede_eof_after_headers_and_multiple_blank_descriptors() {
             (RequestFraming::Tsv, vec!["note\n", "\n", "\n", "first\n"]),
         ] {
             let listener = Listener::answering(response).unwrap();
-            let session = start(&listener, framing, pause);
+            let session = start(&listener, framing, pause).unwrap();
             let mut packets = Vec::new();
             for input in inputs {
-                push(&session, input, &mut packets);
+                push(&session, input, &mut packets).unwrap();
             }
-            first_row(&session, &mut packets);
+            first_row(&session, &mut packets).unwrap();
             assert_eq!(listener.requests().len(), 1);
             session.finish(None).unwrap();
             packets.extend(drain(&session));
@@ -109,10 +109,10 @@ fn first_rows_precede_eof_after_headers_and_multiple_blank_descriptors() {
 fn header_blank_then_eof_or_cancel_settles_without_a_wire_question() {
     for cancel in [false, true] {
         let listener = Listener::answering(response).unwrap();
-        let session = start(&listener, RequestFraming::Csv, None);
+        let session = start(&listener, RequestFraming::Csv, None).unwrap();
         let mut packets = Vec::new();
-        push(&session, "note\n", &mut packets);
-        push(&session, "\n", &mut packets);
+        push(&session, "note\n", &mut packets).unwrap();
+        push(&session, "\n", &mut packets).unwrap();
         if cancel {
             session.cancel();
         } else {
@@ -138,11 +138,11 @@ fn header_blank_then_eof_or_cancel_settles_without_a_wire_question() {
 #[test]
 fn malformed_logical_input_stays_after_the_completed_prefix() {
     let listener = Listener::answering(response).unwrap();
-    let session = start(&listener, RequestFraming::Jsonl, None);
+    let session = start(&listener, RequestFraming::Jsonl, None).unwrap();
     let mut packets = Vec::new();
-    push(&session, "{\"note\":\"first\"}\n", &mut packets);
-    first_row(&session, &mut packets);
-    push(&session, "{\"private-marker\":\n", &mut packets);
+    push(&session, "{\"note\":\"first\"}\n", &mut packets).unwrap();
+    first_row(&session, &mut packets).unwrap();
+    push(&session, "{\"private-marker\":\n", &mut packets).unwrap();
     session.finish(None).unwrap();
     packets.extend(drain(&session));
     assert_eq!(

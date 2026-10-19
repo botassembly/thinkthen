@@ -765,16 +765,7 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
                 && combined.relations().is_none()
         );
         assert!(!format!("{combined:?}").contains("combine-private-evidence"));
-        let encoded = serde_json::to_value(&combined).unwrap();
-        assert_eq!(
-            encoded.as_object().unwrap().len(),
-            serde_json::to_value(&parts[0])
-                .unwrap()
-                .as_object()
-                .unwrap()
-                .len()
-        );
-        assert!(encoded.get("summary").is_none());
+        assert_combined_shape(&combined, &parts[0]).unwrap();
         assert_combined_overflow(combined.clone());
         modes.push(combined);
     }
@@ -799,4 +790,17 @@ fn assert_combined_overflow(mut growing: PlanEstimate) {
         }
     }
     assert!(overflow);
+}
+
+fn assert_combined_shape(combined: &PlanEstimate, part: &PlanEstimate) -> Result<(), Box<dyn std::error::Error>> {
+        let encoded = serde_json::to_value(combined)?;
+        assert_eq!(
+            encoded.as_object().ok_or("combined object")?.len(),
+            serde_json::to_value(part)?
+                .as_object()
+                .ok_or("part object")?
+                .len()
+        );
+        assert!(encoded.get("summary").is_none());
+    Ok(())
 }

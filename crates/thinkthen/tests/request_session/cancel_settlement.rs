@@ -1,12 +1,12 @@
 //! One-cell output backpressure fixes cancellation before native final settlement.
 use super::*;
 
-fn ranked_request() -> Request {
-    Request::for_function(
+fn ranked_request() -> Result<Request, Error> {
+    Ok(Request::for_function(
         RequestFunction::Rank,
         RequestArguments {
             question: RequestQuestion::Definition {
-                value: Question::rank("Does it pass?").unwrap().into(),
+                value: Question::rank("Does it pass?")?.into(),
             },
             input: RequestInput::Records {
                 items: vec![descriptor("first").item],
@@ -16,7 +16,7 @@ fn ranked_request() -> Request {
                 ..Default::default()
             },
         },
-    )
+    ))
 }
 
 fn options(retain: bool) -> RequestSessionFeedOptions {
@@ -27,15 +27,15 @@ fn options(retain: bool) -> RequestSessionFeedOptions {
 }
 
 fn terminal(terminal: &RequestSessionTerminal, retain: bool) {
-    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
-    assert_eq!(terminal.facts.as_ref().unwrap().records(), 1);
+    assert_eq!(terminal.facts.as_ref().map(Facts::requests_sent), Some(1));
+    assert_eq!(terminal.facts.as_ref().map(Facts::records), Some(1));
     if retain {
         assert!(terminal.error.is_none());
         assert_eq!(terminal.resolution, AnswerResolution::Resolved);
     } else {
         assert_eq!(
-            terminal.error.as_ref().unwrap().kind(),
-            ErrorKind::Cancelled
+            terminal.error.as_ref().map(Error::kind),
+            Some(ErrorKind::Cancelled)
         );
         assert_eq!(terminal.resolution, AnswerResolution::Failed);
     }
@@ -46,7 +46,7 @@ fn final_settlement_retains_success_only_when_the_caller_opts_in() {
     for retain in [false, true] {
         let listener = Listener::answering(response).unwrap();
         let session = engine(&listener)
-            .request_session_with_feed_options(ranked_request(), Surface::Rust, options(retain))
+            .request_session_with_feed_options(ranked_request().unwrap(), Surface::Rust, options(retain))
             .unwrap();
         // Do not consume Question. Its occupied output cell blocks Row publication,
         // so the worker cannot reach Stop::finish before cancellation is latched.
@@ -97,7 +97,7 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
         let listener = Listener::answering(response).unwrap();
         let session = engine(&listener)
             .request_recovering_session_with_feed_options(
-                ranked_request(),
+                ranked_request().unwrap(),
                 Surface::Rust,
                 options(retain),
             )
@@ -111,28 +111,7 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
         let mut kinds = vec![];
         loop {
             match session.try_read() {
-                RequestRecoveringRead::Result(packet) => kinds.push(match packet {
-                    RequestRecoveringResult::Observation {
-                        value: OwnedRecordObservation::Question { .. },
-                        ..
-                    } => "question",
-                    RequestRecoveringResult::Observation {
-                        value: OwnedRecordObservation::Row { .. },
-                        ..
-                    } => "row",
-                    RequestRecoveringResult::Row(row) => {
-                        assert!(retain);
-                        let RequestValue::Ranked(rows) = row.outcome().unwrap() else {
-                            panic!("rank aggregate")
-                        };
-                        assert_eq!(rows.len(), 1);
-                        "aggregate"
-                    }
-                    RequestRecoveringResult::Terminal(value) => {
-                        terminal(&value, retain);
-                        "terminal"
-                    }
-                }),
+                RequestRecoveringRead::Result(packet) => kinds.push(recovered_kind(packet, retain).unwrap()),
                 RequestRecoveringRead::Pending => {
                     assert!(Instant::now() < until, "recovering session did not settle");
                     assert!(matches!(
@@ -177,4 +156,29 @@ fn opting_in_still_stops_an_empty_feed_before_any_send() {
         );
         assert_eq!(listener.count(), 0);
     }
+}
+
+fn recovered_kind(packet: RequestRecoveringResult, retain: bool) -> Result<&'static str, Box<dyn std::error::Error>> {
+    Ok(match packet {
+                    RequestRecoveringResult::Observation {
+                        value: OwnedRecordObservation::Question { .. },
+                        ..
+                    } => "question",
+                    RequestRecoveringResult::Observation {
+                        value: OwnedRecordObservation::Row { .. },
+                        ..
+                    } => "row",
+                    RequestRecoveringResult::Row(row) => {
+                        assert!(retain);
+                        let RequestValue::Ranked(rows) = row.outcome().map_err(ToString::to_string)? else {
+                            return Err("rank aggregate".into());
+                        };
+                        assert_eq!(rows.len(), 1);
+                        "aggregate"
+                    }
+                    RequestRecoveringResult::Terminal(value) => {
+                        terminal(&value, retain);
+                        "terminal"
+                    }
+                })
 }

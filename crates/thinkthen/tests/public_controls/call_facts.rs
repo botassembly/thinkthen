@@ -489,7 +489,7 @@ fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
     );
     assert_eq!(listener.count(), 2);
     assert_eq!(
-        listener.requests()[0].body,
+        listener.requests().first().expect("one request").body,
         REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
     );
     let zero = priced(listener.base(), "0", "0")
@@ -505,7 +505,7 @@ fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
     );
     assert_eq!(listener.count(), 3);
     assert_eq!(
-        listener.requests()[0].body,
+        listener.requests().first().expect("one request").body,
         REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
     );
 }
