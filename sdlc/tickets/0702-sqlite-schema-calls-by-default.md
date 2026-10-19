@@ -21,3 +21,7 @@ Milestone: 0.2.1
 The extension registers its functions with `SQLITE_DIRECTONLY` (`databases/sqlite/src/scalars.rs`, `budget.rs`, `catalog.rs`, `files.rs`), so SQLite refuses them in triggers, views, CHECK constraints and defaults. A user building a demo hit `unsafe use of thinkthen_choose()` on an `AFTER INSERT` trigger. The guard protects someone who opens a database file another person wrote, so it blocks the main use, labeling records ahead of time, to protect a rare one, and SQLite's standard `trusted_schema` setting already covers that rare case. Ian, 2026-10-19, asked for schema use to work by default. An opt-in trusted entry point exists on main since 0422 but needs a special load call nobody finds.
 
 PostgreSQL and DuckDB get the same check once their own trigger behavior is measured.
+
+## Progress
+
+- 2026-10-19 started
