@@ -275,12 +275,9 @@ fn an_unrepresentable_reported_count_refuses_storage_without_erasing_the_known_l
 
 fn assert_answer_columns(db: &Connection) -> rusqlite::Result<()> {
     let answer_columns: Vec<String> = db
-        .prepare("PRAGMA table_info(answers)")
-        ?
-        .query_map([], |row| row.get(1))
-        ?
-        .collect::<Result<_, _>>()
-        ?;
+        .prepare("PRAGMA table_info(answers)")?
+        .query_map([], |row| row.get(1))?
+        .collect::<Result<_, _>>()?;
     assert_eq!(
         answer_columns,
         [
