@@ -34,9 +34,15 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
         );
         &*packet.data.terminal
     };
-    assert_eq!(terminal.answer.presence, generated::THINKTHEN_COMPLETE_PRESENCE_NULL_V1);
+    assert_eq!(
+        terminal.answer.presence,
+        generated::THINKTHEN_COMPLETE_PRESENCE_NULL_V1
+    );
     // SAFETY: the terminal owns its required resolution view.
-    assert_eq!(unsafe { (*terminal.resolution).kind }, generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1);
+    assert_eq!(
+        unsafe { (*terminal.resolution).kind },
+        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1
+    );
     assert_eq!(
         terminal.facts.presence,
         generated::THINKTHEN_COMPLETE_PRESENCE_NULL_V1
@@ -51,7 +57,10 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
         failure.facts.presence,
         generated::THINKTHEN_COMPLETE_PRESENCE_MISSING_V1
     );
-    assert_eq!(unsafe { (*failure.resolution).kind }, generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1);
+    assert_eq!(
+        unsafe { (*failure.resolution).kind },
+        generated::THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1
+    );
     let error = unsafe { &*failure.error };
     let stopped = unsafe { &*error.stopped };
     for (extensions, key, raw) in [
