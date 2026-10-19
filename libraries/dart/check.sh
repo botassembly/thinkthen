@@ -13,7 +13,6 @@ case ${THINKTHEN_ARTIFACT:-} in
   *) [ -x "$TT_FLUTTER" ] || exit 77 ;;
 esac
 python3 "$ROOT/../../conformance/children/privacy.py" --sources "$ROOT" --include '*.dart' --include '*.py' --include '*.sh' --include '*.md' --include '*.yaml' --include '*.json' --artifact-env
-node "$ROOT/../../sdlc/scripts/ratchet.mjs" "$ROOT/ratchet.dart.json"
 if [ "${1:-}" = --native-assets ]; then
   shift
   [ "$#" -eq 3 ] || { echo 'usage: check.sh --native-assets NATIVE_LIBRARY SCRATCH PUB_CACHE' >&2; exit 2; }

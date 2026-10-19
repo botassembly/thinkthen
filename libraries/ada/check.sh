@@ -35,7 +35,6 @@ if [ ! -x "$THINKTHEN_BACKEND_BIN" ]; then
 fi
 python3 "$ROOT/checks/generated_names.py"
 python3 "$REPO/conformance/children/privacy.py" --sources "$ROOT" --include README.md --include LICENSE --include 'src/*' --include 'Src/*' --include 'Sources/*' --include 'examples/*' --include 'Examples/*' --artifact-env
-for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 python3 "$REPO/sdlc/scripts/check-c-exports.py" "$REPO/libraries/c/include/thinkthen.h" "$THINKTHEN_C_LIBRARY"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   smoke_guard

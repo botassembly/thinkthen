@@ -96,6 +96,7 @@ pub(crate) enum Source {
     /// The value the question file holds.
     File,
     /// The value the read-only process configuration holds.
+    #[cfg(any(feature = "cli", test))]
     Configuration,
     /// The value nobody named, which the tool supplies.
     Default,
@@ -108,6 +109,7 @@ impl Source {
         match self {
             Self::CommandLine => "command line",
             Self::File => "file",
+            #[cfg(any(feature = "cli", test))]
             Self::Configuration => "configuration",
             Self::Default => "default",
         }
@@ -200,6 +202,7 @@ pub(crate) enum QuestionFileError {
         "{}`filter` takes a single cut, so ask `decide --details` and split the three piles with `jq`",
         named(*.0, "threshold")
     )]
+    #[cfg(any(feature = "cli", test))]
     BandOnFilter(Source),
     /// A rule reached the caller that orders records and selects none.
     #[error("{}`rank` with a score question or question set takes no threshold", named(*.0, "threshold"))]
@@ -272,7 +275,9 @@ fn named(source: Source, key: &str) -> String {
             _ => String::new(),
         },
         Source::File => format!("the question file's `{key}`: "),
-        Source::Configuration | Source::Default => String::new(),
+        Source::Default => String::new(),
+        #[cfg(any(feature = "cli", test))]
+        Source::Configuration => String::new(),
     }
 }
 
@@ -284,13 +289,16 @@ fn pointed(source: Source, key: &str) -> String {
     match source {
         Source::CommandLine => format!("--{key} "),
         Source::File => format!("the question file's `{key}` "),
-        Source::Configuration | Source::Default => String::new(),
+        Source::Default => String::new(),
+        #[cfg(any(feature = "cli", test))]
+        Source::Configuration => String::new(),
     }
 }
 
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
+    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn origin(&self) -> Source {
         match self {
             Self::Blank { origin, .. }
@@ -427,7 +435,9 @@ pub use role::QuestionRole;
 mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;
-pub(crate) use crate::core::question_file::resolve::{Cutting, Resolved, Sources, Typed, resolve};
+pub(crate) use crate::core::question_file::resolve::{Cutting, Typed, resolve};
+#[cfg(any(feature = "cli", test))]
+pub(crate) use crate::core::question_file::resolve::{Resolved, Sources};
 use fields::{labels_in, meaning, model_in, pointers_in, question_text, threshold_in};
 use profile::profile_in;
 

@@ -374,7 +374,7 @@ impl<'a> SessionObservationDocument<'a> {
     }
 }
 
-/// Complete projection of the native question detail, independent of compatibility observation JSON.
+/// Complete projection of the native question detail, independent of observation JSON.
 #[derive(Serialize)]
 #[cfg_attr(
     test,

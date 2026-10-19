@@ -36,6 +36,7 @@ impl Clock {
             self.invalid |= self.elapsed.is_none();
         }
     }
+    #[cfg(any(feature = "cli", test))]
     fn total(&self, now: Instant) -> Option<Duration> {
         if self.invalid {
             return None;
@@ -53,6 +54,7 @@ impl Timeline {
         }
         Interval(self)
     }
+    #[cfg(any(feature = "cli", test))]
     pub(super) fn total(&self) -> Option<Duration> {
         self.0.lock().ok()?.total(Instant::now())
     }

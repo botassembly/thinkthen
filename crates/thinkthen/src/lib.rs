@@ -2,14 +2,6 @@
 
 #![cfg_attr(not(windows), forbid(unsafe_code))]
 #![cfg_attr(windows, deny(unsafe_code))]
-#![cfg_attr(
-    not(feature = "cli"),
-    allow(
-        dead_code,
-        unused_imports,
-        reason = "the private engine has no command consumer when default features are disabled"
-    )
-)]
 
 // ADR 0111: the question store's SQLite is a choice every build makes.
 #[cfg(not(any(feature = "bundled-sqlite", feature = "host-sqlite")))]

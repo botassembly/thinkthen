@@ -34,10 +34,13 @@ mod validation;
 mod versioned;
 pub(crate) use original::Original;
 mod probe;
+#[cfg(any(feature = "cli", test))]
 mod prune;
+#[cfg(any(feature = "cli", test))]
 pub(crate) use convert::convert;
 pub(crate) use fixture::{Answer, Entries, Replayed};
 pub(crate) use probe::Probe;
+#[cfg(any(feature = "cli", test))]
 pub(crate) use prune::{Prune, counts, preview, run as prune, unused};
 
 /// The live container's file name.

@@ -14,12 +14,12 @@ pub(crate) fn engine(
     folders: Folders,
     route: (Backend, Option<BackendProfile>),
     width: Option<u8>,
-    legacy_invocation: bool,
+    count_invocation: bool,
 ) -> Result<Engine, Failure> {
     let (backend, profile) = route;
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     let roots = environment.roots()?;
-    if legacy_invocation && !common.dry_run {
+    if count_invocation && !common.dry_run {
         environment.cancel().invocation()?;
     }
     if !common.dry_run && folders.writable_by_another() {

@@ -63,7 +63,7 @@ pub(crate) fn annotation(
             core::CompleteAnnotationMember {
                 declarations: named.metadata().clone(),
                 identity,
-                compatibility: entry.clone(),
+                reading: entry.clone(),
                 threshold: named.threshold(),
                 sources: receipt.trace.sources.clone(),
                 observations: receipt.trace.observations.clone(),
@@ -103,12 +103,7 @@ pub(crate) fn annotation(
     Ok(core::CompleteAnnotation {
         source: None,
         identity,
-        compatibility: core::AnnotateResult::new(
-            input,
-            annotation.values,
-            annotation.details,
-            meta,
-        ),
+        reading: core::AnnotateResult::new(input, annotation.values, meta),
         members,
         context_sha256,
         attempts: attempts.then(|| events.into_values().collect()),

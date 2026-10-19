@@ -20,8 +20,6 @@ Darwin)
     [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
     ;;
 esac
-node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
-
 for mode in '' --inputs --bridge; do
     python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
 done

@@ -19,12 +19,8 @@ pub(crate) enum TransportKind {
     Other,
 }
 
-/// The stable class a host-facing error will use in a later ticket.
+/// The stable class exposed by public::ErrorKind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[allow(
-    dead_code,
-    reason = "the private bridge fixes all six accepted kinds before public engine errors land"
-)]
 pub(crate) enum Kind {
     Usage,
     Local,
@@ -36,10 +32,6 @@ pub(crate) enum Kind {
 
 /// One exact engine failure. The command maps it to its existing diagnostics.
 #[derive(Clone, Debug)]
-#[allow(
-    dead_code,
-    reason = "deterministic conformance injections exercise kinds absent from the current command"
-)]
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
@@ -62,14 +54,33 @@ pub(crate) enum Error {
     ReplyTooLarge(u64),
     Reply(DecodeError),
     /// Strict replay found no stored answer under this question key.
-    QuestionMiss(String),
+    QuestionMiss(
+        #[cfg_attr(
+            not(feature = "cli"),
+            expect(
+                dead_code,
+                reason = "cli::failure::convert retains this detail in the command diagnostic"
+            )
+        )]
+        String,
+    ),
     /// A replay folder holds both the fixture and the live store.
     StoreAmbiguous,
     /// A read-only replay met a write that did not finish.
     StoreHotJournal,
     /// A named store file predates the current format.
     StoreVersion(String),
-    Entry(String, String),
+    Entry(
+        #[cfg_attr(
+            all(not(feature = "cli"), not(test)),
+            expect(
+                dead_code,
+                reason = "cli::failure::convert retains this detail in the command diagnostic"
+            )
+        )]
+        String,
+        String,
+    ),
     RecordingStorage,
     RecordingForbidden,
     RecordingPathIsFile,
@@ -78,6 +89,7 @@ pub(crate) enum Error {
     /// uncounted (ticket 0360). It carries the whole sentence, which names
     /// only a generated file name.
     UsageUnreadable(String),
+    #[cfg(any(feature = "cli", test))]
     CacheEntry,
     Defect(&'static str),
     Usage(&'static str),
@@ -89,7 +101,16 @@ pub(crate) enum Error {
     /// A later explicit width differs from the one this process selected.
     WidthActive(crate::engine::WidthActive),
     /// Replies for one logical result named different model versions.
-    ModelsDiffer(Option<(String, String)>),
+    ModelsDiffer(
+        #[cfg_attr(
+            not(feature = "cli"),
+            expect(
+                dead_code,
+                reason = "cli::failure::convert retains this detail in the command diagnostic"
+            )
+        )]
+        Option<(String, String)>,
+    ),
     /// Reply token counts cannot be represented as one total.
     UsageOverflow,
     /// Recognition asked for more kinds than one kind question can carry.
@@ -142,10 +163,6 @@ impl fmt::Display for Budget {
     }
 }
 
-#[allow(
-    dead_code,
-    reason = "the command runner reads kinds while normal command paths preserve exact causes"
-)]
 impl Error {
     /// A refusal that a smaller batch may answer.
     pub(crate) const fn too_large(&self) -> bool {
@@ -193,6 +210,7 @@ impl Error {
             | Self::RecordingPathIsFile
             | Self::DefaultCachePrivate
             | Self::UsageUnreadable(_) => Kind::Local,
+            #[cfg(any(feature = "cli", test))]
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)
@@ -246,10 +264,7 @@ pub(crate) fn relation_questions_message(
     )
 }
 
-#[allow(
-    dead_code,
-    reason = "the offline command runner compares the accepted kind spellings"
-)]
+#[cfg(test)]
 impl Kind {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
