@@ -1,0 +1,63 @@
+{
+  "libraries": {
+    "csharp": {
+      "root": "libraries/csharp",
+      "language": "csharp",
+      "naming": "pascal",
+      "declarations": [
+        "libraries/csharp/src/*.cs",
+        "build-tools/results/csharp/CompleteFacts.g.cs"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "function_suffix": "Async",
+      "function_containers": [
+        "Engine"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession"
+      ],
+      "representation_owners": [],
+      "lifecycle_members": {
+        "Engine": [
+          "open",
+          "start_session",
+          "execute"
+        ]
+      },
+      "field_adapters": {
+        "Failure": {
+          "contract": "result",
+          "type": "completeCallError",
+          "aliases": {}
+        },
+        "SessionFailure": {
+          "contract": "result",
+          "type": "completesessionPacket",
+          "aliases": {}
+        }
+      }
+    }
+  }
+}

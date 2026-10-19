@@ -1,8 +1,10 @@
 # 0727 — Each language owns its migration entries
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
+
+Reviews: revision 77112f3, accept
 
 ## Outcome
 

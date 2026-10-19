@@ -1,8 +1,12 @@
 # 0705 — Fixtures have no tight wall-clock limits
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
+
+Reviews: revision 8d51878, accept
+
+Reviews: revision 83a707f, accept
 
 ## Outcome
 

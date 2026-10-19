@@ -9,6 +9,8 @@ import io
 import os
 import shlex
 import shutil
+import select
+import signal
 import sys
 import tempfile
 import unittest
@@ -18,6 +20,59 @@ from conformance import c_images
 from conformance.children.children import child_env
 from sdlc.scripts.tools import fixture_path
 from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
+
+from conformance.children.children import fixture_communicate, fixture_run
+
+
+@unittest.skipUnless(sys.platform == 'darwin', 'Darwin loader observation')
+class DarwinSignalObservation(unittest.TestCase):
+    def test_native_handler_completes_only_after_pending_signal_unblocks(self):
+        from conformance.children.signals import SignalObservation
+        from conformance.children.children import read_process_line
+        with tempfile.TemporaryDirectory(prefix='thinkthen-signal-observation-') as folder:
+            home = Path(folder)
+            env = child_env(home=home)
+            probe = home / 'signal-probe'
+            source = Path(__file__).parent / 'children/signal_observer_probe.c'
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
+                            '-o', str(probe)], env=env, check=True, text=True)
+            observation = SignalObservation(home, env)
+            self.addCleanup(observation.close)
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                for mode in ('stable', 'ignored', 'replacement', 'reset', 'reentrant', 'failure'):
+                    with self.subTest(signal=signum, mode=mode):
+                        process = subprocess.Popen([str(probe), str(signum), mode],
+                                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                   stderr=subprocess.PIPE, text=True,
+                                                   env=observation.env,
+                                                   pass_fds=observation.pass_fds)
+                        def expect_line(expected):
+                            self.assertTrue(select.select([process.stdout], [], [], 30)[0])
+                            actual = read_process_line(process.stdout)
+                            if not actual:
+                                _, stderr = fixture_communicate(process)
+                                self.fail(f'probe exited {process.returncode}: {stderr}')
+                            self.assertEqual(actual, expected + '\n')
+                        try:
+                            expect_line('ready')
+                            process.send_signal(signum)
+                            process.stdin.write('p')
+                            process.stdin.flush()
+                            expect_line('pending')
+                            self.assertFalse(select.select([observation.reader], [], [], 0)[0],
+                                             'a blocked signal was falsely acknowledged')
+                            process.stdin.write('u')
+                            process.stdin.flush()
+                            expect_line('completed')
+                            stdout, stderr = fixture_communicate(process)
+                            self.assertEqual((process.returncode, stdout, stderr), (0, '', ''))
+                            self.assertTrue(select.select([observation.reader], [], [], 0)[0])
+                            expected = b'H' + (bytes([signum]) if mode in ('stable', 'ignored', 'failure') else b'')
+                            self.assertEqual(os.read(observation.reader, 3), expected)
+                        finally:
+                            if process.poll() is None:
+                                process.kill()
+                                process.communicate()
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -599,9 +654,9 @@ class PublicAssertions(unittest.TestCase):
                     selected = dict(env)
                     if selector is not None: selected['THINKTHEN_CONFORMANCE_IDS'] = selector
                     if name.startswith('full'): selected['THINKTHEN_TEST_PROFILE'] = 'full'
-                    result = subprocess.run([sys.executable,
+                    result = fixture_run([sys.executable,
                         str(parity.ROOT / 'databases/sqlite/tests/complete/parity.py'),
-                        'postgresql', *arguments], env=selected, capture_output=True, text=True, timeout=5)
+                        'postgresql', *arguments], env=selected, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
@@ -625,8 +680,8 @@ class PublicAssertions(unittest.TestCase):
                               + 'runtime_remove() { :; }\npg_stop() { :; }\n'
                               + lifecycle + '\nkill -' + name + ' "$$"\n'
                               + 'touch later-case\n')
-                    result = subprocess.run(['bash', '-c', script], cwd=root,
-                                            env={'PATH': os.environ['PATH']}, capture_output=True, text=True, timeout=5)
+                    result = fixture_run(['bash', '-c', script], cwd=root,
+                                            env={'PATH': os.environ['PATH']}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, code, result.stdout + result.stderr)
                     self.assertFalse((root / 'later-case').exists())
                     self.assertFalse(Path((root / 'owned-run').read_text()).exists())
@@ -872,6 +927,14 @@ class PublicAssertions(unittest.TestCase):
 
 
 class CliApplicability(unittest.TestCase):
+    def test_cli_fixture_reports_usage_from_an_owned_directory(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-cli-fixture-') as folder:
+            result = fixture_run([sys.executable, str(parity.ROOT / 'conformance/cli_parity.py')],
+                                 cwd=folder, env=child_env(home=folder),
+                                 capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn('usage: cli_parity.py LOOPBACK_PORT [INSTALLED_BINARY]', result.stderr)
+
     def setUp(self):
         self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
         self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
@@ -1215,9 +1278,9 @@ esac
 
             def run(entry, *args):
                 log.write_text("")
-                result = subprocess.run(["/bin/sh", str(scripts / entry), *args],
+                result = fixture_run(["/bin/sh", str(scripts / entry), *args],
                                         cwd=root, env=env, capture_output=True,
-                                        text=True, timeout=5)
+                                        text=True)
                 return result, log.read_text().splitlines()
 
             routine, calls = run("test")
