@@ -25,3 +25,7 @@ Depends on: 0625, 0629
 `crates/thinkthen` holds the library, the command-line tool (`src/cli`, `src/main.rs`) and the MCP server (`src/mcp`), switched by the `cli` feature (`crates/thinkthen/Cargo.toml`, `src/lib.rs:52-67`). The crate is about 107,000 source lines and exports about 216 public type names. Every binding builds it with default features off and depends on the feature switch to leave the CLI out. `lib.rs:61-64` pulls CLI modules into the crate root (`args`, `asking`, `edge`, `failure`, `judge`, `profile`), so CLI and library code can reach into each other.
 
 The CLI is among the most churned code since 2026-09-15: `cli/args.rs` 68 commits, `cli/args/command.rs` 62, `cli/asking.rs` 59, `cli/mod.rs` 57, `cli/failure.rs` 51. Each of those changes rebuilds and re-reviews the library crate that every binding uses.
+
+## Progress
+
+- 2026-10-19 started
