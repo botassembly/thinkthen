@@ -18,6 +18,8 @@ if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 tools_group=postgresql
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
@@ -28,8 +30,6 @@ cd "$(dirname "$0")"
 PG_MAJOR=${1:-16}
 case $PG_MAJOR in 16|17|18) ;; *) echo 'usage: check.sh [16|17|18]' >&2; exit 2 ;; esac
 export PG_MAJOR
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
 . ../../sdlc/scripts/scratch.sh
@@ -1241,7 +1241,7 @@ a_role_limit_applies() {
 check a_role_limit_applies
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
-THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+THROTTLE_RANGE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["throttle"])' "$REPO/conformance/settings-errors.json")
 throttle_setting_range() {
 	fresh generic "thinkthen.throttle = 0"
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
@@ -1331,7 +1331,7 @@ batch_setting_and_replay_context_validate_before_send() {
     fresh generic
     for setting in 0 +1 -1 1.5 MAX no; do
         has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb)")" \
-            'thinkthen.batch is max or a whole number of 1 or more'
+            "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["batch"])' "$REPO/conformance/settings-errors.json")"
     done
     same "$(bcount)" 0
     fresh generic

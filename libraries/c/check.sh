@@ -1,11 +1,11 @@
 #!/bin/sh
 # The C surface. The surface rung passes its loopback port as $1.
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 tools_group=c
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress|smoke) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }

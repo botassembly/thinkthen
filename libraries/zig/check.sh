@@ -1,14 +1,14 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
-tools_group=zig
-. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in
  routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 77 ;;
  *) echo 'Zig: unknown test profile' >&2; exit 2 ;;
 esac
+tools_group=zig
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+root=$(CDPATH= cd -- "$here/../.." && pwd)
 zig=$(command -v zig || true)
 [ -x "$zig" ] || exit 77
 for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done

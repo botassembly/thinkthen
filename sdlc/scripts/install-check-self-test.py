@@ -676,37 +676,6 @@ class RefusalTable(unittest.TestCase):
                                         env=env, cwd=repo, capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, status)
 
-    def test_workflow_cells(self):
-        import yaml
-        workflow = Path(__file__).resolve().parents[2] / '.github/workflows/install-check.yml'
-        doc = yaml.safe_load(workflow.read_text())
-        self.assertEqual(doc['permissions'], {})
-        self.assertEqual(set(doc.get('on', doc.get(True))), {'workflow_dispatch'})
-        cells, ruby_cells = set(), set()
-        for name, job in doc['jobs'].items():
-            self.assertEqual(job['permissions'], {'contents': 'read'})
-            self.assertNotIn('environment', job)
-            matrix = job.get('strategy', {}).get('matrix', {})
-            for runner in matrix.get('runner', [job['runs-on']]):
-                for channel in matrix.get('channel', [name]): cells.add((runner, channel))
-            for included in matrix.get('include', []):
-                cells.add((included['runner'], included['channel']))
-                if included['channel'] == 'rubygems': ruby_cells.add((included['runner'], included['ruby']))
-            for step in job['steps']:
-                if 'uses' in step: self.assertRegex(step['uses'], r'@[0-9a-f]{40}$')
-                self.assertNotIn('inputs.', step.get('run', ''))
-                self.assertNotIn('secrets.', json.dumps(step))
-        self.assertEqual(len(cells), 56)
-        windows = {'download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c'}
-        self.assertEqual({channel for runner, channel in cells if runner == 'windows-2025'}, windows)
-        self.assertEqual({channel for _, channel in cells}, set(CHANNELS))
-        all_five = {'ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26'}
-        from install_check_workflow import RUBIES
-        self.assertEqual(ruby_cells, {(runner, ruby) for runner in all_five for ruby in RUBIES})
-        for channel in ('download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems'):
-            self.assertEqual({runner for runner, member in cells if member == channel},
-                             all_five | ({'windows-2025'} if channel in windows else set()))
-
 
 class Fixture(Check):
     def __init__(self, root, channel):

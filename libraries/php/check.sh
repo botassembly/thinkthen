@@ -1,12 +1,12 @@
 #!/bin/sh
 # Exercise the installed Composer package; shared parity is release-only.
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo 'php: unknown profile' >&2; exit 2 ;; esac
 tools_group=php
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo 'php: unknown profile' >&2; exit 2 ;; esac
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || { echo 'php: not run: Linux x86_64 required'; exit 77; }
 php_bin=$(command -v php || true)
 python_bin=$(command -v python3 || true)

@@ -1,15 +1,15 @@
 #!/bin/sh
 # Stage the Go module and run its installed consumers offline.
 set -eu
-tools_group=go
-. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
-cd -- "$(dirname -- "$0")"
-repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
     routine|full|smoke) ;;
     stress) echo 'go: not run: no stress gate'; exit 77 ;;
     *) echo 'go: unknown profile' >&2; exit 2 ;;
 esac
+tools_group=go
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+repo=$(cd ../.. && pwd)
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo 'go: not run: this package gate is proven on Linux x86_64'; exit 77
 fi

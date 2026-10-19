@@ -1,5 +1,9 @@
 #!/bin/sh
 set -eu
+case "${THINKTHEN_TEST_PROFILE:-routine}" in
+    routine|full|smoke) ;;
+    *) echo 'C#: unknown test profile' >&2; exit 2 ;;
+esac
 tools_group=csharp
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -11,10 +15,6 @@ usage_home
 dotnet=$(command -v dotnet || true)
 [ -x "$dotnet" ] || exit 77
 command -v python3 >/dev/null 2>&1 || exit 77
-case "${THINKTHEN_TEST_PROFILE:-routine}" in
-    routine|full|smoke) ;;
-    *) echo 'C#: unknown test profile' >&2; exit 2 ;;
-esac
 python3 "$here/tests/toolchains.py"
 python3 "$here/tests/generate_fixture_questions.py" --check
 python3 "$root/sdlc/generators/results/generate.py" --inputs --check

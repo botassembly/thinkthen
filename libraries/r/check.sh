@@ -3,12 +3,12 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown profile: $profile" >&2; exit 2 ;; esac
 tools_group=r
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
 root=$(cd ../.. && pwd)
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown profile: $profile" >&2; exit 2 ;; esac
 if [ "$profile" = routine ]; then
   export THINKTHEN_CONFORMANCE_IDS="$root/conformance/routine-ids.txt"
 else

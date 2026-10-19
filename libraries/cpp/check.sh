@@ -1,14 +1,14 @@
 #!/bin/sh
 # Exercise the installed owned API; complete shared parity is release-only.
 set -eu
-tools_group=cpp
-. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
-cd -- "$(dirname -- "$0")"
-repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
  routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 77 ;;
  *) echo 'cpp: unknown profile' >&2; exit 2 ;;
 esac
+tools_group=cpp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
