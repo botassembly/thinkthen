@@ -281,7 +281,7 @@ fn mlx_plan_names_its_own_workaround_and_sends_nothing() {
 fn a_function_profile_limit_refuses_the_whole_check_before_any_request() {
     let target = mimic(|_| false, 200);
     let home = Home::new("local-profile");
-    home.config(r#"{"schema":"thinkthen.config/1","backends":{"mlx":{"profile":{"schema":"thinkthen.backend-profile/1","name":"narrow","max_options":4}}}}"#);
+    home.config(r#"{"backends":{"mlx":{"profile":{"schema":"thinkthen.backend-profile/1","name":"narrow","max_options":4}}}}"#);
     for flags in [&[][..], &["--plan"][..]] {
         let arguments = [
             &[

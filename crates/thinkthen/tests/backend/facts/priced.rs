@@ -29,7 +29,7 @@ fn run(root: &Path, listener: &Listener, input: &[u8], extra: &[&str]) -> std::p
 
 #[test]
 fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
-    let prices = r#"{"schema":"thinkthen.config/1","usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#;
+    let prices = r#"{"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#;
     let root = configuration("facts-priced-config", prices);
     let reply = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
     let good = Listener::serving(vec![Canned::ok(reply)]).expect("listener");
@@ -93,7 +93,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
 fn caller_price_config_rejects_invalid_pair_without_a_send() {
     let root = configuration(
         "facts-price-refusal",
-        r#"{"schema":"thinkthen.config/1","usd_per_million_input":"0.25"}"#,
+        r#"{"usd_per_million_input":"0.25"}"#,
     );
     let listener = Listener::answering(answered).expect("listener");
     let refused = run(&root, &listener, b"Refund me.", &[]);
@@ -109,7 +109,7 @@ fn caller_price_config_rejects_invalid_pair_without_a_send() {
 fn complete_replies_with_an_overflowed_sum_hide_tokens_and_cost_then_a_new_run_recovers() {
     let root = configuration(
         "facts-price-overflow",
-        r#"{"schema":"thinkthen.config/1","usd_per_million_input":"1","usd_per_million_output":"0"}"#,
+        r#"{"usd_per_million_input":"1","usd_per_million_output":"0"}"#,
     );
     let seen = AtomicUsize::new(0);
     let overflow = Listener::answering(move |_| {

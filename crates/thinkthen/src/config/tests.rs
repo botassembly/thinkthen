@@ -5,10 +5,8 @@ use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
 
 #[test]
 fn raw_configuration_debug_withholds_the_address() {
-    let config = Config::parse(
-        br#"{"schema":"thinkthen.config/1","url":"http://localhost/config-marker-0210"}"#,
-    )
-    .expect("valid configuration");
+    let config = Config::parse(br#"{"url":"http://localhost/config-marker-0210"}"#)
+        .expect("valid configuration");
     let shown = format!("{config:?}");
     assert!(shown.contains("url: Some(\"<withheld>\")"));
     assert!(!shown.contains("config-marker-0210"));
@@ -33,44 +31,44 @@ fn another_owner_or_other_write_warns_and_group_write_stays_quiet() {
 
 #[test]
 fn each_refusal_names_its_field_and_never_its_value() {
-    assert!(Config::parse(br#"{"schema":"thinkthen.config/1"}"#).is_ok());
+    assert!(Config::parse(br#"{}"#).is_ok());
     let not_closed = "the configuration file is not valid closed JSON";
-    let schema = "configuration field `schema` must be `thinkthen.config/1`";
+    let schema = "delete configuration field `schema`";
     let bytes = "configuration field `cache_bytes` must be a whole number greater than zero";
     for (text, sentence) in [
-        (r#"{"schema":"thinkthen.config/1""#, not_closed),
+        (r#"{"cache":true"#, not_closed),
         (r#"["schema"]"#, not_closed),
         (
-            r#"{"schema":"thinkthen.config/1","cache":true,"cache":false}"#,
+            r#"{"cache":true,"cache":false}"#,
             not_closed,
         ),
-        (r#"{}"#, schema),
+        (r#"{"schema":"thinkthen.config/1"}"#, schema),
         (r#"{"schema":"wrong"}"#, schema),
         (r#"{"schema":1}"#, schema),
         (
-            r#"{"schema":"thinkthen.config/1","extra":true}"#,
-            "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`",
+            r#"{"extra":true}"#,
+            "the configuration file holds a field other than `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`",
         ),
         (
-            r#"{"schema":"thinkthen.config/1","cache":"/folder"}"#,
+            r#"{"cache":"/folder"}"#,
             "configuration field `cache` must be true or false",
         ),
         (
-            r#"{"schema":"thinkthen.config/1","url":7}"#,
+            r#"{"url":7}"#,
             "configuration field `url` must be a string",
         ),
         (
-            r#"{"schema":"thinkthen.config/1","model":["m"]}"#,
+            r#"{"model":["m"]}"#,
             "configuration field `model` must be a string",
         ),
-        (r#"{"schema":"thinkthen.config/1","cache_bytes":0}"#, bytes),
-        (r#"{"schema":"thinkthen.config/1","cache_bytes":-1}"#, bytes),
+        (r#"{"cache_bytes":0}"#, bytes),
+        (r#"{"cache_bytes":-1}"#, bytes),
         (
-            r#"{"schema":"thinkthen.config/1","model":"  "}"#,
+            r#"{"model":"  "}"#,
             "configuration field `model` must not be blank",
         ),
         (
-            r#"{"schema":"thinkthen.config/1","url":"http://example.com"}"#,
+            r#"{"url":"http://example.com"}"#,
             "configuration field `url` must be a safe backend base",
         ),
     ] {

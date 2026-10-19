@@ -182,7 +182,7 @@ fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_l
             .expect("config parent");
         fs::write(
             scratch.config(),
-            r#"{"schema":"thinkthen.config/1","model":"local-1"}"#,
+            r#"{"model":"local-1"}"#,
         )
         .expect("config");
         support::plant(&scratch.config(), grant, foreign_owner);
@@ -196,7 +196,7 @@ fn native_configuration_writer_policy_warns_and_refuses_named_backends_without_l
                 b""
             }
         );
-        fs::write(scratch.config(), r#"{"schema":"thinkthen.config/1","backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"secret-model-fixture"}}}"#).expect("named config");
+        fs::write(scratch.config(), r#"{"backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"secret-model-fixture"}}}"#).expect("named config");
         let listener = Listener::answering(|_| Canned::ok(support::ANSWER)).expect("loopback");
         let output = live(&scratch, &listener);
         if shared {
@@ -245,7 +245,7 @@ fn null_usage_dacl_is_unrestricted_and_empty_dacl_is_unreadable() {
 fn null_configuration_dacl_is_shared_and_named_backends_are_refused() {
     let scratch = Scratch::new();
     fs::create_dir_all(scratch.config().parent().expect("parent")).expect("parent");
-    fs::write(scratch.config(), r#"{"schema":"thinkthen.config/1","backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"local-1"}}}"#).expect("configuration");
+    fs::write(scratch.config(), r#"{"backends":{"fixture":{"url":"http://127.0.0.1:1","key_env":"FIXTURE_NAMED_KEY","model":"local-1"}}}"#).expect("configuration");
     support::powershell(
         &scratch.config(),
         "$sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; $a=Get-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH; $a.SetSecurityDescriptorSddlForm(\"O:$sid`D:NO_ACCESS_CONTROL\"); Set-Acl -LiteralPath $env:THINKTHEN_FIXTURE_PATH -AclObject $a",
@@ -295,7 +295,7 @@ fn recognized_month_and_configuration_symlinks_refuse_without_target_mutation() 
         let (scratch, listener) = initialized();
         let leaf = if configuration {
             fs::create_dir_all(scratch.config().parent().expect("parent")).expect("parent");
-            fs::write(scratch.config(), r#"{"schema":"thinkthen.config/1"}"#).expect("config");
+            fs::write(scratch.config(), r#"{}"#).expect("config");
             scratch.config()
         } else {
             month(&scratch)

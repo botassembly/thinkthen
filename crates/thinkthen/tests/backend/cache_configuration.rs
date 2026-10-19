@@ -51,7 +51,7 @@ fn families(set: &Path) -> [Vec<String>; 8] {
 fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     let root = folder("configuration");
     fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
-    fs::write(root.join("thinkthen/config.json"), r#"{"schema":"thinkthen.config/1","url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#).expect("configuration");
+    fs::write(root.join("thinkthen/config.json"), r#"{"url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#).expect("configuration");
     let output = run(
         &["decide", "asks for a refund", "--plan"],
         &[
@@ -75,7 +75,7 @@ fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
 #[test]
 fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     let root = folder("dry-run-disabled-refresh");
-    let config = configure(&root, r#"{"schema":"thinkthen.config/1","cache":false}"#);
+    let config = configure(&root, r#"{"cache":false}"#);
     let listener = Listener::answering(|_| Canned::ok(ANSWERED)).expect("listener");
     let (moved_config, moved_cache) = (
         Folder::Config.variable(&root),
@@ -101,7 +101,7 @@ fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     assert!(listener.requests().is_empty());
     assert_eq!(
         fs::read(&config).expect("configuration retained"),
-        br#"{"schema":"thinkthen.config/1","cache":false}"#
+        br#"{"cache":false}"#
     );
     assert!(!Folder::Cache.under(&root).exists());
 }
@@ -111,7 +111,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
     let root = folder("configuration-precedence");
     configure(
         &root,
-        r#"{"schema":"thinkthen.config/1","url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#,
+        r#"{"url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#,
     );
     let set = root.join("questions.json");
     fs::write(
@@ -184,7 +184,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
 #[test]
 fn a_named_cache_enables_storage_over_disabled_configuration() {
     let root = folder("named-cache-precedence");
-    configure(&root, r#"{"schema":"thinkthen.config/1","cache":false}"#);
+    configure(&root, r#"{"cache":false}"#);
     let moved = Folder::Config.variable(&root);
     let cache = root.join("named");
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
@@ -217,7 +217,7 @@ fn a_configuration_another_user_can_write_is_warned_about() {
     const WARNING: &str = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go\n";
     for (mode, says) in [(0o666, WARNING), (0o602, WARNING), (0o664, ""), (0o600, "")] {
         let root = folder(&format!("configuration-mode-{mode:o}"));
-        let path = configure(&root, r#"{"schema":"thinkthen.config/1"}"#);
+        let path = configure(&root, r#"{}"#);
         fs::set_permissions(&path, fs::Permissions::from_mode(mode)).expect("mode");
         let moved = Folder::Config.variable(&root);
         let output = run(
@@ -239,7 +239,7 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
     const PING: &[u8] = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}\n";
     for (mode, warning) in [(0o666, WARNING), (0o600, "")] {
         let root = folder(&format!("mcp-configuration-mode-{mode:o}"));
-        let path = configure(&root, r#"{"schema":"thinkthen.config/1"}"#);
+        let path = configure(&root, r#"{}"#);
         fs::set_permissions(&path, fs::Permissions::from_mode(mode)).unwrap();
         let moved = Folder::Config.variable(&root);
         let mut child =
@@ -278,7 +278,7 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
     let root = folder("mcp-configuration-shared-backends");
     let path = configure(
         &root,
-        r#"{"schema":"thinkthen.config/1","backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
+        r#"{"backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
     );
     fs::set_permissions(&path, fs::Permissions::from_mode(0o666)).unwrap();
     let moved = Folder::Config.variable(&root);

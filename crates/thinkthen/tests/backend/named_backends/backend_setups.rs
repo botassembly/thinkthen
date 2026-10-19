@@ -17,7 +17,7 @@ fn config(home: &Home, base: &str, fields: Value) {
         .as_object_mut()
         .expect("an entry object")
         .extend(fields.as_object().expect("setup field object").clone());
-    home.config(&json!({"schema":"thinkthen.config/1","usd_per_million_input":"1","usd_per_million_output":"0","backends":{"small":entry}}).to_string());
+    home.config(&json!({"usd_per_million_input":"1","usd_per_million_output":"0","backends":{"small":entry}}).to_string());
 }
 
 fn ask(home: &Home, base: &str, extra: &[&str]) -> std::process::Output {
@@ -96,7 +96,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         json!({"both_sides":false}),
     ] {
         home.config(
-            &json!({"schema":"thinkthen.config/1","backends":{"typesafe":&fields}}).to_string(),
+            &json!({"backends":{"typesafe":&fields}}).to_string(),
         );
         let out = ask(&home, target.base(), &[]);
         assert_eq!(out.status.code(), Some(5));
@@ -110,7 +110,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         assert_eq!(target.count(), 0);
     }
     let raw = format!(
-        r#"{{"schema":"thinkthen.config/1","backends":{{"small":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"m","profile":{{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1,"max_questions":2}}}}}}}}"#,
+        r#"{{"backends":{{"small":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"m","profile":{{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1,"max_questions":2}}}}}}}}"#,
         target.base()
     );
     home.config(&raw);

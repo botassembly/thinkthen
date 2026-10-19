@@ -433,7 +433,7 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
     let matched = ANSWERED.replace("jev-1.13.0", "model-from-config");
     let served = Listener::answering(move |_| Canned::ok(&matched)).expect("a loopback listener");
     let (config, cache) = (folder("config"), folder("cache"));
-    let file = r#"{"schema":"thinkthen.config/1","model":"model-from-config"}"#;
+    let file = r#"{"model":"model-from-config"}"#;
     let moved = crate::child::Folder::configure(&config, file).unwrap();
     let cache_text = cache.to_str().unwrap();
     let environment = [

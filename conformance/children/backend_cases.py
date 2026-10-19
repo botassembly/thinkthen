@@ -17,7 +17,7 @@ def paths(slot, count=1):
 def configuration(env, backends):
     folder = pathlib.Path(env["HOME"]) / "Library/Application Support/thinkthen" if sys.platform == "darwin" else pathlib.Path(env["XDG_CONFIG_HOME"]) / "thinkthen"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "config.json").write_text(json.dumps({"schema":"thinkthen.config/1", "backends":backends}))
+    (folder / "config.json").write_text(json.dumps({"backends":backends}))
 
 
 def alias(row, base):

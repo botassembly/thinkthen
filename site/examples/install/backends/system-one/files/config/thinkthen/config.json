@@ -1,5 +1,4 @@
 {
-  "schema": "thinkthen.config/1",
   "backends": {
     "local-d1": {
       "url": "http://127.0.0.1:8080/v1",

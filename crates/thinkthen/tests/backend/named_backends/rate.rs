@@ -53,7 +53,7 @@ fn spread(config: &str, changes: &[(&str, &str)]) -> Duration {
 
 fn paced(name: &str, rate: u32) -> String {
     format!(
-        r#"{{"schema":"thinkthen.config/1","backends":{{"{name}":{{"requests_per_minute":{rate}}}}}}}"#
+        r#"{{"backends":{{"{name}":{{"requests_per_minute":{rate}}}}}}}"#
     )
 }
 

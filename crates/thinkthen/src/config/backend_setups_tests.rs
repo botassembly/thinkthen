@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 fn parse(entries: Value) -> Config {
     Config::parse(
-        json!({"schema":"thinkthen.config/1","backends":entries})
+        json!({"backends":entries})
             .to_string()
             .as_bytes(),
     )
