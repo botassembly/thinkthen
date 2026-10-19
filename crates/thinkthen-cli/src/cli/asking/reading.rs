@@ -40,8 +40,6 @@ pub(super) fn charge(reading: &Reading, held: &Held, remaining: &mut usize) -> R
         None => reading
             .evidence(&held.record)
             .map_err(record_error)?
-            .as_text()
-            .map_err(|error| Placed::at(Failure::from(error), held.at))?
             .len(),
     };
     *remaining = remaining.checked_sub(bytes).ok_or_else(|| {

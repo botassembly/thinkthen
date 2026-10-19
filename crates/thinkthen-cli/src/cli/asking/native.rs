@@ -3,7 +3,7 @@ use super::{
     JudgingInput,
     judged::{Held, Records},
 };
-use crate::core::Setting;
+use crate::BatchSetting as Setting;
 use crate::cli::reading::Reading;
 use crate::schedule::Outcome;
 mod presentation;
@@ -14,7 +14,7 @@ use crate::schedule::{Judged, Output};
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::process::ExitCode;
-use std::sync::{Arc, Mutex, PoisonError};
+
 
 #[expect(
     clippy::too_many_lines,
@@ -31,161 +31,178 @@ pub(super) fn run(
     let environment = configuration.environment;
     let common = configuration.common;
     let recording = configuration.folders.reported();
-    let inner = crate::cli::construction::engine(
-        common,
-        environment,
-        configuration.folders,
-        (configuration.backend.clone(), configuration.profile.clone()),
-        common.jobs,
-        false,
+    let engine = crate::cli::construction::engine(
+        common, environment, configuration.folders, common.jobs,
     )?;
-    let engine = crate::Engine::from_cli(inner, environment.config().prices());
+    environment.observe_engine(&engine);
     let composition = composition(&admitted, reading)?;
+    let function = admitted.request().call.function();
+    let definition = admitted.resolve_question()?;
+    let mut arguments = admitted.request().call.arguments().clone();
+    arguments.question = crate::RequestQuestion::Definition { value: definition };
+    arguments.input = crate::RequestInput::Feed {
+        name: "cli-atomic".to_owned(), framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(), images: Vec::new(),
+    };
+    arguments.options.field = None;
+    arguments.options.context_field = None;
+    arguments.options.options_field = None;
+    arguments.options.seed_spans_field = None;
+    arguments.options.examples_field = None;
+    arguments.options.attempts = common.details;
+    arguments.options.context = configuration.context.as_ref().map(super::Context::evidence);
+    arguments.options.batch = if !configuration.streams {
+        Some(crate::RequestBatch::Count(1))
+    } else {
+        setting.map(|setting| match setting {
+            Setting::Max => crate::RequestBatch::Named("max".to_owned()),
+            Setting::Records(count) => crate::RequestBatch::Count(count.get()),
+        })
+    };
+    let request = crate::Request::for_function(function, arguments);
+    let tally = environment.tally().start();
+    let session = engine.request_session_with_feed_options(request, crate::Surface::Cli,
+        crate::RequestSessionFeedOptions {
+            retain_success_on_cancel: true, eager: false, image_inputs: common.images(),
+            all_filter_results: configuration.keeping == crate::judge::Keeping::Passing,
+            record_reading: Some(composition),
+        })?;
     let held = RefCell::new(BTreeMap::new());
     let reader = super::native_reader::Reader::new(records);
-    let token = crate::CancelToken::new();
-    let signal_token = crate::CancelToken::from_flag(environment.cancel().flag());
     let downstream = crate::edge::Downstream::default();
-    let signal = || {
-        if downstream.gone() {
-            token.cancel();
-        }
-        environment.cancel().fired() || token.is_cancelled()
-    };
-    let ready = || !signal() && reader.ready();
-    let readiness = crate::public::readiness::Readiness::new(&ready, environment.input_pause());
-    reader.wake(readiness.wake());
-    let rows = std::iter::from_fn(|| {
-        reader.next(environment.cancel()).map(|row| {
-            let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let record = compose(&composition, &unit)?;
-            held.borrow_mut().insert(unit.ordinal, unit);
-            Ok(record)
-        })
-    });
-    let context = configuration
-        .context
-        .as_ref()
-        .map(super::Context::evidence)
-        .map(|c| c.as_text().map(|s| s.into_owned()))
-        .transpose()?;
-    let progress = Mutex::new(RankProgress::default());
-    let observe = |event: crate::RecordObservation<'_>| {
-        let mut progress = progress.lock().unwrap_or_else(PoisonError::into_inner);
-        match event {
-            crate::RecordObservation::Question { detail, .. } => {
-                progress.live |= detail
-                    .question_sources()
-                    .iter()
-                    .any(|source| source.origin() == crate::core::Origin::Live);
-                if progress.failure.is_none() {
-                    progress.failure = progress
-                        .models
-                        .check_sources(detail.question_sources().iter())
-                        .err();
-                }
-                if progress.failure.is_some() {
-                    token.cancel();
-                }
-            }
-            crate::RecordObservation::Row { .. } => {
-                progress.finished += 1;
-                progress.replayed += usize::from(!progress.live);
-                progress.live = false;
-                environment.usage().record_done();
-            }
-        }
-    };
-    let mut controls = controls(
-        (environment, common, configuration.streams),
-        &signal_token,
-        &signal,
-        &readiness,
-        setting,
-        context.as_deref(),
-    )
-    .cancel(&token);
-    if configuration.keeping == crate::judge::Keeping::Ordered {
-        controls = controls.observe(&observe);
-    }
-    let mut feed = crate::RequestFeed::from_records("cli-atomic", rows);
-    if common.images() {
-        feed = feed.with_image_inputs();
-    }
-    if configuration.keeping == crate::judge::Keeping::Passing {
-        feed = feed.with_all_filter_results();
-    }
-    if configuration.keeping != crate::judge::Keeping::Answers {
-        output.guard_models();
-    }
+    if configuration.keeping != crate::judge::Keeping::Answers { output.guard_models(); }
     let rendering = Renderer {
-        view: configuration.view,
-        keeping: configuration.keeping,
+        view: configuration.view, keeping: configuration.keeping,
         streams: configuration.streams,
-        size_advice: if configuration.common.images() {
-            crate::failure::SizeAdvice::Backend
-        } else if configuration.streams {
-            crate::failure::SizeAdvice::Batches
-        } else {
-            crate::failure::SizeAdvice::Text
-        },
-        documents: configuration.documents,
-        text_view: configuration.text_view,
+        size_advice: if common.images() { crate::failure::SizeAdvice::Backend }
+            else if configuration.streams { crate::failure::SizeAdvice::Batches }
+            else { crate::failure::SizeAdvice::Text },
+        documents: configuration.documents, text_view: configuration.text_view,
         mismatch: configuration.mismatch,
     };
-    let ended = RefCell::new(Ended::default());
-    let output = RefCell::new(output);
-    let sink = |value| {
-        let mut ended = ended.borrow_mut();
-        rendering.receive(value, &held, reading, &mut output.borrow_mut(), &mut ended);
-        if ended.closed || ended.failure.is_some() {
-            token.cancel();
+    let mut progress = RankProgress::default();
+    let mut ended = Ended::default();
+    let mut input_done = false;
+    let mut cancelled = false;
+    let mut tally = Some(tally);
+    let mut terminal = None;
+    loop {
+        if !cancelled && (environment.cancel().fired() || downstream.gone()
+            || ended.closed || ended.failure.is_some()) {
+            session.cancel();
+            cancelled = true;
+            input_done = true;
         }
-    };
-    let admitted = admitted.with_composed_feed("cli-atomic");
-    let release = |ordinal| {
-        held.borrow_mut().remove(&ordinal);
-    };
-    let result = engine.execute_cli_request(
-        &admitted,
-        crate::RequestEnvironment {
-            controls,
-            feed: Some(feed),
-        },
-        &sink,
-        &release,
-        None,
-    );
+        match session.try_read() {
+            crate::RequestSessionRead::Result(packet) => {
+                match packet {
+                    crate::RequestSessionResult::Row(row) => {
+                        match row_value(row) {
+                            Ok(value) => rendering.receive(value, &held, reading, output, &mut ended),
+                            Err(error) => { ended.failure.get_or_insert(error); }
+                        }
+                    }
+                    crate::RequestSessionResult::Aggregate(value) => {
+                        rendering.receive(value, &held, reading, output, &mut ended);
+                    }
+                    crate::RequestSessionResult::Observation { value, .. }
+                        if configuration.keeping == crate::judge::Keeping::Ordered => {
+                        progress.observe(value);
+                        if progress.failure.is_some() { session.cancel(); cancelled = true; input_done = true; }
+                    }
+                    crate::RequestSessionResult::Observation { .. } => {}
+                    crate::RequestSessionResult::Terminal(value) => {
+                        if let Some(facts) = &value.facts {
+                            environment.settle_native(facts);
+                            if let Some(start) = tally.take() { start.finish(facts)?; }
+                        }
+                        terminal = Some(value.error.map_or(Ok(()), Err));
+                    }
+                }
+                continue;
+            }
+            crate::RequestSessionRead::End => break,
+            crate::RequestSessionRead::Pending => {}
+        }
+        let mut pending_reader = false;
+        if !input_done {
+            let pushed = session.try_push_with(|| {
+                match reader.try_next() {
+                    super::native_reader::Read::Pending => Err(FeedRead::Pending),
+                    super::native_reader::Read::End => Err(FeedRead::End),
+                    super::native_reader::Read::Item(Err(placed)) => {
+                        ended.input_at = placed.at;
+                        Err(FeedRead::Failed(placed.cause.into_error()))
+                    }
+                    super::native_reader::Read::Item(Ok(unit)) => {
+                        let descriptor = descriptor(&unit)?;
+                        held.borrow_mut().insert(unit.ordinal, unit);
+                        Ok(descriptor)
+                    }
+                }
+            });
+            match pushed {
+                Ok(crate::RequestSessionPushStatus::Accepted) => continue,
+                Ok(crate::RequestSessionPushStatus::Full) => {}
+                Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
+                Err(FeedRead::Pending) => pending_reader = true,
+                Err(FeedRead::End) => { session.finish(None)?; input_done = true; }
+                Err(FeedRead::Failed(error)) => {
+                    session.finish_native_reader_error(error)?;
+                    input_done = true;
+                }
+            }
+        }
+        // A caller-owned input read may block. Poll the signal while the native
+        // session owns all provider waits and final settlement.
+        let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
+            else if input_done || pending_reader { crate::RequestSessionWaitInterest::Result }
+            else { crate::RequestSessionWaitInterest::Input };
+        let ready = session.wait(interest, std::time::Duration::from_millis(50));
+        if ready == crate::RequestSessionReady::End { break; }
+    }
     if configuration.keeping == crate::judge::Keeping::Ordered {
-        let progress = progress
-            .into_inner()
-            .unwrap_or_else(PoisonError::into_inner);
-        let mut ended = ended.borrow_mut();
         ended.finished = progress.finished;
         ended.replayed = progress.replayed;
-        if let Some(failure) = progress.failure {
-            ended.failure.get_or_insert(failure);
-        }
+        if let Some(failure) = progress.failure { ended.failure.get_or_insert(failure); }
     }
-    let result = if configuration.keeping == crate::judge::Keeping::Ordered {
-        result.map(|outcome| match outcome {
-            crate::RequestOutcome::Complete(call) => {
-                crate::RequestOutcome::Complete(call.map(|value| {
-                    sink(value);
-                    crate::RequestValue::Ranked(Vec::new())
-                }))
-            }
-            stopped => stopped,
-        })
-    } else {
-        result
-    };
     rendering.finish(
-        environment,
-        result,
-        ended.into_inner(),
-        (recording, configuration.asks.verb(), downstream.latched()),
+        terminal.ok_or(Failure::Defect("native session ended without settlement"))?,
+        ended, (recording, configuration.asks.verb(), downstream.latched()),
     )
+}
+
+enum FeedRead { Pending, End, Failed(crate::Error) }
+impl From<crate::Error> for FeedRead {
+    fn from(error: crate::Error) -> Self { Self::Failed(error) }
+}
+
+fn descriptor(unit: &Held) -> Result<crate::RequestSessionDescriptor, crate::Error> {
+    let original = Some(match unit.record.literal() {
+        Some(text) => crate::RequestOriginal::Text { text: text.to_owned() },
+        None => crate::RequestOriginal::Json { value: unit.record.clone() },
+    });
+    let images = unit.images.as_ref().map_or_else(Vec::new, |images| images.images().iter()
+        .map(|image| crate::RequestImage::Bytes { media: image.media(), bytes: image.bytes().to_vec() }).collect());
+    let location = unit.position.as_ref().filter(|position| position.located)
+        .and_then(|position| position.file.as_ref().map(|file| (file, position)))
+        .map(|(file, position)| crate::SourceLocation::new(file.clone(), position.first, position.last))
+        .transpose()?;
+    Ok(crate::RequestSessionDescriptor {
+        item: crate::RequestItem { original, images, context: unit.context.clone(), options: None,
+            seed_spans: None, examples: None }, location,
+    })
+}
+
+fn row_value(row: crate::RequestSessionRow) -> Result<crate::RequestValue, Failure> {
+    Ok(match row {
+        crate::RequestSessionRow::Decision(row) => crate::RequestValue::Decisions(vec![row]),
+        crate::RequestSessionRow::Choice(row) => crate::RequestValue::Choices(vec![row]),
+        crate::RequestSessionRow::Tags(row) => crate::RequestValue::Tags(vec![row]),
+        crate::RequestSessionRow::Score(row) => crate::RequestValue::Scores(vec![row]),
+        crate::RequestSessionRow::Filter(row) => crate::RequestValue::Filtered(vec![row]),
+        crate::RequestSessionRow::Annotation(_) => return Err(Failure::Defect("atomic session returned annotation")),
+    })
 }
 
 pub(super) fn composition(
@@ -195,7 +212,7 @@ pub(super) fn composition(
     let fields = reading
         .fields()
         .iter()
-        .map(crate::core::Pointer::as_str)
+        .map(String::as_str)
         .collect::<Vec<_>>();
     let options = admitted
         .request()
@@ -208,59 +225,27 @@ pub(super) fn composition(
     Ok(composition)
 }
 
-fn controls<'a>(
-    configuration: (&crate::edge::Environment, &crate::args::Common, bool),
-    token: &'a crate::CancelToken,
-    signal: &'a (dyn Fn() -> bool + Sync),
-    readiness: &'a crate::public::readiness::Readiness<'a>,
-    setting: Option<Setting>,
-    context: Option<&'a str>,
-) -> crate::CallOptions<'a> {
-    let mut controls = crate::CallOptions::new()
-        .cli_cancel(token, configuration.0.cancel().deadline())
-        .interrupt(signal)
-        .surface(crate::Surface::Cli)
-        .attempts(configuration.1.details)
-        .readiness(readiness);
-    let setting = if !configuration.2 {
-        Some(Setting::Records(std::num::NonZeroUsize::MIN))
-    } else {
-        setting
-    };
-    if let Some(setting) = setting {
-        controls = controls.batch(match setting {
-            Setting::Max => crate::BatchSetting::Max,
-            Setting::Records(count) => crate::BatchSetting::Records(count),
-        });
-    }
-    if let Some(context) = context {
-        controls = controls.context(context);
-    }
-    controls
-}
 
 pub(super) fn compose(
     composition: &crate::RecordReading,
     unit: &Held,
 ) -> Result<crate::RecordInput<crate::QuestionInput>, crate::Error> {
-    if unit.record.text().is_some()
+    if unit.record.literal().is_some()
         && let Some(images) = &unit.images
     {
         let mut images = images.clone();
-        if let Some(position) = unit.position.as_ref().filter(|p| p.located)
+        if let Some(position) = unit.position.as_ref().filter(|position| position.located)
             && let Some(file) = &position.file
         {
             images = images.with_location(crate::SourceLocation::new(
-                file.clone(),
-                position.first,
-                position.last,
+                file.clone(), position.first, position.last,
             )?);
         }
         let mut record = composition.compose_images(images)?;
         record.context = unit.context.clone();
         return Ok(record);
     }
-    let mut record = composition.compose(crate::RawRecord(Arc::new(unit.record.clone())))?;
+    let mut record = composition.compose(unit.record.clone())?;
     record.context = unit.context.clone();
     if let Some(images) = &unit.images {
         record.original = record.original.with_images(images.images().to_vec())?;
@@ -299,28 +284,15 @@ impl Renderer {
 impl Renderer {
     fn finish(
         &self,
-        environment: &crate::edge::Environment,
-        result: Result<crate::RequestOutcome, crate::Error>,
+        result: Result<(), crate::Error>,
         ended: Ended,
         completion: (bool, &'static str, bool),
     ) -> Result<ExitCode, Failure> {
         let (recording, verb, closed) = completion;
-        let failure = match result {
-            Ok(crate::RequestOutcome::Complete(call)) => {
-                environment.settle_native(call.facts());
-                None
-            }
-            Ok(crate::RequestOutcome::Failed { error, .. }) | Err(error) => {
-                let at = error.stopped().at();
-                if let Some(facts) = error.facts() {
-                    environment.settle_native(facts);
-                }
-                Some((
-                    at,
-                    host_error(error, self.streams).with_size_advice(self.size_advice),
-                ))
-            }
-        };
+        let failure = result.err().map(|error| {
+            let at = error.stopped().at().or(ended.input_at);
+            (at, host_error(error, self.streams).with_size_advice(self.size_advice))
+        });
 
         if ended.closed || closed {
             return Ok(ExitCode::SUCCESS);
@@ -361,15 +333,6 @@ impl Renderer {
     }
 }
 
-fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
-    let error = crate::Error::usage("the CLI reader failed").with_diagnostic(
-        crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(cause)),
-    );
-    match at {
-        Some(at) => error.at_record(at.saturating_sub(1)),
-        None => error,
-    }
-}
 #[derive(Default)]
 struct RankProgress {
     models: crate::schedule::ModelGuard,
@@ -378,8 +341,27 @@ struct RankProgress {
     replayed: usize,
     live: bool,
 }
+impl RankProgress {
+    fn observe(&mut self, event: crate::OwnedRecordObservation) {
+        match event {
+            crate::OwnedRecordObservation::Question { detail, .. } => {
+                self.live |= detail.question_sources().iter()
+                    .any(|source| source.origin() == crate::Origin::Live);
+                if self.failure.is_none() {
+                    self.failure = self.models.check_sources(detail.question_sources().iter()).err();
+                }
+            }
+            crate::OwnedRecordObservation::Row { .. } => {
+                self.finished += 1;
+                self.replayed += usize::from(!self.live);
+                self.live = false;
+            }
+        }
+    }
+}
 #[derive(Default)]
 struct Ended {
+    input_at: Option<usize>,
     finished: usize,
     replayed: usize,
     outcome: Option<Outcome>,
@@ -599,13 +581,9 @@ impl Renderer {
     }
 }
 
-fn host_error(mut error: crate::Error, streams: bool) -> Failure {
-    match error.take_diagnostic() {
-        Some(crate::public::error::diagnostic::Diagnostic::PartialReply {
-            cause: Some(cause),
-            ..
-        }) if !streams => Failure::Reply(cause),
-        Some(diagnostic) => Failure::from(error.with_diagnostic(diagnostic)),
-        None => Failure::from(error),
+fn host_error(error: crate::Error, streams: bool) -> Failure {
+    if !streams && let Some(crate::ErrorDiagnostic::PartialReply { cause: Some(cause), .. }) = error.diagnostic() {
+        return Failure::Reply(cause);
     }
+    Failure::from(error)
 }
