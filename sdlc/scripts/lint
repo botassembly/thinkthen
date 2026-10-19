@@ -10,9 +10,22 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 . sdlc/scripts/compiler-isolation
+# Call unconditionally so shell functions retain errexit. The exit trap also times failures.
+step() (
+    printf 'lint step: %s\n' "$*" >&2
+    step_started=$(python3 -c 'import time; print(time.monotonic())')
+    step_finished() {
+        step_status=$?
+        python3 -c 'import sys, time; print("lint elapsed: {:.3f} seconds (exit {})".format(time.monotonic() - float(sys.argv[1]), sys.argv[2]))' "$step_started" "$step_status" >&2 || :
+        exit "$step_status"
+    }
+    trap step_finished EXIT
+    "$@"
+)
+
 # Recursive deletion and test usage stay within owned scratch folders.
-scratch_lint
-usage_lint
+step scratch_lint
+step usage_lint
 
 # This repository goes public, so no tracked path or file may name a private
 # project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a
@@ -62,54 +75,54 @@ else
 fi
 
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
-python3 -c '
+step python3 -c '
 import sys
 n = len(open("CLAUDE.md", encoding="utf-8").read())
 print(f"agents file: CLAUDE.md {n}/5000 characters")
 sys.exit(n > 5000)
 '
-python3 sdlc/scripts/policy.py
-python3 sdlc/scripts/catalog.py
+step python3 sdlc/scripts/policy.py
+step python3 sdlc/scripts/catalog.py
 # Ticket 0164: every offset in the recognize keys cuts its name out of its text.
-python3 sdlc/scripts/recognize-keys --self-test
-python3 sdlc/scripts/recognize-keys
+step python3 sdlc/scripts/recognize-keys --self-test
+step python3 sdlc/scripts/recognize-keys
 # Ticket 0127: a test child builds its whole environment, and test code reads
 # the environment one name at a time.
-python3 sdlc/scripts/children --self-test
-python3 sdlc/scripts/children
+step python3 sdlc/scripts/children --self-test
+step python3 sdlc/scripts/children
 # Ticket 0459: the target C compiler measures every public carrier and signature.
-python3 build-tools/results/answer_rules.py --self-test
-python3 build-tools/results/answer_rules.py
-python3 build-tools/results/generate.py --all --check
-python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
+step python3 build-tools/results/answer_rules.py --self-test
+step python3 build-tools/results/answer_rules.py
+step python3 build-tools/results/generate.py --all --check
+step python3 sdlc/scripts/check-c-exports.py --self-test libraries/c/include/thinkthen.h
 # Ticket 0128: one version everywhere, workflows run by hand from pinned code,
 # and the download script's edge table against a loopback fake of GitHub.
-python3 sdlc/scripts/versions --self-test
-python3 sdlc/scripts/versions
-python3 databases/duckdb/tools/input_version_cases.py
-python3 sdlc/scripts/workflows
-python3 sdlc/scripts/installer-test
-python3 sdlc/scripts/windows-installer-test.py --self-test
+step python3 sdlc/scripts/versions --self-test
+step python3 sdlc/scripts/versions
+step python3 databases/duckdb/tools/input_version_cases.py
+step python3 sdlc/scripts/workflows
+step python3 sdlc/scripts/installer-test
+step python3 sdlc/scripts/windows-installer-test.py --self-test
 # Ticket 0267: absent and unexpected source-package files refuse before the backend.
-sh sdlc/scripts/release-smoke-source-packages-test
+step sh sdlc/scripts/release-smoke-source-packages-test
 # Ticket 0319: the command-only smoke refuses each planted fault by name and passes a good folder.
-sh sdlc/scripts/release-smoke-command-test
+step sh sdlc/scripts/release-smoke-command-test
 # Rehearsal run 36864015235: a release download retries a 5xx reply or lost connection and stops on a 4xx.
-sh sdlc/scripts/fetch-self-test
-python3 sdlc/scripts/pages --self-test
-python3 sdlc/scripts/pages
-node sdlc/scripts/named-answers.mjs --self-test
-node sdlc/scripts/named-answers.mjs
+step sh sdlc/scripts/fetch-self-test
+step python3 sdlc/scripts/pages --self-test
+step python3 sdlc/scripts/pages
+step node sdlc/scripts/named-answers.mjs --self-test
+step node sdlc/scripts/named-answers.mjs
 # ADR 0047: the surface registry and each binding's lock.
 # Keep this lint-only registry child on the same temporary native tool setup.
-THINKTHEN_RESOLVED_TOOLS=surfaces sh sdlc/scripts/surfaces --registry
+THINKTHEN_RESOLVED_TOOLS=surfaces step sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
-cargo deny --offline check advisories bans licenses
-cargo fmt --all -- --check
-cargo clippy --locked --workspace --all-targets -- -D warnings
-cargo clippy --locked -p thinkthen --lib --no-default-features --features bundled-sqlite -- -D warnings
-RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
+step cargo deny --offline check advisories bans licenses
+step cargo fmt --all -- --check
+step cargo clippy --locked --workspace --all-targets -- -D warnings
+step cargo clippy --locked -p thinkthen --lib --no-default-features --features bundled-sqlite -- -D warnings
+RUSTDOCFLAGS='-D warnings' step cargo doc --locked --workspace --no-deps
 # Ticket 0086: the built public API equals the frozen declarations, and the
 # check refuses a planted export, removal, signature change, and extra trait.
-python3 sdlc/scripts/inventory
+step python3 sdlc/scripts/inventory
