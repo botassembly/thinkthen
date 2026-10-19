@@ -26,11 +26,27 @@ def load_manifest(path):
     path = FilePath(path)
     manifest = json.loads(path.read_text())
     for section in ('libraries', 'databases'):
+        if section in manifest:
+            raise ValueError('surface entries belong in ' + str(path.with_suffix('')))
         manifest[section] = {}
-    for entry in sorted(path.with_suffix('').glob('*.json')):
+    folder = path.with_suffix('').resolve()
+    if not folder.is_dir():
+        raise ValueError('missing library surface entries: ' + str(folder))
+    # Indexed entries remain required even if a local file disappears. Include
+    # new entries too, so a local addition cannot bypass the same policy.
+    entries = {entry for entry in tracked_files(folder) if entry.suffix == '.json'}
+    entries.update(folder.glob('*.json'))
+    for entry in sorted(entries):
         data = json.loads(entry.read_text())
-        for section in ('libraries', 'databases'):
-            manifest[section].update(data.get(section, {}))
+        if (not isinstance(data, dict) or len(data) != 1
+                or next(iter(data)) not in ('libraries', 'databases')):
+            raise ValueError('invalid library surface entry: ' + str(entry))
+        section = next(iter(data))
+        if not isinstance(data[section], dict) or list(data[section]) != [entry.stem]:
+            raise ValueError('surface entry must own its filename: ' + str(entry))
+        if any(entry.stem in manifest[name] for name in ('libraries', 'databases')):
+            raise ValueError('duplicate library surface entry: ' + str(entry))
+        manifest[section].update(data[section])
     if not manifest['libraries']:
         raise ValueError('no library surface entries: ' + str(path.with_suffix('')))
     return manifest

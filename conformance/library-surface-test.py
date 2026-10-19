@@ -18,6 +18,39 @@ from sources import load_manifest
 
 
 class PublicSurface(unittest.TestCase):
+    def test_missing_or_misowned_manifest_entries_refuse_at_cli(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-entries-') as folder:
+            root = Path(folder)
+            shared = root / 'conformance/library-surface.json'
+            entries = shared.with_suffix('')
+            entries.mkdir(parents=True)
+            shared.write_text((ROOT / 'conformance/library-surface.json').read_text())
+            entry = entries / 'python.json'
+            original = (ROOT / 'conformance/library-surface/python.json').read_text()
+            entry.write_text(original)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, env=child_env(home=folder))
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True, env=child_env(home=folder))
+            def refused(diagnostic):
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--json'],
+                                        capture_output=True, text=True, env=child_env(home=folder))
+                self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                self.assertEqual(result.stdout, '')
+                self.assertIn(diagnostic, result.stderr)
+            entry.unlink()
+            refused('python.json')
+            entries.rmdir()
+            refused('missing library surface entries:')
+            entries.mkdir()
+            entry.write_text('{}')
+            refused('invalid library surface entry:')
+            entry.write_text(json.dumps({'libraries': {'go': {}}}))
+            refused('surface entry must own its filename:')
+            entry.write_text(original)
+            policy = json.loads(shared.read_text())
+            policy['libraries'] = {}
+            shared.write_text(json.dumps(policy))
+            refused('surface entries belong in')
+
     def test_native_adapter_omissions_and_extra_members(self):
         mutations = {
             'c': [('include/thinkthen.h', 'thinkthen_session_new_typed_with_surface(', 'missing_dispatch(', 'missing function: decide'),
