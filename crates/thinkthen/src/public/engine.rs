@@ -143,29 +143,6 @@ impl Engine {
         Ok(())
     }
 
-    #[cfg(feature = "cli")]
-    pub(crate) fn from_cli(inner: facade::Engine, prices: Option<Prices>) -> Self {
-        Self {
-            profile: inner.profile().cloned(),
-            inner: Arc::new(inner),
-            most: None,
-            batch: None,
-            prices,
-        }
-    }
-
-    /// Reuse resolved settings for backend checks with no storage.
-    #[cfg(feature = "cli")]
-    pub(crate) fn for_check(inner: &facade::Engine) -> Self {
-        Self {
-            inner: Arc::new(inner.clone()),
-            most: None,
-            profile: inner.profile().cloned(),
-            batch: None,
-            prices: None,
-        }
-    }
-
     /// Build from what the command reads: see [`EngineBuilder::from_env`].
     ///
     /// # Errors

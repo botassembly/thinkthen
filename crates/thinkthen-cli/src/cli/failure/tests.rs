@@ -254,3 +254,30 @@ fn no_recognize_debug_line_shows_the_evidence() {
 }
 
 mod diagnostics;
+
+#[test]
+fn native_backend_causes_keep_command_status_and_sentence() {
+    let listener = conformance_backend::Listener::serving(vec![
+        conformance_backend::Canned::status(302, "{}"),
+    ]).expect("loopback redirect");
+    let engine = crate::Engine::builder()
+        .base_url(listener.base()).expect("loopback address")
+        .api_key("command-error-fixture").expect("fixture key")
+        .no_cache().max_retries(0).build().expect("fixture engine");
+    let question = crate::Question::decide("Fits?").expect("question").cut();
+    let error = engine.decide(&question, "evidence").expect_err("redirect refusal");
+    assert_eq!(error.kind(), crate::ErrorKind::Backend);
+    let mut output = Vec::new();
+    assert_eq!(report(&Failure::from(error), &mut output), ExitCode::from(4));
+    assert_eq!(String::from_utf8(output).expect("diagnostic UTF-8"),
+        "thinkthen: the backend answered with status 302: the redirect was not followed; use the final --url directly\n");
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn native_cancellation_keeps_the_commands_silent_signal_exit() {
+    let error = crate::Error::new(crate::ErrorKind::Cancelled, "caller cancelled");
+    let mut output = Vec::new();
+    assert_eq!(report(&Failure::from(error), &mut output), ExitCode::from(130));
+    assert!(output.is_empty());
+}

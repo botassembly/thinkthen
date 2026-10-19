@@ -12,66 +12,9 @@ pub struct AdmittedRequest {
     pub(super) request: Request,
     pub(super) definition: Option<RequestDefinition>,
     pub(super) native_originals: bool,
-    #[cfg(feature = "cli")]
-    pub(super) cli_atomic: Option<crate::cli::atomic::Prepared>,
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
-    #[cfg(feature = "cli")]
-    pub(crate) fn retain_cli_atomic(
-        mut self,
-        prepared: Option<crate::cli::atomic::Prepared>,
-    ) -> Self {
-        self.cli_atomic = prepared;
-        self
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn resolve_cli_atomic(
-        &mut self,
-        verb: crate::core::Verb,
-        typed: &crate::core::Typed,
-    ) -> Result<crate::cli::atomic::Prepared, Error> {
-        if let Some(prepared) = &self.cli_atomic {
-            return Ok(prepared.clone());
-        }
-        let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = crate::cli::atomic::saved(verb, &text, typed)?;
-        let definition = crate::cli::atomic::definition(&prepared)?;
-        let definition = admit_definition(self.request.call.function(), definition)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        self.cli_atomic = Some(prepared.clone());
-        Ok(prepared)
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn resolve_cli_rank(
-        &mut self,
-        typed: &crate::core::Typed,
-    ) -> Result<crate::cli::atomic::Prepared, Error> {
-        if let Some(prepared) = &self.cli_atomic {
-            return Ok(prepared.clone());
-        }
-        let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = crate::cli::atomic::rank(&text, true, typed)?;
-        let definition = admit_definition(
-            self.request.call.function(),
-            crate::cli::atomic::definition(&prepared)?,
-        )?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        self.cli_atomic = Some(prepared.clone());
-        Ok(prepared)
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn retain_cli_definition(
-        mut self,
-        definition: RequestDefinition,
-    ) -> Result<Self, Error> {
-        let definition = admit_definition(self.request.call.function(), definition)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        Ok(self)
-    }
     #[cfg(any(feature = "cli", test))]
     pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
         let args = self.request.call.arguments_mut();
@@ -87,16 +30,6 @@ impl AdmittedRequest {
         args.options.examples_field = None;
         args.options.seed_spans_field = None;
         self
-    }
-
-    #[cfg(feature = "cli")]
-    pub(crate) fn cli_definition(&mut self) -> Result<&mut RequestDefinition, Error> {
-        if self.definition.is_none() {
-            self.resolve_once()?;
-        }
-        self.definition
-            .as_mut()
-            .ok_or_else(|| Error::defect("admitted question lost its definition"))
     }
 
     #[cfg(any(feature = "cli", test))]
@@ -256,8 +189,6 @@ fn admit_header(
         definition,
         native_originals,
         attachment_limit,
-        #[cfg(feature = "cli")]
-        cli_atomic: None,
     };
     if let Some(definition) = &admitted.definition {
         admit_definition_controls(definition, &admitted.request.call.arguments().options)?;
