@@ -3,10 +3,12 @@
 # loopback port as $1. Each suite also starts its own backend, so counts
 # never mix. A missing toolchain reports "not run" (exit 77), never "pass".
 set -eu
-HERE=$(cd -- "$(dirname -- "$0")" && pwd)
-cd -- "$HERE"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+tools_group=duckdb
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+cd -- "$HERE"
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$HERE/../../sdlc/scripts/time-limit

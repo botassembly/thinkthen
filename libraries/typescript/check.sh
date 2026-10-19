@@ -3,10 +3,12 @@
 # port as $1; each test starts its own backend, so this check reads none.
 # It runs only the pinned Node, fetches nothing, and holds no real key.
 set -eu
-cd -- "$(dirname -- "$0")"
-unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+tools_group=typescript
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+unset THINKTHEN_API_KEY
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "$profile" = full ] || exit 2
 fi
@@ -22,7 +24,7 @@ python3 "$repo/sdlc/generators/results/generate.py" --target typescript --check
 usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
-node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
+node_bin=$(command -v node || true)
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
 
@@ -38,8 +40,7 @@ public_types() {
 
 # Full qualification installs one real package, then runs isolated family members.
 if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
-    [ -x "$node_home/bin/node" ] || exit 77
-    PATH=$node_home/bin:$PATH
+    [ -x "$node_bin" ] || exit 77
     sh build-addon.sh
     # Keep the exact installed input for release-pack --reuse after scratch cleanup.
     mkdir -p target/pack
@@ -52,7 +53,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; 
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
     case $(uname -s):$(uname -m) in
-        Linux:x86_64) expected=linux-x64; [ ! -x "$node_home/bin/node" ] || PATH=$node_home/bin:$PATH ;;
+        Linux:x86_64) expected=linux-x64 ;;
         Linux:aarch64) expected=linux-arm64 ;;
         Darwin:x86_64) expected=darwin-x64 ;;
         Darwin:arm64) expected=darwin-arm64 ;;
@@ -116,8 +117,7 @@ if [ "$profile" = smoke ]; then
     smoke_guard
     # The replay smoke (ticket 0335): the package laid out in a fresh project's node_modules,
     # required by its name from that project.
-    [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
-    PATH="$node_home/bin:$PATH"
+    [ -x "$node_bin" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
     cargo build --quiet --locked --offline
     case $(uname -s) in Darwin) library=libthinkthen_typescript.dylib ;; *) library=libthinkthen_typescript.so ;; esac
     scratch_dir project
@@ -172,11 +172,10 @@ else
 fi
 
 step 'toolchain'
-if [ ! -x "$node_home/bin/node" ]; then
+if [ ! -x "$node_bin" ]; then
     echo "typescript: not run; place Node with libraries/typescript/setup-toolchain.sh${missing:+ and install $missing}"
     exit 77
 fi
-PATH="$node_home/bin:$PATH"
 [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
 
 step 'the backend and the command'

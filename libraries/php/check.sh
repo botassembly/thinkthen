@@ -1,14 +1,16 @@
 #!/bin/sh
 # Exercise the installed Composer package; shared parity is release-only.
 set -eu
-cd -- "$(dirname -- "$0")"
-repo=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo 'php: unknown profile' >&2; exit 2 ;; esac
+tools_group=php
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+repo=$(cd ../.. && pwd)
 [ "$(uname -s)" = Linux ] && [ "$(uname -m)" = x86_64 ] || { echo 'php: not run: Linux x86_64 required'; exit 77; }
-php_bin=${THINKTHEN_PHP_BIN:-/usr/bin/php8.3}
-python_bin=${THINKTHEN_PYTHON_BIN:-/usr/bin/python3}
-composer=${THINKTHEN_COMPOSER_BIN:-$(command -v composer || true)}
+php_bin=$(command -v php || true)
+python_bin=$(command -v python3 || true)
+composer=$(command -v composer || true)
 for tool in "$php_bin" "$python_bin" "$composer"; do
  case "$tool" in /*) ;; *) echo 'php: not run: tool needs an absolute path'; exit 77 ;; esac
  [ -f "$tool" ] || { echo 'php: not run: tool unavailable'; exit 77; }

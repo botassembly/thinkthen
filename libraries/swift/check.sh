@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+tools_group=swift
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 case $(uname -s) in
@@ -11,7 +13,7 @@ Darwin)
     [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
     ;;
 esac
-swift=${THINKTHEN_SWIFT:-$(command -v swift || true)}
+swift=$(command -v swift || true)
 [ -x "$swift" ] || exit 77
 for mode in '' --inputs --bridge; do
     python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
