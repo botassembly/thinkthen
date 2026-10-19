@@ -31,32 +31,22 @@ class PrivacyTests(unittest.TestCase):
                     self.assertIn('profile', result.stderr.lower())
                     self.assertNotIn('missing.tar.gz', result.stderr)
 
-    def test_unsupported_hosts_refuse_before_reading_an_artifact(self):
+    def test_missing_artifacts_refuse_before_host_and_tool_checks(self):
         repo = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            shim = root / 'bin'
-            shim.mkdir()
-            uname = shim / 'uname'
-            uname.write_text('#!/bin/sh\necho Unsupported\n')
-            uname.chmod(0o755)
-            env = child_env(home=root / 'home', THINKTHEN_ARTIFACT=str(root / 'missing.tar.gz'))
-            env['PATH'] = str(shim) + ':' + env['PATH']
-            for surface, reason in (('libraries/php', 'Linux x86_64 required'),
-                                    ('libraries/go', 'proven on Linux x86_64'),
-                                    ('libraries/ruby', 'no Ruby host route'),
-                                    ('libraries/objective-c', 'requires macOS'),
-                                    ('libraries/ada', ''),
-                                    ('libraries/cobol', 'unavailable on this host'),
-                                    ('libraries/typescript', 'no native Node target for this host'),
-                                    ('libraries/swift', 'require Linux or macOS'),
-                                    ('databases/duckdb', 'no pinned DuckDB C++ inputs')):
+            artifact = root / 'missing.tar.gz'
+            env = child_env(home=root / 'home', THINKTHEN_ARTIFACT=str(artifact))
+            for surface in ('libraries/php', 'libraries/go', 'libraries/ruby',
+                            'libraries/objective-c', 'libraries/ada', 'libraries/cobol',
+                            'libraries/typescript', 'libraries/swift'):
                 with self.subTest(surface=surface):
                     result = subprocess.run(['sh', str(repo / surface / 'check.sh')], env=env,
                                             capture_output=True, text=True, timeout=30)
-                    self.assertEqual(result.returncode, 77, result.stderr)
-                    self.assertIn(reason, result.stdout + result.stderr)
-                    self.assertNotIn('missing.tar.gz', result.stderr)
+                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                    self.assertEqual(result.stdout,
+                                     f'{surface}: missing input THINKTHEN_ARTIFACT: {artifact}\n')
+                    self.assertEqual(result.stderr, '')
 
     def test_selected_artifacts_must_exist_and_pass_privacy(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -73,7 +63,8 @@ class PrivacyTests(unittest.TestCase):
                         gate = ['sh', str(Path(privacy.__file__).resolve().parents[2] / 'libraries/c/check.sh')]
                         result = subprocess.run(gate, env=env, capture_output=True, text=True, timeout=30)
                         self.assertEqual(result.returncode, 1)
-                        self.assertIn('distribution.txt', result.stderr)
+                        self.assertIn('missing input THINKTHEN_ARTIFACT', result.stdout)
+                        self.assertIn('distribution.txt', result.stdout)
                     path.write_bytes(b'PRIVATE_KEY_MARKER')
                     result = subprocess.run(command, env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1)
