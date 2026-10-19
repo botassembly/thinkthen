@@ -195,6 +195,38 @@ def native_value_union(schema, definitions):
             'nullable_json': 'null' in selected}
 
 
+def enum_map_union(schema, definitions):
+    """Declare an enum or maps of that enum through the existing host union IR."""
+    alternatives = schema.get('anyOf', [])
+    if len(alternatives) < 2:
+        return None
+    states = [item for item in alternatives if '$ref' in item]
+    if len(states) != 1 or set(states[0]) != {'$ref'}:
+        return None
+    state = states[0]
+    source = definitions[state['$ref'].removeprefix('#/$defs/')]
+    values = source.get('oneOf', source.get('anyOf', []))
+    if not (values and all(item.get('type') == 'string' and isinstance(item.get('const'), str)
+                           for item in values)):
+        return None
+    maps = [item for item in alternatives if item != state]
+    general = {'type': 'object', 'additionalProperties': state}
+    if general not in maps:
+        return None
+    # Numeric-key occurrence maps are a subset of the named-member map. Both
+    # carry the same native enum, so their declaration needs only one map arm.
+    if any(item != general and not (
+            set(item) <= {'type', 'additionalProperties', 'patternProperties'}
+            and item.get('type') == 'object' and item.get('additionalProperties') is False
+            and item.get('patternProperties')
+            and all(value == state for value in item['patternProperties'].values()))
+           for item in maps):
+        return None
+    metadata = {key: schema[key] for key in ('title', 'description') if key in schema}
+    return {**metadata, 'primitive_variants': ['string', 'object'],
+            'primitive_schemas': {'string': state, 'object': general}}
+
+
 def normalize(value):
     """Remove only redundant singleton type syntax throughout the source graph."""
     if isinstance(value, list):
@@ -247,7 +279,7 @@ def prepare(definitions):
             if not all(refinement(item, source, definitions) for item in source['allOf']):
                 raise ValueError('object intersections need an explicit typed representation')
             source = {key: value for key, value in source.items() if key != 'allOf'}
-        native = native_value_union(source, definitions)
+        native = native_value_union(source, definitions) or enum_map_union(source, definitions)
         if native:
             result[key] = native
             continue
