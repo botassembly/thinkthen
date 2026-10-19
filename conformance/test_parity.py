@@ -45,7 +45,11 @@ class DarwinSignalObservation(unittest.TestCase):
                                                    **observation.options)
                         def expect_line(expected):
                             self.assertTrue(select.select([process.stdout], [], [], 30)[0])
-                            self.assertEqual(read_process_line(process.stdout), expected + '\n')
+                            actual = read_process_line(process.stdout)
+                            if not actual:
+                                _, stderr = process.communicate(timeout=30)
+                                self.fail(f'probe exited {process.returncode}: {stderr}')
+                            self.assertEqual(actual, expected + '\n')
                         try:
                             expect_line('ready')
                             process.send_signal(signum)

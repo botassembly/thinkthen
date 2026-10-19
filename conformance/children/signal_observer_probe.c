@@ -2,6 +2,7 @@
 #define _DARWIN_C_SOURCE
 #include <errno.h>
 #include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -55,7 +56,10 @@ int main(int argc, char **argv) {
     if (old.sa_handler != (strcmp(mode, "ignored") == 0 ? SIG_IGN : SIG_DFL)) return 4;
     if (sigaction(signum, NULL, &query) != 0 ||
         query.sa_sigaction != native_handler || query.sa_flags != action.sa_flags ||
-        !sigismember(&query.sa_mask, SIGUSR1)) return 5;
+        !sigismember(&query.sa_mask, SIGUSR1)) {
+        fprintf(stderr, "query flags: %x; registered flags: %x\n", query.sa_flags, action.sa_flags);
+        return 5;
+    }
     if (strcmp(mode, "replacement") == 0 && sigaction(signum, &action, &old) != 0) return 6;
     if (strcmp(mode, "failure") == 0) {
         errno = 0;
