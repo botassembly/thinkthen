@@ -11,6 +11,7 @@ def project_session(payload, fixture):
     packets = payload['packets']
     terminal = next(packet for packet in packets if packet['kind'] == 'terminal')
     facts = terminal.get('facts', {})
+    settled = terminal.get('answer')
     rows = []
     aggregates = [packet for packet in packets if packet['kind'] == 'aggregate']
     for packet in aggregates or [packet for packet in packets if packet['kind'] == 'row']:
@@ -34,6 +35,8 @@ def project_session(payload, fixture):
     else:
         output = {'code': 0, 'schema': 'thinkthen.result/2', 'rows': rows,
                   'observations': sum(packet['kind'] == 'observation' for packet in packets)}
+    if 'settled' in fixture['expect']:
+        output['settled'] = settled
     output.update({key: facts[key] for key in ('requests_sent', 'records', 'cache_answers',
                   'call_id', 'input_tokens', 'output_tokens') if key in facts})
     # Installed drivers read these fields from the public result object. Do not

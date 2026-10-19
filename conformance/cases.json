@@ -244,6 +244,34 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "decide",
+            "value": true,
+            "probability": 0.8,
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "decide",
+            "value": [
+              true
+            ],
+            "probability": [
+              0.8
+            ],
+            "pick": [
+              null
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ]
+          }
         }
       }
     },
@@ -380,6 +408,34 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "choose",
+            "value": "billing",
+            "probability": 0.7,
+            "pick": "billing",
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "choose",
+            "value": [
+              "billing"
+            ],
+            "probability": [
+              0.7
+            ],
+            "pick": [
+              "billing"
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ]
+          }
         }
       }
     },
@@ -453,6 +509,34 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "choose",
+            "value": null,
+            "probability": null,
+            "pick": "billing",
+            "index": null,
+            "resolution": "unresolved"
+          },
+          "collection": {
+            "function": "choose",
+            "value": [
+              null
+            ],
+            "probability": [
+              null
+            ],
+            "pick": [
+              "billing"
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "unresolved"
+            ]
+          }
         }
       }
     },
@@ -605,6 +689,40 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "tag",
+            "value": [
+              "billing",
+              "urgent"
+            ],
+            "probability": null,
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "tag",
+            "value": [
+              [
+                "billing",
+                "urgent"
+              ]
+            ],
+            "probability": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ]
+          }
         }
       }
     },
@@ -755,6 +873,34 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "score",
+            "value": 1.0,
+            "probability": null,
+            "pick": "medium",
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "score",
+            "value": [
+              1.0
+            ],
+            "probability": [
+              null
+            ],
+            "pick": [
+              "medium"
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ]
+          }
         }
       }
     },
@@ -949,6 +1095,34 @@
               0,
               2
             ]
+          }
+        },
+        "settled": {
+          "single": {
+            "function": "filter",
+            "value": [
+              "row 0"
+            ],
+            "probability": [
+              0.9
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "filter",
+            "value": [
+              "row 0",
+              "row 2"
+            ],
+            "probability": [
+              0.9,
+              0.6
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
           }
         }
       }
@@ -1181,6 +1355,36 @@
                 "probability": 0.2
               }
             ]
+          }
+        },
+        "settled": {
+          "single": {
+            "function": "rank",
+            "value": [
+              0
+            ],
+            "probability": [
+              0.2
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "rank",
+            "value": [
+              1,
+              2,
+              0
+            ],
+            "probability": [
+              0.9,
+              0.5,
+              0.2
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
           }
         }
       }
@@ -1490,6 +1694,60 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "annotate",
+            "value": {
+              "refund": true,
+              "team": "billing",
+              "severity": 1.2,
+              "topics": [
+                "billing",
+                "urgent"
+              ]
+            },
+            "probability": null,
+            "pick": null,
+            "index": null,
+            "resolution": {
+              "refund": "resolved",
+              "team": "resolved",
+              "severity": "resolved",
+              "topics": "resolved"
+            }
+          },
+          "collection": {
+            "function": "annotate",
+            "value": [
+              {
+                "refund": true,
+                "team": "billing",
+                "severity": 1.2,
+                "topics": [
+                  "billing",
+                  "urgent"
+                ]
+              }
+            ],
+            "probability": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              {
+                "refund": "resolved",
+                "team": "resolved",
+                "severity": "resolved",
+                "topics": "resolved"
+              }
+            ]
+          }
         }
       }
     },
@@ -1659,6 +1917,58 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "annotate",
+            "value": {
+              "refund": null,
+              "severity": 1.2,
+              "topics": [
+                "billing",
+                "urgent"
+              ]
+            },
+            "probability": null,
+            "pick": null,
+            "index": null,
+            "resolution": {
+              "refund": "unresolved",
+              "team": "failed",
+              "severity": "resolved",
+              "topics": "resolved"
+            }
+          },
+          "collection": {
+            "function": "annotate",
+            "value": [
+              {
+                "refund": null,
+                "severity": 1.2,
+                "topics": [
+                  "billing",
+                  "urgent"
+                ]
+              }
+            ],
+            "probability": [
+              null
+            ],
+            "pick": [
+              null
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              {
+                "refund": "unresolved",
+                "team": "failed",
+                "severity": "resolved",
+                "topics": "resolved"
+              }
+            ]
+          }
         }
       }
     },
@@ -1882,6 +2192,24 @@
               }
             ]
           }
+        },
+        "settled": {
+          "single": {
+            "function": "find",
+            "value": "Second passage.",
+            "probability": 0.8,
+            "pick": "u002",
+            "index": 1,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "find",
+            "value": "Second passage.",
+            "probability": 0.8,
+            "pick": "u002",
+            "index": 1,
+            "resolution": "resolved"
+          }
         }
       }
     },
@@ -1964,6 +2292,24 @@
                 "probability": 0.7
               }
             ]
+          }
+        },
+        "settled": {
+          "single": {
+            "function": "find",
+            "value": null,
+            "probability": null,
+            "pick": "none",
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "find",
+            "value": null,
+            "probability": null,
+            "pick": "none",
+            "index": null,
+            "resolution": "resolved"
           }
         }
       }
@@ -3744,6 +4090,60 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "recognize",
+            "value": {
+              "entities": [
+                {
+                  "text": "Maria Chen",
+                  "start": 10,
+                  "end": 20,
+                  "length": 10,
+                  "kind": "person",
+                  "strength": 0.9877
+                }
+              ]
+            },
+            "probability": [
+              0.9976489290347367
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "recognize",
+            "value": [
+              {
+                "entities": [
+                  {
+                    "text": "Maria Chen",
+                    "start": 10,
+                    "end": 20,
+                    "length": 10,
+                    "kind": "person",
+                    "strength": 0.9877
+                  }
+                ]
+              }
+            ],
+            "probability": [
+              [
+                0.9976489290347367
+              ]
+            ],
+            "pick": [
+              null
+            ],
+            "index": [
+              null
+            ],
+            "resolution": [
+              "resolved"
+            ]
+          }
         }
       }
     },
@@ -7492,6 +7892,160 @@
               }
             }
           ]
+        },
+        "settled": {
+          "single": {
+            "function": "relate",
+            "value": [
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.71
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "probability": 0.65
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.73
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "The nightly export ran two hours late.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.55
+              },
+              {
+                "relation": "same_as",
+                "source": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "probability": 0.61,
+                "either": true
+              }
+            ],
+            "probability": [
+              0.71,
+              0.65,
+              0.73,
+              0.55,
+              0.61
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          },
+          "collection": {
+            "function": "relate",
+            "value": [
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.71
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "probability": 0.65
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.73
+              },
+              {
+                "relation": "caused_by",
+                "source": {
+                  "name": "The nightly export ran two hours late.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "The payments database ran out of disk space.",
+                  "kind": "alert"
+                },
+                "probability": 0.55
+              },
+              {
+                "relation": "same_as",
+                "source": {
+                  "name": "Checkout returns 500 at the payment step.",
+                  "kind": "alert"
+                },
+                "target": {
+                  "name": "Card charges are failing for every customer.",
+                  "kind": "alert"
+                },
+                "probability": 0.61,
+                "either": true
+              }
+            ],
+            "probability": [
+              0.71,
+              0.65,
+              0.73,
+              0.55,
+              0.61
+            ],
+            "pick": null,
+            "index": null,
+            "resolution": "resolved"
+          }
         }
       }
     },

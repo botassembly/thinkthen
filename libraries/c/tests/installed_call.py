@@ -65,7 +65,7 @@ def project(payload, value):
         rows.append(project_row(result, dict(value, context_present=False, contexts=None,
                                              candidate_orders=None), len(rows)))
     return {'code': 0, 'schema': 'thinkthen.result/2', 'rows': rows,
-            **payload['facts'], 'call_result': payload}
+            **payload['facts'], 'call_result': payload, 'settled': payload.get('answer')}
 
 
 def run(native, scratch):
