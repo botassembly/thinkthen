@@ -362,7 +362,7 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
             generic(&request.body, None, true).asking("Cache-Control", "no-store")
         }
         (Some("arm"), Some("status"), code) => match code.and_then(whole::<u16>) {
-            Some(code @ 401..=404) => Canned::status(code, "status arm"),
+            Some(code @ 401..=404) => Canned::status(code, &private_error()),
             _ => drift("the status arm takes 401, 402, 403, or 404"),
         },
         (Some("arm"), Some("reset"), _) => Canned::reset(),
@@ -370,7 +370,7 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
             let status = if status == "429" { 429 } else { 503 };
             Canned::status(status, "try again").asking("retry-after-ms", "10")
         }
-        (Some("arm"), Some("refuse"), _) => Canned::status(422, "refused"),
+        (Some("arm"), Some("refuse"), _) => Canned::status(422, &private_error()),
         (Some("arm"), Some("held"), _) => {
             generic(&request.body, None, false).held_by(Arc::clone(gate))
         }
@@ -384,6 +384,19 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
         (Some("arm"), Some("malformed"), Some(cause)) => generic(&request.body, Some(cause), false),
         _ => drift(&format!("no arm at `{path}`")),
     }
+}
+
+// Explicit fake credentials and private-looking prose exercise every caller's
+// diagnostic boundary without reading credentials or echoing request headers.
+const PRIVATE_PROSE: &str = concat!(
+    "sk-loopback-arms c2stbG9vcGJhY2stYXJtcw== sk%2Dloopback%2Darms ",
+    "736b2d6c6f6f706261636b2d61726d73\nAuthorization: Bearer fixture-header\n",
+    "X-Custom: fixture-header\n",
+    "fixturelongtoken0123456789abcdefghijklmnopqrstuvwxyz0123456789"
+);
+
+fn private_error() -> String {
+    format!(r#"{{"error":{{"message":{}}}}}"#, quoted(PRIVATE_PROSE))
 }
 
 /// Answer with the drift status and say why on standard error.
@@ -444,8 +457,13 @@ fn generic(body: &[u8], cause: Option<&str>, full: bool) -> Canned {
     } else {
         ""
     };
+    let private = if cause.is_some() {
+        format!(r#","message":{}"#, quoted(PRIVATE_PROSE))
+    } else {
+        String::new()
+    };
     Canned::ok(&format!(
-        r#"{{"model":{},"answers":{{{}}}{usage}}}"#,
+        r#"{{"model":{},"answers":{{{}}}{usage}{private}}}"#,
         quoted(&request.model),
         answers.join(",")
     ))
