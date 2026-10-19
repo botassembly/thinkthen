@@ -363,21 +363,10 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
         );
         let jsonl = folder.join("thinkthen.jsonl");
         let text = fs::read_to_string(&jsonl)?;
-        let text: String = text
+        let text = text
             .lines()
-            .map(|line| {
-                let mut value: serde_json::Value =
-                    serde_json::from_str(line).expect("fixture line");
-                if value.get("key").is_some() {
-                    let answer = value.as_object_mut().expect("answer");
-                    answer.remove("observation_id");
-                    if old.ends_with("unversioned") {
-                        answer.remove("adapter");
-                    }
-                }
-                format!("{value}\n")
-            })
-            .collect();
+            .map(|line| legacy_answer_line(line, old.ends_with("unversioned")))
+            .collect::<Try<String>>()?;
         fs::write(jsonl, text)?;
         if old.contains("mixed") {
             fs::write(&database, live)?;
@@ -560,4 +549,16 @@ fn maintenance_keeps_current_fixtures_and_counts_only_sqlite_answers() {
         assert_eq!(fs::read_dir(&folder).expect("folder").count(), 1);
         assert!(listener.requests().is_empty());
     }
+}
+
+fn legacy_answer_line(line: &str, unversioned: bool) -> Try<String> {
+    let mut value: serde_json::Value = serde_json::from_str(line)?;
+    if value.get("key").is_some() {
+        let answer = value.as_object_mut().ok_or("answer object")?;
+        answer.remove("observation_id");
+        if unversioned {
+            answer.remove("adapter");
+        }
+    }
+    Ok(format!("{value}\n"))
 }
