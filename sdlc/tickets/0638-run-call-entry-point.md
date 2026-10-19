@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0629, 0635
 
+Reviews: revision 52177a8, accept
+
 ## Outcome
 
 - One exported C function runs a named call to completion. It takes the engine, the function name, the question, input on the path 0635 chose, options, an optional producer callback for fed input, and a cancellation handle. It returns a status, and through out-parameters an owned result handle or an owned error handle. The handles have accessors and a free function. It wraps the Rust function from 0629 and adds no rules of its own.
