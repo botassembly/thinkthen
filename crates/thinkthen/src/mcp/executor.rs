@@ -4,7 +4,7 @@ use super::{
     output::NativeObject,
     runtime::{Executor, NativeReply},
 };
-use crate::{Call, CancelToken, Engine, Error, RequestEnvironment, RequestOutcome, RequestValue};
+use crate::{Call, CancelToken, Engine, Error, RequestEnvironment, RequestValue};
 use serde::Serialize;
 
 pub(super) struct NativeExecutor {
@@ -13,49 +13,54 @@ pub(super) struct NativeExecutor {
 impl Executor for NativeExecutor {
     fn execute(&self, invocation: Invocation, token: &CancelToken) -> Result<NativeReply, Error> {
         let token = invocation.call_token(token);
-        let controls = invocation.controls(&token)?.started()?;
-        controls.admission()?;
-        let (request, feed) = invocation.request()?;
+        let controls = invocation
+            .controls(&token)?
+            .retained_attachment_limit(super::protocol::MAX_MESSAGE)?;
+        let (arguments, feed) = invocation.request()?;
         let single = invocation.arguments.records.is_none()
             && invocation.arguments.source.is_none()
             && invocation.arguments.inputs.is_none();
         match self
             .engine
-            .execute_request(&request, RequestEnvironment { controls, feed })?
+            .call(invocation.tool.name(), arguments, RequestEnvironment { controls, feed })
         {
-            RequestOutcome::Complete(call) => complete(call, single),
-            RequestOutcome::Failed { completed, error } => {
-                #[derive(Serialize)]
-                struct Prefix<'a> {
-                    completed: &'a RequestValue,
-                    #[serde(flatten)]
-                    failure: crate::public::CompleteError<'a>,
-                }
-                let empty = match &completed {
-                    RequestValue::Decisions(rows) => rows.is_empty(),
-                    RequestValue::Choices(rows) => rows.is_empty(),
-                    RequestValue::Tags(rows) => rows.is_empty(),
-                    RequestValue::Scores(rows) => rows.is_empty(),
-                    RequestValue::Filtered(rows) => rows.is_empty(),
-                    RequestValue::Annotations(rows) => rows.is_empty(),
-                    _ => false,
-                };
-                let object = if empty {
-                    NativeObject::new(&error.complete())
-                } else {
-                    NativeObject::new(&Prefix {
-                        completed: &completed,
-                        failure: error.complete(),
-                    })
-                }
-                .map_err(|_| Error::defect("native batch outcome could not be written"))?;
-                Ok(NativeReply {
-                    object,
-                    failed: true,
-                })
-            }
+            Ok(call) => complete(call, single),
+            Err(error) => failure(error),
         }
     }
+}
+fn failure(error: Error) -> Result<NativeReply, Error> {
+    let Some(completed) = error.completed() else {
+        return Err(error);
+    };
+    #[derive(Serialize)]
+    struct Prefix<'a> {
+        completed: &'a RequestValue,
+        #[serde(flatten)]
+        failure: crate::CompleteError<'a>,
+    }
+    let empty = match completed {
+        RequestValue::Decisions(rows) => rows.is_empty(),
+        RequestValue::Choices(rows) => rows.is_empty(),
+        RequestValue::Tags(rows) => rows.is_empty(),
+        RequestValue::Scores(rows) => rows.is_empty(),
+        RequestValue::Filtered(rows) => rows.is_empty(),
+        RequestValue::Annotations(rows) => rows.is_empty(),
+        _ => false,
+    };
+    let object = if empty {
+        NativeObject::new(&error.complete())
+    } else {
+        NativeObject::new(&Prefix {
+            completed,
+            failure: error.complete(),
+        })
+    }
+    .map_err(|_| Error::new(crate::ErrorKind::Defect, "native batch outcome could not be written"))?;
+    Ok(NativeReply {
+        object,
+        failed: true,
+    })
 }
 fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error> {
     let failed = match call.value() {
@@ -78,9 +83,9 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
             let mut rows = $rows.into_iter();
             let one = rows
                 .next()
-                .ok_or_else(|| Error::defect("one input produced no result"))?;
+                .ok_or_else(|| Error::new(crate::ErrorKind::Defect, "one input produced no result"))?;
             if rows.next().is_some() {
-                return Err(Error::defect("one input produced extra results"));
+                return Err(Error::new(crate::ErrorKind::Defect, "one input produced extra results"));
             }
             Ok(one)
         }};
@@ -90,42 +95,42 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
         RequestValue::Decisions(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Decisions(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
         RequestValue::Choices(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Choices(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
         RequestValue::Tags(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Tags(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
         RequestValue::Scores(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Scores(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
         RequestValue::Annotations(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Annotations(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
         RequestValue::Recognized(_) => reply(
             call.try_map(|v| match v {
                 RequestValue::Recognized(rows) => row!(rows),
-                _ => Err(Error::defect("result kind changed")),
+                _ => Err(Error::new(crate::ErrorKind::Defect, "result kind changed")),
             })?,
             failed,
         ),
@@ -135,7 +140,7 @@ fn complete(call: Call<RequestValue>, single: bool) -> Result<NativeReply, Error
 fn reply<T: Serialize>(call: Call<T>, failed: bool) -> Result<NativeReply, Error> {
     Ok(NativeReply {
         object: NativeObject::new(&call)
-            .map_err(|_| Error::defect("native complete call could not be written"))?,
+            .map_err(|_| Error::new(crate::ErrorKind::Defect, "native complete call could not be written"))?,
         failed,
     })
 }

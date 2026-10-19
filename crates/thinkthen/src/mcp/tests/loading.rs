@@ -73,8 +73,9 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
             .unwrap()
             .request()
             .unwrap()
-            .0
-            .resolve_question()
+            .0;
+        let failure = crate::Engine::builder().no_cache().build().unwrap()
+            .call(tool, failure, crate::RequestEnvironment::default())
             .unwrap_err();
         assert_eq!(failure.kind(), crate::ErrorKind::Local, "{tool}");
         assert_eq!(std::fs::read(&path).unwrap(), bytes);
@@ -88,8 +89,9 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         .unwrap()
         .request()
         .unwrap()
-        .0
-        .resolve_question()
+        .0;
+    let failure = crate::Engine::builder().no_cache().build().unwrap()
+        .call("decide", failure, crate::RequestEnvironment::default())
         .unwrap_err();
     assert_eq!(
         failure.detail().message(),
@@ -105,8 +107,9 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         .unwrap()
         .request()
         .unwrap()
-        .0
-        .resolve_question()
+        .0;
+    let failure = crate::Engine::builder().no_cache().build().unwrap()
+        .call("decide", failure, crate::RequestEnvironment::default())
         .unwrap_err();
     assert_eq!(failure.kind(), crate::ErrorKind::Local);
     assert_eq!(failure.detail().message(), "the question file is too large");
@@ -120,13 +123,9 @@ fn native_question_set_preparation_keeps_authored_names_and_utf8_order() {
         "annotate",
         r#"{"version":1,"questions":{"zebra":{"decide":"café 😀?"},"alpha":{"score":"grade","levels":["low","high"]}}}"#,
     );
-    let crate::RequestDefinition::Annotate(set) = call
-        .unwrap()
-        .request()
-        .unwrap()
-        .0
-        .resolve_question()
-        .unwrap()
+    let crate::RequestQuestion::Definition {
+        value: crate::RequestDefinition::DecodedSet { annotation: set, .. },
+    } = call.unwrap().request().unwrap().0.question
     else {
         panic!("annotate set")
     };

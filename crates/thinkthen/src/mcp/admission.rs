@@ -127,7 +127,8 @@ impl Invocation {
             tool: params.name,
             arguments: params.arguments,
         };
-        invocation.request()?;
+        let (arguments, _) = invocation.request()?;
+        crate::Request::named(invocation.tool.name(), arguments)?.admit()?;
         Ok(invocation)
     }
 

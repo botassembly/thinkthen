@@ -17,8 +17,6 @@ fn conflicting_sources_questions_credentials_and_unknown_arguments_send_nothing(
         json!({"question":"q","evidence":"x","records":[]}),
         json!({"question":"q","evidence":"x","inputs":[]}),
         json!({"question":"q","inputs":[{"text":"x","json":null}]}),
-        json!({"question":"q","inputs":[{"text":"x","context":"c"}],"options":{"context_field":"/context"}}),
-        json!({"question":"q","inputs":[{"source":{"paths":["absent"],"unit":"line"}}]}),
         json!({"question":"q","source":{"paths":["absent"]},"records":[]}),
         json!({"question":"q","evidence":"x","options":{"api_key":"fake-secret"}}),
         json!({"question":"q","evidence":"x","unrecognized":"fake-secret"}),

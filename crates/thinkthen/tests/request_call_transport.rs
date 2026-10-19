@@ -100,6 +100,22 @@ fn descriptor_admission_precedes_every_question_and_source_read() {
     assert_eq!(error.detail().message(), "an input source requires explicit whole text files");
     assert!(error.completed().is_none());
     assert_eq!(listener.count(), 0);
+    let mut contextual = item();
+    contextual.original = Some(RequestOriginal::Text { text: "x".into() });
+    contextual.context = Some(thinkthen::RecordContext::Text("c".into()));
+    let mut args = arguments(feed_input(vec![]));
+    args.options.context_field = Some("/context".into());
+    let error = engine.call(
+        "decide", args,
+        RequestEnvironment {
+            controls: CallOptions::new(),
+            feed: Some(RequestFeed::from_descriptors("owned", vec![RequestDescriptor {
+                item: contextual, source: None,
+            }])),
+        },
+    ).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(listener.count(), 0);
     let mut input = item();
     input.images = vec![RequestImage::Bytes { media: ImageMedia::Png, bytes: vec![0; 2] }];
     let error = run_descriptors(
@@ -201,4 +217,33 @@ fn failed_named_calls_expose_only_the_actual_prefix_through_explicit_access() {
     assert!(!format!("{error:?}").contains("original"));
     assert!(!error.to_string().contains("red.png"));
     assert!(!serde_json::to_string(&error.complete()).unwrap().contains("original"));
+}
+
+#[test]
+fn failed_feed_originals_require_explicit_prefix_access() {
+    let listener = listener();
+    let engine = engine(&listener);
+    let marker = "sensitive-prefix-original-0639";
+    let mut first = item();
+    first.original = Some(RequestOriginal::Text { text: marker.into() });
+    let rows = vec![Ok(first), Err(thinkthen::Error::new(ErrorKind::Local, "producer stopped"))];
+    let mut args = arguments(feed_input(vec![]));
+    args.options.batch = Some(RequestBatch::Count(1));
+    let error = engine.call(
+        "decide", args,
+        RequestEnvironment {
+            controls: CallOptions::new(),
+            feed: Some(RequestFeed::new("owned", rows.into_iter())),
+        },
+    ).unwrap_err();
+    let prefix = error.completed().expect("actual completed prefix");
+    let RequestValue::Decisions(rows) = prefix else { panic!("decision prefix"); };
+    assert_eq!(rows.len(), 1);
+    assert!(serde_json::to_string(prefix).unwrap().contains(marker));
+    assert!(!format!("{error:?}").contains(marker));
+    assert!(!error.to_string().contains(marker));
+    assert!(!serde_json::to_string(&error.complete()).unwrap().contains(marker));
+    let cause = std::error::Error::source(&error).expect("typed producer cause");
+    assert!(!cause.to_string().contains(marker));
+    assert_eq!(listener.count(), 1);
 }

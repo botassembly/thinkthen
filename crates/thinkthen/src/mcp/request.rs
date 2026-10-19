@@ -1,21 +1,21 @@
 //! Established MCP carrier aliases enter the single native Request contract.
 use super::{admission::Invocation, inputs::Descriptor};
 use crate::RequestFunction;
-use crate::transport::{TransportAttachmentLimit, RequestDescriptor};
+use crate::RequestDescriptor;
 use crate::{
-    AdmittedRequest, Error, Request, RequestArguments, RequestCall, RequestFeed, RequestInput,
+    Error, RequestArguments, RequestFeed, RequestInput,
     RequestItem, RequestOriginal, RequestQuestion, RequestSource,
 };
 
 impl Invocation {
-    pub(super) fn request(&self) -> Result<(AdmittedRequest, Option<RequestFeed<'static>>), Error> {
+    pub(super) fn request(&self) -> Result<(RequestArguments, Option<RequestFeed<'static>>), Error> {
         let a = &self.arguments;
         let questions = usize::from(a.question.is_some())
             + usize::from(a.question_file.is_some())
             + usize::from(a.question_name.is_some())
             + usize::from(a.question_reference.is_some());
         if questions != 1 {
-            return Err(Error::usage(
+            return Err(Error::new(crate::ErrorKind::Usage,
                 "give exactly one question, file, name or explicit reference",
             ));
         }
@@ -24,13 +24,13 @@ impl Invocation {
             + usize::from(a.source.is_some())
             + usize::from(a.inputs.is_some());
         if forms > 1 || (forms == 0 && a.images.is_empty()) {
-            return Err(Error::usage(
+            return Err(Error::new(crate::ErrorKind::Usage,
                 "give one of evidence, records, source or inputs, or explicit images",
             ));
         }
         if !a.images.is_empty() && (a.records.is_some() || a.source.is_some() || a.inputs.is_some())
         {
-            return Err(Error::usage(
+            return Err(Error::new(crate::ErrorKind::Usage,
                 "attachments cannot accompany records, source or inputs",
             ));
         }
@@ -41,25 +41,6 @@ impl Invocation {
             input,
             options: a.options.native.clone(),
         };
-        let call = match self.tool {
-            super::tools::Tool::Decide => RequestCall::new(RequestFunction::Decide, arguments),
-            super::tools::Tool::Choose => RequestCall::new(RequestFunction::Choose, arguments),
-            super::tools::Tool::Tag => RequestCall::new(RequestFunction::Tag, arguments),
-            super::tools::Tool::Score => RequestCall::new(RequestFunction::Score, arguments),
-            super::tools::Tool::Filter => RequestCall::new(RequestFunction::Filter, arguments),
-            super::tools::Tool::Rank => RequestCall::new(RequestFunction::Rank, arguments),
-            super::tools::Tool::Find => RequestCall::new(RequestFunction::Find, arguments),
-            super::tools::Tool::Annotate => RequestCall::new(RequestFunction::Annotate, arguments),
-            super::tools::Tool::Recognize => {
-                RequestCall::new(RequestFunction::Recognize, arguments)
-            }
-            super::tools::Tool::Relate => RequestCall::new(RequestFunction::Relate, arguments),
-        };
-        let admitted = Request {
-            schema: crate::RequestVersion::V1,
-            call,
-        }
-        .admit_for_transport(TransportAttachmentLimit::new(super::protocol::MAX_MESSAGE)?)?;
         let feed = a
             .inputs
             .as_ref()
@@ -68,10 +49,10 @@ impl Invocation {
                     .iter()
                     .map(Descriptor::native)
                     .collect::<Result<Vec<_>, _>>()?;
-                admitted.admit_descriptor_feed("mcp-inputs".into(), descriptors)
+                Ok::<_, Error>(RequestFeed::from_descriptors("mcp-inputs", descriptors))
             })
             .transpose()?;
-        Ok((admitted, feed))
+        Ok((arguments, feed))
     }
     fn question_selector(&self) -> Result<RequestQuestion, Error> {
         let a = &self.arguments;
@@ -87,11 +68,11 @@ impl Invocation {
             let raw = a
                 .question
                 .as_ref()
-                .ok_or_else(|| Error::usage("missing question"))?;
+                .ok_or_else(|| Error::new(crate::ErrorKind::Usage, "missing question"))?;
             if raw.get().starts_with('"') {
                 RequestQuestion::Text {
                     text: serde_json::from_str(raw.get())
-                        .map_err(|_| Error::usage("invalid question"))?,
+                        .map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid question"))?,
                 }
             } else {
                 RequestQuestion::Definition {
@@ -184,7 +165,7 @@ impl Descriptor {
             + usize::from(self.source.is_some())
             > 1
         {
-            return Err(Error::usage("a descriptor selects one original"));
+            return Err(Error::new(crate::ErrorKind::Usage, "a descriptor selects one original"));
         }
         let original = if let Some(text) = &self.text {
             Some(RequestOriginal::Text { text: text.clone() })
@@ -208,13 +189,13 @@ impl Descriptor {
         .filter_map(|(name, raw)| raw.as_ref().map(|raw| (name, raw)))
         .collect();
         let json = serde_json::to_string(&fields)
-            .map_err(|_| Error::usage("invalid per-item controls"))?;
+            .map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid per-item controls"))?;
         let controls: RequestItem =
-            serde_json::from_str(&json).map_err(|_| Error::usage("invalid per-item controls"))?;
+            serde_json::from_str(&json).map_err(|_| Error::new(crate::ErrorKind::Usage, "invalid per-item controls"))?;
         if let Some(raw) = &self.context {
             let context: RequestItem =
                 serde_json::from_str(&format!("{{\"context\":{}}}", raw.get())).map_err(|_| {
-                    Error::usage("the per-item context does not match context_schema")
+                    Error::new(crate::ErrorKind::Usage, "the per-item context does not match context_schema")
                 })?;
             item.context = context.context;
         }

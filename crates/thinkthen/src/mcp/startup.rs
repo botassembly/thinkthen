@@ -121,7 +121,7 @@ fn run(arguments: &Arguments) -> Result<(), Error> {
     let engine = arguments.engine()?;
     let executor = super::executor::NativeExecutor { engine };
     let (input_file, output_file) =
-        super::input::pipes().map_err(|_| Error::local("MCP stdio pipes unavailable"))?;
+        super::input::pipes().map_err(|_| Error::new(crate::ErrorKind::Local, "MCP stdio pipes unavailable"))?;
     #[cfg(unix)]
     let result = super::runtime::serve(
         move |stop| {
@@ -138,7 +138,7 @@ fn run(arguments: &Arguments) -> Result<(), Error> {
         move |stop| super::input::PipeOutput::new(output_file, stop),
         executor,
     );
-    result.map_err(|_| Error::local("MCP stdio session closed"))
+    result.map_err(|_| Error::new(crate::ErrorKind::Local, "MCP stdio session closed"))
 }
 
 pub(crate) fn entry(arguments: &Arguments) -> std::process::ExitCode {
