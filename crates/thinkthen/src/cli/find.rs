@@ -138,7 +138,7 @@ fn execute(
             if let Some(facts) = error.facts() {
                 environment.settle_native(facts);
             }
-            Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
+            Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len())).with_size_advice(crate::failure::SizeAdvice::Candidates)
         })?;
     let crate::RequestOutcome::Complete(call) = outcome else {
         return Err(Failure::Defect("whole-set find returned a stream failure"));

@@ -339,7 +339,7 @@ fn too_large_remedies_fit_each_commands_request_shape() {
     let mut cases = vec![
         (vec!["find", "Which fits?"], "first\nsecond\n", "shorten the text or use fewer candidates"),
         (vec!["annotate", set], "first", "shorten the text"),
-        (vec!["annotate", set, "--lines"], "first\nsecond\n", "shorten the text or set a lower --max-request-bytes"),
+        (vec!["annotate", set, "--lines"], "first\n", "shorten the text or set a lower --max-request-bytes"),
         (vec!["relate", "works_for=person:organization"], r#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#, "shorten the text or use fewer entities"),
         (vec!["recognize"], "Ada", "shorten the text"),
     ];
@@ -356,7 +356,7 @@ fn too_large_remedies_fit_each_commands_request_shape() {
         }
         let mut records = arguments;
         records.push("--lines");
-        cases.push((records, "first\nsecond\n", "shorten the text or set a lower --max-request-bytes"));
+        cases.push((records, "first\n", "shorten the text or set a lower --max-request-bytes"));
     }
     for (arguments, evidence, advice) in cases {
         let help = crate::harness::spawn(&[arguments[0], "--help"], &[], b"").unwrap();

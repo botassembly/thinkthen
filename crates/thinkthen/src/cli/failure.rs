@@ -22,6 +22,7 @@ mod recording;
 pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
+pub(crate) use status::SizeAdvice;
 mod stopped;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
@@ -163,6 +164,8 @@ pub(crate) enum Failure {
     },
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
+    /// A too-large refusal with a remedy selected by the request shape.
+    RequestTooLarge { tokens: bool, advice: SizeAdvice },
     /// The reply passed its request's limit of this many bytes and was not kept.
     ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
@@ -212,6 +215,23 @@ pub(crate) enum Failure {
 }
 
 impl Failure {
+    /// Keep provider and stop details while attaching only useful size remedies.
+    pub(crate) fn with_size_advice(mut self, advice: SizeAdvice) -> Self {
+        self.attach_size_advice(advice);
+        self
+    }
+
+    fn attach_size_advice(&mut self, advice: SizeAdvice) {
+        match self {
+            Self::TokenLimit => *self = Self::RequestTooLarge { tokens: true, advice },
+            Self::Status(413) => *self = Self::RequestTooLarge { tokens: false, advice },
+            Self::Provider { cause, .. }
+            | Self::Stopped { cause, .. }
+            | Self::BatchFailed { cause, .. } => cause.attach_size_advice(advice),
+            _ => {}
+        }
+    }
+
     /// Windows reports a closing pipe as ERROR_PIPE_NOT_CONNECTED as well as BrokenPipe.
     pub(crate) fn closed_output(error: &io::Error) -> bool {
         error.kind() == io::ErrorKind::BrokenPipe
@@ -284,6 +304,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
+        Failure::Status(413) => (4, status::too_large(false, SizeAdvice::Text)),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Provider { cause, diagnostic } => provider_message(cause, diagnostic),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
@@ -341,7 +362,8 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     }
     Some(match failure {
         Failure::Table(error) => table_message(error),
-        Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
+        Failure::TokenLimit => (4, status::too_large(true, SizeAdvice::Text)),
+        Failure::RequestTooLarge { tokens, advice } => (4, status::too_large(*tokens, *advice)),
         Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::OpenProfile { path, error } => profile_open_message(path, error),
         Failure::Profile { path, error } => {

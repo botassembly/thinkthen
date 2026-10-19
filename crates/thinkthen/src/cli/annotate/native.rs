@@ -238,7 +238,7 @@ fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
 }
 
 fn host_error(mut error: crate::Error, streams: bool) -> Failure {
-    match error.take_diagnostic() {
+    let failure = match error.take_diagnostic() {
         Some(crate::public::error::diagnostic::Diagnostic::PartialReply {
             cause: Some(cause),
             ..
@@ -264,7 +264,12 @@ fn host_error(mut error: crate::Error, streams: bool) -> Failure {
         }
         Some(diagnostic) => Failure::from(error.with_diagnostic(diagnostic)),
         None => Failure::from(error),
-    }
+    };
+    failure.with_size_advice(if streams {
+        crate::failure::SizeAdvice::Batches
+    } else {
+        crate::failure::SizeAdvice::Text
+    })
 }
 
 fn receive(

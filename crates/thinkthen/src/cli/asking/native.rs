@@ -304,7 +304,11 @@ impl Renderer {
                 if let Some(facts) = error.facts() {
                     environment.settle_native(facts);
                 }
-                Some((at, host_error(error, self.streams)))
+                Some((at, host_error(error, self.streams).with_size_advice(if self.streams {
+                    crate::failure::SizeAdvice::Batches
+                } else {
+                    crate::failure::SizeAdvice::Text
+                })))
             }
         };
 

@@ -141,7 +141,7 @@ fn a_refused_second_half_keeps_first_rows_and_does_not_split_again() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         text(&output.stderr),
-        "thinkthen: stopped at record 4; the request for records 4 to 5 failed: the backend answered with status 413: the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile; 3 records finished\n"
+        "thinkthen: stopped at record 4; the request for records 4 to 5 failed: the backend answered with status 413: the backend refused the request as too large; shorten the text or set a lower --max-request-bytes; 3 records finished\n"
     );
 }
 
