@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612
 
+Reviews: revision a2534b1, accept
+
 ## Outcome
 
 - The choice between typed structs and JSON text as the one C input path is recorded in the repo with its reasons and the cost of each option.
