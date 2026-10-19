@@ -5,20 +5,27 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
+
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
+
 use crate::engine::http::{Client, Exchange, Key};
 use crate::engine::{Cancel, Width, Widths, limits};
 use crate::test_deadline::isolated::{child, in_child_at};
+
 mod facade_tests;
+
 const QUIET: Duration = Duration::from_millis(150);
+
 fn in_child(name: &str) {
     in_child_at(&format!("command_width_tests::{name}"));
 }
+
 #[test]
 fn two_engines_share_one_cap() {
     in_child("shared_cap_child");
 }
+
 #[test]
 #[ignore = "runs alone in a child process"]
 fn shared_cap_child() {
@@ -26,19 +33,30 @@ fn shared_cap_child() {
         two_engines_share_the_cap();
     }
 }
+
 #[test]
 fn width_selection_preserves_omission_and_refuses_conflicts() {
     let widths: &'static Widths = Box::leak(Box::default());
-    assert_eq!(widths.select(None).expect("omitted"), Width::new(8).expect("fallback"));
+    assert_eq!(
+        widths.select(None).expect("omitted"),
+        Width::new(8).expect("fallback")
+    );
     assert_eq!(widths.selected(), None);
-    assert_eq!(widths.select(Width::new(4).ok()).expect("explicit"), Width::new(4).expect("width"));
+    assert_eq!(
+        widths.select(Width::new(4).ok()).expect("explicit"),
+        Width::new(4).expect("width")
+    );
     assert_eq!(widths.selected(), Width::new(4).ok());
     let active = widths.select(Width::new(8).ok()).expect_err("conflict");
     assert_eq!(Some(active.0), Width::new(4).ok());
-    assert!(matches!(Width::new(0), Err(crate::engine::error::Error::Usage(
-        "a width is a whole number from 1 through 32"
-    ))));
+    assert!(matches!(
+        Width::new(0),
+        Err(crate::engine::error::Error::Usage(
+            "a width is a whole number from 1 through 32"
+        ))
+    ));
 }
+
 /// Answer every question: yes at 0.9, and the first option of any choice.
 fn generic(body: &[u8]) -> String {
     let request: Value = serde_json::from_slice(body).expect("request");
@@ -166,4 +184,3 @@ fn two_engines_share_the_cap() {
     assert_eq!(seen.len(), 12);
     assert_eq!(held.listener.count(), 12);
 }
-

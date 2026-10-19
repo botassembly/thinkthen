@@ -8,11 +8,11 @@ use std::thread;
 use std::time::Duration;
 
 use super::{child, in_child};
-use crate::public::complete::recognize::ordered::{self, Outcome};
 use crate::core::{Backend, Evidence, Question, QuestionText};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Engine, Key, Settings, Storage};
 use crate::engine::{Cancel, Width, limits};
+use crate::public::complete::recognize::ordered::{self, Outcome};
 
 #[test]
 fn the_facade_registers_its_width_and_stops_a_cancelled_batch() {
@@ -87,7 +87,12 @@ fn cancelled_batch_leaves_no_send(engine: &Engine, loopback: &conformance_backen
                 1,
                 &batch,
                 None,
-                || input.next().map(ordered::Input::Item).or(Some(ordered::Input::End)),
+                || {
+                    input
+                        .next()
+                        .map(ordered::Input::Item)
+                        .or(Some(ordered::Input::End))
+                },
                 &|text: &str| {
                     ask(text, &each).map(|judged| ordered::Row {
                         value: judged.answer.yes(),
@@ -141,10 +146,13 @@ fn native_selection_child() {
     }
     let listener = conformance_backend::Listener::answering(|body| {
         conformance_backend::Canned::ok(&super::generic(body))
-    }).expect("listener");
+    })
+    .expect("listener");
     let cancel = Cancel::default();
     let question = Question::Decide {
-        text: QuestionText::new("Is it late?").expect("question"), yes: None, no: None,
+        text: QuestionText::new("Is it late?").expect("question"),
+        yes: None,
+        no: None,
     };
     let usage = Arc::new(crate::engine::usage::Counters::default());
     let key_reads = Arc::new(AtomicUsize::new(0));
@@ -160,13 +168,28 @@ fn native_selection_child() {
     };
     for width in [None, Some(4), Some(4)] {
         let engine = Engine::new(counted_settings(width)).expect("width admitted");
-        assert_eq!(limits::process().widths.selected(), width.and_then(|width| Width::new(width).ok()));
+        assert_eq!(
+            limits::process().widths.selected(),
+            width.and_then(|width| Width::new(width).ok())
+        );
         for text in ["one", "two"] {
-            engine.judge(&question, None, Evidence::new(text).expect("evidence"), &cancel)
+            engine
+                .judge(
+                    &question,
+                    None,
+                    Evidence::new(text).expect("evidence"),
+                    &cancel,
+                )
                 .expect("answer");
         }
     }
-    let before = (listener.connections(), listener.count(), cancel.keys(), usage.snapshot().requests_sent, key_reads.load(Ordering::SeqCst));
+    let before = (
+        listener.connections(),
+        listener.count(),
+        cancel.keys(),
+        usage.snapshot().requests_sent,
+        key_reads.load(Ordering::SeqCst),
+    );
     assert_eq!(before.1, 6);
     assert_eq!(before.2, 6, "the real native producer counted its key lookups");
     assert_eq!(before.3, 6);
@@ -175,7 +198,13 @@ fn native_selection_child() {
         panic!("a different width is refused")
     };
     assert!(matches!(refused, EngineError::WidthActive(_)));
-    let after = (listener.connections(), listener.count(), cancel.keys(), usage.snapshot().requests_sent, key_reads.load(Ordering::SeqCst));
+    let after = (
+        listener.connections(),
+        listener.count(),
+        cancel.keys(),
+        usage.snapshot().requests_sent,
+        key_reads.load(Ordering::SeqCst),
+    );
     assert_eq!(after, before, "no connection, request, key, or count");
     assert_eq!(limits::process().widths.selected(), Width::new(4).ok());
 }
