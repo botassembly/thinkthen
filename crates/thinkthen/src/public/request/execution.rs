@@ -157,6 +157,7 @@ impl Engine {
         release: Option<&dyn Fn(usize)>,
         recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
+        environment.controls.admit_preparation(request.request.call.function())?;
         let recover = recover.or(environment.controls.annotation_missing
             .map(|callback| callback as &dyn Fn(usize, &str) -> bool));
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
@@ -319,11 +320,10 @@ where
                     self.image_refusal.as_deref(),
                     self.native_originals && self.controls.eager_inputs,
                 )?;
-                // Native preparation preserves its reader-before-declaration and
-                // staged-plan refusal contracts. Find projects already admitted rows.
+                // Owned feeds retain native composition, not prior declaration
+                // admission. Validate selected values before any batch can send.
                 if !self.controls.recovery_rows
                     && !self.controls.entity_rows
-                    && (!self.native_originals || self.function == Function::Find)
                 {
                     declarations(&self.reading, &self.options, &row, input)?;
                 }

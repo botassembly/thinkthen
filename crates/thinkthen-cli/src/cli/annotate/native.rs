@@ -144,8 +144,12 @@ pub(super) fn run(
         }
         // The private callback channel cannot wake the native result queue;
         // keep polling it and cancellation even while native input is finished.
+        if pending_reader {
+            reader.wait(std::time::Duration::from_millis(50));
+            continue;
+        }
         let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done || pending_reader { crate::RequestSessionWaitInterest::Result }
+            else if input_done { crate::RequestSessionWaitInterest::Result }
             else { crate::RequestSessionWaitInterest::Input };
         if session.wait(interest, std::time::Duration::from_millis(50)) == crate::RequestSessionReady::End { break; }
     }

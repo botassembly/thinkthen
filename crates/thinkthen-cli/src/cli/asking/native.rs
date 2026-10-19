@@ -157,8 +157,12 @@ pub(super) fn run(
         }
         // A caller-owned input read may block. Poll the signal while the native
         // session owns all provider waits and final settlement.
+        if pending_reader {
+            reader.wait(std::time::Duration::from_millis(50));
+            continue;
+        }
         let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done || pending_reader { crate::RequestSessionWaitInterest::Result }
+            else if input_done { crate::RequestSessionWaitInterest::Result }
             else { crate::RequestSessionWaitInterest::Input };
         let ready = session.wait(interest, std::time::Duration::from_millis(50));
         if ready == crate::RequestSessionReady::End { break; }

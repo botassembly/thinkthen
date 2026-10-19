@@ -58,11 +58,7 @@ pub(crate) fn run(
     if units.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    if !range.contains(&units.len()) {
-        return Err(Failure::FindCount {
-            none: arguments.none,
-        });
-    }
+    // Native whole-set admission validates each typed item before its minimum count.
     if common.dry_run {
         return planned(
             admitted,

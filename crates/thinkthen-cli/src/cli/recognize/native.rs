@@ -166,8 +166,12 @@ pub(super) fn run(
                 }
             }
         }
+        if pending_reader {
+            if let Some(reader) = &reader { reader.wait(std::time::Duration::from_millis(50)); }
+            continue;
+        }
         let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
-            else if input_done || pending_reader { crate::RequestSessionWaitInterest::Result }
+            else if input_done { crate::RequestSessionWaitInterest::Result }
             else { crate::RequestSessionWaitInterest::Input };
         if session.wait(interest, std::time::Duration::from_millis(50)) == crate::RequestSessionReady::End { break; }
     }

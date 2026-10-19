@@ -35,6 +35,14 @@ impl<T: Send + 'static> Reader<T> {
         thread::spawn(move || feed(records, worker));
         Self(shared)
     }
+    /// Wait only for an already demanded item. Arrival, EOF and failure wake
+    /// the pump immediately; the existing poll bound still admits cancellation.
+    pub(crate) fn wait(&self, timeout: std::time::Duration) {
+        if let Ok(state) = self.0.state.lock() {
+            let _ready = self.0.changed.wait_timeout_while(state, timeout,
+                |state| state.item.is_none() && !state.stopped);
+        }
+    }
     /// Demand one item without blocking the command's event pump.
     pub(crate) fn try_next(&self) -> Read<T> {
         let Ok(mut state) = self.0.state.lock() else {
