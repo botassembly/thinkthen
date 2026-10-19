@@ -1,13 +1,14 @@
 //! CLI annotation framing and preview presentation; native execution owns answers.
 use super::Judging;
-use crate::core::{Reading, Record};
+use crate::cli::reading::Reading;
+use crate::RawRecord as Record;
 use crate::failure::Failure;
 
 pub(crate) type Framed = crate::cli::intake::Item;
 
 pub(super) struct Parser {
     reading: Reading,
-    set: crate::core::QuestionSet,
+    set: crate::QuestionSet,
     details: bool,
 }
 impl Parser {

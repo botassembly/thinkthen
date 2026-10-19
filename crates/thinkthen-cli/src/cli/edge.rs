@@ -14,6 +14,8 @@ mod key;
 mod roots;
 use key::KeySnapshot;
 
+pub(crate) const DEFAULT_REQUEST_SIZE: usize = 96_000;
+
 /// The command's shared, latched observation of a closed output pipe.
 #[derive(Clone, Default)]
 pub(crate) struct Downstream(Arc<AtomicBool>);
@@ -143,7 +145,7 @@ impl Environment {
         flag.is_some() || self.max_request_bytes.is_some()
     }
     pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
-        let Some(value) = flag.or(self.max_request_bytes.as_deref()) else { return Ok(96_000); };
+        let Some(value) = flag.or(self.max_request_bytes.as_deref()) else { return Ok(DEFAULT_REQUEST_SIZE); };
         value.parse::<usize>().ok()
             .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()))
             .ok_or(Failure::Usage(if flag.is_some() {
@@ -154,7 +156,7 @@ impl Environment {
         self.update_builder(|builder| builder.max_request_bytes(size))
     }
     pub(crate) fn warn_request_size(&self, route: &crate::ResolvedSettings, size: usize) -> Result<(), Failure> {
-        if route.is_built_in && size > 96_000 {
+        if route.is_built_in && size > DEFAULT_REQUEST_SIZE {
             writeln!(io::stderr().lock(),
                 "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens")
                 .map_err(Failure::Output)?;

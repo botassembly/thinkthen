@@ -75,7 +75,7 @@ impl Tiers<'_> {
     }
 }
 
-fn parse_batch(text: &str) -> Option<Setting> {
+pub(crate) fn parse_batch(text: &str) -> Option<Setting> {
     let batch = text.parse::<usize>().map_or_else(
         |_| crate::RequestBatch::Named(text.to_owned()), crate::RequestBatch::Count,
     );

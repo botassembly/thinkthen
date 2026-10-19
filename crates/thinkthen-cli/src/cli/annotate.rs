@@ -4,16 +4,13 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::core::{
-    Backend, Framing, Pointer, QuestionSet, QuestionSetError, Reading, ReadingError, Record,
-    Setting,
-};
+use crate::{BatchSetting as Setting, Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing, ResolvedSettings};
+use crate::cli::reading::Reading;
 
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
 use crate::cli::question_text;
 use crate::edge::Environment;
-use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
 use crate::schedule::Output;
@@ -22,6 +19,7 @@ mod asker;
 pub(crate) mod error_row;
 mod native;
 mod plan;
+mod settings;
 
 pub(crate) fn run(
     arguments: &AnnotateArguments,
@@ -41,7 +39,7 @@ pub(crate) fn run(
         Some(path) => question_text::reference(Path::new(path), Failure::OpenQuestionSet),
         None => question_text::read(arguments.questions.as_path(), Failure::OpenQuestionSet),
     }?;
-    let set = match QuestionSet::parse(&text) {
+    let set = match QuestionSet::from_json(&text) {
         Ok(set) => set,
         Err(_) if input_looks_like_set(arguments) => {
             return Err(Failure::Usage(
@@ -50,6 +48,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
+    let settings = settings::Settings::of(&set, &text)?;
     crate::schedule::width(arguments.common.jobs, environment)?;
     let backend = environment.resolve(
         arguments.common.backend.as_deref(),
@@ -60,38 +59,37 @@ pub(crate) fn run(
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
-    let profile = profile::read(&arguments.common, environment, &backend)?;
-    let mismatch = Mismatch::new(set.profile(), profile.as_ref());
-    crate::cli::intake::window(&arguments.common, set.first_part().is_some())?;
+    profile::read(&arguments.common, environment)?;
+    crate::cli::intake::window(&arguments.common, settings.first_part().is_some())?;
     let reading = reading(&arguments.common)?;
-    let setting = batch_setting(arguments, environment, &set, reading.streams())?;
+    let setting = batch_setting(arguments, environment, settings.batch, reading.streams())?;
     let request_size = if reading.streams() {
         Some(environment.request_size(arguments.batching.max_request_bytes.as_deref())?)
     } else {
         None
     };
-    let backend = backend.with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
-    if request_size.is_some_and(|size| size > Backend::DEFAULT_REQUEST_SIZE) {
-        environment.warn_request_size(&backend)?;
+    environment.set_request_size(request_size.unwrap_or(crate::edge::DEFAULT_REQUEST_SIZE))?;
+    if let Some(size) = request_size.filter(|size| *size > crate::edge::DEFAULT_REQUEST_SIZE) {
+        environment.warn_request_size(&backend, size)?;
     }
-    if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
-        return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
+    if let (Framing::Lines, Some(name)) = (arguments.common.framing(), settings.first_part()) {
+        return Err(Failure::Reading(format!("question `{name}` reads `on`, and a --lines record is text with no members")));
     }
     let inputs = crate::cli::intake::Intake::new(
         &arguments.common,
         &reading,
         input,
-        set.first_part().is_some(),
+        settings.first_part().is_some(),
     )?;
+    let recording = folders.reported();
     let engine = crate::cli::construction::engine(
         &arguments.common,
         environment,
         folders,
-        (backend, profile),
         arguments.common.jobs,
-        false,
     )?;
-    let judging = Judging::new(arguments, environment, engine, set, mismatch)?;
+    let mismatch = Mismatch::new(settings.profile.as_deref(), engine.profile_name());
+    let judging = Judging::new(arguments, environment, engine, set, mismatch, settings, backend, recording)?;
     if arguments.common.dry_run {
         return plan::dry_run(&judging, admitted, &reading, inputs, setting, &mut writer);
     }
@@ -135,7 +133,7 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
 fn batch_setting(
     arguments: &AnnotateArguments,
     environment: &Environment,
-    set: &QuestionSet,
+    saved: Option<Setting>,
     streams: bool,
 ) -> Result<Option<Setting>, Failure> {
     if !streams {
@@ -150,7 +148,7 @@ fn batch_setting(
     let flag = arguments.batching.batch.as_deref();
     let selected = flag.or_else(|| environment.batch());
     if let Some(text) = selected {
-        return Setting::parse(text)
+        return crate::judge::parse_batch(text)
             .map(Some)
             .ok_or(Failure::Usage(if flag.is_some() {
                 "--batch takes max or a whole number of at least 1"
@@ -158,14 +156,7 @@ fn batch_setting(
                 "THINKTHEN_BATCH takes max or a whole number of at least 1"
             }));
     }
-    set.batch().map_or(Ok(Some(Setting::Max)), |value| {
-        Setting::of_json(value)
-            .map(Some)
-            .ok_or(Failure::QuestionSet(QuestionSetError::Shape {
-                path: "batch".to_owned(),
-                wanted: "takes max or a whole number of at least 1",
-            }))
-    })
+    Ok(Some(saved.unwrap_or(Setting::Max)))
 }
 
 fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
@@ -174,18 +165,14 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
         .input
         .first()
         .and_then(|path| crate::read_question_file(path).ok())
-        .is_some_and(|text| QuestionSet::parse(&text).is_ok())
+        .is_some_and(|text| QuestionSet::from_json(&text).is_ok())
 }
 
 fn reading(common: &Common) -> Result<Reading, Failure> {
-    let fields = common
-        .field
-        .iter()
-        .map(|typed| {
-            Pointer::new(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Reading::new(common.framing(), fields)?)
+    for pointer in &common.field {
+        crate::validate_pointer(pointer).map_err(|error| Failure::Pointer("--field", pointer.clone(), error.to_string()))?;
+    }
+    Reading::new(common.framing(), common.field.clone())
 }
 
 pub(crate) struct Judging<'a> {
@@ -193,6 +180,9 @@ pub(crate) struct Judging<'a> {
     environment: &'a Environment,
     engine: Engine,
     set: QuestionSet,
+    settings: settings::Settings,
+    backend: ResolvedSettings,
+    recording: bool,
     mismatch: Mismatch,
     streams: bool,
     continue_missing: bool,
@@ -207,6 +197,9 @@ impl<'a> Judging<'a> {
         engine: Engine,
         set: QuestionSet,
         mismatch: Mismatch,
+        settings: settings::Settings,
+        backend: ResolvedSettings,
+        recording: bool,
     ) -> Result<Self, Failure> {
         let common = &arguments.common;
         Ok(Self {
@@ -218,6 +211,9 @@ impl<'a> Judging<'a> {
             common,
             environment,
             set,
+            settings,
+            backend,
+            recording,
             mismatch,
         })
     }
@@ -230,7 +226,7 @@ impl<'a> Judging<'a> {
         &self.set
     }
 
-    pub(crate) fn cancel(&self) -> &crate::engine::Cancel<'static> {
+    pub(crate) fn cancel(&self) -> &crate::cli::interrupt::Signal {
         self.environment.cancel()
     }
 
@@ -252,9 +248,11 @@ impl<'a> Judging<'a> {
 }
 
 fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {
-    for question in set.questions() {
-        if record.has_member(question.name()) {
-            return Err(Failure::AnnotationCollision(question.name().to_owned()));
+    if let Some(content) = record.content() {
+        for (name, _) in set.members() {
+            if content.member(name).is_some() {
+                return Err(Failure::AnnotationCollision(name.to_owned()));
+            }
         }
     }
     Ok(())

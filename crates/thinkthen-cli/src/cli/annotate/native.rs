@@ -211,20 +211,12 @@ pub(super) fn run(
 }
 
 pub(super) fn compose(
-    judging: &Judging<'_>,
-    composition: &crate::RecordReading,
-    original: &Record,
+    judging: &Judging<'_>, composition: &crate::RecordReading, original: &crate::RawRecord,
 ) -> Result<crate::RecordInput<crate::RecordEvidence>, Failure> {
-    let mut record = composition
-        .compose(crate::RawRecord(Arc::new(original.clone())))
-        .map_err(Failure::from)?;
-    let schema = judging
-        .set
-        .questions()
-        .first()
-        .and_then(|member| member.metadata().context_schema.as_ref());
-    record.context =
-        crate::asking::context::record(original, judging.context_field.as_deref(), schema)?;
+    let mut record = composition.compose(original.clone())?;
+    record.context = crate::asking::context::record(
+        original, judging.context_field.as_deref(), judging.settings.context_schema.as_ref(),
+    )?;
     Ok(record)
 }
 
