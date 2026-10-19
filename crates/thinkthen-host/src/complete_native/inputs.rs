@@ -58,7 +58,7 @@ impl Inputs {
 
     /// Decode native request descriptors while allowing native per-record controls.
     pub fn parse_request(source: &str) -> Result<Self, Error> {
-        let mut inputs = Self::parse(source, true)?;
+        let mut inputs = Self::parse(source)?;
         inputs.native_request = true;
         Ok(inputs)
     }
@@ -74,8 +74,8 @@ impl Inputs {
             }),
         )
     }
-    /// Decode descriptors and enforce the host server-file admission rule.
-    pub fn parse(source: &str, server_files: bool) -> Result<Self, Error> {
+    /// Decode SQL descriptors without opening their readers.
+    pub fn parse(source: &str) -> Result<Self, Error> {
         let raw = fields(source)?;
         if raw.keys().any(|key| {
             !matches!(
@@ -99,11 +99,6 @@ impl Inputs {
         if raw.contains_key("records") == raw.contains_key("files") {
             return Err(usage(
                 "complete inputs takes exactly one of records or files",
-            ));
-        }
-        if !server_files && raw.contains_key("files") {
-            return Err(usage(
-                "PostgreSQL evidence and images require client-read records",
             ));
         }
         let flag = |key| {
