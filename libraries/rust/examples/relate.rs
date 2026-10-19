@@ -2,7 +2,10 @@
 
 use std::io::Write;
 
-use thinkthen::{Engine, Entity, Relate, RelationRule};
+mod support;
+use thinkthen::{RequestEnvironment, RequestValue};
+
+use thinkthen::{Engine, RawRecord, Relate, RelationRule};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tt = Engine::from_env()?;
@@ -10,11 +13,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .relation(RelationRule::both_ways("contradicts", "*", "*")?)?
         .build()?;
     let rules = [
-        Entity::new("Book economy class for every flight.", "rule")?,
-        Entity::new("Employees may book business class on any flight.", "rule")?,
+        RawRecord::json(r#"{"name":"Book economy class for every flight.","kind":"rule"}"#)?,
+        RawRecord::json(r#"{"name":"Employees may book business class on any flight.","kind":"rule"}"#)?,
     ];
     let mut out = std::io::stdout().lock();
-    for edge in tt.relate(&ask, rules)?.into_value() {
+    let call = tt.call("relate", support::arguments(ask, support::records(rules)), RequestEnvironment::default())?;
+    let RequestValue::Related(row) = call.value() else { return Err("expected relations".into()); };
+    for edge in row.result().value() {
         let (name, probability) = (edge.relation(), edge.probability());
         let (source, target) = (edge.source().name(), edge.target().name());
         writeln!(out, "{name} {probability:.2} {source} | {target}")?;

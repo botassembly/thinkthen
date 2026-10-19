@@ -2,6 +2,9 @@
 
 use std::io::Write;
 
+mod support;
+use thinkthen::{RequestEnvironment, RequestValue};
+
 use thinkthen::{Engine, Kind, Recognize, RelationRule};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,7 +16,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .relation(works_for)?
         .build()?;
     let text = "Maria Chen joined Northwind Freight last spring.";
-    let found = tt.recognize(&ask, text)?.into_value();
+    let call = tt.call("recognize", support::arguments(ask, support::text(text)), RequestEnvironment::default())?;
+    let RequestValue::Recognized(rows) = call.value() else { return Err("expected recognition".into()); };
+    let found = rows.first().ok_or("missing recognition")?.result().value();
     let mut out = std::io::stdout().lock();
     for name in found.entities() {
         writeln!(out, "{} {}", name.text(), name.kind())?;

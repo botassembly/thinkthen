@@ -2,6 +2,9 @@
 
 use std::io::Write;
 
+mod support;
+use thinkthen::{RequestEnvironment, RequestValue};
+
 use thinkthen::{Engine, Question};
 
 thinkthen::choices! {
@@ -26,8 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "I cannot reset my password.",
     ] {
         // The compiler makes you handle "not sure".
-        match tt.choose(&owner, text)?.into_value() {
-            Some(team) => writeln!(out, "{}: {text}", team.label())?,
+        let call = tt.call("choose", support::arguments(owner.clone(), support::text(text)), RequestEnvironment::default())?;
+        let RequestValue::Choices(rows) = call.value() else { return Err("expected choices".into()); };
+        match rows.first().ok_or("missing choice")?.result().value() {
+            Some(team) => writeln!(out, "{}: {text}", team)?,
             None => writeln!(out, "a person: {text}")?,
         }
     }

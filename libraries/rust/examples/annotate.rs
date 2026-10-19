@@ -2,6 +2,9 @@
 
 use std::io::Write;
 
+mod support;
+use thinkthen::{RequestEnvironment, RequestValue};
+
 use thinkthen::{Engine, QuestionSet};
 
 const FORM: &str = r#"{"version": 1, "questions": {
@@ -17,12 +20,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "I was charged twice this month.",
     ];
     let mut out = std::io::stdout().lock();
-    let annotated = tt.annotate(&form, reports)?;
-    for (record, values) in annotated.results().iter().zip(annotated.value()) {
+    let annotated = tt.call("annotate", support::arguments(form, support::records(reports)), RequestEnvironment::default())?;
+    let RequestValue::Annotations(rows) = annotated.value() else { return Err("expected annotations".into()); };
+    for record in rows {
+        let values = record.result().members();
         for value in values {
-            write!(out, "{}={:?} ", value.name(), value.value())?;
+            write!(out, "{}={:?} ", value.name(), value.value().ok_or("missing annotation value")?)?;
         }
-        writeln!(out, "| {}", record.original())?;
+        writeln!(out, "| {}", support::original(record.original())?)?;
     }
     Ok(())
 }

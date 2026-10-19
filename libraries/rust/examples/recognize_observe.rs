@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use thinkthen::{
     CallOptions, Engine, QuestionDetail, QuestionInput, Recognize, RecordInput, RecordObservation,
-    Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestOutcome,
+    Request, RequestEnvironment, RequestFeed, RequestInput, RequestOptions,
     RequestValue,
 };
 
@@ -62,18 +62,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             images: Vec::new(),
         },
         RequestOptions::default(),
-    )
-    .admit()?;
-    let call = match engine.execute_request(
-        &request,
+    );
+    let call = engine.call(
+        "recognize",
+        request.call.arguments,
         RequestEnvironment {
             controls: CallOptions::new().observe(&callback),
             feed: Some(RequestFeed::from_records("observed", records.into_iter().map(Ok)).eager()),
         },
-    )? {
-        RequestOutcome::Complete(call) => call,
-        RequestOutcome::Failed { error, .. } => return Err(error.into()),
-    };
+    )?;
     let held = questions.lock().map_err(|_| "question lock poisoned")?;
     let mut out = std::io::stdout().lock();
     for ((index, stage, position), owned) in held.iter() {
