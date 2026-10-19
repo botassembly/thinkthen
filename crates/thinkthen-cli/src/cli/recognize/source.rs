@@ -1,14 +1,18 @@
 //! Typed physical span presentation; evidence and answer identity stay unchanged.
 use crate::SourceRecord;
 use crate::cli::intake::{Position, SourceFields};
-use crate::core::{self, RecognizedName, RecognizedValue, RelationEdge};
+use crate::{RecognizedEntity, Recognized, RecognitionValue};
 use crate::failure::Failure;
 use serde::{Serialize, Serializer};
 
 #[derive(Serialize)]
 pub(super) struct Entity<'a> {
-    #[serde(flatten)]
-    entity: &'a RecognizedName,
+    text: &'a str,
+    start: usize,
+    end: usize,
+    length: usize,
+    kind: &'a str,
+    strength: f64,
     #[serde(flatten)]
     coordinates: SourceFields<'a>,
 }
@@ -30,38 +34,42 @@ pub(super) enum Located<'a> {
         relations: Option<Vec<Relation<'a>>>,
     },
     BoundaryOnly {
-        mode: core::BoundaryMode,
+        mode: crate::RecognitionMode,
         proposals: Vec<Proposal<'a>>,
     },
 }
 #[derive(Serialize)]
 pub(super) struct Proposal<'a> {
-    #[serde(flatten)]
-    proposal: &'a core::BoundaryProposal,
+    text: &'a str,
+    start: usize,
+    end: usize,
+    length: usize,
+    probability: f64,
     #[serde(flatten)]
     coordinates: SourceFields<'a>,
 }
 pub(super) fn located<'a>(
-    value: &'a RecognizedValue,
+    value: &'a Recognized,
     position: &'a Position,
     text: &str,
 ) -> Result<Located<'a>, Failure> {
-    let RecognizedValue::Whole {
+    let RecognitionValue::Whole {
         entities,
         relations,
-    } = value
+    } = value.value()
     else {
-        let RecognizedValue::BoundaryOnly { proposals, mode } = value else {
+        let RecognitionValue::BoundaryOnly(proposals) = value.value() else {
             return Err(Failure::Defect("recognition has no value"));
         };
         return Ok(Located::BoundaryOnly {
-            mode: *mode,
+            mode: value.mode(),
             proposals: proposals
                 .iter()
                 .map(|proposal| {
                     Ok(Proposal {
-                        proposal,
-                        coordinates: coordinates(proposal.start, proposal.end, position, text)?,
+                        text: proposal.text(), start: proposal.start(), end: proposal.end(),
+                        length: proposal.length(), probability: proposal.probability(),
+                        coordinates: coordinates(proposal.start(), proposal.end(), position, text)?,
                     })
                 })
                 .collect::<Result<_, Failure>>()?,
@@ -76,13 +84,13 @@ pub(super) fn located<'a>(
         .map(|edges| {
             edges
                 .iter()
-                .map(|edge: &RelationEdge<_>| {
+                .map(|edge| {
                     Ok(Relation {
-                        relation: &edge.relation,
-                        source: entity(&edge.source, position, text)?,
-                        target: entity(&edge.target, position, text)?,
-                        probability: edge.probability,
-                        either: edge.either,
+                        relation: edge.relation(),
+                        source: entity(edge.source(), position, text)?,
+                        target: entity(edge.target(), position, text)?,
+                        probability: edge.probability(),
+                        either: edge.either(),
                     })
                 })
                 .collect::<Result<_, Failure>>()
@@ -94,13 +102,14 @@ pub(super) fn located<'a>(
     })
 }
 fn entity<'a>(
-    name: &'a RecognizedName,
+    name: &'a RecognizedEntity,
     position: &'a Position,
     text: &str,
 ) -> Result<Entity<'a>, Failure> {
     Ok(Entity {
-        entity: name,
-        coordinates: coordinates(name.start, name.end, position, text)?,
+        text: name.text(), start: name.start(), end: name.end(),
+        length: name.length(), kind: name.kind(), strength: name.strength(),
+        coordinates: coordinates(name.start(), name.end(), position, text)?,
     })
 }
 fn coordinates<'a>(
@@ -137,12 +146,27 @@ fn coordinates<'a>(
     })
 }
 pub(super) struct Complete<'a> {
-    pub(super) canonical: &'a core::CompleteRecognition,
-    pub(super) value: Located<'a>,
+    pub(super) canonical: &'a crate::CompleteRecognized,
+    pub(super) value: Option<Located<'a>>,
+    pub(super) input: Option<&'a crate::RawRecord>,
 }
 impl Serialize for Complete<'_> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.canonical
-            .serialize_with_value(self.canonical.input.as_ref(), &self.value, serializer)
+        use serde::ser::{SerializeMap as _, Error as _};
+        let text = self.canonical.to_json().map_err(S::Error::custom)?;
+        let document = crate::saved_json::Json::parse(&text).map_err(S::Error::custom)?;
+        let crate::saved_json::Kind::Object(fields) = document.kind() else {
+            return Err(S::Error::custom("a complete recognition is not an object"));
+        };
+        let mut map = serializer.serialize_map(None)?;
+        for (name, value) in fields {
+            if name == "input" || name == "index" { continue; }
+            if name == "value" {
+                if let Some(located) = &self.value { map.serialize_entry(name, located)?; }
+                else { map.serialize_entry(name, value)?; }
+                if let Some(input) = self.input { map.serialize_entry("input", input)?; }
+            } else { map.serialize_entry(name, value)?; }
+        }
+        map.end()
     }
 }
