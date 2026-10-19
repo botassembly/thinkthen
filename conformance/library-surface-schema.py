@@ -2,9 +2,7 @@
 import importlib
 import importlib.util
 import json
-from pathlib import Path
 import sys
-import tempfile
 
 
 def contracts(root, authority):
@@ -111,18 +109,11 @@ def generated_sources(root, target, request, result):
         outputs['results_generated.zig'] = template.render_results(
             graph(immediate_schema(result), ('completesessionPacket', 'completeImmediateFacts')))
     elif target == 'ada':
-        # Reuse the production generator, including its friendly schema projections.
-        # Redirect only output paths; neither the source tree nor its templates change.
-        original_path = template.output_path
-        with tempfile.TemporaryDirectory(prefix='library-surface-ada-') as folder:
-            temporary = Path(folder)
-            try:
-                template.output_path = lambda root, target, name: temporary / name
-                template.generate(root, generator.graph, generator.prepare,
-                                  generator.child_env(keep=('LANG', 'LC_ALL', 'TMPDIR')), False)
-                outputs.update({path.name: path.read_text() for path in temporary.glob('*.ads')})
-            finally:
-                template.output_path = original_path
+        # Public declarations share the production renderer. The private ABI
+        # package belongs to the native generation gate and requires GCC.
+        outputs.update({name: source for name, source in
+                        template.declarations(root, generator.graph, generator.prepare).items()
+                        if name.endswith('.ads')})
     elif target == 'cobol':
         outputs.update(template.outputs(root, graph(request, ('Request', 'RequestSessionDescriptor'))))
     # R's generated Rust metadata has no host declaration syntax. Its NAMESPACE
