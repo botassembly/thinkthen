@@ -677,6 +677,33 @@ def flutter_locked_setup_case():
 
 
 
+def crate_publish_routing_case():
+    """The release publishes the command after its matching library, and stops on failure."""
+    release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
+    command = next(step['run'] for step in release['jobs']['crates']['steps']
+                   if 'CARGO_REGISTRY_TOKEN' in step.get('env', {}))
+    with tempfile.TemporaryDirectory(prefix='thinkthen-crate-publish-') as temporary:
+        root = Path(temporary)
+        cargo = root / 'cargo'
+        cargo.write_text('#!/bin/sh\n'
+                         'printf "%s\\n" "$*" >> "$CARGO_CALLS"\n'
+                         'if [ "$*" = "publish --locked --package thinkthen" ]; then exit "$LIBRARY_STATUS"; fi\n'
+                         '[ "$*" = "publish --locked --package thinkthen-cli" ] || exit 93\n')
+        cargo.chmod(0o755)
+        calls = root / 'calls'
+        for status in (0, 19):
+            calls.unlink(missing_ok=True)
+            env = {'PATH': fixture_path(root), 'HOME': str(root), 'LANG': 'C.UTF-8',
+                   'CARGO_CALLS': str(calls), 'LIBRARY_STATUS': str(status)}
+            result = subprocess.run(['/bin/sh', '-ec', command], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            assert result.returncode == status, (result.returncode, result.stderr)
+            expected = ['publish --locked --package thinkthen']
+            if status == 0:
+                expected.append('publish --locked --package thinkthen-cli')
+            assert calls.read_text().splitlines() == expected, 'release omitted or reordered a Rust package'
+
+
 def preflight_cases():
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
     steps = gate['jobs']['linux-release']['steps']
@@ -1056,6 +1083,7 @@ def parameter_cases():
 
 
 smoke_family_cases()
+crate_publish_routing_case()
 preflight_cases()
 print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
 linux_work_destination_cases()
