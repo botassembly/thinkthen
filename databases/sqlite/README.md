@@ -32,10 +32,10 @@ CREATE TABLE messages(id INTEGER PRIMARY KEY, body TEXT, team TEXT, tags TEXT);
 
 CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN
   UPDATE messages SET
-    team = thinkthen_choose('Which team handles this?', NEW.body,
-      '{"options":["billing","shipping"]}'),
-    tags = thinkthen_tag('What is in this text?', NEW.body,
-      '{"labels":["refund","shipping"]}')
+    team = (SELECT thinkthen_choose('Which team handles this?', NEW.body,
+      '{"options":["billing","shipping"]}') AS team),
+    tags = (SELECT thinkthen_tag('What is in this text?', NEW.body,
+      '{"labels":["refund","shipping"]}') AS tags)
   WHERE id = NEW.id;
 END;
 
