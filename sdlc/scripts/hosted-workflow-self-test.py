@@ -893,7 +893,7 @@ def preflight_cases():
         # Rehearsal output is future input during bootstrap-only proof.
         # The normal coverage path must refuse absent and different-SHA reports.
         module = runpy.run_path(str(helper))
-        # An exact cache hit cannot excuse missing sources or stale/partial native hosts.
+        # Restored hosts cannot excuse missing sources or stale/partial native hosts.
         sys.path.insert(0, str(REPO / 'databases/duckdb/tools'))
         from inputs import selected, versions
         ruby = root / 'libraries/ruby'
@@ -912,8 +912,7 @@ def preflight_cases():
             if state == 'wrong-pin': cli.write_text('#!/bin/sh\necho wrong-source-id\n')
             elif state == 'partial': cli.unlink()
             check = module['Preflight']()
-            with patch.dict(module['native_inputs'].__globals__, ROOT=root), \
-                    patch.dict(os.environ, {'THINKTHEN_DUCKDB_HOST_CACHE_HIT': 'true'}):
+            with patch.dict(module['native_inputs'].__globals__, ROOT=root):
                 module['native_inputs'](check, 'x86_64-apple-darwin', cache, source_only=True)
             source_failures = [message for message in check.missing if message.startswith('DuckDB ')]
             assert len(source_failures) == 2 * len(versions()), check.missing
