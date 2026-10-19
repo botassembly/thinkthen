@@ -31,7 +31,7 @@ def workflow_command(root, name, doc):
     workflow.write_text(original if doc == yaml.safe_load(original) else yaml.safe_dump(doc))
     try:
         result = subprocess.run([sys.executable, str(root / 'sdlc/scripts/workflows')],
-                                cwd=REPO, capture_output=True, text=True, timeout=30)
+                                cwd=root, capture_output=True, text=True, timeout=30)
         return result.returncode, result.stdout + result.stderr
     finally:
         workflow.write_text(original)
