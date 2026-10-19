@@ -6,6 +6,7 @@
 set -eu
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/sqlite
 tools_group=sqlite
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY
@@ -29,7 +30,7 @@ case $(uname -s) in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 
 not_run() {
 	echo "not run  databases/sqlite: $1; run databases/sqlite/setup.sh once"
-	exit 77
+	exit 1
 }
 command -v cc >/dev/null || not_run "no cc to build the SQLite 3.50.0 host"
 if [ "$suffix" = dylib ]; then

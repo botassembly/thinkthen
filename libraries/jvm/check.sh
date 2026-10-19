@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/jvm
 tools_group=jvm
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -9,7 +10,7 @@ usage_home
 if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
     [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ] || exit 2
 fi
-for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
 # Resolve the supported compiler floor before any native build or package work.
 python3 "$here/tests/toolchains.py" --stable
 if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then

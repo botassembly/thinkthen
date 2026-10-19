@@ -165,8 +165,9 @@ apple-check)
 	export THINKTHEN_ARTIFACT
 	# Only a completed check qualifies. A missing tool or package (77) fails.
 	sh "libraries/$4/check.sh" && code=0 || code=$?
+	REPO=$repo
 	. sdlc/scripts/verdict.sh
-	verdict release "libraries/$4" "$code"
+	verdict "libraries/$4" "$code"
 	;;
 source-capture)
 	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'

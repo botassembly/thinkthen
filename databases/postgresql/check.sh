@@ -8,18 +8,20 @@
 # The surfaces rung runs `sh check.sh`, and the steps need bash 5 outside POSIX mode:
 # EPOCHREALTIME, `exec {fd}>` and process substitution. macOS's sh is bash 3.2 in
 # POSIX mode, so a set BASH_VERSION is not enough (ticket 0375).
+set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/postgresql
 if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 	if [ -n "${THINKTHEN_PG_CHECK_REEXEC:-}" ]; then
 		echo "not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found ${BASH_VERSION:-no bash}"
-		exit 77
+		exit 1
 	fi
 	unset POSIXLY_CORRECT
 	THINKTHEN_PG_CHECK_REEXEC=1 exec bash "$0" "$@"
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 tools_group=postgresql
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
@@ -31,7 +33,7 @@ PG_MAJOR=${1:-16}
 case $PG_MAJOR in 16|17|18) ;; *) echo 'usage: check.sh [16|17|18]' >&2; exit 2 ;; esac
 export PG_MAJOR
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
+case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 1 ;; esac
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home

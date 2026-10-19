@@ -5,6 +5,7 @@
 set -euo pipefail
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown profile: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/r
 tools_group=r
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
@@ -22,7 +23,7 @@ if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
 else
   scratch_dir scratch
 fi
-not_run() { echo "not run: $1" >&2; exit 77; }
+not_run() { echo "not run: $1" >&2; exit 1; }
 command -v Rscript >/dev/null || not_run "R 4.2 or later is required"
 command -v cargo >/dev/null || not_run "cargo is required for the R source package"
 libs=${R_LIBS:-$PWD/rlib}
