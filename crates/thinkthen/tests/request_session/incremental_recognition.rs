@@ -1,7 +1,7 @@
 //! The explicit command mode publishes native recognition before input closure.
 use super::*;
 
-fn start(listener: &Listener, input: RequestInput, eager: bool) -> RequestSession {
+fn start(listener: &Listener, input: RequestInput, eager: bool) -> Result<RequestSession, Error> {
     engine(listener)
         .request_session_with_feed_options(
             super::recognize::recognition_request(input),
@@ -12,7 +12,6 @@ fn start(listener: &Listener, input: RequestInput, eager: bool) -> RequestSessio
                 ..Default::default()
             },
         )
-        .unwrap()
 }
 fn rows(packets: &[RequestSessionResult]) -> Vec<usize> {
     packets
@@ -32,33 +31,12 @@ fn rows(packets: &[RequestSessionResult]) -> Vec<usize> {
 fn recognition_can_publish_before_feed_eof_without_replaying_its_prefix() {
     for later_failure in [false, true] {
         let listener = Listener::answering(|body| recognition_response(body, None)).unwrap();
-        let session = start(&listener, feed(), false);
+        let session = start(&listener, feed(), false).unwrap();
         assert!(matches!(
             session.try_push(descriptor("first")).unwrap(),
             RequestSessionPush::Accepted
         ));
-        let mut packets = Vec::new();
-        let deadline = Instant::now() + Duration::from_secs(10);
-        loop {
-            assert!(
-                Instant::now() < deadline,
-                "first recognition must precede input EOF"
-            );
-            match session.try_read() {
-                RequestSessionRead::Result(packet) => packets.push(packet),
-                RequestSessionRead::Pending => {
-                    let ready = session.wait(
-                        RequestSessionWaitInterest::Result,
-                        Duration::from_millis(50),
-                    );
-                    assert_ne!(ready, RequestSessionReady::End);
-                }
-                RequestSessionRead::End => panic!("session ended before input EOF"),
-            }
-            if !rows(&packets).is_empty() {
-                break;
-            }
-        }
+        let mut packets = before_eof(&session).unwrap();
         assert_eq!(rows(&packets), [0]);
         if later_failure {
             session
@@ -115,7 +93,7 @@ fn incremental_empty_eager_and_cancellation_keep_actual_settlement() {
         &listener,
         RequestInput::Records { items: Vec::new() },
         false,
-    );
+    ).unwrap();
     let inline_packets = drain(&inline);
     assert!(rows(&inline_packets).is_empty());
     assert!(
@@ -130,7 +108,7 @@ fn incremental_empty_eager_and_cancellation_keep_actual_settlement() {
     assert_eq!(listener.count(), 0);
     for eager in [false, true] {
         let listener = Listener::answering(|body| recognition_response(body, None)).unwrap();
-        let session = start(&listener, feed(), eager);
+        let session = start(&listener, feed(), eager).unwrap();
         session.finish(None).unwrap();
         let packets = drain(&session);
         assert!(rows(&packets).is_empty());
@@ -144,7 +122,7 @@ fn incremental_empty_eager_and_cancellation_keep_actual_settlement() {
         };
         assert!(terminal.error.is_none());
         assert_eq!(listener.count(), 0);
-        let session = start(&listener, feed(), eager);
+        let session = start(&listener, feed(), eager).unwrap();
         session.cancel();
         let packets = drain(&session);
         assert!(rows(&packets).is_empty());
@@ -181,4 +159,30 @@ fn incremental_recognition_refuses_other_functions_before_input() {
         .unwrap_err();
     assert_eq!(refused.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
+}
+
+fn before_eof(session: &RequestSession) -> Result<Vec<RequestSessionResult>, Error> {
+        let mut packets = Vec::new();
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            assert!(
+                Instant::now() < deadline,
+                "first recognition must precede input EOF"
+            );
+            match session.try_read() {
+                RequestSessionRead::Result(packet) => packets.push(packet),
+                RequestSessionRead::Pending => {
+                    let ready = session.wait(
+                        RequestSessionWaitInterest::Result,
+                        Duration::from_millis(50),
+                    );
+                    assert_ne!(ready, RequestSessionReady::End);
+                }
+                RequestSessionRead::End => return Err(Error::new(ErrorKind::Defect, "session ended before input EOF")),
+            }
+            if !rows(&packets).is_empty() {
+                break;
+            }
+        }
+    Ok(packets)
 }

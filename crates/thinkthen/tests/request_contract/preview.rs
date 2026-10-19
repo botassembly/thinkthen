@@ -726,13 +726,7 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
                 )
                 .unwrap();
             let body = plan.first_body().unwrap();
-            let wire: Value = serde_json::from_slice(body).unwrap();
-            token_bytes += body.len()
-                + if backend == "perplexity" {
-                    serde_json::to_string(&wire["state"]).unwrap().len() * 2
-                } else {
-                    0
-                };
+            token_bytes += preview_token_bytes(body, backend).unwrap();
             parts.push(plan);
         }
         let combined = parts[0].combine(&parts[1]).unwrap();
@@ -792,15 +786,27 @@ fn assert_combined_overflow(mut growing: PlanEstimate) {
     assert!(overflow);
 }
 
-fn assert_combined_shape(combined: &PlanEstimate, part: &PlanEstimate) -> Result<(), Box<dyn std::error::Error>> {
-        let encoded = serde_json::to_value(combined)?;
-        assert_eq!(
-            encoded.as_object().ok_or("combined object")?.len(),
-            serde_json::to_value(part)?
-                .as_object()
-                .ok_or("part object")?
-                .len()
-        );
-        assert!(encoded.get("summary").is_none());
+fn assert_combined_shape(
+    combined: &PlanEstimate,
+    part: &PlanEstimate,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let encoded = serde_json::to_value(combined)?;
+    assert_eq!(
+        encoded.as_object().ok_or("combined object")?.len(),
+        serde_json::to_value(part)?
+            .as_object()
+            .ok_or("part object")?
+            .len()
+    );
+    assert!(encoded.get("summary").is_none());
     Ok(())
+}
+
+fn preview_token_bytes(body: &[u8], backend: &str) -> Result<usize, serde_json::Error> {
+    let wire: Value = serde_json::from_slice(body)?;
+    Ok(body.len() + if backend == "perplexity" {
+        serde_json::to_string(wire.get("state").unwrap_or(&Value::Null))?.len() * 2
+    } else {
+        0
+    })
 }

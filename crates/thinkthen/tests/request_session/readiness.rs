@@ -1,7 +1,11 @@
 //! Native logical readiness keeps an open producer from holding completed output.
 use super::*;
 
-fn start(listener: &Listener, framing: RequestFraming, pause: Option<Duration>) -> Result<RequestSession, Error> {
+fn start(
+    listener: &Listener,
+    framing: RequestFraming,
+    pause: Option<Duration>,
+) -> Result<RequestSession, Error> {
     let mut request = request(RequestInput::Feed {
         name: "ready".to_owned(),
         framing,
@@ -11,17 +15,20 @@ fn start(listener: &Listener, framing: RequestFraming, pause: Option<Duration>) 
     let mut arguments = request.call.arguments().clone();
     arguments.options.batch = Some(RequestBatch::Named("max".to_owned()));
     request = Request::for_function(RequestFunction::Decide, arguments);
-    engine(listener)
-        .request_session_with_feed_options(
-            request,
-            Surface::Rust,
-            RequestSessionFeedOptions {
-                input_pause: pause,
-                ..Default::default()
-            },
-        )
+    engine(listener).request_session_with_feed_options(
+        request,
+        Surface::Rust,
+        RequestSessionFeedOptions {
+            input_pause: pause,
+            ..Default::default()
+        },
+    )
 }
-fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionResult>) -> Result<(), Error> {
+fn push(
+    session: &RequestSession,
+    text: &str,
+    packets: &mut Vec<RequestSessionResult>,
+) -> Result<(), Error> {
     let mut item = descriptor(text);
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
@@ -32,7 +39,12 @@ fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionRe
         match session.try_push(item)? {
             RequestSessionPush::Accepted => return Ok(()),
             RequestSessionPush::Full(value) => item = value,
-            RequestSessionPush::Closed(_) => return Err(Error::new(ErrorKind::Defect, "intake closed before its descriptor")),
+            RequestSessionPush::Closed(_) => {
+                return Err(Error::new(
+                    ErrorKind::Defect,
+                    "intake closed before its descriptor",
+                ));
+            }
         }
         if let RequestSessionRead::Result(packet) = session.try_read() {
             packets.push(packet);
@@ -41,7 +53,10 @@ fn push(session: &RequestSession, text: &str, packets: &mut Vec<RequestSessionRe
         assert_ne!(ready, RequestSessionReady::End);
     }
 }
-fn first_row(session: &RequestSession, packets: &mut Vec<RequestSessionResult>) -> Result<(), Error> {
+fn first_row(
+    session: &RequestSession,
+    packets: &mut Vec<RequestSessionResult>,
+) -> Result<(), Error> {
     let deadline = Instant::now() + Duration::from_secs(10);
     while !packets
         .iter()
@@ -60,7 +75,9 @@ fn first_row(session: &RequestSession, packets: &mut Vec<RequestSessionResult>) 
                 );
                 assert_ne!(ready, RequestSessionReady::End);
             }
-            RequestSessionRead::End => return Err(Error::new(ErrorKind::Defect, "producer remains open")),
+            RequestSessionRead::End => {
+                return Err(Error::new(ErrorKind::Defect, "producer remains open"));
+            }
         }
     }
     Ok(())

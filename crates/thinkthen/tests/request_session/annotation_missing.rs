@@ -288,7 +288,9 @@ fn synchronous_call_uses_the_same_narrow_policy_and_refuses_other_controls_befor
 #[path = "annotation_missing/ack.rs"]
 mod ack;
 
-fn observing_policy(observed: Arc<Mutex<Vec<(usize, String)>>>, permit: bool) -> Policy {
+type ObservedMissing = Arc<Mutex<Vec<(usize, String)>>>;
+
+fn observing_policy(observed: ObservedMissing, permit: bool) -> Policy {
     Arc::new(move |ordinal: usize, pointer: &str| {
         observed.lock().unwrap().push((ordinal, pointer.to_owned()));
         permit

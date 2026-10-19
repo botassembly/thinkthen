@@ -46,7 +46,11 @@ fn final_settlement_retains_success_only_when_the_caller_opts_in() {
     for retain in [false, true] {
         let listener = Listener::answering(response).unwrap();
         let session = engine(&listener)
-            .request_session_with_feed_options(ranked_request().unwrap(), Surface::Rust, options(retain))
+            .request_session_with_feed_options(
+                ranked_request().unwrap(),
+                Surface::Rust,
+                options(retain),
+            )
             .unwrap();
         // Do not consume Question. Its occupied output cell blocks Row publication,
         // so the worker cannot reach Stop::finish before cancellation is latched.
@@ -111,7 +115,9 @@ fn recovering_settlement_uses_the_same_explicit_success_policy() {
         let mut kinds = vec![];
         loop {
             match session.try_read() {
-                RequestRecoveringRead::Result(packet) => kinds.push(recovered_kind(packet, retain).unwrap()),
+                RequestRecoveringRead::Result(packet) => {
+                    kinds.push(recovered_kind(packet, retain).unwrap())
+                }
                 RequestRecoveringRead::Pending => {
                     assert!(Instant::now() < until, "recovering session did not settle");
                     assert!(matches!(
@@ -158,27 +164,30 @@ fn opting_in_still_stops_an_empty_feed_before_any_send() {
     }
 }
 
-fn recovered_kind(packet: RequestRecoveringResult, retain: bool) -> Result<&'static str, Box<dyn std::error::Error>> {
+fn recovered_kind(
+    packet: RequestRecoveringResult,
+    retain: bool,
+) -> Result<&'static str, Box<dyn std::error::Error>> {
     Ok(match packet {
-                    RequestRecoveringResult::Observation {
-                        value: OwnedRecordObservation::Question { .. },
-                        ..
-                    } => "question",
-                    RequestRecoveringResult::Observation {
-                        value: OwnedRecordObservation::Row { .. },
-                        ..
-                    } => "row",
-                    RequestRecoveringResult::Row(row) => {
-                        assert!(retain);
-                        let RequestValue::Ranked(rows) = row.outcome().map_err(ToString::to_string)? else {
-                            return Err("rank aggregate".into());
-                        };
-                        assert_eq!(rows.len(), 1);
-                        "aggregate"
-                    }
-                    RequestRecoveringResult::Terminal(value) => {
-                        terminal(&value, retain);
-                        "terminal"
-                    }
-                })
+        RequestRecoveringResult::Observation {
+            value: OwnedRecordObservation::Question { .. },
+            ..
+        } => "question",
+        RequestRecoveringResult::Observation {
+            value: OwnedRecordObservation::Row { .. },
+            ..
+        } => "row",
+        RequestRecoveringResult::Row(row) => {
+            assert!(retain);
+            let RequestValue::Ranked(rows) = row.outcome().map_err(ToString::to_string)? else {
+                return Err("rank aggregate".into());
+            };
+            assert_eq!(rows.len(), 1);
+            "aggregate"
+        }
+        RequestRecoveringResult::Terminal(value) => {
+            terminal(&value, retain);
+            "terminal"
+        }
+    })
 }

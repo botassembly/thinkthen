@@ -181,8 +181,7 @@ pub(super) fn run(
             reader.wait(std::time::Duration::from_millis(50));
             continue;
         }
-        if crate::asking::native_reader::session_ended(&session, cancelled, input_done)
-        {
+        if crate::asking::native_reader::session_ended(&session, cancelled, input_done) {
             break;
         }
     }

@@ -320,7 +320,8 @@ fn admit_rank_meanings(
 }
 
 fn definition_details(
-    definition: &RequestDefinition, member: Option<&Json>,
+    definition: &RequestDefinition,
+    member: Option<&Json>,
 ) -> Result<(QuestionKind, bool, Option<InputDeclaration>), Failure> {
     Ok(match definition {
         RequestDefinition::Atomic(question) => {
