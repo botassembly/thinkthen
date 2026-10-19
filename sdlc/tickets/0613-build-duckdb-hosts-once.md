@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision 7a2c32b, accept
 
+Reviews: revision 9b49152, accept
+
 ## Outcome
 
 - Changes: `.github/workflows/release.yml`, `databases/duckdb/tools/setup.sh`, `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `sdlc/scripts/workflows`.
