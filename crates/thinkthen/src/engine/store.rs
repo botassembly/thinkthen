@@ -48,6 +48,9 @@ pub(crate) const SQLITE: &str = "thinkthen.sqlite";
 /// The committed fixture's file name.
 pub(crate) const JSONL: &str = "thinkthen.jsonl";
 
+/// SQLite layout identity, independent of answer-key hash domains.
+const STORE_VERSION: i64 = 3;
+
 const SCHEMA: &str = "
 CREATE TABLE IF NOT EXISTS states (
   id     INTEGER PRIMARY KEY,
@@ -67,12 +70,10 @@ CREATE TABLE IF NOT EXISTS answers (
   output_tokens INTEGER,
   taken_at      INTEGER NOT NULL,
   origin        TEXT NOT NULL,
-  key_version   INTEGER NOT NULL,
   adapter       TEXT NOT NULL,
   observation_id TEXT NOT NULL,
   batch_size    INTEGER
 );
-PRAGMA user_version = 2;
 ";
 
 /// How a call uses its folder, by the modes table of ADR 0111 section 3.
@@ -363,7 +364,7 @@ impl Store {
                 |row| Ok((row.get(0)?, row.get(1)?)),
             )
         })?;
-        if (version == 0 && tables != 0) || (version != 0 && version != 2) {
+        if (version == 0 && tables != 0) || (version != 0 && version != STORE_VERSION) {
             return Err(Error::StoreVersion(SQLITE.to_owned()));
         }
         self.waiting(cancel, || {

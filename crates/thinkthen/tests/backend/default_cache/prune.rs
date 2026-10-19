@@ -276,7 +276,7 @@ fn older_than_selects_by_taken_at_and_keeps_unrelated_files() {
     fs::write(folder.join("sentinel"), b"keep me").expect("sentinel");
     // A current version can live in WAL while the database header remains old.
     let writer = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("writer");
-    writer.execute_batch("PRAGMA user_version = 1; PRAGMA journal_mode = WAL; PRAGMA user_version = 2; BEGIN IMMEDIATE;").expect("current WAL");
+    writer.execute_batch("PRAGMA user_version = 1; PRAGMA journal_mode = WAL; PRAGMA user_version = 3; BEGIN IMMEDIATE;").expect("current WAL");
     let preview = prune(&folder, &["--older-than", "1d", "--dry-run"]);
     assert_eq!(preview.status.code(), Some(0), "{preview:?}");
     assert!(crate::harness::printed(&preview).starts_with("selected 1 answers"));
@@ -363,14 +363,20 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
         );
         let jsonl = folder.join("thinkthen.jsonl");
         let text = fs::read_to_string(&jsonl)?;
-        let text = text.replace(
-            "\"key_version\":2,",
-            if old.ends_with("unversioned") {
-                ""
-            } else {
-                "\"key_version\":1,"
-            },
-        );
+        let text: String = text
+            .lines()
+            .map(|line| {
+                let mut value: serde_json::Value = serde_json::from_str(line).expect("fixture line");
+                if value.get("key").is_some() {
+                    let answer = value.as_object_mut().expect("answer");
+                    answer.remove("observation_id");
+                    if old.ends_with("unversioned") {
+                        answer.remove("adapter");
+                    }
+                }
+                format!("{value}\n")
+            })
+            .collect();
         fs::write(jsonl, text)?;
         if old.contains("mixed") {
             fs::write(&database, live)?;

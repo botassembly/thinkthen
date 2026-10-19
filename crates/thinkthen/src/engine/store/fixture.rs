@@ -30,8 +30,6 @@ struct StateLine {
 #[serde(deny_unknown_fields)]
 pub(crate) struct Answer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) key_version: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) adapter: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) observation_id: Option<crate::core::ObservationId>,
@@ -186,7 +184,7 @@ impl Entries {
                 )
             })?;
             if value.get("key").is_some()
-                && value.get("key_version").and_then(serde_json::Value::as_u64) != Some(2)
+                && (value.get("adapter").is_none() || value.get("observation_id").is_none())
             {
                 return Err(Error::StoreVersion(JSONL.to_owned()));
             }
@@ -199,10 +197,10 @@ impl Entries {
 
     /// Read every entry of one store's database.
     pub(crate) fn read(connection: &Connection) -> Result<Self, Error> {
-        let version: u32 = connection
+        let version: i64 = connection
             .query_row("PRAGMA user_version", [], |row| row.get(0))
             .map_err(storage)?;
-        if version != 2 {
+        if version != super::STORE_VERSION {
             return Err(Error::StoreVersion(SQLITE.to_owned()));
         }
         let mut entries = Self::default();
@@ -231,7 +229,6 @@ impl Entries {
             .query_map([], |row| {
                 Ok((
                     Answer {
-                        key_version: None,
                         adapter: None,
                         observation_id: None,
                         batch_size: None,
@@ -255,11 +252,10 @@ impl Entries {
             let (mut answer, state) = row.map_err(|_| super::versioned::invalid())?;
             {
                 let key = bytes_of(&answer.key).ok_or_else(super::versioned::invalid)?;
-                let (key_version, adapter, id, batch): (u32, String, String, Option<u32>) = connection.query_row(
-                    "SELECT key_version, adapter, observation_id, batch_size FROM answers WHERE key=?1", [key.as_slice()],
-                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+                let (adapter, id, batch): (String, String, Option<u32>) = connection.query_row(
+                    "SELECT adapter, observation_id, batch_size FROM answers WHERE key=?1", [key.as_slice()],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                 ).map_err(storage)?;
-                answer.key_version = Some(key_version);
                 answer.adapter = Some(adapter);
                 answer.observation_id = Some(
                     crate::core::ObservationId::new(id).map_err(|_| super::versioned::invalid())?,
@@ -302,8 +298,8 @@ impl Entries {
             let state = ids.get(answer.state.as_str()).ok_or_else(unconvertible)?;
             connection
                 .execute(
-                    "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin, key_version, adapter, observation_id, batch_size)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
+                    "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin, adapter, observation_id, batch_size)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
                     rusqlite::params![
                         key.as_slice(),
                         answer.url,
@@ -316,7 +312,7 @@ impl Entries {
                         super::signed(answer.output_tokens)?,
                         answer.taken_at,
                         answer.origin,
-                        answer.key_version, answer.adapter,
+                        answer.adapter,
                         answer.observation_id.as_ref().map(crate::core::ObservationId::as_str),
                         answer.batch_size.map(std::num::NonZeroU32::get),
                     ],
