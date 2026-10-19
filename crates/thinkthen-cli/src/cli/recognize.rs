@@ -89,7 +89,7 @@ pub(crate) fn run(
         arguments.common.framing()
     };
     let reading =
-        Reading::new(framing, pointers)?.with_item_schema(spec.item_schema().cloned());
+        Reading::new(framing, pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams(), environment)?;
     if (arguments.common.located() || arguments.common.input.len() > 1)
         && (has_on

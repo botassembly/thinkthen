@@ -17,7 +17,6 @@ pub(crate) struct Resolved {
     pub(crate) on: Vec<String>,
     pub(crate) profile: Option<String>,
     pub(crate) literal_question: bool,
-    pub(crate) item_schema: Option<InputDeclaration>,
     pub(crate) context_schema: Option<InputDeclaration>,
     pub(crate) sources: Sources,
     pub(crate) saved: bool,
@@ -98,14 +97,14 @@ fn prepare(admitted: &mut AdmittedRequest)
             Kind::Object(fields) => fields.first().map(|(_, value)| value), _ => None,
         })
     } else { top };
-    let (kind, dynamic, item_schema, context_schema) = match &definition {
-        RequestDefinition::Atomic(question) => (question.kind(), false, question.item_schema().cloned(), question.context_schema().cloned()),
-        RequestDefinition::Rank(question) => (if member.is_some_and(|value| value.member("score").is_some()) { QuestionKind::Score } else { QuestionKind::Decide }, false, question.item_schema().cloned(), question.context_schema().cloned()),
-        RequestDefinition::DynamicChoose(question) => (QuestionKind::Choose, true, question.item_schema().cloned(), question.context_schema().cloned()),
+    let (kind, dynamic, context_schema) = match &definition {
+        RequestDefinition::Atomic(question) => (question.kind(), false, question.context_schema().cloned()),
+        RequestDefinition::Rank(question) => (if member.is_some_and(|value| value.member("score").is_some()) { QuestionKind::Score } else { QuestionKind::Decide }, false, question.context_schema().cloned()),
+        RequestDefinition::DynamicChoose(question) => (QuestionKind::Choose, true, question.context_schema().cloned()),
         RequestDefinition::RankSet(_) => {
             let member = member.ok_or(Failure::Defect("admitted rank set lost its first member"))?;
             let question = crate::Question::from_json(&crate::render::json_line(member)?)?;
-            (QuestionKind::Decide, false, question.item_schema().cloned(), question.context_schema().cloned())
+            (QuestionKind::Decide, false, question.context_schema().cloned())
         }
         _ => return Err(Failure::Defect("atomic preparation resolved another function")),
     };
@@ -133,7 +132,7 @@ fn prepare(admitted: &mut AdmittedRequest)
     }
     sources = sources.setting("on", source(options.field.is_some(), "on"))
         .setting("model", if options.model.is_some() { "command line" } else if top.is_some_and(|value| value.member("model").is_some()) { "file" } else { "default" });
-    Ok((Resolved { kind, dynamic, model, on, profile, literal_question, item_schema, context_schema, sources, saved }, FileTier { batch: selected_batch, tuned }, rank_set))
+    Ok((Resolved { kind, dynamic, model, on, profile, literal_question, context_schema, sources, saved }, FileTier { batch: selected_batch, tuned }, rank_set))
 }
 
 fn mismatch(function: crate::RequestFunction, definition: &RequestDefinition) -> Result<(), Failure> {

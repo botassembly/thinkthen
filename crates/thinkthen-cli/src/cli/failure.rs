@@ -38,8 +38,6 @@ pub(crate) enum Failure {
     Native(ErrorKind, String),
     /// A safe native named-question loading refusal.
     NamedQuestion(String),
-    /// The flags and the environment name no backend.
-    Backend(String),
     OpenProfile {
         path: PathBuf,
         error: io::Error,
@@ -113,8 +111,6 @@ pub(crate) enum Failure {
     /// One record could not become the evidence of one request.
     Record(String),
     RecordJson(thinkthen::JsonFailure),
-    /// A CSV or TSV header or record broke its table rule.
-    Table(thinkthen::Error),
     /// The file the records were to be read from could not be opened.
     OpenInput(io::Error),
     /// `--input` named a directory rather than a file.
@@ -298,7 +294,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         return code;
     }
     let (code, message): (u8, String) = match failure {
-        Failure::Backend(error) => (2, error.to_string()),
         Failure::Question { message, from_file } => (
             if *from_file { 5 } else { 2 },
             message.clone(),
@@ -310,7 +305,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
         Failure::Record(error) => (2, error.to_string()),
         Failure::RecordJson(failure) => (2, json::record(*failure)),
-        Failure::Table(_) => (70, "defect: a table failure was not reported".to_owned()),
         Failure::NoKey(variable) => (
             4,
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
@@ -373,7 +367,6 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         return Some(message);
     }
     Some(match failure {
-        Failure::Table(error) => table_message(error),
         Failure::Status(413, _) => (4, status::too_large(false, SizeAdvice::Text)),
         Failure::TokenLimit => (4, status::too_large(true, SizeAdvice::Text)),
         Failure::RequestTooLarge { tokens, advice } => (4, status::too_large(*tokens, *advice)),
@@ -530,10 +523,6 @@ mod tests;
 fn report_estimated(reason: thinkthen::EstimatedInputDenial, writer: &mut dyn Write) -> u8 {
     let _unwritten = writeln!(writer, "{NAME} usage: {reason}");
     2
-}
-
-fn table_message(error: &thinkthen::Error) -> (u8, String) {
-    (if error.kind() == ErrorKind::Local { 5 } else { 2 }, error.to_string())
 }
 
 fn profile_open_message(path: &std::path::Path, error: &io::Error) -> (u8, String) {

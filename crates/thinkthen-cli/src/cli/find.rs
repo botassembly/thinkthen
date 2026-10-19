@@ -29,7 +29,6 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let question::Prepared {
-        item_schema,
         authored_model,
         common,
         sources,
@@ -37,8 +36,7 @@ pub(crate) fn run(
     let common = &common;
     let context = asking::context::shared(arguments.common.context.as_deref())?;
     let mut display = display(arguments, common)?;
-    let reading = Reading::new(framing(common), fields(common)?)?
-        .with_item_schema(item_schema);
+    let reading = Reading::new(framing(common), fields(common)?)?;
     let backend = environment.resolve(common.backend.as_deref(), common.url.as_deref(), common.model.as_deref())?;
     environment.set_request_size(environment.request_size(arguments.common.max_request_bytes.as_deref())?)?;
     profile::read(common, environment)?;

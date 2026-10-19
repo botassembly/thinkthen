@@ -5,7 +5,6 @@ use crate::plan_document::Sources;
 use crate::saved_json::{Json, Kind};
 
 pub(super) struct Prepared {
-    pub(super) item_schema: Option<crate::InputDeclaration>,
     pub(super) authored_model: Option<String>,
     pub(super) common: Common,
     pub(super) sources: Option<Sources>,
@@ -22,9 +21,9 @@ impl Prepared {
             Some(Json::parse(&text)?)
         } else { None };
         let definition = admitted.resolve_question()?;
-        let question = match &definition {
-            crate::RequestDefinition::Find(file) => file.question(),
-            crate::RequestDefinition::Atomic(crate::LoadedQuestion::Question(question)) => question,
+        match &definition {
+            crate::RequestDefinition::Find(_)
+            | crate::RequestDefinition::Atomic(crate::LoadedQuestion::Question(_)) => {},
             _ => return Err(Failure::Defect("find admission retained another question kind")),
         };
         let saved_fields = match authored.as_ref().and_then(|value| value.member("on")).map(Json::kind) {
@@ -40,6 +39,6 @@ impl Prepared {
             .setting("model", if common.model.is_some() { "command line" } else if authored_model.is_some() { "file" } else { "default" }));
         if common.field.is_empty() { common.field = saved_fields; }
         if common.model.is_none() { common.model.clone_from(&authored_model); }
-        Ok(Self { item_schema: question.item_schema().cloned(), authored_model, common, sources })
+        Ok(Self { authored_model, common, sources })
     }
 }

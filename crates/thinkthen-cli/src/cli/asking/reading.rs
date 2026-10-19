@@ -19,7 +19,7 @@ pub(super) fn read_by(
         || common.unit.as_deref() == Some("file")
     {
         return Ok(
-            Reading::new(asked, on)?.with_item_schema(settled.item_schema.clone())
+            Reading::new(asked, on)?
         );
     }
     let framing = if on.is_empty() {
@@ -28,8 +28,7 @@ pub(super) fn read_by(
         Framing::Jsonl
     };
     Ok(Reading::new(framing, on)?
-        .by_default()
-        .with_item_schema(settled.item_schema.clone()))
+        .by_default())
 }
 
 /// Charge original evidence at source admission, leaving the iterator tail unread.

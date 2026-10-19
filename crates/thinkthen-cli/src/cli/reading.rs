@@ -2,9 +2,8 @@
 
 use crate::failure::Failure;
 use crate::{
-    Error, InputDeclaration, RawRecord, RecordEvidence, RecordInput, RecordReading, RequestFraming,
+    Error, RawRecord, RecordEvidence, RecordInput, RecordReading, RequestFraming,
 };
-use serde::Serialize;
 
 #[derive(Clone)]
 pub(crate) struct Reading {
@@ -12,15 +11,6 @@ pub(crate) struct Reading {
     fields: Vec<String>,
     composition: RecordReading,
     default: bool,
-    item_schemas: Vec<InputDeclaration>,
-}
-
-#[derive(Serialize)]
-pub(crate) struct ReadingPlan<'a> {
-    framing: RequestFraming,
-    field: &'a [String],
-    #[serde(skip_serializing_if = "Option::is_none")]
-    from: Option<&'static str>,
 }
 
 impl Reading {
@@ -35,7 +25,6 @@ impl Reading {
             fields,
             composition,
             default: false,
-            item_schemas: Vec::new(),
         })
     }
 
@@ -60,27 +49,6 @@ impl Reading {
 
     pub(crate) fn has_fields(&self) -> bool {
         !self.fields.is_empty()
-    }
-
-    pub(crate) fn with_item_schema(self, schema: Option<InputDeclaration>) -> Self {
-        self.with_item_schemas(schema.into_iter().collect())
-    }
-
-    pub(crate) fn with_item_schemas(mut self, schemas: Vec<InputDeclaration>) -> Self {
-        self.item_schemas = schemas;
-        self
-    }
-
-    pub(crate) fn declares_item(&self) -> bool {
-        !self.item_schemas.is_empty()
-    }
-
-    pub(crate) fn plan(&self) -> ReadingPlan<'_> {
-        ReadingPlan {
-            framing: self.framing,
-            field: &self.fields,
-            from: self.default.then_some("default"),
-        }
     }
 
     pub(crate) fn record(&self, bytes: &[u8]) -> Result<RawRecord, Error> {

@@ -1,7 +1,7 @@
 //! Command presentation of exact native prepared request bytes.
 use serde::{Serialize, Serializer};
 use serde_json::value::RawValue;
-use thinkthen::{Error, PlanEstimate, RequestFraming, ResolvedSettings};
+use thinkthen::{Error, RequestFraming, ResolvedSettings};
 
 /// The command's ordered setting-source labels, independent of native configuration.
 #[derive(Clone, Debug, Default)]
@@ -59,13 +59,6 @@ impl std::fmt::Debug for PlanDocument<'_> {
 }
 impl<'a> PlanDocument<'a> {
     pub(crate) fn request_body(&self) -> &[u8] { self.request.get().as_bytes() }
-
-    /// Disclose the first actual native request without re-encoding it.
-    pub(crate) fn of(settings: &'a ResolvedSettings, plan: &PlanEstimate) -> Result<Self, Error> {
-        let body = plan.prepared_requests().next()
-            .ok_or_else(|| Error::new(thinkthen::ErrorKind::Defect, "a displayed plan has no prepared request"))?;
-        Self::of_body(settings, body.body.to_vec())
-    }
 
     /// Retain exactly the body closed by native admission and packing.
     pub(crate) fn of_body(settings: &'a ResolvedSettings, body: Vec<u8>) -> Result<Self, Error> {
