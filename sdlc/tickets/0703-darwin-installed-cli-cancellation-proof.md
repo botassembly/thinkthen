@@ -1,12 +1,14 @@
 # 0703 — Prove installed command cancellation on macOS without Linux signal metadata
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Reviews: revision 349a19a, accept
+
+Reviews: revision 94a6a34, accept
 
 ## Outcome
 

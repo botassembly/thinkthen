@@ -472,6 +472,9 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
     return pages[0].parent if len(pages) == 1 else destination
 
 
+TERMINATION_GRACE = 1
+
+
 def run_process(command, work, env, input, timeout):
     with subprocess.Popen(command, cwd=work, env=env, stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -486,7 +489,7 @@ def run_process(command, work, env, input, timeout):
             except ProcessLookupError:
                 pass
             try:
-                process.communicate(timeout=1)
+                process.communicate(timeout=TERMINATION_GRACE)
             except subprocess.TimeoutExpired:
                 pass
             finally:

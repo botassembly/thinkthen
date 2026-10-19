@@ -3,3 +3,8 @@
 fail-fast = false
 test-threads = 2
 slow-timeout = { period = "5s", terminate-after = 1 }
+
+# This cache refusal test runs the CLI repeatedly, including an upgrade.
+[[profile.default.overrides]]
+filter = 'test(prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade)'
+slow-timeout = { period = "30s", terminate-after = 2 }

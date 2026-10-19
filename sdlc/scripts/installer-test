@@ -24,6 +24,10 @@ import threading
 from loopback_server import LoopbackServer
 from tools import fixture_path
 
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import fixture_run
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 # Each `uname -s` and `uname -m` pair install.sh accepts, and the command archive's target
 # that release-pack publishes for it: static musl on Linux, the Rust target on macOS.
@@ -125,7 +129,7 @@ def run(shell, port, root, args=(), on_path=False, folder=None, **tools):
            "THINKTHEN_INSTALL_API": f"http://127.0.0.1:{port}"}
     if folder:
         env["THINKTHEN_INSTALL_DIR"] = str(root / folder)
-    done = subprocess.run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
+    done = fixture_run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True)
     return done.returncode, done.stdout, done.stderr
 
 

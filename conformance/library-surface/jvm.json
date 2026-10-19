@@ -1,0 +1,146 @@
+{
+  "libraries": {
+    "jvm": {
+      "root": "libraries/jvm",
+      "language": "java",
+      "naming": "camel",
+      "declarations": [
+        "libraries/jvm/session/thinkthen/*.java",
+        "libraries/jvm/session/kotlin/*.kt",
+        "libraries/jvm/session/scala/*.scala"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Engine"
+      ],
+      "facades": {
+        "kotlin": "KotlinEngine",
+        "scala": "ScalaEngine"
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "KotlinEngine",
+        "ScalaEngine",
+        "OwnedSession",
+        "OwnedCall",
+        "Read",
+        "SessionFailure",
+        "NativeFailure"
+      ],
+      "representation_owners": [
+        "Presence",
+        "UsageStatus",
+        "UsagePersistence",
+        "Values",
+        "Builder",
+        "View",
+        "Options"
+      ],
+      "lifecycle_members": {
+        "Engine": [
+          "execute",
+          "start_session"
+        ],
+        "KotlinEngine": [
+          "execute",
+          "start_session"
+        ],
+        "ScalaEngine": [
+          "execute",
+          "start_session"
+        ],
+        "OwnedCall": [
+          "packets",
+          "terminal"
+        ],
+        "OwnedSession": [
+          "next_packet",
+          "next_packet_async",
+          "wait_ready"
+        ],
+        "Read": [
+          "ended",
+          "packet"
+        ],
+        "SessionFailure": [
+          "call",
+          "failure"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      },
+      "representation_types": [
+        "KotlinEngine",
+        "ScalaEngine",
+        "Call",
+        "Read",
+        "Surface",
+        "Values",
+        "Builder",
+        "View",
+        "Questions",
+        "Options"
+      ],
+      "representation_members": {
+        "Values": [
+          "freeze",
+          "integer",
+          "json",
+          "object",
+          "list",
+          "map"
+        ],
+        "Builder": [
+          "extension",
+          "json"
+        ],
+        "View": [
+          "json"
+        ],
+        "Options": [
+          "option"
+        ]
+      },
+      "wrapper_members": {
+        "State": [
+          "MISSING",
+          "NULL"
+        ],
+        "Surface": [
+          "JAVA",
+          "KOTLIN",
+          "SCALA"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      }
+    }
+  }
+}

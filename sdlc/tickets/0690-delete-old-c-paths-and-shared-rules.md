@@ -10,20 +10,25 @@ Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 06
 
 ## Outcome
 
+- Changes: `libraries/c/include/thinkthen.h`, `libraries/c/src/ffi.rs`, `libraries/c/src/ffi/session/`, `libraries/c/src/ffi/native_request/`, `libraries/c/src/ffi/carriers/`, `libraries/c/src/ffi/operations_generated.rs`, `libraries/c/src/ffi/values.rs`, `libraries/c/src/session/`, `libraries/c/src/session.rs`, `libraries/c/src/failures.rs`, `libraries/c/src/failures/`, `libraries/c/src/lib.rs`, `libraries/c/tests/`, `build-tools/results/generate.py`, `build-tools/results/layouts.py`, `build-tools/results/native.py`, `build-tools/results/operations.py`, `build-tools/results/templates/c.py`, `build-tools/results/templates/layouts.py`, `build-tools/results/templates/native_request.py`, `build-tools/results/templates/operations.py`, `sdlc/scripts/generate-c-header.py`, `sdlc/scripts/check-c-exports.py`.
 - The low-level C session functions (`thinkthen_session_new*`, `push`, `try_push`, `wait`, `next_packet`, `try_read`, `finish` and their typed twins) are deleted from the header and the C library.
-- The per-thread error slots and the `thinkthen_error_*(NULL)` and `thinkthen_session_error_*` accessors are deleted.
-- The input path 0635 rejected is deleted: its functions, generated carriers and header structs.
-- The result representation 0638 rejected is deleted, with its generated outputs in every language.
+- The per-thread error slots and the `thinkthen_error_*` and `thinkthen_session_error_*` accessors are deleted. `thinkthen_run_call` reports failure only through its owned error handle.
+- The typed input path that the counted JSON decision (`sdlc/decisions/2026-10-19-c-input-json.md`) rejected is deleted: its exported constructors, generated request carriers and header structs.
+- The generated packet views that the owned JSON decision (`sdlc/decisions/2026-10-19-c-call-owned-json.md`) rejected are deleted with the generator templates that emit them.
 - The 8192-byte COBOL cap and `THINKTHEN_COBOL_OVERFLOW` are deleted from the shared interface.
-- `sdlc/generators/results/templates/host_answers.py` (at its new location after 0637), the shared rule table and every template section left that derives answers are deleted.
-- The 0637 answer-rule check's list of exceptions is deleted, so the check refuses answer rules in every template and library file with no exception.
+- The legacy ABI safety regressions the two decisions retained until this ticket (`LEGACY_INPUT_ABI`, `SESSION_TYPED`, `SESSION_NAMED_REFUSALS`) are deleted with the functions they guard.
+- 0711 deletes the shared answer-rule template and the answer-rule exception list; this ticket leaves them alone.
 
 ### Proof
 
-- On the M5 through pm job, `generate.py --check`, `lint` and `test` pass, and `sdlc/scripts/check-c-exports.py` passes with the header listing none of the deleted symbols.
-- Every library gate passes, natively on the M5 and in the pinned arm64 container.
-- The 0691 checkpoint run passes on the revision that lands this ticket.
+- On the M5: `pm job run --machine m5 0690 SHA --memory 16 -- sh -c 'python3 build-tools/results/generate.py --check && sdlc/scripts/lint && sdlc/scripts/test'` passes, and `python3 sdlc/scripts/check-c-exports.py` reports a header with none of the deleted symbols. Before the change the header lists `thinkthen_session_new` and `THINKTHEN_COBOL_OVERFLOW`.
+- On the M5: `pm job run --machine m5 0690 SHA --memory 16 -- sdlc/scripts/surfaces` passes every library gate.
+- The Linux library gates run at the 0619 container checkpoint, and the 0691 checkpoint run passes on the revision that lands this ticket.
 
 ## Evidence
 
-Phase 2 adds the new path (the run call, one input path, one result representation, answers in the packet) and moves the C library and the Rust library onto it, but it cannot delete the old paths while every other language still uses them on main. Each phase 3 ticket deletes its own language's projection, session loop, error text and fixture consumer. The shared old paths are temporary scaffolding with this ticket as their named deletion owner, not compatibility code. Root cause 3 of the 0.2.1 ruling, no single native path, ends only when they are gone.
+- Starts from: `libraries/c/src/ffi/session/ffi.rs` (session constructors, push, wait, read, finish), `libraries/c/src/ffi/session/views/`, `libraries/c/src/session/views_generated.rs` and `primitives_generated.rs` (generated packet views), `libraries/c/src/ffi/native_request/ffi.rs` and `carriers_generated.rs` (typed input converter and its 8192-byte COBOL cap), `libraries/c/src/ffi/carriers/layouts_generated.rs`, the `thread_local!` error slot in `libraries/c/src/failures.rs`, and `THINKTHEN_COBOL_OVERFLOW` in `libraries/c/src/ffi/values.rs`. The run call lives in `libraries/c/src/ffi/run_call/ffi.rs` and stays, as do `libraries/c/src/ffi/current/` (question parse and author) and `libraries/c/src/ffi/runtime_version/`.
+- Both 2026-10-19 C decisions keep the session, typed, view and thread-local error exports only for the phase 3 hosts, and name this ticket as their deletion owner.
+- Phase 2 added the new path and moved the C and Rust libraries onto it. Each phase 3 ticket deletes its own language's projection, session loop, error text and fixture consumer. Root cause 3 of the 0.2.1 ruling, no single native path, ends only when the shared old paths are gone.
+- The header is generated by `sdlc/scripts/generate-c-header.py` from the C crate; `check-c-exports.py` compares exports with it.
+- 0709 renames the C type names without their `_v1` suffix before the freeze; this ticket deletes whatever names remain on the old paths.

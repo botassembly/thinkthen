@@ -99,6 +99,9 @@ fn recording_attempts_is_optional_retry_timing_is_header_free_and_replay_never_a
         bytes
     );
     assert_eq!(listener.count(), 3);
+    drop(engine);
+    drop(replay);
+    std::fs::remove_dir_all(place).unwrap();
 }
 #[test]
 fn split_children_attribute_the_actual_parent_and_own_attempt_without_transient_ids() {
@@ -149,6 +152,8 @@ fn split_children_attribute_the_actual_parent_and_own_attempt_without_transient_
         );
     }
     assert_eq!(listener.count(), 3);
+    drop(engine);
+    std::fs::remove_dir_all(place).unwrap();
 }
 #[test]
 #[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]
@@ -207,6 +212,9 @@ fn release_only_timing_entry_or_byte_overflow_keeps_old_answers_and_history_and_
                 .to_string_lossy()
                 .ends_with(".tmp")
         }));
+        drop(db);
+        drop(engine);
+        std::fs::remove_dir_all(place).unwrap();
     }
 }
 #[test]
@@ -229,6 +237,8 @@ fn nonstorable_recording_creates_no_timing_history_or_saved_answers() {
     assert!(!place.join("thinkthen.sqlite").exists());
     assert!(!place.join(".thinkthen.timing.lock").exists());
     assert_eq!(listener.count(), 1);
+    drop(engine);
+    std::fs::remove_dir_all(place).unwrap();
 }
 #[test]
 fn concurrent_recording_calls_append_both_histories_under_one_stable_writer_lock() {
@@ -274,4 +284,7 @@ fn concurrent_recording_calls_append_both_histories_under_one_stable_writer_lock
         assert!(saved.iter().any(|key| entry["key"] == *key));
     }
     assert_eq!(listener.count(), 2);
+    drop(db);
+    drop(engines);
+    std::fs::remove_dir_all(place).unwrap();
 }

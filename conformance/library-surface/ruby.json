@@ -1,0 +1,80 @@
+{
+  "libraries": {
+    "ruby": {
+      "root": "libraries/ruby",
+      "language": "ruby",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ruby/lib/**/*.rb",
+        "libraries/ruby/sig/thinkthen/results_generated.rbs"
+      ],
+      "option_containers": [
+        "Client.*"
+      ],
+      "setting_containers": [
+        "Client.initialize",
+        "Client.open"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation",
+        "UsageStatus",
+        "Error"
+      ],
+      "representation_owners": [
+        "Completed"
+      ],
+      "helper_names": {
+        "question_file": "Client.question_file",
+        "question_name": "Client.question_name",
+        "question_reference": "Client.question_reference",
+        "item": "Client.item",
+        "files": "Client.files"
+      },
+      "representation_types": [
+        "Error",
+        "CancelledError"
+      ],
+      "lifecycle_members": {
+        "Client": [
+          "inspect"
+        ],
+        "Operation": [
+          "inspect",
+          "initialize"
+        ],
+        "UsageStatus": [
+          "initialize"
+        ],
+        "Error": [
+          "initialize",
+          "code"
+        ]
+      },
+      "representation_members": {
+        "Completed": [
+          "initialize",
+          "facts",
+          "probability",
+          "inspect"
+        ]
+      },
+      "wrapper_members": {
+        "Completed": [
+          "observations"
+        ],
+        "Error": [
+          "observations"
+        ]
+      }
+    }
+  }
+}

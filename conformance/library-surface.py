@@ -10,7 +10,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'build-tools/results'))
-from sources import tracked_files
+from sources import load_manifest, tracked_files
 
 
 def support(name):
@@ -303,7 +303,7 @@ def main():
     args = parser.parse_args()
     try:
         root = args.root.resolve()
-        manifest = json.loads((args.manifest or root / 'conformance/library-surface.json').read_text())
+        manifest = load_manifest(args.manifest or root / 'conformance/library-surface.json')
         libraries = args.library or list(manifest['libraries'])
         unknown = set(libraries) - manifest['libraries'].keys()
         if unknown:

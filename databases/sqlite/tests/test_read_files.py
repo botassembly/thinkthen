@@ -6,7 +6,6 @@ import sys
 import tempfile
 
 from helper import Backend, child, environment, expect, main
-from test_trusted_schema import TRUSTED
 
 FIXTURE = pathlib.Path(__file__).resolve().parents[3] / 'specification/fixtures/files/documents'
 
@@ -108,22 +107,20 @@ say(errors=errors)
         expect(backend.close(),0,'unknown complete formats send nothing')
 
 
-def test_reader_is_direct_only_in_trusted_mode_and_caller_temp_still_works():
+def test_reader_follows_schema_trust_and_caller_temp_still_works():
     backend = Backend()
-    held = child(TRUSTED + f"""
+    held = child(f"""
 results = []
-for entry in ('sqlite3_thinkthen_init','sqlite3_thinkthen_trusted_init'):
-    for setting in ('ON','OFF'):
-        db = sqlite3.connect(':memory:', isolation_level=None)
-        db.enable_load_extension(True)
-        db.execute('SELECT load_extension(?, ?)', (LIB,entry))
-        db.execute('PRAGMA trusted_schema='+setting)
-        for schema in ('main','temp'):
-            db.execute(f"CREATE VIEW {{schema}}.v AS SELECT * FROM thinkthen_read_files('{FIXTURE}')")
-        results.append([run(db,'SELECT count(*) FROM main.v'),run(db,'SELECT count(*) FROM temp.v')])
+for setting in ('ON','OFF'):
+    db = connect()
+    db.execute('PRAGMA trusted_schema='+setting)
+    for schema in ('main','temp'):
+        db.execute(f"CREATE VIEW {{schema}}.v AS SELECT * FROM thinkthen_read_files('{FIXTURE}')")
+    results.append([run(db,'SELECT count(*) FROM main.v'),run(db,'SELECT count(*) FROM temp.v')])
 say(results=results)
 """, environment(backend))
-    expect(held['results'], [['unsafe use of virtual table "thinkthen_read_files"', [[8]]]]*4, 'persistent schema blocked, caller TEMP retained')
+    expect(held['results'], [[[[8]], [[8]]], ['unsafe use of virtual table "thinkthen_read_files"', [[8]]]],
+           'persistent schema follows trust and caller TEMP remains available')
     expect(backend.close(), 0, 'schema and direct readers send nothing')
 
 
