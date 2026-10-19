@@ -31,8 +31,14 @@ def declarations(header):
     records = {n['id']: n for n in walk(ast) if n.get('kind') == 'RecordDecl' and n.get('completeDefinition')}
     record_types = {n['id']: n for n in walk(ast) if n.get('kind') == 'RecordDecl'}
     aliases = {}
+    callbacks = {n['name']: n['type'].get('desugaredQualType', n['type']['qualType'])
+                 for n in ast.get('inner', []) if n.get('kind') == 'TypedefDecl'
+                 and '(*)' in n['type'].get('desugaredQualType', n['type']['qualType']).replace(' ', '')}
+    def direct_record(node):
+        # A callback's nested argument RecordType is not the typedef's own type.
+        return node['type'].get('desugaredQualType', node['type']['qualType']).startswith(('struct ', 'union '))
     for node in ast.get('inner', []):
-        if node.get('kind') == 'TypedefDecl':
+        if node.get('kind') == 'TypedefDecl' and direct_record(node):
             refs = [n['decl']['id'] for n in walk(node) if n.get('kind') == 'RecordType']
             if refs and refs[0] in record_types and record_types[refs[0]].get('name'):
                 record = record_types[refs[0]]
@@ -41,6 +47,8 @@ def declarations(header):
     def canonical(kind):
         # Resolve only aliases Clang proves refer to the same record. Const,
         # pointer depth and distinct carrier identities remain significant.
+        for name, signature in callbacks.items():
+            kind = re.sub(r'\b' + re.escape(name) + r'\b', lambda _: signature, kind)
         return re.sub(r'\b(?:struct|union) \w+\b', lambda m: aliases.get(m[0], m[0]), kind)
 
     layouts, functions, union_owners = {}, {}, {}
@@ -48,7 +56,7 @@ def declarations(header):
         name = node.get('name', '')
         if not name.startswith('thinkthen_'):
             continue
-        if node.get('kind') == 'TypedefDecl':
+        if node.get('kind') == 'TypedefDecl' and direct_record(node):
             refs = [n['decl']['id'] for n in walk(node) if n.get('kind') == 'RecordType']
             if refs and refs[0] in records:
                 record = records[refs[0]]
@@ -289,6 +297,8 @@ def self_test(header):
         ('return', 'int thinkthen_session_try_read(', 'uint64_t thinkthen_session_try_read('),
         ('pointer-depth', r'(?:struct )?thinkthen_session_result \*\*out\b', 'struct thinkthen_session_result *out'),
         ('by-value', r'(?:struct )?thinkthen_complete_utf8_v1 surface', 'const thinkthen_complete_utf8_v1 *surface'),
+        ('callback-return', r'typedef uint32_t \(\*thinkthen_call_producer_v1\)', 'typedef uint64_t (*thinkthen_call_producer_v1)'),
+        ('callback-argument', r'thinkthen_call_producer_v1\)\(void\*, struct thinkthen_complete_utf8_v1\*\)', 'thinkthen_call_producer_v1)(void*, struct thinkthen_complete_utf8_v1**)'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
         # Clang emits kindless generic associations and empty for-loop children.
