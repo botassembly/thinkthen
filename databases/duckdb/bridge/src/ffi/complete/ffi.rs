@@ -109,6 +109,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
                     image_inputs: input.image_inputs()?,
                     all_filter_results,
                     record_reading: Some(reading),
+                    ..Default::default()
                 },
             )
         })();

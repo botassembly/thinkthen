@@ -39,6 +39,7 @@ mod source;
 pub use source::RequestSourceReader;
 mod session;
 mod session_queue;
+mod session_input;
 mod session_result;
 mod settlement;
 #[cfg(test)]

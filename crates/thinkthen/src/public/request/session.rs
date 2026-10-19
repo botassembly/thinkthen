@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::{
     cell::RefCell,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 /// Owned input content and physical provenance, separate from selected evidence.
@@ -244,6 +245,11 @@ pub struct RequestSessionFeedOptions {
     /// nothing and the terminal answer still retains the complete ordered prefix.
     /// Bounded publication applies backpressure and never replays the final prefix.
     pub incremental_recognition: bool,
+    /// Override the native open-batch input pause for a caller-supplied feed.
+    /// None retains the native default; zero retains immediate native closure.
+    /// This controls the existing host pause, without another timer. Headers,
+    /// blanks and buffered logical input do not count as an input pause.
+    pub input_pause: Option<Duration>,
     /// Validate the supported input before any provider sends.
     pub eager: bool,
     /// Admit the image route before the caller reads content.
@@ -259,6 +265,7 @@ impl std::fmt::Debug for RequestSessionFeedOptions {
         f.debug_struct("RequestSessionFeedOptions")
             .field("retain_success_on_cancel", &self.retain_success_on_cancel)
             .field("incremental_recognition", &self.incremental_recognition)
+            .field("input_pause", &self.input_pause)
             .field("eager", &self.eager).field("image_inputs", &self.image_inputs)
             .field("all_filter_results", &self.all_filter_results)
             .field("record_reading", &self.record_reading).finish()
@@ -467,11 +474,14 @@ impl Engine {
             RequestInput::Feed { .. }
         );
         let queue = Arc::new(Queue::default());
+        if let RequestInput::Feed { framing, .. } = admitted.request.call.arguments().input {
+            queue.configure_input(framing);
+        }
         let configured_feed = match &admitted.request.call.arguments().input {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(&queue), &options))
             }
-            _ if options.eager
+            _ if options.input_pause.is_some() || options.eager
                 || options.image_inputs
                 || options.all_filter_results
                 || options.record_reading.is_some() =>
@@ -569,6 +579,10 @@ fn run(
     if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
         controls = controls.on_missing_annotation_pointer(callback);
     }
+    let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
+    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let registration = feed.as_ref().map(|_| super::session_input::Registration::new(queue, readiness.wake()));
+    if feed.is_some() { controls = controls.readiness(&readiness); }
     let environment = RequestEnvironment { controls, feed };
     let mut terminal =
         match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
@@ -599,6 +613,7 @@ fn run(
         )));
     }
     terminal.answer = answers.into_inner().finish();
+    drop(registration);
     queue.settle(terminal);
 }
 
@@ -690,12 +705,15 @@ fn run_recovering(
         answers.borrow_mut().recovered(function, &row);
         queue.publish(RequestRecoveringResult::Row(row));
     };
+    let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
+    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let feed_request = matches!(request.request.call.arguments().input, RequestInput::Feed { .. });
+    let registration = feed_request.then(|| super::session_input::Registration::new(queue, readiness.wake()));
+    let mut controls = CallOptions::new().surface(surface).cancel(&queue.cancel)
+        .retain_success_on_cancel(options.retain_success_on_cancel).observe(&observe);
+    if feed_request { controls = controls.readiness(&readiness); }
     let environment = RequestEnvironment {
-        controls: CallOptions::new()
-            .surface(surface)
-            .cancel(&queue.cancel)
-            .retain_success_on_cancel(options.retain_success_on_cancel)
-            .observe(&observe),
+        controls,
         feed: match &request.request.call.arguments().input {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(queue), &options))
@@ -713,5 +731,6 @@ fn run_recovering(
         Err(error) => RequestSessionTerminal::failed(error),
     };
     terminal.answer = answers.into_inner().finish();
+    drop(registration);
     queue.settle(terminal);
 }

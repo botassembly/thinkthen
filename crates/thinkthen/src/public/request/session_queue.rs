@@ -65,11 +65,51 @@ pub(super) struct Queue {
     state: Mutex<State>,
     wake: Condvar,
     pub(super) cancel: CancelToken,
+    pub(super) logical: Mutex<Option<super::session_input::Logical>>,
+    input_wake: Mutex<Option<crate::public::readiness::Wake>>,
 }
 
 impl Queue {
     fn notify(&self) {
         self.wake.notify_all();
+    }
+    pub(super) fn register_input_wake(&self, wake: Option<crate::public::readiness::Wake>) {
+        let mut previous = self.input_wake.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        if let Some(previous) = previous.take() { previous.clear(); }
+        *previous = wake;
+    }
+    fn notify_input(&self) {
+        let wake = self.input_wake.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+        if let Some(wake) = wake { wake.notify(); }
+    }
+    pub(super) fn reschedule_input(&self) {
+        let ready = { let state = self.lock(); state.input.is_some() || state.finish.is_some()
+            || state.intake_closed || self.cancel.is_cancelled() };
+        if ready { self.notify_input(); }
+    }
+    pub(super) fn try_input(&self, controls: CallOptions<'_>) -> super::session_input::Read {
+        let mut state = self.lock();
+        let value = self.take_input(&mut state, controls);
+        self.notify();
+        value
+    }
+    fn take_input(&self, state: &mut State, controls: CallOptions<'_>) -> super::session_input::Read {
+        use super::session_input::Read;
+        if state.intake_closed || self.cancel.is_cancelled() { return Read::End; }
+        if let Err(error) = controls.reader_admission() {
+            state.intake_closed = true;
+            return Read::Item(Err(error));
+        }
+        if let Some(item) = state.input.take() { return Read::Item(Ok(item)); }
+        if let Some(failure) = &mut state.finish {
+            let error = match failure {
+                Finish::Transport(failure) => failure.as_ref().map(RequestReaderFailure::error),
+                Finish::Native(error) => error.take(),
+            };
+            state.intake_closed = true;
+            return error.map_or(Read::End, |error| Read::Item(Err(error)));
+        }
+        Read::Pending
     }
     fn lock(&self) -> MutexGuard<'_, State> {
         self.state.lock().unwrap_or_else(|error| error.into_inner())
@@ -172,6 +212,8 @@ impl Queue {
         } else {
             state.input = Some(descriptor);
             self.notify();
+            drop(state);
+            self.notify_input();
             RequestSessionPushStatus::Accepted
         }
     }
@@ -187,6 +229,8 @@ impl Queue {
         } else {
             state.input = Some(descriptor);
             self.notify();
+            drop(state);
+            self.notify_input();
             RequestSessionPush::Accepted
         }
     }
@@ -209,48 +253,23 @@ impl Queue {
             state.finish = Some(finish);
         }
         self.notify();
+        drop(state);
+        self.notify_input();
         Ok(())
     }
-    pub(super) fn next(
-        &self,
-        controls: CallOptions<'_>,
-    ) -> Option<Result<RequestSessionDescriptor, Error>> {
+    pub(super) fn next(&self, controls: CallOptions<'_>) -> Option<Result<RequestSessionDescriptor, Error>> {
         let mut state = self.lock();
         loop {
-            if state.intake_closed || self.cancel.is_cancelled() {
-                return None;
-            }
-            if let Err(error) = controls.reader_admission() {
-                state.intake_closed = true;
-                self.notify();
-                return Some(Err(error));
-            }
-            if let Some(item) = state.input.take() {
-                self.notify();
-                return Some(Ok(item));
-            }
-            if let Some(failure) = &mut state.finish {
-                let error = match failure {
-                    Finish::Transport(failure) => failure.as_ref().map(RequestReaderFailure::error),
-                    Finish::Native(error) => error.take(),
-                };
-                state.intake_closed = true;
-                self.notify();
-                return error.map(Err);
+            match self.take_input(&mut state, controls) {
+                super::session_input::Read::Item(item) => { self.notify(); return Some(item); }
+                super::session_input::Read::End => { self.notify(); return None; }
+                super::session_input::Read::Pending => {}
             }
             state = match controls.reader_remaining() {
-                Ok(Some(remaining)) => {
-                    self.wake
-                        .wait_timeout(state, remaining)
-                        .unwrap_or_else(|error| error.into_inner())
-                        .0
-                }
+                Ok(Some(remaining)) => self.wake.wait_timeout(state, remaining)
+                    .unwrap_or_else(std::sync::PoisonError::into_inner).0,
                 Ok(None) => self.wait(state),
-                Err(error) => {
-                    state.intake_closed = true;
-                    self.notify();
-                    return Some(Err(error));
-                }
+                Err(error) => { state.intake_closed = true; self.notify(); return Some(Err(error)); }
             };
         }
     }
@@ -271,6 +290,9 @@ impl Queue {
         state.terminal = Some(terminal);
         state.settled = true;
         self.notify();
+        drop(state);
+        self.logical.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take();
+        self.notify_input();
     }
     pub(super) fn read(&self) -> Read {
         self.read_locked(&mut self.lock())
@@ -317,6 +339,8 @@ impl Queue {
         state.intake_closed = true;
         state.input = None;
         self.notify();
+        drop(state);
+        self.notify_input();
     }
     pub(super) fn stop(&self, drop_receiver: bool) {
         let mut state = self.lock();
@@ -331,5 +355,10 @@ impl Queue {
             state.terminal = None;
         }
         self.notify();
+        drop(state);
+        self.notify_input();
     }
 }
+
+#[cfg(test)]
+mod input_tests;

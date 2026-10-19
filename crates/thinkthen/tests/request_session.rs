@@ -19,6 +19,8 @@ mod framing;
 mod push;
 #[path = "request_session/incremental_recognition.rs"]
 mod incremental_recognition;
+#[path = "request_session/readiness.rs"]
+mod readiness;
 #[path = "request_session/recognize.rs"]
 mod recognize;
 #[path = "request_session/wait.rs"]

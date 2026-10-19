@@ -179,9 +179,8 @@ impl AdmittedRequest {
             return Err(Error::defect("session feed lost its declaration"));
         };
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let mut decoder = super::framing::Decoder::new(*framing);
         let input_queue = std::sync::Arc::clone(&queue);
-        let descriptors = std::iter::from_fn(move || decoder.next(&input_queue, controls));
+        let descriptors = std::iter::from_fn(move || input_queue.next_decoded(controls));
         let mut compose = move |descriptor: super::RequestSessionDescriptor| {
             if options.files_only && descriptor.location.is_none() {
                 return Err(Error::usage(

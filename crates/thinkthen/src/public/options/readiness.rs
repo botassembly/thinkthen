@@ -6,13 +6,15 @@ type Notify = Box<dyn Fn() + Send + Sync>;
 
 #[derive(Clone, Default)]
 pub(crate) struct Wake(Arc<Mutex<Option<Notify>>>);
+impl std::fmt::Debug for Wake {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("Wake") }
+}
 impl Wake {
     pub(crate) fn register(&self, notify: Notify) {
         if let Ok(mut held) = self.0.lock() {
             *held = Some(notify);
         }
     }
-    #[cfg(test)]
     pub(crate) fn notify(&self) {
         if let Ok(held) = self.0.lock()
             && let Some(notify) = held.as_ref()
@@ -33,7 +35,6 @@ pub(crate) struct Readiness<'a> {
     wake: Wake,
 }
 impl<'a> Readiness<'a> {
-    #[cfg(test)]
     pub(crate) fn new(ready: &'a (dyn Fn() -> bool + Sync), pause: Option<Duration>) -> Self {
         Self {
             ready,

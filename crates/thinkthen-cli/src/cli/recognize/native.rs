@@ -98,6 +98,7 @@ pub(super) fn run(
         request(admitted, running.context.as_deref()), crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
             retain_success_on_cancel: true, incremental_recognition: true, eager,
+            input_pause: running.environment.input_pause(),
             record_reading: Some(composition(reading, None, None)?),
             ..crate::RequestSessionFeedOptions::default()
         },

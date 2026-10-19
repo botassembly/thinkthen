@@ -64,6 +64,7 @@ pub(super) fn run(
     let session = engine.request_session_with_feed_options(request, crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
             on_missing_annotation_pointer: None, incremental_recognition: false,
+            input_pause: environment.input_pause(),
             retain_success_on_cancel: true, eager: false, image_inputs: common.images(),
             all_filter_results: configuration.keeping == crate::judge::Keeping::Passing,
             record_reading: Some(composition),

@@ -370,6 +370,13 @@ fn validate_pointer(&str) -> Result<(), Error>
 fn EngineBuilder::from_config() -> Result<EngineBuilder, Error>
 ResolvedSettings::key_variables: Vec<String>
 RequestSessionFeedOptions::retain_success_on_cancel: bool
+RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>
+RequestSessionFeedOptions::incremental_recognition: bool
+RequestSessionFeedOptions::input_pause: Option<Duration>
+fn CallOptions::on_missing_annotation_pointer(self, &'a (dyn Fn(usize, &str) -> bool + Sync)) -> Self
+fn find_candidate_count_range(bool) -> RangeInclusive<usize>
+fn PlanEstimate::combine(&self, &PlanEstimate) -> Result<PlanEstimate, Error>
+ErrorDiagnostic::MissingPointer { pointer: &'a str }
 fn QuestionContent::member(self, &str) -> Option<QuestionContent<'a>>
 fn QuestionContent::element(self, usize) -> Option<QuestionContent<'a>>
 fn QuestionContent::fields(self) -> Option<impl ExactSizeIterator<Item = (&'a str, QuestionContent<'a>)> + 'a>
@@ -964,3 +971,16 @@ and native backpressure; it introduces no packet or C interface field.
 The existing `RequestOptions::threshold` relation override uses the same native
 single-cut validator as authored relation settings, before both preview and
 execution. It retains saved precedence and does not rewrite the authored file.
+
+`RequestSessionFeedOptions::input_pause: Option<Duration>` selects the existing
+native open-batch pause for a caller-supplied feed. `None` retains the native
+default and an explicit zero retains immediate closure. Other input forms refuse
+this feed control before execution. The CLI passes its existing debug-only pause
+capture; the production default and existing open-pipe/EOF behavior stay native.
+Ordinary and recovering sessions use the same private logical-input stage and
+native readiness/wake path, including recognition. The stage retains at most one
+decoded descriptor or deferred error/EOF and never holds its queue. Header/blank
+progress schedules a bounded recheck if more work is already available; empty
+input does not spin. Native attachment reads, effective admission and record
+composition stay in the existing iterator after readiness. No readiness callback,
+scheduler, sink, encoded submission, C field or result-packet field is public.
