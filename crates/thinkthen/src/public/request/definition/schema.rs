@@ -102,7 +102,7 @@ fn set(definitions: &serde_json::Map<String, Value>) -> Value {
         }
         member
     });
-    json!({"title":"AnnotateDefinition","type":"object","required":["version","questions"],"additionalProperties":false,
+    json!({"title":"AnnotateDefinition","type":"object","required":["questions"],"additionalProperties":false,
     "properties":{
         "version":{"const":1},"threshold":reference("threshold"),"profile":reference("profile"),
         "batch":{},
