@@ -8,7 +8,11 @@ Phase: 1
 
 Depends on: 0626
 
+Reviews: revision 2478857, accept
+
 ## Outcome
+
+- Changes: `conformance/settings-errors.json`, `crates/thinkthen/src/public/settings.rs`, `crates/thinkthen/src/public/settings/json.rs`, `crates/thinkthen/src/public/settings/prices.rs`, `crates/thinkthen/tests/library/public_env.rs`, `crates/thinkthen/tests/library/public_env/settings_json.rs`, `databases/duckdb/bridge/src/engines.rs`, `databases/duckdb/bridge/src/ffi.rs`, `databases/duckdb/bridge/src/ffi/find.rs`, `databases/duckdb/bridge/src/ffi/images/ffi.rs`, `databases/duckdb/bridge/src/ffi/portable_aux/ffi.rs`, `databases/duckdb/bridge/src/ffi/settings.rs`, `databases/duckdb/bridge/src/relate/ffi.rs`, `databases/duckdb/cpp/src/bridge.hpp`, `databases/duckdb/cpp/src/engine_settings.hpp`, `databases/duckdb/cpp/src/scalar_settings.cpp`, `databases/duckdb/cpp/src/scalar_settings.hpp`, `databases/duckdb/cpp/src/thinkthen.cpp`, `databases/duckdb/tools/settings_suite.py`, `databases/postgresql/check.sh`, `databases/postgresql/src/call.rs`, `databases/postgresql/src/call/settings.rs`, `databases/postgresql/src/call/settings/complete.rs`, `databases/postgresql/src/ffi.rs`, `databases/sqlite/src/settings.rs`, `databases/sqlite/tests/test_settings.py`, `libraries/c/tests/installed_cases.py`, `sdlc/scripts/settings`.
 
 - `crates/thinkthen/src/public/settings.rs` gains one setter that takes a setting name and its raw text value, validates it with the core's own messages, and applies it to the `EngineBuilder`. `from_settings_json` applies each entry through that setter, so the JSON form and the name-and-value form share one parser.
 - PostgreSQL GUCs, SQLite settings calls and DuckDB settings pass raw name and value pairs to that setter. The C library keeps passing its settings object to `from_settings_json`. The `Plan`, `Raw` and `Stored` structs, `throttle_refusal`, the DuckDB throttle parse and the host crate's own settings parsing are deleted.
@@ -25,3 +29,9 @@ Depends on: 0626
 Each database extension repeats the same settings model and checks. `databases/postgresql/src/call/settings.rs:31-48` (`Plan`) and `databases/sqlite/src/settings.rs:15-33` (`Stored`) declare the same fields: `base_url`, `prices`, `refresh_cache`, `throttle`, `batch`, `cache`, `backend`, `model`, `timeout`, `max_retries`, `profile`, `record` and `replay`. `databases/duckdb/bridge/src/engines.rs:306-310` parses throttle again. Each repeats the core's sentence "a throttle is a whole number from 1 through 32", which `crates/thinkthen/src/public/settings.rs:233` already owns. The PostgreSQL test copy of that sentence is in `check.sh:1242` and the DuckDB copy in `tools/settings_suite.py:28`. Adding a setting means editing three extensions and their tests.
 
 The core already parses a settings object for the C library: `EngineBuilder::from_settings_json` in `crates/thinkthen/src/public/settings.rs`, called from `libraries/c/src/settings.rs:8`. The host crate keeps its own settings code too (`crates/thinkthen-host/src/complete_native/settings.rs`, "used by PostgreSQL and DuckDB"), which 0627 then removes.
+
+## Progress
+
+- 2026-10-18 started
+- 2026-10-18 next: Code review accepted at 2478857b6 with native and SQL profile formats preserved by one shared private parser mode; five core settings cases and nine SQLite settings cases pass, but the installed C and PostgreSQL/DuckDB matrix, DuckDB C++ build, core rebase and final routine gate remain unproved, with missing runtimes and existing packaging/usage fixtures recorded separately.
+- 2026-10-18 next: The PM accepts the reviewed Rust and SQLite settings cases as this ticket proof, defers unavailable PostgreSQL/DuckDB runtime rows to 0618/0619 and the unrelated SQLite path fixture to its phase-3 owner, and assigns packaging exit handling to 0698; rebase the accepted settings source after core landing and run the main closing gate.

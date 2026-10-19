@@ -75,6 +75,7 @@ pub struct EngineBuilder {
     max_requests_total: Option<u64>,
     max_estimated_input_tokens_total: Option<u64>,
     prices: Option<Prices>,
+    setting_prices: (Option<String>, Option<String>),
     max_request_bytes: usize,
     explicit_request_bytes: bool,
     batch: Option<crate::core::Setting>,
@@ -128,6 +129,29 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Apply one engine setting from its name and raw JSON value.
+    /// Text values use JSON string quoting; numbers and booleans use their literal text.
+    /// SQL profiles contain inline JSON; settings documents name profile files.
+    /// This validates without opening files or sending requests.
+    /// # Errors
+    /// Refuses unknown names and invalid values with the settings document's messages.
+    pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
+        if name == "batch"
+            && let Ok(text) = serde_json::from_str::<String>(raw)
+        {
+            match crate::core::Setting::parse(&text) {
+                Some(crate::core::Setting::Records(count)) => {
+                    return self.apply_setting(name, &count.to_string(), true, true);
+                }
+                Some(crate::core::Setting::Max) => {}
+                None => {
+                    crate::public::RequestBatch::Named(text).native()?;
+                }
+            }
+        }
+        self.apply_setting(name, raw, true, true)
+    }
+
     /// Validate the closed C/host engine-settings object without reading the
     /// environment. The total-request cap is active before any send.
     ///
@@ -152,6 +176,7 @@ impl EngineBuilder {
             max_requests_total: None,
             max_estimated_input_tokens_total: None,
             prices: None,
+            setting_prices: (None, None),
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             explicit_request_bytes: false,
             batch: None,
@@ -383,6 +408,7 @@ impl EngineBuilder {
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
         self.check_proxy()?;
+        self.check_setting_prices()?;
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
