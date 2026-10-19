@@ -60,7 +60,8 @@ class PrivacyTests(unittest.TestCase):
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_DART_ARTIFACT', 'THINKTHEN_C_ARTIFACT'):
                 with self.subTest(name=name):
                     path = root / 'distribution.txt'
-                    env = child_env(home=root / 'home', **{name: str(path)})
+                    env = child_env(home=root / 'home', THINKTHEN_RESOLVED_TOOLS='c',
+                                    **{name: str(path)})
                     result = subprocess.run(command, env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 1)
                     self.assertIn('distribution.txt', result.stderr)
