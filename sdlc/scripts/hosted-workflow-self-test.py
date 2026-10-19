@@ -1054,6 +1054,7 @@ def smoke_family_cases():
         for name in ('release-smoke', 'scratch.sh', 'verdict.sh', 'check_verdict.py', 'compiler-isolation'):
             (scripts / name).write_bytes((REPO / 'sdlc/scripts' / name).read_bytes())
         (scripts / 'installed.sh').write_text('backend_start() { scratch_dir backend; port=1; }\n')
+        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
         (root / 'crates/thinkthen').mkdir(parents=True)
         (root / 'crates/thinkthen/Cargo.toml').write_text('version = "0.2.0"\n')
         (root / 'libraries/c').mkdir(parents=True)
