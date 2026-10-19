@@ -372,7 +372,11 @@ PYWIN
 		fi
 		sh libraries/ruby/setup-ruby.sh
 		sh databases/sqlite/setup.sh
-		sh databases/duckdb/tools/setup.sh --fetch
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			sh databases/duckdb/tools/setup.sh --fetch "$PWD/duckdb-hosts"
+		else
+			sh databases/duckdb/tools/setup.sh --fetch
+		fi
 		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
 			# setup-python's macOS build cannot load SQLite extensions, and Homebrew's can.
 			# Rehearsal run 36853575250 failed the SQLite examples on both Macs (ticket 0369).
@@ -395,7 +399,7 @@ PYWIN
 			sudo apt-get update
 			sudo apt-get install -y postgresql-server-dev-16
 			sh libraries/ruby/setup-ruby.sh
-			sh databases/duckdb/tools/setup.sh --fetch
+			sh databases/duckdb/tools/setup.sh --fetch "$PWD/duckdb-hosts"
 			sh databases/sqlite/setup.sh
 			for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
 			if [ "$2" = x86_64-unknown-linux-gnu ]; then
@@ -425,13 +429,43 @@ PYWIN
 		mkdir -p "$generator_tools/bin"
 		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
 		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
-		# setup.sh fetched the pinned inputs; installed checks require their built CLIs too.
-		# An exact same-run Intel cache carries the native CLI and its adjacent libraries.
-		# Setup above still prepares Python; preflight below still checks both source IDs.
-		if [ "$2" != x86_64-apple-darwin ] || [ "${THINKTHEN_DUCKDB_HOST_CACHE_HIT:-}" != true ]; then
-			python3 databases/duckdb/tools/source_hosts.py
-		fi
 	fi
+	;;
+duckdb-host-pack)
+	[ "$#" = 4 ] || fail 'duckdb-host-pack OUT TARGET SHA'
+	python3 - "$2" "$3" "$4" <<'PYHOST'
+import os
+from pathlib import Path
+import sys
+import tarfile
+sys.path.insert(0, 'databases/duckdb/tools')
+from inputs import selected, versions
+output, target, sha = sys.argv[1:]
+Path(output).mkdir(parents=True, exist_ok=True)
+for version in versions():
+    selected(version, target)
+    runtime = Path('databases/duckdb/build/community') / version / 'build/release'
+    wheels = Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'duckdb/community' / version / 'wheels'
+    wheel_files = list(wheels.glob('*.whl'))
+    if not (runtime / 'duckdb').is_file() or len(wheel_files) != 1:
+        raise SystemExit(f'release-workflow: missing built DuckDB host for {version}')
+    with tarfile.open(Path(output) / f'duckdb-hosts-{version}-{target}-{sha}.tar.gz', 'w:gz', dereference=True) as archive:
+        archive.add(runtime / 'duckdb', arcname=str(runtime / 'duckdb'))
+        for library in runtime.rglob('*'):
+            if library.is_file() and (library.name.endswith(('.dylib', '.so')) or '.so.' in library.name):
+                archive.add(library, arcname=str(library))
+        archive.add(wheel_files[0], arcname=str(Path('duckdb-hosts') / version / wheel_files[0].name))
+PYHOST
+	;;
+duckdb-host-unpack)
+	[ "$#" = 4 ] || fail 'duckdb-host-unpack IN TARGET SHA'
+	for version in $(python3 databases/duckdb/tools/inputs.py versions); do
+		tar -xzf "$2/duckdb-hosts-$version-$3-$4.tar.gz"
+		chmod +x "databases/duckdb/build/community/$version/build/release/duckdb"
+		# Installed package checks validate the pinned sources through this host-local link.
+		tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/community/$version/tools
+		ln -sfn "$tools" "databases/duckdb/build/community/$version/extension-ci-tools"
+	done
 	;;
 resolve)
 	[ "$#" = 3 ] || fail 'resolve MODE REF needs exactly two arguments'
