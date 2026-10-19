@@ -1019,6 +1019,24 @@ def preflight_cases():
             assert 'hosted-preflight: ' + tool + ': missing from PATH' in missing.stderr, missing.stderr
         assert 'all prepared inputs are ready' not in missing.stdout
 
+def parameter_run(case, command, **kwargs):
+    print(f'hosted parameter: {case}', file=sys.stderr, flush=True)
+    started = time.monotonic()
+    try:
+        result = subprocess.run(command, **kwargs)
+    except subprocess.TimeoutExpired as error:
+        print(f'hosted parameter: {case}: timeout after {error.timeout}s', file=sys.stderr)
+        for name, output in (('stdout', error.stdout), ('stderr', error.stderr)):
+            if isinstance(output, bytes):
+                output = output.decode('utf-8', errors='replace')
+            if output:
+                print(f'{name} (last 4096 characters):\n{output[-4096:]}', file=sys.stderr)
+        raise
+    print(f'hosted parameter: {case}: exit {result.returncode} in '
+          f'{time.monotonic() - started:.3f}s', file=sys.stderr, flush=True)
+    return result
+
+
 def parameter_cases():
     head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
     guard = REPO / 'sdlc/scripts/hosted-candidate.py'
@@ -1026,7 +1044,8 @@ def parameter_cases():
     cases += [(value, head, 1) for value in ('', '--help', head.upper(), head[:39],
                                            head + '\n', '$(touch /tmp/hosted-plant)', 'x; exit 0')]
     for candidate, dispatch, wanted in cases:
-        result = subprocess.run([sys.executable, str(guard), 'checkout', candidate, dispatch],
+        result = parameter_run(f'candidate={candidate!r} dispatch={dispatch!r}',
+                               [sys.executable, str(guard), 'checkout', candidate, dispatch],
                                 cwd=REPO, capture_output=True, text=True, timeout=5)
         assert result.returncode == wanted, (candidate, result.stderr)
         if wanted:
@@ -1060,7 +1079,8 @@ def parameter_cases():
         command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
         (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
         for cell in apple['strategy']['matrix']['include']:
-            result = subprocess.run(['/bin/sh', '-c', command], cwd=root,
+            result = parameter_run(f'Apple assembly target={cell["target"]}',
+                                   ['/bin/sh', '-x', '-c', command], cwd=root,
                                     env={**env, 'TARGET': cell['target']},
                                     capture_output=True, text=True, timeout=5)
             assert result.returncode == 2 and 'Apple native tools are required' in result.stderr, (
@@ -1069,14 +1089,16 @@ def parameter_cases():
         for status in (0, 77, 1):
             (root / 'libraries/swift/check.sh').write_text(f'echo selected-swift\nexit {status}\n')
             (root / 'libraries/objective-c/check.sh').write_text('echo WRONG_LANGUAGE\nexit 1\n')
-            result = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
+            result = parameter_run(f'Apple swift exit={status}',
+                                   ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), 'swift', head],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == (0 if status == 0 else 1), result.stderr
             assert 'selected-swift' in result.stdout and 'WRONG_LANGUAGE' not in result.stdout
             assert ('surfaces: pass' if status == 0 else 'surfaces: FAIL') in result.stdout
         for language in ('all', 'swift objective-c', '../swift', 'swift; exit 0'):
-            result = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
+            result = parameter_run(f'Apple language={language!r}',
+                                   ['/bin/sh', '-x', str(root / 'sdlc/scripts/release-workflow'), 'apple-check',
                                      'aarch64-apple-darwin', str(root / 'packages'), language, head],
                                     cwd=root, env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == 1 and 'select exactly one Apple language' in result.stderr
