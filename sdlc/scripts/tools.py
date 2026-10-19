@@ -228,7 +228,7 @@ def resolve(manifest, groups, root, check=False):
             rust_components(manifest, env, install=host == 'darwin' and not check)
         except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
             failures.append('rust: ' + str(error))
-    shared = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
+    shared = (os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))
     env['CARGO_HOME'] = cargo_runtime(root, shared) if host == 'darwin' else shared
     missing = []
     for tool in requirements.values():
