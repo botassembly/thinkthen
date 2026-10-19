@@ -13,7 +13,9 @@ impl Sources {
             "command_line" => "command line",
             source => source,
         };
-        self.0.push((name.to_owned(), source.to_owned()));
+        if let Some((_, held)) = self.0.iter_mut().find(|(held, _)| held == name) {
+            *held = source.to_owned();
+        } else { self.0.push((name.to_owned(), source.to_owned())); }
         self
     }
 }

@@ -1,257 +1,158 @@
-//! What one verb was asked, gathered from the command line and from a file.
-//!
-//! The file is read here, at the edge, and the core is handed its text. The
-//! rule that settles which value wins lives in `thinkthen-core`, so a library
-//! over that crate reaches the question a shell user reaches.
-
-use crate::core::{Cutting, Description, Json, Resolved, Typed, Verb};
-
-use crate::args::{
-    ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, ScoreArguments,
-    TagArguments,
-};
+//! Command-owned file capture and setting-source presentation over native admission.
+use crate::args::{ChooseArguments, DecideArguments, FilterArguments, ScoreArguments, TagArguments};
 use crate::failure::Failure;
+use crate::plan_document::Sources;
+use crate::saved_json::{Json, Kind};
+use crate::{AdmittedRequest, BatchSetting, InputDeclaration, QuestionKind, RequestDefinition};
 
-/// The raw file batch tier and whether that file carries a tuned threshold.
-pub(crate) struct FileTier {
-    pub(crate) batch: Option<Json>,
-    pub(crate) tuned: bool,
+pub(crate) struct FileTier { pub(crate) batch: Option<BatchSetting>, pub(crate) tuned: bool }
+
+/// Only command presentation and setup metadata live here. The admitted native
+/// definition and RequestOptions own question resolution and every answer identity.
+#[derive(Clone)]
+pub(crate) struct Resolved {
+    pub(crate) kind: QuestionKind,
+    pub(crate) dynamic: bool,
+    pub(crate) model: Option<String>,
+    pub(crate) on: Vec<String>,
+    pub(crate) profile: Option<String>,
+    pub(crate) literal_question: bool,
+    pub(crate) item_schema: Option<InputDeclaration>,
+    pub(crate) context_schema: Option<InputDeclaration>,
+    pub(crate) sources: Sources,
+    pub(crate) saved: bool,
+}
+impl std::fmt::Debug for Resolved {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResolvedCommandSettings").field("kind", &self.kind).finish_non_exhaustive()
+    }
 }
 
-/// The pointers `--field` named, or `None` when it named none.
-fn fields(common: &Common) -> Option<Vec<String>> {
-    (!common.field.is_empty()).then(|| common.field.clone())
-}
-
-/// Settle one yes/no question, which is what all three record verbs ask.
-///
-/// `decide`, `filter`, and `rank` send the same request and read the same
-/// question file. They differ in the rule each one can act on, which
-/// [`Cutting`] carries, and in what each one prints.
-fn yes_no(
-    operation: (&'static str, Cutting),
-    question: &str,
-    meanings: &Meanings,
-    threshold: Option<&String>,
-    common: &Common,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    let (caller, cutting) = operation;
-    let typed = Typed {
-        threshold: threshold.cloned(),
-        yes: meanings.yes.clone().map(Json::String),
-        no: meanings.no.clone().map(Json::String),
-        model: common.model.clone(),
-        on: fields(common),
-        cutting,
-        ..Typed::default()
-    };
-    atomic(Verb::Decide, question, &typed, admitted).map_err(|error| match error {
-        Failure::Question(crate::core::QuestionFileError::VerbMismatch { held, .. })
-            if caller != "decide" =>
-        {
-            Failure::QuestionKind {
-                command: caller,
-                held: held.word(),
-            }
+macro_rules! atomic {
+    ($name:ident, $arguments:ty) => {
+        pub(crate) fn $name(_arguments: &$arguments, admitted: &mut AdmittedRequest)
+            -> Result<(Resolved, FileTier), Failure> {
+            prepare(admitted).map(|(resolved, tier, _)| (resolved, tier))
         }
-        other => other,
-    })
+    };
 }
-
-/// Settle everything `decide` was asked.
-pub(crate) fn decide(
-    arguments: &DecideArguments,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    yes_no(
-        ("decide", Cutting::AsTheVerbAllows),
-        &arguments.question,
-        &arguments.meanings,
-        arguments.threshold.as_ref(),
-        &arguments.common,
-        admitted,
-    )
-}
-
-/// Settle everything `filter` was asked, which takes a single cut alone.
-pub(crate) fn filter(
-    arguments: &FilterArguments,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    yes_no(
-        ("filter", Cutting::OneCut),
-        &arguments.question,
-        &arguments.meanings,
-        arguments.threshold.as_ref(),
-        &arguments.common,
-        admitted,
-    )
-}
-
+atomic!(decide, DecideArguments);
+atomic!(filter, FilterArguments);
+atomic!(choose, ChooseArguments);
+atomic!(tag, TagArguments);
+atomic!(score, ScoreArguments);
 mod rank;
 pub(crate) use rank::rank;
 
-/// Settle everything `choose` was asked.
-pub(crate) fn choose(
-    arguments: &ChooseArguments,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    let listed = !arguments.options.is_empty();
-    let described = !arguments.described.is_empty();
-    if listed && described {
-        return Err(Failure::OptionWithList);
+fn strings(value: Option<&Json>) -> Vec<String> {
+    match value.map(Json::kind) {
+        Some(Kind::String(text)) => vec![text.clone()],
+        Some(Kind::Array(values)) => values.iter().filter_map(Json::as_str).map(str::to_owned).collect(),
+        _ => Vec::new(),
     }
-    if arguments.options_pointer.is_some() && (listed || described) {
-        return Err(Failure::OptionsWithList);
-    }
-    let labels = match (listed, described) {
-        (true, _) => Some(
-            arguments
-                .options
-                .iter()
-                .map(|name| (name.clone(), None))
-                .collect(),
-        ),
-        (_, true) => Some(
-            arguments
-                .described
-                .iter()
-                .map(|entry| {
-                    split(entry).map(|(name, described)| (name, described.map(Description::text)))
-                })
-                .collect::<Result<Vec<_>, Failure>>()?,
-        ),
+}
+fn batch(value: Option<&Json>) -> Result<Option<BatchSetting>, Failure> {
+    value.map(|value| {
+        let text = crate::render::json_line(value)?;
+        let batch: crate::RequestBatch = serde_json::from_str(&text)
+            .map_err(|_| Failure::Defect("admitted file batch lost its native shape"))?;
+        batch.native().map_err(Failure::from)
+    }).transpose()
+}
+
+fn prepare(admitted: &mut AdmittedRequest)
+    -> Result<(Resolved, FileTier, Option<crate::RankSet>), Failure> {
+    let function = admitted.request().call.function();
+    let selected = match &admitted.request().call.arguments().question {
+        crate::RequestQuestion::Reference { reference } => Some(crate::QuestionFileReference::reference(reference)?),
+        crate::RequestQuestion::Name { name } => Some(crate::QuestionFileReference::named(name)?),
+        crate::RequestQuestion::File { path } => Some(crate::QuestionFileReference::reference(&format!("@{}", path.display()))?),
         _ => None,
     };
-    let typed = Typed {
-        threshold: arguments.threshold.clone(),
-        labels,
-        model: arguments.common.model.clone(),
-        on: fields(&arguments.common),
-        options_from_record: arguments.options_pointer.is_some(),
-        ..Typed::default()
+    let saved = selected.is_some();
+    let authored = if let Some(reference) = selected {
+        let text = super::question_text::selected_text(&reference, Failure::OpenQuestionFile)?;
+        // Native saved-file parsing owns all grammar errors. This tentative
+        // host selection chooses only the already explicit set role.
+        let document = Json::parse(&text).ok();
+        let role = if document.as_ref().is_some_and(|value| value.member("questions").is_some()) {
+            crate::QuestionRole::Set
+        } else { crate::QuestionRole::Atomic };
+        let dynamic = function == crate::RequestFunction::Choose
+            && admitted.request().call.arguments().options.options_field.is_some();
+        let definition = reference.parse(&text, role, |text| {
+            if dynamic { crate::RecordChooseQuestion::from_json(text).map(RequestDefinition::DynamicChoose) }
+            else { RequestDefinition::from_authored_json(text) }
+        })?;
+        mismatch(function, &definition)?;
+        let retained = admitted.clone().with_resolved_definition(definition)?;
+        *admitted = retained;
+        Some(document.ok_or(Failure::Defect("native admitted file lost its ordered JSON"))?)
+    } else { None };
+    let definition = admitted.resolve_question()?;
+    let rank_set = match &definition { RequestDefinition::RankSet(set) => Some(set.clone()), _ => None };
+    let options = &admitted.request().call.arguments().options;
+    let top = authored.as_ref();
+    let member = if rank_set.is_some() {
+        top.and_then(|value| value.member("questions")).and_then(|value| match value.kind() {
+            Kind::Object(fields) => fields.first().map(|(_, value)| value), _ => None,
+        })
+    } else { top };
+    let (kind, dynamic, item_schema, context_schema) = match &definition {
+        RequestDefinition::Atomic(question) => (question.kind(), false, question.item_schema().cloned(), question.context_schema().cloned()),
+        RequestDefinition::Rank(question) => (if member.is_some_and(|value| value.member("score").is_some()) { QuestionKind::Score } else { QuestionKind::Decide }, false, question.item_schema().cloned(), question.context_schema().cloned()),
+        RequestDefinition::DynamicChoose(question) => (QuestionKind::Choose, true, question.item_schema().cloned(), question.context_schema().cloned()),
+        RequestDefinition::RankSet(_) => {
+            let member = member.ok_or(Failure::Defect("admitted rank set lost its first member"))?;
+            let question = crate::Question::from_json(&crate::render::json_line(member)?)?;
+            (QuestionKind::Decide, false, question.item_schema().cloned(), question.context_schema().cloned())
+        }
+        _ => return Err(Failure::Defect("atomic preparation resolved another function")),
     };
-    atomic(Verb::Choose, &arguments.question, &typed, admitted)
-}
-
-/// Settle everything `tag` was asked.
-pub(crate) fn tag(
-    arguments: &TagArguments,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    let listed = !arguments.labels.is_empty();
-    let described = !arguments.described.is_empty();
-    if listed && described {
-        return Err(Failure::LabelWithList);
+    if function == crate::RequestFunction::Rank && (options.yes.is_some() || options.no.is_some()) {
+        if rank_set.is_some() { return Err(Failure::Usage("`rank` with a question set takes no --true or --false; put meanings in each member")); }
+        if kind == QuestionKind::Score { return Err(Failure::Usage("`rank` with a `score` question file takes no --true or --false")); }
     }
-    let labels = match (listed, described) {
-        (true, _) => Some(
-            arguments
-                .labels
-                .iter()
-                .map(|name| (name.clone(), None))
-                .collect(),
-        ),
-        (_, true) => Some(
-            arguments
-                .described
-                .iter()
-                .map(|entry| {
-                    split_label(entry)
-                        .map(|(name, described)| (name, described.map(Description::text)))
-                })
-                .collect::<Result<Vec<_>, Failure>>()?,
-        ),
-        _ => None,
+    let key = match kind { QuestionKind::Choose => "choose", QuestionKind::Tag => "tag", QuestionKind::Score => "score", _ => "decide" };
+    let literal_question = member.and_then(|value| value.member(key)).is_none_or(|value| value.as_str().is_some());
+    let model = options.model.clone().or_else(|| top.and_then(|value| value.member("model")).and_then(Json::as_str).map(str::to_owned));
+    let on = options.field.clone().unwrap_or_else(|| strings(member.and_then(|value| value.member("on"))));
+    let profile = top.and_then(|value| value.member("profile")).and_then(Json::as_str).map(str::to_owned);
+    let selected_batch = batch(top.and_then(|value| value.member("batch")))?;
+    let tuned = function != crate::RequestFunction::Rank && member.is_some_and(|value| value.member("threshold").is_some());
+    let source = |typed: bool, name: &str| if typed { "command line" } else if member.is_some_and(|value| value.member(name).is_some()) { "file" } else { "default" };
+    let mut sources = Sources::default().setting("question", if saved { "file" } else { "command line" });
+    sources = match kind {
+        QuestionKind::Choose => sources.setting("options", source(options.labels.is_some() || dynamic, "options")),
+        QuestionKind::Tag => sources.setting("labels", source(options.labels.is_some(), "labels")),
+        QuestionKind::Score => sources.setting("levels", source(options.levels.is_some(), "levels")),
+        _ => sources.setting("true", source(options.yes.is_some(), "true")).setting("false", source(options.no.is_some(), "false")),
     };
-    let typed = Typed {
-        threshold: arguments.threshold.clone(),
-        labels,
-        model: arguments.common.model.clone(),
-        on: fields(&arguments.common),
-        ..Typed::default()
-    };
-    atomic(Verb::Tag, &arguments.question, &typed, admitted)
-}
-
-/// Settle everything `score` was asked.
-pub(crate) fn score(
-    arguments: &ScoreArguments,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    let typed = Typed {
-        // `score` takes no rule, and the core writes that refusal, so the
-        // value reaches it rather than being refused twice.
-        threshold: arguments.threshold.clone(),
-        labels: (!arguments.levels.is_empty()).then(|| {
-            arguments
-                .levels
-                .iter()
-                .map(|name| (name.clone(), None))
-                .collect()
-        }),
-        model: arguments.common.model.clone(),
-        on: fields(&arguments.common),
-        ..Typed::default()
-    };
-    atomic(Verb::Score, &arguments.question, &typed, admitted)
-}
-
-fn atomic(
-    verb: Verb,
-    question: &str,
-    typed: &Typed,
-    admitted: Option<&mut crate::AdmittedRequest>,
-) -> Result<(Resolved, FileTier), Failure> {
-    let prepared = if let Some(admitted) = admitted {
-        admitted.resolve_cli_atomic(verb, typed)
-    } else {
-        crate::cli::atomic::inline(verb, question, typed)
+    if kind != QuestionKind::Score && (function != crate::RequestFunction::Rank || options.threshold.is_some() || tuned) {
+        sources = sources.setting("threshold", source(options.threshold.is_some(), "threshold"));
     }
-    .map_err(Failure::from)?;
-    Ok((
-        prepared.resolved,
-        FileTier {
-            batch: prepared.batch,
-            tuned: prepared.tuned,
+    sources = sources.setting("on", source(options.field.is_some(), "on"))
+        .setting("model", if options.model.is_some() { "command line" } else if top.is_some_and(|value| value.member("model").is_some()) { "file" } else { "default" });
+    Ok((Resolved { kind, dynamic, model, on, profile, literal_question, item_schema, context_schema, sources, saved }, FileTier { batch: selected_batch, tuned }, rank_set))
+}
+
+fn mismatch(function: crate::RequestFunction, definition: &RequestDefinition) -> Result<(), Failure> {
+    let held = match definition {
+        RequestDefinition::Atomic(question) => match question.kind() {
+            QuestionKind::Decide => "decide", QuestionKind::Choose => "choose",
+            QuestionKind::Tag => "tag", QuestionKind::Score => "score", _ => return Ok(()),
         },
-    ))
-}
-
-/// Split one `--option` entry at its first `=`.
-///
-/// A blank description is no description, and the core applies that rule, so
-/// `LABEL=` asks the same question `LABEL` alone asks.
-fn split(entry: &str) -> Result<(String, Option<String>), Failure> {
-    let (label, described) = entry.split_once('=').ok_or(Failure::OptionWithoutSign)?;
-    Ok((label.to_owned(), Some(described.to_owned())))
-}
-
-/// Split one `--label` entry at its first `=`.
-fn split_label(entry: &str) -> Result<(String, Option<String>), Failure> {
-    let (label, described) = entry.split_once('=').ok_or(Failure::LabelWithoutSign)?;
-    Ok((label.to_owned(), Some(described.to_owned())))
-}
-
-#[cfg(test)]
-mod tests {
-    //! Stays: the private option parser must split only the first equals sign and refuse missing separators.
-    use super::split;
-    use crate::failure::Failure;
-
-    #[test]
-    fn an_option_splits_at_its_first_equals_sign_and_needs_one() {
-        let taken = |entry: &str| split(entry).expect("an option with a sign");
-        assert_eq!(
-            taken("late=It arrived late."),
-            ("late".to_owned(), Some("It arrived late.".to_owned()))
-        );
-        assert_eq!(
-            taken("late=a=b"),
-            ("late".to_owned(), Some("a=b".to_owned()))
-        );
-        assert_eq!(taken("late="), ("late".to_owned(), Some(String::new())));
-        assert!(matches!(split("late"), Err(Failure::OptionWithoutSign)));
+        _ => return Ok(()),
+    };
+    let caller = function.name();
+    let matches = match function {
+        crate::RequestFunction::Filter => held == "decide",
+        crate::RequestFunction::Rank => held == "decide" || held == "score",
+        _ => caller == held,
+    };
+    if matches { return Ok(()); }
+    if matches!(function, crate::RequestFunction::Filter | crate::RequestFunction::Rank) {
+        return Err(Failure::QuestionKind { command: caller, held });
     }
+    Err(Failure::Question { message: format!("the command is `{caller}` and the question file holds a `{held}` question"), from_file: false })
 }

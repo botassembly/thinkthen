@@ -91,7 +91,7 @@ pub(super) fn packed(
     };
     print_plan(
         backend,
-        &configuration.mismatch,
+        &configuration.mismatch.clone().running_profile(configuration.profile.as_deref(), native.profile_name()),
         reading,
         &configuration.planning(),
         first.to_vec(),

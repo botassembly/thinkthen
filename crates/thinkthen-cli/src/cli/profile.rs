@@ -59,6 +59,12 @@ impl Mismatch {
         }
     }
 
+    /// Attach the actual built profile after native construction and admission.
+    pub(crate) fn running_profile(mut self, tuned_for: Option<&str>, running: Option<&str>) -> Self {
+        self.warning = Self::new(tuned_for, running).warning;
+        self
+    }
+
     pub(crate) fn with_batch(mut self, tuned_for: Option<BatchSetting>, running: BatchSetting) -> Self {
         self.batch_warning =
             tuned_for.filter(|&tuned| tuned != running).map(|tuned_for| BatchWarning { tuned_for, running });

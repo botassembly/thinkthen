@@ -7,14 +7,14 @@ use std::io::Read;
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
 
-use crate::core::{
-    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Resolved,
-    Setting, Sources,
-};
+use crate::{BatchSetting as Setting, Engine, InputDeclaration, QuestionKind, RequestFraming as Framing, ResolvedSettings};
+use crate::cli::asked::Resolved;
+use crate::cli::reading::Reading;
+use crate::schedule::Outcome;
+use crate::plan_document::Sources;
 
 use crate::args::Common;
 use crate::edge::Environment;
-use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
@@ -35,22 +35,9 @@ use reading::read_by;
 /// Build the one engine a command calls, from what the command resolved.
 ///
 /// `width` is the `--jobs` a record command registered, or `None`.
-pub(crate) fn engine(
-    common: &Common,
-    environment: &Environment,
-    folders: Folders,
-    backend: Backend,
-    profile: Option<BackendProfile>,
-    width: Option<u8>,
-) -> Result<Engine, Failure> {
-    crate::cli::construction::engine(
-        common,
-        environment,
-        folders,
-        (backend, profile),
-        width,
-        true,
-    )
+pub(crate) fn engine(common: &Common, environment: &Environment, folders: Folders,
+    width: Option<u8>) -> Result<Engine, Failure> {
+    crate::cli::construction::engine(common, environment, folders, width)
 }
 
 /// Where one record's question comes from.
@@ -58,64 +45,19 @@ pub(crate) fn engine(
 /// Every verb but `choose --options` asks the same question of every record.
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
-#[derive(Clone)]
-pub(crate) enum Asks {
-    /// One question, asked of every record.
-    Fixed(Question),
-    /// Ordered decide questions, each asking about the same evidence.
-    Set(crate::core::QuestionSet),
-    /// A pick whose options each record carries at this pointer.
-    FromRecord {
-        /// The question the model receives.
-        text: QuestionText,
-        /// Where in the record the candidate list sits.
-        pointer: Pointer,
-    },
-}
-
-impl std::fmt::Debug for Asks {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Set(set) => formatter
-                .debug_struct("Set")
-                .field("questions", &set.questions().len())
-                .finish_non_exhaustive(),
-            Self::Fixed(question) => formatter.debug_tuple("Fixed").field(question).finish(),
-            Self::FromRecord { text, pointer } => formatter
-                .debug_struct("FromRecord")
-                .field("text", text)
-                .field("pointer", pointer)
-                .finish(),
-        }
-    }
-}
-
+#[derive(Clone, Debug)]
+pub(crate) enum Asks { Fixed(QuestionKind), Set, FromRecord }
 impl Asks {
-    /// The verb a replay failure over one document names.
     const fn verb(&self) -> &'static str {
         match self {
-            Self::Set(_) | Self::Fixed(Question::Decide { .. }) => "decide",
-            Self::Fixed(Question::Tag { .. }) => "tag",
-            Self::Fixed(Question::Score { .. }) => "score",
-            Self::Fixed(Question::Choose { .. }) | Self::FromRecord { .. } => "choose",
+            Self::Fixed(QuestionKind::Tag) => "tag", Self::Fixed(QuestionKind::Score) => "score",
+            Self::Fixed(QuestionKind::Choose) | Self::FromRecord => "choose", _ => "decide",
         }
     }
 }
-
-/// The one question every record is asked, which every verb but one has.
-///
-/// # Errors
-///
-/// Returns [`Failure::Defect`] when a verb that settles its own list left the
-/// question open, which no verb but `choose --options` can do.
 pub(crate) fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
-    settled
-        .question()
-        .cloned()
-        .map(Asks::Fixed)
-        .ok_or(Failure::Defect(
-            "a verb with no list left its question open",
-        ))
+    if settled.dynamic { return Err(Failure::Defect("a verb with no list left its question open")); }
+    Ok(Asks::Fixed(settled.kind))
 }
 
 /// Send the question over every record, and print one answer for each.
@@ -144,15 +86,14 @@ pub(crate) fn run(
         admitted,
     } = asked;
     common.check_plan_name()?;
-    if common.media.as_deref() == Some("image") && !settled.on().is_empty() {
+    if common.media.as_deref() == Some("image") && !settled.on.is_empty() {
         return Err(Failure::Usage("images cannot accompany saved on pointers"));
     }
     let view = view.checked()?;
-    let asked = (!settled.sources().model_is_default()).then(|| settled.model().as_str());
+    let asked = settled.model.as_deref();
     let per_document = matches!(
         asks,
-        Asks::Fixed(Question::Choose { .. } | Question::Tag { .. } | Question::Score { .. })
-            | Asks::FromRecord { .. }
+        Asks::Fixed(QuestionKind::Choose | QuestionKind::Tag | QuestionKind::Score) | Asks::FromRecord
     );
     let request_size = batch
         .as_ref()
@@ -166,33 +107,18 @@ pub(crate) fn run(
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = environment.resolve(common.backend.as_deref(), common.url.as_deref(), asked)?;
-    let backend = match request_size {
-        Some(size) => backend.with_request_size(size),
-        None => backend,
-    };
+    if let Some(size) = request_size { environment.set_request_size(size)?; }
     // The configuration's model applies only on the unnamed path.
-    let configured_model = (asked.is_none() && environment.named().is_none())
-        .then(|| environment.model())
-        .flatten();
+    let configured_model = asked.is_none() && backend.backend_name.is_none()
+        && backend.model_source == "configuration";
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
     }
-    if request_size.is_some() {
-        environment.warn_request_size(&backend)?;
-    }
-    let profile = profile::read(common, environment, &backend)?;
-    crate::cli::intake::window(common, !settled.on().is_empty())?;
+    if let Some(size) = request_size { environment.warn_request_size(&backend, size)?; }
+    profile::read(common, environment)?;
+    crate::cli::intake::window(common, !settled.on.is_empty())?;
     let reading = read_by(common, settled, keeping)?;
-    let reading = match &asks {
-        Asks::Set(set) => reading.with_item_schemas(
-            set.questions()
-                .iter()
-                .filter_map(|member| member.metadata().item_schema.clone())
-                .collect(),
-        ),
-        _ => reading,
-    };
     output.validate_display(common)?;
     let documents = !reading.streams() && (common.input.len() > 1 || common.located());
     if documents && (view.raw || view.quiet) {
@@ -206,7 +132,7 @@ pub(crate) fn run(
     schedule::jobs_of(common.jobs, reading.streams(), environment)?;
     let context = context::for_run(
         batch.as_ref().and_then(|tiers| tiers.context),
-        settled.text().as_json().as_str().is_some(),
+        settled.literal_question,
     )?;
     let context_field = batch
         .as_ref()
@@ -215,36 +141,33 @@ pub(crate) fn run(
     let tuned_for = batch
         .as_ref()
         .filter(|tiers| tiers.tuned)
-        .and_then(|tiers| match tiers.file.as_ref() {
-            Some(value) => Setting::of_json(value),
-            None => Some(Setting::Records(NonZeroUsize::MIN)),
-        });
+        .map(|tiers| tiers.file.unwrap_or(Setting::Records(NonZeroUsize::MIN)));
     let batch = batch.map_or(Ok(None), |tiers| {
         tiers.setting(environment, reading.streams())
     })?;
     let mismatch = match batch {
         Some(running) => {
             let running =
-                if matches!(asks, Asks::Set(_)) || settled.text().as_json().as_str().is_some() {
+                if matches!(asks, Asks::Set) || settled.literal_question {
                     running
                 } else {
                     Setting::Records(NonZeroUsize::MIN)
                 };
-            Mismatch::new(settled.profile(), profile.as_ref()).with_batch(tuned_for, running)
+            Mismatch::new(settled.profile.as_deref(), None).with_batch(tuned_for, running)
         }
-        None => Mismatch::new(settled.profile(), profile.as_ref()),
+        None => Mismatch::new(settled.profile.as_deref(), None),
     };
     let (source, snapshot) = crate::cli::intake::Intake::prepare(
         common,
         &reading,
         input,
-        !settled.on().is_empty(),
+        !settled.on.is_empty(),
         output.neighbors(),
     )?;
     output.snapshot(snapshot);
     let configuration = JudgingInput {
         admitted,
-        declarations: settled.metadata().clone(),
+        context_schema: settled.context_schema.clone(),
         common,
         environment,
         folders,
@@ -255,19 +178,14 @@ pub(crate) fn run(
         streams: reading.streams(),
         documents,
         text_view: output.text_view(),
-        profile,
+        profile: settled.profile.clone(),
         mismatch,
         context,
         context_field,
-        sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
-            || {
-                if configured_model.is_some() {
-                    settled.sources().with_configuration_model()
-                } else {
-                    *settled.sources()
-                }
-            },
-        ),
+        sources: (settled.saved || configured_model).then(|| {
+            let sources = settled.sources.clone();
+            if configured_model { sources.setting("model", "configuration") } else { sources }
+        }),
     };
 
     judged::run(configuration, &reading, source, batch, output)
@@ -275,11 +193,11 @@ pub(crate) fn run(
 
 struct JudgingInput<'a> {
     admitted: Option<crate::AdmittedRequest>,
-    declarations: crate::core::declaration::QuestionMetadata,
+    context_schema: Option<InputDeclaration>,
     common: &'a Common,
     environment: &'a Environment,
     folders: Folders,
-    backend: Backend,
+    backend: ResolvedSettings,
     asks: Asks,
     view: View,
     keeping: Keeping,
@@ -287,7 +205,7 @@ struct JudgingInput<'a> {
     documents: bool,
     text_view: bool,
     sources: Option<Sources>,
-    profile: Option<BackendProfile>,
+    profile: Option<String>,
     mismatch: Mismatch,
     context: Option<Context>,
     context_field: Option<String>,

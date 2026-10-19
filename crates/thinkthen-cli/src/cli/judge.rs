@@ -7,7 +7,8 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::core::{Json, Pointer, QuestionFileError, Resolved, Setting};
+use crate::BatchSetting as Setting;
+use crate::cli::asked::Resolved;
 
 use crate::args::{
     Batching, ChooseArguments, Common, DecideArguments, FilterArguments, RankArguments, Refused,
@@ -40,7 +41,7 @@ pub(crate) struct Tiers<'a> {
     pub(crate) context_field: Option<&'a str>,
     pub(crate) flag: Option<&'a str>,
     pub(crate) request_size: Option<&'a str>,
-    pub(crate) file: Option<Json>,
+    pub(crate) file: Option<Setting>,
     pub(crate) tuned: bool,
 }
 
@@ -61,22 +62,24 @@ impl Tiers<'_> {
             };
         }
         match (self.flag, environment.batch(), &self.file) {
-            (Some(flag), ..) => Setting::parse(flag).ok_or(Failure::Usage(
+            (Some(flag), ..) => parse_batch(flag).ok_or(Failure::Usage(
                 "--batch takes max or a whole number of at least 1",
             )),
-            (None, Some(variable), _) => Setting::parse(variable).ok_or(Failure::Usage(
+            (None, Some(variable), _) => parse_batch(variable).ok_or(Failure::Usage(
                 "THINKTHEN_BATCH takes max or a whole number of at least 1",
             )),
-            (None, None, Some(value)) => {
-                Setting::of_json(value).ok_or(Failure::Question(QuestionFileError::Shape {
-                    key: "batch",
-                    wanted: "takes max or a whole number of at least 1",
-                }))
-            }
+            (None, None, Some(value)) => Ok(*value),
             (None, None, None) => Ok(Setting::Max),
         }
         .map(Some)
     }
+}
+
+fn parse_batch(text: &str) -> Option<Setting> {
+    let batch = text.parse::<usize>().map_or_else(
+        |_| crate::RequestBatch::Named(text.to_owned()), crate::RequestBatch::Count,
+    );
+    batch.native().ok()
 }
 
 /// What a run does with each answered record.
@@ -152,7 +155,7 @@ pub(crate) fn decide(
             "`decide` prints JSON; `choose --raw` prints a bare label",
         ));
     }
-    let (settled, file) = asked::decide(arguments, Some(&mut admitted))?;
+    let (settled, file) = asked::decide(arguments, &mut admitted)?;
     let view = View {
         quiet: arguments.quiet,
         raw: false,
@@ -194,7 +197,7 @@ pub(crate) fn filter(
             "`filter` keeps records and has no order to cut, so --top belongs to `rank`",
         ));
     }
-    let (settled, file) = asked::filter(arguments, Some(&mut admitted))?;
+    let (settled, file) = asked::filter(arguments, &mut admitted)?;
     let mut display = arguments.display.clone();
     display.files_only = arguments.files_only;
     over_kept(
@@ -236,7 +239,7 @@ pub(crate) fn rank(
                 .ok_or(Failure::TopIsZero)
         })
         .transpose()?;
-    let (settled, file, set) = asked::rank(arguments, Some(&mut admitted))?;
+    let (settled, file, set) = asked::rank(arguments, &mut admitted)?;
     over_kept(
         Some(admitted),
         Keeping::Ordered,
@@ -244,7 +247,7 @@ pub(crate) fn rank(
         &arguments.display,
         tiers(&arguments.batching, file),
         &settled,
-        set.map_or_else(|| fixed(&settled), |set| Ok(Asks::Set(set)))?,
+        set.map_or_else(|| fixed(&settled), |_| Ok(Asks::Set))?,
         environment,
         input,
         writer,
@@ -356,17 +359,15 @@ pub(crate) fn choose(
     if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
         return Err(Failure::TableRaw);
     }
-    let (settled, file) = asked::choose(arguments, Some(&mut admitted))?;
+    let (settled, file) = asked::choose(arguments, &mut admitted)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
             if !arguments.common.jsonl {
                 return Err(Failure::OptionsOutsideJsonl);
             }
-            Asks::FromRecord {
-                text: settled.text().clone(),
-                pointer: Pointer::new(typed)
-                    .map_err(|error| Failure::Pointer("--options", typed.to_owned(), error))?,
-            }
+            crate::validate_pointer(typed)
+                .map_err(|error| Failure::Pointer("--options", typed.to_owned(), error.to_string()))?;
+            Asks::FromRecord
         }
         None => fixed(&settled)?,
     };
@@ -406,7 +407,7 @@ pub(crate) fn tag(
     if arguments.quiet {
         return Err(Failure::TagQuiet);
     }
-    let (settled, file) = asked::tag(arguments, Some(&mut admitted))?;
+    let (settled, file) = asked::tag(arguments, &mut admitted)?;
     judging(
         ReplayContext::Tag,
         Asked {
@@ -452,7 +453,7 @@ pub(crate) fn score(
             "`score` has no answer exit code, so --quiet would discard its result",
         ));
     }
-    let (settled, file) = asked::score(arguments, Some(&mut admitted))?;
+    let (settled, file) = asked::score(arguments, &mut admitted)?;
     let view = View {
         quiet: false,
         raw: false,

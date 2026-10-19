@@ -78,7 +78,7 @@ pub(super) fn run(
             else if configuration.streams { crate::failure::SizeAdvice::Batches }
             else { crate::failure::SizeAdvice::Text },
         documents: configuration.documents, text_view: configuration.text_view,
-        mismatch: configuration.mismatch,
+        mismatch: configuration.mismatch.running_profile(configuration.profile.as_deref(), engine.profile_name()),
     };
     let mut progress = RankProgress::default();
     let mut ended = Ended::default();

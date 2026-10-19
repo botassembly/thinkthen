@@ -33,7 +33,7 @@ pub(super) fn records(
 ) -> Result<Records, Failure> {
     let reading = reading.clone();
     let context_field = configuration.context_field.clone();
-    let context_schema = configuration.declarations.context_schema.clone();
+    let context_schema = configuration.context_schema.clone();
     let streams = reading.streams();
     let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
     let mut remaining = RawRecord::max_bytes();

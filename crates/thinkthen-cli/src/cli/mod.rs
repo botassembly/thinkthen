@@ -4,7 +4,6 @@ pub(crate) mod annotate;
 pub(crate) mod args;
 pub(crate) mod asked;
 pub(crate) mod asking;
-pub(crate) mod atomic;
 mod audit;
 pub(crate) mod cache;
 mod check;

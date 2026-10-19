@@ -12,14 +12,14 @@ pub(super) fn read_by(
     settled: &Resolved,
     keeping: Keeping,
 ) -> Result<Reading, Failure> {
-    let on = settled.on().to_vec();
+    let on = settled.on.clone();
     let asked = common.framing();
     if asked != Framing::Document
         || !keeping.streams_only()
         || common.unit.as_deref() == Some("file")
     {
         return Ok(
-            Reading::new(asked, on)?.with_item_schema(settled.metadata().item_schema.clone())
+            Reading::new(asked, on)?.with_item_schema(settled.item_schema.clone())
         );
     }
     let framing = if on.is_empty() {
@@ -29,7 +29,7 @@ pub(super) fn read_by(
     };
     Ok(Reading::new(framing, on)?
         .by_default()
-        .with_item_schema(settled.metadata().item_schema.clone()))
+        .with_item_schema(settled.item_schema.clone()))
 }
 
 /// Charge original evidence at source admission, leaving the iterator tail unread.
