@@ -9,7 +9,16 @@ use csv_core::{ReadFieldResult, Reader, ReaderBuilder};
 /// Shared reader failures retain typed CLI diagnostics without a CLI dependency.
 #[derive(Debug)]
 pub(crate) enum ReadError {
-    Input(std::io::Error),
+    Input(
+        #[cfg_attr(
+            not(feature = "cli"),
+            expect(
+                dead_code,
+                reason = "cli::failure::convert reads the retained IO cause; native maps it to a safe local error"
+            )
+        )]
+        std::io::Error,
+    ),
     Table(Error),
 }
 

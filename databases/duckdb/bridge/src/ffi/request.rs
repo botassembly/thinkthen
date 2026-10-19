@@ -114,10 +114,10 @@ impl ResultSet {
 
 pub(crate) fn scalar_json(row: RequestSessionRow) -> Result<String, String> {
     let json = match row {
-        RequestSessionRow::Decision(row) => row.result().to_scalar_json(),
-        RequestSessionRow::Choice(row) => row.result().to_scalar_json(),
-        RequestSessionRow::Tags(row) => row.result().to_scalar_json(),
-        RequestSessionRow::Score(row) => row.result().to_scalar_json(),
+        RequestSessionRow::Decision(row) => row.result().to_json(),
+        RequestSessionRow::Choice(row) => row.result().to_json(),
+        RequestSessionRow::Tags(row) => row.result().to_json(),
+        RequestSessionRow::Score(row) => row.result().to_json(),
         _ => return Err("thinkthen defect: scalar returned another kind".to_owned()),
     };
     json.map_err(|e| crate::engines::call_error(e, None).text)

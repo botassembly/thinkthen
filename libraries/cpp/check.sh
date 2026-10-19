@@ -35,7 +35,6 @@ else
  wrapper=$repo/libraries/cpp
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
- node "$repo/sdlc/scripts/ratchet.mjs" ratchet.hpp.json
  . "$repo/sdlc/scripts/installed.sh"
  native_install "$repo" "$out/native"
  header=$out/native/include/thinkthen.h

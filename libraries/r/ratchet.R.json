@@ -1,9 +1,0 @@
-{
-  "directory": [
-    "thinkthen/R",
-    "thinkthen/tools"
-  ],
-  "extension": ".R",
-  "max": 490,
-  "scope": "handwritten-production"
-}

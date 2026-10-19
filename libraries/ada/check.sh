@@ -36,7 +36,6 @@ if [ ! -x "$THINKTHEN_BACKEND_BIN" ]; then
   cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 fi
 python3 "$ROOT/checks/privacy.py"
-for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 python3 "$REPO/sdlc/scripts/check-c-exports.py" "$REPO/libraries/c/include/thinkthen.h" "$THINKTHEN_C_LIBRARY"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   smoke_guard

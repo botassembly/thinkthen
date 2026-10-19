@@ -370,24 +370,24 @@
       }
     },
     {
-      "name": "02-decide-details",
-      "definition": "details",
-      "request": {
-        "decide": "Does this need attention?",
-        "threshold": 0.5,
-        "evidence": "A short note.",
-        "details": true
-      },
-      "case_id": "02-decide-no",
-      "expect_fields": {
-        "schema": "thinkthen.result/1",
-        "value": false,
-        "answer": {
-          "kind": "yes_no",
-          "probability": 0.12
-        }
-      }
-    },
+  "name": "02-decide-details",
+  "definition": "completeDetailed",
+  "request": {
+    "decide": "Does this need attention?",
+    "threshold": 0.5,
+    "evidence": "A short note.",
+    "details": true
+  },
+  "case_id": "02-decide-no",
+  "expect_fields": {
+    "schema": "thinkthen.result/2",
+    "value": false,
+    "answer": {
+      "kind": "yes_no",
+      "probability": 0.12
+    }
+  }
+},
     {
       "name": "usage",
       "definition": "usage",
@@ -494,19 +494,682 @@
       "response_valid": false
     },
     {"name":"record-row-null","definition":"recordRow","response":{"input":"hello","value":null}},
-    {"name":"detailed-kind-mismatch","definition":"details","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"choose","text":"Which?","options":["first","second"]},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}},"response_valid":false},
-    {"name":"find-details","definition":"details","response":{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which?","none":true},"answer":{"kind":"find","pick":"none","probabilities":{"u001":0.1,"none":0.9}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
-    {"name":"annotate-details","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"x"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
-    {"name":"annotate-details-empty-success","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":{"failed":{"kind":"backend","cause":"missing_answer"}}},"answers":{"ready":{}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":1}},"response_valid":false},
-    {"name":"annotate-success-missing-answer","definition":"annotateEntry","response":{"value":true,"question":{"verb":"decide","text":"Ready?"},"threshold":0.5,"request":"x"},"response_valid":false},
-    {"name":"annotate-failed-entry","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"}},
-    {"name":"annotate-failed-entry-with-value","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x","value":null},"response_valid":false},
-    {"name":"annotate-find-not-a-member","definition":"annotateEntry","response":{"question":{"verb":"find","text":"Which?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"},"response_valid":false},
-    {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate","fields":null,"relations":[],"threshold":0.5},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {
+  "name": "detailed-kind-mismatch",
+  "definition": "completeChoose",
+  "response": {
+    "schema": "thinkthen.result/2",
+    "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "value": null,
+    "question": {
+      "verb": "choose",
+      "text": "Which?",
+      "options": [
+        "z",
+        "a"
+      ]
+    },
+    "answer": {
+      "kind": "yes_no",
+      "probability": 0.9
+    },
+    "threshold": null,
+    "meta": {
+      "tool": "thinkthen 0.2.0",
+      "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "http://127.0.0.1:1/v1/systemone",
+      "model": "reported",
+      "usage": {
+        "input_tokens": 887
+      },
+      "requests_sent": 1,
+      "cached": false,
+      "requests": [
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "failed_questions": 0,
+      "origin": "live",
+      "question_sources": [
+        {
+          "origin": "live",
+          "answered_by": "reported",
+          "batch_size": 13
+        }
+      ],
+      "observations": [
+        {
+          "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "answered_by": "reported"
+    }
+  },
+  "response_valid": false
+},
+    {
+  "name": "find-details",
+  "definition": "completeFind",
+  "response": {
+    "schema": "thinkthen.result/2",
+    "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "value": null,
+    "index": null,
+    "question": {
+      "verb": "find",
+      "text": "Which?",
+      "none": true
+    },
+    "answer": {
+      "kind": "find",
+      "pick": "u001",
+      "probabilities": {
+        "u001": 0.5,
+        "u002": 0.0,
+        "none": 0.5
+      }
+    },
+    "threshold": null,
+    "meta": {
+      "tool": "thinkthen 0.2.0",
+      "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "http://127.0.0.1:1/v1/systemone",
+      "model": "reported",
+      "usage": {
+        "input_tokens": 887
+      },
+      "requests_sent": 1,
+      "cached": false,
+      "requests": [
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "failed_questions": 0,
+      "origin": "live",
+      "question_sources": [
+        {
+          "origin": "live",
+          "answered_by": "reported",
+          "batch_size": 13
+        }
+      ],
+      "observations": [
+        {
+          "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "answered_by": "reported"
+    }
+  }
+},
+    {
+  "name": "annotate-details",
+  "definition": "completeAnnotation",
+  "response": {
+    "answer_id": "75a9e9da3e4eb77c568981b0b548adfd4fe840fa0a8af45d448641990a7c52cd",
+    "answers": {
+      "failed": {
+        "failure": {
+          "cause": "wrong_kind",
+          "kind": "backend"
+        },
+        "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c",
+        "observations": [
+          {
+            "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+          }
+        ],
+        "question": {
+          "text": "Fails?",
+          "verb": "decide"
+        },
+        "question_sources": [
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          }
+        ],
+        "request": "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+        "threshold": 0.5,
+        "usage": {
+          "input_tokens": 3
+        }
+      },
+      "good": {
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.9
+        },
+        "answer_id": "3a32013889fcdffbd93b1abf698b1d28a56ba898f213a860549df141680561a4",
+        "observations": [
+          {
+            "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+          }
+        ],
+        "question": {
+          "text": "Good?",
+          "verb": "decide"
+        },
+        "question_sources": [
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          }
+        ],
+        "request": "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+        "threshold": 0.5,
+        "usage": {
+          "input_tokens": 3
+        },
+        "value": true
+      },
+      "unsure": {
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.5
+        },
+        "answer_id": "b215b287ecbb02b723680723b9e0e23fcaebcc307b2bc206449eacfa051302fc",
+        "observations": [
+          {
+            "observation_id": "1c9c73fe4c1b6542e990d9712e6232fbe395bd40cd2c627a8996558bcedd7a58"
+          }
+        ],
+        "question": {
+          "text": "Sure?",
+          "verb": "decide"
+        },
+        "question_sources": [
+          {
+            "answered_by": "fixed",
+            "batch_size": 3,
+            "origin": "live"
+          }
+        ],
+        "request": "ef4b341b471f7ba45e41d6f0e71a23121c91bec10bf958a5bea19d96a038df9d",
+        "threshold": "0.1:0.9",
+        "usage": {
+          "input_tokens": 3
+        },
+        "value": null
+      }
+    },
+    "input": "Original.",
+    "meta": {
+      "answered_by": "fixed",
+      "attempts": [
+        {
+          "ordinal": 1,
+          "outcome": "ok",
+          "request_sha256": "20fb6e40b08780cd3e08296d14952f5da7ac0356cbc88150d4d5b0291047d919",
+          "sdk_request_id": "dd78a5622c69c09eaf593cfa96072a461e4ef7a5f8d31d05e2aa89f9722635c2",
+          "status": 200,
+          "wall_ms": 4
+        }
+      ],
+      "cached": false,
+      "context_sha256": "609f08a01dc1bc6e6144d7e2148be83b56b1c628548fbe35670083e8b583eec2",
+      "failed_questions": 1,
+      "model": "fixed",
+      "observations": [
+        {
+          "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+        },
+        {
+          "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+        },
+        {
+          "observation_id": "1c9c73fe4c1b6542e990d9712e6232fbe395bd40cd2c627a8996558bcedd7a58"
+        }
+      ],
+      "origin": "live",
+      "question_sources": [
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        },
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        },
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        }
+      ],
+      "questions_sha256": "607d560a705c50d8d490275dbc74d375e0ae7daa72e8c1294d4df5382962542a",
+      "requests": [
+        "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+        "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+        "ef4b341b471f7ba45e41d6f0e71a23121c91bec10bf958a5bea19d96a038df9d"
+      ],
+      "requests_sent": 1,
+      "tool": "thinkthen 0.2.0",
+      "url": "http://127.0.0.1:37965/v1/systemone",
+      "usage": {
+        "input_tokens": 9
+      }
+    },
+    "schema": "thinkthen.result/2",
+    "value": {
+      "failed": {
+        "failed": {
+          "cause": "wrong_kind",
+          "kind": "backend"
+        }
+      },
+      "good": true,
+      "unsure": null
+    }
+  }
+},
+    {
+  "name": "annotate-details-empty-success",
+  "definition": "completeAnnotation",
+  "response": {
+    "answer_id": "75a9e9da3e4eb77c568981b0b548adfd4fe840fa0a8af45d448641990a7c52cd",
+    "answers": {
+      "ready": {}
+    },
+    "input": "Original.",
+    "meta": {
+      "answered_by": "fixed",
+      "attempts": [
+        {
+          "ordinal": 1,
+          "outcome": "ok",
+          "request_sha256": "20fb6e40b08780cd3e08296d14952f5da7ac0356cbc88150d4d5b0291047d919",
+          "sdk_request_id": "dd78a5622c69c09eaf593cfa96072a461e4ef7a5f8d31d05e2aa89f9722635c2",
+          "status": 200,
+          "wall_ms": 4
+        }
+      ],
+      "cached": false,
+      "context_sha256": "609f08a01dc1bc6e6144d7e2148be83b56b1c628548fbe35670083e8b583eec2",
+      "failed_questions": 1,
+      "model": "fixed",
+      "observations": [
+        {
+          "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+        },
+        {
+          "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+        },
+        {
+          "observation_id": "1c9c73fe4c1b6542e990d9712e6232fbe395bd40cd2c627a8996558bcedd7a58"
+        }
+      ],
+      "origin": "live",
+      "question_sources": [
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        },
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        },
+        {
+          "answered_by": "fixed",
+          "batch_size": 3,
+          "origin": "live"
+        }
+      ],
+      "questions_sha256": "607d560a705c50d8d490275dbc74d375e0ae7daa72e8c1294d4df5382962542a",
+      "requests": [
+        "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+        "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+        "ef4b341b471f7ba45e41d6f0e71a23121c91bec10bf958a5bea19d96a038df9d"
+      ],
+      "requests_sent": 1,
+      "tool": "thinkthen 0.2.0",
+      "url": "http://127.0.0.1:37965/v1/systemone",
+      "usage": {
+        "input_tokens": 9
+      }
+    },
+    "schema": "thinkthen.result/2",
+    "value": {
+      "failed": {
+        "failed": {
+          "cause": "wrong_kind",
+          "kind": "backend"
+        }
+      },
+      "good": true,
+      "unsure": null
+    }
+  },
+  "response_valid": false
+},
+    {
+  "name": "annotate-success-missing-answer",
+  "definition": "completeAnnotationMember",
+  "response": {
+    "answer_id": "3a32013889fcdffbd93b1abf698b1d28a56ba898f213a860549df141680561a4",
+    "observations": [
+      {
+        "observation_id": "0c3f35035feb2c37f311700e366e8d19ea2b3569a4f834f642f6a0f8168c187e"
+      }
+    ],
+    "question": {
+      "text": "Good?",
+      "verb": "decide"
+    },
+    "question_sources": [
+      {
+        "answered_by": "fixed",
+        "batch_size": 3,
+        "origin": "live"
+      }
+    ],
+    "request": "82b36d84c1dc927ebacdc9165705812bfdd0ad4154f6e5c5e707475a1b4f4fae",
+    "threshold": 0.5,
+    "usage": {
+      "input_tokens": 3
+    },
+    "value": true
+  },
+  "response_valid": false
+},
+    {
+  "name": "annotate-failed-entry",
+  "definition": "completeAnnotationMember",
+  "response": {
+    "failure": {
+      "cause": "wrong_kind",
+      "kind": "backend"
+    },
+    "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c",
+    "observations": [
+      {
+        "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+      }
+    ],
+    "question": {
+      "text": "Fails?",
+      "verb": "decide"
+    },
+    "question_sources": [
+      {
+        "answered_by": "fixed",
+        "batch_size": 3,
+        "origin": "live"
+      }
+    ],
+    "request": "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+    "threshold": 0.5,
+    "usage": {
+      "input_tokens": 3
+    }
+  }
+},
+    {
+  "name": "annotate-failed-entry-with-value",
+  "definition": "completeAnnotationMember",
+  "response": {
+    "failure": {
+      "cause": "wrong_kind",
+      "kind": "backend"
+    },
+    "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c",
+    "observations": [
+      {
+        "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+      }
+    ],
+    "question": {
+      "text": "Fails?",
+      "verb": "decide"
+    },
+    "question_sources": [
+      {
+        "answered_by": "fixed",
+        "batch_size": 3,
+        "origin": "live"
+      }
+    ],
+    "request": "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+    "threshold": 0.5,
+    "usage": {
+      "input_tokens": 3
+    },
+    "value": null
+  },
+  "response_valid": false
+},
+    {
+  "name": "annotate-find-not-a-member",
+  "definition": "completeAnnotationMember",
+  "response": {
+    "failure": {
+      "cause": "wrong_kind",
+      "kind": "backend"
+    },
+    "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c",
+    "observations": [
+      {
+        "failure_id": "09812d91ac8bef618624f2642b75271c62c370c68f2b5aacfa9ddebf69ccc75c"
+      }
+    ],
+    "question": {
+      "verb": "find",
+      "text": "Which?"
+    },
+    "question_sources": [
+      {
+        "answered_by": "fixed",
+        "batch_size": 3,
+        "origin": "live"
+      }
+    ],
+    "request": "aaa69468b8da1b345c0b05e9c64a03ba7ad5d2fc678be53126cb9d1300a1053b",
+    "threshold": 0.5,
+    "usage": {
+      "input_tokens": 3
+    }
+  },
+  "response_valid": false
+},
+    {
+  "name": "relate-details",
+  "definition": "completeRelation",
+  "response": {
+    "schema": "thinkthen.result/2",
+    "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "value": [],
+    "question": {
+      "verb": "relate",
+      "fields": null,
+      "relations": [],
+      "threshold": 0.5
+    },
+    "answer": {
+      "questions": []
+    },
+    "meta": {
+      "tool": "thinkthen 0.2.0",
+      "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "http://127.0.0.1:1/v1/systemone",
+      "model": "reported",
+      "requests_sent": 0,
+      "cached": false,
+      "requests": [],
+      "failed_questions": 0,
+      "origin": null,
+      "question_sources": [],
+      "observations": []
+    }
+  }
+},
     {"name":"c-call-success","definition":"callSuccess","response":{"value":[true,null],"facts":{"largest_request_bytes":182,"largest_request_estimated_input_tokens":166,"token_estimate_method":"encoded-body-bytes-908-v1","records":2,"requests_sent":1,"cache_answers":0,"seconds":0.01,"input_tokens":5,"output_tokens":3,"model":"jev-latest"}}},
     {"name":"c-call-success-missing-facts","definition":"callSuccess","response":{"value":true},"response_valid":false},
-    {"name":"c-detailed-record","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","input":{"id":"one","body":"alpha"},"value":"first","question":{"verb":"choose","text":"Which label?","options":["first","second"]},"answer":{"kind":"choice","pick":"first","probabilities":{"first":0.9,"second":0.1}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0}}},
-    {"name":"c-detailed-record-missing-input","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Q?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0}},"response_valid":false},
+    {
+  "name": "c-detailed-record",
+  "definition": "completeFilter",
+  "response": {
+    "schema": "thinkthen.result/2",
+    "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "value": false,
+    "question": {
+      "verb": "decide",
+      "text": {
+        "original": [
+          false,
+          null
+        ]
+      },
+      "name": "refund",
+      "wording_version": 7,
+      "item_schema": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "body"
+        ]
+      }
+    },
+    "answer": {
+      "kind": "yes_no",
+      "probability": 0.1
+    },
+    "threshold": 0.5,
+    "meta": {
+      "tool": "thinkthen 0.2.0",
+      "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "http://127.0.0.1:1/v1/systemone",
+      "model": "reported",
+      "usage": {
+        "input_tokens": 887
+      },
+      "requests_sent": 1,
+      "cached": false,
+      "requests": [
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "failed_questions": 0,
+      "origin": "live",
+      "question_sources": [
+        {
+          "origin": "live",
+          "answered_by": "reported",
+          "batch_size": 13
+        }
+      ],
+      "observations": [
+        {
+          "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "answered_by": "reported"
+    },
+    "input": {
+      "input": false,
+      "value": null,
+      "meta": [
+        "original"
+      ]
+    }
+  }
+},
+    {
+  "name": "c-detailed-record-missing-input",
+  "definition": "completeFilter",
+  "response": {
+    "schema": "thinkthen.result/2",
+    "answer_id": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "value": false,
+    "question": {
+      "verb": "decide",
+      "text": {
+        "original": [
+          false,
+          null
+        ]
+      },
+      "name": "refund",
+      "wording_version": 7,
+      "item_schema": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "body"
+        ]
+      }
+    },
+    "answer": {
+      "kind": "yes_no",
+      "probability": 0.1
+    },
+    "threshold": 0.5,
+    "meta": {
+      "tool": "thinkthen 0.2.0",
+      "question_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "http://127.0.0.1:1/v1/systemone",
+      "model": "reported",
+      "usage": {
+        "input_tokens": 887
+      },
+      "requests_sent": 1,
+      "cached": false,
+      "requests": [
+        "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      ],
+      "failed_questions": 0,
+      "origin": "live",
+      "question_sources": [
+        {
+          "origin": "live",
+          "answered_by": "reported",
+          "batch_size": 13
+        }
+      ],
+      "observations": [
+        {
+          "observation_id": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      "answered_by": "reported"
+    }
+  },
+  "response_valid": false
+},
     {"name":"c-record-call-options","definition":"doorRequest","schema_only":true,"request":{"choose":"Which?","options":["first","second"],"records":["alpha","beta"],"call":{"batch":2,"context":"Shared facts."}}},
     {"name":"c-call-unknown-option","definition":"doorRequest","request":{"decide":"Q?","records":["alpha"],"call":{"jobs":2}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{"batch":2}},"request_valid":false,"expected_error":"usage"},

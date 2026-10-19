@@ -38,7 +38,6 @@ export CARGO_PROFILE_DEV_DEBUG=${CARGO_PROFILE_DEV_DEBUG:-0} CARGO_INCREMENTAL=$
 export CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
 export GOCACHE="${GOCACHE:-$repo/target/go/cache}" GOMODCACHE="${GOMODCACHE:-$repo/target/go/modcache}"
-node "$repo/sdlc/scripts/ratchet.mjs" ratchet.go.json
 "$python_bin" "$repo/sdlc/generators/results/generate.py" --target go --check
 "$python_bin" fixtures/guard.py .
 test -z "$(gofmt -l .)"

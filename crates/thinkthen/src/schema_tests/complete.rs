@@ -64,8 +64,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
     );
     definitions["completeBatchFailure"]["properties"]["completed"] =
         json!({"type":"array", "items":{"$ref":"#/$defs/completeDetailed"}});
-    // Strict complete readers have their own derived graph; released definitions
-    // keep their compatibility spelling and permissiveness.
+    // Derive closed result/2 readers from the concrete serializer graph.
     strict::graph(definitions, "completeCall");
     strict::graph(definitions, "plan");
     strict::graph(definitions, "Surface");

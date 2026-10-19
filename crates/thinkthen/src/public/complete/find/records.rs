@@ -40,6 +40,7 @@ impl Engine {
             .map(|result| result.map_original(|unit| unit.original)))
     }
 
+    #[cfg(any(feature = "cli", test))]
     pub(in crate::public) fn preview_find_records<I, T>(
         &self,
         question: &Question,

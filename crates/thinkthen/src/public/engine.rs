@@ -154,7 +154,7 @@ impl Engine {
         }
     }
 
-    /// Reuse resolved settings for backend compatibility calls with no storage.
+    /// Reuse resolved settings for backend checks with no storage.
     #[cfg(feature = "cli")]
     pub(crate) fn for_check(inner: &facade::Engine) -> Self {
         Self {
