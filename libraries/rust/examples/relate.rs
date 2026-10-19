@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         RawRecord::json(r#"{"name":"Employees may book business class on any flight.","kind":"rule"}"#)?,
     ];
     let mut out = std::io::stdout().lock();
-    let call = tt.call("relate", support::arguments(ask, support::records(rules)), RequestEnvironment::default())?;
+    let call = tt.call("relate", support::arguments(ask, support::records(rules.map(thinkthen::QuestionInput::Record))), RequestEnvironment::default())?;
     let RequestValue::Related(row) = call.value() else { return Err("expected relations".into()); };
     for edge in row.result().value() {
         let (name, probability) = (edge.relation(), edge.probability());
