@@ -1,6 +1,6 @@
 //! One bounded answered batch member, retained only until its ordered row leaves.
 
-//! Stays: The retained private scalar projection must preserve original serialization, probabilities and batch metadata without changing canonical result identity.
+//! Stays: The retained private result projection must preserve original serialization, probabilities and batch metadata without changing canonical result identity.
 use std::fmt;
 
 use crate::core::{self, BatchWarning};
@@ -45,17 +45,7 @@ impl fmt::Debug for Details {
             .field("confidence", &self.confidence)
             .field("url", &"<withheld>")
             .field("json", &self.json)
-            .field("scalar_json", &self.scalar_json)
             .finish()
-    }
-}
-
-impl Details {
-    /// The same detailed result as a scalar SQL value, without a record input.
-    #[doc(hidden)]
-    #[must_use]
-    pub fn to_scalar_json(&self) -> String {
-        self.scalar_json.as_ref().unwrap_or(&self.json).text()
     }
 }
 
@@ -66,7 +56,7 @@ impl Details {
         original: Option<&T>,
     ) -> Result<Self, Error> {
         let fields = canonical.metadata();
-        let scalar = Written::of(&canonical.scalar_details(None))?;
+        let scalar = Written::of(canonical)?;
         let json = match original {
             Some(original) => {
                 // Match native member materialization without reapplying reader byte limits.
@@ -74,7 +64,11 @@ impl Details {
                     .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
                 let record =
                     core::Record::from_json(core::Json::parse(&source).map_err(Error::refused)?);
-                Written::of(&canonical.scalar_details(Some(record)))?
+                {
+                    let mut row = canonical.clone();
+                    row.input = Some(record);
+                    Written::of(&row)?
+                }
             }
             None => scalar.clone(),
         };
@@ -95,7 +89,6 @@ impl Details {
             confidence: canonical.answer().confidence().map(|p| p.as_f64()),
             url: fields.url.to_owned(),
             json,
-            scalar_json: original.map(|_| scalar),
         })
     }
 }
@@ -107,7 +100,7 @@ mod tests {
     use conformance_backend::{Canned, Listener};
 
     #[test]
-    fn actual_cached_flag_survives_absent_complete_sources_and_refused_originals_stay_safe() {
+    fn cached_details_retain_sources_and_refused_originals_stay_safe() {
         let listener = Listener::answering(|_| {
             Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
         })
@@ -141,12 +134,10 @@ mod tests {
                 CallOptions::new(),
             )
             .unwrap();
-        let mut result = call.value().clone();
-        result.canonical.identity =
-            core::ResultIdentity::resolved(result.answer_id().clone(), None, vec![], vec![], None);
+        let result = call.value().clone();
         let details = Details::of_complete::<()>(&result.canonical, None).unwrap();
         assert!(details.cached());
-        assert!(result.identity().question_sources().is_empty());
+        assert!(!result.identity().question_sources().is_empty());
         assert!(details.to_json().contains(r#""cached":true"#));
         struct Refuses;
         impl Serialize for Refuses {

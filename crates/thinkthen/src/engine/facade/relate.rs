@@ -1,8 +1,10 @@
 //! Relations between given entities, planned as one ordered set of pair and
 //! menu questions.
 
+#[cfg(any(feature = "cli", test))]
+use super::Request;
 use super::each::Models;
-use super::{Answered, Asks, Bound, Engine, Request};
+use super::{Answered, Asks, Bound, Engine};
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
     RelationEdge, RelationEntity, RelationRule, Usage, plan_relate, relate_edge,
@@ -17,8 +19,11 @@ pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
     pub(crate) asked: Vec<RelateAsk>,
     pub(crate) asks: Asks,
+    #[cfg(any(feature = "cli", test))]
     pub(crate) requests: Vec<Request>,
+    #[cfg(any(feature = "cli", test))]
     pub(crate) questions_per_rule: Vec<usize>,
+    #[cfg(any(feature = "cli", test))]
     pub(crate) requests_per_rule: Vec<usize>,
 }
 
@@ -60,11 +65,14 @@ pub(crate) fn relations(
         plan_relate(entities, &rules).map_err(|_| Error::Defect("relation planning failed"))?
     else {
         return Ok(PreparedRelations {
+            #[cfg(any(feature = "cli", test))]
             questions_per_rule: vec![0; rules.len()],
+            #[cfg(any(feature = "cli", test))]
             requests_per_rule: vec![0; rules.len()],
             rules,
             asked: Vec::new(),
             asks: Asks::default(),
+            #[cfg(any(feature = "cli", test))]
             requests: Vec::new(),
         });
     };
@@ -105,8 +113,11 @@ pub(crate) fn relations(
         rules,
         asked: planned.asked,
         asks,
+        #[cfg(any(feature = "cli", test))]
         requests,
+        #[cfg(any(feature = "cli", test))]
         questions_per_rule,
+        #[cfg(any(feature = "cli", test))]
         requests_per_rule,
     })
 }

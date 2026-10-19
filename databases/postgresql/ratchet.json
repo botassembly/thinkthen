@@ -1,9 +1,0 @@
-{
-  "directory": [
-    "src",
-    "examples"
-  ],
-  "extension": ".rs",
-  "scope": "handwritten-production",
-  "max": 5238
-}

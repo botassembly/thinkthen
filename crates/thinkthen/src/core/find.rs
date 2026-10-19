@@ -180,7 +180,6 @@ impl Find {
         meta: Meta,
     ) -> FindResult {
         FindResult {
-            schema: "thinkthen.result/1",
             value,
             question: FindQuestionOwned {
                 text: self.text.clone(),
@@ -270,10 +269,8 @@ fn ordered<S: Serializer>(entries: &[(String, f64)], serializer: S) -> Result<S:
 }
 
 /// One dedicated detailed find result.
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findDetails"))]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct FindResult {
-    schema: &'static str,
     pub(super) value: Option<Record>,
     pub(super) question: FindQuestionOwned,
     pub(super) answer: FindAnswer,

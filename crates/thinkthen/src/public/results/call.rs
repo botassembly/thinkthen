@@ -18,7 +18,7 @@ pub struct Facts {
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     pub(super) attempts: Option<Vec<crate::public::AttemptObservation>>,
-    // Explicit compatibility serialization stays count-only; complete projection adopts this ID.
+    // Explicit facts serialization stays count-only; complete projection adopts this ID.
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     pub(super) call_id: Option<CallId>,

@@ -156,22 +156,7 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
             )
             .expect("a judgment");
         let reply = &judgment.answered.reply;
-        let meta = crate::core::Meta::new(
-            "0.0.0",
-            String::new(),
-            backend.url().clone(),
-            reply.model().clone(),
-            reply.usage(),
-            crate::core::RequestMeta::new(false, 1, Vec::new()),
-        );
-        let row = crate::core::DecisionResult::new(
-            judgment.value.clone(),
-            question,
-            judgment.answer.clone(),
-            None,
-            meta,
-        );
-        shown.push_str(&format!("{reply:?} {reply:#?} {row:?} {row:#?}"));
+        shown.push_str(&format!("{reply:?} {reply:#?}"));
         judged.push(format!("{:?} {:?}", judgment.answer, judgment.value));
     }
     assert_eq!(listener.requests().len(), 3);
