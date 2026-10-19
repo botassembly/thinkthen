@@ -804,9 +804,10 @@ fn assert_combined_shape(
 
 fn preview_token_bytes(body: &[u8], backend: &str) -> Result<usize, serde_json::Error> {
     let wire: Value = serde_json::from_slice(body)?;
-    Ok(body.len() + if backend == "perplexity" {
-        serde_json::to_string(wire.get("state").unwrap_or(&Value::Null))?.len() * 2
-    } else {
-        0
-    })
+    Ok(body.len()
+        + if backend == "perplexity" {
+            serde_json::to_string(wire.get("state").unwrap_or(&Value::Null))?.len() * 2
+        } else {
+            0
+        })
 }

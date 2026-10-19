@@ -4,6 +4,7 @@
 #![cfg_attr(windows, deny(unsafe_code))]
 
 use std::process::ExitCode;
+#[cfg(test)]
 use thinkthen::RelationIdentityMode;
 use thinkthen::{
     AdmittedRequest, Answer, AttemptOutcome, BatchSetting, CachePruneOptions, CacheSettings, Call,
@@ -23,14 +24,13 @@ use thinkthen::{
     RequestDescriptor, RequestEnvironment, RequestFeed, RequestFraming, RequestFunction,
     RequestImage, RequestInput, RequestItem, RequestOptions, RequestOriginal, RequestOutcome,
     RequestQuestion, RequestSessionDescriptor, RequestSessionFeedOptions, RequestSessionPushStatus,
-    RequestSessionRead, RequestSessionResult, RequestSessionRow,
-    RequestSource, RequestThreshold, RequestValue, ResolvedSettings,
-    ResultMetadata, SettledAnswer, SourceItem, SourceItems, SourceLocation, SourceRecord,
-    SourceRelationEndpoint, SourceUnit, Surface, TableFormat, TableReader, Tally, Threshold,
-    UsageFailure, UsageFailureCategory, UsagePersistence, cache_counts, cache_unused,
-    convert_cache, current_usage_month, enumerate_files, find_candidate_count_range,
-    preview_cache_prune, prune_cache, read_inputs, read_question_file, read_usage, request_schema,
-    storage_writable_by_another, validate_pointer,
+    RequestSessionRead, RequestSessionResult, RequestSessionRow, RequestSource, RequestThreshold,
+    RequestValue, ResolvedSettings, ResultMetadata, SettledAnswer, SourceItem, SourceItems,
+    SourceLocation, SourceRecord, SourceRelationEndpoint, SourceUnit, Surface, TableFormat,
+    TableReader, Tally, Threshold, UsageFailure, UsageFailureCategory, UsagePersistence,
+    cache_counts, cache_unused, convert_cache, current_usage_month, enumerate_files,
+    find_candidate_count_range, preview_cache_prune, prune_cache, read_inputs, read_question_file,
+    read_usage, request_schema, storage_writable_by_another, validate_pointer,
 };
 
 #[cfg(test)]

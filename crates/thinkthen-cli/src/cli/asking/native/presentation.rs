@@ -155,6 +155,22 @@ pub(super) fn without_batch(value: &impl Serialize) -> Result<String, Failure> {
     crate::render::json_line(&Document(fields)).map_err(Failure::from)
 }
 
+struct Document<'a>(&'a [(String, Json)]);
+impl Serialize for Document<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap as _;
+        let mut map = serializer.serialize_map(None)?;
+        for (name, value) in self.0 {
+            if name == "meta" {
+                map.serialize_entry(name, &WithoutBatch(value))?;
+            } else {
+                map.serialize_entry(name, value)?;
+            }
+        }
+        map.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! Stays: command plan presentation must preserve native counts and withhold authored evidence.
@@ -187,21 +203,5 @@ mod tests {
         .unwrap();
         assert_eq!(streamed, crate::render::json_line(&document).unwrap());
         assert!(!format!("{document:?}").contains("question-marker"));
-    }
-}
-
-struct Document<'a>(&'a [(String, Json)]);
-impl Serialize for Document<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::SerializeMap as _;
-        let mut map = serializer.serialize_map(None)?;
-        for (name, value) in self.0 {
-            if name == "meta" {
-                map.serialize_entry(name, &WithoutBatch(value))?;
-            } else {
-                map.serialize_entry(name, value)?;
-            }
-        }
-        map.end()
     }
 }

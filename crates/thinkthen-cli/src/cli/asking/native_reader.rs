@@ -111,6 +111,23 @@ fn feed<T>(mut records: impl Iterator<Item = Result<T, Placed>>, worker: Arc<Sha
     }
 }
 
+/// Wait for the next native boundary while retaining command signal polling.
+pub(crate) fn session_ended(
+    session: &thinkthen::RequestSession,
+    cancelled: bool,
+    input_done: bool,
+) -> bool {
+    let interest = if cancelled {
+        thinkthen::RequestSessionWaitInterest::Settlement
+    } else if input_done {
+        thinkthen::RequestSessionWaitInterest::Result
+    } else {
+        thinkthen::RequestSessionWaitInterest::Input
+    };
+    session.wait(interest, std::time::Duration::from_millis(50))
+        == thinkthen::RequestSessionReady::End
+}
+
 #[cfg(test)]
 #[allow(
     clippy::expect_used,
@@ -139,21 +156,4 @@ mod tests {
             crate::failure::Failure::Defect("the input reader lock failed")
         ));
     }
-}
-
-/// Wait for the next native boundary while retaining command signal polling.
-pub(crate) fn session_ended(
-    session: &thinkthen::RequestSession,
-    cancelled: bool,
-    input_done: bool,
-) -> bool {
-    let interest = if cancelled {
-        thinkthen::RequestSessionWaitInterest::Settlement
-    } else if input_done {
-        thinkthen::RequestSessionWaitInterest::Result
-    } else {
-        thinkthen::RequestSessionWaitInterest::Input
-    };
-    session.wait(interest, std::time::Duration::from_millis(50))
-        == thinkthen::RequestSessionReady::End
 }
