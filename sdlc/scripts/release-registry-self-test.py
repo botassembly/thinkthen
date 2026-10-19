@@ -443,7 +443,9 @@ def apple_package_cases():
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
         env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
                             'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
-        apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
+        # The fixture owns uname and a failing Cargo sentinel. Do not resolve
+        # host tools again and replace that controlled command environment.
+        apple_env = env | {'THINKTHEN_RESOLVED_TOOLS': 'swift', 'THINKTHEN_ARTIFACT': ''}
         refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
         assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
         apple_env['THINKTHEN_ARTIFACT'] = str(output / name)
