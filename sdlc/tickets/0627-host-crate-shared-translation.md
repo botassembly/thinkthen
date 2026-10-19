@@ -1,6 +1,6 @@
 # 0627: Make the host crate a plain shared translation layer
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

@@ -1,6 +1,6 @@
 # 0699: Align installed error fixtures with approved provider redaction
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
