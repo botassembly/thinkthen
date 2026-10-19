@@ -424,6 +424,8 @@ impl Failure {
         &self.message
     }
     pub(crate) fn owned_facts(&self) -> Option<String> {
-        self.facts.as_ref().map(|facts| facts_json(facts))
+        self.facts.as_ref().and_then(|facts| {
+            facts.complete().map_or_else(|| serde_json::to_string(facts), |complete| serde_json::to_string(&complete)).ok()
+        })
     }
 }

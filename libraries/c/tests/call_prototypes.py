@@ -19,7 +19,7 @@ int32_t thinkthen_run_call(void *,const Request *,uint32_t (*)(void *,Text *),vo
 Text thinkthen_call_result_json(void *);Text thinkthen_call_error_message(void *);
 void thinkthen_call_result_free(void *);void thinkthen_call_error_free(void *);', $argv[1]);
 $threads=FFI::cdef('unsigned long pthread_self(void);');
-$caller=$threads->pthread_self();$count=0;$buffers=[];
+$caller=$threads->pthread_self();$count=0;$buffers=[];$changed=false;
 $text=function($value)use($ffi,&$buffers) {
  $bytes=$ffi->new('char['.(strlen($value)+1).']');FFI::memcpy($bytes,$value,strlen($value));$buffers[]=$bytes;
  $out=$ffi->new('Text');$out->data=FFI::addr($bytes[0]);$out->len=strlen($value);return $out;
@@ -27,8 +27,8 @@ $text=function($value)use($ffi,&$buffers) {
 $request=$ffi->new('Request');$request->function=$text('decide');
 $request->question_json=$text('{"kind":"text","text":"Does it pass?"}');
 $request->input_json=$text('{"kind":"feed","name":"records"}');$request->options_json=$text('{}');
-$callback=function($context,$out)use(&$count,$caller,$threads,$text) {
- if($threads->pthread_self()!=$caller)throw new Exception('producer thread changed');
+$callback=function($context,$out)use(&$count,&$changed,$caller,$threads,$text) {
+ if($threads->pthread_self()!=$caller){$changed=true;return 2;}
  if($count++)return 1;
  $out[0]=$text('{"original":{"kind":"text","text":"Evidence."}}');return 0;
 };
@@ -39,7 +39,7 @@ $ffi->thinkthen_engine_free($engine);
 if($code){$message=$ffi->thinkthen_call_error_message($error);throw new Exception(FFI::string($message->data,$message->len));}
 $json=$ffi->thinkthen_call_result_json($result);$call=json_decode(FFI::string($json->data,$json->len),true,512,JSON_THROW_ON_ERROR);
 $ffi->thinkthen_call_result_free($result);
-if($count!=2||$call['facts']['records']!=1)throw new Exception('missing producer/result');
+if($changed||$count!=2||$call['facts']['records']!=1)throw new Exception('missing producer/result');
 echo "PHP producer calling thread PASS\n";
 '''
 DART = r'''import 'dart:ffi';

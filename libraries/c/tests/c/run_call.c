@@ -59,6 +59,9 @@ int main(int argc,char **argv) {
     if(held&&fixture_start(&worker,cancel_held,cancel))return 4;
     thinkthen_call_result *result=NULL;
     thinkthen_call_error *error=NULL;
+    /* Invalid output storage must refuse before touching a slot or producer. */
+    if(thinkthen_run_call(engine,&request,NULL,NULL,cancel,NULL,&error)!=THINKTHEN_EUSAGE||error)return 7;
+    if(thinkthen_run_call(engine,&request,NULL,NULL,cancel,&result,(thinkthen_call_error **)&result)!=THINKTHEN_EUSAGE||result)return 7;
     int code=thinkthen_run_call(engine,&request,!strcmp(argv[7],"plain")?NULL:produce,&p,cancel,&result,&error);
     if(held&&fixture_join(worker))return 4;
     thinkthen_engine_free(engine);thinkthen_call_cancel_free(cancel);
