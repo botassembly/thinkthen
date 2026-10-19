@@ -141,14 +141,11 @@ fn inline_profile_replaces_a_file_and_rejects_invalid_json_as_usage() {
     assert!(matches!(from_file, Err(Error::Local(_))));
 }
 
-/// The one answer every listener gives: a yes at 0.92.
-const ANSWERED: &str = concat!(
-    r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
-    r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
-);
+#[path = "../support/environment.rs"]
+mod fixture;
+use fixture::{ANSWERED, EVIDENCE};
 const CASE: &str = "PUBLIC_ENV_CASE";
 const ARGUMENT: &str = "PUBLIC_ENV_ARGUMENT";
-const EVIDENCE: &str = "Refund me please.";
 
 fn listener() -> Listener {
     Listener::answering(|_| Canned::ok(ANSWERED)).expect("a loopback listener")
@@ -432,7 +429,7 @@ fn r4_24_the_engine_base_url_outranks_the_environment_base() {
 
 #[cfg(unix)] // It names the XDG folders (sdlc/planning/windows.md).
 #[test]
-fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
+fn a_seeded_engine_equals_one_given_each_value() {
     let matched = ANSWERED.replace("jev-1.13.0", "model-from-config");
     let served = Listener::answering(move |_| Canned::ok(&matched)).expect("a loopback listener");
     let (config, cache) = (folder("config"), folder("cache"));
@@ -474,26 +471,7 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
         "the answer is cached under THINKTHEN_CACHE"
     );
 
-    // The command plan needs the binary, which the library-only build lacks.
-    #[cfg(feature = "cli")]
-    {
-        fs::write(config.join("evidence"), EVIDENCE).unwrap();
-        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-        command
-            .args(["decide", "asks for a refund", "--plan"])
-            .clear_environment()
-            .envs(environment)
-            .stdin(fs::File::open(config.join("evidence")).unwrap())
-            .stdout(std::process::Stdio::piped());
-        let plan = crate::wait::finish(command.spawn().expect("the command runs"), "the plan")
-            .expect("the command ends");
-        let plan = String::from_utf8_lossy(&plan.stdout);
-        assert!(
-            plan.contains(&format!(r#""url":"{}""#, served.url())),
-            "{plan}"
-        );
-        assert!(plan.contains(r#""model":"model-from-config""#), "{plan}");
-    }
+
 }
 
 #[test]

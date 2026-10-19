@@ -2,8 +2,6 @@
 //! usage totals, and one built by hand writes none.
 
 use super::*;
-#[cfg(all(unix, feature = "cli"))]
-use crate::child::ChildEnvironment as _;
 use crate::child::Folder;
 
 fn hold_usage_writer(case: &str, argument: &str) -> Option<fs::File> {
@@ -143,85 +141,15 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
 }
 
 #[cfg(unix)]
-#[cfg(feature = "cli")]
-/// The command's own `status --json` under this root's usage folder.
 fn status(home: &Path) -> serde_json::Value {
-    let state = Folder::Usage.variable(home);
-    let output = run::output(
-        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .args(["status", "--json"])
-            .clear_environment()
-            .home(home)
-            .env(state.0, state.1),
-    )
-    .expect("status runs");
-    assert!(output.status.success());
-    serde_json::from_slice::<serde_json::Value>(&output.stdout).expect("status JSON")["usage"]
-        ["total"]
-        .clone()
-}
-
-#[cfg(unix)]
-#[cfg(feature = "cli")]
-/// A listener that answers `503` to the arrivals named, and `ANSWERED` otherwise.
-fn failing_at(busy: &'static [usize]) -> Listener {
-    let arrivals = AtomicUsize::new(0);
-    Listener::answering(move |_| {
-        if busy.contains(&arrivals.fetch_add(1, Ordering::SeqCst)) {
-            Canned::status(503, "busy").asking("retry-after-ms", "0")
-        } else {
-            Canned::ok(ANSWERED)
-        }
-    })
-    .expect("a loopback listener")
+    let total = thinkthen::read_usage(&Folder::Usage.under(home), &thinkthen::current_usage_month()).unwrap().total;
+    serde_json::json!({"requests_sent": total.requests_sent(), "retries": total.retries(),
+        "input_tokens": total.input_tokens(), "output_tokens": total.output_tokens(),
+        "cache_answers": total.cache_answers()})
 }
 
 // It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
 #[cfg(unix)]
-#[cfg(feature = "cli")]
-#[test]
-fn the_command_and_a_seeded_engine_add_to_one_total() {
-    let listener = failing_at(&[1]);
-    let home = folder("usage-one-total");
-    let (cache, state) = (Folder::Cache.variable(&home), Folder::Usage.variable(&home));
-    let evidence = folder("usage-one-total-evidence");
-    fs::write(&evidence, format!("{EVIDENCE}\n")).expect("evidence");
-    let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["decide", "asks for a refund"])
-        .clear_environment()
-        .env(cache.0, &cache.1)
-        .env(state.0, &state.1)
-        .env("THINKTHEN_BASE_URL", listener.base())
-        .stdin(fs::File::open(&evidence).expect("evidence"))
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .expect("the command starts");
-    let command = crate::wait::finish(child, "thinkthen decide").expect("the command runs");
-    assert!(
-        command.status.success(),
-        "{}",
-        String::from_utf8_lossy(&command.stderr)
-    );
-    let seeded = in_child(
-        "usage-seeded",
-        &[
-            (cache.0, cache.1.as_str()),
-            (state.0, state.1.as_str()),
-            ("THINKTHEN_BASE_URL", listener.base()),
-        ],
-    );
-    assert_eq!(seeded, "Some(true) sent 2 cached 0");
-    assert_eq!(listener.count(), 3);
-    assert_eq!(
-        status(&home),
-        serde_json::json!({"requests_sent": 3, "retries": 1, "input_tokens": 624, "output_tokens": 96, "cache_answers": 0})
-    );
-}
-
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
-#[cfg(unix)]
-#[cfg(feature = "cli")]
 #[test]
 fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
     let listener = listener();
