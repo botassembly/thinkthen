@@ -62,7 +62,7 @@ def render(schema):
 def main():
     import subprocess
     import tempfile
-    root = Path(__file__).resolve().parents[4]
+    root = Path(__file__).resolve().parents[3]
     sys.path.insert(0, str(root / 'conformance/children'))
     from children import CARGO, child_env
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())

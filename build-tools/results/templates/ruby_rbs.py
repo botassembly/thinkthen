@@ -46,7 +46,7 @@ def schema_type(source, reference, objects=False):
 
 
 def render(definitions, name):
-    request = json.loads((Path(__file__).resolve().parents[4] / 'specification/request.schema.json').read_text())['$defs']
+    request = json.loads((Path(__file__).resolve().parents[3] / 'specification/request.schema.json').read_text())['$defs']
     selected = {}
 
     def request_type(key):

@@ -381,7 +381,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[4]
+    root = Path(__file__).resolve().parents[3]
     sys.path.insert(0, str(root / 'conformance/children'))
     from children import CARGO, child_env
     schema = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())

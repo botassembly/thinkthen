@@ -131,7 +131,7 @@ class PrivacyTests(unittest.TestCase):
                                      'mkdir -p "$2/include" "$2/lib"\n'
                                      'printf "public header" > "$2/include/thinkthen.h"\n'
                                      'printf "PRIVATE_KEY_MARKER" > "$2/lib/libthinkthen.a"\n}\n')
-                    (root / 'sdlc/generators/results/generate.py').write_text('')
+                    (root / 'build-tools/results/generate.py').write_text('')
                     zig = tools / 'zig'
                     zig.write_text('#!/bin/sh\n[ "$1" = fmt ] || exit 9\n')
                     zig.chmod(0o755)

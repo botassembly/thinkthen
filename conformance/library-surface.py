@@ -9,7 +9,7 @@ import sys
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
 from sources import tracked_files
 
 
@@ -126,7 +126,7 @@ def exported(declared, names):
 def check(root, manifest, name):
     config = manifest['libraries'][name]
     request, result, functions = SCHEMA.contracts(root, manifest['authority'])
-    sys.path.insert(0, str(root / 'sdlc/generators/results'))
+    sys.path.insert(0, str(root / 'build-tools/results'))
     from registry import OUTPUTS
     suffixes = {
         'python': ('.pyi',), 'typescript': ('.d.ts',), 'ruby': ('.rb', '.rbs'),

@@ -19,7 +19,7 @@ if [ "$profile" = routine ]; then
     THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$repo/conformance/routine-ids.txt}
     export THINKTHEN_CONFORMANCE_IDS
 fi
-python3 "$repo/sdlc/generators/results/generate.py" --target typescript --check
+python3 "$repo/build-tools/results/generate.py" --target typescript --check
 . "$repo/sdlc/scripts/scratch.sh"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home

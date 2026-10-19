@@ -74,7 +74,7 @@ ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "confor
 # same lints, license, and dependency tables as the crate.
 MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend", "thinkthen-host": "crates/thinkthen-host"}
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
-sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+sys.path.insert(0, str(REPO / "build-tools/results"))
 from registry import generated_paths
 from sources import TOOL_GENERATED, tracked_files
 GENERATED_BINDING_SOURCES = generated_paths() | TOOL_GENERATED

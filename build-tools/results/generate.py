@@ -15,7 +15,7 @@ from registry import OUTPUTS, attributes, invocations, output_path
 from native import selected_functions, immediate_schema
 from formatting import format_source
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import CARGO, child_env
 SCHEMA = ROOT / 'crates/thinkthen/src/public/results/complete.schema.json'
@@ -1005,7 +1005,7 @@ def main():
     result = format_source(args.output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
-            print('generated results differ; run sdlc/generators/results/generate.py',
+            print('generated results differ; run build-tools/results/generate.py',
                   file=sys.stderr)
             return 1
     else:
@@ -1019,7 +1019,7 @@ def main():
         inputs = format_source('RequestInputs.g.cs', target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph), child_env())
         output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
         if not output.exists() or output.read_text() != inputs:
-            print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)
+            print('generated C# inputs differ; run build-tools/results/generate.py --inputs', file=sys.stderr)
             return 1
     return 0
 
