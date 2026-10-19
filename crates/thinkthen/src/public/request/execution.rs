@@ -753,6 +753,9 @@ pub(super) fn apply(
             }
         }
         RequestDefinition::Relate(q) => {
+            if let Some(rule) = &options.threshold {
+                q.0.override_threshold(&rule.native()?.to_string()).map_err(Error::refused)?;
+            }
             if let Some(model) = &options.model {
                 q.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
             }

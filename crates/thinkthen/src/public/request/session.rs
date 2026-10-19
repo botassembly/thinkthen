@@ -237,6 +237,13 @@ pub struct RequestSessionFeedOptions {
     /// Defaults to false: ordinary caller cancellation takes precedence over success.
     /// Applies to inline, source and feed requests in either session mode.
     pub retain_success_on_cancel: bool,
+    /// Publish each completed recognition collection immediately as an Aggregate
+    /// packet, before input EOF. Defaults to false, preserving one final whole-
+    /// function Aggregate, including empty input and a failed completed prefix.
+    /// With this ordinary recognition-only option, empty collections publish
+    /// nothing and the terminal answer still retains the complete ordered prefix.
+    /// Bounded publication applies backpressure and never replays the final prefix.
+    pub incremental_recognition: bool,
     /// Validate the supported input before any provider sends.
     pub eager: bool,
     /// Admit the image route before the caller reads content.
@@ -251,6 +258,7 @@ impl std::fmt::Debug for RequestSessionFeedOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RequestSessionFeedOptions")
             .field("retain_success_on_cancel", &self.retain_success_on_cancel)
+            .field("incremental_recognition", &self.incremental_recognition)
             .field("eager", &self.eager).field("image_inputs", &self.image_inputs)
             .field("all_filter_results", &self.all_filter_results)
             .field("record_reading", &self.record_reading).finish()
@@ -449,6 +457,10 @@ impl Engine {
                 return Err(Error::usage("annotation pointer continuation cannot accompany general row recovery"));
             }
         }
+        if options.incremental_recognition && (request.call.function() != super::RequestFunction::Recognize
+            || matches!(mode, Mode::Recovering)) {
+            return Err(Error::usage("incremental recognition requires an ordinary recognition session"));
+        }
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
@@ -531,7 +543,11 @@ fn run(
             answers
                 .borrow_mut()
                 .record(&RequestValue::Recognized(rows.clone()));
-            recognized.borrow_mut().extend(rows);
+            if options.incremental_recognition {
+                if !rows.is_empty() {
+                    queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(rows)));
+                }
+            } else { recognized.borrow_mut().extend(rows); }
         }
         value => publish_rows(
             queue,
@@ -577,7 +593,7 @@ fn run(
                 RequestSessionTerminal::failed(error)
             }
         };
-    if function == super::RequestFunction::Recognize {
+    if function == super::RequestFunction::Recognize && !options.incremental_recognition {
         queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
             recognized.into_inner(),
         )));

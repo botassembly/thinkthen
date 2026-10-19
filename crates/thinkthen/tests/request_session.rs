@@ -17,6 +17,8 @@ mod cancel_settlement;
 mod framing;
 #[path = "request_session/push.rs"]
 mod push;
+#[path = "request_session/incremental_recognition.rs"]
+mod incremental_recognition;
 #[path = "request_session/recognize.rs"]
 mod recognize;
 #[path = "request_session/wait.rs"]

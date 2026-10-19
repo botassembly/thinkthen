@@ -74,3 +74,35 @@ fn wording_controls_keep_wire_presence_and_refuse_wrong_verbs_before_file_reads(
         assert_eq!(request.admit().unwrap_err().kind(), ErrorKind::Usage);
     }
 }
+
+#[test]
+fn relation_threshold_overrides_share_native_preview_and_execution() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let saved = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"threshold":0.5}"#;
+    let input = || RequestInput::Records { items: ["Ada", "Bea"].into_iter().map(|name| RequestItem {
+        original: Some(RequestOriginal::Json { value: RawRecord::json(&json!({"name":name,"kind":"person"}).to_string()).unwrap() }),
+        images: Vec::new(), context: None, options: None, seed_spans: None, examples: None,
+    }).collect() };
+    for threshold in [None, Some(0.95)] {
+        let request = Request::for_function(RequestFunction::Relate, RequestArguments {
+            question: RequestQuestion::Definition { value: Relate::from_records_json(saved).unwrap().into() },
+            input: input(), options: RequestOptions { threshold: threshold.map(RequestThreshold::Cut), ..Default::default() },
+        }).admit().unwrap();
+        let plan = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
+        let authored = saved.replace("0.5", &threshold.unwrap_or(0.5).to_string());
+        let equivalent = Request::for_function(RequestFunction::Relate, RequestArguments {
+            question: RequestQuestion::Definition { value: Relate::from_records_json(&authored).unwrap().into() },
+            input: input(), options: RequestOptions::default(),
+        }).admit().unwrap();
+        let expected = engine.plan_request(&equivalent, RequestEnvironment::default()).unwrap();
+        assert_eq!(plan.first_body(), expected.first_body());
+        assert_eq!(listener.count(), if threshold.is_some() { 1 } else { 0 });
+        let RequestOutcome::Complete(call) = engine.execute_request(&request, RequestEnvironment::default()).unwrap() else { panic!("complete relate") };
+        let RequestValue::Related(row) = call.value() else { panic!("related") };
+        assert_eq!(serde_json::to_value(row.result()).unwrap()["question"]["threshold"], threshold.unwrap_or(0.5));
+        assert_eq!(row.result().value().is_empty(), threshold.is_some());
+        assert_eq!(call.facts().requests_sent(), 1);
+    }
+    assert_eq!(listener.count(), 2);
+}

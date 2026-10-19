@@ -950,3 +950,17 @@ output before acknowledging, and declines/cancels after a failed output operatio
 `ErrorDiagnostic::MissingPointer { pointer: &str }` directly borrows the retained native
 record cause; it authorizes no recovery and exposes no record content. Error kind,
 facts, ordinary serialization and all existing result packet shapes stay unchanged.
+
+`RequestSessionFeedOptions::incremental_recognition` defaults to false. Ordinary
+recognition sessions may opt in to immediate nonempty native recognition
+collections in existing Aggregate packets. Each collection is recorded once in
+settlement before bounded publication. Empty final values do not replay earlier
+rows; Terminal still owns the complete ordered answer, failed prefix and final
+facts. Default sessions retain the existing one final Aggregate, including empty
+input. Other functions and general recovering sessions refuse this flag before
+input. The CLI recognition command requires this option for incremental output
+and native backpressure; it introduces no packet or C interface field.
+
+The existing `RequestOptions::threshold` relation override uses the same native
+single-cut validator as authored relation settings, before both preview and
+execution. It retains saved precedence and does not rewrite the authored file.
