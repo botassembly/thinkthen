@@ -76,7 +76,8 @@ def run(native, scratch):
                     str(ROOT / 'libraries/c/tests/c/run_call.c'),
                     *static_flags(native, env), '-o', str(binary)], env=env, check=True)
     rows = parity.required_cases(parity.inventory(), 'c')
-    cases = {case['id']: case for case in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
+    corpus = json.loads((ROOT / 'conformance/cases.json').read_text())
+    cases = {case['id']: case for case in corpus['cases']}
     named = {case['id']: case for case in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
     backend_binary = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))) / 'debug/conformance-backend'
     for name in CASES:
@@ -101,26 +102,29 @@ def run(native, scratch):
                     print(f'installed blocking C: {name} {mode} PASS', flush=True)
                 finally:
                     backend.close()
-    # Producer failure and cancellation while provider work remains held use the same caller.
-    for probe in ('producer', 'held'):
+    # One shared behavior table drives the installed C and Rust callers.
+    for probe in corpus['call_behaviors']:
         with tempfile.TemporaryDirectory(prefix='blocking-c-stop-', dir=scratch) as folder:
             home = Path(folder)
             isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
             backend = shared.Backend(backend_binary, isolated)
             try:
-                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held" else "full"}/v1',
+                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held-cancel" else "full"}/v1',
                                 THINKTHEN_API_KEY='sk-conformance-loopback')
                 value = shared.document(rows[CASES[0]], cases, named)
-                value['held_cancel'] = probe == 'held'
+                value['held_cancel'] = probe == 'held-cancel'
+                if probe == 'expired-deadline':
+                    value['operation'] = {'injection': 'expired_deadline'}
+                mode = {'producer': 'fail', 'missing-producer': 'missing',
+                        'held-cancel': 'fed', 'expired-deadline': 'plain'}[probe]
                 payload = invoke(binary, value, {'cache': False, 'max_retries': 0}, isolated, home,
-                                 backend, 'fail' if probe == 'producer' else 'fed')
-                assert payload['code'] == (4 if probe == 'producer' else 5), payload
-                assert payload['retryable'] is False and payload['message'], payload
-                if probe == 'producer':
-                    assert payload['message'] == 'session producer raised an exception', payload
-                    assert int(backend.read('count')) == 0
-                else:
-                    assert payload['facts']['requests_sent'] == 1, payload
+                                 backend, mode)
+                expected = corpus['call_behaviors'][probe]
+                assert payload['code'] == shared.ERRORS[expected['kind']], payload
+                assert payload['retryable'] is False and payload['message'] == expected['message'], payload
+                assert int(backend.read('count')) == expected['requests_sent'], payload
+                if 'facts_requests_sent' in expected:
+                    assert payload['facts']['requests_sent'] == expected['facts_requests_sent'], payload
                 print(f'installed blocking C: {probe} PASS', flush=True)
             finally:
                 backend.close()

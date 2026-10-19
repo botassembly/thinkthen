@@ -35,22 +35,37 @@ fn engine(listener: &Listener) -> Result<Engine, Error> {
         .max_retries(0)
         .build()
 }
-fn kind(
+fn behavior(
     error: &Error,
-    expected: ErrorKind,
-    message: &str,
+    id: &str,
+    requests_sent: usize,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let cases: serde_json::Value = serde_json::from_str(CASES)?;
-    assert!(
-        cases
-            .get("error_kinds")
-            .and_then(serde_json::Value::as_array)
-            .ok_or("missing shared kinds")?
-            .iter()
-            .any(|kind| kind.as_str() == Some(error.kind().name()))
+    let expected = cases
+        .get("call_behaviors")
+        .and_then(|cases| cases.get(id))
+        .ok_or("missing shared call behavior")?;
+    assert_eq!(
+        Some(error.kind().name()),
+        expected.get("kind").and_then(serde_json::Value::as_str)
     );
-    assert_eq!(error.kind(), expected);
-    assert_eq!(error.to_string(), message);
+    assert_eq!(
+        Some(error.to_string().as_str()),
+        expected.get("message").and_then(serde_json::Value::as_str)
+    );
+    assert_eq!(
+        Some(requests_sent as u64),
+        expected.get("requests_sent").and_then(serde_json::Value::as_u64)
+    );
+    if let Some(sent) = expected
+        .get("facts_requests_sent")
+        .and_then(serde_json::Value::as_u64)
+    {
+        assert_eq!(
+            error.facts().ok_or("missing final facts")?.requests_sent(),
+            sent
+        );
+    }
     Ok(())
 }
 #[test]
@@ -71,17 +86,12 @@ fn producer_failure_keeps_its_cause_and_sends_nothing() -> Result<(), Box<dyn st
         )
         .err()
         .ok_or("producer succeeded")?;
-    kind(
-        &error,
-        ErrorKind::Local,
-        "session producer raised an exception",
-    )?;
+    behavior(&error, "producer", listener.count())?;
     assert_eq!(
         error.source().ok_or("lost producer cause")?.to_string(),
         "producer marker"
     );
     assert!(!format!("{error:?}").contains("producer marker"));
-    assert_eq!(listener.count(), 0);
     Ok(())
 }
 #[test]
@@ -91,12 +101,7 @@ fn feed_without_producer_is_usage_before_send() -> Result<(), Box<dyn std::error
         .call("decide", arguments(true)?, RequestEnvironment::default())
         .err()
         .ok_or("missing producer succeeded")?;
-    kind(
-        &error,
-        ErrorKind::Usage,
-        "the request requires its named caller-supplied feed",
-    )?;
-    assert_eq!(listener.count(), 0);
+    behavior(&error, "missing-producer", listener.count())?;
     Ok(())
 }
 #[test]
@@ -133,12 +138,7 @@ fn cancellation_while_reply_is_held_returns_settled_failure()
     let outcome = worker.join().map_err(|_| "call worker panicked")?;
     arrived?;
     let error = outcome.err().ok_or("cancelled call succeeded")?;
-    kind(&error, ErrorKind::Cancelled, "the call was cancelled")?;
-    assert_eq!(listener.count(), 1);
-    assert_eq!(
-        error.facts().ok_or("missing final facts")?.requests_sent(),
-        1
-    );
+    behavior(&error, "held-cancel", listener.count())?;
     Ok(())
 }
 #[test]
@@ -155,11 +155,6 @@ fn expired_deadline_sends_nothing() -> Result<(), Box<dyn std::error::Error>> {
         )
         .err()
         .ok_or("expired call succeeded")?;
-    kind(
-        &error,
-        ErrorKind::Deadline,
-        "the deadline of 0 s passed before the call answered",
-    )?;
-    assert_eq!(listener.count(), 0);
+    behavior(&error, "expired-deadline", listener.count())?;
     Ok(())
 }

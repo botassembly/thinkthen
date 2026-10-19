@@ -240,7 +240,7 @@ def assertions(row, value, got, count):
         assert isinstance(result['results'], list) and len(result['results']) == expected['results_count'], result
         assert isinstance(result['facts'], dict) and result['facts']['requests_sent'] == expected['requests_sent'], result
         assert count == expected['requests_sent'], (count, result)
-    if 'settled' in expect and 'settled' in got:
+    if row['kind'] == 'behavior' and 'settled' in expect and 'settled' in got:
         assert equivalent(got['settled'], expect['settled']['collection']), (got['settled'], expect['settled'])
     error = expect.get('error')
     if error is not None:

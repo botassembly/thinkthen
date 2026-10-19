@@ -18358,5 +18358,28 @@
         ]
       }
     ]
+  },
+  "call_behaviors": {
+    "producer": {
+      "kind": "local",
+      "message": "session producer raised an exception",
+      "requests_sent": 0
+    },
+    "missing-producer": {
+      "kind": "usage",
+      "message": "the request requires its named caller-supplied feed",
+      "requests_sent": 0
+    },
+    "held-cancel": {
+      "kind": "cancelled",
+      "message": "the call was cancelled",
+      "requests_sent": 1,
+      "facts_requests_sent": 1
+    },
+    "expired-deadline": {
+      "kind": "deadline",
+      "message": "the deadline of 0 s passed before the call answered",
+      "requests_sent": 0
+    }
   }
 }
