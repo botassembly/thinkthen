@@ -40,7 +40,10 @@ impl Engine {
             rejected,
             |ordinal, held, row| {
                 let outcome =
-                    complete_row(&engine, &questions.0, &stop, &held, ordinal, row).map(|result| {
+                    complete_row(
+                        &engine, &questions.0, &stop, &held, ordinal, row,
+                        options.shared_state_groups,
+                    ).map(|result| {
                         RequestValue::Annotations(vec![CompleteRecord {
                             original: held.original,
                             ordinal,
@@ -134,7 +137,10 @@ impl Engine {
                             .at_record(at));
                     }
                 };
-                let outcome = complete_row(&engine, &questions.0, stop, &original.held, at, row)
+                let outcome = complete_row(
+                    &engine, &questions.0, stop, &original.held, at, row,
+                    options.shared_state_groups,
+                )
                     .map(|result| {
                         RequestValue::Annotations(vec![CompleteRecord {
                             original: original.held.original,

@@ -150,6 +150,16 @@ impl CompleteAnnotationMember<'_> {
             .map(|(_, answer, _, _)| super::complete::probabilities(answer))
     }
 
+    /// The retained native choice pick or score level before threshold reading.
+    /// This is absent for decide, tag and failed members, and never inferred
+    /// from probabilities. A tied or below-threshold choice still has its
+    /// backend answer's original leader even when its read value is null.
+    #[must_use]
+    pub fn leader(&self) -> Option<&str> {
+        self.canonical.reading.answered()
+            .and_then(|(_, answer, _, _)| answer.leader())
+    }
+
     /// Backend-provided confidence, when supplied for this successful member.
     #[must_use]
     pub fn confidence(&self) -> Option<f64> {

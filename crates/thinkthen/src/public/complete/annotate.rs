@@ -76,7 +76,7 @@ impl Asker for Annotations {
         answers: Vec<pipeline::Answered>,
     ) -> Result<facade::Annotation, Error> {
         Annotating::new(&self.engine, self.set.clone())
-            .require_usable_groups(self.require_usable_groups)
+            .require_usable_groups(self.require_usable_groups && !self.shared_state_groups)
             .row(input.text, answers)
     }
 }
@@ -123,6 +123,10 @@ fn failed(row: pipeline::Failed<Error>) -> Error {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the native annotation renderer carries one explicit failed-member settlement policy"
+)]
 fn complete_row<T>(
     engine: &facade::Engine,
     set: &core::QuestionSet,
@@ -130,6 +134,7 @@ fn complete_row<T>(
     held: &Held<T>,
     at: usize,
     row: pull::Row<Annotations>,
+    retain_failed_members: bool,
 ) -> Result<CompleteAnnotated, Error> {
     let annotation = row.map_err(failed)?;
     let mut observed = crate::public::bulk::annotation::rendered(
@@ -144,7 +149,7 @@ fn complete_row<T>(
     let all_failed =
         annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty();
     crate::public::bulk::observe_annotated(&observed, at, stop)?;
-    if all_failed {
+    if all_failed && !retain_failed_members {
         return Err(crate::public::asking::backend_failed());
     }
     render::complete(
