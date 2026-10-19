@@ -137,7 +137,7 @@ fn write_run_facts(
     cancelled: bool,
 ) {
     let stderr = io::stderr();
-    let snapshot = environment.usage().run_snapshot();
+    let snapshot = environment.snapshot();
     let elapsed = started.elapsed();
     let writer = stderr.lock();
     let stopped = if cancelled {
@@ -151,9 +151,7 @@ fn write_run_facts(
         elapsed,
         accepted.elapsed(),
         stopped,
-        environment
-            .native_call_id()
-            .or_else(|| environment.cancel().call_id()),
+        environment.native_call_id(),
     );
 }
 
@@ -165,7 +163,7 @@ fn mcp_entry(arguments: &crate::mcp::startup::Arguments) -> ExitCode {
 }
 
 fn warn_configuration(environment: &Environment, mut writer: impl Write) {
-    warn_configuration_shared(environment.config().shared(), &mut writer);
+    warn_configuration_shared(environment.configuration_shared(), &mut writer);
 }
 
 pub(crate) fn warn_configuration_shared(shared: bool, mut writer: impl Write) {
@@ -179,7 +177,7 @@ pub(crate) fn warn_configuration_shared(shared: bool, mut writer: impl Write) {
 }
 
 fn warn_held_model_mismatch(environment: &Environment, mut writer: impl Write) {
-    if environment.usage().has_held_model_mismatch() {
+    if environment.snapshot().facts.held_model_mismatch() {
         let _unwritten = writeln!(
             writer,
             "thinkthen: warning: a held answer names a different model and cannot be reused online"
@@ -188,17 +186,22 @@ fn warn_held_model_mismatch(environment: &Environment, mut writer: impl Write) {
 }
 
 fn finish_usage(environment: &Environment) {
-    if environment.usage().finish() {
+    if let Some(failure) = environment.finish_usage() {
         let mut writer = io::stderr().lock();
-        let advice = environment.usage().failed_file().map_or_else(
+        let advice = failure.map_or_else(
             || "check the usage folder permissions and free space".to_owned(),
-            |(name, category)| format!("local usage file {name} has {category}"),
+            |failure| {
+                let name = failure.file_name.as_deref().unwrap_or("usage directory");
+                let category = match failure.category {
+                    crate::UsageFailureCategory::InvalidContents => "invalid contents",
+                    crate::UsageFailureCategory::UnsafeOrUnreadable => "unsafe or unreadable state",
+                };
+                format!("local usage file {name} has {category}")
+            },
         );
-        let _unwritten = writeln!(
-            writer,
-            "thinkthen: usage counters could not be updated; {advice}"
-        )
-        .and_then(|()| writer.flush());
+        let _unwritten = writeln!(writer,
+            "thinkthen: usage counters could not be updated; {advice}")
+            .and_then(|()| writer.flush());
     }
 }
 
@@ -231,7 +234,11 @@ fn report_early(
     if wants_facts {
         facts::write(
             &mut writer,
-            crate::engine::usage::Counters::default().run_snapshot(),
+            facts::Snapshot {
+                facts: crate::Tally::new().facts(),
+                counts: crate::Counters::ZERO,
+                http_time: None,
+            },
             started.elapsed(),
             accepted.elapsed(),
             Some(failure::facts::Stopped::of(failure, code)),
