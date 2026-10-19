@@ -66,7 +66,8 @@ impl fmt::Debug for Secret {
 /// Engine settings, checked at each step and applied at [`EngineBuilder::build`].
 ///
 /// A builder holds settings alone. It opens no file, counts nothing, and
-/// registers no throttle until `build`, except explicit [`Self::preload_ca_bundle`].
+/// registers no throttle until `build`, except explicit [`Self::select_throttle`].
+/// [`Self::preload_ca_bundle`] explicitly reads the selected certificate file.
 pub struct EngineBuilder {
     base_url: Option<String>,
     backend: Option<String>,
@@ -293,6 +294,27 @@ impl EngineBuilder {
             .map_err(|_| Error::usage("a throttle is a whole number from 1 through 32"))?;
         self.width = Some(width);
         Ok(self)
+    }
+
+    /// Select this process's live-attempt throttle immediately and retain it for build.
+    ///
+    /// This is an explicit process-state operation for callers that must refuse a
+    /// conflicting width before reading input or opening storage. The first explicit
+    /// width persists after this builder is dropped or a later setting/build fails.
+    /// Selecting the same width succeeds; a different one is refused. Ordinary
+    /// [`Self::throttle`] stays lazy until build. Omit this operation when no width
+    /// was requested: following the process default does not select a width.
+    /// This uses the existing fork-aware process limit owner and sends nothing.
+    ///
+    /// # Errors
+    /// Returns Usage for an invalid width or the existing typed active-width conflict.
+    pub fn select_throttle(self, value: u8) -> Result<Self, Error> {
+        let builder = self.throttle(value)?;
+        let limits = crate::engine::limits::of(std::process::id(), &crate::engine::Cancel::default())
+            .map_err(Error::from)?;
+        limits.widths.select(builder.width)
+            .map_err(|active| Error::from(crate::engine::error::Error::WidthActive(active)))?;
+        Ok(builder)
     }
 
     /// Refuse a call over more than this many records. `rank` and `find`

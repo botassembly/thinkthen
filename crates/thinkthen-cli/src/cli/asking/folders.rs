@@ -1,7 +1,5 @@
 //! The recording folders one command selected.
 
-use std::fs;
-
 use crate::args::Common;
 use crate::edge::Environment;
 use crate::failure::Failure;
@@ -92,9 +90,6 @@ impl Folders {
         self.record
             .as_deref()
             .or(self.replay.as_deref())
-            .and_then(|folder| fs::metadata(folder).ok())
-            .is_some_and(|metadata| {
-                metadata.is_dir() && crate::config::writable_by_another(&metadata)
-            })
+            .is_some_and(crate::storage_writable_by_another)
     }
 }

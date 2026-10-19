@@ -875,3 +875,15 @@ Neither operation exposes certificate bytes, provider bodies, or credentials.
 `ResolvedSettings::is_built_in` reuses that same native resolved-backend predicate
 without building storage or transport. The command reads it to retain its request-size
 warning before profile and certificate admission; no URL rule is copied at the edge.
+
+`EngineBuilder::select_throttle(self, u8) -> Result<EngineBuilder, Error>` selects
+the existing fork-aware process throttle immediately, retaining it for build. Selection
+persists after a builder drop or a later failure. The same selection succeeds and a
+different one retains the typed conflict. Ordinary `throttle` remains lazy. Commands
+call this only at their original explicit-jobs admission point; omitted jobs select nothing.
+
+`storage_writable_by_another(&Path) -> bool` is the existing best-effort named-folder
+warning signal, reusing native directory metadata ownership/world-write rules. It returns
+false for missing paths, files, metadata failures and non-Unix platforms. It is no security
+or storage-validity guarantee. The command retains its private-default exemption, record
+before replay path selection, and warning order before any storage build.

@@ -51,3 +51,15 @@ pub fn preview_cache_prune(
 pub fn prune_cache(path: &Path, options: &CachePruneOptions) -> Result<CachePruned, Error> {
     store::prune(path, options, store::now()).map_err(Error::from)
 }
+
+/// Best-effort warning signal for an explicitly selected cache or recording folder.
+/// Uses the existing native owner/world-write predicate on directory metadata.
+/// Missing paths, regular files, metadata failures and non-Unix platforms return false.
+/// This does not establish security or storage validity; storage admission still owns
+/// those checks. The caller owns its private-default exemption and warning timing.
+#[must_use]
+pub fn storage_writable_by_another(path: &Path) -> bool {
+    std::fs::metadata(path).is_ok_and(|metadata| {
+        metadata.is_dir() && crate::config::writable_by_another(&metadata)
+    })
+}

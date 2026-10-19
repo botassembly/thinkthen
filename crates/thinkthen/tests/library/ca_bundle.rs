@@ -173,3 +173,27 @@ fn explicit_preload_retains_roots_and_new_selection_invalidates_them() {
     assert_eq!(error.to_string(), expected.to_string());
     assert!(!error.to_string().contains(missing.to_str().unwrap()));
 }
+
+#[test]
+fn named_storage_metadata_is_a_warning_signal_only() {
+    let fixture = Fixture::new();
+    let path = fixture.at("named");
+    assert!(!thinkthen::storage_writable_by_another(&path));
+    fs::write(&path, b"unchanged contents").unwrap();
+    assert!(!thinkthen::storage_writable_by_another(&path));
+    assert_eq!(fs::read(&path).unwrap(), b"unchanged contents");
+    let folder = fixture.at("folder");
+    fs::create_dir(&folder).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        for (mode, warned) in [(0o700, false), (0o770, false), (0o707, true)] {
+            fs::set_permissions(&folder, fs::Permissions::from_mode(mode)).unwrap();
+            assert_eq!(thinkthen::storage_writable_by_another(&folder), warned);
+            assert_eq!(fs::metadata(&folder).unwrap().permissions().mode() & 0o777, mode);
+        }
+    }
+    #[cfg(not(unix))]
+    assert!(!thinkthen::storage_writable_by_another(&folder));
+    assert_eq!(fs::read_dir(folder).unwrap().count(), 0);
+}
