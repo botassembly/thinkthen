@@ -19,6 +19,10 @@ pub mod carriers;
 #[path = "ffi/values.rs"]
 pub mod values;
 
+#[path = "ffi/runtime_version/ffi.rs"]
+mod runtime_version;
+pub use runtime_version::thinkthen_version;
+
 /// Counted constructors; native complete execution integration stays private.
 #[path = "ffi/current/ffi.rs"]
 pub mod current;
