@@ -64,6 +64,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: Fresh review accepts8fb6a4843 after pidfd-safe libc fallback and owned-home repairs passed PostgreSQL14 and conformance58 plus installer, registry, hosted, children and policy checks, with all failed receipts retained; tools.py changes the derived image tag to eaff8aa4e10dcb70a62f, so prepare and qualify that image after native integration before remaining capped suites and x86 proof.
 - 2026-10-19 next: Image preparation job1792422700610-64942 passed with actual image6187179e9fec18f0bf4b2a02d27e9b8209b128caf1d1772c8b5cc51e6da777ed, unchanged pins and declared-tool probes; fresh review accepts integrated57a481fa7 with all seven image inputs identical, while final-image suites, native Mac proof, resource measurements and x86 plus database checkpoint checks remain.
 - 2026-10-19 next: Fresh review accepts integratedcfad2cd71 with all seven image inputs unchanged; Yellow x86 preparation refused before starting with exit125 because the required16GiB booking exceeds its15GiB admission limit, and PM has the resource ruling while the accepted629-635 pair closes its gate before final-image suites.
+- 2026-10-19 next: PM clarified that Yellow bookings and container caps are both13.5GiB under the prior ruling, while16GiB applies to M5 and hosted jobs; the refused16GiB prepare started nothing and the unchanged Yellow prepare now retries with the authorized13.5GiB booking before final integrated suites.
 
 ## Amendment, 2026-10-18
 
