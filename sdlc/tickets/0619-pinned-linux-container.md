@@ -49,6 +49,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: Updated-manifest image preparation at f10d64cf6 stopped before probes on Ubuntu snapshot HTTP502 in job1792415676742-53168; one unchanged infrastructure retry is authorized while native landings continue independently.
 - 2026-10-19 next: The single unchanged preparation retry job1792415714835-65984 also stopped before probes on snapshot HTTP503; retain both failed receipts, diagnose the immutable certificate-bootstrap input without edits or further retries, and keep native landings independent.
 - 2026-10-19 next: Read-only diagnosis confirms both preparation failures are remote Docker ADD of the unchanged SHA256-pinned certificate package before verification; no existing offline input route exists, so hold further preparation until endpoint recovery or a scoped recipe ruling, keep both receipts and old image, and continue native phase1 landings.
+- 2026-10-19 next: Reviewed75ba26cfd keeps the exact certificate checksum while using the official archive; M5prepare job1792416297174-36106 passed with imagef090f2aa90834abd29c4c13cba83df9546e63b1b975eccd5845c44941a566756, both declared-tool checks and unchanged caps, and the first bounded Linuxlint proof now runs while native phase1 landings continue.
 
 ## Amendment, 2026-10-18
 
