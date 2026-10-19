@@ -146,7 +146,7 @@ fn declaration_files_take_no_version_inline_or_saved() {
         |text| QuestionSet::from_json(text).map(drop),
     ];
     for ((role, load, text), parse) in LOADERS.into_iter().skip(1).zip(parsers) {
-        parse(&text).expect("inline file without version");
+        parse(text).expect("inline file without version");
         let path = written(&folder, role, text.as_bytes());
         load(&path).expect("saved file without version");
         for version in ["1", "2", r#""1""#, "null"] {

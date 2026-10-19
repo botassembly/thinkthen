@@ -7,9 +7,6 @@
 //! line at all passes [`Typed::default`], so a library over this crate reaches
 //! the same question a shell user reaches.
 
-/// Refusal shared by the three declaration-file forms.
-pub(crate) const VERSION_FIELD_ERROR: &str = "delete the `version` field.";
-
 use std::fmt;
 
 use serde::{Serialize, Serializer};
@@ -21,6 +18,9 @@ use crate::core::pointer::{Pointer, PointerError};
 use crate::core::question::LabelsError;
 use crate::core::text::{BlankTextError, Description, Meaning, ModelName, QuestionText};
 use crate::core::threshold::{Threshold, ThresholdError};
+
+/// Refusal shared by the three declaration-file forms.
+pub(crate) const VERSION_FIELD_ERROR: &str = "delete the `version` field.";
 
 /// Which question type a file holds or a command asks.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
