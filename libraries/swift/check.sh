@@ -15,7 +15,6 @@ Darwin)
 esac
 swift=$(command -v swift || true)
 [ -x "$swift" ] || exit 77
-node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 for mode in '' --inputs --bridge; do
     python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
 done

@@ -10,14 +10,15 @@ case $profile in routine|full|stress|smoke) ;; *) echo "rust: unknown THINKTHEN_
 if [ "$profile" = routine ]; then
     export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/../../conformance/routine-ids.txt}"
 fi
-if [ "$profile" = stress ]; then
-    echo 'rust: not run: no port load campaign'
-    exit 77
-fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
 root=$(CDPATH= cd ../.. && pwd)
+if [ "$profile" = stress ] && [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+    cargo package --locked --offline --no-verify --manifest-path "$root/crates/thinkthen/Cargo.toml" -p thinkthen
+    version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/crates/thinkthen/Cargo.toml" | head -n 1)
+    THINKTHEN_ARTIFACT="$root/target/package/thinkthen-$version.crate"
+fi
 native_cases() {
     python3 - "$root" "$1" <<'RUSTNATIVE'
 import os,sys,tomllib
@@ -44,14 +45,18 @@ root,installed=map(Path,sys.argv[1:])
 project=installed/'consumer'
 shutil.copytree(root/'libraries/rust/consumer',project,dirs_exist_ok=True,ignore=shutil.ignore_patterns('target'))
 manifest=project/'Cargo.toml'
-manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(installed/'crate')))
+manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(installed/'crate')).replace('../../../conformance/backend',str(root/'conformance/backend')))
 RUSTCONSUMER
     if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then
         separator=$(printf '\037')
         CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:-}${CARGO_ENCODED_RUSTFLAGS:+$separator}--remap-path-prefix=$installed/crate=$THINKTHEN_COVERAGE_ROOT/crates/thinkthen"
         export CARGO_ENCODED_RUSTFLAGS
     fi
-    native_cases "$installed/consumer/Cargo.toml"
+    if [ "$profile" != stress ]; then native_cases "$installed/consumer/Cargo.toml"; fi
+    cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --test sessions -- --test-threads=1
+    if [ "$profile" = stress ]; then
+        cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --features session-stress --test sessions repeated_session_contention_never_loses_wake_or_settlement -- --exact --test-threads=1
+    fi
     echo 'rust: pass, installed'
     exit 0
 fi

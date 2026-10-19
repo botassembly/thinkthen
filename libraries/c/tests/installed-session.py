@@ -57,3 +57,5 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
         backend.close()
 
     run(native, root)
+    from session_wait import run as session_wait
+    session_wait(native, root)

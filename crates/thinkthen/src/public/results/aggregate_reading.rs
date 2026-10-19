@@ -54,7 +54,7 @@ impl RecognitionReading<'_> {
         &self.0.stage_context
     }
 
-    /// Caller task wording, absent for the compatibility default.
+    /// Caller task wording, absent for the default relation question.
     #[must_use]
     pub fn instructions(&self) -> Option<&str> {
         self.0

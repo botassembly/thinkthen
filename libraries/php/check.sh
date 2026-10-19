@@ -24,8 +24,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
  archive=$THINKTHEN_ARTIFACT
 else
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target php --check
- node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
- node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
  for file in autoload.php src/session/*.php examples/*.php fixtures/*.php; do "$php_bin" -n -l "$file" >/dev/null; done
  library=${THINKTHEN_COMPLETE_LIBRARY:-${CARGO_TARGET_DIR:-$repo/target}/debug/libthinkthen_c.so}
  if [ -z "${THINKTHEN_COMPLETE_LIBRARY:-}" ]; then

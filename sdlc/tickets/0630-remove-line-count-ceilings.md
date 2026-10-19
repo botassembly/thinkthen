@@ -1,12 +1,16 @@
 # 0630: Remove every line-count ceiling
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision fb2824e, accept
+
 ## Outcome
+
+- Changes: `**/ratchet*.json`, `.github/workflows/gate.yml`, `AGENTS.md`, `conformance/library-surface-README.md`, `conformance/library-surface-size-test.py`, `databases/sqlite/tests/conditional_backend.py`, `libraries/ada/check.sh`, `libraries/cobol/check.sh`, `libraries/cpp/check.sh`, `libraries/dart/check.sh`, `libraries/go/README-DEVELOPMENT.md`, `libraries/go/check.sh`, `libraries/php/check.sh`, `libraries/swift/check.sh`, `libraries/zig/check.sh`, `sdlc/README.md`, `sdlc/generators/results/sources.py`, `sdlc/planning/databases/README.md`, `sdlc/planning/databases/duckdb.md`, `sdlc/planning/databases/postgres.md`, `sdlc/planning/databases/sqlite.md`, `sdlc/planning/design-study.md`, `sdlc/planning/libraries/README.md`, `sdlc/planning/libraries/python.md`, `sdlc/planning/relate-design.md`, `sdlc/planning/review-lessons.md`, `sdlc/planning/rust-standards.md`, `sdlc/planning/ticket-preparation.md`, `sdlc/scripts/README.md`, `sdlc/scripts/install`, `sdlc/scripts/library-size`, `sdlc/scripts/lint`, `sdlc/scripts/policy.py`, `sdlc/scripts/ratchet.mjs`, `sdlc/scripts/surfaces`, `sdlc/scripts/test`, `sdlc/surfaces.txt`, `specification/rust-api-0.2.md`.
 
 - All 54 tracked `ratchet*.json` files are deleted, `sdlc/ratchet.json` included.
 - `sdlc/scripts/ratchet.mjs` and its self-tests are deleted. No gate, lint step, `surfaces` step, release script or workflow calls it.

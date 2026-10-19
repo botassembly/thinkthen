@@ -51,7 +51,8 @@ class StressSelection(unittest.TestCase):
                                      result.stdout + result.stderr)
 
     def test_actual_registry_excludes_unsupported_php_and_requires_selected_checks(self):
-        selected = {'libraries/polars', 'libraries/typescript', 'libraries/r',
+        selected = {'libraries/c', 'libraries/rust', 'libraries/polars',
+                    'libraries/typescript', 'libraries/r',
                     'databases/sqlite', 'databases/duckdb', 'databases/postgresql'}
         with tempfile.TemporaryDirectory(prefix='thinkthen-stress-selection-') as folder:
             root = Path(folder)
