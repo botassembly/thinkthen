@@ -383,6 +383,7 @@ ResolvedSettings::key_variables: Vec<String>
 RequestSessionFeedOptions::retain_success_on_cancel: bool
 RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>
 RequestSessionFeedOptions::incremental_recognition: bool
+RequestSessionFeedOptions::incremental_ranking: bool
 RequestSessionFeedOptions::input_pause: Option<Duration>
 const fn CallOptions::on_missing_annotation_pointer(self, &'a (dyn Fn(usize, &str) -> bool + Sync)) -> CallOptions<'a>
 fn find_candidate_count_range(bool) -> RangeInclusive<usize>
@@ -969,6 +970,8 @@ output before acknowledging, and declines/cancels after a failed output operatio
 `ErrorDiagnostic::MissingPointer { pointer: &str }` directly borrows the retained native
 record cause; it authorizes no recovery and exposes no record content. Error kind,
 facts, ordinary serialization and all existing result packet shapes stay unchanged.
+
+`RequestSessionFeedOptions::incremental_ranking` defaults to false. Ordinary rank sessions may opt in to the existing native streaming rank intake. Default sessions validate the whole set before sending. Opted-in sessions may send completed batches before a later invalid record; ranked output still waits for the whole set and failures retain actual send facts. Other functions and general recovering sessions refuse the option before source access. The CLI opts in to preserve its existing send behavior. This adds no packet, C, MCP or language-binding field.
 
 `RequestSessionFeedOptions::incremental_recognition` defaults to false. Ordinary
 recognition sessions may opt in to immediate nonempty native recognition

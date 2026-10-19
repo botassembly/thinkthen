@@ -248,6 +248,11 @@ pub struct RequestSessionFeedOptions {
     /// nothing and the terminal answer still retains the complete ordered prefix.
     /// Bounded publication applies backpressure and never replays the final prefix.
     pub incremental_recognition: bool,
+    /// Rank records as they arrive through the existing native streaming path.
+    /// Defaults to false, preserving whole-set admission before provider sends.
+    /// Only ordinary rank sessions admit this option; ranked output still waits
+    /// for the complete set and a later invalid record retains actual send facts.
+    pub incremental_ranking: bool,
     /// Override the native open-batch input pause for a caller-supplied feed.
     /// None retains the native default; zero retains immediate native closure.
     /// This controls the existing host pause, without another timer. Headers,
@@ -268,6 +273,7 @@ impl std::fmt::Debug for RequestSessionFeedOptions {
         f.debug_struct("RequestSessionFeedOptions")
             .field("retain_success_on_cancel", &self.retain_success_on_cancel)
             .field("incremental_recognition", &self.incremental_recognition)
+            .field("incremental_ranking", &self.incremental_ranking)
             .field("input_pause", &self.input_pause)
             .field("eager", &self.eager)
             .field("image_inputs", &self.image_inputs)
@@ -481,6 +487,14 @@ impl Engine {
                 "incremental recognition requires an ordinary recognition session",
             ));
         }
+        if options.incremental_ranking
+            && (request.call.function() != super::RequestFunction::Rank
+                || matches!(mode, Mode::Recovering))
+        {
+            return Err(Error::usage(
+                "incremental ranking requires an ordinary rank session",
+            ));
+        }
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
@@ -609,8 +623,14 @@ fn run(
         controls = controls.readiness(&readiness);
     }
     let environment = RequestEnvironment { controls, feed };
+    // The existing release hook selects native incremental rank intake. Session
+    // packets own the final result, so discarded originals need no host callback.
+    let release = |_: usize| {};
+    let release = options
+        .incremental_ranking
+        .then_some(&release as &dyn Fn(usize));
     let mut terminal =
-        match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
+        match engine.execute_request_sink(&request, environment, Some(&sink), release, None) {
             Ok(RequestOutcome::Complete(call)) => {
                 let facts = call.facts().clone();
                 queue.close_intake();

@@ -15,6 +15,8 @@ mod annotation_missing;
 mod cancel_settlement;
 #[path = "request_session/framing.rs"]
 mod framing;
+#[path = "request_session/incremental_ranking.rs"]
+mod incremental_ranking;
 #[path = "request_session/incremental_recognition.rs"]
 mod incremental_recognition;
 #[path = "request_session/push.rs"]

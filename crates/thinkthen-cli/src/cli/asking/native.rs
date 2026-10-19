@@ -67,6 +67,7 @@ pub(super) fn run(
         crate::RequestSessionFeedOptions {
             on_missing_annotation_pointer: None,
             incremental_recognition: false,
+            incremental_ranking: function == crate::RequestFunction::Rank,
             input_pause: environment.input_pause(),
             retain_success_on_cancel: true,
             eager: false,
