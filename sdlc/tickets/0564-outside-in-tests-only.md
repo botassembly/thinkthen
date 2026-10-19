@@ -16,6 +16,8 @@ Reviews: revision 387ccc1, accept
 
 Reviews: revision 699ef50, accept
 
+Reviews: revision ea272a3, accept
+
 ## Outcome
 
 Unit tests in `src` stay only where no public surface can show the behavior, or where the stakes call for a direct test, and each one says why. Every behavior they covered that a caller can reach has an outside-in test through the CLI, the Rust public API, the MCP command or an installed library. No behavior a caller can reach loses its only test. Passing tests leave no temporary folders behind.
