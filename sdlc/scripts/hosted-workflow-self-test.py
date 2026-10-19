@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -55,34 +56,43 @@ def workflow_command(name, doc):
 def workflow_cases():
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
     windows = yaml.safe_load((REPO / '.github/workflows/windows.yml').read_text())
-    assert workflow_command('release.yml', release)[0] == 0
-    assert workflow_command('windows.yml', windows)[0] == 0
-    # The host cache exception must not admit another release cache or a wider key.
-    for job in ('build', 'smoke'):
-        steps = release['jobs'][job]['steps']
-        cache = next(step for step in steps if step.get('id') == 'duckdb-hosts')
-        setup = next(step for step in steps if 'host-setup' in step.get('run', ''))
-        assert steps.index(cache) < steps.index(setup)
-        if job == 'smoke':
-            assert setup['env']['THINKTHEN_DUCKDB_HOST_CACHE_HIT'] == '${{ steps.duckdb-hosts.outputs.cache-hit }}'
-        for defect in ('path', 'restore-keys', 'sha', 'target', 'run', 'action', 'runner', 'publish'):
-            doc = deepcopy(release)
-            candidate = next(step for step in doc['jobs'][job]['steps'] if step.get('id') == 'duckdb-hosts')
-            if defect == 'path': candidate['with']['path'] = '~/.cache/thinkthen-toolchains'
-            elif defect == 'restore-keys': candidate['with']['restore-keys'] = 'duckdb-hosts-'
-            elif defect in ('sha', 'target', 'run'):
-                expression = {'sha': 'needs.resolve.outputs.sha', 'target': 'matrix.target', 'run': 'github.run_id'}[defect]
-                candidate['with']['key'] = candidate['with']['key'].replace('${{ ' + expression + ' }}', 'any')
-            elif defect == 'action': candidate['uses'] = 'actions/cache@' + 'a' * 40
-            elif defect == 'runner': candidate['if'] = "runner.os == 'macOS'"
-            else:
-                doc['jobs'][job]['steps'].remove(candidate)
-                doc['jobs']['publish']['steps'].append(candidate)
-            code, output = workflow_command('release.yml', doc)
-            owner = 'publish' if defect == 'publish' else job
-            assert code == 1 and f'job {owner} uses a cache' in output, (job, defect, output)
+    for name, document in (('release.yml', release), ('windows.yml', windows)):
+        code, output = workflow_command(name, document)
+        assert code == 0, (name, code, output)
+    # Shared hosts belong to this version, target and resolved source commit.
+    artifact = 'duckdb-hosts-${{ needs.resolve.outputs.version }}-${{ matrix.target }}-${{ needs.resolve.outputs.sha }}'
+    build = release['jobs']['build']['steps']
+    smoke = release['jobs']['smoke']['steps']
+    upload = next(step for step in build if (step.get('with') or {}).get('name') == artifact)
+    download = next(step for step in smoke if (step.get('with') or {}).get('name') == artifact)
+    pack = next(step for step in build if ' duckdb-host-pack ' in step.get('run', ''))
+    restore = next(step for step in smoke if ' duckdb-host-unpack ' in step.get('run', ''))
+    setup = next(step for step in smoke if 'host-setup' in step.get('run', ''))
+    assert upload['uses'].startswith('actions/upload-artifact@'), upload
+    assert download['uses'].startswith('actions/download-artifact@'), download
+    assert upload['with']['path'] == 'duckdb-hosts/' and upload['with']['if-no-files-found'] == 'error', upload
+    assert download['with']['path'] == 'duckdb-hosts', download
+    assert build.index(pack) < build.index(upload)
+    assert smoke.index(download) < smoke.index(restore) < smoke.index(setup)
+    assert pack['if'] == "runner.os == 'macOS'", pack
+    assert 'build' in release['jobs']['smoke']['needs']
+    for step in (upload, download, restore):
+        assert step['if'] == "matrix.target != 'x86_64-pc-windows-msvc'", step
+    for step, command in ((pack, 'pack'), (restore, 'unpack')):
+        assert step['env'] == {'TARGET': '${{ matrix.target }}', 'SHA': '${{ needs.resolve.outputs.sha }}'}, step
+        assert step['run'] == f'sdlc/scripts/release-workflow duckdb-host-{command} duckdb-hosts "$TARGET" "$SHA"', step
+    assert setup['env']['RELEASE_SMOKE'] == '1' and 'if' not in setup, setup
+    assert not any('continue-on-error' in step for step in (pack, upload, download, restore, setup))
+    # No job may restore the retired host cache or introduce another cache.
+    for job in ('build', 'smoke', 'publish'):
+        doc = deepcopy(release)
+        doc['jobs'][job]['steps'].append({'uses': 'actions/cache@' + 'a' * 40,
+                                         'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}})
+        code, output = workflow_command('release.yml', doc)
+        assert code == 1 and f'job {job} uses a cache' in output, (job, code, output)
     gate = yaml.safe_load((REPO / '.github/workflows/gate.yml').read_text())
-    assert workflow_command('gate.yml', gate)[0] == 0
+    code, output = workflow_command('gate.yml', gate)
+    assert code == 0, (code, output)
     for defect in ('options', 'declaration', 'dynamic', 'paid', 'string', 'default'):
         doc = deepcopy(gate)
         platform = doc.get('on', doc.get(True))['workflow_dispatch']['inputs']['platform']
@@ -201,7 +211,7 @@ def linux_nested_tools_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
     host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
-    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
+    assert 'python3 databases/duckdb/tools/source_hosts.py' not in installed
     assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
         line for line in installed.splitlines() if "ruff==" in line)
     assert '--prefix "$generator_tools" ' in next(
@@ -504,7 +514,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         runtime_commands = []
         def command(args, expected=None, cwd=root):
             if args[:2] == ['sh', '-ec'] and 'runtime_ready' in args[2]:
-                subprocess.run(args, cwd=cwd, env=env, capture_output=True, check=True, timeout=5)
+                subprocess.run(args, cwd=cwd, env=env, check=True, timeout=5)
                 runtime_commands.append(args)
         with patch.dict(module['qualify'].__globals__, ROOT=root, rust=lambda *args: None,
                         cargo_cache=lambda *args: None, downloaded_inputs=lambda *args: None), \
@@ -1028,16 +1038,16 @@ def parameter_cases():
             assert 'selected-swift' not in result.stdout
 
 
-preflight_cases()
-print('hosted preflight: ready, aggregate missing, checksum corruption and Apple input cases pass')
-workflow_cases()
-linux_tool_destination_case()
-linux_nested_tools_case()
-linux_failed_phase_evidence_case()
-linux_source_staging_case()
-postgresql_package_case()
-linux_coverage_destination_case()
-dart_cache_setup_case()
-flutter_locked_setup_case()
-parameter_cases()
+failures = []
+for case in (preflight_cases, workflow_cases, linux_tool_destination_case, linux_nested_tools_case,
+             linux_failed_phase_evidence_case, linux_source_staging_case, postgresql_package_case,
+             linux_coverage_destination_case, dart_cache_setup_case, flutter_locked_setup_case, parameter_cases):
+    try:
+        case()
+        print(f'hosted workflows: {case.__name__} passed', flush=True)
+    except Exception:
+        failures.append(case.__name__)
+        traceback.print_exc()
+if failures:
+    raise SystemExit('hosted workflows failed: ' + ', '.join(failures))
 print('hosted workflows: standard runners, exact commits, installed Apple routing and skipped checks hold')

@@ -571,7 +571,7 @@ def check(folder, lint_text=None):
     return out
 
 
-def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False, cache_hit=""):
+def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
     """Run the real setup branch while a temporary PATH records its host calls.
 
     A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
@@ -642,7 +642,7 @@ sh) case $1 in databases/duckdb/tools/setup.sh)
         echo 'DuckDB setup preceded uv or Python 3.13 readiness' >&2; exit 92;
       } ;;
     esac
-    printf '%s %s\\n' "$1" "$2" >> "$FAKE_LOG" ;;
+    printf '%s %s\\n' "$1" "$2${3:+ $3}" >> "$FAKE_LOG" ;;
 esac
 """)
         route.chmod(0o755)
@@ -671,10 +671,10 @@ esac
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
                    FAKE_UV_LINE=uv_line, FAKE_OLD_BASH="1" if old_bash else "", GITHUB_PATH=str(root / "github-path"),
                    GITHUB_ENV=str(root / "github-env"), RUNNER_TEMP=str(root / "runner"),
-                   RELEASE_SMOKE="1" if smoke else "0", THINKTHEN_DUCKDB_HOST_CACHE_HIT=cache_hit)
+                   RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
-        calls = [line.replace(str(root), "$ROOT") for line in log.read_text().splitlines()] if log.exists() else []
+        calls = [line.replace(str(root), "$ROOT").replace(str(REPO), "$REPO") for line in log.read_text().splitlines()] if log.exists() else []
         pgrx = root / ".pgrx/config.toml"
         if pgrx.exists():
             calls.append("pgrx " + pgrx.read_text().replace(str(root), "$ROOT").replace("\n", " ").strip())
@@ -901,7 +901,7 @@ def duckdb_hook_self_test():
 
 def self_test():
     duckdb_hook_self_test()
-    subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/hosted-workflow-self-test.py')], check=True)
+    hosted = subprocess.run([sys.executable, str(REPO / 'sdlc/scripts/hosted-workflow-self-test.py')])
     real = check(REPO / ".github/workflows")
     cases = [
         ("real", None, None, []),
@@ -1168,7 +1168,7 @@ def self_test():
          lambda t: t.replace('npm stage publish "./npm-dist/thinkthen-$VERSION.tgz" --provenance', 'npm stage publish npm-dist/*.tgz --provenance'),
          ["release.yml: job npm publishes npm-dist/*.tgz; npm reads a bare relative path as a GitHub repository, so start it with ./"]),
     ]
-    bad = 0
+    bad = int(hosted.returncode != 0)
     for name, file, plant, expected in cases:
         if file is None:
             got = real
@@ -1233,18 +1233,17 @@ def self_test():
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
                       *(["bash-check"] if smoke else []),
                       "libraries/ruby/setup-ruby.sh ",
-                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch",
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch" + (" $REPO/duckdb-hosts" if smoke else ""),
                       *(["sqlite-python-check", "sqlite-venv", "sqlite-jsonschema", "sqlite-python-check", "npm-seed"] if smoke else []), *seed,
-                      *(["duckdb-source-hosts"] if smoke else []),
                       'pgrx [configs] pg16 = "$ROOT/openssl3/bin/pg_config" pg17 = "$ROOT/openssl3/bin/pg_config" pg18 = "$ROOT/openssl3/bin/pg_config"', handoff,
                       *(["env THINKTHEN_PYTHON=$ROOT/.cache/thinkthen-toolchains/sqlite-python-3.14/bin/python"] if smoke else [])]
         elif smoke:
             wanted = ["py313-ready", "uv-install", "uv-check", "pg-index", "pg-host", "libraries/ruby/setup-ruby.sh ",
-                      "databases/duckdb/tools/setup.sh --fetch", "databases/sqlite/setup.sh ",
+                      "databases/duckdb/tools/setup.sh --fetch $REPO/duckdb-hosts", "databases/sqlite/setup.sh ",
                       *[f"databases/postgresql/setup.sh {major}" for major in (16, 17, 18)],
                       *(["libraries/typescript/setup-toolchain.sh ", "r-host", "r-dependencies"]
                         if target == "x86_64-unknown-linux-gnu" else []),
-                      "npm-seed", *seed, "duckdb-source-hosts", handoff]
+                      "npm-seed", *seed, handoff]
         else:
             # Ticket 0366: the Linux build job builds Ruby in its container, not on the host.
             wanted = [f"rustup target add --toolchain 1.95.0 {target.replace('-gnu', '-musl')}"]
@@ -1252,22 +1251,6 @@ def self_test():
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
                   f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
-    # Only an exact Intel hit skips the duplicate native host build. Fetch and
-    # Python preparation still run through the same host setup on every path.
-    cache_cases = (
-            ("x86_64-apple-darwin", "true", False),
-            ("x86_64-apple-darwin", "false", True),
-            ("x86_64-apple-darwin", "True", True),
-            ("aarch64-apple-darwin", "true", True),
-            ("x86_64-unknown-linux-gnu", "true", True))
-    for target, hit, compile_host in cache_cases:
-        result, calls = host_setup_calls(target, True, cache_hit=hit)
-        if (result.returncode != 0 or ("duckdb-source-hosts" in calls) != compile_host
-                or "databases/duckdb/tools/setup.sh --fetch" not in calls
-                or "seed $ROOT/bin/python3.13" not in calls):
-            bad += 1
-            print(f"workflows self-test DuckDB cache {target} hit={hit}: "
-                  f"exit {result.returncode}, calls {calls}, stderr {result.stderr}", file=sys.stderr)
     with tempfile.TemporaryDirectory() as tmp:
         folder = pathlib.Path(tmp)
         for path in workflow_files(REPO / '.github/workflows'):
@@ -1363,7 +1346,7 @@ def self_test():
             print(f"workflows self-test {fixture}: {result.stdout}{result.stderr}", file=sys.stderr)
         else:
             print(result.stdout.strip() or result.stderr.strip())
-    total = len(cases) + 4 + len(host_cases) + len(cache_cases) + 13 + len(python_defects)
+    total = len(cases) + 4 + len(host_cases) + 13 + len(python_defects)
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
