@@ -12,6 +12,8 @@ Reviews: revision 788fda3, accept
 
 ## Outcome
 
+- Changes: `conformance/c_parity.py`, `conformance/cases.json`, `conformance/children/native_fixture.py`, `conformance/children/session_cases.py`, `conformance/parity.py`, `conformance/session_projection.py`, `libraries/c/tests/c/run_call.c`, `libraries/c/tests/installed_call.py`, `libraries/rust/check.py`, `libraries/rust/check.sh`, `libraries/rust/consumer/tests/call.rs`, `libraries/rust/consumer/tests/settled.rs`.
+
 - `cases.json` holds the expected settled answer for each case: value, probability, pick and resolution. The full packet oracle is 0642's.
 - The session and run-call behavior matrix (cancellation, deadline, failing producer, closed engine, error facts) is proven once against the installed C library and once against the Rust library. Language runners check only their idiom: values converted, errors raised as the host's error type, cancellation reaching the native call, and resources freed.
 - The CLI's case exemptions in `conformance/parity.py` (`SDK_ONLY_CLI_CASES`, `QUESTION_FILE_CLI_CASES`) are reviewed. Any exemption with no current reason is deleted.
