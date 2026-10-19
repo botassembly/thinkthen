@@ -178,6 +178,7 @@ impl<'a> CallOptions<'a> {
             attachment_limit: None,
             recognition_text_limit: None,
             eager_inputs: false,
+            shared_state_groups: false,
             pending_inputs: false,
             scalar_input: false,
             recovery_rows: false,
