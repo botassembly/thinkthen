@@ -164,7 +164,7 @@ def cache_refusal_cases():
                        'with': {'path': 'duckdb-hosts', 'key': 'duckdb-hosts'}},
                       {'uses': 'actions/setup-node@' + 'a' * 40, 'with': {'cache': 'npm'}}):
             document = deepcopy(release)
-            document['jobs'][job].setdefault('steps', []).append(cache)
+            document['jobs'][job].setdefault('steps', []).insert(1, cache)
             assert checker['release']('release.yml', document) == [f'release.yml: job {job} uses a cache']
     for name in ('gate.yml', 'pages.yml', 'windows.yml'):
         document = yaml.safe_load((folder / name).read_text())
