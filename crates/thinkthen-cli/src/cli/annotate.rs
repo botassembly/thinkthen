@@ -20,6 +20,8 @@ pub(crate) mod error_row;
 mod native;
 mod plan;
 mod settings;
+mod continuation;
+mod presentation;
 
 pub(crate) fn run(
     arguments: &AnnotateArguments,
