@@ -76,4 +76,8 @@ env -i THINKTHEN_CACHE="$cache/cache" THINKTHEN_API_KEY=sk-examples-loopback \
     THINKTHEN_BASE_URL="http://127.0.0.1:$1/generic/v1" \
     "$cache/session" >"$cache/out" 2>"$cache/err"
 [ ! -s "$cache/err" ] || { cat -- "$cache/err" >&2; exit 1; }
-[ "$(cat "$cache/out")" = "records=1 requests=1" ]
+python3 - "$cache/out" <<'CALL'
+import json, sys
+call = json.load(open(sys.argv[1]))
+assert call['facts']['records'] == 1 and call['facts']['requests_sent'] == 1, call
+CALL

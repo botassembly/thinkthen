@@ -3,13 +3,13 @@ typedef struct thinkthen_engine thinkthen_engine;
 typedef struct thinkthen_session thinkthen_session;
 typedef struct thinkthen_session_result thinkthen_session_result;
 typedef struct thinkthen_value thinkthen_value;
-typedef struct thinkthen_complete_usage_persistence_v1 {
-    uint32_t kind;
-} thinkthen_complete_usage_persistence_v1;
 typedef struct thinkthen_complete_utf8_v1 {
     const char *data;
     size_t len;
 } thinkthen_complete_utf8_v1;
+typedef struct thinkthen_complete_usage_persistence_v1 {
+    uint32_t kind;
+} thinkthen_complete_usage_persistence_v1;
 typedef struct thinkthen_complete_json_array_v1 {
     const struct thinkthen_complete_json_v1 *const *data;
     size_t len;

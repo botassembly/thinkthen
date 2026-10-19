@@ -40,6 +40,10 @@ const CASES = [
   ['generic', 'c', 'pass', 'int is_spam;\nint code = thinkthen_decide(tt, q, m, &is_spam);', []],
   ['generic', 'c', 'fail', 'int answer;\nint code = thinkthen_decide(tt, q, m, &answer);', [[2, 'generic']]],
 
+  ['generic', 'c', 'pass', 'int code = thinkthen_run_call(tt,&request,0,0,0,&refund_call,&failure);', []],
+  ['generic', 'c', 'fail', 'int code = thinkthen_run_call(tt,&request,0,0,0,&result,&failure);', [[1, 'generic']]],
+  ['direct', 'c', 'fail', 'assert(thinkthen_run_call(tt,&request,0,0,0,&refund_call,&failure) == 0);', [[1, 'direct']]],
+
   ['direct', 'cpp', 'pass', 'auto is_refund = tt::decide(engine, q, m);\nassert(is_refund.value.outcome == tt::Outcome::yes);', []],
   ['direct', 'cpp', 'fail', 'assert(tt::decide(engine, q, m).value.outcome\n       == tt::Outcome::yes);', [[1, 'direct']]],
   ['direct', 'cpp', 'fail', 'std::cout << tt::decide(engine, q, m).ok;', [[1, 'direct']]],

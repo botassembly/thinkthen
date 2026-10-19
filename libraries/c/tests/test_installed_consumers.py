@@ -33,7 +33,7 @@ class InstalledProducts(unittest.TestCase):
                                             cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)
                     self.assertNotEqual(result.returncode, 0)
                     if caller == 'objective-c/checks/foundation_installed.py' and sys.platform != 'darwin':
-                        self.assertEqual(result.returncode, 77)
+                        self.assertEqual(result.returncode, 1)
                         self.assertIn('Foundation installed consumer requires macOS', result.stderr)
                     else:
                         self.assertIn('FileNotFoundError', result.stderr)

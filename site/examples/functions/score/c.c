@@ -9,40 +9,39 @@ const char *levels =
 const char *outage =
     "Our checkout page is down and "
     "customers cannot pay.\\n";
-char request[1024];
-snprintf(request, sizeof request,
-    "{\"schema\":\"thinkthen.request/1\","
-    "\"call\":{\"function\":\"score\","
-    "\"question\":{\"kind\":\"definition\",\"value\":"
-    "{\"score\":\"%s\",\"levels\":%s}},"
-    "\"input\":{\"kind\":\"text\",\"text\":\"%s\"}}}",
-    question, levels, outage);
+char question_json[512];
+snprintf(question_json, sizeof question_json,
+    "{\"kind\":\"definition\","
+    "\"value\":{\"score\":\"%s\",\"levels\":%s}}",
+    question, levels);
+char input_json[512];
+snprintf(input_json, sizeof input_json,
+    "{\"kind\":\"text\",\"text\":\"%s\"}",
+    outage);
 
 thinkthen_engine *tt = thinkthen_engine_new();
-thinkthen_session *call = NULL;
-int rc = thinkthen_session_new(
-    tt, request, strlen(request), &call);
-assert(rc == THINKTHEN_OK);
+assert(tt != NULL);
+thinkthen_named_request_v1 request = {
+    .function = {"score", 5},
+    .question_json = {question_json, strlen(question_json)},
+    .input_json = {input_json, strlen(input_json)},
+    .options_json = {"{}", 2},
+};
+thinkthen_call_result *urgency_call = NULL;
+thinkthen_call_error *error = NULL;
+int rc = thinkthen_run_call(tt, &request,
+    NULL, NULL, NULL, &urgency_call, &error);
 thinkthen_engine_free(tt);
-
-double urgency = -1;
-const uint32_t score_row =
-    THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1;
-uint32_t status = THINKTHEN_SESSION_PENDING_V1;
-while (status != THINKTHEN_SESSION_END_V1) {
-    thinkthen_session_result *owner = NULL;
-    rc = thinkthen_session_next_packet(call,
-        THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,
-        &status, &owner);
-    assert(rc == THINKTHEN_OK);
-
-    if (status != THINKTHEN_SESSION_RESULT_V1) continue;
-    const thinkthen_complete_session_packet_v1 *packet;
-    thinkthen_session_result_view(owner, &packet);
-    if (packet->kind == score_row) {
-        urgency = packet->data.score_row->value->value;
-    }
-    thinkthen_session_result_free(owner);
+if (rc != THINKTHEN_OK) {
+    thinkthen_complete_utf8_v1 message =
+        thinkthen_call_error_message(error);
+    fwrite(message.data, 1, message.len, stderr);
+    thinkthen_call_error_free(error);
 }
-thinkthen_session_free(call);
-assert(urgency == 2.0);
+assert(rc == THINKTHEN_OK);
+thinkthen_complete_utf8_v1 json =
+    thinkthen_call_result_json(urgency_call);
+assert(json.data != NULL && json.len > 0);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
+thinkthen_call_result_free(urgency_call);

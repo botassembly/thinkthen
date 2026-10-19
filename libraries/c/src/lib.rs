@@ -11,7 +11,8 @@
 //! engine carries its own failure table keyed by the recording thread.
 //!
 //! No panic crosses into the host: every exported symbol runs behind one
-//! guard that records the defect kind and returns a code or a null.
+//! guard that returns the defect kind through the operation's error owner or
+//! its legacy diagnostic slot.
 //! `DESIGN.md` records the options and ownership design.
 
 pub mod ffi;
