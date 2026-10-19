@@ -1239,7 +1239,7 @@ a_role_limit_applies() {
 check a_role_limit_applies
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
-THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+THROTTLE_RANGE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["throttle"])' "$REPO/conformance/settings-errors.json")
 throttle_setting_range() {
 	fresh generic "thinkthen.throttle = 0"
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
@@ -1329,7 +1329,7 @@ batch_setting_and_replay_context_validate_before_send() {
     fresh generic
     for setting in 0 +1 -1 1.5 MAX no; do
         has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb)")" \
-            'thinkthen.batch is max or a whole number of 1 or more'
+            "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["batch"])' "$REPO/conformance/settings-errors.json")"
     done
     same "$(bcount)" 0
     fresh generic
