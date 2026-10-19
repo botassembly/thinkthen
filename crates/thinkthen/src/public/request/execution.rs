@@ -324,9 +324,13 @@ where
                     self.image_refusal.as_deref(),
                     self.native_originals && self.controls.eager_inputs,
                 )?;
-                // Owned feeds retain native composition, not prior declaration
-                // admission. Validate selected values before any batch can send.
-                if !self.controls.recovery_rows && !self.controls.entity_rows {
+                // Canonical feeds are already selected and need declaration admission.
+                // Legacy native atomic preparation selects authored on pointers itself
+                // before validating declarations. Find has no later record preparation.
+                if !self.controls.recovery_rows
+                    && !self.controls.entity_rows
+                    && (!self.native_originals || self.function == Function::Find)
+                {
                     declarations(&self.reading, &self.options, &row, input)?;
                 }
                 Ok(row)
