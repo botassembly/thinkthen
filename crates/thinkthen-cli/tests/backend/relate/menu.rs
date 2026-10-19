@@ -24,7 +24,7 @@ fn folder(test: &str) -> PathBuf {
 /// Write one relate file and return its `@FILE` operand.
 fn file(folder: &Path, name: &str, relations: &str) -> String {
     let path = folder.join(format!("{name}.json"));
-    let text = format!(r#"{{"version":1,"relate":{{"relations":[{relations}]}}}}"#);
+    let text = format!(r#"{{"relate":{{"relations":[{relations}]}}}}"#);
     fs::write(&path, text).expect("relate file");
     format!("@{}", path.display())
 }
@@ -290,7 +290,7 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
         "thinkthen: a single-answer relation is directed, so `single` and `either` do not mix\n",
     );
     let recognize = folder.join("recognize.json");
-    fs::write(&recognize, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
+    fs::write(&recognize, r#"{"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
     let refused = spawn(
         &[
             "recognize",

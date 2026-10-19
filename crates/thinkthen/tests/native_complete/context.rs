@@ -124,7 +124,7 @@ fn finite_context_admission_refuses_the_whole_call_without_coercion_or_cache_loo
         .is_err()
     );
     let structured = thinkthen::QuestionSet::from_json(
-        r#"{"version":1,"questions":{"refund":{"decide":{"ask":"Refund?"}}}}"#,
+        r#"{"questions":{"refund":{"decide":{"ask":"Refund?"}}}}"#,
     )
     .unwrap();
     let error = crate::api::annotate(
@@ -216,7 +216,7 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
         r#"{"state":{"context":{"guide":"Private guide.","ready":false,"extra":[null,12]},"evidence":"Each question quotes the text it asks about."},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}}"#
     );
     let text_set = thinkthen::QuestionSet::from_json(
-        r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#,
+        r#"{"questions":{"refund":{"decide":"Refund?"}}}"#,
     )
     .unwrap();
     for (context, expected) in [

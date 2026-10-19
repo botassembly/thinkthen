@@ -58,7 +58,7 @@ fn equal_logical_group_requests_keep_both_positions() {
     let file = set(
         "equal-group-identities",
         concat!(
-            r#"{"version":1,"questions":{"first":{"decide":"Same question?","on":"/left/text"},"#,
+            r#"{"questions":{"first":{"decide":"Same question?","on":"/left/text"},"#,
             r#""second":{"decide":"Same question?","on":"/right/text"}}}"#,
         ),
     );

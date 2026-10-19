@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use thinkthen::{Evidence, RankSet};
 
 pub(super) const SET: &str =
-    r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
+    r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
 
 pub(super) fn answer(body: &[u8]) -> Canned {
     let body: Value = serde_json::from_slice(body).expect("request JSON");
@@ -173,7 +173,7 @@ fn reversed_members_use_literal_turns_and_equal_text_keeps_two_positions() {
     let listener = Listener::answering(answer).expect("listener");
     let engine = engine(listener.base());
     let set = RankSet::from_json(
-        r#"{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}"#,
+        r#"{"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}"#,
     )
     .expect("set");
     let result = engine.rank_set(&set, ["a", "b", "c"]).expect("call");
@@ -226,24 +226,24 @@ fn blank_later_record_and_record_limit_fail_before_counted_sends() {
 #[test]
 fn invalid_authored_rank_settings_and_debug_names_do_not_escape() {
     let valid =
-        RankSet::from_json(r#"{"version":1,"questions":{"private_name":{"decide":"First?"}}}"#)
+        RankSet::from_json(r#"{"questions":{"private_name":{"decide":"First?"}}}"#)
             .expect("valid set");
     assert!(!format!("{valid:?}").contains("private_name"));
     for (json, message) in [
         (
-            r#"{"version":1,"threshold":0.5,"questions":{"private_name":{"decide":"secret wording"}}}"#,
+            r#"{"threshold":0.5,"questions":{"private_name":{"decide":"secret wording"}}}"#,
             "`threshold`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"private_name":{"decide":"secret wording","on":""}}}"#,
+            r#"{"questions":{"private_name":{"decide":"secret wording","on":""}}}"#,
             "`questions.private_name.on`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"private_name":{"decide":"secret wording","threshold":0.5}}}"#,
+            r#"{"questions":{"private_name":{"decide":"secret wording","threshold":0.5}}}"#,
             "`questions.private_name.threshold`: rank question sets take no threshold or on",
         ),
         (
-            r#"{"version":1,"questions":{"private_name":{"score":"secret wording","levels":["low","high"]}}}"#,
+            r#"{"questions":{"private_name":{"score":"secret wording","levels":["low","high"]}}}"#,
             "`questions.private_name`: rank takes only decide questions",
         ),
     ] {

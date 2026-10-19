@@ -95,7 +95,7 @@ fn every_record_command_accepts_a_table_and_prints_jsonl() {
     let set = Path::new(env!("CARGO_TARGET_TMPDIR")).join("table-question-set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Is it yes?"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Is it yes?"}}}"#,
     )
     .expect("write question set");
     let set_name = set.to_string_lossy();

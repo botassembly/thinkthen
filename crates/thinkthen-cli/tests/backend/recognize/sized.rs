@@ -265,7 +265,7 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
             .collect::<serde_json::Map<_, _>>();
         fs::write(
             &file,
-            json!({"version":1,"recognize":{"kinds":kinds}}).to_string(),
+            json!({"recognize":{"kinds":kinds}}).to_string(),
         )
         .unwrap();
         let file = format!("@{}", file.display());

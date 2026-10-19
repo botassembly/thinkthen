@@ -49,7 +49,7 @@ pub(super) fn grouped(name: &str, count: usize) -> PathBuf {
         .join(",");
     set(
         name,
-        &format!(r#"{{"version":1,"questions":{{{questions}}}}}"#),
+        &format!(r#"{{"questions":{{{questions}}}}}"#),
     )
 }
 

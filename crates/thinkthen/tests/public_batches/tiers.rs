@@ -16,11 +16,11 @@ fn saved_annotate_batch_tiers() {
         .and_then(EngineBuilder::build)
         .expect("max engine");
     let saved = QuestionSet::from_json(
-        r#"{"version":1,"batch":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"batch":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
     )
     .expect("saved batch one");
     let invalid = QuestionSet::from_json(
-        r#"{"version":1,"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
     )
     .expect("invalid saved tier is retained until selected");
     let records = ["one", "two", "three"];

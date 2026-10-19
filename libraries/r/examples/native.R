@@ -15,7 +15,7 @@ stopifnot(result(tt_score(list(score = "How urgent?", levels = c("low", "soon", 
 stopifnot(result(tt_filter("A complaint?", c("first", "second")), list(0.9, 0.9))$value[[1]] == "first")
 stopifnot(result(tt_rank("A complaint?", c("first", "second")), list(0.9, 0.9))$value[[1]] == 0)
 stopifnot(result(tt_find("Which line?", c("first", "second")), 0.9)$value == "first")
-stopifnot(isTRUE(result(tt_annotate(list(version = 1L, questions = list(approved = list(decide = "Approved?"))), "Yes"))$value[[1]]$approved))
+stopifnot(isTRUE(result(tt_annotate(list(questions = list(approved = list(decide = "Approved?"))), "Yes"))$value[[1]]$approved))
 recognition <- tt_recognize_question(kinds = list(person = NULL, organization = NULL))
 recognized <- tt_recognize(recognition, "Maria Chen joined Northwind Freight.")
 stopifnot(result(recognized, lapply(recognized$value$entities, function(entity) {

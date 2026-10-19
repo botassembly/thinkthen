@@ -200,7 +200,7 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?)", pair) for pair in (
 def test_an_annotate_row_missing_its_part_fails_alone() -> None:
     """ADR 0111 slice 3: a record missing its `on` part fails alone, and its neighbours' answers stay stored."""
     backend = Backend()
-    parted = json.dumps({"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}})
+    parted = json.dumps({"questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}})
     held = child(f"""
 db = connect()
 run(db, "CREATE TABLE t(i INTEGER, x TEXT)")
@@ -235,7 +235,7 @@ def test_recognize_counts_offsets_as_substr_does_and_refuses_relations() -> None
     """Case 41 and decision 10."""
     backend = Backend()
     case = "41-offsets-past-an-accent-and-an-emoji"
-    kinds = json.dumps({"version": 1, "recognize": {"kinds": {"person": "A person's name."}}, "threshold": 0.5})
+    kinds = json.dumps({"recognize": {"kinds": {"person": "A person's name."}}, "threshold": 0.5})
     relations = json.dumps({"kinds": {"person": "A person."}, "relations": [{"name": "knows", "source": "person", "target": "person"}]})
     held = child(f"""
 db = connect()
@@ -255,7 +255,7 @@ def test_recognize_document_accepts_spec_forms_and_refuses_bad_sql_values() -> N
     backend = Backend()
     bare = {"kinds": {"person": "A person's name."}, "relations": [
         {"name": "knows", "source": "person", "target": "person"}]}
-    full = {"version": 1, "recognize": bare}
+    full = {"recognize": bare}
     plain = {"kinds": {"person": "A person's name."}}
     bad = {"kinds": {"person": "A person."}, "relations": [
         {"name": "bad", "source": "absent", "target": "person"}]}
@@ -304,7 +304,7 @@ say(forms=[run(db, 'SELECT thinkthen_relations(?, ?)', ('', spec))
 def test_recognize_document_applies_a_nondefault_relation_threshold() -> None:
     """A stronger edge cut removes the edge without losing recognized entities."""
     evidence = "Maria Chen joined Northwind Freight in Chicago last spring."
-    question = {"version": 1, "recognize": {
+    question = {"recognize": {
         "kinds": {"organization": "An organization."},
         "relations": [{"name": "knows", "source": "organization", "target": "organization"}],
     }, "threshold": 0.5, "relation_threshold": 0.5}

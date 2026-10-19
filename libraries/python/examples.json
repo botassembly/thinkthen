@@ -47,7 +47,7 @@
     },
     "annotate": {
       "files": {
-        "form.json": "{\"version\":1,\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
+        "form.json": "{\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
       },
       "python": "tt.annotate(\"form.json\", [\"maybe later\"]).value",
       "expected": "[{'wants_refund': True, 'team': 'billing', 'urgency': 0.15}]"

@@ -9,7 +9,7 @@ use super::harness::{CLOSED, run, written};
 fn file_backed_dry_run_reports_every_independent_precedence_source() {
     let file = written(
         "relate-precedence",
-        r#"{"version":1,"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.6,"model":"file-model","profile":"measured"}"#,
+        r#"{"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.6,"model":"file-model","profile":"measured"}"#,
     );
     let output = run(
         &[
@@ -90,12 +90,12 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
 fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
     let invalid = written(
         "relate-invalid",
-        r#"{"version":1,"relate":{"relations":[{"name":"x","source":"a","target":"b"}]},"extra":true}"#,
+        r#"{"relate":{"relations":[{"name":"x","source":"a","target":"b"}]},"extra":true}"#,
     );
     let wrong = written("relate-wrong", r#"{"decide":"Is this valid?"}"#);
     let wrong_recognize = written(
         "relate-wrong-recognize",
-        r#"{"version":1,"recognize":{"kinds":{"person":"A person's name."}}}"#,
+        r#"{"recognize":{"kinds":{"person":"A person's name."}}}"#,
     );
     let invalid_decide = written(
         "relate-invalid-decide",
@@ -103,7 +103,7 @@ fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
     );
     let invalid_recognize = written(
         "relate-invalid-recognize",
-        r#"{"version":1,"recognize":{"kinds":{}},"extra":true}"#,
+        r#"{"recognize":{"kinds":{}},"extra":true}"#,
     );
     for (file, code) in [
         (invalid, 5),
@@ -131,7 +131,7 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
         (
             "recognize",
             "names-native",
-            r#"{"version":1,"recognize":{"kinds":{"person":null}},"on":"/body","name":"names-native","wording_version":3,"item_schema":{"type":"string"}}"#,
+            r#"{"recognize":{"kinds":{"person":null}},"on":"/body","name":"names-native","wording_version":3,"item_schema":{"type":"string"}}"#,
             br#"{"body":"Ada met Grace."}"#.as_slice(),
             br#"{"body":7}"#.as_slice(),
             vec!["--jsonl"],
@@ -139,7 +139,7 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
         (
             "relate",
             "links-native",
-            r#"{"version":1,"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"met","source":"person","target":"person"}]},"name":"links-native","wording_version":4,"item_schema":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"}}}}"#,
+            r#"{"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"met","source":"person","target":"person"}]},"name":"links-native","wording_version":4,"item_schema":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"}}}}"#,
             br#"[{"title":"Ada","type":"person"},{"title":"Grace","type":"person"}]"#.as_slice(),
             br#"[{"title":7,"type":"person"}]"#.as_slice(),
             vec![],
@@ -218,5 +218,23 @@ fn native_relation_admission_keeps_the_cli_complete_set_count_sentence() {
         "thinkthen: --lines takes only bare relation names or NAME=*:*\n",
     );
     assert!(empty.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+}
+
+#[test]
+fn version_members_are_refused_before_any_backend_connection() {
+    let listener = crate::harness::Listener::serving(Vec::new()).expect("listener");
+    for (verb, body, evidence) in [
+        ("annotate", r#""questions":{"q":{"decide":"Ready?"}}"#, "text"),
+        ("recognize", r#""recognize":{}"#, "text"),
+        ("relate", r#""relate":{"relations":[{"name":"linked"}]}"#, r#"[{"name":"Ada","kind":"person"}]"#),
+    ] {
+        let file = written(&format!("version-{verb}"), &format!("{{\"version\":1,{body}}}"));
+        let output = run(
+            &[verb, &file, "--url", listener.base(), "--no-cache"],
+            evidence.as_bytes(),
+        ).expect("command");
+        crate::harness::refuses(&output, 5, "thinkthen: delete the `version` field.\n");
+    }
     assert_eq!(listener.connections(), 0);
 }

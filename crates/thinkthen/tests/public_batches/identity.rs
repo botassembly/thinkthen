@@ -403,7 +403,7 @@ fn a_question_limit_packs_whole_records_and_every_group_together() {
         .no_cache()
         .build()
         .expect("engine");
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"a1":{"decide":"A1?","on":"/a"},"a2":{"decide":"A2?","on":"/a"},"a3":{"decide":"A3?","on":"/a"},"a4":{"decide":"A4?","on":"/a"},"b":{"decide":"B?","on":"/b"}}}"#).expect("set");
+    let set = QuestionSet::from_json(r#"{"questions":{"a1":{"decide":"A1?","on":"/a"},"a2":{"decide":"A2?","on":"/a"},"a3":{"decide":"A3?","on":"/a"},"a4":{"decide":"A4?","on":"/a"},"b":{"decide":"B?","on":"/b"}}}"#).expect("set");
     let records = [
         r#"{"a":"a0","b":"b0"}"#,
         r#"{"a":"a1","b":"b1"}"#,

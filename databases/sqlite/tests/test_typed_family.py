@@ -184,7 +184,7 @@ questions={'decide':{'decide':'Fits?'},'filter':{'decide':'Fits?'},
  'choose':{'choose':'Which?','options':['billing','shipping','other']},
  'tag':{'tag':'Which?','labels':['billing','urgent','security']},
  'score':{'score':'How?','levels':['low','medium','high']},
- 'annotate':{'version':1,'questions':{'fits':{'decide':'Fits?'}}}}
+ 'annotate':{'questions':{'fits':{'decide':'Fits?'}}}}
 results={}
 for verb,question in questions.items():
     records=[{'text':'first valid row'},{'text':'private evidence'},{'text':'last valid row'}]
@@ -249,7 +249,7 @@ from native_receipts import Read
 db=connect()
 db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':64})])
 records=[{'json':{'name':name,'kind':'organization'}} for name in ('one','two','three','four')]
-question=json.dumps({'version':1,'relate':{'relations':[{'name':'linked','source':'organization','target':'organization'}]}})
+question=json.dumps({'relate':{'relations':[{'name':'linked','source':'organization','target':'organization'}]}})
 items=json.dumps(records)
 rows=db.execute('SELECT ordinal,value,probability,result,observations FROM thinkthen_relate_details WHERE request_question=? AND request_records=?',(question,items)).fetchall()
 assert len(rows)==12,rows

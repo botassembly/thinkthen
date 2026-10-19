@@ -38,17 +38,17 @@
   },
   "annotate": {
    "files": {
-    "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
+    "form.json": "{\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
    },
    "r": "out <- tt_annotate(tt_question(file = \"form.json\"), data.frame(body = \"I demand a refund today\"), options = list(field = list(\"/body\")))$value[[1]]; cat(out$refund, out$complaint, \"\\n\")",
    "expected": "TRUE TRUE"
   },
   "recognize": {
-   "r": "question <- list(version = 1, recognize = list(kinds = list(person = NULL, organization = NULL, place = NULL))); found <- tt_recognize(question, \"Maria Chen joined Northwind Freight in Chicago last spring.\")$value$entities; cat(vapply(found, function(row) paste(row$text, row$kind, row$start, row$end, sep = \"|\"), \"\"), \"\\n\")",
+   "r": "question <- list(recognize = list(kinds = list(person = NULL, organization = NULL, place = NULL))); found <- tt_recognize(question, \"Maria Chen joined Northwind Freight in Chicago last spring.\")$value$entities; cat(vapply(found, function(row) paste(row$text, row$kind, row$start, row$end, sep = \"|\"), \"\"), \"\\n\")",
    "expected": "Maria Chen|person|0|10 spring.|person|52|59"
   },
   "relate": {
-   "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); question <- list(version = 1, relate = list(relations = list(list(name = \"caused_by\", source = \"alert\", target = \"alert\")))); edges <- tt_relate(question, alerts)$value; cat(vapply(edges, `[[`, \"\", \"relation\"), vapply(edges, `[[`, 0, \"probability\"), \"\\n\")",
+   "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); question <- list(relate = list(relations = list(list(name = \"caused_by\", source = \"alert\", target = \"alert\")))); edges <- tt_relate(question, alerts)$value; cat(vapply(edges, `[[`, \"\", \"relation\"), vapply(edges, `[[`, 0, \"probability\"), \"\\n\")",
    "expected": "caused_by caused_by 0.9 0.9"
   }
  }

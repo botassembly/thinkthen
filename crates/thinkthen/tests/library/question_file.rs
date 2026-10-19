@@ -25,17 +25,17 @@ const LOADERS: [(&str, Loader, &str); 4] = [
     (
         "relate file",
         |path| Relate::load(path).map(drop),
-        r#"{"version":1,"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
     ),
     (
         "recognize file",
         |path| Recognize::load(path).map(drop),
-        r#"{"version":1,"recognize":{}}"#,
+        r#"{"recognize":{}}"#,
     ),
     (
         "question set",
         |path| QuestionSet::load(path).map(drop),
-        r#"{"version":1,"questions":{"q":{"decide":"Is it?"}}}"#,
+        r#"{"questions":{"q":{"decide":"Is it?"}}}"#,
     ),
 ];
 
@@ -121,11 +121,11 @@ fn the_reader_names_each_reason() {
 
 #[test]
 fn recognition_admits_caller_defined_values_and_refuses_blank_customization() {
-    let declaration = r#"{"version":1,"recognize":{"instructions":"Find literal values only.","entity_definition":"An amount with its currency.","kinds":{"amount":"The receipt total, not the TOTAL label."}}}"#;
+    let declaration = r#"{"recognize":{"instructions":"Find literal values only.","entity_definition":"An amount with its currency.","kinds":{"amount":"The receipt total, not the TOTAL label."}}}"#;
     assert!(Recognize::from_json(declaration).is_ok());
     for field in ["instructions", "entity_definition"] {
         for value in [r#""""#, r#"" \n ""#, "null", "42", "[]", "{}", "true"] {
-            let declaration = format!(r#"{{"version":1,"recognize":{{"{field}":{value}}}}}"#);
+            let declaration = format!(r#"{{"recognize":{{"{field}":{value}}}}}"#);
             assert_eq!(
                 Recognize::from_json(&declaration)
                     .expect_err("refusal")
@@ -145,8 +145,7 @@ fn declaration_files_take_no_version_inline_or_saved() {
         |text| Recognize::from_json(text).map(drop),
         |text| QuestionSet::from_json(text).map(drop),
     ];
-    for ((role, load, old), parse) in LOADERS.into_iter().skip(1).zip(parsers) {
-        let text = old.replace("\"version\":1,", "");
+    for ((role, load, text), parse) in LOADERS.into_iter().skip(1).zip(parsers) {
         parse(&text).expect("inline file without version");
         let path = written(&folder, role, text.as_bytes());
         load(&path).expect("saved file without version");

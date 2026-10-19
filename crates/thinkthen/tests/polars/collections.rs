@@ -217,7 +217,7 @@ fn recognition_keeps_complete_spans_and_relations_and_relate_keeps_the_entity_se
     assert_eq!(saved.requests().len(), 6);
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)).expect("relations listener");
     let engine = common::engine(listener.base());
-    let ask = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation spec");
+    let ask = Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation spec");
     let frame = DataFrame::new(
         3,
         vec![
@@ -335,9 +335,9 @@ fn remaining_zero_send_cases(
     token: &thinkthen::CancelToken,
 ) {
     let recognize =
-        Recognize::from_json(r#"{"version":1,"recognize":{"kinds":{"person":"A person name."}}}"#)
+        Recognize::from_json(r#"{"recognize":{"kinds":{"person":"A person name."}}}"#)
             .expect("recognition");
-    let relate = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let relate = Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
     let entities = |kinds| {
         DataFrame::new(
             2,
@@ -554,7 +554,7 @@ fn relation_expression_omits_paired_nulls_and_refuses_a_partial_entity_before_se
         .no_cache()
         .build()
         .expect("engine");
-    let question = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let question = Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
     let expression = engine
         .relate_expr(
             &question,
@@ -855,7 +855,7 @@ fn located_relation_records_keep_typed_originals_member_text_and_whole_set_proba
         .no_cache()
         .build()
         .expect("engine");
-    let question = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
+    let question = Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#).expect("relation");
     let reading = RecordReading::new(&[], None, None).expect("reading");
     let inputs = ["Ada", "Bo"]
         .into_iter()

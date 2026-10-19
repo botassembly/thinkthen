@@ -5,9 +5,9 @@ documents <- file.path(Sys.getenv("TT_TESTS"), "..", "..", "..", "specification"
 questions <- list(list(decide = "Q?"), list(choose = "Q?", options = c("policy", "contract")),
   list(tag = "Q?", labels = c("refund", "support")), list(score = "Q?", levels = c("low", "high")),
   list(decide = "Q?"), list(decide = "Q?"), list(find = "Q?"),
-  list(version = 1, questions = list(urgent = list(decide = "Q?"))),
-  list(version = 1, recognize = list(kinds = list(person = NULL))),
-  list(version = 1, relate = list(relations = list(list(name = "supports", source = "*", target = "*")))))
+  list(questions = list(urgent = list(decide = "Q?"))),
+  list(recognize = list(kinds = list(person = NULL))),
+  list(relate = list(relations = list(list(name = "supports", source = "*", target = "*")))))
 verbs <- c("decide", "choose", "tag", "score", "filter", "rank", "find", "annotate", "recognize", "relate")
 for (i in seq_along(questions)) {
   arrivals <- sent_by(called <- get(paste0("tt_", verbs[i]))(questions[[i]], tt_files(documents, unit = "file")))

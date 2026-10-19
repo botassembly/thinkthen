@@ -190,7 +190,7 @@ SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing argume
 
 ## Rank an ordered question set
 
-`thinkthen_rank_set(questions, keyed_json[, settings])` takes the native version-one ordered set of named decide questions. `SELECT *` returns `key, rank, probability, question_name`. Equal text keeps each original key. Native turns visit each depth in authored member order and emit each original once. The selecting member supplies probability and question name. `ORDER BY rank` and `LIMIT` operate on the merged result; every member still judges every record.
+`thinkthen_rank_set(questions, keyed_json[, settings])` takes the native ordered set of named decide questions. `SELECT *` returns `key, rank, probability, question_name`. Equal text keeps each original key. Native turns visit each depth in authored member order and emit each original once. The selecting member supplies probability and question name. `ORDER BY rank` and `LIMIT` operate on the merged result; every member still judges every record.
 
 Settings take batch, context and deadline. Engine configuration supplies model/backend selection. Described decide members retain authored true/false meanings. An empty keyed object and required NULL operands return no rows before sending. Question files use the existing native reader. Typed `facts_*` columns replace the previous JSON facts column and repeat the owning call facts on each answer row. Full member judgments and observations use the same typed projections below.
 

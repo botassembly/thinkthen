@@ -174,11 +174,11 @@ fn check_named(root: &Path) {
 fn check_roles(root: &Path) {
     for (name, body) in [
         ("finder", r#"{"find":"Which?","wording_version":2}"#),
-        ("recognizer", r#"{"version":1,"recognize":{}}"#),
+        ("recognizer", r#"{"recognize":{}}"#),
         ("ranker", r#"{"decide":"Ready?","wording_version":2}"#),
         (
             "connections",
-            r#"{"version":1,"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#,
+            r#"{"relate":{"fields":{"name":"/person/name","kind":"/person/kind"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#,
         ),
     ] {
         fs::write(config(root).join(format!("questions/{name}.json")), body).unwrap();

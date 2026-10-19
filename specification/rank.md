@@ -26,7 +26,7 @@ It also prints no order while an earlier record or batch is still waiting for a 
 
 ## Rank question sets
 
-The CLI and Rust crate accept a saved version-one set of named decide questions:
+The CLI and Rust crate accept a saved set of named decide questions:
 
 ```json
 {"questions":{"billing":{"decide":"Does this explain the billing problem?"},"recovery":{"decide":"Does this explain how to recover?"}}}

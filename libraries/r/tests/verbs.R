@@ -53,7 +53,7 @@ check("empty find is usage and sends nothing", sent_by(check("empty find kind",
 
 # Annotation retains original rows and separately typed question values.
 set_file <- tempfile(fileext = ".json")
-writeLines('{"version":1,"questions":{"refund":{"decide":"Refund?","threshold":"0.2:0.95"},
+writeLines('{"questions":{"refund":{"decide":"Refund?","threshold":"0.2:0.95"},
   "team":{"choose":"Which team?","options":["billing","other"]},
   "urgency":{"score":"How urgent?","levels":["low","soon","high"]},
   "labels":{"tag":"Which labels?","labels":["billing","urgent"],"threshold":0.95}}}', set_file)
@@ -72,7 +72,7 @@ check("a set file that cannot be read is local", identical(kind_of(tt_annotate(t
 # R3-3: main's set parser refuses a NUL in a member name first, and the
 # message crosses with the NUL escaped. The Rust unit test pins the escape.
 nul <- tempfile(fileext = ".json")
-writeLines('{"version":1,"questions":{"a\\u0000b":{"decide":"Q?"}}}', nul)
+writeLines('{"questions":{"a\\u0000b":{"decide":"Q?"}}}', nul)
 nul_sends <- sent_by(nul_error <- tryCatch(tt_annotate(tt_question(file = nul), frame, options = list(field = list("/body"))), thinkthen_error = identity))
 check("R3-3: a NUL name is refused and the process lives", nul_sends == 0L && inherits(nul_error, "thinkthen_local") && inherits(nul_error$complete, "thinkthen_CallError") && identical(conditionMessage(nul_error),
   "`questions.a\\u0000b` uses lowercase letters, digits, and underscores, and is not empty"))

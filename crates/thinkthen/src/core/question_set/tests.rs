@@ -5,7 +5,7 @@ use proptest::prelude::*;
 #[test]
 fn pinned_set_has_the_contract_digest() {
     let set = QuestionSet::parse(
-        r#"{"version":1,"questions":{"refund":{"decide":"Does this ask for a refund?"}}}"#,
+        r#"{"questions":{"refund":{"decide":"Does this ask for a refund?"}}}"#,
     )
     .expect("valid set");
     assert_eq!(
@@ -16,10 +16,10 @@ fn pinned_set_has_the_contract_digest() {
 
 #[test]
 fn one_top_level_profile_changes_the_set_digest_and_nested_profiles_are_refused() {
-    let plain = QuestionSet::parse(r#"{"version":1,"questions":{"refund":{"decide":"Refund?"}}}"#)
+    let plain = QuestionSet::parse(r#"{"questions":{"refund":{"decide":"Refund?"}}}"#)
         .expect("plain set");
     let named = QuestionSet::parse(
-        r#"{"version":1,"profile":"jev","questions":{"refund":{"decide":"Refund?"}}}"#,
+        r#"{"profile":"jev","questions":{"refund":{"decide":"Refund?"}}}"#,
     )
     .expect("profiled set");
     assert_eq!(named.profile().expect("profile").as_str(), "jev");
@@ -28,7 +28,7 @@ fn one_top_level_profile_changes_the_set_digest_and_nested_profiles_are_refused(
         named.sha256().expect("digest")
     );
     let nested = QuestionSet::parse(
-        r#"{"version":1,"questions":{"refund":{"decide":"Refund?","profile":"jev"}}}"#,
+        r#"{"questions":{"refund":{"decide":"Refund?","profile":"jev"}}}"#,
     )
     .expect_err("nested profile");
     assert!(nested.to_string().contains("questions.refund.profile"));
@@ -38,56 +38,56 @@ fn one_top_level_profile_changes_the_set_digest_and_nested_profiles_are_refused(
 fn grammar_errors_name_the_full_path() {
     let cases = [
         (
-            r#"{"version":1,"questions":{}}"#,
+            r#"{"questions":{}}"#,
             "`questions` holds at least",
         ),
         (
-            r#"{"version":1,"questions":{"Bad":{"decide":"x"}}}"#,
+            r#"{"questions":{"Bad":{"decide":"x"}}}"#,
             "questions.Bad",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","model":"jev-latest"}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","model":"jev-latest"}}}"#,
             "questions.ok.model",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","extra":1}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","extra":1}}}"#,
             "questions.ok.extra",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","on":"not-a-pointer"}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","on":"not-a-pointer"}}}"#,
             "questions.ok.on",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"choose":"x","options":true}}}"#,
+            r#"{"questions":{"ok":{"choose":"x","options":true}}}"#,
             "questions.ok.options",
         ),
         (
-            r#"{"version":1,"threshold":true,"questions":{"ok":{"decide":"x"}}}"#,
+            r#"{"threshold":true,"questions":{"ok":{"decide":"x"}}}"#,
             "`threshold`",
         ),
-        (r#"{"version":1,"questions":{"ok":true}}"#, "`questions.ok`"),
+        (r#"{"questions":{"ok":true}}"#, "`questions.ok`"),
         (
-            r#"{"version":1,"questions":{"ok":{"threshold":0.5}}}"#,
+            r#"{"questions":{"ok":{"threshold":0.5}}}"#,
             "`questions.ok`",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","choose":"y"}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","choose":"y"}}}"#,
             "`questions.ok`",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"score":"x","threshold":0.5,"levels":["low","high"]}}}"#,
+            r#"{"questions":{"ok":{"score":"x","threshold":0.5,"levels":["low","high"]}}}"#,
             "questions.ok.threshold",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":" "}}}"#,
+            r#"{"questions":{"ok":{"decide":" "}}}"#,
             "questions.ok.decide",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"score":"x","levels":["only"]}}}"#,
+            r#"{"questions":{"ok":{"score":"x","levels":["only"]}}}"#,
             "questions.ok.levels",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","on":["/a/id","/b/id"]}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","on":["/a/id","/b/id"]}}}"#,
             "questions.ok.on",
         ),
     ];
@@ -102,7 +102,7 @@ fn grammar_errors_name_the_full_path() {
             "version",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"x","decide":"y"}}}"#,
+            r#"{"questions":{"ok":{"decide":"x","decide":"y"}}}"#,
             "questions.ok.decide",
         ),
     ] {
@@ -121,7 +121,7 @@ fn grammar_errors_name_the_full_path() {
 #[test]
 fn a_missing_questions_wrapper_precedes_unknown_top_level_keys() {
     assert_eq!(
-        QuestionSet::parse(r#"{"version":1,"unresolved":{"decide":"x"}}"#),
+        QuestionSet::parse(r#"{"unresolved":{"decide":"x"}}"#),
         Err(QuestionSetError::MissingQuestions)
     );
 }
@@ -129,10 +129,11 @@ fn a_missing_questions_wrapper_precedes_unknown_top_level_keys() {
 #[test]
 fn a_set_inherits_the_structured_grammar_and_digests_it() {
     let set = QuestionSet::parse(
-        r#"{"version":1,"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money"},"urgent":null}}}}"#,
+        r#"{"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money"},"urgent":null}}}}"#,
     )
     .expect("valid set");
     let resolved = set.resolved_json().expect("resolved set renders");
+    assert!(crate::core::Json::parse(&resolved).expect("JSON").member("version").is_none());
     assert!(
         resolved.contains(r#""tag":["Which topics?"]"#),
         "{resolved}"
@@ -142,7 +143,7 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
         "{resolved}"
     );
     let spaced = QuestionSet::parse(
-        "{ \"version\":1, \"questions\":{\"topics\":{\"tag\":[\"Which topics?\"],\"labels\":{\"billing\":{\"what\":\"Money\"},\"urgent\":null}}}}",
+        "{ \"questions\":{\"topics\":{\"tag\":[\"Which topics?\"],\"labels\":{\"billing\":{\"what\":\"Money\"},\"urgent\":null}}}}",
     )
     .expect("valid set");
     assert_eq!(
@@ -150,7 +151,7 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
         spaced.sha256().expect("digest")
     );
     let changed = QuestionSet::parse(
-        r#"{"version":1,"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money!"},"urgent":null}}}}"#,
+        r#"{"questions":{"topics":{"tag":["Which topics?"],"labels":{"billing":{"what":"Money!"},"urgent":null}}}}"#,
     )
     .expect("valid set");
     assert_ne!(
@@ -158,7 +159,7 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
         changed.sha256().expect("digest")
     );
     let refused = QuestionSet::parse(
-        r#"{"version":1,"questions":{"bad":{"tag":"x","labels":{"a":3,"b":"y"}}}}"#,
+        r#"{"questions":{"bad":{"tag":"x","labels":{"a":3,"b":"y"}}}}"#,
     )
     .expect_err("a structured refusal names its path");
     assert!(
@@ -169,19 +170,19 @@ fn a_set_inherits_the_structured_grammar_and_digests_it() {
 
 #[test]
 fn groups_keep_first_question_order() {
-    let set = QuestionSet::parse(r#"{"version":1,"questions":{"a":{"decide":"a","on":"/x"},"b":{"score":"b","levels":["low","high"],"on":"/y"},"c":{"decide":"c","on":"/x"}}}"#).expect("valid set");
+    let set = QuestionSet::parse(r#"{"questions":{"a":{"decide":"a","on":"/x"},"b":{"score":"b","levels":["low","high"],"on":"/y"},"c":{"decide":"c","on":"/x"}}}"#).expect("valid set");
     assert_eq!(set.groups(), vec![vec![0, 2], vec![1]]);
 }
 
 #[test]
 fn absent_and_explicit_root_are_one_behavior_and_one_group() {
     let absent = QuestionSet::parse(
-        r#"{"version":1,"questions":{"a":{"decide":"a"},"b":{"decide":"b","on":""}}}"#,
+        r#"{"questions":{"a":{"decide":"a"},"b":{"decide":"b","on":""}}}"#,
     )
     .expect("valid set");
     assert_eq!(absent.groups(), vec![vec![0, 1]]);
     let explicit = QuestionSet::parse(
-        r#"{"version":1,"questions":{"a":{"decide":"a","on":""},"b":{"decide":"b"}}}"#,
+        r#"{"questions":{"a":{"decide":"a","on":""},"b":{"decide":"b"}}}"#,
     )
     .expect("valid set");
     assert_eq!(
@@ -196,8 +197,8 @@ proptest! {
         name in "[a-z][a-z0-9_]{0,15}",
         question in "[A-Za-z][A-Za-z0-9 ?]{0,40}",
     ) {
-        let compact = format!(r#"{{"version":1,"questions":{{"{name}":{{"decide":"{question}"}}}}}}"#);
-        let spaced = format!(r#"{{ "version" : 1, "questions" : {{ "{name}" : {{ "decide" : "{question}", "threshold" : 0.5 }} }} }}"#);
+        let compact = format!(r#"{{"questions":{{"{name}":{{"decide":"{question}"}}}}}}"#);
+        let spaced = format!(r#"{{ "questions" : {{ "{name}" : {{ "decide" : "{question}", "threshold" : 0.5 }} }} }}"#);
         let first = QuestionSet::parse(&compact).expect("generated set parses");
         let second = QuestionSet::parse(&spaced).expect("generated set parses");
         prop_assert_eq!(first.sha256().expect("digest"), second.sha256().expect("digest"));
@@ -215,7 +216,7 @@ proptest! {
             2 => format!(r#"{{"tag":"{question}","labels":{{"first":null,"second":"Second label."}},"threshold":0.7}}"#),
             _ => format!(r#"{{"score":"{question}","levels":["low","high"]}}"#),
         };
-        let compact = format!(r#"{{"version":1,"questions":{{"{name}":{held}}}}}"#);
+        let compact = format!(r#"{{"questions":{{"{name}":{held}}}}}"#);
         let first = QuestionSet::parse(&compact).expect("generated set parses");
         let resolved = first.resolved_json().expect("resolved set renders");
         let second = QuestionSet::parse(&resolved).expect("resolved set parses again");

@@ -41,7 +41,7 @@ fn run(file: &Path, response: &str, details: bool) -> io::Result<(Listener, std:
 fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
     let file = questions(
         "one-failed",
-        r#"{"version":1,"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"},"not_sure":{"decide":"not sure?","threshold":"0.1:0.9"}}}"#,
+        r#"{"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"},"not_sure":{"decide":"not sure?","threshold":"0.1:0.9"}}}"#,
     );
     let response = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -101,7 +101,7 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
 fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
     let file = questions(
         "failed-tag",
-        r#"{"version":1,"questions":{"good":{"decide":"good?"},"topics":{"tag":"topics?","labels":["billing","urgent"]}}}"#,
+        r#"{"questions":{"good":{"decide":"good?"},"topics":{"tag":"topics?","labels":["billing","urgent"]}}}"#,
     );
     let response = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -138,7 +138,7 @@ fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
 fn a_missing_member_fails_only_its_question() -> io::Result<()> {
     let file = questions(
         "missing-member",
-        r#"{"version":1,"questions":{"d":{"decide":"d?"},"c":{"choose":"c?","options":["a","b"]},"s":{"score":"s?","levels":["low","high"]},"t":{"tag":"t?","labels":["x","y"]}}}"#,
+        r#"{"questions":{"d":{"decide":"d?"},"c":{"choose":"c?","options":["a","b"]},"s":{"score":"s?","levels":["low","high"]},"t":{"tag":"t?","labels":["x","y"]}}}"#,
     );
     let base = [
         r#"{"type":"noul","noul":0.9}"#,
@@ -188,7 +188,7 @@ fn a_missing_member_fails_only_its_question() -> io::Result<()> {
 fn a_group_with_no_valid_answer_remains_a_backend_failure() -> io::Result<()> {
     let file = questions(
         "all-failed",
-        r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
     );
     let response = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"choice","probabilities":{"x":1.0}},"#,
@@ -208,7 +208,7 @@ fn a_group_with_no_valid_answer_remains_a_backend_failure() -> io::Result<()> {
 fn a_record_stream_finishes_after_partial_replies_and_exits_six() -> io::Result<()> {
     let file = questions(
         "stream-partial",
-        r#"{"version":1,"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
+        r#"{"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
     );
     let response = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -234,7 +234,7 @@ fn a_record_stream_finishes_after_partial_replies_and_exits_six() -> io::Result<
 fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()> {
     let file = questions(
         "partial-then-stop",
-        r#"{"version":1,"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
+        r#"{"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
     );
     let partial = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -276,7 +276,7 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
 fn a_recorded_partial_reply_replays_its_failed_question_as_a_miss() -> io::Result<()> {
     let file = questions(
         "recorded-partial",
-        r#"{"version":1,"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
+        r#"{"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
     );
     let response = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,

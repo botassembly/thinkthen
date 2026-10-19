@@ -118,7 +118,9 @@ impl Serialize for Kinds<'_> {
 pub(crate) enum RecognizeConfigError {
     #[error(transparent)]
     Declaration(#[from] crate::core::declaration::DeclarationError),
-    #[error("a recognize question file is one closed version-one object")]
+    #[error("{}", super::question_file::VERSION_FIELD_ERROR)]
+    Version,
+    #[error("a recognize question file is one closed object")]
     Shape,
     #[error("recognize takes distinct, nonblank kinds")]
     Kinds,
@@ -459,9 +461,11 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
     let Json::Object(members) = value else {
         return Err(RecognizeConfigError::Shape);
     };
+    if value.member("version").is_some() {
+        return Err(RecognizeConfigError::Version);
+    }
     if members.iter().any(|(name, _)| {
         ![
-            "version",
             "recognize",
             "threshold",
             "relation_threshold",
@@ -472,9 +476,6 @@ fn declaration(value: &Json) -> Result<&Json, RecognizeConfigError> {
         .contains(&name.as_str())
             && !crate::core::declaration::QuestionMetadata::is_key(name)
     }) {
-        return Err(RecognizeConfigError::Shape);
-    }
-    if value.member("version").and_then(number_u64) != Some(1) {
         return Err(RecognizeConfigError::Shape);
     }
     let recognize = value
@@ -508,10 +509,10 @@ mod tests {
     #[test]
     fn file_defaults_and_canonical_identity_are_stable_across_whitespace() {
         let compact =
-            RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person."}}}"#)
+            RecognizeSpec::parse(r#"{"recognize":{"kinds":{"person":"A person."}}}"#)
                 .expect("file");
         let spaced = RecognizeSpec::parse(
-            "{ \"version\": 1, \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }",
+            "{ \"recognize\": { \"kinds\": { \"person\": \"A person.\" } } }",
         )
         .expect("file");
         assert_eq!(compact, spaced);
@@ -541,7 +542,7 @@ mod tests {
                 .contains("private boundary")
         );
         assert!(!format!("{contextual:?}").contains("private boundary"));
-        let complete = RecognizeSpec::parse(r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}]},"threshold":0.6,"relation_threshold":0.7,"model":"ignored","profile":"measured-profile","on":"/body"}"#).unwrap();
+        let complete = RecognizeSpec::parse(r#"{"recognize":{"kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}]},"threshold":0.6,"relation_threshold":0.7,"model":"ignored","profile":"measured-profile","on":"/body"}"#).unwrap();
         assert_eq!(
             crate::core::json_line(&complete).unwrap(),
             r#"{"verb":"recognize","kinds":{"person":"A person.","organization":"An org."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":true}],"threshold":0.6,"relation_threshold":0.7,"profile":"measured-profile"}"#
@@ -555,9 +556,9 @@ mod tests {
     #[test]
     fn invalid_references_reserved_kinds_and_policy_members_are_refused() {
         for text in [
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"person","target":"organization"}]}}"#,
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person.","Entity":null}}}"#,
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"depth":2}}"#,
+            r#"{"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"person","target":"organization"}]}}"#,
+            r#"{"recognize":{"kinds":{"person":"A person.","Entity":null}}}"#,
+            r#"{"recognize":{"kinds":{"person":"A person."},"depth":2}}"#,
         ] {
             assert!(RecognizeSpec::parse(text).is_err(), "{text}");
         }

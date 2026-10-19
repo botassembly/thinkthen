@@ -21,7 +21,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
         },
         input: None,
         question: RecognizeSpec::parse(
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."}}}"#,
+            r#"{"recognize":{"kinds":{"person":"A person."}}}"#,
         )
         .unwrap(),
         answer: RecognitionOdds::Whole(crate::core::WholeRecognitionOdds {
@@ -171,7 +171,7 @@ fn empty_complete_relation_is_a_zero_observation_aggregate() {
     let canonical = Relation {
         identity: base.identity, value: Vec::new(), members: Vec::new(), lines: false,
         question: RelateSpec::parse(
-            r#"{"version":1,"relate":{"relations":[{"name":"link","source":"*","target":"*","single":true}]}}"#,
+            r#"{"relate":{"relations":[{"name":"link","source":"*","target":"*","single":true}]}}"#,
         ).unwrap(),
         meta: base.meta,
     };

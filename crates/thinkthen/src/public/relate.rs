@@ -51,7 +51,7 @@ impl Relate {
         }
     }
 
-    /// Read one version-one relate file. A `fields` pointer other than the
+    /// Read one relate file. A `fields` pointer other than the
     /// default `/name` and `/kind` is refused, because a library entity is
     /// already a name and a kind.
     ///

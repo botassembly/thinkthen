@@ -120,7 +120,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
     let set = root.join("questions.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"answer":{"decide":"asks?"}}}"#,
+        r#"{"questions":{"answer":{"decide":"asks?"}}}"#,
     )
     .expect("question set");
     let families = families(&set);

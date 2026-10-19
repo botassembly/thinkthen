@@ -48,11 +48,11 @@ def main():
                 ('filter', 'Fits?', record, 'Alpha.', .9, 1),
                 ('rank', '{"decide":"Fits?"}', record, 1, .9, 1),
                 ('find', '{"find":"Fits?"}', record + ",thinkthen_record(text=>'Beta.')", 'Alpha.', .9, 1),
-                ('annotate', '{"version":1,"questions":{"fit":{"decide":"Fits?"}}}',
+                ('annotate', '{"questions":{"fit":{"decide":"Fits?"}}}',
                  "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"untouched\":false}'::json)", None, None, 1),
-                ('recognize', '{"version":1,"recognize":{"kinds":{"person":"A person."}}}',
+                ('recognize', '{"recognize":{"kinds":{"person":"A person."}}}',
                  record, None, None, None),
-                ('relate', '{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}',
+                ('relate', '{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}',
                  "thinkthen_record(value=>'{\"name\":\"Alice\",\"kind\":\"person\"}'::json),thinkthen_record(value=>'{\"name\":\"Acme\",\"kind\":\"organization\"}'::json)", None, None, None),
             ]
             for function, question, item, value, probability, sends in checks:

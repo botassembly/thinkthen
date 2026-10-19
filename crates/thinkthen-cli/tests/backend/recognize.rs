@@ -455,7 +455,7 @@ fn long_descriptions_split_both_membership_and_kind_requests() {
 #[test]
 fn question_file_dry_run_attributes_source_and_sums_every_rule_bound() {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-question.json");
-    fs::write(&path, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"directed","source":"person","target":"person"},{"name":"either","source":"person","target":"person","either":true},{"name":"cross","source":"person","target":"organization"}]}}"#).expect("question file");
+    fs::write(&path, r#"{"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"directed","source":"person","target":"person"},{"name":"either","source":"person","target":"person","either":true},{"name":"cross","source":"person","target":"organization"}]}}"#).expect("question file");
     let listener = Listener::serving(Vec::new()).expect("listener");
     let report = plan_json(&local(
         &listener,
@@ -474,7 +474,7 @@ fn a_saved_recognize_name_reaches_details_identity_and_warning() {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-calibrated.json");
     fs::write(
         &path,
-        r#"{"version":1,"recognize":{"kinds":{"person":"A person."}},"profile":"old"}"#,
+        r#"{"recognize":{"kinds":{"person":"A person."}},"profile":"old"}"#,
     )
     .expect("question file");
     let running = profile("new", r#""max_evidence_bytes":1000"#);

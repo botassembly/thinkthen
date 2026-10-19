@@ -30,7 +30,7 @@ fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch
         json!({"body":"Bob.","context":4}),
     ] {
         let params: CallParams = serde_json::from_value(json!({"name":"recognize","arguments":{
-            "question":{"version":1,"recognize":{}},
+            "question":{"recognize":{}},
             "records":[{"body":"Ada.","context":"First context"},invalid],
             "options":{"field":"/body","context_field":"/context"}
         }}))
@@ -94,11 +94,11 @@ fn rank_forwards_the_inclusive_cutoff_before_top_and_refuses_nonprobability_rout
             json!(0.8),
         ),
         (
-            json!({"version":1,"questions":{"first":{"decide":"Best?"}}}),
+            json!({"questions":{"first":{"decide":"Best?"}}}),
             json!(0.8),
         ),
         (
-            json!({"version":1,"questions":{"first":{"decide":"Best?","threshold":0.8}}}),
+            json!({"questions":{"first":{"decide":"Best?","threshold":0.8}}}),
             json!(0.8),
         ),
     ] {
@@ -194,7 +194,7 @@ fn recognition_item_controls_refuse_null_and_invalid_edges_without_sends() {
         let mut descriptor = controls;
         descriptor["text"] = json!("Ada");
         let params: CallParams = serde_json::from_value(json!({"name":"recognize","arguments":{
-            "question":{"version":1,"recognize":{"kinds":{"person":null}}},
+            "question":{"recognize":{"kinds":{"person":null}}},
             "inputs":[descriptor]
         }}))
         .unwrap();

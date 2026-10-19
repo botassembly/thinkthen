@@ -7,6 +7,9 @@
 //! line at all passes [`Typed::default`], so a library over this crate reaches
 //! the same question a shell user reaches.
 
+/// Refusal shared by the three declaration-file forms.
+pub(crate) const VERSION_FIELD_ERROR: &str = "delete the `version` field.";
+
 use std::fmt;
 
 use serde::{Serialize, Serializer};
@@ -228,10 +231,10 @@ pub(crate) enum QuestionFileError {
     },
 }
 
-/// Where `version` belongs, for a user who copied it from another file.
+/// Explain how to remove a retired format member.
 fn elsewhere(key: &str) -> &'static str {
     if key == "version" {
-        "; `version` belongs in a question set, a recognize file, or a relate file"
+        "; delete the `version` field."
     } else {
         ""
     }

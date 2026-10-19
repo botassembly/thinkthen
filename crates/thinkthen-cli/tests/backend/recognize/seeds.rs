@@ -143,7 +143,7 @@ fn scalar_seed_offsets_deduplicate_and_match_native_request_bodies() {
         let request = Request::from_json(
             &json!({
                 "schema":"thinkthen.request/1", "call":{
-                    "function":"recognize", "question":{"kind":"definition","value":{"version":1,"recognize":{"kinds":{}}}},
+                    "function":"recognize", "question":{"kind":"definition","value":{"recognize":{"kinds":{}}}},
                     "input":{"kind":"json","value":original},
                     "options":{"field":["/body"],"seed_spans_field":"/seeds"}
                 }
@@ -244,7 +244,7 @@ fn native_seed_fallback_clearing_and_refusals_preserve_zero_send_admission() {
         .build()
         .unwrap();
     let base = json!({"schema":"thinkthen.request/1","call":{
-        "function":"recognize","question":{"kind":"definition","value":{"version":1,"recognize":{"kinds":{}}}},
+        "function":"recognize","question":{"kind":"definition","value":{"recognize":{"kinds":{}}}},
         "input":{"kind":"json","value":{"body":"Ada"}},
         "options":{"field":["/body"],"seed_spans_field":"/seeds","seed_spans":[{"start":0,"end":3}]}
     }});

@@ -23,7 +23,7 @@ fn partial_refusal_keeps_valid_observations_and_only_missing_piece_is_sent_again
         .build()
         .unwrap();
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Retry?"}}}"#,
+        r#"{"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Retry?"}}}"#,
     )
     .unwrap();
     let first = crate::api::annotate(

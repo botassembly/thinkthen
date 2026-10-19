@@ -71,7 +71,7 @@ def main():
                     else:
                         assert 'stopped_at' not in got and 'facts' not in got, got
 
-            question = {'version': 1, 'questions': {'body': {
+            question = {'questions': {'body': {
                 'decide': 'Fits?', 'on': '/body', 'item_schema': {'type': 'string'}}}}
             got = call('annotate', question, {'records': [
                 {'json': {'body': 'Alpha.', 'untouched': False}}]}, 1)

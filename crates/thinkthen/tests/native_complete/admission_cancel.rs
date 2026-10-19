@@ -22,15 +22,15 @@ fn call(
     let options = CallOptions::new().cancel(token);
     let question = Question::decide("Ready?").unwrap().cut();
     let rank = Question::rank("Ready?").unwrap();
-    let set = r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#;
+    let set = r#"{"questions":{"ready":{"decide":"Ready?"}}}"#;
     match function {
         "atomic" => crate::api::eager_decisions(engine,&question,records(),options).map(|_|()),
         "annotation" => crate::api::whole(engine,thinkthen::RequestFunction::Annotate,thinkthen::QuestionSet::from_json(set).unwrap().into(),records().map(Ok),options).map(|_|()),
         "rank" => crate::api::eager_rank(engine,&rank,records(),options).map(|_|()),
         "rank-set" => crate::api::whole(engine,thinkthen::RequestFunction::Rank,RankSet::from_json(set).unwrap().into(),records().map(Ok),options).map(|_|()),
         "find" => crate::api::find(engine, &Question::find("Which?").unwrap(), records().map(Ok), options).map(|_|()),
-        "recognize" => crate::api::recognize_records(engine,&thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{}}"#).unwrap(),records(),options).map(|_|()),
-        "relate" => crate::api::whole(engine,thinkthen::RequestFunction::Relate,thinkthen::Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),records().map(Ok),options).map(|_|()),
+        "recognize" => crate::api::recognize_records(engine,&thinkthen::Recognize::from_json(r#"{"recognize":{}}"#).unwrap(),records(),options).map(|_|()),
+        "relate" => crate::api::whole(engine,thinkthen::RequestFunction::Relate,thinkthen::Relate::from_records_json(r#"{"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),records().map(Ok),options).map(|_|()),
         _=>panic!("function"),
     }
 }

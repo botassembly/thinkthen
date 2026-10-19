@@ -12,7 +12,7 @@ mod field_failure;
 const INPUT: &[u8] =
     b"{\"id\":\"a\",\"body\":\"first\"}\n{\"id\":\"b\"}\n{\"id\":\"c\",\"body\":\"third\"}\n";
 const SET: &str =
-    r#"{"version":1,"questions":{"urgent":{"decide":"Is this urgent?","on":"/body"}}}"#;
+    r#"{"questions":{"urgent":{"decide":"Is this urgent?","on":"/body"}}}"#;
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":4,"output_tokens":1}}"#;
 const FIRST_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Is this urgent?"}}}"#;
 const THIRD_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"third\". Is this urgent?"}}}"#;
@@ -379,7 +379,7 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
 fn skipped_row_outranks_a_completed_partial_answer_without_erasing_it() -> io::Result<()> {
     let file = set(
         "record-continue-partial",
-        r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/body"},"second":{"decide":"Second?","on":"/body"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?","on":"/body"},"second":{"decide":"Second?","on":"/body"}}}"#,
     );
     let reply = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::serving(vec![Canned::ok(reply)])?;
@@ -474,7 +474,7 @@ fn missing_first_and_last_positions_keep_the_middle_answer() -> io::Result<()> {
 fn annotation_admits_the_same_invalid_record_through_cli_and_library_before_sending()
 -> io::Result<()> {
     const DECLARED: &str =
-        r#"{"version":1,"questions":{"good":{"decide":"Good?","item_schema":{"type":"string"}}}}"#;
+        r#"{"questions":{"good":{"decide":"Good?","item_schema":{"type":"string"}}}}"#;
     let file = set("shared-annotation-admission", DECLARED);
     let listener = Listener::serving(vec![])?;
     let output = crate::harness::annotate_at(

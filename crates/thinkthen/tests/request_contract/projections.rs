@@ -196,7 +196,7 @@ fn all_filter_results_refuses_incompatible_feed_without_advancing() {
 fn annotation_declarations_use_each_members_selected_evidence() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let set=QuestionSet::from_json(r#"{"version":1,"questions":{"body":{"decide":"Fits?","on":"/body","item_schema":{"type":"string"}}}}"#).unwrap();
+    let set=QuestionSet::from_json(r#"{"questions":{"body":{"decide":"Fits?","on":"/body","item_schema":{"type":"string"}}}}"#).unwrap();
     for invalid in [false, true] {
         let values = if invalid {
             vec![r#"{"body":"Alpha."}"#, r#"{"body":42}"#]
@@ -603,7 +603,7 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
     std::fs::write(&path, "Ada\n\n").unwrap();
     let listener = Listener::answering(response).unwrap();
     let session = engine(&listener).request_session(Request::named("relate", args(
-        Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),
+        Relate::from_records_json(r#"{"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),
         RequestInput::Source { source: RequestSource {
             framing: None,
             paths: vec![path.clone(), path.clone()],

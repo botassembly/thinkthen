@@ -214,7 +214,7 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
     let set = file(
         "grouped.json",
         concat!(
-            r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/a"},"#,
+            r#"{"questions":{"first":{"decide":"First?","on":"/a"},"#,
             r#""second":{"decide":"Second?","on":"/b"}}}"#,
         ),
     );

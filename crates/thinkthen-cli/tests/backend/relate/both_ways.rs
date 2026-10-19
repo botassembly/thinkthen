@@ -10,7 +10,7 @@ use serde_json::Value;
 use super::{answered, run};
 use crate::harness::Listener;
 
-const MIXED: &str = r#"{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"},{"name":"partners","source":"organization","target":"person","either":true}]}}"#;
+const MIXED: &str = r#"{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"},{"name":"partners","source":"organization","target":"person","either":true}]}}"#;
 
 /// Acme comes after Ada, and the both-ways rule names the organization first.
 const NAMES: &[u8] = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;

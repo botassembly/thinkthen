@@ -43,7 +43,7 @@ fn three_questions(name: &str) -> PathBuf {
     set(
         name,
         concat!(
-            r#"{"version":1,"questions":{"first":{"decide":"first?"},"#,
+            r#"{"questions":{"first":{"decide":"first?"},"#,
             r#""second":{"decide":"second?"},"third":{"decide":"third?"}}}"#,
         ),
     )
@@ -170,7 +170,7 @@ fn question_and_option_limits_split_or_refuse_before_any_send() {
 
     let exact_choice = set(
         "option-exact",
-        r#"{"version":1,"questions":{"first":{"decide":"first?"},"pick":{"choose":"pick?","options":["a","b"]}}}"#,
+        r#"{"questions":{"first":{"decide":"first?"},"pick":{"choose":"pick?","options":["a","b"]}}}"#,
     );
     let exact_reply = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -194,7 +194,7 @@ fn question_and_option_limits_split_or_refuse_before_any_send() {
 
     let overflow_choice = set(
         "option-overflow",
-        r#"{"version":1,"questions":{"first":{"decide":"first?"},"pick":{"choose":"pick?","options":["a","b","c"]}}}"#,
+        r#"{"questions":{"first":{"decide":"first?"},"pick":{"choose":"pick?","options":["a","b","c"]}}}"#,
     );
     let refused = Listener::serving(Vec::new()).expect("refused listener");
     let output = run(&overflow_choice, &options, &refused, &[], &[]);
@@ -211,7 +211,7 @@ fn every_question_of_every_group_is_preflighted_before_the_first_send() {
     let questions = set(
         "later-impossible-group",
         concat!(
-            r#"{"version":1,"questions":{"first":{"decide":"first?","on":"/left"},"#,
+            r#"{"questions":{"first":{"decide":"first?","on":"/left"},"#,
             r#""second":{"decide":"second?","on":"/left"},"#,
             r#""impossible":{"choose":"pick?","options":["a","b","c"],"on":"/right"}}}"#,
         ),
@@ -261,7 +261,7 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
     // A run of the first two questions alone stores their answers.
     let seed = set(
         "mixed-seed",
-        r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
     );
     let seed_home = crate::child::Folder::Usage.variable(&root.join("seed-usage"));
     let seeded = run(
@@ -402,7 +402,7 @@ fn the_plan_shows_each_request() {
         .join(",");
     let many = set(
         "plan-many",
-        &format!(r#"{{"version":1,"questions":{{{questions}}}}}"#),
+        &format!(r#"{{"questions":{{{questions}}}}}"#),
     );
     let hundred = profile("hundred", r#""max_questions":100"#);
     let (line, code) = dry_run(
@@ -425,7 +425,7 @@ fn the_plan_shows_each_request() {
     // Row 10: two `on` groups and no profile share one request.
     let two = set(
         "plan-two-groups",
-        r#"{"version":1,"questions":{"concise":{"decide":"Is this concise?","on":"/summary"},"refund":{"decide":"Does this ask for a refund?","on":"/body"}}}"#,
+        r#"{"questions":{"concise":{"decide":"Is this concise?","on":"/summary"},"refund":{"decide":"Does this ask for a refund?","on":"/body"}}}"#,
     );
     assert_eq!(
         dry_run(&two, &[], br#"{"summary":"Short note.","body":"Refund me."}"#),

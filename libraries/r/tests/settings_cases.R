@@ -24,7 +24,7 @@ for (case in corpus$cases) {
       'tryCatch({',
       'do.call(tt_engine, settings)',
       if (identical(step$verb, "relate"))
-        sprintf('value <- length(tt_relate(list(version = 1, relate = list(relations = list(list(name = %s, source = "*", target = "*")))), jsonlite::fromJSON(%s))$results[[1]]$value)',
+        sprintf('value <- length(tt_relate(list(relate = list(relations = list(list(name = %s, source = "*", target = "*")))), jsonlite::fromJSON(%s))$results[[1]]$value)',
                 literal(case$relation), literal(literal(case$entities)))
       else if (identical(step$verb, "decide_many"))
         sprintf('value <- vapply(tt_decide(%s, c("refund one", "refund two", "refund three"))$results, `[[`, TRUE, "value")', literal(corpus$question))

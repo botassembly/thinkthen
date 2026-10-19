@@ -57,7 +57,7 @@ def test_complete_annotation_validates_member_projection_before_schema():
     got = child('''
 db=connect()
 db.execute('SELECT thinkthen_configure(?)', [json.dumps({'cache':False,'batch':1})])
-question={'version':1,'questions':{'body':{'decide':'Fits?','on':['/body'],'item_schema':{'type':'string'}}}}
+question={'questions':{'body':{'decide':'Fits?','on':['/body'],'item_schema':{'type':'string'}}}}
 for invalid in (False, True):
     records=[{'json':{'body':'Alpha.'}}]
     if invalid: records.append({'json':{'body':42}})

@@ -14,7 +14,7 @@ fn named_groups_pack_two_rows_and_keep_ordered_observations() {
     let listener = Listener::serving(vec![Canned::ok(reply)]).expect("scripted listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());
@@ -83,7 +83,7 @@ fn a_failed_group_stops_after_the_usable_prefix() {
     .expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"a":{"decide":"First A?","on":"/a"},"a_again":{"decide":"Second A?","on":"/a"},"b":{"decide":"Group B?","on":"/b"}}}"#,
+        r#"{"questions":{"a":{"decide":"First A?","on":"/a"},"a_again":{"decide":"Second A?","on":"/a"},"b":{"decide":"Group B?","on":"/b"}}}"#,
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());
@@ -165,7 +165,7 @@ fn a_halved_request_keeps_one_question_key_per_member() {
     .expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());
@@ -265,7 +265,7 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
         .build()
         .expect("engine");
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let mut rows = crate::api::pull_annotations(
@@ -305,7 +305,7 @@ fn compatible_profile_group_still_packs_multiple_rows() {
         .build()
         .expect("engine");
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let mut rows = crate::api::pull_annotations(
@@ -338,7 +338,7 @@ fn a_later_profile_group_refuses_before_any_request() {
         .build()
         .expect("engine");
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/a"},"second":{"decide":"Second?","on":"/b"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?","on":"/a"},"second":{"decide":"Second?","on":"/b"}}}"#,
     ).expect("set");
     let mut rows = crate::api::pull_annotations(
         &engine,

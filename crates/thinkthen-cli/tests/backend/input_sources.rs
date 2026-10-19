@@ -58,7 +58,7 @@ fn seven_commands_read_files_in_order_and_restart_positions() -> io::Result<()> 
     let set = place.join("set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Is it clear?"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Is it clear?"}}}"#,
     )?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",
@@ -198,7 +198,7 @@ fn windows_preserve_blanks_final_lines_and_file_edges() -> io::Result<()> {
     let set = place.join("set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Clear?"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Clear?"}}}"#,
     )?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",
@@ -258,7 +258,7 @@ fn preflight_refusals_send_nothing() -> io::Result<()> {
     let set = place.join("set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Clear?","on":"/text"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Clear?","on":"/text"}}}"#,
     )?;
     let one = one.to_str().expect("path");
     let missing = place.join("missing");

@@ -130,7 +130,7 @@ fn native_readiness_emits_a_row_and_cancels_without_waiting_for_input_eof() {
         .join(format!("reader-questions-{}.json", std::process::id()));
     std::fs::write(
         &questions,
-        r#"{"version":1,"questions":{"keep":{"decide":"Keep?"}}}"#,
+        r#"{"questions":{"keep":{"decide":"Keep?"}}}"#,
     )
     .expect("questions");
     for verb in ["decide", "annotate", "recognize"] {

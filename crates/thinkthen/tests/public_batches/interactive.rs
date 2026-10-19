@@ -58,7 +58,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
         Some((1, 1))
     );
 
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#)
+    let set = QuestionSet::from_json(r#"{"questions":{"first":{"decide":"First?"}}}"#)
         .expect("annotation set");
     let (release_annotation, held_annotation) = std::sync::mpsc::channel();
     let pulled_annotation = std::sync::Arc::new(AtomicUsize::new(0));
@@ -271,7 +271,7 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         &pulls,
         |row| assert!(row.result().value()),
     );
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#)
+    let set = QuestionSet::from_json(r#"{"questions":{"first":{"decide":"First?"}}}"#)
         .expect("set");
     let pulls = AtomicUsize::new(0);
     reader_failure(

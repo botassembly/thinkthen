@@ -26,7 +26,7 @@ fn non_utf8_file_names_keep_answers_and_use_display_strings() -> io::Result<()> 
     let set = place.join("set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Clear?"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Clear?"}}}"#,
     )?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",
@@ -172,7 +172,7 @@ fn single_file_and_stdin_keep_each_commands_original_bytes_and_requests() -> io:
     let set = place.join("set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Clear?"}}}"#,
+        r#"{"questions":{"ok":{"decide":"Clear?"}}}"#,
     )?;
     for verb in [
         "decide", "filter", "rank", "choose", "score", "tag", "annotate",

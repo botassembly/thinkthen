@@ -9,7 +9,7 @@ use crate::harness::Listener;
 fn the_input_cap_closes_a_request_at_4096_records() {
     let file = set(
         "batch-cap-records",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(all_yes).expect("listener");
     let input: String = (1..=4097).map(|at| format!("r{at}\n")).collect();

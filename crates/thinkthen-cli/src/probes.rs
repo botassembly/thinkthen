@@ -20,19 +20,19 @@ const OBJECT: &str = r#"{"note":"The parcel arrived on Tuesday.","box":"intact"}
 const PROBES: [(bool, &str); 4] = [
     (
         false,
-        r#"{"version":1,"questions":{"q":{"decide":"Did the parcel arrive undamaged?","true":"The text says the box or its contents were intact.","false":null}}}"#,
+        r#"{"questions":{"q":{"decide":"Did the parcel arrive undamaged?","true":"The text says the box or its contents were intact.","false":null}}}"#,
     ),
     (
         false,
-        r#"{"version":1,"questions":{"q":{"choose":"Which day did the parcel arrive?","options":{"Monday":null,"Tuesday":"The second working day of the week.","Wednesday":{"what":"The middle of the week","examples":["midweek"]}}}}}"#,
+        r#"{"questions":{"q":{"choose":"Which day did the parcel arrive?","options":{"Monday":null,"Tuesday":"The second working day of the week.","Wednesday":{"what":"The middle of the week","examples":["midweek"]}}}}}"#,
     ),
     (
         false,
-        r#"{"version":1,"questions":{"q":{"score":"How well was the parcel packed?","levels":{"fair":null,"good":"The box was dented but the contents were fine.","excellent":{"what":"The box was intact","not_for":"a dented box"}}}}}"#,
+        r#"{"questions":{"q":{"score":"How well was the parcel packed?","levels":{"fair":null,"good":"The box was dented but the contents were fine.","excellent":{"what":"The box was intact","not_for":"a dented box"}}}}}"#,
     ),
     (
         true,
-        r#"{"version":1,"questions":{"on_time":{"decide":"Did it arrive on time?"},"day":{"choose":"Which day?","options":["Monday","Tuesday"]},"packing":{"score":"How was the packing?","levels":["poor","good"]},"fit":{"tag":"Which labels fit?","labels":{"on_time":{"what":"It arrived when promised"},"damaged":"The box or its contents were harmed."}}}}"#,
+        r#"{"questions":{"on_time":{"decide":"Did it arrive on time?"},"day":{"choose":"Which day?","options":["Monday","Tuesday"]},"packing":{"score":"How was the packing?","levels":["poor","good"]},"fit":{"tag":"Which labels fit?","labels":{"on_time":{"what":"It arrived when promised"},"damaged":"The box or its contents were harmed."}}}}"#,
     ),
 ];
 

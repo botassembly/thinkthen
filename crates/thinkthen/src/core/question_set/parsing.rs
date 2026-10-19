@@ -10,22 +10,15 @@ pub(super) fn parse(text: &str, rank: bool) -> Result<QuestionSet, QuestionSetEr
     let Json::Object(members) = &value else {
         return Err(QuestionSetError::NotObject);
     };
+    if value.member("version").is_some() {
+        return Err(QuestionSetError::Version);
+    }
     if value.member("questions").is_none() {
         return Err(QuestionSetError::MissingQuestions);
     }
     for (key, _) in members {
-        if !["version", "threshold", "profile", "questions", "batch"].contains(&key.as_str()) {
+        if !["threshold", "profile", "questions", "batch"].contains(&key.as_str()) {
             return Err(QuestionSetError::UnknownKey(key.clone()));
-        }
-    }
-    match value.member("version") {
-        None => {}
-        Some(Json::Number(number)) if number.as_u64() == Some(1) => {}
-        _ => {
-            return Err(QuestionSetError::Shape {
-                path: "version".to_owned(),
-                wanted: "is the number 1",
-            });
         }
     }
     if rank && value.member("threshold").is_some() {

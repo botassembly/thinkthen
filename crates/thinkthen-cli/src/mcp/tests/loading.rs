@@ -25,23 +25,23 @@ fn native_closed_grammars_refuse_duplicate_unknown_and_wrong_kind_without_sends(
         ),
         (
             "annotate",
-            r#"{"version":1,"questions":{"a":{"decide":"q"},"a":{"decide":"other"}}}"#,
+            r#"{"questions":{"a":{"decide":"q"},"a":{"decide":"other"}}}"#,
         ),
         (
             "rank",
-            r#"{"version":1,"questions":{"a":{"decide":"q","threshold":0.5}}}"#,
+            r#"{"questions":{"a":{"decide":"q","threshold":0.5}}}"#,
         ),
         (
             "rank",
-            r#"{"version":1,"questions":{"a":{"decide":"q","on":""}}}"#,
+            r#"{"questions":{"a":{"decide":"q","on":""}}}"#,
         ),
         (
             "recognize",
-            r#"{"version":1,"recognize":{"kinds":{"person":null}},"extra":true}"#,
+            r#"{"recognize":{"kinds":{"person":null}},"extra":true}"#,
         ),
         (
             "relate",
-            r#"{"version":1,"relate":{"relations":[{"name":"same","source":"*","target":"*","extra":true}]}}"#,
+            r#"{"relate":{"relations":[{"name":"same","source":"*","target":"*","extra":true}]}}"#,
         ),
         ("tag", r#"{"decide":"q"}"#),
     ] {
@@ -62,7 +62,7 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
         ("annotate", b"{\"version\":2,\"questions\":{}}".as_slice()),
         ("recognize", b"\xff".as_slice()),
         ("relate", b"not JSON".as_slice()),
-        ("rank", b"{\"version\":1,\"questions\":{}}".as_slice()),
+        ("rank", b"{\"questions\":{}}".as_slice()),
     ] {
         std::fs::write(&path, bytes).unwrap();
         let params: CallParams = serde_json::from_value(
@@ -118,7 +118,7 @@ fn explicit_file_loading_keeps_local_errors_and_never_creates_or_rewrites_files(
 fn native_question_set_preparation_keeps_authored_names_and_utf8_order() {
     let call = inline(
         "annotate",
-        r#"{"version":1,"questions":{"zebra":{"decide":"café 😀?"},"alpha":{"score":"grade","levels":["low","high"]}}}"#,
+        r#"{"questions":{"zebra":{"decide":"café 😀?"},"alpha":{"score":"grade","levels":["low","high"]}}}"#,
     );
     let crate::RequestQuestion::Definition {
         value: crate::RequestDefinition::DecodedSet {

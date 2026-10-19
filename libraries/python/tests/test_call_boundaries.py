@@ -11,9 +11,9 @@ def test_named_failure_messages_and_result_reprs_do_not_expose_credentials(backe
         calls=[('decide','Late?',['note'],{}),('choose','Team?',['note'],{'options':['a','b']}),
                ('score','Urgent?',['note'],{'levels':['low','high']}),('tag','Kinds?',['note'],{'labels':['a','b']}),
                ('filter','Late?',['note'],{}),('rank','Late?',['a','b'],{}),('find','Best?',['a','b'],{}),
-               ('annotate',{'version':1,'questions':{'late':{'decide':'Late?'}}},['note'],{}),
-               ('recognize',{'version':1,'recognize':{'kinds':{'person':'name'}}},'Ada',{}),
-               ('relate',{'version':1,'relate':{'relations':[{'name':'knows','source':'person','target':'person'}]}},[('Ada','person'),('Bo','person')],{})]
+               ('annotate',{'questions':{'late':{'decide':'Late?'}}},['note'],{}),
+               ('recognize',{'recognize':{'kinds':{'person':'name'}}},'Ada',{}),
+               ('relate',{'relate':{'relations':[{'name':'knows','source':'person','target':'person'}]}},[('Ada','person'),('Bo','person')],{})]
         for verb,question,source,controls in calls:
             try:
                 value=getattr(engine,verb)(source,question,**controls) if verb in ('recognize','relate') else getattr(engine,verb)(question,source,**controls)
@@ -87,7 +87,7 @@ def test_native_admission_and_removed_keywords(backend, tmp_path):
             assert str(error) == 'the question declaration uses an unsupported feature'
         else: raise AssertionError('unsupported declaration admitted')
         for field in ['snippet_pieces', 'deadline_ms', 'max_requests_total', 'top']:
-            try: engine.plan('recognize', {'version': 1, 'recognize': {'kinds': {}}}, ['note'], **{field: True})
+            try: engine.plan('recognize', {'recognize': {'kinds': {}}}, ['note'], **{field: True})
             except tt.UsageError as error: assert str(error) == 'invalid canonical request'
             else: raise AssertionError('boolean integer admitted')
         for unit, window in [('bad', None), ('line', 2), ('window', 0), ('window', True), ('window', -1)]:
