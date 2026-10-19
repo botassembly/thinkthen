@@ -1,6 +1,6 @@
 # 0710: Serve the site's installers from the root copies
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
