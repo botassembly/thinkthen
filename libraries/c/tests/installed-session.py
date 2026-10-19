@@ -67,6 +67,3 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
 
     from installed_call import run as blocking_call
     blocking_call(native, root)
-
-    from call_prototypes import run as call_prototypes
-    call_prototypes(native, root)

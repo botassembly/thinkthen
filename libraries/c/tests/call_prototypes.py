@@ -105,7 +105,7 @@ def run(native, scratch):
         try:
             env.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/generic/v1',
                        THINKTHEN_API_KEY='sk-conformance-loopback')
-            for name, source, command in (('php', PHP, ['php', '-d', 'ffi.enable=true']),
+            for name, source, command in (('php', PHP, ['php', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1']),
                                            ('dart', DART, ['dart'])):
                 path = folder / ('caller.' + name)
                 path.write_text(source)
@@ -117,3 +117,8 @@ def run(native, scratch):
             assert int(backend.read('count')) == 2
         finally:
             backend.close()
+
+
+if __name__ == '__main__':
+    with tempfile.TemporaryDirectory(prefix='blocking-call-prototypes-') as scratch:
+        run(Path(sys.argv[1]).resolve(strict=True), Path(scratch))
