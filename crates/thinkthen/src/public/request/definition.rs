@@ -66,6 +66,21 @@ impl RequestDefinition {
     }
 }
 
+impl From<crate::BandedQuestion> for RequestDefinition {
+    fn from(question: crate::BandedQuestion) -> Self {
+        Self::Atomic(LoadedQuestion::Banded(question))
+    }
+}
+impl<C: crate::Choice> From<crate::ChooseQuestion<C>> for RequestDefinition {
+    fn from(question: crate::ChooseQuestion<C>) -> Self {
+        Self::Atomic(LoadedQuestion::Question(question.0))
+    }
+}
+impl<C: crate::Choice> From<crate::TagQuestion<C>> for RequestDefinition {
+    fn from(question: crate::TagQuestion<C>) -> Self {
+        Self::Atomic(LoadedQuestion::Question(question.0))
+    }
+}
 impl From<LoadedQuestion> for RequestDefinition {
     fn from(q: LoadedQuestion) -> Self {
         Self::Atomic(q)

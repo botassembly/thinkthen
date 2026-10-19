@@ -13,26 +13,31 @@ use crate::public::{EstimatedInputDenial, SendBudgetDenial};
 ///
 /// Match the variant or read [`Error::kind`]. Every message is safe to log:
 /// none carries a key, evidence, or a label a record supplied.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
     /// The call or a setting cannot act as given.
-    #[error("{}", .0.message)]
     Usage(ErrorDetail),
     /// The backend failed or refused the call.
-    #[error("{}", .0.message)]
     Backend(ErrorDetail),
     /// A local file, folder, or cache failed.
-    #[error("{}", .0.message)]
     Local(ErrorDetail),
     /// The call's cancel token fired, or its interrupt check answered `true`.
-    #[error("{}", .0.message)]
     Cancelled(ErrorDetail),
     /// The call's deadline passed.
-    #[error("{}", .0.message)]
     Deadline(ErrorDetail),
     /// A fault inside `thinkthen`. Report it.
-    #[error("{}", .0.message)]
     Defect(ErrorDetail),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.detail().message())
+    }
+}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.detail().producer.as_deref().map(|error| error as _)
+    }
 }
 
 /// The six kinds an [`Error`] takes.
@@ -79,6 +84,7 @@ pub struct ErrorDetail {
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
     diagnostic: Option<Box<diagnostic::Diagnostic>>,
+    producer: Option<Box<Error>>,
 }
 
 impl std::fmt::Debug for ErrorDetail {
@@ -227,6 +233,7 @@ impl Error {
             estimated_input_denial: None,
             facts: None,
             diagnostic: None,
+            producer: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -236,6 +243,12 @@ impl Error {
             ErrorKind::Deadline => Self::Deadline(detail),
             ErrorKind::Defect => Self::Defect(detail),
         }
+    }
+
+    pub(crate) fn producer(cause: Self) -> Self {
+        let mut error = Self::local("session producer raised an exception");
+        error.detail_mut().producer = Some(Box::new(cause));
+        error
     }
 
     pub(crate) fn usage(message: impl Into<String>) -> Self {

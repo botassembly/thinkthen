@@ -2,6 +2,9 @@
 
 use std::io::Write;
 
+mod support;
+use thinkthen::{RequestEnvironment, RequestValue};
+
 use thinkthen::{Engine, Question};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,10 +15,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Please refund my order. It arrived broken.",
         "Thanks for the quick help yesterday!",
     ] {
-        let answer = match tt.decide(&ask, text)?.into_value() {
-            Some(true) => "Yes",
-            Some(false) => "No",
-            None => "Unsure",
+        let call = tt.call(
+            "decide",
+            support::arguments(ask.clone(), support::text(text)),
+            RequestEnvironment::default(),
+        )?;
+        let RequestValue::Decisions(rows) = call.value() else {
+            return Err("expected decisions".into());
+        };
+        let answer = match rows.first().ok_or("missing decision")?.result().value() {
+            thinkthen::Answer::Yes => "Yes",
+            thinkthen::Answer::No => "No",
+            thinkthen::Answer::Unsure => "Unsure",
         };
         writeln!(out, "{answer}: {text}")?;
     }
