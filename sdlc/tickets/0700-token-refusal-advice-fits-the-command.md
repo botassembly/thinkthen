@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision d253870, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/cli/failure/status.rs`, `crates/thinkthen/src/cli/failure.rs`, `crates/thinkthen/tests/backend/status_reason.rs`.
@@ -18,3 +20,7 @@ Milestone: 0.2.1
 Research ran released 0.1.0 `find` on 21 JSONL candidates, 86,552 bytes. The plan estimated 43,297 to 76,190 input tokens; the hosted TypeSafe backend refused with `max_tokens_exceeded`. The message said to "shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile", but 0.1.0 `find --help` has no `--max-request-bytes`. Main has since added the flag to `find`, but `find` sends one request for the whole set, so a lower request size only turns the refusal into a local one. The one message in `cli/failure/status.rs` serves every command.
 
 A preflight that compares the estimate with the model's input limit before sending belongs with backend capabilities as configuration (0594), which holds each model's context limit as data.
+
+## Progress
+
+- 2026-10-19 started

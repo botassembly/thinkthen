@@ -359,13 +359,13 @@ private package Thinkthen.Session_C is
    type thinkthen_session is null record;
    type thinkthen_session_result is null record;
    type thinkthen_value is null record;
-   type thinkthen_complete_usage_persistence_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_utf8_v1 is record
       data : Interfaces.C.Strings.chars_ptr;
       len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_usage_persistence_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_text_v1 is record

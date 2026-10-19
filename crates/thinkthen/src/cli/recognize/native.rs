@@ -199,7 +199,9 @@ pub(super) fn run(
             if let Some(facts) = error.facts() {
                 running.environment.settle_native(facts);
             }
-            let cause = Failure::from(error).with_replay_context(ReplayContext::Recognize);
+            let cause = Failure::from(error)
+                .with_replay_context(ReplayContext::Recognize)
+                .with_size_advice(crate::failure::SizeAdvice::Batches);
             let cause = match at {
                 Some(at) => super::examples::at_record(cause, at.saturating_sub(1)),
                 None => cause,
