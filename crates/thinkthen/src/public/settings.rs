@@ -3,6 +3,7 @@
 mod backend;
 mod budgets;
 mod environment;
+mod configuration;
 mod snapshot;
 pub use snapshot::ResolvedSettings;
 pub(super) mod json;

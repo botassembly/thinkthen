@@ -12,6 +12,8 @@
     reason = "a failed fixture or child stops the proof"
 )]
 
+#[path = "public_env/config_capture.rs"]
+mod config_capture;
 #[path = "public_env/batch.rs"]
 mod batch;
 #[path = "public_env/cache_budget.rs"]
@@ -235,6 +237,7 @@ fn ask(engine: &Engine) -> String {
 fn run(case: &str, argument: &str) -> Vec<String> {
     let seed = || EngineBuilder::from_env().expect("a seed");
     match case {
+        "config-only" => config_capture::capture(argument),
         "settings-json" => vec![shown(EngineBuilder::from_settings_json(argument))],
         "settings-profile" => vec![shown(
             EngineBuilder::from_settings_json(argument).and_then(EngineBuilder::build),

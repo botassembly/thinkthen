@@ -20,7 +20,7 @@ pub(super) struct Captured {
     pub(super) backend: Option<String>,
     pub(super) config_url: Option<String>,
     pub(super) config_backend: Option<String>,
-    pub(super) config_model: Option<ModelName>,
+    pub(super) config_model: Option<String>,
     pub(super) prices: Option<Prices>,
     pub(super) metadata: super::snapshot::CapturedMetadata,
     pub(super) configured: Vec<Named>,
@@ -37,7 +37,7 @@ impl fmt::Debug for Captured {
             .field("backend", &withheld(&self.backend))
             .field("config_url", &withheld(&self.config_url))
             .field("config_backend", &self.config_backend)
-            .field("config_model", &self.config_model)
+            .field("config_model", &withheld(&self.config_model))
             .field("configured", &self.configured)
             .field("keys", &self.keys.len())
             .finish()
@@ -54,6 +54,7 @@ pub(super) struct Selected {
     pub(super) profile: Option<BackendProfile>,
     pub(super) key: Option<Secret>,
     pub(super) variable: String,
+    pub(super) variables: Vec<String>,
 }
 
 impl EngineBuilder {
@@ -91,8 +92,8 @@ impl EngineBuilder {
         let choice = named::choose(&tiers, &captured.configured).map_err(Error::refused)?;
         let unnamed_model = captured
             .config_model
-            .as_ref()
-            .map_or(DEFAULT_MODEL, ModelName::as_str);
+            .as_deref()
+            .unwrap_or(DEFAULT_MODEL);
         let backend = choice
             .backend(self.model.as_ref().map(ModelName::as_str), unnamed_model)
             .map_err(Error::refused)?;
@@ -132,6 +133,7 @@ impl EngineBuilder {
             backend,
             key,
             variable: choice.key_variable().to_owned(),
+            variables: choice.keys().into_iter().map(str::to_owned).collect(),
         })
     }
 }

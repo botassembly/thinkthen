@@ -4,8 +4,7 @@ use std::path::PathBuf;
 
 use std::collections::BTreeMap;
 
-use super::backend::Captured;
-use super::{EngineBuilder, Secret, Seeded, variable};
+use super::{EngineBuilder, Secret, variable};
 use crate::config::{self, Config};
 use crate::core::{Backend, DEFAULT_MODEL, KEY_VAR, ModelName, named};
 use crate::public::error::Error;
@@ -47,36 +46,17 @@ impl EngineBuilder {
             }
         })?;
         let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
-        let mut builder = Self::new();
-        builder.seeded = Some(Seeded {
-            platform: named.is_none(),
-            folder: named.or_else(config::cache_path),
-            enabled: config.cache_enabled(),
-            usage: config::usage_path(),
-        });
+        let platform = named.is_none();
+        let folder = named.or_else(config::cache_path);
+        let mut builder = Self::configured(&config, config_path, folder, platform);
         let base_url = variable("THINKTHEN_BASE_URL")?;
         if let Some(base) = &base_url {
             Backend::resolve(Some(base), None, DEFAULT_MODEL)
                 .map_err(|error| Error::usage(format!("THINKTHEN_BASE_URL: {error}")))?;
         }
-        builder.captured = Captured {
-            prices: config.prices(),
-            metadata: super::snapshot::CapturedMetadata {
-                path: config_path,
-                present: config.present(),
-                shared: config.shared(),
-                cache_configured: config.has_cache(),
-                cache_bytes: Some(config.cache_bytes()),
-                cache_bytes_configured: config.has_cache_bytes(),
-            },
-            base_url,
-            backend: variable("THINKTHEN_BACKEND")?,
-            config_url: config.url().map(str::to_owned),
-            config_backend: config.backend().map(str::to_owned),
-            config_model: None,
-            configured: config.named().to_vec(),
-            keys: keys(&config)?,
-        };
+        builder.captured.base_url = base_url;
+        builder.captured.backend = variable("THINKTHEN_BACKEND")?;
+        builder.captured.keys = keys(&config)?;
         // A later explicit setter outranks this path, including an invalid one.
         // Validate only the path selected when the engine is built.
         builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
@@ -89,7 +69,7 @@ impl EngineBuilder {
             crate::engine::estimated_total(variable("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL")?)
                 .map_err(Error::usage)?;
         if let Some(model) = config.model() {
-            builder.captured.config_model = Some(ModelName::new(model).map_err(Error::refused)?);
+            ModelName::new(model).map_err(Error::refused)?;
         }
         if let Some(size) = variable("THINKTHEN_MAX_REQUEST_BYTES")? {
             let value = size

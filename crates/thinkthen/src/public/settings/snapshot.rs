@@ -38,6 +38,10 @@ pub struct ResolvedSettings {
     pub model_source: &'static str,
     /// The selected backend's first credential variable name.
     pub key_variable: String,
+    /// Approved credential variable names in their native fallback order.
+    /// The caller may capture only this selected route's variables after selection
+    /// and host guards. This list contains names, never credential values.
+    pub key_variables: Vec<String>,
     /// Whether a usable credential was captured, without exposing it.
     pub api_key_set: bool,
     /// Whether the builder selected answer caching.
@@ -119,6 +123,7 @@ impl EngineBuilder {
             model: selected.backend.model().as_str().to_owned(),
             model_source: selected.model_source,
             key_variable: selected.variable,
+            key_variables: selected.variables,
             api_key_set: selected.key.is_some(),
             cache_enabled,
             cache_enabled_source,
