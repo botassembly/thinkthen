@@ -278,8 +278,12 @@ def represented_abi(native, records, functions, constants, signed=True):
 def check_exports(header, library):
     text = re.sub(r'/\*.*?\*/|//[^\n]*', '', Path(header).read_text(), flags=re.S)
     declared = set(re.findall(r'\b(thinkthen_\w+)\s*\([^;{}]*\)\s*;', text, flags=re.S))
-    listing = run(['nm', '-D', '--defined-only', str(library)])
-    actual = {line.split()[-1] for line in listing.splitlines() if line.split() and line.split()[-1].startswith('thinkthen_')}
+    command = ['nm', '-gU'] if sys.platform == 'darwin' else ['nm', '-D', '--defined-only']
+    listing = run([*command, str(library)])
+    names = [line.split()[-1] for line in listing.splitlines() if line.split()]
+    if sys.platform == 'darwin':
+        names = [name.removeprefix('_') for name in names]
+    actual = {name for name in names if name.startswith('thinkthen_')}
     if not declared or declared != actual:
         raise ValueError(f'ABI export mismatch: missing={sorted(declared-actual)}, extra={sorted(actual-declared)}')
     print(f'native C ABI: {len(actual)} header-derived exports match')
