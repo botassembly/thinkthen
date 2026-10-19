@@ -64,7 +64,10 @@
         "ranlib",
         "mkfifo",
         "sleep",
-        "shasum"
+        "shasum",
+        "rmdir",
+        "seq",
+        "cksum"
       ],
       "platforms": [
         "darwin",
@@ -361,7 +364,8 @@
       "groups": [
         "lint",
         "install",
-        "c"
+        "c",
+        "test"
       ],
       "provider": "cargo:cbindgen",
       "version": "0.29.4",
