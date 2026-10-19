@@ -1,6 +1,6 @@
 # 0614: Delete workflow-text assertions and planted lint self-tests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
