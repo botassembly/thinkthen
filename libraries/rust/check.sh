@@ -19,44 +19,12 @@ if [ "$profile" = stress ] && [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/crates/thinkthen/Cargo.toml" | head -n 1)
     THINKTHEN_ARTIFACT="$root/target/package/thinkthen-$version.crate"
 fi
-native_cases() {
-    python3 - "$root" "$1" <<'RUSTNATIVE'
-import os,sys,tomllib
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
-from native_fixture import run
-binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target')))/'debug/thinkthen-rust-consumer'
-binary.parent.mkdir(parents=True,exist_ok=True)
-if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
-    os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
-compiler_env={'RUSTUP_TOOLCHAIN':tomllib.loads((root/'rust-toolchain.toml').read_text())['toolchain']['channel']}
-sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]),extra_env=compiler_env)))
-RUSTNATIVE
-}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
     scratch_dir installed
     mkdir "$installed/crate" "$installed/consumer"
     tar -xzf "$THINKTHEN_ARTIFACT" -C "$installed/crate" --strip-components=1
-    python3 - "$root" "$installed" <<'RUSTCONSUMER'
-import shutil,sys
-from pathlib import Path
-root,installed=map(Path,sys.argv[1:])
-project=installed/'consumer'
-shutil.copytree(root/'libraries/rust/consumer',project,dirs_exist_ok=True,ignore=shutil.ignore_patterns('target'))
-manifest=project/'Cargo.toml'
-manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(installed/'crate')).replace('../../../conformance/backend',str(root/'conformance/backend')))
-RUSTCONSUMER
-    if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then
-        separator=$(printf '\037')
-        CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:-}${CARGO_ENCODED_RUSTFLAGS:+$separator}--remap-path-prefix=$installed/crate=$THINKTHEN_COVERAGE_ROOT/crates/thinkthen"
-        export CARGO_ENCODED_RUSTFLAGS
-    fi
-    if [ "$profile" != stress ]; then native_cases "$installed/consumer/Cargo.toml"; fi
-    cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --test sessions -- --test-threads=1
-    if [ "$profile" = stress ]; then
-        cargo test --locked --offline --manifest-path "$installed/consumer/Cargo.toml" --features session-stress --test sessions repeated_session_contention_never_loses_wake_or_settlement -- --exact --test-threads=1
-    fi
+    python3 check.py "$root" "$installed"
     echo 'rust: pass, installed'
     exit 0
 fi
@@ -68,7 +36,7 @@ if [ "$profile" = smoke ]; then
 fi
 
 if [ "$profile" = full ]; then
-    native_cases "$PWD/consumer/Cargo.toml"
+    python3 check.py "$root"
     echo 'rust: pass, source'
     exit 0
 fi

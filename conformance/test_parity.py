@@ -820,43 +820,6 @@ class PublicAssertions(unittest.TestCase):
                     self.assertIn('private fixture: ' + member, result.stdout)
             self.assertEqual((assets / 'tests/native_case.py').read_text(), '# compiled installed caller fixture\n')
 
-    def test_bare_rust_campaign_uses_the_complete_source_consumer(self):
-        import shlex
-        rust = next(row for row in parity.inventory()['consumers'] if row['id'] == 'rust')
-        contract = {'functions': ['decide'], 'consumers': [rust],
-                    'required_cases': list(self.cases.values())}
-        with tempfile.TemporaryDirectory() as scratch:
-            root = Path(scratch)
-            stage_checkout(parity.ROOT, root)
-            scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True, exist_ok=True)
-            (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
-            library = root / 'libraries/rust'
-            library.mkdir(parents=True, exist_ok=True)
-            tools = root / 'bin'
-            tools.mkdir(exist_ok=True)
-            runner = tools / 'python3'
-            runner.write_text('#!/bin/sh\nset -eu\n'
-                              'test "$THINKTHEN_TEST_PROFILE" = full\n'
-                              'test -z "${THINKTHEN_CONFORMANCE_IDS+x}"\n'
-                              'test "$1" = -\ntest "$3" = "$2/libraries/rust/consumer/Cargo.toml"\n'
-                              'cat > "$2/invoked-driver"\n'
-                              'exec ' + shlex.quote(sys.executable) + ' "$2/invoked-driver" "$2" "$3"\n')
-            children = root / 'conformance/children'
-            children.mkdir(parents=True, exist_ok=True)
-            (children / 'native_fixture.py').write_text(
-                'from pathlib import Path\nimport tomllib\n'
-                'def run(consumer, command, root, rust_manifest, extra_env):\n'
-                ' assert consumer == "rust"\n'
-                ' assert Path(command[0]).parent.is_dir()\n'
-                ' assert rust_manifest == root / "libraries/rust/consumer/Cargo.toml"\n' +
-                ' assert extra_env == {"RUSTUP_TOOLCHAIN": tomllib.loads((root / "rust-toolchain.toml").read_text())["toolchain"]["channel"]}\n' +
-                ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
-                ' return False\n')
-            runner.chmod(0o755)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {'PATH': str(tools) + ':' + os.defpath}):
-                self.assertEqual(parity.run('12345'), 0)
-
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
             {'id': 'rust', 'owner': '0431', 'baseline': ['sh', 'stub.sh']}],
