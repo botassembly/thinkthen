@@ -88,7 +88,7 @@ The complete `sdlc/scripts/package` validation is a separate explicit packaging 
 
 ## When the repository goes public
 
-`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. `.github/workflows/gate.yml` runs the four rungs on every push and every pull request, and ADR 0015 item 6 rules it. Each action in it is pinned to a commit SHA and the downloaded `jq` is checked against a recorded SHA-256. `deny.toml` allows exactly the licenses the tree carries, and `lint` runs `cargo deny check advisories bans licenses` over it. `CHANGELOG.md` still waits.
+`LICENSE` is here. Ian ruled MIT in ADR 0015, each package declares `license = "MIT"`, and `policy.py` checks both. Hosted workflows run by hand for releases after local checks pass. Everyday builds and checks run through pm job on M5. Linux checks use the pinned arm64 container on M5; x86_64-specific proof uses the pinned container on Yellow. Each action in it is pinned to a commit SHA and the downloaded `jq` is checked against a recorded SHA-256. `deny.toml` allows exactly the licenses the tree carries, and `lint` runs `cargo deny check advisories bans licenses` over it. `CHANGELOG.md` still waits.
 
 ## Not yet enforced
 
