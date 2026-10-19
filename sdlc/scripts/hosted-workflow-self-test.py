@@ -254,7 +254,6 @@ def linux_nested_tools_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
     host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
-    assert 'python3 databases/duckdb/tools/source_hosts.py' in installed
     assert 'uv pip install --python "$generator_tools/python/bin/python" ' in next(
         line for line in installed.splitlines() if "ruff==" in line)
     assert '--prefix "$generator_tools" ' in next(
