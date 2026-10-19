@@ -148,7 +148,10 @@ fn question_sets_default_to_version_one_inline_and_in_saved_files() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("question-set-version");
     std::fs::create_dir_all(&folder).expect("folder");
     let path = written(&folder, "implicit.json", unversioned.as_bytes());
-    assert_eq!(QuestionSet::load(&path).expect("saved implicit version"), expected);
+    assert_eq!(
+        QuestionSet::load(&path).expect("saved implicit version"),
+        expected
+    );
     for version in ["2", r#""1""#] {
         let invalid = versioned.replacen("1", version, 1);
         let inline = QuestionSet::from_json(&invalid).expect_err("invalid version");
