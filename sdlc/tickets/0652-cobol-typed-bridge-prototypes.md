@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0650, 0651, 0688
+Depends on: 0650, 0651, 0688, 0728
 
 ## Outcome
 
-- Changes: `build-tools/results/templates/cobol*.py`, `libraries/cobol/src/`, `libraries/cobol/checks/`, `libraries/cobol/check.sh`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `conformance/children/usage_installed.py`, `conformance/library-surface-test.py`, `sdlc/tools.json`, `site/src/data/build-lines.mjs`.
+- Changes: `build-tools/results/templates/cobol*.py`, `libraries/cobol/src/`, `libraries/cobol/checks/`, `libraries/cobol/check.sh`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `conformance/children/usage_installed.py`, `conformance/library-surface-test.py`, `sdlc/tools/cobol.json`, `site/src/data/build-lines.mjs`.
 - The generated bridge declares parameters with the types cobc's static-call prototypes use, or callers use `-fno-gen-c-decl-static-call` with matching declarations from the bridge header. No `-Wno-incompatible-pointer-types` remains in the README, the checks or the site's build line.
 - The forced `-include` of `src/tt_session.h` becomes a normal include path.
 - The supported GnuCOBOL range is chosen from released versions and stated in the README. Its lowest and newest versions are both in `sdlc/tools.json`.

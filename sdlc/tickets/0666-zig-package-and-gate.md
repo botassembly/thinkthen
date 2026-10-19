@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/zig/build.zig`, `libraries/zig/build.zig.zon`, `libraries/zig/src/thinkthen.zig`, `libraries/zig/check.sh`, `libraries/zig/Tests/package_local.py`, `libraries/zig/README.md`, `libraries/zig/README-PUBLIC.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`, `sdlc/scripts/coverage_installed_c_hosts.py`.
+- Changes: `libraries/zig/build.zig`, `libraries/zig/build.zig.zon`, `libraries/zig/src/thinkthen.zig`, `libraries/zig/check.sh`, `libraries/zig/Tests/package_local.py`, `libraries/zig/README.md`, `libraries/zig/README-PUBLIC.md`, `sdlc/tools/zig.json`, `sdlc/scripts/release-pack.d/zig`, `sdlc/scripts/coverage_installed_c_hosts.py`.
 - Zig adds darwin-arm64 and linux-arm64 to its `platforms` and `check_platforms` in `sdlc/tools.json`. The package carries the native archive for each supported target. `linkNative` in build.zig selects it by target and links that target's system libraries.
 - Engine construction calls `thinkthen_version` once and compares the number it writes with the header's `THINKTHEN_INTERFACE_NUMBER`, as 0692's contract says. `headerVersionMatches` and the header symbol search in build.zig are deleted.
 - The supported Zig version range is stated in the README. Its lowest and newest versions are both in the tool manifest, and the gate tests both.

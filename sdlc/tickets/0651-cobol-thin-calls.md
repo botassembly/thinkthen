@@ -8,11 +8,11 @@ Phase: 3
 
 Depends on: 0688
 
-Depends on: 0650, 0727
+Depends on: 0650, 0727, 0728
 
 ## Outcome
 
-- Changes: `build-tools/results/templates/cobol*.py`, `build-tools/results/registry.py`, `build-tools/results/legacy/cobol.txt`, `libraries/cobol/native-helpers.json`, `libraries/cobol/copybooks/tt-native-generated.cpy`, `libraries/cobol/src/`, `libraries/cobol/checks/`, `libraries/cobol/check.sh`, `libraries/cobol/examples/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `conformance/library-surface/cobol.json`, `conformance/library-surface-test.py`, `conformance/children/usage_installed.py`, `sdlc/scripts/release-pack`, `site/examples/functions/*/cobol.cob`, `site/src/data/catalog.mjs`.
+- Changes: `build-tools/results/templates/cobol*.py`, `build-tools/results/registry/cobol.py`, `build-tools/results/legacy/cobol.txt`, `libraries/cobol/native-helpers.json`, `libraries/cobol/copybooks/tt-native-generated.cpy`, `libraries/cobol/src/`, `libraries/cobol/checks/`, `libraries/cobol/check.sh`, `libraries/cobol/examples/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `conformance/library-surface/cobol.json`, `conformance/library-surface-test.py`, `conformance/children/usage_installed.py`, `sdlc/scripts/release-pack.d/cobol`, `site/examples/functions/*/cobol.cob`, `site/src/data/catalog/cobol.mjs`.
 - One family remains, the blocking `TT_DECIDE` family, and it calls `thinkthen_run_call`. Its answer records copy the packet's answer fields instead of projecting them.
 - The streaming `TT_SESSION_*` family, including the `TT_SESSION_NEXT` loop, `examples/session.cob` and the private closed, reader and producer error text, is deleted.
 - The COBOL binding enforces its own 8192-byte text limit and no longer calls `thinkthen_session_new_typed_with_surface`, so 0690 can delete the shared cap and `THINKTHEN_COBOL_OVERFLOW`.

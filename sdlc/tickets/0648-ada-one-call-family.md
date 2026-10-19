@@ -8,11 +8,11 @@ Phase: 3
 
 Depends on: 0688
 
-Depends on: 0649, 0727
+Depends on: 0649, 0727, 0728
 
 ## Outcome
 
-- Changes: `build-tools/results/templates/ada*.py`, `build-tools/results/registry.py`, `build-tools/results/legacy/ada.txt`, `libraries/ada/src/`, `libraries/ada/checks/`, `libraries/ada/check.sh`, `libraries/ada/examples/`, `libraries/ada/README.md`, `libraries/ada/README-PUBLIC.md`, `conformance/library-surface/ada.json`, `site/examples/functions/*/ada.adb`, `site/src/data/catalog.mjs`.
+- Changes: `build-tools/results/templates/ada*.py`, `build-tools/results/registry/ada.py`, `build-tools/results/legacy/ada.txt`, `libraries/ada/src/`, `libraries/ada/checks/`, `libraries/ada/check.sh`, `libraries/ada/examples/`, `libraries/ada/README.md`, `libraries/ada/README-PUBLIC.md`, `conformance/library-surface/ada.json`, `site/examples/functions/*/ada.adb`, `site/src/data/catalog/ada.mjs`.
 - One family remains: the named functions in `Thinkthen.Inputs.Calls`. Each returns an owned result and takes an optional producer for fed input and a cancellation handle. The procedure set in `Thinkthen.Sessions.Calls` and its duplicate in `Thinkthen.Inputs.Calls` are deleted.
 - Each call runs `thinkthen_run_call` once. The session loop in `Thinkthen.Native_Sessions` and its private closed, reader and producer error text are deleted. A task that needs to cancel uses the handle.
 - Value and probability come from the packet's answer fields. The projection code in `Thinkthen.Answers` and its templates are deleted.

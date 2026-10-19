@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/typescript/check.sh`, `libraries/typescript/setup-toolchain.sh`, `libraries/typescript/node.sha256`, `libraries/typescript/README-DEVELOPMENT.md`, `libraries/typescript/tests/`, `sdlc/tools.json`, `sdlc/scripts/tools.py`, `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/coverage_installed_extensions.py`.
+- Changes: `libraries/typescript/check.sh`, `libraries/typescript/setup-toolchain.sh`, `libraries/typescript/node.sha256`, `libraries/typescript/README-DEVELOPMENT.md`, `libraries/typescript/tests/`, `sdlc/tools/typescript.json`, `sdlc/scripts/tools.py`, `sdlc/scripts/hosted-preflight.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/coverage_installed_extensions.py`.
 - The gate takes Node versions from the tool manifest `sdlc/tools.json`, which lists the lowest and newest supported Node majors. Both are tested. The `"node": ">=22"` floor in `package.json` stays; it is a minimum host version, not a format version.
 - `setup-toolchain.sh`, `node.sha256` and the home-cache Node path are deleted, with the readers of `node.sha256` in `hosted-preflight.py`, `hosted-workflow-self-test.py` and `coverage_installed_extensions.py`. The TypeScript compiler comes from the locked devDependency.
 - Conformance goes through a packet dumper over the public API that follows the 0642 contract, for the JavaScript and compiled TypeScript consumers. `tests/native_case.ts`, `tests/native_case.mjs` and `tests/native_case.d.mts` are replaced by it.

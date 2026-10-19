@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0665, 0688, 0727
+Depends on: 0665, 0688, 0727, 0728
 
 ## Outcome
 
-- Changes: `libraries/typescript/native.js`, `libraries/typescript/native.ts`, `libraries/typescript/native.d.ts`, `libraries/typescript/index.js`, `libraries/typescript/index.mjs`, `libraries/typescript/index.d.ts`, `libraries/typescript/src/request_node.rs`, `libraries/typescript/package.json`, `libraries/typescript/package-lock.json`, `libraries/typescript/check.sh`, `libraries/typescript/README-DEVELOPMENT.md`, `libraries/typescript/tests/`, `conformance/library-surface/typescript.json`, `site/src/data/catalog.mjs`.
+- Changes: `libraries/typescript/native.js`, `libraries/typescript/native.ts`, `libraries/typescript/native.d.ts`, `libraries/typescript/index.js`, `libraries/typescript/index.mjs`, `libraries/typescript/index.d.ts`, `libraries/typescript/src/request_node.rs`, `libraries/typescript/package.json`, `libraries/typescript/package-lock.json`, `libraries/typescript/check.sh`, `libraries/typescript/README-DEVELOPMENT.md`, `libraries/typescript/tests/`, `conformance/library-surface/typescript.json`, `site/src/data/catalog/typescript.mjs`.
 - `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError` and `DefectError` extend a common `ThinkThenError` that carries `retryable`, `facts`, `results` and `terminal`. The addon throws them directly. `ClientError` and its `kind` string are deleted.
 - The wrapper source is `native.ts`, compiled at package time by the locked TypeScript devDependency and formatted by a standard formatter that the gate checks. The handwritten `native.d.ts` is replaced by compiler output.
 - The `Object.setPrototypeOf` patching in `crossing` is deleted.
