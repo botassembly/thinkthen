@@ -24,8 +24,7 @@ pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
     Session(std::sync::Arc<super::session_queue::Queue>),
-    #[cfg(feature = "cli")]
-    Descriptors(Vec<super::transport::TransportDescriptor>),
+    Descriptors(Vec<super::transport::RequestDescriptor>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -46,14 +45,17 @@ impl<'a> RequestFeed<'a> {
             record_reading: None,
         }
     }
-    #[cfg(feature = "cli")]
-    pub(super) fn descriptors(
-        name: String,
-        descriptors: Vec<super::transport::TransportDescriptor>,
+    /// Supply deferred source descriptors with eager whole-feed admission.
+    /// Every descriptor and the aggregate inline attachment budget are checked
+    /// before question resolution, source reads or sends.
+    #[must_use]
+    pub fn from_descriptors(
+        name: impl Into<String>,
+        descriptors: Vec<super::transport::RequestDescriptor>,
     ) -> Self {
         let image_inputs = descriptors.iter().any(|d| !d.item.images.is_empty());
         Self {
-            name,
+            name: name.into(),
             contents: FeedContents::Descriptors(descriptors),
             eager: true,
             image_inputs,

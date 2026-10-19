@@ -1,6 +1,7 @@
 //! Unresolved transport descriptors share native admission and attachment accounting.
+use super::{AdmittedRequest, RequestItem, RequestSource};
 #[cfg(feature = "cli")]
-use super::{AdmittedRequest, RequestFeed, RequestItem, RequestSource};
+use super::RequestFeed;
 use super::{RequestImage, RequestInput};
 use crate::{
     Error, ImageMedia, ObjectContext, RawRecord, RecordContext, RecordOption, RecordOptions,
@@ -10,7 +11,6 @@ use serde_json::{Value, value::RawValue};
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct TransportAttachmentLimit(usize);
 impl TransportAttachmentLimit {
-    #[cfg(feature = "cli")]
     pub(crate) fn new(bytes: usize) -> Result<Self, Error> {
         if bytes == 0 {
             return Err(budget_error());
@@ -18,10 +18,14 @@ impl TransportAttachmentLimit {
         Ok(Self(bytes))
     }
 }
-#[cfg(feature = "cli")]
-pub(crate) struct TransportDescriptor {
-    pub(crate) item: RequestItem,
-    pub(crate) source: Option<RequestSource>,
+/// One caller-owned record with an optional deferred whole-file source.
+/// Sources and attachments are admitted before any source is opened.
+#[derive(Debug)]
+pub struct RequestDescriptor {
+    /// Original, images and per-record controls.
+    pub item: RequestItem,
+    /// Explicit whole text files supplying this record's original.
+    pub source: Option<RequestSource>,
 }
 #[derive(Debug)]
 pub(super) struct AttachmentBudget(Option<usize>);
@@ -70,13 +74,23 @@ pub(super) fn preflight_input(
         RequestInput::Source { .. } => Ok(()),
     }
 }
-#[cfg(feature = "cli")]
 impl AdmittedRequest {
+    #[cfg(feature = "cli")]
     pub(crate) fn admit_descriptor_feed(
         &self,
         name: String,
-        descriptors: Vec<TransportDescriptor>,
+        descriptors: Vec<RequestDescriptor>,
     ) -> Result<RequestFeed<'static>, Error> {
+        self.validate_descriptor_feed(&name, &descriptors, crate::CallOptions::new())?;
+        Ok(RequestFeed::from_descriptors(name, descriptors))
+    }
+    pub(super) fn validate_descriptor_feed(
+        &self,
+        name: &str,
+        descriptors: &[RequestDescriptor],
+        controls: crate::CallOptions<'_>,
+    ) -> Result<(), Error> {
+        controls.admission()?;
         let args = self.request.call.arguments();
         let RequestInput::Feed {
             name: expected,
@@ -86,22 +100,24 @@ impl AdmittedRequest {
         else {
             return Err(Error::usage("transport descriptors require a named feed"));
         };
-        if expected != &name || !images.is_empty() {
+        if expected != name || !images.is_empty() {
             return Err(Error::usage(
                 "transport descriptors own their attachments and feed",
             ));
         }
         let mut budget = AttachmentBudget::new(self.attachment_limit);
         // Complete inline preflight precedes every per-item validation clone.
-        for descriptor in &descriptors {
+        for descriptor in descriptors {
+            controls.admission()?;
             preflight(&descriptor.item.images, &mut budget)?;
         }
-        for descriptor in &descriptors {
+        for descriptor in descriptors {
+            controls.admission()?;
             self.admit_descriptor(descriptor)?;
         }
-        Ok(RequestFeed::descriptors(name, descriptors))
+        Ok(())
     }
-    fn admit_descriptor(&self, descriptor: &TransportDescriptor) -> Result<(), Error> {
+    fn admit_descriptor(&self, descriptor: &RequestDescriptor) -> Result<(), Error> {
         let args = self.request.call.arguments();
         let mut item = descriptor.item.clone();
         if let Some(source) = &descriptor.source {

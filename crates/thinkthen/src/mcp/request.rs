@@ -1,7 +1,7 @@
 //! Established MCP carrier aliases enter the single native Request contract.
 use super::{admission::Invocation, inputs::Descriptor};
 use crate::RequestFunction;
-use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
+use crate::transport::{TransportAttachmentLimit, RequestDescriptor};
 use crate::{
     AdmittedRequest, Error, Request, RequestArguments, RequestCall, RequestFeed, RequestInput,
     RequestItem, RequestOriginal, RequestQuestion, RequestSource,
@@ -178,7 +178,7 @@ impl super::admission::Source {
     }
 }
 impl Descriptor {
-    fn native(&self) -> Result<TransportDescriptor, Error> {
+    fn native(&self) -> Result<RequestDescriptor, Error> {
         if usize::from(self.text.is_some())
             + usize::from(self.json.is_some())
             + usize::from(self.source.is_some())
@@ -223,7 +223,7 @@ impl Descriptor {
         if let Some(raw) = &self.options {
             item.options = Some(crate::RecordOptions::project(raw.get(), "")?);
         }
-        Ok(TransportDescriptor {
+        Ok(RequestDescriptor {
             item,
             source: self.source.as_ref().map(super::admission::Source::native),
         })

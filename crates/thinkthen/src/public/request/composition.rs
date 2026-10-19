@@ -1,7 +1,6 @@
 //! One typed composition path resolves sources only after complete header admission.
 use super::transport::AttachmentBudget;
-#[cfg(feature = "cli")]
-use super::transport::TransportDescriptor;
+use super::transport::RequestDescriptor;
 use super::{
     AdmittedRequest, RequestDefinition, RequestEnvironment, RequestImage, RequestInput,
     RequestItem, RequestOriginal,
@@ -120,7 +119,6 @@ impl AdmittedRequest {
                         "the supplied feed does not match the requested name",
                     ));
                 }
-                #[cfg(feature = "cli")]
                 if let super::execution::FeedContents::Descriptors(descriptors) = feed.contents {
                     return compose_descriptors(
                         &descriptors,
@@ -548,9 +546,8 @@ fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Er
     Ok(())
 }
 
-#[cfg(feature = "cli")]
 fn compose_descriptor(
-    descriptor: &TransportDescriptor,
+    descriptor: &RequestDescriptor,
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
     budget: &mut AttachmentBudget,
@@ -592,9 +589,8 @@ fn compose_descriptor(
     Ok(row)
 }
 
-#[cfg(feature = "cli")]
 fn compose_descriptors(
-    descriptors: &[TransportDescriptor],
+    descriptors: &[RequestDescriptor],
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
     budget: &mut AttachmentBudget,

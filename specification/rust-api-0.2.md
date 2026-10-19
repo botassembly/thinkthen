@@ -26,6 +26,8 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0643](../sdlc/tickets/0643-database-settings-in-rust.md), accepted at revision `2478857b6`, adds `EngineBuilder::setting` to apply a setting name and raw JSON value through the shared settings parser. The method retains the reviewed settings validation and SQL profile handling.
 
+[0639](../sdlc/tickets/0639-split-cli-and-mcp-crates.md) keeps MCP execution in the existing `Engine::call` family. `CallOptions::retained_attachment_limit` bounds aggregate retained compressed attachment bytes; inline preflight precedes admission clones. `RequestDescriptor` and `RequestFeed::from_descriptors` retain deferred whole-file originals, whole-feed structural admission and eager composition under one attachment budget. Descriptor admission precedes question resolution, source reads and sends; every repeated image occurrence charges the budget. `Error::completed` exposes only the actual completed prefix of a failed call. This explicit access can expose sensitive originals; Debug, Display, complete error serialization and standard error sources omit it. These supported transport operations avoid exposing private engine or domain modules. Ian can overturn these API details.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -202,6 +204,14 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+struct RequestDescriptor
+RequestDescriptor::item: RequestItem
+RequestDescriptor::source: Option<RequestSource>
+impl Debug for RequestDescriptor
+fn CallOptions::retained_attachment_limit(self, usize) -> Result<Self, Error>
+fn RequestFeed::from_descriptors(impl Into<String>, Vec<RequestDescriptor>) -> Self
+fn Error::completed(&self) -> Option<&RequestValue>
+const fn RequestFunction::name(self) -> &'static str
 RequestCall::arguments: RequestArguments
 RequestCall::function: RequestFunction
 RequestColumnValues::Choices(Vec<Option<String>>)

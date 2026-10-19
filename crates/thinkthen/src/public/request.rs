@@ -45,6 +45,7 @@ use super::{Error, LoadedQuestion};
 pub use admission::AdmittedRequest;
 pub use definition::RequestDefinition;
 pub use execution::{RequestEnvironment, RequestFeed};
+pub use transport::RequestDescriptor;
 pub use input::{
     RequestFraming, RequestImage, RequestInput, RequestItem, RequestOriginal, RequestSource,
 };
@@ -315,7 +316,9 @@ impl RequestFunction {
             _ => true,
         }
     }
-    pub(crate) const fn name(self) -> &'static str {
+    /// The canonical function name accepted by [`crate::Engine::call`].
+    #[must_use]
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Decide => "decide",
             Self::Choose => "choose",

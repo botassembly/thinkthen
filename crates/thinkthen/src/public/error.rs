@@ -85,6 +85,7 @@ pub struct ErrorDetail {
     facts: Option<Box<Facts>>,
     diagnostic: Option<Box<diagnostic::Diagnostic>>,
     producer: Option<Box<Error>>,
+    completed: Option<Box<crate::RequestValue>>,
 }
 
 impl std::fmt::Debug for ErrorDetail {
@@ -107,6 +108,18 @@ impl ErrorDetail {
 }
 
 impl Error {
+    /// The actual completed prefix when a named call fails after yielding rows.
+    /// This explicit view can expose sensitive original evidence. Debug, Display
+    /// and complete error serialization omit it. No successful answer is supplied.
+    #[must_use]
+    pub fn completed(&self) -> Option<&crate::RequestValue> {
+        self.detail().completed.as_deref()
+    }
+
+    pub(crate) fn with_completed(mut self, completed: crate::RequestValue) -> Self {
+        self.detail_mut().completed = Some(Box::new(completed));
+        self
+    }
     /// The typed admission reason when canonical request decoding failed.
     #[must_use]
     pub fn request_decode_cause(&self) -> Option<crate::public::request::RequestDecodeCause> {
@@ -234,6 +247,7 @@ impl Error {
             facts: None,
             diagnostic: None,
             producer: None,
+            completed: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),

@@ -2,6 +2,7 @@
 
 mod admission;
 mod observer;
+mod attachments;
 pub(crate) mod readiness;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
@@ -114,6 +115,7 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
+    pub(in crate::public) attachment_limit: Option<super::request::transport::TransportAttachmentLimit>,
     pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
     pub(in crate::public) pending_inputs: bool,
@@ -172,6 +174,7 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            attachment_limit: None,
             cli_text_limit: None,
             eager_inputs: false,
             pending_inputs: false,

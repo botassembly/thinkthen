@@ -20,7 +20,17 @@ impl Engine {
         arguments: RequestArguments,
         mut environment: RequestEnvironment<'_>,
     ) -> Result<Call<RequestValue>, Error> {
-        let request = Request::named(function, arguments)?.admit()?;
+        environment.controls = environment.controls.started()?;
+        environment.controls.admission()?;
+        let request = super::admission::admit(
+            Request::named(function, arguments)?,
+            environment.controls.attachment_limit,
+        )?;
+        if let Some(feed) = &environment.feed
+            && let super::execution::FeedContents::Descriptors(descriptors) = &feed.contents
+        {
+            request.validate_descriptor_feed(&feed.name, descriptors, environment.controls)?;
+        }
         if let Some(feed) = &mut environment.feed {
             use super::execution::FeedContents;
             let contents = std::mem::replace(
@@ -39,7 +49,7 @@ impl Engine {
         }
         match self.execute_request(&request, environment)? {
             RequestOutcome::Complete(call) => Ok(call),
-            RequestOutcome::Failed { error, .. } => Err(error),
+            RequestOutcome::Failed { completed, error } => Err(error.with_completed(completed)),
         }
     }
 }
