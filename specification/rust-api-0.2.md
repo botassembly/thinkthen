@@ -40,6 +40,8 @@ The same ticket exposes the existing explicit cache maintenance operations for `
 
 MCP discovery now reads `request_schema`, `RequestFunction::ALL`, `allows_option` and `images` through the public library. These expose the existing committed schema, canonical function order and discovery predicates without copying schemas or function tables into the command package. Full native admission remains authoritative for option validation.
 
+Offline command reports inspect `RawRecord::content` through additional borrowed `QuestionContent` operations: member and array access, ordered field and element iteration, exact number and boolean access, and the existing native pointer grammar. The library keeps duplicate, nonfinite and depth validation; command reporting does not receive or copy the private JSON tree or implement another parser. These views retain false, null, numeric distinctions and authored order without reparsing originals.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
 ### Retired public declarations
@@ -216,6 +218,13 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+fn QuestionContent::member(self, &str) -> Option<QuestionContent<'a>>
+fn QuestionContent::element(self, usize) -> Option<QuestionContent<'a>>
+fn QuestionContent::fields(self) -> Option<impl ExactSizeIterator<Item = (&'a str, QuestionContent<'a>)> + 'a>
+fn QuestionContent::elements(self) -> Option<impl ExactSizeIterator<Item = QuestionContent<'a>> + 'a>
+fn QuestionContent::number(self) -> Option<&'a Number>
+const fn QuestionContent::boolean(self) -> Option<bool>
+fn QuestionContent::pointer(self, &str) -> Result<Option<QuestionContent<'a>>, Error>
 const fn request_schema() -> &'static str
 const RequestFunction::ALL: [RequestFunction; 10]
 fn RequestFunction::allows_option(self, &str) -> bool

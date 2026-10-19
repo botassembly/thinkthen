@@ -18,6 +18,7 @@ pub use crate::engine::usage::UsagePersistence;
 mod complete;
 mod metadata;
 mod reading;
+mod content;
 pub use aggregate_reading::{RecognitionReading, RelationReading, ResolvedRelationRule};
 pub use metadata::{BatchMismatch, ProfileMismatch, ResultMetadata};
 pub use reading::{
