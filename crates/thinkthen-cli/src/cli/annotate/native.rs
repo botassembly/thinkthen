@@ -1,333 +1,181 @@
-//! Annotation keeps CLI framing and presentation around the native request stream.
-use super::{Judging, asker::Parser};
-use crate::core::{Outcome, Reading, Record, RecordValue, Setting};
-use crate::render::json_line;
+//! Public sessions own annotation execution; the command owns ordered presentation.
+use super::{Judging, asker::Parser, continuation::Continuation};
+use crate::{BatchSetting, RawRecord, RequestSessionRead, RequestSessionResult};
+use crate::cli::reading::Reading;
 use crate::failure::Failure;
-use crate::schedule::{Judged, Output, Placed};
-use std::{cell::RefCell, collections::BTreeMap, io::Write, process::ExitCode, sync::Arc};
+use crate::schedule::{Output, Placed};
+use std::{collections::BTreeMap, process::ExitCode};
+mod rendering;
+use rendering::{Ended, Held};
 
-struct Held {
-    record: Record,
-    position: Option<crate::cli::intake::Position>,
-}
-#[derive(Default)]
-struct Ended {
-    finished: usize,
-    replayed: usize,
-    skipped: usize,
-    partial: bool,
-    closed: bool,
-    failure: Option<Failure>,
+enum FeedRead { Pending, End, Failed(crate::Error) }
+impl From<crate::Error> for FeedRead {
+    fn from(error: crate::Error) -> Self { Self::Failed(error) }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "one request bridge retains ordered skips, output failures and final facts"
-)]
+#[expect(clippy::too_many_lines, reason = "one ordered pump joins input, continuation acknowledgements and native settlement")]
 pub(super) fn run(
-    judging: &Judging<'_>,
-    admitted: crate::AdmittedRequest,
-    reading: &Reading,
+    judging: &Judging<'_>, admitted: crate::AdmittedRequest, reading: &Reading,
     inputs: impl Iterator<Item = Result<crate::cli::intake::Item, Placed>> + Send + 'static,
-    setting: Option<Setting>,
-    output: &mut Output<'_>,
+    setting: Option<BatchSetting>, output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let parser = Parser::of(judging, reading);
     let frames = inputs.enumerate().map(move |(ordinal, frame)| {
         let frame = frame?;
         let at = frame.at;
         let position = frame.position.clone();
-        let record = parser
-            .record(frame)
-            .map_err(|error| Placed::at(error, at))?;
+        let record = parser.record(frame).map_err(|error| Placed::at(error, at))?;
         Ok((ordinal, Held { record, position }))
     });
     let reader = crate::asking::native_reader::Reader::new(frames);
-    let ready = || reader.ready();
-    let readiness =
-        crate::public::readiness::Readiness::new(&ready, judging.environment.input_pause());
-    reader.wake(readiness.wake());
-    let held = RefCell::new(BTreeMap::new());
-    let fields = reading
-        .fields()
-        .iter()
-        .map(crate::core::Pointer::as_str)
-        .collect::<Vec<_>>();
-    let composition = crate::RecordReading::new(&fields, None, None).map_err(Failure::from)?;
-    let records = std::iter::from_fn(|| {
-        reader.next(judging.environment.cancel()).map(|frame| {
-            let (ordinal, original) =
-                frame.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let mut record = compose(judging, &composition, &original.record)
-                .map_err(|error| input_error(error, Some(ordinal + 1)))?;
-            if let Some(position) = original.position.as_ref().filter(|p| p.located)
-                && let Some(file) = &position.file
-            {
-                record.original = record.original.with_location(crate::SourceLocation::new(
-                    file.clone(),
-                    position.first,
-                    position.last,
-                )?);
-            }
-            held.borrow_mut().insert(ordinal, original);
-            Ok(record.map_original(crate::QuestionInput::Record))
-        })
+    let fields = reading.fields().iter().map(String::as_str).collect::<Vec<_>>();
+    let composition = crate::RecordReading::new(&fields, None, None)?;
+    let mut arguments = admitted.request().call.arguments().clone();
+    arguments.question = crate::RequestQuestion::Definition { value: judging.set.clone().into() };
+    arguments.input = crate::RequestInput::Feed {
+        name: "cli-annotate".to_owned(), framing: crate::RequestFraming::Document,
+        reading: crate::ReaderOptions::default(), images: Vec::new(),
+    };
+    arguments.options.field = None;
+    arguments.options.context_field = None;
+    arguments.options.context = judging.context.clone();
+    arguments.options.attempts = judging.details();
+    arguments.options.batch = setting.map(|setting| match setting {
+        BatchSetting::Max => crate::RequestBatch::Named("max".to_owned()),
+        BatchSetting::Records(count) => crate::RequestBatch::Count(count.get()),
     });
-    let ended = RefCell::new(Ended::default());
-    let output = RefCell::new(output);
-    let token = crate::CancelToken::new();
-    let signal_token = crate::CancelToken::from_flag(judging.cancel().flag());
-    let downstream = crate::edge::Downstream::default();
-    let signal = || judging.cancel().fired() || token.is_cancelled() || downstream.gone();
-    let mut controls = crate::CallOptions::new()
-        .cancel(&token)
-        .cli_cancel(&signal_token, judging.cancel().deadline())
-        .interrupt(&signal)
-        .surface(crate::Surface::Cli)
-        .attempts(judging.details())
-        .readiness(&readiness);
-    if let Some(setting) = setting {
-        controls = controls.batch(match setting {
-            Setting::Max => crate::BatchSetting::Max,
-            Setting::Records(n) => crate::BatchSetting::Records(n),
-        });
-    }
-    if let Some(context) = judging.context.as_deref() {
-        controls = controls.context(context);
-    }
-    let recover = |ordinal, pointer: &str| {
-        held.borrow_mut().remove(&ordinal);
-        let mut ended = ended.borrow_mut();
-        match super::error_row::missed(ordinal + 1, pointer)
-            .and_then(|row| output.borrow_mut().take(row))
-        {
-            Ok(true) => {
-                ended.finished += 1;
-                ended.skipped += 1;
-                true
-            }
-            Ok(false) => {
-                ended.closed = true;
-                token.cancel();
-                true
-            }
-            Err(error) => {
-                ended.failure = Some(error);
-                token.cancel();
-                false
-            }
-        }
-    };
-    let sink = |value| {
-        let mut ended = ended.borrow_mut();
-        if ended.closed || ended.failure.is_some() {
-            return;
-        }
-        match receive(judging, value, &held, &mut output.borrow_mut(), &mut ended) {
-            Ok(()) => {}
-            Err(error) => {
-                ended.failure = Some(error);
-                token.cancel();
-            }
-        }
-        if ended.closed {
-            token.cancel();
-        }
-    };
-    let release = |ordinal| {
-        held.borrow_mut().remove(&ordinal);
-    };
-    let request = admitted
-        .retain_cli_definition(crate::QuestionSet(judging.set.clone()).into())
-        .map_err(Failure::from)?
-        .with_composed_feed("cli-annotate");
-    let engine = crate::Engine::from_cli(
-        judging.engine.clone(),
-        judging.environment.config().prices(),
-    );
-    let result = engine.execute_cli_request(
-        &request,
-        crate::RequestEnvironment {
-            controls,
-            feed: Some(crate::RequestFeed::from_records("cli-annotate", records)),
+    let (continuation, callback) = Continuation::new(judging.cancel().clone());
+    let tally = judging.environment.tally().start();
+    let session = judging.engine.request_session_with_feed_options(
+        crate::Request::for_function(crate::RequestFunction::Annotate, arguments), crate::Surface::Cli,
+        crate::RequestSessionFeedOptions {
+            on_missing_annotation_pointer: judging.continue_missing().then_some(callback),
+            retain_success_on_cancel: true, record_reading: Some(composition), ..Default::default()
         },
-        &sink,
-        &release,
-        judging.continue_missing().then_some(&recover),
-    );
-    let mut ended = ended.into_inner();
-    let failure = match result {
-        Ok(crate::RequestOutcome::Complete(call)) => {
-            judging.environment.settle_native(call.facts());
-            None
+    )?;
+    let mut tally = Some(tally);
+    let mut held = BTreeMap::new();
+    let mut ended = Ended::default();
+    let downstream = crate::edge::Downstream::default();
+    let mut input_done = false;
+    let mut cancelled = false;
+    let mut terminal = None;
+    loop {
+        if !cancelled && (judging.cancel().fired() || downstream.gone() || ended.closed || ended.failure.is_some()) {
+            continuation.close();
+            session.cancel();
+            cancelled = true;
+            input_done = true;
         }
-        Ok(crate::RequestOutcome::Failed { error, .. }) | Err(error) => {
-            let at = error.stopped().at();
-            if let Some(facts) = error.facts() {
-                judging.environment.settle_native(facts);
+        // Drain preceding native rows before acknowledging a missing-pointer row.
+        // The callback blocks later rows until the command has written this row.
+        match session.try_read() {
+            RequestSessionRead::Result(packet) => {
+                match packet {
+                    RequestSessionResult::Row(crate::RequestSessionRow::Annotation(row)) => {
+                        rendering::receive(judging, row, &mut held, output, &mut ended);
+                    }
+                    RequestSessionResult::Row(_) => {
+                        ended.failure.get_or_insert(Failure::Defect("annotate returned another function"));
+                    }
+                    RequestSessionResult::Aggregate(crate::RequestValue::Annotations(rows)) => {
+                        for row in rows { rendering::receive(judging, row, &mut held, output, &mut ended); }
+                    }
+                    RequestSessionResult::Aggregate(_) => {
+                        ended.failure.get_or_insert(Failure::Defect("annotate returned another function"));
+                    }
+                    RequestSessionResult::Observation { .. } => {}
+                    RequestSessionResult::Terminal(value) => {
+                        if let Some(facts) = &value.facts {
+                            judging.environment.settle_native(facts);
+                            if let Some(start) = tally.take() { start.finish(facts)?; }
+                        }
+                        terminal = Some(value.error.map_or(Ok(()), Err));
+                    }
+                }
+                continue;
             }
-            Some((at, host_error(error, reading.streams())))
+            RequestSessionRead::End => break,
+            RequestSessionRead::Pending => {}
         }
-    };
-    if ended.skipped > 0 {
-        writeln!(
-            std::io::stderr().lock(),
-            "thinkthen: {} record{} skipped",
-            ended.skipped,
-            if ended.skipped == 1 { "" } else { "s" }
-        )
-        .map_err(Failure::Output)?;
-    }
-    if ended.closed || downstream.gone() {
-        return Ok(ExitCode::SUCCESS);
-    }
-    if let Some((at, cause)) = ended.failure.take().map(|cause| (None, cause)).or(failure) {
-        if !reading.streams()
-            && judging.common.input.len() <= 1
-            && !judging.common.located()
-            && ended.finished > 0
-        {
-            return Ok(ExitCode::SUCCESS);
+        if let Some(missing) = continuation.try_next() {
+            held.remove(&missing.ordinal);
+            if cancelled || ended.closed || ended.failure.is_some() {
+                missing.acknowledge(false);
+            } else {
+                match super::error_row::missed(missing.ordinal + 1, &missing.pointer)
+                    .and_then(|row| output.take(row))
+                {
+                    Ok(true) => { ended.finished += 1; ended.skipped += 1; missing.acknowledge(true); }
+                    // Preserve the old callback's accepted closed-pipe row. Its
+                    // native accounting still settles before command success.
+                    Ok(false) => { ended.closed = true; missing.acknowledge(true); }
+                    Err(error) => { ended.failure = Some(error); missing.acknowledge(false); }
+                }
+            }
+            continue;
         }
-        if !reading.streams() {
-            return Err(cause);
+        let mut pending_reader = false;
+        if !input_done {
+            match session.try_push_with(|| match reader.try_next() {
+                crate::asking::native_reader::Read::Pending => Err(FeedRead::Pending),
+                crate::asking::native_reader::Read::End => Err(FeedRead::End),
+                crate::asking::native_reader::Read::Item(Err(placed)) => {
+                    ended.input_at = placed.at;
+                    Err(FeedRead::Failed(placed.cause.into_error()))
+                }
+                crate::asking::native_reader::Read::Item(Ok((ordinal, original))) => {
+                    let descriptor = descriptor(judging, &original).map_err(|error| {
+                        ended.input_at = Some(ordinal + 1);
+                        FeedRead::Failed(error)
+                    })?;
+                    held.insert(ordinal, original);
+                    Ok(descriptor)
+                }
+            }) {
+                Ok(crate::RequestSessionPushStatus::Accepted) => continue,
+                Ok(crate::RequestSessionPushStatus::Full) => {}
+                Ok(crate::RequestSessionPushStatus::Closed) => input_done = true,
+                Err(FeedRead::Pending) => pending_reader = true,
+                Err(FeedRead::End) => { session.finish(None)?; input_done = true; }
+                Err(FeedRead::Failed(error)) => { session.finish_native_reader_error(error)?; input_done = true; }
+            }
         }
-        return Err(Failure::Stopped {
-            at: at.unwrap_or(ended.finished + 1),
-            finished: ended.finished,
-            replayed: ended.replayed,
-            recording: judging.engine.recording(),
-            held: false,
-            cause: Box::new(cause),
-        });
+        // The private callback channel cannot wake the native result queue;
+        // keep polling it and cancellation even while native input is finished.
+        let interest = if cancelled { crate::RequestSessionWaitInterest::Settlement }
+            else if input_done || pending_reader { crate::RequestSessionWaitInterest::Result }
+            else { crate::RequestSessionWaitInterest::Input };
+        if session.wait(interest, std::time::Duration::from_millis(50)) == crate::RequestSessionReady::End { break; }
     }
-    Ok(ExitCode::from(if ended.skipped > 0 {
-        7
-    } else if ended.partial {
-        6
-    } else {
-        0
-    }))
+    continuation.close();
+    rendering::finish(judging, reading, ended,
+        terminal.ok_or(Failure::Defect("native session ended without settlement"))?, downstream.latched())
+}
+
+fn descriptor(judging: &Judging<'_>, original: &Held) -> Result<crate::RequestSessionDescriptor, crate::Error> {
+    let context = crate::asking::context::record(&original.record,
+        judging.context_field.as_deref(), judging.settings.context_schema.as_ref())
+        .map_err(Failure::into_error)?;
+    let location = original.position.as_ref().filter(|position| position.located)
+        .and_then(|position| position.file.as_ref().map(|file| (file, position)))
+        .map(|(file, position)| crate::SourceLocation::new(file.clone(), position.first, position.last))
+        .transpose()?;
+    let original = Some(match original.record.literal() {
+        Some(text) => crate::RequestOriginal::Text { text: text.to_owned() },
+        None => crate::RequestOriginal::Json { value: original.record.clone() },
+    });
+    Ok(crate::RequestSessionDescriptor { item: crate::RequestItem {
+        original, images: Vec::new(), context, options: None, seed_spans: None, examples: None,
+    }, location })
 }
 
 pub(super) fn compose(
-    judging: &Judging<'_>, composition: &crate::RecordReading, original: &crate::RawRecord,
+    judging: &Judging<'_>, composition: &crate::RecordReading, original: &RawRecord,
 ) -> Result<crate::RecordInput<crate::RecordEvidence>, Failure> {
     let mut record = composition.compose(original.clone())?;
     record.context = crate::asking::context::record(
         original, judging.context_field.as_deref(), judging.settings.context_schema.as_ref(),
     )?;
     Ok(record)
-}
-
-fn input_error(cause: Failure, at: Option<usize>) -> crate::Error {
-    let error = crate::Error::usage("the CLI reader failed").with_diagnostic(
-        crate::public::error::diagnostic::Diagnostic::CliInput(Box::new(cause)),
-    );
-    match at {
-        Some(at) => error.at_record(at.saturating_sub(1)),
-        None => error,
-    }
-}
-
-fn host_error(mut error: crate::Error, streams: bool) -> Failure {
-    let failure = match error.take_diagnostic() {
-        Some(crate::public::error::diagnostic::Diagnostic::PartialReply {
-            cause: Some(cause),
-            ..
-        }) if !streams => Failure::Reply(cause),
-        Some(crate::public::error::diagnostic::Diagnostic::EngineRange { cause, first, last }) => {
-            let cause =
-                Failure::from(cause).with_replay_context(crate::failure::ReplayContext::Annotate);
-            if matches!(
-                cause,
-                Failure::Transport(_)
-                    | Failure::Status(_)
-                    | Failure::TokenLimit
-                    | Failure::Reply(_)
-            ) && (streams || last > first)
-            {
-                Failure::BatchFailed {
-                    last: last.saturating_add(1),
-                    cause: Box::new(cause),
-                }
-            } else {
-                cause
-            }
-        }
-        Some(diagnostic) => Failure::from(error.with_diagnostic(diagnostic)),
-        None => Failure::from(error),
-    };
-    failure.with_size_advice(if streams {
-        crate::failure::SizeAdvice::Batches
-    } else {
-        crate::failure::SizeAdvice::Text
-    })
-}
-
-fn receive(
-    judging: &Judging<'_>,
-    value: crate::RequestValue,
-    held: &RefCell<BTreeMap<usize, Held>>,
-    output: &mut Output<'_>,
-    ended: &mut Ended,
-) -> Result<(), Failure> {
-    let crate::RequestValue::Annotations(rows) = value else {
-        return Err(Failure::Defect("annotate returned another function"));
-    };
-    for row in rows {
-        let original = held
-            .borrow_mut()
-            .remove(&row.ordinal())
-            .ok_or(Failure::Defect("native annotate lost its original"))?;
-        let canonical = &row.result().canonical;
-        let partial = canonical
-            .members
-            .iter()
-            .any(|(_, member)| matches!(member.identity, crate::core::MemberIdentity::Failed(_)));
-        let replayed = canonical
-            .identity
-            .question_sources()
-            .iter()
-            .all(|source| source.origin() != crate::core::Origin::Live);
-        let values = canonical.reading.value().clone().into_values();
-        let mut printed = Some(if judging.details() {
-            json_line(canonical)?
-        } else if judging.streams() && !original.record.is_object() {
-            json_line(&RecordValue::new(
-                original.record.clone(),
-                crate::core::NamedValues::new(values),
-            ))?
-        } else {
-            json_line(&original.record.clone().annotated(values))?
-        });
-        if let Some(position) = original.position.as_ref().filter(|p| p.located)
-            && !judging.details()
-            && let Some(line) = &mut printed
-        {
-            *line = crate::cli::intake::source_value(&original.record, line, position)?;
-        }
-        if judging.details() {
-            crate::cli::intake::source_members(&mut printed, original.position.as_ref())?;
-            crate::cli::intake::locate(&mut printed, original.position.as_ref())?;
-        }
-        let judged = Judged {
-            model: None,
-            printed,
-            position: None,
-            outcome: Outcome::Yes,
-            replayed,
-            order_value: None,
-            partial_failure: partial,
-            profile_mismatch: judging.mismatch.notice(),
-        };
-        if !output.take(judged)? {
-            ended.closed = true;
-            break;
-        }
-        ended.finished += 1;
-        ended.replayed += usize::from(replayed);
-        ended.partial |= partial;
-    }
-    Ok(())
 }

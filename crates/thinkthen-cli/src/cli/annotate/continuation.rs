@@ -47,3 +47,56 @@ impl Continuation {
 impl Drop for Continuation {
     fn drop(&mut self) { self.close(); }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acknowledgement_holds_the_worker_until_the_command_finishes_its_row() {
+        let (continuation, callback) = Continuation::new(Signal::default());
+        let (settled, result) = mpsc::sync_channel(1);
+        let worker = std::thread::spawn(move || { settled.send(callback(2, "/selected")).unwrap(); });
+        let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
+        assert_eq!((missing.ordinal, missing.pointer.as_str()), (2, "/selected"));
+        assert_eq!(result.try_recv(), Err(mpsc::TryRecvError::Empty));
+        missing.acknowledge(true);
+        assert!(result.recv_timeout(Duration::from_secs(5)).unwrap());
+        worker.join().unwrap();
+    }
+
+    #[test]
+    fn failed_or_dropped_output_acknowledgement_releases_the_worker() {
+        for explicit_refusal in [false, true] {
+            let (continuation, callback) = Continuation::new(Signal::default());
+            let worker = std::thread::spawn(move || callback(0, "/missing"));
+            let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
+            if explicit_refusal { missing.acknowledge(false); } else { drop(missing); }
+            assert!(!worker.join().unwrap());
+        }
+    }
+
+    #[test]
+    fn shutdown_and_dropped_receiver_release_an_outstanding_acknowledgement() {
+        for drop_receiver in [false, true] {
+            let (continuation, callback) = Continuation::new(Signal::default());
+            let worker = std::thread::spawn(move || callback(0, "/missing"));
+            let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
+            if drop_receiver { drop(continuation); } else { continuation.close(); }
+            // Keep the sender alive: closure must release the callback even
+            // when command output has stalled while holding this event.
+            assert!(!worker.join().unwrap());
+            drop(missing);
+        }
+    }
+
+    #[test]
+    fn rendered_closed_pipe_acknowledgement_wins_before_shutdown() {
+        let (continuation, callback) = Continuation::new(Signal::default());
+        let worker = std::thread::spawn(move || callback(0, "/missing"));
+        let missing = continuation.events.recv_timeout(Duration::from_secs(5)).unwrap();
+        missing.acknowledge(true);
+        continuation.close();
+        assert!(worker.join().unwrap());
+    }
+}
