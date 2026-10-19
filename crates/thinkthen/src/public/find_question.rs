@@ -93,3 +93,12 @@ impl Question {
 pub(crate) fn profiled(find: core::Find, question: &Question) -> core::Find {
     find.with_profile(question.profile.clone())
 }
+
+/// Native admitted candidate counts for one complete find request.
+/// Explicit none occupies one primitive option. Callers can stop framing before
+/// reading an excessive candidate; this observation opens nothing and grants no
+/// execution permission. A command may separately treat empty input as no work.
+#[must_use]
+pub fn find_candidate_count_range(none: bool) -> std::ops::RangeInclusive<usize> {
+    crate::core::Find::count_range(none)
+}

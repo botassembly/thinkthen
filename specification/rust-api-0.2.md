@@ -920,3 +920,8 @@ exposes the existing native image-source composition operation for the command p
 It refuses incompatible record pointers before composing, preserves the complete validated
 set and its order, and leaves route, declaration, budget and execution admission intact.
 The implementation and ownership stay unchanged; no alternate submission path is added.
+
+`find_candidate_count_range(none: bool) -> RangeInclusive<usize>` observes the one
+native complete-set count policy. Native find validation uses that same range.
+The command uses its endpoint before framing another candidate, keeps its separate
+empty-input success, and retains the native minimum/count refusal before sends.
