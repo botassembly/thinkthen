@@ -34,3 +34,7 @@ Phase: 1
 - 0636 M5 job `1792441871889-70440` at source `a8527005c4685a46f870f497c5c0605009262752` passed fresh production packaging, installed C static, session and blocking checks, installed Rust checks, and 242 of 243 installed command cases. The remaining `cancellation-held-call` case failed at `cli_parity.py:312-316` because Darwin has no `/proc/<pid>/task/*/status`.
 - Apple's `adv_cmds/ps/keyword.c` maps the displayed pending field to `extern_proc.p_siglist`; the examined XNU `bsd/kern/kern_sysctl.c` fills caught and ignored signals but does not populate that pending field. Treating a zero from `ps` as an acknowledgement can falsely pass.
 - The PM approved running the unchanged cell on Linux from the same source for 0636 and required this separate macOS fixture repair; that scope ruling does not withdraw macOS cancellation support.
+
+## Progress
+
+- 2026-10-19 started
