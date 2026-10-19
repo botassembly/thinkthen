@@ -112,6 +112,7 @@ pub(crate) enum Failure {
     QuietOverRecords,
     /// One record could not become the evidence of one request.
     Record(String),
+    RecordJson(thinkthen::JsonFailure),
     /// A CSV or TSV header or record broke its table rule.
     Table(thinkthen::Error),
     /// The file the records were to be read from could not be opened.
@@ -308,6 +309,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Reading(error) => (2, error.to_string()),
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
         Failure::Record(error) => (2, error.to_string()),
+        Failure::RecordJson(failure) => (2, json::record(*failure)),
         Failure::Table(_) => (70, "defect: a table failure was not reported".to_owned()),
         Failure::NoKey(variable) => (
             4,

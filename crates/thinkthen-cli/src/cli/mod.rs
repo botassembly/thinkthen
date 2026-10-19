@@ -43,7 +43,7 @@ use crate::cli::args::{Cli, Command, Common};
 use crate::cli::asking::Folders;
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
-use crate::core::{JsonError, RecordError, safe_key, version_line};
+
 use clap::{CommandFactory as _, FromArgMatches as _};
 
 /// Parse the process inputs, run one command, and report its exit code.
@@ -59,7 +59,7 @@ pub(crate) fn entry() -> ExitCode {
     let stdout = io::stdout();
     let stderr = io::stderr();
     if cli.version {
-        return match edge::write_line(stdout.lock(), &version_line(env!("CARGO_PKG_VERSION"))) {
+        return match edge::write_line(stdout.lock(), &format!("thinkthen {}", env!("CARGO_PKG_VERSION"))) {
             Ok(_) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
@@ -377,7 +377,7 @@ fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
     if let Failure::Stopped { at: 1, cause, .. } = &mut failure
         && matches!(
             cause.as_ref(),
-            Failure::Record(RecordError::Json(JsonError::Syntax { .. }))
+            Failure::RecordJson(crate::JsonFailure::Syntax { .. })
         )
         && cli.command.as_ref().is_some_and(Command::typed_jsonl)
     {
@@ -387,7 +387,7 @@ fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
         Failure::RecordingStorage => true,
         Failure::Stopped { cause, .. } => matches!(cause.as_ref(), Failure::RecordingStorage),
         Failure::Pointer(option, typed, error) => {
-            return Failure::Pointer(option, safe_key(typed), *error);
+            return Failure::Pointer(option, crate::render::safe_key(typed), error.clone());
         }
         _ => false,
     };
@@ -450,3 +450,7 @@ fn request_admission(
         .map(Option::flatten)
         .map_err(|failure| report_early(&failure, wants_facts, (started, accepted), writer))
 }
+
+#[cfg(test)]
+#[path = "presentation_tests.rs"]
+mod presentation_tests;

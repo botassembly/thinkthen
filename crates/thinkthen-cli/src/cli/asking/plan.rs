@@ -147,4 +147,3 @@ pub(super) fn print_plan(
     edge::write_line(&mut writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
 }
-

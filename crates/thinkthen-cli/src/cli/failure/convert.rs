@@ -111,7 +111,7 @@ fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
         D::RecognitionConfiguration { message, from_file } => F::Recognize(super::recognize::Error::Config { file: from_file, error: message }),
         D::RelationConfiguration { message, from_file } => F::Relate(super::relate::Error::Config { file: from_file, error: message }),
         D::EntitySet(message) => F::Relate(super::relate::Error::Entities(message)),
-        D::Json(failure) | D::RecordJson(failure) => F::Record(super::json::record(failure)),
+        D::Json(failure) | D::RecordJson(failure) => F::RecordJson(failure),
         D::InputJson { line, column } => F::Record(format!(
             "the input is not valid JSON: the JSON at line {line} column {column} is not one"
         )),
