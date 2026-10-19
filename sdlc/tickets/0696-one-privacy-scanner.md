@@ -8,6 +8,8 @@ Phase: 1
 
 Reviews: revision 79afa73, accept
 
+Reviews: revision acb31e6, accept
+
 ## Outcome
 
 - Changes: `conformance/children/native_guard.py`, `conformance/children/privacy.py`, `conformance/children/test_privacy.py`, `databases/duckdb/check.sh`, `databases/postgresql/check.sh`, `databases/sqlite/check.sh`, `libraries/ada/check.sh`, `libraries/ada/checks/generated_names.py`, `libraries/ada/checks/privacy.py`, `libraries/c/check.sh`, `libraries/cobol/check.sh`, `libraries/cobol/checks/generated_names.py`, `libraries/cobol/checks/privacy.py`, `libraries/cpp/check.sh`, `libraries/cpp/fixtures/guard.py`, `libraries/cpp/fixtures/installed_headers.py`, `libraries/cpp/fixtures/owned_calls.py`, `libraries/csharp/check.sh`, `libraries/csharp/tests/isolated_consumer.py`, `libraries/csharp/tests/package_check.py`, `libraries/dart/check.sh`, `libraries/dart/checks/installed_native_assets.py`, `libraries/dart/checks/privacy.py`, `libraries/go/check.sh`, `libraries/go/fixtures/guard.py`, `libraries/jvm/check.sh`, `libraries/jvm/tests/package_check.py`, `libraries/mcp/check.sh`, `libraries/objective-c/check.sh`, `libraries/php/check.sh`, `libraries/polars/check.sh`, `libraries/python/check.sh`, `libraries/r/check.sh`, `libraries/ruby/check.sh`, `libraries/rust/check.sh`, `libraries/swift/Tests/fixtures/guard.py`, `libraries/swift/check.sh`, `libraries/typescript/check.sh`, `libraries/zig/check.sh`, `sdlc/scripts/release-archive-self-test.py`, `sdlc/scripts/release-go-cpp-pair`, `sdlc/scripts/release-managed-pair.py`, `sdlc/scripts/test`.
