@@ -90,7 +90,7 @@ BEGIN
   NEW.team := (SELECT thinkthen_choose('Which team handles this?', NEW.body,
     settings => '{"options":["billing","shipping"]}'::json) AS team);
   NEW.tags := (SELECT thinkthen_tag('What is in this text?', NEW.body,
-    settings => '{"labels":["refund","shipping"]}'::json) AS tags);
+    settings => '{"labels":["refund","shipping"]}'::json) AS message_tags);
   RETURN NEW;
 END
 $$;

@@ -35,7 +35,7 @@ CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN
     team = (SELECT thinkthen_choose('Which team handles this?', NEW.body,
       '{"options":["billing","shipping"]}') AS team),
     tags = (SELECT thinkthen_tag('What is in this text?', NEW.body,
-      '{"labels":["refund","shipping"]}') AS tags)
+      '{"labels":["refund","shipping"]}') AS message_tags)
   WHERE id = NEW.id;
 END;
 
