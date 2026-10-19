@@ -65,6 +65,9 @@ pub struct ResolvedSettings {
     pub url_source: &'static str,
     /// The selected model name.
     pub model: String,
+    /// Whether the actual selected adapter treats this model as a mutable alias.
+    /// Uses the native resolved route, without inferring a provider from names or URLs.
+    pub model_is_mutable_alias: bool,
     /// The tier selecting the model, using the same names as `url_source`.
     pub model_source: &'static str,
     /// The selected backend's first credential variable name.
@@ -176,6 +179,7 @@ impl EngineBuilder {
             url: selected.backend.url().as_str().to_owned(),
             url_source: selected.url_source,
             model: selected.backend.model().as_str().to_owned(),
+            model_is_mutable_alias: selected.backend.api_type().is_mutable_alias(selected.backend.model()),
             model_source: selected.model_source,
             key_variable: selected.variable,
             key_variables: selected.variables,

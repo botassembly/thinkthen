@@ -291,6 +291,8 @@ const fn PlanEstimate::largest_request_bytes(&self) -> usize
 const fn PlanEstimate::largest_request_estimated_input_tokens(&self) -> u64
 const fn PlanEstimate::token_estimate_method(&self) -> &'static str
 const fn PlanEstimate::token_estimate_note(&self) -> &'static str
+fn EngineBuilder::preload_ca_bundle(self) -> Result<EngineBuilder, Error>
+ResolvedSettings::model_is_mutable_alias: bool
 fn Engine::is_built_in(&self) -> bool
 fn Engine::provider_name(&self) -> &'static str
 fn Engine::model_is_mutable_alias(&self) -> bool
@@ -861,3 +863,10 @@ struct SettledOriginal
 struct SettledRecognition
 struct SettledRelations
 ```
+
+The command admits the selected certificate bundle with `EngineBuilder::preload_ca_bundle`
+before named-cache and alias warnings. The explicit operation reuses the native bundle
+loader and privately retains its parsed roots for build; selecting a bundle invalidates
+that retained state. Ordinary builders remain lazy. `ResolvedSettings::model_is_mutable_alias`
+uses the actual resolved adapter and model so the command can warn before storage opens.
+Neither operation exposes certificate bytes, provider bodies, or credentials.

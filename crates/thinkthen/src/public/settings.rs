@@ -66,7 +66,7 @@ impl fmt::Debug for Secret {
 /// Engine settings, checked at each step and applied at [`EngineBuilder::build`].
 ///
 /// A builder holds settings alone. It opens no file, counts nothing, and
-/// registers no throttle until `build`.
+/// registers no throttle until `build`, except explicit [`Self::preload_ca_bundle`].
 pub struct EngineBuilder {
     base_url: Option<String>,
     backend: Option<String>,
@@ -95,6 +95,7 @@ pub struct EngineBuilder {
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
+    admitted_roots: Option<Roots>,
     per_minute: Option<std::num::NonZeroU32>,
 }
 
@@ -198,6 +199,7 @@ impl EngineBuilder {
             record: None,
             replay: None,
             ca_bundle: None,
+            admitted_roots: None,
             per_minute: None,
         }
     }
@@ -240,7 +242,34 @@ impl EngineBuilder {
             ));
         }
         self.ca_bundle = Some(path.to_owned());
+        self.admitted_roots = None;
         Ok(self)
+    }
+
+    /// Load and admit the selected certificate bundle before building storage or transport.
+    ///
+    /// This explicit operation uses the same native loader as [`Self::build`]. The builder
+    /// privately retains the admitted roots, so build never reopens that bundle. Selecting
+    /// another bundle with [`Self::ca_bundle`] invalidates them. Without this operation,
+    /// bundle contents remain lazy until build. No certificate bytes or roots are exposed.
+    /// The command uses this to preserve certificate refusal order before cache warnings.
+    ///
+    /// # Errors
+    /// Returns the same safe local or usage refusal as build for the selected bundle.
+    pub fn preload_ca_bundle(mut self) -> Result<Self, Error> {
+        self.admitted_roots = self.load_roots()?;
+        Ok(self)
+    }
+
+    fn load_roots(&self) -> Result<Option<Roots>, Error> {
+        if let Some(roots) = &self.admitted_roots {
+            return Ok(Some(roots.clone()));
+        }
+        self.ca_bundle.as_deref().map(Roots::load).transpose()
+            .map_err(|error| match error {
+                RootsError::Usage(message) => Error::usage(message),
+                RootsError::Local(message) => Error::local(message),
+            })
     }
 
     /// Name this model when a question names none.
@@ -457,15 +486,7 @@ impl EngineBuilder {
         if backend.address_contains_key(key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }
-        let roots = self
-            .ca_bundle
-            .as_deref()
-            .map(Roots::load)
-            .transpose()
-            .map_err(|error| match error {
-                RootsError::Usage(message) => Error::usage(message),
-                RootsError::Local(message) => Error::local(message),
-            })?;
+        let roots = self.load_roots()?;
         let profile = self
             .profile
             .as_ref()

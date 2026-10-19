@@ -64,6 +64,10 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
             .no_cache()
             .build()
             .expect_err("bad CA before transport");
+        let preloaded = Engine::builder().base_url(base).unwrap()
+            .ca_bundle(&path).unwrap().no_cache().preload_ca_bundle().unwrap_err();
+        assert_eq!(preloaded.kind(), refused.kind(), "{name}");
+        assert_eq!(preloaded.to_string(), refused.to_string(), "{name}");
         assert_eq!(refused.kind(), ErrorKind::Usage, "{name}");
         assert!(
             !refused.to_string().contains(path.to_str().expect("path")),
@@ -141,4 +145,31 @@ fn public_tls_child() {
     engine
         .decide(&question, "Please refund this.")
         .expect("trusted answer");
+}
+
+#[test]
+fn explicit_preload_retains_roots_and_new_selection_invalidates_them() {
+    let fixture = Fixture::new();
+    let path = fixture.at("preloaded.pem");
+    let builder = Engine::builder().no_cache().ca_bundle(&path).unwrap();
+    // Selecting a bundle is lazy: it may be created before ordinary build.
+    fs::write(&path, CA).unwrap();
+    builder.build().unwrap();
+    let builder = Engine::builder().no_cache().ca_bundle(&path).unwrap()
+        .preload_ca_bundle().unwrap();
+    fs::remove_file(&path).unwrap();
+    // Both a repeated preload and build reuse the admitted roots without reopening.
+    let builder = builder.preload_ca_bundle().unwrap();
+    builder.build().unwrap();
+
+    fs::write(&path, CA).unwrap();
+    let builder = Engine::builder().no_cache().ca_bundle(&path).unwrap()
+        .preload_ca_bundle().unwrap();
+    let missing = fixture.at("replacement-missing.pem");
+    let error = builder.ca_bundle(&missing).unwrap().build().unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Local);
+    let expected = Engine::builder().no_cache().ca_bundle(&missing).unwrap()
+        .preload_ca_bundle().unwrap_err();
+    assert_eq!(error.to_string(), expected.to_string());
+    assert!(!error.to_string().contains(missing.to_str().unwrap()));
 }
