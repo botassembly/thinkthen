@@ -8,7 +8,7 @@ import sys
 import tempfile
 import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "conformance/children"))
-from children import child_env
+from children import child_env, fixture_communicate
 from question_files import file_question_expectation
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -107,7 +107,7 @@ def main():
                                             if time.monotonic()>limit:raise AssertionError('public cancellation did not fire')
                                             time.sleep(.01)
                                         backend.process.stdin.write('release\n');backend.process.stdin.flush()
-                                    stdout,stderr=running.communicate(timeout=5 if routine else 120)
+                                    stdout,stderr=fixture_communicate(running) if routine else running.communicate(timeout=120)
                                     assert running.returncode==0,(stdout,stderr)
                                     assert 'sk-conformance-loopback' not in stdout+stderr, 'credential leaked'
                                     if consumer=='flutter':payload=json.loads((home/'output.json').read_text())

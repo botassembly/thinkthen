@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0619, 0641, 0688
+Depends on: 0619, 0641, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/go/thinkthen.go`, `libraries/go/link_*.go`, `libraries/go/fixtures/package_owned.py`, `libraries/go/check.sh`, `libraries/go/README.md`, `libraries/go/README-DEVELOPMENT.md`, `sdlc/scripts/release-pack`, `sdlc/tools.json`.
+- Changes: `libraries/go/thinkthen.go`, `libraries/go/link_*.go`, `libraries/go/fixtures/package_owned.py`, `libraries/go/check.sh`, `libraries/go/README.md`, `libraries/go/README-DEVELOPMENT.md`, `sdlc/scripts/release-pack.d/go`, `sdlc/tools/go.json`.
 - A chosen and documented distribution: either a tagged module that carries per-platform static archives, or a small separate module per platform selected by build tags. It covers linux/amd64, linux/arm64 and darwin/arm64, plus windows/amd64 if the 0615 manifest lists it for Go. New per-platform link files sit beside `link_linux_amd64.go`.
 - Go's `check_platforms` in `sdlc/tools.json` adds darwin-arm64 and linux-arm64, so the Go gate runs there.
 - `release-pack` packs the Go module for every target the manifest lists, not only `x86_64-unknown-linux-gnu`.

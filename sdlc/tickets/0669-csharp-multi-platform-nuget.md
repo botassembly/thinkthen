@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/csharp/ThinkThen.csproj`, `libraries/csharp/Botassembly.ThinkThen.nuspec`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/check.sh`, `libraries/csharp/tests/`, `libraries/csharp/README.md`, `build-tools/results/csharp/`, `sdlc/tools.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`.
+- Changes: `libraries/csharp/ThinkThen.csproj`, `libraries/csharp/Botassembly.ThinkThen.nuspec`, `libraries/csharp/src/NativeLoader.cs`, `libraries/csharp/check.sh`, `libraries/csharp/tests/`, `libraries/csharp/README.md`, `build-tools/results/csharp/`, `sdlc/tools/csharp.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`.
 - One NuGet package carries the native library for every supported runtime under standard `runtimes/<rid>/native` folders, so the default .NET loader finds it.
 - The custom resolver in `NativeLoader.cs` and its filename special case are deleted, or reduced to what the standard layout cannot do.
 - The native library name cannot collide with the managed assembly name.

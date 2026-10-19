@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0683, 0688
+Depends on: 0615, 0618, 0619, 0683, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/ruby/setup-ruby.sh`, `libraries/ruby/toolchain.env`, `libraries/ruby/build.sh`, `libraries/ruby/check.sh`, `libraries/ruby/thinkthen.gemspec`, `libraries/ruby/fallback/`, `libraries/ruby/tests/test_package.rb`, `libraries/ruby/README-DEVELOPMENT.md`, `sdlc/planning/libraries/ruby.md`, `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack`, `.github/workflows/gate.yml`, `site/README.md`, `site/scripts/smoke-bindings.mjs`.
+- Changes: `libraries/ruby/setup-ruby.sh`, `libraries/ruby/toolchain.env`, `libraries/ruby/build.sh`, `libraries/ruby/check.sh`, `libraries/ruby/thinkthen.gemspec`, `libraries/ruby/fallback/`, `libraries/ruby/tests/test_package.rb`, `libraries/ruby/README-DEVELOPMENT.md`, `sdlc/planning/libraries/ruby.md`, `sdlc/scripts/release-container`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-pack.d/ruby`, `.github/workflows/gate.yml`, `site/README.md`, `site/scripts/smoke-bindings.mjs`.
 - On Linux, the 0619 pinned image supplies both pinned Rubies. On macOS, `sdlc/scripts/tools.py` supplies them through the `ruby` and `ruby34` groups. `setup-ruby.sh` is deleted, and every caller resolves Ruby through the manifest.
 - Precompiled platform gems keep one extension per supported Ruby minor, built by `build.sh` for each minor in `RUBY_MINORS`.
 - One diagnostic gem for the generic `ruby` platform stays. The packaging step builds it from its own spec under `libraries/ruby/fallback/`, and the `THINKTHEN_RUBY_FALLBACK` switch in `thinkthen.gemspec` is deleted.

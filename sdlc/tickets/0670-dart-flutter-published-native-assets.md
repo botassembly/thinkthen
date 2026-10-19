@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/dart/native-assets.json`, `libraries/dart/hook/build.dart`, `libraries/dart/pubspec.yaml`, `libraries/dart/flutter/`, `libraries/dart/check.sh`, `libraries/dart/checks/`, `libraries/dart/README.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`.
+- Changes: `libraries/dart/native-assets.json`, `libraries/dart/hook/build.dart`, `libraries/dart/pubspec.yaml`, `libraries/dart/flutter/`, `libraries/dart/check.sh`, `libraries/dart/checks/`, `libraries/dart/README.md`, `sdlc/tools/dart.json`, `sdlc/scripts/release-pack.d/dart`.
 - `release-pack` generates the native-asset manifest from the `dart` entry under `libraries` in `sdlc/tools.json`. Each supported platform has an HTTPS download address and a checksum.
 - The checked-in hash and the development-only mode in `hook/build.dart` are deleted.
 - The Flutter plugin declares every supported platform, at least Linux and macOS, and can be published. `sdlc/tools.json` declares Flutter for macOS and adds `darwin-arm64` to the Dart `check_platforms`.

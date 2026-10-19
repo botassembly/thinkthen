@@ -1,8 +1,10 @@
 # 0603 — time-each-check-step
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
+
+Reviews: revision c6529de, accept
 
 ## Outcome
 

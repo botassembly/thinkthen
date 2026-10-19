@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0688
+Depends on: 0615, 0618, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/jvm/build-session.py`, `libraries/jvm/build.sh`, `libraries/jvm/pom.xml`, `libraries/jvm/tests/toolchains.py`, `libraries/jvm/tests/package_check.py`, `libraries/jvm/check.sh`, `libraries/jvm/README.md`, `libraries/jvm/settings.gradle.kts`, `libraries/jvm/build.gradle.kts`, `sdlc/tools.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`, `sdlc/decisions/`.
+- Changes: `libraries/jvm/build-session.py`, `libraries/jvm/build.sh`, `libraries/jvm/pom.xml`, `libraries/jvm/tests/toolchains.py`, `libraries/jvm/tests/package_check.py`, `libraries/jvm/check.sh`, `libraries/jvm/README.md`, `libraries/jvm/settings.gradle.kts`, `libraries/jvm/build.gradle.kts`, `sdlc/tools/jvm.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`, `sdlc/decisions/`.
 - Gradle builds and packs the artifacts from `libraries/jvm/settings.gradle.kts` and `libraries/jvm/build.gradle.kts`. `build-session.py`, `build.sh`'s compiler calls and the environment-variable toolchain lookup in `tests/toolchains.py` are deleted. `sdlc/tools.json` pins Gradle and a Java 22 runtime beside the existing JDK.
 - Java 22 stays the floor. A decision record in `sdlc/decisions/` states the reason, the final foreign-function API, and the README says so.
 - Java, Kotlin and Scala ship as separate artifacts with declared standard-library dependencies, and the Scala artifact carries a Scala-version suffix.

@@ -8,11 +8,11 @@ Phase: 3
 
 Depends on: 0688
 
-Depends on: 0653, 0727
+Depends on: 0653, 0727, 0728
 
 ## Outcome
 
-- Changes: `build-tools/results/templates/cpp.py`, `build-tools/results/templates/cpp_results.py`, `build-tools/results/legacy/cpp.txt`, `libraries/cpp/include/thinkthen/`, `libraries/cpp/src/client.cpp`, `libraries/cpp/examples/`, `libraries/cpp/fixtures/`, `libraries/cpp/check.sh`, `libraries/cpp/README.md`, `libraries/cpp/README-PUBLIC.md`, `conformance/library-surface/cpp.json`, `conformance/library-surface-test.py`, `conformance/test_parity.py`, `site/examples/functions/*/cpp.cpp`, `site/src/data/catalog.mjs`.
+- Changes: `build-tools/results/templates/cpp.py`, `build-tools/results/templates/cpp_results.py`, `build-tools/results/legacy/cpp.txt`, `libraries/cpp/include/thinkthen/`, `libraries/cpp/src/client.cpp`, `libraries/cpp/examples/`, `libraries/cpp/fixtures/`, `libraries/cpp/check.sh`, `libraries/cpp/README.md`, `libraries/cpp/README-PUBLIC.md`, `conformance/library-surface/cpp.json`, `conformance/library-surface-test.py`, `conformance/test_parity.py`, `site/examples/functions/*/cpp.cpp`, `site/src/data/catalog/cpp.mjs`.
 - Each named call runs `thinkthen_run_call` once with one request on the input path 0635 chose, and passes no language identity.
 - `Call`, `Poll`, `ResultCall` and the rest of the C++ session loop, with its private closed, reader and producer error text, are deleted. Async use runs the call on one worker and cancels through the handle.
 - `value` and `probability` read the packet's answer fields. The per-function projections that `cpp.py` and `cpp_results.py` generate are deleted, and both leave this language's exception file `build-tools/results/legacy/cpp.txt`.

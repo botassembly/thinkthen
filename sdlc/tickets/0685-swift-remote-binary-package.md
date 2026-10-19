@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0686, 0688
+Depends on: 0615, 0618, 0686, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/swift/Package.swift`, `libraries/swift/Sources/ThinkThen/NativePackage.swift`, `libraries/swift/Sources/CThinkThen/`, `libraries/swift/check.sh`, `libraries/swift/Tests/fixtures/smoke.swift`, `libraries/swift/Tests/fixtures/package_local.py`, `libraries/swift/Tests/fixtures/installed.py`, `libraries/swift/README.md`, `libraries/swift/README-PUBLIC.md`, `sdlc/scripts/release-pack`, `sdlc/tools.json`, `site/examples/install/swift/files/Package.swift`, `site/src/data/build-lines.mjs`, `site/src/data/catalog.mjs`.
+- Changes: `libraries/swift/Package.swift`, `libraries/swift/Sources/ThinkThen/NativePackage.swift`, `libraries/swift/Sources/CThinkThen/`, `libraries/swift/check.sh`, `libraries/swift/Tests/fixtures/smoke.swift`, `libraries/swift/Tests/fixtures/package_local.py`, `libraries/swift/Tests/fixtures/installed.py`, `libraries/swift/README.md`, `libraries/swift/README-PUBLIC.md`, `sdlc/scripts/release-pack.d/swift`, `sdlc/tools/swift.json`, `site/examples/install/swift/files/Package.swift`, `site/src/data/build-lines.mjs`, `site/src/data/catalog/swift.mjs`.
 - The release declares the native framework as a binary target with `url:` and `checksum:`, written by `release-pack` from the packed framework.
 - A consumer adds the package by git URL alone. The README, the site install sample and the site's Swift build and download lines show that.
 - Linux support either uses a published artifact the same way or is listed as unsupported for Swift in `sdlc/tools.json`.

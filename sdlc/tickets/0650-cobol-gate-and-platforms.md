@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/cobol/check.sh`, `libraries/cobol/checks/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`, `site/src/data/catalog.mjs`.
+- Changes: `libraries/cobol/check.sh`, `libraries/cobol/checks/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `sdlc/tools/cobol.json`, `sdlc/scripts/release-pack.d/cobol`, `site/src/data/catalog/cobol.mjs`.
 - COBOL adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools.json`, beside linux-x86_64. The release archive for each carries that target's native library.
 - The gate and its drivers find the native library by the platform's file name, not a fixed `libthinkthen.so.0`, and `checks/exports.py` confirms the generated copybook layout on each target.
 - The README states the platforms the archive supports. It no longer says the declarations fit only Linux x86_64.

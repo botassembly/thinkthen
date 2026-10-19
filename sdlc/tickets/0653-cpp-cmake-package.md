@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0619, 0641, 0688
+Depends on: 0619, 0641, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/cpp/CMakeLists.txt`, `libraries/cpp/cmake/ThinkThenCppConfig.cmake.in`, `libraries/cpp/src/client.cpp`, `libraries/cpp/check.sh`, `libraries/cpp/README.md`, `libraries/cpp/README-PUBLIC.md`, `sdlc/scripts/release-pack`, `sdlc/scripts/release-go-cpp-pair`, `site/src/data/build-lines.mjs`.
+- Changes: `libraries/cpp/CMakeLists.txt`, `libraries/cpp/cmake/ThinkThenCppConfig.cmake.in`, `libraries/cpp/src/client.cpp`, `libraries/cpp/check.sh`, `libraries/cpp/README.md`, `libraries/cpp/README-PUBLIC.md`, `sdlc/scripts/release-pack.d/cpp`, `sdlc/scripts/release-go-cpp-pair`, `site/src/data/build-lines.mjs`.
 - The C++ archive contains the matching native library for its platform. `find_package(thinkthen-cpp)` locates it with no extra variables.
 - Library names and system link flags come from CMake per platform (Linux, macOS, Windows), not literals.
 - The implementation lives in a checked-in source file, `libraries/cpp/src/client.cpp`; configure writes no source.

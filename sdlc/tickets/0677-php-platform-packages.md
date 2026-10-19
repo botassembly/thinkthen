@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688
+Depends on: 0615, 0618, 0619, 0688, 0728
 
 ## Outcome
 
-- Changes: `libraries/php/src/session/client.php`, `libraries/php/composer.json`, `libraries/php/check.sh`, `libraries/php/fixtures/`, `libraries/php/README.md`, `sdlc/tools.json`, `sdlc/scripts/release-pack`.
+- Changes: `libraries/php/src/session/client.php`, `libraries/php/composer.json`, `libraries/php/check.sh`, `libraries/php/fixtures/`, `libraries/php/README.md`, `sdlc/tools/php.json`, `sdlc/scripts/release-pack.d/php`.
 - The package carries the native library for each platform the `php` entry under `libraries` in `sdlc/tools.json` lists, and `Client` picks the right one at runtime.
 - The hard-coded `native/libthinkthen.so` default in `client.php` and the `/usr/bin/php8.3` paths in `fixtures/session_installed.py` are deleted. PHP comes from the manifest on every platform it checks; `sdlc/tools.json` declares PHP for macOS and adds `darwin-arm64` to `check_platforms`.
 - `release-pack` builds the archive in a form a Composer path or VCS repository accepts. `fixtures/package.py` is deleted.

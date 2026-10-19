@@ -52,45 +52,58 @@ usage_guard
 config_home
 temp_home
 
+# Call unconditionally so shell functions retain errexit. The exit trap also times failures.
+step() (
+    printf 'test step: %s\n' "$*" >&2
+    step_started=$(python3 -c 'import time; print(time.monotonic())')
+    step_finished() {
+        step_status=$?
+        python3 -c 'import sys, time; print("test elapsed: {:.3f} seconds (exit {})".format(time.monotonic() - float(sys.argv[1]), sys.argv[2]))' "$step_started" "$step_status" >&2 || :
+        exit "$step_status"
+    }
+    trap step_finished EXIT
+    "$@"
+)
+
 if [ "$(uname -s)" = Darwin ]; then
     echo "test: skip four invalid UTF-8 filename cases because macOS refuses those filenames; Linux CI runs them"
 fi
-cargo nextest run --profile default --locked --offline --workspace --all-targets
-cargo test --locked --offline --workspace --doc
-cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
+step cargo nextest run --profile default --locked --offline --workspace --all-targets
+step cargo test --locked --offline --workspace --doc
+step cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
     --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer --workspace
-python3 sdlc/scripts/tools-self-test.py
-python3 sdlc/scripts/hosted-workflow-self-test.py
-python3 sdlc/scripts/release-archive-self-test.py
-python3 sdlc/scripts/release-managed-pair-self-test.py
-python3 sdlc/scripts/release-language-tools-self-test.py
-python3 sdlc/scripts/release-registry-self-test.py
-python3 sdlc/scripts/release-windows-command-self-test.py
-python3 sdlc/scripts/windows-installer-integration-self-test.py
-python3 sdlc/scripts/install-check-self-test.py
-python3 sdlc/scripts/install-check-postgresql-self-test.py
-python3 sdlc/scripts/install-check-r-binary-test.py
-python3 sdlc/scripts/release-windows-c-self-test.py
-python3 sdlc/scripts/release-python-self-test.py
-python3 conformance/parity.py --validate
-python3 -m unittest conformance.test_parity conformance.test_campaign_env conformance.test_candidate_campaign conformance.test_stress_selection
-python3 conformance/library-surface-test.py
-sh specification/fixtures/question-file/self-test
-sh specification/fixtures/types/self-test
-python3 -m unittest conformance.children.test_privacy
-sh conformance/children/test.sh
-sh transforms/band/test.sh
-sh transforms/compare/test.sh
-sh transforms/cost/test.sh
-sh transforms/monitor/test.sh
-sh transforms/sweep/test.sh
-sh transforms/trials/test.sh
-sh transforms/triage/test.sh
-demos/16-triage-pipeline/self-test
+step python3 sdlc/scripts/tools-self-test.py
+step python3 sdlc/scripts/hosted-workflow-self-test.py
+step python3 sdlc/scripts/release-archive-self-test.py
+step python3 sdlc/scripts/release-managed-pair-self-test.py
+step python3 sdlc/scripts/release-language-tools-self-test.py
+step python3 sdlc/scripts/release-registry-self-test.py
+step python3 sdlc/scripts/release-windows-command-self-test.py
+step python3 sdlc/scripts/windows-installer-integration-self-test.py
+step python3 sdlc/scripts/install-check-self-test.py
+step python3 sdlc/scripts/install-check-postgresql-self-test.py
+step python3 sdlc/scripts/install-check-r-binary-test.py
+step python3 sdlc/scripts/release-windows-c-self-test.py
+step python3 sdlc/scripts/release-python-self-test.py
+step python3 conformance/parity.py --validate
+step python3 -m unittest conformance.test_parity conformance.test_campaign_env conformance.test_candidate_campaign conformance.test_stress_selection
+step python3 conformance/library-surface-test.py
+step sh specification/fixtures/question-file/self-test
+step sh specification/fixtures/types/self-test
+step python3 -m unittest conformance.children.test_privacy
+step sh conformance/children/test.sh
+step sh transforms/band/test.sh
+step sh transforms/compare/test.sh
+step sh transforms/cost/test.sh
+step sh transforms/monitor/test.sh
+step sh transforms/sweep/test.sh
+step sh transforms/trials/test.sh
+step sh transforms/triage/test.sh
+step demos/16-triage-pipeline/self-test
 
 if [ "$(uname -s)" = Linux ]; then
-    sdlc/live-test
+    step sdlc/live-test
 else
     echo "test: skip Linux-only RLIMIT_NPROC, XDG-without-HOME and /proc thread assertions on macOS; Linux CI runs them"
     echo "test: skip Linux live-ledger process checks on macOS; Linux CI runs sdlc/live-test"

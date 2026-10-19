@@ -14,6 +14,6 @@ export default {
       ['.load ./thinkthen', null],
     ],
     particular: [
-      'Default loading permits top-level calls and blocks judgments from main and attached schema objects. Explicit trusted loading permits reviewed judgments from those schemas while trusted_schema is ON. Caller-created TEMP objects can call judgments, plans and controls in both modes, even with trusted_schema OFF. They can spend requests and read permitted question files.',
+      'Normal loading registers every ThinkThen function for use in triggers, views, CHECK constraints and column defaults.',
     ],
   };

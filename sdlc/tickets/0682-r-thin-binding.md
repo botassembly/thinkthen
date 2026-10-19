@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0629, 0688, 0689, 0727
+Depends on: 0629, 0688, 0689, 0727, 0728
 
 ## Outcome
 
-- Changes: `libraries/r/thinkthen/src/rust/`, `libraries/r/thinkthen/R/thinkthen.R`, `libraries/r/thinkthen/R/requests.R`, `libraries/r/thinkthen/R/feeds.R`, `libraries/r/thinkthen/R/complete.R`, `libraries/r/thinkthen/R/extendr-wrappers.R`, `libraries/r/thinkthen/NAMESPACE`, `libraries/r/tests/interrupt.R`, `libraries/r/tests/ordinary_interrupt.R`, `build-tools/results/templates/r.py`, `build-tools/results/registry.py`, `build-tools/results/legacy/r.txt`.
+- Changes: `libraries/r/thinkthen/src/rust/`, `libraries/r/thinkthen/R/thinkthen.R`, `libraries/r/thinkthen/R/requests.R`, `libraries/r/thinkthen/R/feeds.R`, `libraries/r/thinkthen/R/complete.R`, `libraries/r/thinkthen/R/extendr-wrappers.R`, `libraries/r/thinkthen/NAMESPACE`, `libraries/r/tests/interrupt.R`, `libraries/r/tests/ordinary_interrupt.R`, `build-tools/results/templates/r.py`, `build-tools/results/registry/r.py`, `build-tools/results/legacy/r.txt`.
 - R calls `Engine::call` (the Rust run function from 0629) and builds R values by mapping the 0689 value tree, which carries the final answer, probability, pick and resolution.
 - The string state machine in `src/rust/src/calls.rs` is deleted, along with the hand-written result shaping in `native_results.rs` and its private closed, reader and producer error text. The generated `results_generated.rs` keeps only declarations, or is deleted where the tree makes it unused; the R template and registry entries change to match.
 - The call runs on a worker thread. The R thread checks R's own interrupt polling while it waits and cancels through the run function's handle. `.tt_interrupt` in `thinkthen.R`, which sends the process SIGINT and sleeps, is deleted.
