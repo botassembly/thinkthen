@@ -291,6 +291,24 @@ impl RecordReading {
         self.seed_spans = Some(core::Pointer::new(pointer).map_err(Error::refused)?);
         Ok(self)
     }
+    /// Read one whole document through the native record reader, then compose it.
+    ///
+    /// Already admitted fields select JSON document reading; without fields the
+    /// original stays literal text, including text that looks like JSON. The same
+    /// native size, UTF-8 and JSON checks run in that order. Whole-document syntax
+    /// failures retain [`crate::ErrorDiagnostic::InputJson`]; JSONL reading remains
+    /// separate. Existing context, candidate and recognition projections apply once.
+    /// This operation opens nothing and sends nothing.
+    ///
+    /// # Errors
+    /// Returns native record admission or composition refusals with safe diagnostics.
+    pub fn read_document(&self, bytes: &[u8]) -> Result<RecordInput<RecordEvidence>, Error> {
+        let reading = core::Reading::new(core::Framing::Document, self.reading.fields().to_vec())
+            .map_err(Error::refused)?;
+        let original = reading.record(bytes).map_err(Error::refused)?;
+        self.compose(RawRecord(Arc::new(original)))
+    }
+
     /// Compose one original without inserting context, candidates or provenance into evidence.
     /// # Errors
     /// Refuses missing fields, blank evidence, invalid context or candidates.

@@ -891,3 +891,14 @@ before replay path selection, and warning order before any storage build.
 `ErrorDiagnostic::InputJson { line: usize, column: usize }` preserves a retained native
 whole-document syntax cause separately from `RecordJson(JsonFailure)`. Only numeric
 location facts are projected; ordinary error shape, kind, facts and source stay unchanged.
+
+`RecordReading::read_document(&self, &[u8]) -> Result<RecordInput<RecordEvidence>, Error>`
+uses the native whole-document reader with its already admitted fields, then the existing
+composition. Without fields it retains literal text; fields select JSON. Native size,
+UTF-8, syntax, context and options admission retain their precedence. It opens nothing
+and introduces no execution conversion. Annotation-specific document reading and JSONL
+retain their separate contracts.
+
+`CompleteRank::score(&self) -> Option<f64>` borrows the retained native weighted score
+for score ranks, separate from final position and raw leader. Decision ranks return None.
+Set ranks use their existing `result()` projection. No probability weighting is copied.

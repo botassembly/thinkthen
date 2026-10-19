@@ -145,6 +145,16 @@ complete!(
 );
 
 impl CompleteRank {
+    /// Retained native weighted score for a score-ranked input, distinct from its
+    /// final rank position and its raw leading level. Decision ranks return None.
+    /// This reads the accepted value without weighting or rounding again.
+    #[must_use]
+    pub fn score(&self) -> Option<f64> {
+        match self.canonical.value() {
+            core::Value::Score(value) => Some(*value),
+            _ => None,
+        }
+    }
     /// One-based final rank position, assigned before top truncation.
     #[must_use]
     pub const fn value(&self) -> usize {

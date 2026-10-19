@@ -117,3 +117,35 @@ fn model_validation_projects_closed_admission_without_authored_values() {
         assert_private(&error, "private_model_marker");
     }
 }
+
+#[test]
+fn public_document_reading_preserves_numeric_syntax_and_literal_input() {
+    use thinkthen::{JsonFailure, RawRecord, RecordReading};
+    let marker = "private_document_parser_marker_0639";
+    let reading = RecordReading::new(&["/evidence"], None, None).unwrap();
+    for text in [String::new(), format!("{{\n\"{marker}\":?}}"), "\u{feff}{}".into(), "{} trailing".into()] {
+        let document = reading.read_document(text.as_bytes()).unwrap_err();
+        let record = RawRecord::json(&text).unwrap_err();
+        assert_eq!(document.kind(), ErrorKind::Usage);
+        let Some(ErrorDiagnostic::InputJson { line, column }) = document.diagnostic() else {
+            panic!("whole document syntax classification");
+        };
+        assert!(matches!(record.diagnostic(), Some(ErrorDiagnostic::RecordJson(JsonFailure::Syntax { line: record_line, column: record_column })) if line == record_line && column == record_column));
+        assert_eq!(column == 0, text.is_empty());
+        assert_private(&document, marker);
+        assert_private(&record, marker);
+    }
+    let literal = format!(r#"{{"{marker}":broken-json}}"#);
+    let plain = RecordReading::new(&[], None, None).unwrap().read_document(literal.as_bytes()).unwrap();
+    assert_eq!(plain.original.original().literal(), Some(literal.as_str()));
+    let array = RecordReading::new(&["/0/evidence"], None, None).unwrap()
+        .read_document(br#"[{"evidence":"original","extra":false}]"#).unwrap();
+    assert!(array.original.original().content().unwrap().elements().is_some());
+    assert!(array.original.selected().to_json().unwrap().contains("original"));
+    let missing = reading.read_document(br#"{"other":null}"#).unwrap_err();
+    assert!(matches!(missing.diagnostic(), Some(ErrorDiagnostic::Record(_))));
+    let utf8 = reading.read_document(&[0xff]).unwrap_err();
+    assert!(matches!(utf8.diagnostic(), Some(ErrorDiagnostic::InvalidUtf8)));
+    let oversized = reading.read_document(&vec![0xff; RawRecord::max_bytes() + 1]).unwrap_err();
+    assert!(oversized.to_string().contains("over 16 MiB"));
+}
