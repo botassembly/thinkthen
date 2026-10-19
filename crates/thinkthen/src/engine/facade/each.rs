@@ -98,7 +98,6 @@ impl Asks {
         Ok(self)
     }
 
-    #[cfg(test)]
     pub(crate) fn with_context(self, backend: &Backend, context: &str) -> Result<Self, Error> {
         self.with_context_value(backend, &crate::core::Json::String(context.to_owned()))
     }

@@ -92,7 +92,6 @@ impl PlanSummary {
         Ok(())
     }
 
-    #[cfg(test)]
     pub(crate) fn records_added(&mut self, count: usize) -> Result<(), PlanTooLarge> {
         self.records = self.records.checked_add(count).ok_or(PlanTooLarge)?;
         Ok(())

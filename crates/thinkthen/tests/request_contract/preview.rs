@@ -467,7 +467,8 @@ fn annotation_preview_retains_group_counts_without_adding_generic_json_fields() 
         let request = Request::named("annotate", arguments).unwrap().admit().unwrap();
         let plan = engine.plan_request(&request, RequestEnvironment::default()).unwrap();
         assert_eq!(plan.records(), records);
-        assert_eq!(plan.question_requests(), Some((records, [records, records].as_slice())));
+        // Both questions read the root, so native normalization puts them in one group.
+        assert_eq!(plan.question_requests(), Some((records, [records].as_slice())));
         assert!(!plan.drops_detail());
         let json = serde_json::to_value(&plan).unwrap();
         assert!(json.get("question_requests").is_none());
