@@ -7,6 +7,7 @@ import subprocess
 import contextlib
 import io
 import os
+import shlex
 import shutil
 import sys
 import tempfile
@@ -14,7 +15,8 @@ import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_files, stage_generated_source
+from conformance.children.children import child_env
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
@@ -337,6 +339,7 @@ class PublicAssertions(unittest.TestCase):
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -448,6 +451,7 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -471,6 +475,7 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -537,7 +542,7 @@ class PublicAssertions(unittest.TestCase):
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -559,7 +564,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.defpath)):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -576,6 +581,7 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -660,13 +666,14 @@ class PublicAssertions(unittest.TestCase):
                             else: sentinel.write_text('preexisting extension')
                         script = root / 'run.sh'
                         script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
-                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + '\nPG_HOST=Darwin\nPG_CONFIG=$(command -v pg_config)\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
                             + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
-                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
-                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                        env = {'PATH': str(root) + os.pathsep + os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'FIXTURE_ROOT': str(root), 'RUN': str(root),
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -735,6 +742,7 @@ class PublicAssertions(unittest.TestCase):
                             env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
@@ -773,20 +781,18 @@ class PublicAssertions(unittest.TestCase):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
-            stage_generated_source(parity.ROOT, root, 'python')
+            stage_checkout(parity.ROOT, root)
             library = root / 'libraries/python'
             library.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
+            scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            venv.EnvBuilder(with_pip=False).create(assets / 'venv')
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
-            site.mkdir()
+            site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
-            (assets / 'tests').mkdir()
+            (assets / 'tests').mkdir(exist_ok=True)
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
             children.mkdir(parents=True, exist_ok=True)
@@ -800,13 +806,14 @@ class PublicAssertions(unittest.TestCase):
                 ' print("private fixture: " + consumer)\n'
                 ' return False\n')
             tools = root / 'tools'
-            tools.mkdir()
+            tools.mkdir(exist_ok=True)
             for tool in ('uv', 'maturin'):
                 (tools / tool).write_text('#!/bin/sh\nexit 99\n')
                 (tools / tool).chmod(0o755)
             for member in ('python', 'pandas', 'python-polars'):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -837,10 +844,9 @@ class PublicAssertions(unittest.TestCase):
         ]:
             with self.subTest(baseline=baseline), tempfile.TemporaryDirectory() as scratch:
                 root = Path(scratch)
+                stage_checkout(parity.ROOT, root)
                 scripts = root / 'sdlc/scripts'
-                scripts.mkdir(parents=True)
-                for filename in ['time-limit', 'scratch.sh']:
-                    shutil.copyfile(parity.ROOT / 'sdlc/scripts' / filename, scripts / filename)
+                scripts.mkdir(parents=True, exist_ok=True)
                 contract = {'functions': ['decide'], 'consumers': [
                     {'id': 'rust', 'owner': '0431', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
@@ -1101,7 +1107,7 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': 'postgresql', 'case': key, 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
@@ -1177,20 +1183,17 @@ class FullCheckpoint(unittest.TestCase):
     def test_binding_builds_run_only_in_release_and_fail_the_release_on_error(self):
         with tempfile.TemporaryDirectory(prefix="thinkthen-suite-routing-") as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             scripts = root / "sdlc/scripts"
-            scripts.mkdir(parents=True)
-            stage_files(parity.ROOT, root, (
-                "libraries/ruby/toolchain.env",
-                *("sdlc/scripts/" + name
-                  for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"))))
+            scripts.mkdir(parents=True, exist_ok=True)
             # Routing probes retain their control variables across the shell boundary.
-            for name in ("heavy-lock", "allow-list"):
+            for name in ("allow-list",):
                 (scripts / name).write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
             with (scripts / "scratch.sh").open("a") as stream:
                 stream.write("\nusage_guard() { :; }\nconfig_home() { :; }\n")
             fake = root / "bin"
-            fake.mkdir()
+            fake.mkdir(exist_ok=True)
             log = root / "calls"
             command = '''#!/bin/sh
 printf '%s %s\\n' "${0##*/}" "$*" >> "$ROUTING_LOG"
@@ -1205,11 +1208,12 @@ esac
                 path.write_text(command)
                 path.chmod(0o755)
             demo = root / "demos/16-triage-pipeline/self-test"
-            demo.parent.mkdir(parents=True)
+            demo.parent.mkdir(parents=True, exist_ok=True)
             demo.write_text("#!/bin/sh\nexit 0\n")
             demo.chmod(0o755)
             env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
 
             def run(entry, *args):
                 log.write_text("")
@@ -1250,11 +1254,10 @@ esac
             for failed in failures:
                 with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
                     root = Path(folder)
+                    stage_checkout(parity.ROOT, root)
                     scripts = root / 'sdlc/scripts'
-                    scripts.mkdir(parents=True)
-                    stage_files(parity.ROOT, root, (
-                        'sdlc/scripts/' + name
-                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler')))
+                    scripts.mkdir(parents=True, exist_ok=True)
+                    stub_other_surfaces(root, {'libraries/c'})
                     files = {
                         # Environment filtering is covered by the real nested campaign fixture.
                         'sdlc/scripts/allow-list': '',
@@ -1267,13 +1270,12 @@ esac
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
                         'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
                         'sdlc/scripts/smoke': 'printf "binding-smoke\\n" >> calls\n',
-                        'sdlc/surfaces.txt': 'libraries/c landed\n',
                         'libraries/c/Cargo.toml': '',
                         'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
                         'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
                         'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
-                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/git': '#!/bin/sh\ncase "$1" in rev-parse) printf "source-hash\\n" ;; status) : ;; *) exec ' + shlex.quote(shutil.which('git')) + ' "$@" ;; esac\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
                         'site/package.json': '{}\n',
                         'bin/npm': (
@@ -1306,6 +1308,7 @@ esac
                         target = root / path
                         target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_text(text)
+                    (root / 'bin/python3').symlink_to(sys.executable)
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
@@ -1318,6 +1321,7 @@ esac
                            'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']

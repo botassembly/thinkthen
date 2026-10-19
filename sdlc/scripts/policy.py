@@ -57,20 +57,22 @@ ACCEPTED_DEPENDENCIES = {
         "signal-hook", "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
+    "thinkthen-host": {"thinkthen", "serde_json"},
 }
-ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
     # Ticket 0372: rustls serves the CA bundle test's own TLS.
     "thinkthen": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
     "conformance-backend": set(),
+    "thinkthen-host": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.
-ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, and dependency tables as the crate.
-MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend"}
+MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend", "thinkthen-host": "crates/thinkthen-host"}
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 sys.path.insert(0, str(REPO / "sdlc/generators/results"))
 from registry import generated_paths
@@ -252,7 +254,7 @@ def check_workspace() -> None:
     manifest = read_toml("Cargo.toml")
     workspace = manifest.get("workspace", {})
     if workspace.get("members") != list(MEMBERS.values()):
-        fail("workspace", "thinkthen and the conformance backend are the workspace members")
+        fail("workspace", "the command, conformance backend and shared host crate are the workspace members")
     if workspace.get("exclude") != ["conformance/consumer", "libraries", "databases"]:
         fail("workspace", "the consumer and every binding folder are their own workspaces (ADR 0047)")
     if workspace.get("default-members") != ["crates/thinkthen"]:
@@ -381,6 +383,7 @@ def check_crates() -> None:
     backend = check_member("conformance-backend")
     if backend.get("features") or backend.get("target"):
         fail("dependencies", "the conformance backend declares no feature and no target table")
+    check_member("thinkthen-host")
     manifest = check_member("thinkthen")
     check_windows_manifest(manifest)
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
@@ -2426,10 +2429,12 @@ GRAPH_PLANTS = (
 )
 GRAPH_FILES = (
     "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+    "crates/thinkthen-host/Cargo.toml",
 )
 GRAPH_STUBS = (
     "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
     "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
+    "crates/thinkthen-host/src/lib.rs",
 )
 
 

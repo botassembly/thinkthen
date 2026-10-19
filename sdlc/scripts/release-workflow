@@ -708,7 +708,7 @@ php-dart-tools)
 	dart_bin=$dart
 	printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
 	[ -z "${GATE_OUTPUT:-}" ] || git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
-	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
 	;;
 swift-zig-tools)
 	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'

@@ -237,7 +237,8 @@ end Thinkthen.Session_C;""")
     return '-- Generated from the canonical C header by GNAT. Do not edit.\nwith Ada.Unchecked_Conversion;\nwith Interfaces;\n' + '\n'.join(line.rstrip() for line in source.splitlines() if line.strip()) + '\n'
 
 
-def generate(root, graph, prepare, env, check):
+def declarations(root, graph, prepare):
+    """Render schema declarations without compiling the private C ABI package."""
     schema = json.loads((root / 'specification/request.schema.json').read_text())
     schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
     definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
@@ -261,8 +262,7 @@ def generate(root, graph, prepare, env, check):
     outputs = {'thinkthen-sessions-calls.ads': '\n'.join(calls_spec) + '\n',
                'thinkthen-sessions-calls.adb': '\n'.join(calls_body) + '\n',
                'thinkthen-requests.ads': spec,
-               'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
-               'thinkthen-session_c.ads': header(root, env)}
+               'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body}
     from templates.ada_sessions import outputs as session_outputs
     outputs.update(session_outputs())
     results = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
@@ -278,6 +278,12 @@ def generate(root, graph, prepare, env, check):
     outputs.update(value_outputs())
     from templates.ada_usage import outputs as usage_outputs
     outputs.update(usage_outputs((root / 'libraries/c/include/thinkthen.h').read_text()))
+    return outputs
+
+
+def generate(root, graph, prepare, env, check):
+    outputs = declarations(root, graph, prepare)
+    outputs['thinkthen-session_c.ads'] = header(root, env)
     for name, content in outputs.items():
         path = output_path(root, 'ada', name)
         if check:

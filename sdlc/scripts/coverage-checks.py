@@ -210,8 +210,18 @@ class ManagedToolAvailability(unittest.TestCase):
             def command(args, cwd, env, log, **kwargs):
                 # XCFramework assembly requires macOS; package validation below is real.
                 framework = Path(args[args.index('-output') + 1])
-                framework.mkdir()
-                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+                arch = platform.machine()
+                identifier = 'macos-' + arch
+                slice = framework / identifier
+                slice.mkdir(parents=True)
+                library = Path(args[args.index('-library') + 1])
+                shutil.copy2(library, slice / library.name)
+                shutil.copytree(args[args.index('-headers') + 1], slice / 'Headers')
+                metadata = dict(CFBundlePackageType='XFWK', XCFrameworkFormatVersion='1.0',
+                                AvailableLibraries=[dict(LibraryIdentifier=identifier,
+                                    LibraryPath=library.name, HeadersPath='Headers',
+                                    SupportedArchitectures=[arch], SupportedPlatform='macos')])
+                (framework / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             context = dict(root=checkout, run=run, env={}, command=command,
                            missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)

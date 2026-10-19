@@ -2,7 +2,7 @@
 """Planted-archive proof of the registry operations (ticket 0355). No network.
 
 Each case copies the operations into a small Git tree, plants one fault, and
-checks the exit code and the refusal sentence. Signing cases need gpg.
+checks the exit code and the refusal sentence. Signing uses a local command fixture.
 """
 
 import base64
@@ -157,6 +157,80 @@ case "$*" in
   *'--jq .object.sha'*) echo "$FAKE_GO_SHA" ;;
 esac
 """
+
+
+GPG = r'''
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+
+args = sys.argv[1:]
+home = Path(args[args.index('--homedir') + 1])
+assert home.is_dir() and home.stat().st_mode & 0o777 == 0o700
+if Path(sys.argv[0]).name == 'gpgconf':
+    assert args == ['--homedir', str(home), '--kill', 'gpg-agent']
+    operation = '--kill'
+else:
+    assert args[:4] == ['--homedir', str(home), '--batch', '--no-tty']
+    operations = ('--quick-gen-key', '--list-secret-keys', '--detach-sign', '--verify')
+    operation, = [name for name in operations if name in args]
+with open(os.environ['FAKE_GPG_LOG'], 'a') as log:
+    log.write(json.dumps([operation, Path(args[-1]).name]) + '\n')
+if operation == '--quick-gen-key':
+    assert args[4:] == ['--pinentry-mode', 'loopback', '--passphrase', '', '--quick-gen-key',
+                        'ThinkThen rehearsal <rehearsal@invalid>', 'ed25519', 'sign', '1d']
+elif operation == '--list-secret-keys':
+    assert args[4:] == ['--with-colons', '--list-secret-keys']
+    print('sec::::fixture-key:')
+elif operation == '--detach-sign':
+    assert args[4:-1] == ['--pinentry-mode', 'loopback', '--passphrase-fd', '0',
+                          '--local-user', 'fixture-key', '--armor', '--detach-sign',
+                          '--output', args[-1] + '.asc']
+    assert sys.stdin.buffer.read() == b''
+    Path(args[-1] + '.asc').write_text(hashlib.sha256(Path(args[-1]).read_bytes()).hexdigest())
+elif operation == '--verify':
+    assert args[4:] == ['--verify', args[-1] + '.asc', args[-1]]
+    assert Path(args[-1] + '.asc').read_text() == hashlib.sha256(Path(args[-1]).read_bytes()).hexdigest()
+    if os.environ.get('FAKE_GPG_REFUSE_VERIFY'):
+        sys.stderr.write('fixture verification refused')
+        sys.exit(1)
+'''
+
+
+def signing_cases(root, base, layout, artifacts, stem):
+    """Exercise signing orchestration without a host key store or cryptographic tools."""
+    with tempfile.TemporaryDirectory(prefix='registry-sign-') as tmp:
+        tools = pathlib.Path(tmp)
+        for name in ('gpg', 'gpgconf'):
+            command = tools / name
+            command.write_text(f'#!{sys.executable}\n' + GPG)
+            command.chmod(0o755)
+        log = tools / 'calls'
+        env = {'PATH': f"{tools}:{os.environ['PATH']}", 'FAKE_GPG_LOG': str(log)}
+        before = {p.name: p.read_bytes() for p in base.iterdir()}
+        signed = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
+        calls = [json.loads(line) for line in log.read_text().splitlines()]
+        expected = [['--quick-gen-key', '1d'], ['--list-secret-keys', '--list-secret-keys']]
+        for name in artifacts:
+            expected += [['--detach-sign', name], ['--verify', name]]
+        expected += [['--kill', 'gpg-agent']]
+        checks = [('rehearse-sign', (signed.returncode, signed.stdout.strip(), signed.stderr.strip(),
+                                     sorted(p.name for p in base.iterdir()), calls,
+                                     {p.name: p.read_bytes() for p in base.iterdir()} == before),
+                   (0, 'release-registry: rehearsal signed and verified 11 Maven files with a throwaway key',
+                    '', layout, expected, True))]
+        refused = run(root, 'maven-sign', 'out/maven', 'rehearse',
+                      env=env | {'FAKE_GPG_REFUSE_VERIFY': '1'})
+        checks.append(('rehearse-verification-refused', (refused.returncode, refused.stderr.strip()),
+                       (1, 'release-registry: gpg --verify failed: fixture verification refused')))
+        (base / f'{stem}.jar.sha1').write_text('0' * 40)
+        calls_before = log.read_bytes()
+        stale = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
+        checks.append(('rehearse-stale-checksum', (stale.returncode, stale.stderr.strip(), log.read_bytes()),
+                       (1, f'release-registry: {stem}.jar.sha1 differs', calls_before)))
+        return checks
 
 
 def go_tag_cases():
@@ -477,7 +551,7 @@ def main():
         root = pathlib.Path(tmp) / "pack"
         base = root / "out/maven/io/github/botassembly/thinkthen-jvm" / v
         layout = sorted(p.name for p in base.iterdir())
-        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
+        artifacts = [f"{stem}{suffix}" for suffix in (".pom", ".jar", "-kotlin.jar", "-scala.jar", "-sources.jar", "-javadoc.jar", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
         pub = sorted(p.relative_to(root / "out/pub").as_posix() for p in (root / "out/pub").rglob("*") if p.is_file())
         expected_pub = ["thinkthen_dart/README.md", "thinkthen_dart/lib/thinkthen_dart.dart", "thinkthen_dart/pubspec.yaml"]
         with zipfile.ZipFile(base / f"{stem}-sources.jar") as sources:
@@ -519,20 +593,7 @@ def main():
         for name, args, env, refusal in refusals:
             result = run(root, *args, env=env)
             checks.append((name, (result.returncode, result.stderr.strip()), (1, f"release-registry: {refusal}")))
-        if shutil.which("gpg"):
-            # Nested macOS temporary paths exceed the gpg-agent socket path limit.
-            with tempfile.TemporaryDirectory(prefix="gpg-", dir="/tmp" if sys.platform == "darwin" else None) as signing_tmp:
-                signing_env = dict.fromkeys(("TMPDIR", "TMP", "TEMP"), signing_tmp)
-                signed = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
-                checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), signed.stderr.strip(),
-                                                sorted(p.name for p in base.iterdir())),
-                               (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", "", layout)))
-                (base / f"{stem}.jar.sha1").write_text("0" * 40)
-                stale = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
-                checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),
-                               (1, f"release-registry: {stem}.jar.sha1 differs")))
-        else:
-            checks.append(("rehearse-sign", "gpg missing", "gpg present"))
+        checks += signing_cases(root, base, layout, artifacts, stem)
         checks += go_tag_cases()
         (root / "bundle.zip").write_bytes(b"zip")
         checks += upload_cases(root / "bundle.zip")

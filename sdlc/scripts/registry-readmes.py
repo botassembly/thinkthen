@@ -579,7 +579,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
     elif family in ('php', 'packagist'):
         (work / 'vendor').mkdir()
         (work / 'vendor/autoload.php').symlink_to(package / 'autoload.php')
-        output = run([os.environ.get('THINKTHEN_PHP_BIN', 'php'), '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
+        output = run(['php', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
     elif family == 'typescript':
         (work / 'node_modules').mkdir()
         (work / 'node_modules/thinkthen').symlink_to(package)

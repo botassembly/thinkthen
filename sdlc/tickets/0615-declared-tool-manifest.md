@@ -6,6 +6,26 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision bfcfac4, accept
+
+Reviews: revision 42d80cb, accept
+
+Reviews: revision c1bfa7a, accept
+
+Reviews: revision 8d5c560, accept
+
+Reviews: revision feb660e, accept
+
+Reviews: revision 70fa206, accept
+
+Reviews: revision 9a08fdc, accept
+
+Reviews: revision ecf5f01, accept
+
+Reviews: revision ae51f8a, accept
+
+Reviews: revision 5d7b40d, accept
+
 ## Outcome
 
 - One tracked manifest names every tool each gate, check and library gate needs, with its pinned version where one is pinned, and the platforms on which each library is supported.
@@ -31,6 +51,10 @@ The M5 login shells (`-lc` and `-lic`) both lack rustup and prettier and select 
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The independent native-test and library-tool extraction is fresh-accepted at bfcfac412 after nine resolver checks and the repaired preparation fixtures; native lint keeps the PM-approved old setup until 0619, and landing now waits only for the shared main repair and its own rebased main gate, with no container dependency.
+- 2026-10-19 next: Fresh review accepts native integration c1bfa7a98 after the complete focused fixture batch passed; the main closing gate remains, while0620 owns the removed Ruby variable/cache readers in release-workflow, gate.yml and hosted-preflight plus the empty-RUBY_MINORS fixture bypass, and native lint keeps its temporary setup until0619.
+- 2026-10-19 next: The full closing gate at b49a61103 reached the workflow self-test and failed nine of133 cases; a fresh developer is classifying every saved failure against approved0614 test deletion and0620 hosted deferrals before any further repair or gate.
+- 2026-10-19 next: Fresh review accepts ecf5f01d4 after profile admission, local refusal-fixture isolation and registry tool-fixture repairs passed focused M5 checks; retain every earlier failed gate receipt, merge the next landed main pair, then run one closing gate on that revision.
 
 ## Amendment, 2026-10-18
 

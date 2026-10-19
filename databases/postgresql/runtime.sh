@@ -14,13 +14,7 @@ TOOLCHAIN=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/postgresql
 PG_HOST=$(uname -s)
 if [ "$PG_HOST" = Darwin ]; then
 	. ./runtime-darwin.env
-	if command -v brew >/dev/null; then
-		PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@$PG_MAJOR)/bin/pg_config}
-		PATH=${PG_CONFIG%/pg_config}:$PATH
-		export PATH
-	else
-		PG_CONFIG=${PG_CONFIG:-/nonexistent/pg_config}
-	fi
+	PG_CONFIG=$(command -v pg_config || true)
 fi
 # One pinned server package per CPU (ticket 0369). PINNED is empty on any other CPU.
 case $(uname -m) in x86_64) DEB_ARCH=amd64 ;; aarch64) DEB_ARCH=arm64 ;; *) DEB_ARCH=none ;; esac

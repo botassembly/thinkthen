@@ -369,7 +369,11 @@ fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Resu
     ];
     let into = folder("refused-runs");
     fs::create_dir_all(&into)?;
-    for arguments in cases {
+    for mut arguments in cases {
+        // A valid case must fail locally in transport, never call the default backend.
+        if !arguments.contains(&"--url") {
+            arguments.extend(["--url", CLOSED]);
+        }
         let output = spawn(
             &arguments,
             &[("THINKTHEN_API_KEY", key), ("RUST_BACKTRACE", "full")],

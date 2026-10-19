@@ -4,9 +4,11 @@
 # loopback port as $1. The tests start their own backends, so this check does
 # not use it. It runs from the repository root, where the manifest is.
 set -eu
-cd -- "$(dirname -- "$0")/../.."
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+tools_group=polars
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")/../.."
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 if [ "$profile" = routine ]; then
     export THINKTHEN_CONFORMANCE_IDS="${THINKTHEN_CONFORMANCE_IDS:-$PWD/conformance/routine-ids.txt}"
