@@ -117,7 +117,7 @@ impl std::error::Error for ReaderFailure {
     }
 }
 
-fn input_failure(error: crate::Error) -> Failure {
+pub(crate) fn input_failure(error: crate::Error) -> Failure {
     if let Some(cause) = std::error::Error::source(&error)
         .and_then(|cause| cause.downcast_ref::<std::io::Error>())
     {

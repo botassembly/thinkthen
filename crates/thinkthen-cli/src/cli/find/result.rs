@@ -2,7 +2,7 @@
 use super::{Rendered, Unit};
 use crate::args::Common;
 use crate::cli::intake;
-use crate::core::{Reading};
+use crate::cli::reading::Reading;
 use crate::render::json_line;
 use crate::failure::Failure;
 
@@ -11,7 +11,7 @@ pub(super) fn rendered(
     reading: &Reading,
     units: &[Unit],
     found: &crate::CompleteFound<crate::QuestionInput>,
-    declarations: &crate::core::declaration::QuestionMetadata,
+    authored_model: Option<&str>,
 ) -> Result<Rendered, Failure> {
     let place = match found.selection() {
         crate::FindSelection::Unit(at) => Some(at),
@@ -35,7 +35,7 @@ pub(super) fn rendered(
         })
         .transpose()?;
     let mut line = if common.details {
-        Some(details(found, declarations)?)
+        Some(details(found, authored_model)?)
     } else {
         unit.map(|unit| {
             reading
@@ -61,23 +61,24 @@ pub(super) fn rendered(
     })
 }
 
-// The CLI presents authored reading metadata; route overrides remain in native meta.
-fn details(
-    found: &crate::CompleteFound<crate::QuestionInput>,
-    declarations: &crate::core::declaration::QuestionMetadata,
-) -> Result<String, Failure> {
-    let presentation = found.canonical.display_question(declarations);
-    let question = crate::core::Json::parse(&json_line(&presentation)?)
-        .map_err(|_| Failure::Defect("a native find question could not be displayed"))?;
-    let mut document = crate::core::Json::parse(&found.to_json().map_err(Failure::from)?)
-        .map_err(|_| Failure::Defect("a native find result could not be displayed"))?;
-    let crate::core::Json::Object(members) = &mut document else {
+// The command displays the authored model beside the actual native answer.
+// Route/model overrides remain in native metadata; native identities and values
+// pass through unchanged. The native canonical question already owns every
+// semantic field and declaration, so only this presentation label is adjusted.
+fn details(found: &crate::CompleteFound<crate::QuestionInput>, authored_model: Option<&str>) -> Result<String, Failure> {
+    let document = crate::saved_json::Json::parse(&found.to_json()?)?;
+    let crate::saved_json::Kind::Object(mut members) = document.kind().clone() else {
         return Err(Failure::Defect("a native find result is not an object"));
     };
-    let (_, displayed) = members
-        .iter_mut()
-        .find(|(name, _)| name == "question")
+    let question = members.iter_mut().find(|(name, _)| name == "question")
         .ok_or(Failure::Defect("a native find result has no question"))?;
-    *displayed = question;
-    json_line(&document).map_err(Failure::from)
+    let crate::saved_json::Kind::Object(mut fields) = question.1.kind().clone() else {
+        return Err(Failure::Defect("a native find question is not an object"));
+    };
+    if let Some((_, model)) = fields.iter_mut().find(|(name, _)| name == "model") {
+        if let Some(authored) = authored_model { *model = crate::saved_json::Json::made(crate::saved_json::Kind::String(authored.to_owned())); }
+        else { fields.retain(|(name, _)| name != "model"); }
+    }
+    question.1 = crate::saved_json::Json::made(crate::saved_json::Kind::Object(fields));
+    json_line(&crate::saved_json::Json::made(crate::saved_json::Kind::Object(members)))
 }

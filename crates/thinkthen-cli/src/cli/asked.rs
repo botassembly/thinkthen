@@ -76,8 +76,8 @@ fn prepare(admitted: &mut AdmittedRequest)
         // host selection chooses only the already explicit set role.
         let document = Json::parse(&text).ok();
         let role = if document.as_ref().is_some_and(|value| value.member("questions").is_some()) {
-            crate::QuestionRole::Set
-        } else { crate::QuestionRole::Atomic };
+            crate::QuestionFileRole::Set
+        } else { crate::QuestionFileRole::Atomic };
         let dynamic = function == crate::RequestFunction::Choose
             && admitted.request().call.arguments().options.options_field.is_some();
         let definition = reference.parse(&text, role, |text| {

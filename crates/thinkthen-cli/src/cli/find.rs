@@ -4,7 +4,8 @@ use crate::plan_document::PlanDocument;
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
-use crate::core::{Backend, Framing, MAX_RECORD_BYTES, Pointer, Reading, Record};
+use crate::{RawRecord as Record, RequestFraming as Framing, ResolvedSettings};
+use crate::cli::reading::Reading;
 use crate::render::json_line;
 
 use crate::args::{Common, FindArguments};
@@ -14,8 +15,7 @@ use crate::cli::{
     intake::{self, Position, Snapshot},
 };
 use crate::edge::{self, Environment};
-use crate::engine::facade;
-use crate::failure::{Failure, ReplayContext};
+use crate::failure::Failure;
 use crate::profile;
 mod question;
 mod result;
@@ -29,7 +29,8 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let question::Prepared {
-        metadata,
+        item_schema,
+        authored_model,
         common,
         sources,
     } = question::Prepared::new(arguments, &mut admitted)?;
@@ -37,30 +38,18 @@ pub(crate) fn run(
     let context = asking::context::shared(arguments.common.context.as_deref())?;
     let mut display = display(arguments, common)?;
     let reading = Reading::new(framing(common), fields(common)?)?
-        .with_item_schema(metadata.item_schema.clone());
-    let backend = environment
-        .resolve(
-            common.backend.as_deref(),
-            common.url.as_deref(),
-            common.model.as_deref(),
-        )?
-        .with_request_size(
-            environment.request_size(arguments.common.max_request_bytes.as_deref())?,
-        );
-    let profile = profile::read(common, environment, &backend)?;
+        .with_item_schema(item_schema);
+    let backend = environment.resolve(common.backend.as_deref(), common.url.as_deref(), common.model.as_deref())?;
+    environment.set_request_size(environment.request_size(arguments.common.max_request_bytes.as_deref())?)?;
+    profile::read(common, environment)?;
     let folders = Folders::of(common, environment)?;
-    if common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
+    if common.dry_run && folders.named() { return Err(Failure::DryRunWithRecording); }
     let recording = folders.reported();
-    let engine = live_engine(
-        common,
-        environment,
-        folders,
-        backend.clone(),
-        profile.clone(),
-    )?;
-    let most = crate::core::Find::maximum(arguments.none);
+    let engine = if common.dry_run { None } else {
+        Some(crate::cli::construction::engine(common, environment, folders, None)?)
+    };
+    let range = crate::find_candidate_count_range(arguments.none);
+    let most = *range.end();
     let units = input_units(
         common,
         input,
@@ -71,7 +60,7 @@ pub(crate) fn run(
     if units.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    if crate::core::Find::validate_count(units.len(), arguments.none).is_err() {
+    if !range.contains(&units.len()) {
         return Err(Failure::FindCount {
             none: arguments.none,
         });
@@ -80,7 +69,7 @@ pub(crate) fn run(
         return planned(
             admitted,
             (common, environment),
-            (&backend, profile.as_ref(), context.as_deref()),
+            (&backend, context.as_deref()),
             (&reading, sources),
             &units,
             writer,
@@ -95,62 +84,18 @@ pub(crate) fn run(
         &units,
         context.as_deref(),
     )?;
-    let rendered = result::rendered(common, &reading, &units, &found, &metadata)?;
+    let rendered = result::rendered(common, &reading, &units, &found, authored_model.as_deref())?;
     display.emit_row(
         &mut writer,
         rendered.line.as_deref(),
         rendered.position.as_ref(),
         rendered.score,
     )?;
-    environment.usage().record_done();
     Ok(ExitCode::from(if rendered.resolved { 0 } else { 3 }))
 }
 
-fn execute(
-    admitted: crate::AdmittedRequest,
-    engine: facade::Engine,
-    common: &Common,
-    environment: &Environment,
-    units: &[Unit],
-    context: Option<&str>,
-) -> Result<crate::CompleteFound<crate::QuestionInput>, Failure> {
-    let engine = crate::Engine::from_cli(engine, environment.config().prices());
-    let composition = composition(common)?;
-    let rows = composed(&composition, units);
-    let token = crate::CancelToken::from_flag(environment.cancel().flag());
-    let mut controls = crate::CallOptions::new()
-        .cli_cancel(&token, environment.cancel().deadline())
-        .surface(crate::Surface::Cli)
-        .attempts(common.details);
-    if let Some(context) = context {
-        controls = controls.context(context);
-    }
-    let admitted = admitted.with_composed_feed("cli-find");
-    let outcome = engine
-        .execute_request(
-            &admitted,
-            crate::RequestEnvironment {
-                controls,
-                feed: Some(crate::RequestFeed::from_records("cli-find", rows)),
-            },
-        )
-        .map_err(|error| {
-            if let Some(facts) = error.facts() {
-                environment.settle_native(facts);
-            }
-            Failure::from(error)
-                .with_replay_context(ReplayContext::FindSet(units.len()))
-                .with_size_advice(crate::failure::SizeAdvice::Candidates)
-        })?;
-    let crate::RequestOutcome::Complete(call) = outcome else {
-        return Err(Failure::Defect("whole-set find returned a stream failure"));
-    };
-    environment.settle_native(call.facts());
-    let crate::RequestValue::Found(found) = call.into_value() else {
-        return Err(Failure::Defect("find returned another native result"));
-    };
-    Ok(found)
-}
+mod execution;
+use execution::execute;
 
 fn composition(common: &Common) -> Result<crate::RecordReading, Failure> {
     let fields = common.field.iter().map(String::as_str).collect::<Vec<_>>();
@@ -163,7 +108,7 @@ fn composed<'a>(
 ) -> impl Iterator<Item = Result<crate::RecordInput<crate::QuestionInput>, crate::Error>> + 'a {
     units.iter().map(|unit| {
         let mut record =
-            composition.compose(crate::RawRecord(std::sync::Arc::new(unit.record.clone())))?;
+            composition.compose(unit.record.clone())?;
         if unit.position.located
             && let Some(file) = &unit.position.file
         {
@@ -177,27 +122,6 @@ fn composed<'a>(
     })
 }
 
-fn live_engine(
-    common: &Common,
-    environment: &Environment,
-    folders: Folders,
-    backend: Backend,
-    profile: Option<crate::core::BackendProfile>,
-) -> Result<Option<facade::Engine>, Failure> {
-    (!common.dry_run)
-        .then(|| {
-            crate::cli::construction::engine(
-                common,
-                environment,
-                folders,
-                (backend, profile),
-                None,
-                false,
-            )
-        })
-        .transpose()
-}
-
 fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failure> {
     let mut display = Display::default();
     display.arguments = arguments.display.clone();
@@ -205,76 +129,46 @@ fn display(arguments: &FindArguments, common: &Common) -> Result<Display, Failur
     Ok(display)
 }
 
-/// Print the plan. `target` is the backend and its first key variable.
+/// Print exactly the native admitted whole-set request and aggregate counts.
 fn planned(
     admitted: crate::AdmittedRequest,
     (common, environment): (&Common, &Environment),
-    (backend, profile, context): (&Backend, Option<&crate::core::BackendProfile>, Option<&str>),
-    (reading, sources): (&Reading, Option<crate::core::Sources>),
-    units: &[Unit],
-    mut writer: impl Write,
+    (backend, context): (&ResolvedSettings, Option<&str>),
+    (reading, sources): (&Reading, Option<crate::plan_document::Sources>),
+    units: &[Unit], mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let inner = crate::cli::construction::engine(
-        common,
-        environment,
-        Folders::of(common, environment)?,
-        (backend.clone(), profile.cloned()),
-        None,
-        false,
-    )?;
-    let native = crate::Engine::from_cli(inner, environment.config().prices());
+    let native = crate::cli::construction::engine(common, environment, Folders::of(common, environment)?, None)?;
     let composition = composition(common)?;
     let rows = composed(&composition, units);
-    let admitted = admitted.with_composed_feed("cli-find-plan");
-    let mut controls = crate::CallOptions::new().surface(crate::Surface::Cli);
-    if let Some(context) = context {
-        controls = controls.context(context);
-    }
-    let (find, summary) = admitted
-        .plan_find(
-            &native,
-            crate::RequestEnvironment {
-                controls,
-                feed: Some(crate::RequestFeed::from_records("cli-find-plan", rows)),
-            },
-        )
-        .map_err(Failure::from)?;
-    let mut document = match context {
-        Some(_) => PlanDocument::of_body(
-            backend,
-            summary
-                .first_body()
-                .ok_or(Failure::Defect("a find preview has no request"))?
-                .to_vec(),
-        ),
-        None => PlanDocument::of(backend, find.plan()),
-    }
-    .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
-    .key_env(environment.key_variable());
-    if summary.first_body() != Some(document.request_body()) {
-        return Err(Failure::Defect(
-            "the disclosed request changed after preparation",
-        ));
-    }
-    if let Some(sources) = sources {
-        document = document.from(sources);
-    }
-    edge::write_line(&mut writer, &json_line(&document.reading(reading))?)?;
-    let counts = summary
-        .counts()
-        .map_err(|_| Failure::Defect("a plan is too large"))?;
-    edge::write_line(&mut writer, &json_line(&counts)?)?;
+    let admitted = request(&admitted, "cli-find-plan", context)?.admit()?;
+    let summary = native.plan_request(&admitted, crate::RequestEnvironment {
+        controls: crate::CallOptions::new().surface(crate::Surface::Cli),
+        feed: Some(crate::RequestFeed::from_records("cli-find-plan", rows)),
+    })?;
+    let mut document = PlanDocument::of_body(backend, summary.first_body()
+        .ok_or(Failure::Defect("a find preview has no request"))?.to_vec())?
+        .key_env(&backend.key_variable);
+    if let Some(sources) = sources { document = document.from(sources); }
+    edge::write_line(&mut writer, &json_line(&document.reading(reading.framing(), reading.fields().to_vec(), reading.is_default()))?)?;
+    edge::write_line(&mut writer, &json_line(&crate::cli::plan_counts::Counts::from(&summary))?)?;
     Ok(ExitCode::SUCCESS)
 }
 
-fn fields(common: &Common) -> Result<Vec<Pointer>, Failure> {
-    common
-        .field
-        .iter()
-        .map(|typed| {
-            Pointer::new(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error))
-        })
-        .collect()
+fn request(admitted: &crate::AdmittedRequest, feed: &str, context: Option<&str>) -> Result<crate::Request, Failure> {
+    let mut arguments = admitted.request().call.arguments().clone();
+    arguments.question = crate::RequestQuestion::Definition { value: admitted.resolve_question()? };
+    arguments.input = crate::RequestInput::Feed { name: feed.to_owned(), framing: Framing::Document,
+        reading: crate::ReaderOptions::default(), images: Vec::new() };
+    arguments.options.field = None;
+    arguments.options.context = context.map(str::to_owned);
+    Ok(crate::Request::for_function(crate::RequestFunction::Find, arguments))
+}
+
+fn fields(common: &Common) -> Result<Vec<String>, Failure> {
+    common.field.iter().map(|typed| {
+        crate::validate_pointer(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error.to_string()))?;
+        Ok(typed.clone())
+    }).collect()
 }
 
 fn input_units(
@@ -331,7 +225,7 @@ fn located_units(
         original = original
             .checked_add(bytes.len())
             .ok_or(Failure::FindTooLarge)?;
-        if original > MAX_RECORD_BYTES {
+        if original > Record::max_bytes() {
             return Err(Failure::FindTooLarge);
         }
         let record = reading
@@ -374,17 +268,18 @@ fn read_units(
     none: bool,
     recording: bool,
 ) -> Result<Vec<Unit>, Failure> {
-    let mut chunks = edge::Chunks::new(source, true);
+    let mut chunks = crate::FileReader::new(file.clone().unwrap_or_default(), source, crate::ReaderOptions { unit: crate::SourceUnit::Line, window: None })?;
     let mut original = 0usize;
     let mut units = Vec::new();
-    while let Some(bytes) = chunks.next().transpose()? {
+    while let Some(unit) = chunks.next_bytes().transpose().map_err(intake::input_failure)? {
+        let bytes = unit.record;
         if units.len() == most {
             return Err(Failure::FindCount { none });
         }
         original = original
             .checked_add(bytes.len())
             .ok_or(Failure::FindTooLarge)?;
-        if original > MAX_RECORD_BYTES {
+        if original > Record::max_bytes() {
             return Err(Failure::FindTooLarge);
         }
         let record = reading
@@ -428,5 +323,47 @@ fn framing(common: &Common) -> Framing {
         Framing::Jsonl
     } else {
         Framing::Lines
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{io::{self, BufRead}, sync::{Arc, atomic::{AtomicUsize, Ordering}}};
+    struct Counted { bytes: Vec<u8>, at: usize, consumed: Arc<AtomicUsize> }
+    impl Read for Counted {
+        fn read(&mut self, target: &mut [u8]) -> io::Result<usize> {
+            if target.is_empty() { return Ok(0); }
+            let source = self.fill_buf()?;
+            let Some(byte) = source.first() else { return Ok(0); };
+            target[0] = *byte;
+            self.consume(1);
+            Ok(1)
+        }
+    }
+    impl BufRead for Counted {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> { Ok(&self.bytes[self.at..(self.at + 1).min(self.bytes.len())]) }
+        fn consume(&mut self, count: usize) { self.at += count; self.consumed.fetch_add(count, Ordering::Relaxed); }
+    }
+    #[test]
+    fn candidate_overflow_stops_before_the_following_invalid_record() {
+        for none in [false, true] {
+            let most = *crate::find_candidate_count_range(none).end();
+            let mut bytes = b"candidate\n".repeat(most + 1);
+            let cutoff = bytes.len();
+            bytes.extend_from_slice(b"\xffmust remain unread\n");
+            let consumed = Arc::new(AtomicUsize::new(0));
+            let source = Counted { bytes, at: 0, consumed: consumed.clone() };
+            let reading = Reading::new(Framing::Lines, Vec::new()).unwrap();
+            let failure = read_units(&reading, Box::new(source), None, most, none, false).err().unwrap();
+            assert!(matches!(failure, Failure::FindCount { none: actual } if actual == none));
+            assert_eq!(consumed.load(Ordering::Relaxed), cutoff);
+        }
+    }
+    #[test]
+    fn empty_find_input_remains_an_empty_host_set() {
+        let reading = Reading::new(Framing::Lines, Vec::new()).unwrap();
+        assert!(read_units(&reading, Box::new(io::Cursor::new(Vec::<u8>::new())), None,
+            *crate::find_candidate_count_range(false).end(), false, false).unwrap().is_empty());
     }
 }

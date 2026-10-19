@@ -32,7 +32,7 @@ pub(crate) fn reference(
     let reference = crate::QuestionFileReference::reference(&format!("@{value}"))
         .map_err(|error| Failure::NamedQuestion(error.detail().message().to_owned()))?;
     let text = selected_text(&reference, unopened)?;
-    reference.parse(&text, crate::QuestionRole::Set, |text| Ok(text.to_owned()))
+    reference.parse(&text, crate::QuestionFileRole::Set, |text| Ok(text.to_owned()))
         .map_err(Failure::from)
 }
 
