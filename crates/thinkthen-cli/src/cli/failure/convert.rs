@@ -130,3 +130,6 @@ fn diagnostic_failure(diagnostic: D<'_>, retryable: bool) -> Failure {
         ),
     }
 }
+
+#[cfg(test)]
+mod conformance_tests;
