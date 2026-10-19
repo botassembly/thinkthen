@@ -48,4 +48,6 @@ assert(rc == THINKTHEN_OK);
 thinkthen_complete_utf8_v1 json =
     thinkthen_call_result_json(complaints_call);
 assert(json.data != NULL && json.len > 0);
+fwrite(json.data, 1, json.len, stdout);
+putchar('\n');
 thinkthen_call_result_free(complaints_call);

@@ -57,6 +57,18 @@ def cli_examples(runner, packages, family):
 
 
 class PackageText(unittest.TestCase):
+    def test_c_owned_calls_keep_exact_answers_and_do_not_read_nested_values(self):
+        calls = [{'answer': {'function': function, 'value': values}, 'facts': {'records': 3}}
+                 for function, values in [('decide', [True, False, None]),
+                                          ('choose', ['billing', 'shipping', 'account'])]]
+        readmes.check_c_calls('\n'.join(map(json.dumps, calls)))
+        for replacement in (False, {'value': [True, False, None]}, '\"value\":[true,false,null]'):
+            changed = json.loads(json.dumps(calls))
+            changed[0]['answer']['value'] = replacement
+            changed[0]['value'] = {'nested': [True, False, None]}
+            with self.assertRaises(readmes.Refusal):
+                readmes.check_c_calls('\n'.join(map(json.dumps, changed)))
+
     def test_public_package_uses_reviewed_text(self):
         with tempfile.TemporaryDirectory() as scratch:
             package = Path(scratch) / 'thinkthen.tgz'

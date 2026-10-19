@@ -747,8 +747,23 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
                 run([str(binaries / 'pg_ctl'), '-D', str(data), '-m', 'immediate', '-w', '-t', '20', 'stop'])
     else:
         raise Refusal('example-preparation-unavailable: ' + family)
+    if family == 'c':
+        check_c_calls(output)
     if expected is not None and output != expected:
         raise Refusal('example-output-mismatch: ' + family)
+
+
+def check_c_calls(output):
+    """Read each complete owned Call; retain the README's six exact answers."""
+    calls = [json.loads(line) for line in output.splitlines()]
+    wanted = [('decide', [True, False, None]), ('choose', ['billing', 'shipping', 'account'])]
+    if len(calls) != len(wanted):
+        raise Refusal('c-example-call-count')
+    for call, (function, values) in zip(calls, wanted):
+        answer = call.get('answer', {})
+        if (answer.get('function') != function or answer.get('value') != values
+                or call.get('facts', {}).get('records') != len(values)):
+            raise Refusal('c-example-answer-or-facts')
 
 
 def check_examples(packages, root=REPO, families=None):
