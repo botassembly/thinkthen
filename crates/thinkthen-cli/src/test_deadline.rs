@@ -6,4 +6,3 @@ mod support;
 pub(crate) use child::{run::output, wait::finish};
 #[cfg(unix)]
 pub(crate) use support::park_for_signal;
-pub(crate) use support::whole_request;
