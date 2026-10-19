@@ -24,3 +24,7 @@ Depends on: 0613
 The `smoke` matrix in `.github/workflows/release.yml` runs every family on one runner per target: the Go and C++, Swift and Zig, PHP and Dart, Ada, Objective-C and COBOL, and managed gates, then the smoke bundle, installer and crate smoke. The Intel macOS runner is the slowest, and this one job ran into the six-hour hosted cap.
 
 Reviewed source 14e97f9e7, now on main, bounds all 23 executable gate and release jobs. Short jobs got small caps, but long jobs kept the six-hour ceiling, so a hung long job still costs up to six hours. Hosted runs can also return 404 for live child logs, so a long job shows only broad step states.
+
+## Progress
+
+- 2026-10-19 started
