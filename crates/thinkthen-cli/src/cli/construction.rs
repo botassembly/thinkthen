@@ -16,6 +16,13 @@ pub(crate) fn engine(
             "thinkthen: warning: another user may change this named cache or recording folder; its writers decide the answers read from it")
             .map_err(Failure::Output)?;
     }
+    let route = environment.inspect_builder(crate::EngineBuilder::resolved_settings)?;
+    if folders.record.is_some() && folders.replay.is_some()
+        && (folders.refresh_cache || route.model_is_mutable_alias) {
+        writeln!(io::stderr().lock(),
+            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge")
+            .map_err(Failure::Output)?;
+    }
     let mut builder = environment.take_builder()?
         .timeout(Duration::from_secs(common.timeout))?
         .max_retries(common.max_retries)
@@ -38,12 +45,6 @@ pub(crate) fn engine(
         if let Some(path) = &folders.replay { builder = builder.replay(path)?; }
     }
     let engine = builder.refresh_cache(folders.refresh_cache).build()?;
-    if folders.record.is_some() && folders.replay.is_some()
-        && (folders.refresh_cache || engine.model_is_mutable_alias()) {
-        writeln!(io::stderr().lock(),
-            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge")
-            .map_err(Failure::Output)?;
-    }
     environment.observe_engine(&engine);
     Ok(engine)
 }

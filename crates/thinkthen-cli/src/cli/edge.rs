@@ -189,11 +189,11 @@ impl Environment {
             counts: engine.as_ref().map_or(crate::Counters::ZERO, Engine::usage),
             http_time: engine.as_ref().and_then(Engine::http_time) }
     }
-    pub(crate) fn finish_usage(&self) -> Option<crate::UsageFailure> {
+    pub(crate) fn finish_usage(&self) -> Option<Option<crate::UsageFailure>> {
         let engine = self.engine.lock().ok()?;
         let engine = engine.as_ref()?;
-        engine.finish_usage_status();
-        engine.usage_failure()
+        (engine.finish_usage_status() == crate::UsagePersistence::Failed)
+            .then(|| engine.usage_failure())
     }
 }
 
