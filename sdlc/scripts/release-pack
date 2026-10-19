@@ -316,6 +316,7 @@ EOF
 
 # Step files share the driver's helpers and invocation state.
 for step in "$REPO"/sdlc/scripts/release-pack.d/*; do
+	[ -f "$step" ] || { echo "release-pack: missing step $step" >&2; exit 1; }
 	. "$step"
 done
 

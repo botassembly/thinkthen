@@ -40,6 +40,7 @@ def copy_packer(destination: Path) -> None:
         target = destination / name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO / name, target)
+    shutil.copytree(REPO / 'sdlc/scripts/release-pack.d', destination / 'sdlc/scripts/release-pack.d')
 
 
 def reject_lane_cleanup() -> None:
