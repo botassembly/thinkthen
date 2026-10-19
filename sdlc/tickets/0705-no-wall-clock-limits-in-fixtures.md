@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 8d51878, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/`, `conformance/`, `crates/thinkthen/.config/nextest.toml`.
