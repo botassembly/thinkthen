@@ -33,6 +33,7 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT="$here/target/artifacts/thinkthen-zig-$version-x86_64-unknown-linux-gnu.tar.gz"
     export THINKTHEN_ARTIFACT
 fi
+python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     smoke_guard
     . "$root/sdlc/scripts/installed.sh"
@@ -45,5 +46,4 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"
