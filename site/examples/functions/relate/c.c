@@ -19,7 +19,8 @@ int at = snprintf(input_json, sizeof input_json,
     "{\"kind\":\"entities\",\"items\":[");
 for (int i = 0; i < 4; i++) {
     at += snprintf(input_json + at, sizeof input_json - at,
-        "%s{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"%s\",\"kind\":\"%s\"}}}",
+        "%s{\"original\":{\"kind\":\"json\","
+        "\"value\":{\"name\":\"%s\",\"kind\":\"%s\"}}}",
         i ? "," : "", names[i][0], names[i][1]);
 }
 snprintf(input_json + at, sizeof input_json - at, "]}");
@@ -32,10 +33,10 @@ thinkthen_named_request_v1 request = {
     .input_json = {input_json, strlen(input_json)},
     .options_json = {"{}", 2},
 };
-thinkthen_call_result *result = NULL;
+thinkthen_call_result *makers_call = NULL;
 thinkthen_call_error *error = NULL;
 int rc = thinkthen_run_call(tt, &request,
-    NULL, NULL, NULL, &result, &error);
+    NULL, NULL, NULL, &makers_call, &error);
 thinkthen_engine_free(tt);
 if (rc != THINKTHEN_OK) {
     thinkthen_complete_utf8_v1 message =
@@ -45,7 +46,7 @@ if (rc != THINKTHEN_OK) {
 }
 assert(rc == THINKTHEN_OK);
 thinkthen_complete_utf8_v1 json =
-    thinkthen_call_result_json(result);
-fwrite(json.data, 1, json.len, stdout);
-putchar('\n');
-thinkthen_call_result_free(result);
+    thinkthen_call_result_json(makers_call);
+assert(json.data != NULL && json.len > 0);
+/* Parse with your application's JSON library. */
+thinkthen_call_result_free(makers_call);
