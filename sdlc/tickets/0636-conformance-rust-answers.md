@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0638
 
+Reviews: revision 788fda3, accept
+
 ## Outcome
 
 - `cases.json` holds the expected settled answer for each case: value, probability, pick and resolution. The full packet oracle is 0642's.
