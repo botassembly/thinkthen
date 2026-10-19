@@ -5,6 +5,7 @@
 set -eu
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/typescript
 tools_group=typescript
 . "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 cd -- "$(dirname -- "$0")"
@@ -40,7 +41,7 @@ public_types() {
 
 # Full qualification installs one real package, then runs isolated family members.
 if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
-    [ -x "$node_bin" ] || exit 77
+    [ -x "$node_bin" ] || exit 1
     sh build-addon.sh
     # Keep the exact installed input for release-pack --reuse after scratch cleanup.
     mkdir -p target/pack
@@ -57,9 +58,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; 
         Linux:aarch64) expected=linux-arm64 ;;
         Darwin:x86_64) expected=darwin-x64 ;;
         Darwin:arm64) expected=darwin-arm64 ;;
-        *) echo 'typescript: not run; no native Node target for this host'; exit 77 ;;
+        *) echo 'typescript: not run; no native Node target for this host'; exit 1 ;;
     esac
-    command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 77; }
+    command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 1; }
     [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
     [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
     if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
@@ -117,7 +118,7 @@ if [ "$profile" = smoke ]; then
     smoke_guard
     # The replay smoke (ticket 0335): the package laid out in a fresh project's node_modules,
     # required by its name from that project.
-    [ -x "$node_bin" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
+    [ -x "$node_bin" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 1; }
     cargo build --quiet --locked --offline
     case $(uname -s) in Darwin) library=libthinkthen_typescript.dylib ;; *) library=libthinkthen_typescript.so ;; esac
     scratch_dir project
@@ -174,7 +175,7 @@ fi
 step 'toolchain'
 if [ ! -x "$node_bin" ]; then
     echo "typescript: not run; place Node with libraries/typescript/setup-toolchain.sh${missing:+ and install $missing}"
-    exit 77
+    exit 1
 fi
 [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
 
@@ -233,6 +234,6 @@ node -e 'const d = require("./package.json").devDependencies; for (const [n, v] 
 ! grep -rnP '\bunsafe\b' src || fail 'src holds unsafe'
 if [ -n "$missing" ]; then
     echo "typescript: not run; the steps above passed, and $missing is missing"
-    exit 77
+    exit 1
 fi
 echo 'typescript: pass'
