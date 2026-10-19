@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 
 fn admit(name: &str, arguments: Value) -> Result<Invocation, crate::Error> {
     let params: CallParams = serde_json::from_value(json!({"name":name,"arguments":arguments}))
-        .map_err(|_| crate::Error::usage("invalid tool arguments"))?;
+        .map_err(|_| crate::Error::new(crate::ErrorKind::Usage, "invalid tool arguments"))?;
     Invocation::admit(params)
 }
 

@@ -1,6 +1,6 @@
 //! Unresolved transport descriptors share native admission and attachment accounting.
 use super::{AdmittedRequest, RequestItem, RequestSource};
-#[cfg(feature = "cli")]
+#[cfg(test)]
 use super::RequestFeed;
 use super::{RequestImage, RequestInput};
 use crate::{
@@ -75,7 +75,7 @@ pub(super) fn preflight_input(
     }
 }
 impl AdmittedRequest {
-    #[cfg(feature = "cli")]
+    #[cfg(test)]
     pub(crate) fn admit_descriptor_feed(
         &self,
         name: String,

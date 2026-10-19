@@ -1,6 +1,6 @@
 //! Stays: framing, cancellation, reader ownership and native admission faults need direct private transport checks.
 //! Retained original admission through current native MCP carriers.
-use super::super::protocol::MAX_MESSAGE;
+const RETAINED_BYTES: usize = 16 * 1024 * 1024;
 use crate::{InputReaderOptions, ReaderMedia, ReaderOptions, SourceItems, SourceUnit};
 
 #[test]
@@ -55,7 +55,7 @@ fn release_only_native_image_sources_retain_their_default_byte_ceiling() {
     )
     .unwrap();
     std::fs::write(&image, &bytes).unwrap();
-    let admitted = MAX_MESSAGE / bytes.len();
+    let admitted = RETAINED_BYTES / bytes.len();
     let options = InputReaderOptions {
         reading: ReaderOptions {
             unit: SourceUnit::File,
@@ -77,7 +77,7 @@ fn release_only_native_image_sources_retain_their_default_byte_ceiling() {
 
 #[test]
 fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_unchanged() {
-    use crate::transport::TransportAttachmentLimit;
+    use crate::public::request::transport::TransportAttachmentLimit;
     let request = || {
         crate::Request::named(
             "decide",
@@ -121,7 +121,7 @@ fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_uncha
 
 #[test]
 fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
-    use crate::transport::{TransportAttachmentLimit, RequestDescriptor};
+    use crate::public::request::transport::{TransportAttachmentLimit, RequestDescriptor};
     let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -212,7 +212,7 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
 fn image_listener() -> conformance_backend::Listener {
     conformance_backend::Listener::answering(|_| {
         conformance_backend::Canned::ok(include_str!(
-            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
+            "../../../../../../specification/fixtures/images/liquid-decide-reply.json"
         ))
     })
     .unwrap()
@@ -236,7 +236,7 @@ fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
 
 #[test]
 fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
-    use crate::transport::TransportAttachmentLimit;
+    use crate::public::request::transport::TransportAttachmentLimit;
     let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

@@ -159,7 +159,7 @@ impl Request {
             },
         )
     }
-    #[cfg(feature = "cli")]
+    #[cfg(test)]
     pub(crate) fn admit_for_transport(
         self,
         limit: transport::TransportAttachmentLimit,
