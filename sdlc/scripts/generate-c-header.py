@@ -58,7 +58,7 @@ def main():
     parser.add_argument('--check', action='store_true', help='refuse committed header drift')
     args = parser.parse_args()
     header = ROOT / 'libraries/c/include/thinkthen.h'
-    subprocess.run([sys.executable, str(ROOT / "sdlc/generators/results/generate.py"),
+    subprocess.run([sys.executable, str(ROOT / "build-tools/results/generate.py"),
                     "--target", "c", "--check"], check=True, env=tool_environment())
     generated = generate()
     if args.check:

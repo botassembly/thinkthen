@@ -19,9 +19,9 @@ command -v python3 >/dev/null 2>&1 || exit 1
 python3 "$here/tests/toolchains.py"
 python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 python3 "$here/tests/generate_fixture_questions.py" --check
-python3 "$root/sdlc/generators/results/generate.py" --inputs --check
-python3 "$root/sdlc/generators/results/generate.py" --bridge --check
-python3 "$root/sdlc/generators/results/generate.py" --check
+python3 "$root/build-tools/results/generate.py" --inputs --check
+python3 "$root/build-tools/results/generate.py" --bridge --check
+python3 "$root/build-tools/results/generate.py" --check
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
     # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C interface.
@@ -89,7 +89,7 @@ tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$root/sdlc/scripts/package-inventory.py" csharp --out "$here/obj/Release" --check "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg" > /dev/null
 # Decoder-only refusal checks stay in the generated assembly; installed callers receive typed values.
-"$dotnet" build "$root/sdlc/generators/results/csharp/Conformance.csproj" -c Release \
+"$dotnet" build "$root/build-tools/results/csharp/Conformance.csproj" -c Release \
     -p:BaseIntermediateOutputPath="$here/target/scratch/decoder-obj/" \
     --source "$here/target/scratch/nuget" -o "$here/target/scratch/decoder" -v quiet
 "$dotnet" "$here/target/scratch/decoder/Conformance.dll" "$root/conformance/fixtures/complete.json"

@@ -590,7 +590,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(source)
             (root / 'sdlc').mkdir()
-            (root / 'sdlc/generators').symlink_to(ROOT / 'sdlc/generators', target_is_directory=True)
+            (root / 'build-tools').symlink_to(ROOT / 'build-tools', target_is_directory=True)
             write('libraries/c/include/thinkthen.h', '')
             definitions = {
                 'RequestVersion': {'oneOf': [{'const': 'fixture'}]},
@@ -639,7 +639,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                          'export class NativeNumber { readonly raw: string; private constructor(); }\n'
                          'export class NativeSessionPacket {\n readonly "payload"?: string;\n has(key: string): boolean;\n readonly [key: string]: unknown;\n}\n')
             # Produce the remaining native declarations through the same renderer.
-            spec = importlib.util.spec_from_file_location('fixture_typescript', ROOT / 'sdlc/generators/results/templates/typescript.py')
+            spec = importlib.util.spec_from_file_location('fixture_typescript', ROOT / 'build-tools/results/templates/typescript.py')
             template = importlib.util.module_from_spec(spec)
             original_path = sys.path[:]
             sys.path[:0] = [str(Path(spec.origin).parent), str(Path(spec.origin).parent.parent)]

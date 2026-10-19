@@ -530,6 +530,12 @@
 #define THINKTHEN_EUSAGE 1
 
 /*
+ Exact C interface compatibility number. Compare with thinkthen_version at load.
+ Change this number whenever the C contract becomes incompatible.
+ */
+#define THINKTHEN_INTERFACE_NUMBER 1
+
+/*
  C value `THINKTHEN_NO`.
  */
 #define THINKTHEN_NO 0
@@ -5433,6 +5439,25 @@ int thinkthen_value_parse(const char *json, size_t len, struct thinkthen_value *
  */
 int thinkthen_value_view(const struct thinkthen_value *owner,
                          const struct thinkthen_complete_json_v1 **out);
+
+/*
+ Return the loaded library's NUL-terminated package version and write its interface
+ number. The returned immutable text lives until the library is unloaded; never free
+ it. This bootstrap signature stays stable even when the interface number changes.
+ It allocates nothing, sends nothing, and changes no engine or thread error state.
+
+ Check once when loading the library, before creating an engine or calling any other
+ operation. Compare the written number exactly with THINKTHEN_INTERFACE_NUMBER.
+ On mismatch, report "ThinkThen C interface mismatch: header requires %u, loaded
+ library %s provides %u" with the header number, returned version and loaded number,
+ then refuse all other operations. A dynamic loader must also refuse a library
+ missing this symbol. Package version differences alone do not imply incompatibility.
+
+ # Safety
+ interface_number is nonnull, aligned writable storage for one uint32_t, retained
+ throughout this call. The library remains loaded while reading the returned text.
+ */
+const char *thinkthen_version(uint32_t *interface_number);
 
 #ifdef __cplusplus
 }  // extern "C"

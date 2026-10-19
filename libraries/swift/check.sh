@@ -24,7 +24,7 @@ Darwin)
     ;;
 esac
 for mode in '' --inputs --bridge; do
-    python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
+    python3 -I "$root/build-tools/results/generate.py" --target swift ${mode:+"$mode"} --check
 done
 case $(uname -s) in
 Darwin)

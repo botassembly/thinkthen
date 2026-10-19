@@ -6,7 +6,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance'))
 from c_parity import ERRORS
 import json
 from jsonschema import Draft202012Validator
-sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'sdlc/generators/results/templates'))
+sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'build-tools/results/templates'))
 from postgresql import sql_schema
 NATIVE=Draft202012Validator(sql_schema(json.loads((Path(__file__).resolve().parents[4]/'crates/thinkthen/src/public/results/complete.schema.json').read_text())))
 
