@@ -378,6 +378,30 @@
         "contains": "cbindgen {version}"
       }
     },
+    "pkgconf": {
+      "commands": [
+        "pkgconf",
+        "pkg-config"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "install",
+        "c"
+      ],
+      "provider": "python-package",
+      "version": "3.0.7.post0",
+      "upstream_version": "3.0.7",
+      "probe": {
+        "argv": [
+          "pkg-config",
+          "--version"
+        ],
+        "contains": "{upstream_version}"
+      }
+    },
     "mustmatch": {
       "commands": [
         "mustmatch"

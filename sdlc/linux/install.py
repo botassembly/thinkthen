@@ -161,8 +161,8 @@ subprocess.run([str(python), '-m', 'pip', 'install', '--disable-pip-version-chec
 scripts = subprocess.check_output([str(python), '-c', 'import sysconfig; print(sysconfig.get_path("scripts"))'], env=env, text=True).strip()
 for name in manifest['tools'].values():
     if name.get('provider') == 'python-package':
-        command = name['commands'][0]
-        (root / 'bin' / command).symlink_to(Path(scripts) / command)
+        for command in name['commands']:
+            (root / 'bin' / command).symlink_to(Path(scripts) / command)
 # The second Ruby carries its own bundled RBS and must not replace the default.
 for name in ('ruby', 'ruby34'):
     tool = manifest['tools'][name]

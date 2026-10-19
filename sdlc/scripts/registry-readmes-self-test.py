@@ -25,6 +25,7 @@ spec.loader.exec_module(readmes)
 sys.path.insert(0, str(readmes.REPO))
 from conformance.source_fixtures import stage_checkout
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_tools
 
 
 REAL_RUN_BUILD = readmes.run_build
@@ -644,6 +645,7 @@ class PackageText(unittest.TestCase):
                     '    out.write_text(' + repr('#!' + sys.executable + '\nimport fcntl\nwith open(' + repr(str(lock)) + ', "a") as lock: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\nprint("fixture")\n') + ')\n' +
                     '    out.chmod(0o755)\n')
                 tool.chmod(0o755)
+                fixture_tools(tools)
                 work = tree / family; work.mkdir()
                 with self.subTest(family=family), patch.object(readmes, 'run_build', side_effect=fixture_build), \
                         patch.dict(os.environ, child_env(home=tree / 'home') | {'PATH': str(tools), 'PUB_CACHE': str(cache),

@@ -11,6 +11,7 @@ import tempfile
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_tools
 
 
 def community():
@@ -44,6 +45,7 @@ if pathlib.Path(sys.argv[0]).name == 'cargo' and 'rustc' in sys.argv:
         for name in ('rustup', 'rustc', 'cargo'):
             (tools / name).symlink_to(probe)
         (tools / 'python3.13').symlink_to(sys.executable)
+        fixture_tools(tools)
         driver = root / 'older.py'
         driver.write_text('''import runpy, shutil, sys
 if sys.version_info >= (3, 11): sys.version_info = (3, 10)
@@ -119,8 +121,8 @@ def container_build_tools():
         root = Path(temporary)
         tools = root / 'bin'
         tools.mkdir()
-        for name in ('cmake', 'make', 'cc', 'c++', 'as', 'ld', 'ar', 'ranlib'):
-            (tools / name).symlink_to(shutil.which(name))
+        fixture_tools(tools)
+        (tools / 'cmake').symlink_to(shutil.which('cmake'))
         requirements = REPO / 'databases/duckdb/tools/requirements.txt'
         install = tools / 'python3'
         install.write_text(f'''#!{sys.executable}

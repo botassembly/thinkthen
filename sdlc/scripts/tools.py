@@ -61,6 +61,25 @@ def commands(groups=(), host=None):
                                for command in tool['commands']))
 
 
+def fixture_tools(directory, exclude=()):
+    """Keep declared system runtime commands in an isolated fixture PATH.
+
+    Existing fixture commands win. No host directory or provider tool leaks
+    into the PATH, so a fixture can still remove a tool to prove its refusal.
+    """
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    manifest = json.loads((ROOT / 'sdlc/tools.json').read_text())
+    for tool in selected(manifest, (), platform.system().lower()).values():
+        if 'provider' in tool:
+            continue
+        for command in tool['commands']:
+            target = directory / command
+            executable = shutil.which(command)
+            if command not in exclude and not target.exists() and not target.is_symlink() and executable:
+                target.symlink_to(executable)
+
+
 def bootstrap(manifest, root, env):
     binary = root / 'bootstrap/mise/bin/mise'
     if binary.is_file():

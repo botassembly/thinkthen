@@ -22,6 +22,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_tools
 
 
 def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)", old_bash=False):
@@ -895,6 +896,7 @@ def preflight_cases():
         required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
         for tool in required:
             (tools / tool).symlink_to(probe)
+        fixture_tools(tools)
         # Compiler fixtures stand at the process boundary; no digest check is bypassed.
         command = [sys.executable, str(helper), 'build', 'x86_64-pc-windows-msvc']
         env = {'PATH': str(tools), 'HOME': str(root), 'PYTHONDONTWRITEBYTECODE': '1'}
