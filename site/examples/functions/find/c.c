@@ -49,5 +49,4 @@ assert(rc == THINKTHEN_OK);
 thinkthen_complete_utf8_v1 json =
     thinkthen_call_result_json(deadline_call);
 assert(json.data != NULL && json.len > 0);
-/* Parse with your application's JSON library. */
 thinkthen_call_result_free(deadline_call);

@@ -23,7 +23,7 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
     // The terminal/null envelope is the existing generated-reader fixture;
     // extra failure members exercise the same extension rule at nested depths.
     let projection = extension_values::projection(
-        r#"{"kind":"terminal","facts":null,"failure":{"error":{"kind":"local","message":"safe","retryable":false,"stopped":{"cause":"local","retryable":false,"future_stop":17},"future_error":{"z":1e400,"a":-0}},"future_failure":[false,null]},"future":{"nested":false}}"#,
+        r#"{"kind":"terminal","resolution":"failed","facts":null,"failure":{"resolution":"failed","error":{"kind":"local","message":"safe","retryable":false,"stopped":{"cause":"local","retryable":false,"future_stop":17},"future_error":{"z":1e400,"a":-0}},"future_failure":[false,null]},"future":{"nested":false}}"#,
     );
     // SAFETY: the projection owns this tagged graph throughout these reads.
     let terminal = unsafe {

@@ -42,6 +42,9 @@ unsafe fn read<'a>(text: thinkthen_complete_utf8_v1) -> Result<&'a str, Failure>
     // SAFETY: the foreign caller retains the counted readable extent.
     unsafe { super::text(text.data, text.len) }
 }
+fn producer_utf8_error(_: Failure) -> thinkthen::Error {
+    thinkthen::Error::new(thinkthen::ErrorKind::Usage, "invalid producer UTF-8")
+}
 unsafe fn feed<'a>(
     producer: CallProducerV1,
     context: *mut c_void,
@@ -73,12 +76,7 @@ unsafe fn feed<'a>(
                         // SAFETY: the producer retains these bytes until its next invocation.
                         Some(
                             unsafe { read(item) }
-                                .map_err(|_| {
-                                    thinkthen::Error::new(
-                                        thinkthen::ErrorKind::Usage,
-                                        "invalid producer UTF-8",
-                                    )
-                                })
+                                .map_err(producer_utf8_error)
                                 .and_then(RequestItem::from_json),
                         )
                     }
