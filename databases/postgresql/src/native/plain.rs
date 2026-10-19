@@ -237,6 +237,7 @@ fn project_outcome(
         }
     };
     let mut carrier = serde_json::json!({"native":{"value":serde_json::to_value(&result).map_err(|_| defect())?,"facts":facts},"observations":observations});
+    let restore_values = failure.is_none() || function != RequestFunction::Find;
     if let Some(failure) = failure {
         crate::complete_native::put(
             carrier.get_mut("native").ok_or_else(defect)?,
@@ -245,6 +246,9 @@ fn project_outcome(
         )?;
     }
     let mut rows = thinkthen_host::sql_request::project_carrier(function, &carrier);
-    thinkthen_host::sql_request::typed_values(&result, &mut rows)?;
+    // An aggregate find failure owns no completed row or probability.
+    if restore_values {
+        thinkthen_host::sql_request::typed_values(&result, &mut rows)?;
+    }
     Ok(rows)
 }
