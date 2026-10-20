@@ -67,7 +67,7 @@ fn configuration_capture_retains_configured_nonsecret_metadata() {
         home.join("thinkthen/config.json")
     };
     fs::create_dir_all(config.parent().unwrap()).unwrap();
-    fs::write(&config, r#"{"schema":"thinkthen.config/1","cache":false,"cache_bytes":17,"model":"configured-model"}"#).unwrap();
+    fs::write(&config, r#"{"cache":false,"cache_bytes":17,"model":"configured-model"}"#).unwrap();
     let written = in_child(
         "config-only",
         &[
@@ -125,7 +125,7 @@ fn configuration_profile_observation_borrows_the_actual_built_profile_without_se
     };
     fs::create_dir_all(config.parent().unwrap()).unwrap();
     fs::write(&config, serde_json::json!({
-        "schema":"thinkthen.config/1", "backend":"local", "backends": {"local": {
+         "backend":"local", "backends": {"local": {
             "url":listener.base(), "key_env":"UNSET_CONFIGURED_PROFILE_KEY", "model":"fixed",
             "profile":{"schema":"thinkthen.backend-profile/1","name":"configured-profile","max_questions":3}
         }}
@@ -189,7 +189,7 @@ fn cache_metadata_ignores_irrelevant_routes_and_retains_disabled_default_and_tar
         fs::create_dir_all(config.parent().unwrap()).unwrap();
         fs::write(
             &config,
-            format!(r#"{{"schema":"thinkthen.config/1","cache":false,"cache_bytes":17,{route}}}"#),
+            format!(r#"{{"cache":false,"cache_bytes":17,{route}}}"#),
         )
         .unwrap();
         let named = home.join("unopened-private-cache-marker");

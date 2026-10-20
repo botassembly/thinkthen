@@ -36,7 +36,7 @@ fn configuration_model_and_environment_route_reach_the_command_plan() {
     let home = home("plan");
     let configured = Folder::configure(
         &home,
-        r#"{"schema":"thinkthen.config/1","model":"model-from-config"}"#,
+        r#"{"model":"model-from-config"}"#,
     )
     .unwrap();
     let evidence = home.join("evidence");
