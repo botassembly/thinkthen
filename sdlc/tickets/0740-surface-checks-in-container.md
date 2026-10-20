@@ -16,12 +16,14 @@ Reviews: revision e0dfd1a, accept
 - `linux-check surface PATH` runs that surface's existing `check.sh` (for example `libraries/r` or `databases/duckdb`) in the pinned image, with the same caps, labels and mounts as the other checks.
 - The image installs a language's or database's tools when its `sdlc/tools/NAME.json` declares Linux tools, each in its own layer from 0738. Adding a language's tools edits only that language's file, never a shared list, so phase 3 tickets add tools in parallel without touching the same lines.
 - A surface whose declared tools are missing from the image fails, never skips.
+- A failing tool probe preserves its captured child diagnostic, including readiness checks, so the actual prerequisite failure remains visible; this repair is approved in the PM's TLS advisory ruling.
 - `test-full-cases` and `test-stress` read the same per-surface selection, so the checkpoint covers every surface whose tools the image holds.
 
 ### Proof
 
 - On the M5 through pm job: `sdlc/scripts/linux-check surface libraries/c` passes in the arm64 image, and on Gator through pm job the same command passes in the x86_64 image.
 - Declaring a tool for a scratch surface in its own `sdlc/tools/NAME.json` (not landed) rebuilds only that layer and the surface check sees the tool; removing it makes the surface check fail with the missing tool named.
+- The existing tool fixtures run through `pm job run --machine m5 0740 SHA --disk 20 --memory 8 -- sdlc/scripts/job python3 sdlc/scripts/tools-self-test.py`, first at regression-only f034eb52355825e994199a8db071f2d939cac55b and then at the pushed diagnostic repair; no hand Docker, image tag or PATH is used.
 
 ## Evidence
 
