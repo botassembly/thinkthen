@@ -1,4 +1,4 @@
-# 0742 — Run registry fixtures with the complete release context
+# 0742 — Keep constructor documentation within the public README contract
 
 Status: OPEN.
 
@@ -6,12 +6,12 @@ Milestone: 0.2.1
 
 ## Outcome
 
-The release-registry self-test exercises every existing Go tag branch in the isolated configured gate without using live services or credentials.
+The C public README preserves the owned-constructor error instructions and passes the existing public-page contract, so the release-registry self-test exercises every existing Go tag branch without using live services or credentials.
 
 ## Changes
 
-- Diagnose the four Go tag fixture failures in the combined core gate and repair the shared cause in `sdlc/scripts/release-registry-self-test.py`; change `sdlc/scripts/release-registry` only if the reproduction proves a production defect.
-- Check every sibling fixture for the same missing or stale release context, preserving all existing success, refusal and mocked-command assertions.
+- Preserve every word and code statement in `libraries/c/README-PUBLIC.md`; join the constructor-diagnostics paragraph to the adjacent caller-ownership paragraph so the page satisfies the existing under-40-line requirement.
+- Leave the production README validation and all release-registry success, refusal and mocked-command assertions unchanged.
 
 ## Keeps
 
@@ -25,5 +25,7 @@ The release-registry self-test exercises every existing Go tag branch in the iso
 - Reproduce the cause through the existing isolated test path, make all existing registry fixtures pass, and run the configured gate on the combined repaired revision before landing.
 
 ## Progress
+
+- 2026-10-20 diagnosis: the four Go fixtures correctly stopped at production README validation; 0741 added two lines to the previously 38-line C README, reaching 40, which the unchanged under-40 rule refuses; no missing fixture context exists.
 
 - 2026-10-20 started
