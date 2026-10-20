@@ -8,6 +8,8 @@ Phase: 3
 
 Depends on: 0738
 
+Reviews: revision e0dfd1a, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/linux-check`, `sdlc/linux/Dockerfile`, `sdlc/linux/install.py`, `sdlc/scripts/tools.py`, `sdlc/tools.json`, `sdlc/scripts/README.md`, `conformance/parity.py`, `sdlc/scripts/smoke`, `sdlc/scripts/surfaces`, `sdlc/scripts/tools-self-test.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/tools/python.json`.
