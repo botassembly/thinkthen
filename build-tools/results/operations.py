@@ -75,7 +75,7 @@ OPERATIONS = (
         (Argument('engine', '*const EngineHandle', 'borrow'),
          Argument('request_json', '*const c_char', 'input', 'request_len'), Argument('request_len', 'usize', 'input'),
          Argument('out', '*mut *mut crate::session::views::ValueHandle', 'transfer', lifetime='value_free')),
-        'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::value_output'), ('out',), 'session_call', native_unsafe=True),
+        'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::value_output'), ('out',), 'session_native_call', native_unsafe=True),
     Operation('engine', 'thinkthen_value_free',
         '/// Free an independent canonical value owner; NULL is ignored.\n/// # Safety\n/// owner is NULL or unfreed, after every operation and borrowed view finishes.\n',
         (Argument('owner', '*mut crate::session::views::ValueHandle', 'consume-nullable'),),
@@ -228,7 +228,7 @@ OPERATIONS = (
             Argument('request_len', 'usize', 'input'),
             Argument('out', '*mut *mut c_char', 'transfer', lifetime='free_string'),
             Argument('out_len', '*mut usize', 'transfer'),
-        ), 'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::json_output'), ('out', 'out_len'), 'session_call', native_unsafe=True),
+        ), 'request_preview::json_plan', ('engine', 'request_json', 'request_len', '@super::request_preview::json_output'), ('out', 'out_len'), 'session_native_call', native_unsafe=True),
     Operation('typed', 'thinkthen_request_plan_typed_json',
         '/// Preview typed request arguments through Rust admission without sending.\n/// Supports the same fixed atomic questions and plan JSON as the JSON preview.\n/// COBOL scalar capacity applies before admission. No carrier pointer survives return.\n/// Success owns NUL-terminated JSON; free once with thinkthen_free_string.\n/// Refusals preserve both output slots and use the calling thread session diagnostic.\n/// # Safety\n/// Engine is live; function and surface are counted UTF-8 views. The finite aligned\n/// argument tree remains readable until return. Outputs are writable and nonoverlapping.\n',
         (

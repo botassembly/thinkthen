@@ -170,9 +170,8 @@ impl RequestDefinition {
                 return super::RequestDecodeCause::Malformed.error();
             };
             if crate::core::declaration::DeclarationError::is_retired(cause.as_ref()) {
-                return error.with_diagnostic(
-                    crate::public::error::diagnostic::Diagnostic::Refusal(cause),
-                );
+                return error
+                    .with_diagnostic(crate::public::error::diagnostic::Diagnostic::Refusal(cause));
             }
             if matches!(
                 cause.downcast_ref::<crate::core::QuestionFileError>(),
