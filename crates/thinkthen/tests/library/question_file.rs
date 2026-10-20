@@ -16,6 +16,9 @@ const LIMIT: usize = 1_048_576;
 /// A loader, a valid file for it, and the words its sentences name the file by.
 type Loader = fn(&Path) -> Result<(), thinkthen::Error>;
 
+/// An inline declaration parser.
+type Parser = fn(&str) -> Result<(), thinkthen::Error>;
+
 const LOADERS: [(&str, Loader, &str); 4] = [
     (
         "question file",
@@ -140,7 +143,7 @@ fn recognition_admits_caller_defined_values_and_refuses_blank_customization() {
 fn declaration_files_take_no_version_inline_or_saved() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("question-file-no-version");
     std::fs::create_dir_all(&folder).expect("folder");
-    let parsers: [fn(&str) -> Result<(), thinkthen::Error>; 3] = [
+    let parsers: [Parser; 3] = [
         |text| Relate::from_json(text).map(drop),
         |text| Recognize::from_json(text).map(drop),
         |text| QuestionSet::from_json(text).map(drop),
