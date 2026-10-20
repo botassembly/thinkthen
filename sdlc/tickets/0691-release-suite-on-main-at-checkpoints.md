@@ -31,8 +31,8 @@ Reviews: revision 5ad7d11, accept
 
 0619 now closes on the core image only.
 
-- The phase 1 checkpoint and the core-freeze checkpoint (0688) run the existing named core smoke and `package` parts on the M5 natively and in the arm64 container, and the configured tickets gate in both containers.
-- `test-full-cases` and `test-stress` run in both containers from the phase 3 checkpoint at which every language's toolchain is in the manifest, and at each later checkpoint. Until then they run natively on the M5 at each checkpoint.
+- The PM's 2026-10-20 scope ruling makes the phase 1 checkpoint and the core-freeze checkpoint (0688) run the existing full Rust and C smoke selection (`smoke libraries/rust libraries/c`) and `package` natively on M5, plus the configured gate and existing `package` check in both containers.
+- The whole native `test-full-cases` and `test-stress` campaign and the full container campaigns start at the phase 3 checkpoint where every language's providers and assets are in the manifest, and run at each later checkpoint. R and PostgreSQL provider work stays with its own wave tickets. Missing consumers never count as passing.
 - Add no core-only selector to `test-full-cases` or `test-stress`, and never weaken a missing-tool failure.
 
 ## Evidence

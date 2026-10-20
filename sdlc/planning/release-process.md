@@ -8,7 +8,18 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 2. Checkpoints
 
-For 0.2.1, checkpoints are the end of phase 1, the core-freeze main commit (0688), and each batch of phase 3 landings the coordinator names. Name a full main commit SHA and run the existing entrypoint through pm job:
+For 0.2.1, checkpoints are the end of phase 1, the core-freeze main commit (0688), and each batch of phase 3 landings the coordinator names. Name the same full main commit SHA in every job for a checkpoint.
+
+For phase 1 and the core freeze, the [0691 core-cut amendment](../tickets/0691-release-suite-on-main-at-checkpoints.md#amendment-2026-10-19-core-cut) incorporates the PM's 2026-10-20 scope ruling. Run the existing full Rust and C smoke selection and `package` natively on M5 through the outer job entrypoint and scoped tool resolver:
+
+```sh
+pm job run --machine m5 0691 MAIN_SHA --disk 40 --memory 16 -- sdlc/scripts/job python3 sdlc/scripts/tools.py rust,c -- sh sdlc/scripts/smoke libraries/rust libraries/c
+pm job run --machine m5 0691 MAIN_SHA --disk 40 --memory 16 -- sdlc/scripts/job python3 sdlc/scripts/tools.py rust -- sh sdlc/scripts/package
+```
+
+Run the configured gate with the existing container `package` check on both M5 and Yellow. Invoke `sdlc/scripts/gate package` directly through pm job so the gate captures Docker's absolute host path before tool isolation. It runs `linux-check package lint test`, including the configured C checks; on M5 it also runs native macOS `test`. Match each booking's memory to the manifest caps below. Retain each job's output and exit status. Add no `linux-check` extension or new core-smoke choice.
+
+The whole native `test-full-cases` and `test-stress` campaign starts at the phase 3 checkpoint where every language's providers and assets are in the manifest, and runs at every later checkpoint. R and PostgreSQL providers remain with their own wave tickets. Missing consumers never count as passing. From that checkpoint, run the existing full native entrypoint through pm job:
 
 ```sh
 pm job run --machine m5 0691 MAIN_SHA --disk 40 --memory 16 -- sh sdlc/scripts/test-full-cases --checkpoint MAIN_SHA /tmp/thinkthen-checkpoint-MAIN_SHA-native.log
@@ -16,9 +27,7 @@ pm job run --machine m5 0691 MAIN_SHA --disk 40 --memory 16 -- sh sdlc/scripts/t
 
 The command runs the release suite in order and writes one log for the target. Use a new absolute log path for each run. The job checkout must equal the named revision, which must belong to fetched `origin/main`. The command does not move branches. The coordinator retains each target's log with the existing job output and cites its revision.
 
-Run the full checkpoint command natively on M5 at each checkpoint. For phase 1 and the core freeze, the [0691 core-cut amendment](../tickets/0691-release-suite-on-main-at-checkpoints.md#amendment-2026-10-19-core-cut) and the PM's 2026-10-20 ruling accept the existing native checkpoint command plus container package and gate commands. Use `sdlc/scripts/linux-check package` for container packaging and `sdlc/scripts/linux-check lint test` for the Linux gate, including its configured C checks. The configured `sdlc/scripts/gate` also runs native macOS `test` on M5. Run the named Rust and C smokes natively on M5 with `sdlc/scripts/smoke libraries/rust libraries/c` at checkpoint. Add no `linux-check` extension or new core-smoke choice.
-
-At the phase 3 checkpoint where every language's toolchain is in the manifest, and at each later checkpoint, run `sdlc/scripts/linux-check test-full-cases package test-stress` in both containers through pm job. Redirect its output to one new host log per target and retain the job's actual exit status. This existing container invocation runs the suite in order and stops on failure; it does not accept the native command's `--checkpoint MAIN_SHA LOG` arguments. Name the same full main SHA in each pm job booking.
+At that same phase 3 checkpoint, and at each later checkpoint, run `sdlc/scripts/linux-check test-full-cases package test-stress` in both containers through pm job. Redirect its output to one new host log per target and retain the job's actual exit status. This existing container invocation runs the suite in order and stops on failure; it does not accept the native command's `--checkpoint MAIN_SHA LOG` arguments.
 
 Linux arm64 runs on M5 and Linux x86_64 runs on Yellow. Match pm job memory to `linux.memory_gib` on M5 and `linux.yellow_memory_gib` on Yellow in `sdlc/tools.json`; these keys also set the container caps. Yellow runs one heavy job. Retain container logs on the host with the existing job output. Do not substitute the distribution-artifact `release-container` helper for the check environment, add a core-only full-suite selector, or weaken missing-tool failures.
 
