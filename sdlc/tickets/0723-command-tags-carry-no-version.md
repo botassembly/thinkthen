@@ -25,3 +25,7 @@ Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbe
 Starts from the writers: `crates/thinkthen/src/cli/annotate/error_row.rs` (`thinkthen.record-error/1`), `crates/thinkthen/src/cli/facts.rs` (`thinkthen.run/1`), `crates/thinkthen/src/cli/status.rs` (`thinkthen.status/2`), and the dry-run plans in `crates/thinkthen/src/cli/recognize/dry_run.rs` (`thinkthen.recognize-plan/2`) and `crates/thinkthen/src/cli/relate/dry_run.rs` (`thinkthen.relate-plan/1`). Readers: `conformance/cli_parity.py`, `probes/paid_evidence.py` and the probe `measure.py` scripts, and `demos/16-triage-pipeline/review-jsonl`.
 
 Shares specification pages with 0707 and 0706; any order lands. Paths under `crates/thinkthen/src/cli/` move when 0639 lands; the claim follows the move.
+
+## Progress
+
+- 2026-10-20 started
