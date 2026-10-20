@@ -27,3 +27,4 @@ Changes: `**/Cargo.lock`, `Cargo.lock`. Change a manifest only if the existing c
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: setup: Gator jobs 1792527683967-1234165 and 1792528070953-1250064 exited 1 before lint/test because the pinned Ubuntu snapshot returned HTTP 503 during image build; no further retry or source workaround. Await coordinator ruling and the M5 standard gate result.
