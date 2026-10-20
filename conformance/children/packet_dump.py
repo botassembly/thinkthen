@@ -8,9 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
-import subprocess
 import sys
-import tempfile
 from decimal import Decimal
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -73,8 +71,11 @@ def folded(document):
     packet = {'native': True, 'results': results, 'facts': terminal.get('facts'),
               'answer': terminal.get('answer')}
     if failure is not None:
+        prefix = packet
         packet = {'error': failure['error'], 'facts': failure.get('facts', terminal.get('facts')),
-                  'resolution': failure['resolution'], 'completed': packet}
+                  'resolution': failure['resolution']}
+        if results:
+            packet['completed'] = prefix
     return packet
 
 

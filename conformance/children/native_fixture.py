@@ -1,3 +1,5 @@
-"""Retained family fixture entry point; shared preparation and assertions live once."""
-from fixture_suite import (ERRORS, VERBS, assert_required, native_inputs, native_request,
-                           project, request, run, selected_case_ids)
+"""Retained host entry point to the shared fixture module, including producer hooks."""
+import sys
+import fixture_suite
+
+sys.modules[__name__] = fixture_suite
