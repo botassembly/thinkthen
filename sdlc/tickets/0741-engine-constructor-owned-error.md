@@ -8,7 +8,7 @@ Phase: 2
 
 ## Outcome
 
-- Changes: `libraries/c/src/ffi.rs`, `libraries/c/src/ffi/`, `libraries/c/src/failures.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`, `libraries/c/README.md`, `libraries/BINDING-AUTHOR.md`, `build-tools/results/operations.py`, `build-tools/results/templates/operations.py`, `sdlc/scripts/install_check_consumers.py`, `libraries/c/examples/session.c`.
+- Changes: `libraries/c/src/ffi.rs`, `libraries/c/src/ffi/`, `libraries/c/src/failures.rs`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`, `libraries/c/README.md`, `libraries/BINDING-AUTHOR.md`, `build-tools/results/operations.py`, `build-tools/results/templates/operations.py`, `sdlc/scripts/install_check_consumers.py`, `libraries/c/examples/session.c`, `libraries/c/README-PUBLIC.md`.
 - `thinkthen_engine_new_with` takes a `struct thinkthen_call_error **error` out-parameter, the same owned error `thinkthen_run_call` returns. On failure it returns NULL and sets `*error` with the code, message, retryability and facts; on success it leaves `*error` NULL. A NULL `error` pointer is allowed and reports nothing.
 - `thinkthen_engine_new` and `thinkthen_engine_new_typed` follow the same pattern, or are deleted if 0690 deletes them.
 - After this ticket, no caller needs a per-thread error accessor to learn why an engine was not built, so 0690 can delete every `thinkthen_error_*` accessor.
