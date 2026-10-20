@@ -192,7 +192,12 @@ jq -n -f ../sweep/sweep.jq "$work/yes-derived.jsonl" > /dev/null
 # Real command details must be consumable without rebuilding their envelope.
 usage_home
 config_home
-thinkthen decide "$(cat ../rows/question.txt)" --jsonl --field /body --details \
+repo=$(CDPATH= cd -- ../.. && pwd)
+case ${CARGO_TARGET_DIR:-target} in
+  /*) native_bin="${CARGO_TARGET_DIR}/debug/thinkthen" ;;
+  *) native_bin="$repo/${CARGO_TARGET_DIR:-target}/debug/thinkthen" ;;
+esac
+"$native_bin" decide "$(cat ../rows/question.txt)" --jsonl --field /body --details \
   --batch 1 --replay ../rows/recording --input ../rows/cases.jsonl > "$work/current.jsonl"
 jq -n -c -f trials.jq "$work/current.jsonl" > "$work/current-derived.jsonl"
 jq -s -e 'length == 40 and all(.[]; .schema == "thinkthen.trials" and .trials.count == 1)' \
