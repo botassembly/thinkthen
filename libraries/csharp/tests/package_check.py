@@ -225,7 +225,7 @@ class Probe {
   dynamicAssembly.SetCustomAttribute(new CustomAttributeBuilder(typeof(System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute).GetConstructor(new[]{typeof(string)})!,new object[]{assembly.GetName().Name!}));
   var module=dynamicAssembly.DefineDynamicModule("align");
   foreach(var t in assembly.GetTypes()) {
-   if(t.Namespace=="ThinkThen"&&t.IsValueType&&!t.IsEnum&&!t.IsPublic) {
+   if(t.Namespace=="ThinkThen"&&t.IsValueType&&!t.IsEnum&&!t.IsPublic&&(t.IsLayoutSequential||t.IsExplicitLayout)&&!t.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute),false)) {
     var holder=module.DefineType("Align"+t.Name,TypeAttributes.Public|TypeAttributes.SequentialLayout|TypeAttributes.Sealed,typeof(ValueType));
     holder.DefineField("prefix",typeof(byte),FieldAttributes.Public);holder.DefineField("value",t,FieldAttributes.Public);
     var aligned=holder.CreateType()!;
