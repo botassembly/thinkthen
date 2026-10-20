@@ -76,6 +76,29 @@ class DarwinSignalObservation(unittest.TestCase):
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
+    def test_c_compiler_preserves_the_campaign_profile_without_service_keys(self):
+        from conformance import c_parity
+        sys.path.insert(0, str(parity.ROOT / 'libraries/c/tests'))
+        import installed_cases
+        launch = subprocess.run
+        settings = {'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'CARGO_PROFILE_DEV_DEBUG': '0',
+                    'CARGO_PROFILE_TEST_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_DEBUG': '0',
+                    'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': '',
+                    'CARGO_BUILD_RUSTC_WRAPPER': ''}
+        def compiler(args, **kwargs):
+            self.assertEqual(args[0], 'cargo')
+            probe = ('import os; expected = ' + repr(settings)
+                     + '; assert all(os.environ.get(k) == v for k, v in expected.items()); '
+                     + 'assert "FAKE_SERVICE_API_KEY" not in os.environ; '
+                     + 'assert "THINKTHEN_API_KEY" not in os.environ')
+            return launch([sys.executable, '-c', probe], **kwargs)
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller)
+                | settings | {'FAKE_SERVICE_API_KEY': 'parent-only', 'THINKTHEN_API_KEY': 'parent-only'}), \
+                patch.object(c_parity.subprocess, 'run', side_effect=compiler) as compiled, \
+                patch.object(installed_cases, 'run'):
+            self.assertEqual(c_parity.main(), 0)
+            self.assertEqual(compiled.call_count, 2)
+
     def test_compiler_child_owns_folders_and_preserves_explicit_settings(self):
         sys.path.append(str(parity.ROOT / 'conformance/children'))
         sys.path.insert(0, str(parity.ROOT / 'conformance'))

@@ -414,8 +414,10 @@ def main(*, header=None, library=None):
         header, library = Path(header).resolve(strict=True), Path(library).resolve(strict=True)
         if not header.is_file() or not library.is_file():
             raise ValueError('installed C parity header or library is missing')
-    from children import child_env
-    env = child_env(keep=('HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'CARGO_TARGET_DIR'),
+    from children import CARGO, child_env
+    env = child_env(keep=(*CARGO, 'CARGO_BUILD_RUSTC_WRAPPER',
+                          'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG',
+                          'CARGO_PROFILE_TEST_OPT_LEVEL', 'CARGO_PROFILE_TEST_DEBUG'),
                     CARGO_BUILD_JOBS='2', CARGO_NET_OFFLINE='true')
     target = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))).resolve()
     env['CARGO_TARGET_DIR'] = str(target)
