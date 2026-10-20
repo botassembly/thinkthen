@@ -90,7 +90,7 @@ fn a_saved_relate_name_reaches_details_identity_and_warning() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-calibration");
     fs::create_dir_all(&folder).expect("folder");
     let question = folder.join("question.json");
-    fs::write(&question, r#"{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"old"}"#)
+    fs::write(&question, r#"{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"old"}"#)
         .expect("question file");
     let running = folder.join("runtime.json");
     fs::write(

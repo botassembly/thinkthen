@@ -54,7 +54,7 @@ def test_plain_and_one_member_have_equal_wire_and_per_member_zero_send_replay():
         expect(backend.count(), before, 'replay sends zero')
         facts = dict(zip(('records','requests_sent','cache_answers'), replay['rows'][0][4:]))
         expect((facts['records'], facts['requests_sent'], facts['cache_answers']), (4, 0, 0), 'replayed combined facts')
-        reordered = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+        reordered = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
         renamed = invoke(backend, [('rows', QUERY, (reordered, RECORDS, '{"batch":1}'))], replay=folder, keyless=True)
         expect([row[:4] for row in renamed['rows']], [['a',1,1.0,'renamed'],['d',2,1.0,'renamed'],
                                                      ['c',3,.99,'renamed'],['b',4,.6,'last']], 'reorder and rename reuse member keys')
@@ -68,7 +68,7 @@ def test_plain_and_one_member_have_equal_wire_and_per_member_zero_send_replay():
 
 def test_set_descriptions_order_and_file_use_native_admission():
     described = SET.replace('"decide":"First?"', '"decide":"First?","true":"supports first","false":"opposes first"')
-    reversed_set = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+    reversed_set = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
     with RankBackend() as backend, tempfile.TemporaryDirectory() as folder:
         path = pathlib.Path(folder) / 'rank.json'
         path.write_text(described)
@@ -85,10 +85,10 @@ def test_set_descriptions_order_and_file_use_native_admission():
 
 
 def test_invalid_set_controls_keys_and_empty_rows_send_zero():
-    bad = ['{"version":1,"questions":{}}', SET.replace('"decide":"Second?"', '"score":"Second?","levels":["low","high"]'),
+    bad = ['{"questions":{}}', SET.replace('"decide":"Second?"', '"score":"Second?","levels":["low","high"]'),
            SET.replace('"decide":"First?"', '"decide":"First?","threshold":0.5'),
            SET.replace('"decide":"First?"', '"decide":"First?","on":""'),
-           SET.replace('"second"', '"first"'), SET.replace('"version":1', '"version":1,"threshold":0.5')]
+           SET.replace('"second"', '"first"'), SET.replace('"questions":', '"threshold":0.5,"questions":')]
     with RankBackend() as backend:
         calls = [(f'bad{i}', QUERY, (spec, RECORDS, '{}')) for i, spec in enumerate(bad)]
         calls += [(f'control{i}', QUERY, (SET, RECORDS, controls)) for i, controls in enumerate(

@@ -153,7 +153,7 @@ fn json_source(
     Ok((source, value, file))
 }
 
-/// A JSON argument or file read as a version-one file, wrapping a bare section.
+/// A JSON argument or file read as a question file, wrapping a bare section.
 pub(crate) fn file_json(
     argument: &str,
     section: &str,
@@ -162,7 +162,7 @@ pub(crate) fn file_json(
     let whole = if value.get(section).is_some() {
         value
     } else {
-        json!({ "version": 1, section: value })
+        json!({ section: value })
     };
     Ok((whole, file))
 }
@@ -173,7 +173,7 @@ pub(crate) fn ordered_file_json(argument: &str, section: &str) -> Result<(String
     let whole = if value.get(section).is_some() {
         source
     } else {
-        format!(r#"{{"version":1,"{section}":{source}}}"#)
+        format!(r#"{{"{section}":{source}}}"#)
     };
     Ok((whole, file))
 }
@@ -295,7 +295,7 @@ impl Relater {
             .map(|rule| inline(rule))
             .collect::<Result<Vec<_>, _>>()?;
         read(
-            &json!({ "version": 1, "relate": { "relations": relations } }),
+            &json!({ "relate": { "relations": relations } }),
             false,
             Relate::from_json,
         )

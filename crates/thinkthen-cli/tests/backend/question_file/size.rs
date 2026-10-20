@@ -29,13 +29,13 @@ const VERBS: [(&str, &str, &str); 9] = [
     ),
     (
         "annotate",
-        r#"{"version":1,"questions":{"q":{"decide":"Is it?"}}}"#,
+        r#"{"questions":{"q":{"decide":"Is it?"}}}"#,
         "hello",
     ),
-    ("recognize", r#"{"version":1,"recognize":{}}"#, "hello"),
+    ("recognize", r#"{"recognize":{}}"#, "hello"),
     (
         "relate",
-        r#"{"version":1,"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
         r#"[{"name":"Ann","kind":"a"},{"name":"Acme","kind":"b"}]"#,
     ),
 ];
@@ -94,7 +94,7 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
 /// under the same cap, so a broken set beside `--input /dev/zero` fails at once.
 #[test]
 fn a_broken_question_set_beside_an_endless_input_fails_without_reading_it_all() {
-    let broken = written("size-annotate-broken", r#"{"version":1,"questions":{}}"#);
+    let broken = written("size-annotate-broken", r#"{"questions":{}}"#);
     let output = run(
         &["annotate", &broken, "--input", "/dev/zero", "--plan"],
         b"",

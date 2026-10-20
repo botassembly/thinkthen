@@ -26,7 +26,7 @@ impl fmt::Debug for RankSet {
 }
 
 impl RankSet {
-    /// Parse the saved version-one grammar, preserving member order.
+    /// Parse the saved question-set grammar, preserving member order.
     ///
     /// # Errors
     /// Returns [`Error::Usage`] when the set breaks rank admission or grammar.

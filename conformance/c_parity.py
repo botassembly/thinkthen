@@ -83,7 +83,7 @@ def document(row, cases, named):
         if row['id'] == 'proxy-reservation-refusal':
             return {**base, 'settings': {'proxy': row['input']['proxy']}}
         if row['id'] == 'zero-observation-relate':
-            return {**base, 'question': {'version': 1, 'relate': {'relations': [{'name': 'linked', **row['input']['relation']}]}},
+            return {**base, 'question': {'relate': {'relations': [{'name': 'linked', **row['input']['relation']}]}},
                     'items': row['input']['entities'], 'text': False, 'zero_observations': True, 'expect': {}}
         raise ValueError('shared boundary projection not yet implemented')
     if kind == 'settings':
@@ -97,7 +97,7 @@ def document(row, cases, named):
             if verb == 'relate':
                 name, kinds = fixture['relation'].split('=')
                 source, target = kinds.split(':')
-                question = {'version': 1, 'relate': {'relations': [{'name': name, 'source': source, 'target': target}]}}
+                question = {'relate': {'relations': [{'name': name, 'source': source, 'target': target}]}}
                 items = fixture['entities']
             steps.append({'verb': verb, 'question': question, 'items': items, 'text': verb != 'relate', 'expect': step, 'settings': step['settings'], 'incremental': original_verb == 'decide_many'})
         return {'steps': steps, 'arm': fixture['arm'], 'profile': fixture.get('profile')}
@@ -414,8 +414,10 @@ def main(*, header=None, library=None):
         header, library = Path(header).resolve(strict=True), Path(library).resolve(strict=True)
         if not header.is_file() or not library.is_file():
             raise ValueError('installed C parity header or library is missing')
-    from children import child_env
-    env = child_env(keep=('HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN', 'CARGO_TARGET_DIR'),
+    from children import CARGO, child_env
+    env = child_env(keep=(*CARGO, 'CARGO_BUILD_RUSTC_WRAPPER',
+                          'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG',
+                          'CARGO_PROFILE_TEST_OPT_LEVEL', 'CARGO_PROFILE_TEST_DEBUG'),
                     CARGO_BUILD_JOBS='2', CARGO_NET_OFFLINE='true')
     target = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))).resolve()
     env['CARGO_TARGET_DIR'] = str(target)

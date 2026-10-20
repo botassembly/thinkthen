@@ -47,10 +47,7 @@ pub(super) fn grouped(name: &str, count: usize) -> PathBuf {
         })
         .collect::<Vec<_>>()
         .join(",");
-    set(
-        name,
-        &format!(r#"{{"version":1,"questions":{{{questions}}}}}"#),
-    )
+    set(name, &format!(r#"{{"questions":{{{questions}}}}}"#))
 }
 
 pub(super) fn grouped_input(record: usize, count: usize) -> String {

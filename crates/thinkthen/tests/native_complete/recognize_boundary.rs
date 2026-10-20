@@ -42,7 +42,7 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
         .max_retries(0)
         .build()
         .unwrap();
-    let declaration = r#"{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."}}}"#;
+    let declaration = r#"{"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."}}}"#;
     let ask = Recognize::from_json(declaration)
         .unwrap()
         .with_mode(RecognitionMode::BoundaryOnly);
@@ -247,10 +247,7 @@ fn skipped_stage_controls_refuse_before_native_record_enumeration() {
             .build()
             .unwrap()
             .with_mode(RecognitionMode::BoundaryOnly),
-        Recognize::from_json(
-            r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[]}}"#,
-        )
-        .unwrap(),
+        Recognize::from_json(r#"{"recognize":{"mode":"boundary_only","relations":[]}}"#).unwrap(),
     ] {
         let rows = std::iter::from_fn(|| {
             advanced.fetch_add(1, Ordering::SeqCst);
@@ -381,10 +378,10 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
         ))
     };
     for declaration in [
-        r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[]}}"#,
-        r#"{"version":1,"recognize":{"mode":"boundary_only"},"relation_threshold":0.5}"#,
-        r#"{"version":1,"recognize":{"mode":"boundary_only","stage_context":{"kind_edge":""}}}"#,
-        r#"{"version":1,"recognize":{"mode":"boundary_only","stage_context":{"relation":""}}}"#,
+        r#"{"recognize":{"mode":"boundary_only","relations":[]}}"#,
+        r#"{"recognize":{"mode":"boundary_only"},"relation_threshold":0.5}"#,
+        r#"{"recognize":{"mode":"boundary_only","stage_context":{"kind_edge":""}}}"#,
+        r#"{"recognize":{"mode":"boundary_only","stage_context":{"relation":""}}}"#,
     ] {
         std::fs::write(&saved, declaration).unwrap();
         let admitted = request(RequestOptions::default()).admit().unwrap();
@@ -398,7 +395,7 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
         );
     }
     assert_eq!(listener.count(), 0);
-    std::fs::write(&saved,r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[],"stage_context":{"kind_edge":"","relation":""}},"relation_threshold":0.5}"#).unwrap();
+    std::fs::write(&saved,r#"{"recognize":{"mode":"boundary_only","relations":[],"stage_context":{"kind_edge":"","relation":""}},"relation_threshold":0.5}"#).unwrap();
     let request = Request::new(RequestCall::new(
         RequestFunction::Recognize,
         RequestArguments {

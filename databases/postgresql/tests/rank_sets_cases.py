@@ -35,7 +35,7 @@ def verify(socket, folder):
     facts = [row['facts'] for row in result]
     assert all(fact == facts[0] for fact in facts), facts
     assert (facts[0]['records'],facts[0]['requests_sent']) == (4,3), facts
-    reversed_set = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+    reversed_set = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
     reverse = run(socket, ranked(reversed_set))[0]
     assert values(reverse) == [['a',1,1.0,'renamed'],['d',2,1.0,'renamed'],['c',3,.99,'renamed'],['b',4,.6,'last']], reverse
     described = SET.replace('"decide":"First?"', '"decide":"First?","true":"supports first","false":"opposes first"')
@@ -51,10 +51,10 @@ def verify(socket, folder):
 
 
 def invalid(socket):
-    bad = ['{"version":1,"questions":{}}', SET.replace('"decide":"Second?"','"score":"Second?","levels":["low","high"]'),
+    bad = ['{"questions":{}}', SET.replace('"decide":"Second?"','"score":"Second?","levels":["low","high"]'),
            SET.replace('"decide":"First?"','"decide":"First?","threshold":0.5'),
            SET.replace('"decide":"First?"','"decide":"First?","on":""'),
-           SET.replace('"second"','"first"'), SET.replace('"version":1','"version":1,"threshold":0.5')]
+           SET.replace('"second"','"first"'), SET.replace('"questions":','"threshold":0.5,"questions":')]
     statements = [ranked(spec) for spec in bad] + [ranked(settings=setting) for setting in
         ['{"model":"private-model"}', '{"true":"secret"}', '{"threshold":0.5}']]
     statements += [ranked(records='{"a":"a","bad":" "}'), ranked(records='{"a":4}')]
@@ -83,7 +83,7 @@ def replay(socket, folder):
     assert (facts['records'],facts['requests_sent'],facts['cache_answers']) == (4,0,0), facts
     one = run(socket, *controls, ranked(ONE))[0]
     assert [row[:3] for row in values(one)] == [['a',1,.7],['d',2,.7],['b',3,.6],['c',4,.5]], one
-    renamed = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+    renamed = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
     reverse = run(socket, *controls, ranked(renamed))[0]
     assert values(reverse) == [['a',1,1.0,'renamed'],['d',2,1.0,'renamed'],['c',3,.99,'renamed'],['b',4,.6,'last']], reverse
     out, error = sql(socket, "SET thinkthen.model='judge-rank'", *controls, ranked(SET.replace('Second?','Missing private question?')))

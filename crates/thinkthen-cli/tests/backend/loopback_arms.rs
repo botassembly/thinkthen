@@ -14,7 +14,7 @@ use conformance_backend::Backend;
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-arms")];
 
 /// A question set with one yes-or-no question and one choice after it.
-const SET: &str = r#"{"version":1,"questions":{"ready":{"decide":"Is it ready?"},"kind":{"choose":"Which kind?","options":["bug","other"]}}}"#;
+const SET: &str = r#"{"questions":{"ready":{"decide":"Is it ready?"},"kind":{"choose":"Which kind?","options":["bug","other"]}}}"#;
 
 /// Run the command with its arguments, a base under the backend, and the input.
 fn run(backend: &Backend, path: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
@@ -151,13 +151,13 @@ fn the_generic_arm_answers_every_verb() {
     let set = set.to_str().expect("a UTF-8 path");
     let recognize = file(
         "recognize.json",
-        r#"{"version":1,"recognize":{"kinds":{"person":"A person's name."}},"threshold":0.5}"#,
+        r#"{"recognize":{"kinds":{"person":"A person's name."}},"threshold":0.5}"#,
     )
     .expect("recognize question");
     let recognize = format!("@{}", recognize.display());
     let relate = file(
         "relate.json",
-        r#"{"version":1,"relate":{"relations":[{"name":"same_as","source":"alert","target":"alert","either":true}]},"threshold":0.5}"#,
+        r#"{"relate":{"relations":[{"name":"same_as","source":"alert","target":"alert","either":true}]},"threshold":0.5}"#,
     )
     .expect("relate question");
     let relate = format!("@{}", relate.display());

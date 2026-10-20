@@ -97,7 +97,7 @@ fn find() -> Find {
 
 fn recognize_spec() -> RecognizeSpec {
     RecognizeSpec::parse(
-        r#"{"version":1,"recognize":{"kinds":{"person":"A person's name.","place":"A place name."},"relations":[{"name":"lives_in","source":"person","target":"place"}]}}"#,
+        r#"{"recognize":{"kinds":{"person":"A person's name.","place":"A place name."},"relations":[{"name":"lives_in","source":"person","target":"place"}]}}"#,
     )
     .expect("spec")
 }
@@ -114,7 +114,7 @@ fn relate_limited(
     cancel: &Cancel,
 ) -> Result<Execution, Error> {
     let spec = RelateSpec::parse(
-        r#"{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}"#,
     )
     .expect("spec");
     let entities = spec

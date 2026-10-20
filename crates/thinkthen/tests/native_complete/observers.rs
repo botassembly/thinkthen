@@ -99,7 +99,7 @@ fn owned_failed_annotation_events_keep_admitted_rules_actual_failure_ids_and_par
     let snapshots = Mutex::new(Vec::new());
     let capture =
         |event: thinkthen::RecordObservation<'_>| snapshots.lock().unwrap().push(event.to_owned());
-    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"uncertain":{"decide":"Sure?","threshold":"0.2:0.8"},"failed":{"decide":"Failed?","threshold":0.9}}}"#).unwrap();
+    let set = thinkthen::QuestionSet::from_json(r#"{"questions":{"uncertain":{"decide":"Sure?","threshold":"0.2:0.8"},"failed":{"decide":"Failed?","threshold":0.9}}}"#).unwrap();
     let engine = engine(&listener);
     let call = crate::api::annotate(
         &engine,

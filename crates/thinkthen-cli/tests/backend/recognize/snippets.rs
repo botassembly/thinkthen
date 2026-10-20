@@ -100,7 +100,7 @@ fn malformed_cli_and_saved_snippet_widths_send_nothing() {
     for width in ["-1", "1.5", "4294967296", "null"] {
         fs::write(
             &file,
-            format!(r#"{{"version":1,"recognize":{{"snippet_pieces":{width}}}}}"#),
+            format!(r#"{{"recognize":{{"snippet_pieces":{width}}}}}"#),
         )
         .unwrap();
         let operand = format!("@{}", file.display());

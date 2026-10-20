@@ -142,7 +142,9 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && readiness.is_none() && !call.pending_inputs,
+        interactive: packing.inputs == Some(1)
+            && !readiness.is_some_and(|reader| reader.parallel_batch_one)
+            && !call.pending_inputs,
         input_barrier: call.input_barrier,
         pending_ask: false,
         deferred: false,

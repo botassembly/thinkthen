@@ -257,7 +257,7 @@ fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and
     let path = folder.join("recognize.json");
     std::fs::write(
         &path,
-        r#"{"version":1,"recognize":{},"on":"/body","model":"saved-model","profile":"calibrated"}"#,
+        r#"{"recognize":{},"on":"/body","model":"saved-model","profile":"calibrated"}"#,
     )
     .unwrap();
     let saved = thinkthen::RecognizeQuestionFile::load(&path).unwrap();

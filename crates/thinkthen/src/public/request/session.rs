@@ -571,6 +571,20 @@ fn configured_feed(
     feed
 }
 
+fn session_readiness(
+    ready: &(dyn Fn() -> bool + Sync),
+    pause: Option<Duration>,
+    surface: Surface,
+) -> crate::public::readiness::Readiness<'_> {
+    let readiness = crate::public::readiness::Readiness::new(ready, pause);
+    if surface == Surface::Cli {
+        // The command-line caller deliberately uses scheduler parallelism.
+        readiness
+    } else {
+        readiness.sequential_batch_one()
+    }
+}
+
 fn run(
     engine: Engine,
     request: AdmittedRequest,
@@ -628,7 +642,7 @@ fn run(
         controls = controls.on_missing_annotation_pointer(callback);
     }
     let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
-    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let readiness = session_readiness(&input_ready, options.input_pause, surface);
     let registration = feed
         .as_ref()
         .map(|_| super::session_input::Registration::new(queue, readiness.wake()));
@@ -759,7 +773,7 @@ fn run_recovering(
         queue.publish(RequestRecoveringResult::Row(row));
     };
     let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
-    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let readiness = session_readiness(&input_ready, options.input_pause, surface);
     let feed_request = matches!(
         request.request.call.arguments().input,
         RequestInput::Feed { .. }

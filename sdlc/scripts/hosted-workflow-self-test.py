@@ -89,7 +89,7 @@ def linux_nested_tools_case():
     handoff = next(line for line in selected.splitlines()
                    if '"$THINKTHEN_SCALA_HOME/bin"' in line and '>> "$GITHUB_PATH"' in line)
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    host_setup = workflow.split('host-setup)\n', 1)[1].split('\nresolve)', 1)[0]
+    host_setup = workflow.split('host_setup() (\n', 1)[1].split('\n)\n', 1)[0]
     installed = host_setup.rsplit('if [ "${RELEASE_SMOKE:-0}" = 1 ]; then', 1)[1]
     formatters = '\n'.join(line for line in installed.splitlines()
                            if line.strip().startswith(('mkdir -p "$generator_tools/bin"',
@@ -364,6 +364,7 @@ touch "$tree/share/extension/thinkthen--$version.sql"
         scripts.mkdir(parents=True)
         for name in ('scratch.sh', 'release-workflow'):
             shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
+        shutil.copyfile(REPO / 'sdlc/tools.json', root / 'sdlc/tools.json')
         for relative, body in (('libraries/ruby/toolchain.env', 'RUBY_MINORS=\n'),
                                ('libraries/python/host.sh', 'python_host() { command -v python3; }\n'),
                                ('libraries/typescript/node.sha256', ''),
@@ -461,7 +462,7 @@ def linux_coverage_destination_case():
 
 def dart_cache_setup_case():
     bootstrap = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    preparation = bootstrap.split('\tpub_cache=$1/pub-cache\n', 1)[1].split('\n}\ncase ', 1)[0]
+    preparation = bootstrap.split('\tpub_cache=$1/pub-cache\n', 1)[1].split('\n}\n', 1)[0]
     with tempfile.TemporaryDirectory(prefix='thinkthen-dart-cache-') as temporary:
         root = Path(temporary)
         dart = root / 'dart'
@@ -516,7 +517,7 @@ def dart_cache_setup_case():
 
 def flutter_locked_setup_case():
     workflow = (REPO / 'sdlc/scripts/release-workflow').read_text()
-    step = workflow.split('\nphp-dart-tools)\n', 1)[1].split('\nswift-zig-tools)', 1)[0]
+    step = workflow.split('\nphp_dart_tools() (\n', 1)[1].split('\n)\n', 1)[0]
     step = step[step.index('mkdir -p "$HOME/.local/opt/flutter"'):]
     acquisition = step.split('flutter=', 1)[0]
     command = '(cd "$HOME' + step.split('(cd "$HOME', 1)[1].split('git diff --exit-code', 1)[0]
@@ -716,10 +717,11 @@ def preflight_cases():
     assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
                if 'actions/upload-artifact@' in step.get('uses', ''))
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    for job, name in (('build', 'Check every prepared build input'),
-                      ('smoke', 'Check every prepared installed smoke input')):
+    for job, name in (('build', 'Check every prepared build input'),):
         step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
         assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
+    stage = (REPO / 'sdlc/scripts/release-workflow').read_text().split('smoke-stage)\n', 1)[1].split('\nbuild-stage)', 1)[0]
+    assert stage.index('hosted-preflight.py smoke') < stage.index('for family in go-cpp') < stage.index('release-smoke smoke-files')
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
         scripts = root / 'sdlc/scripts'
@@ -733,6 +735,8 @@ def preflight_cases():
         (root / 'libraries/typescript').mkdir(parents=True)
         (root / 'libraries/typescript/node.sha256').write_bytes((REPO / 'libraries/typescript/node.sha256').read_bytes())
         (scripts / 'release-workflow').write_bytes((REPO / 'sdlc/scripts/release-workflow').read_bytes())
+        (root / 'sdlc/tools.json').write_bytes((REPO / 'sdlc/tools.json').read_bytes())
+        maturin_pin = json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
         tools = root / 'bin'
         tools.mkdir()
         probe = tools / 'fixture'
@@ -741,7 +745,7 @@ def preflight_cases():
                          'name = Path(sys.argv[0]).name\n' +
                          'if name == "rustc": print("rustc 1.95.0 (fixture)")\n' +
                          'if name == "node": print("v22.22.3")\n' +
-                         'if name == "maturin": print("maturin 1.15.0")\n' +
+                         f'if name == "maturin": print("maturin {maturin_pin}")\n' +
                          'if name == "rustup": print("clippy-fixture\\nrustfmt-fixture")\n')
         probe.chmod(0o755)
         required = ('cargo', 'rustc', 'rustup', 'git', 'python3', 'node', 'npm', 'tar', 'maturin', 'cl.exe', 'lib.exe', 'link.exe')
@@ -893,7 +897,7 @@ def smoke_family_cases():
     assert smoke['timeout-minutes'] == '${{ matrix.job_minutes }}'
     assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
     assert 'smoke' in release['jobs']['draft']['needs']
-    selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
+    selected = next(step for step in smoke['steps'] if 'release-workflow smoke-stage' in step.get('run', ''))
     assert selected['env']['THINKTHEN_RELEASE_SMOKE_FAMILY'] == '${{ matrix.family }}'
     assert selected['env']['THINKTHEN_TEST_PROFILE'] == 'full'
     assert selected['timeout-minutes'] == '${{ matrix.consumer_minutes }}'
@@ -1051,8 +1055,8 @@ def parameter_cases():
         # stage_checkout preserves the tracked helper's non-executable mode.
         release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
         apple = release['jobs']['apple-packages']
-        assembly = next(step['run'] for step in apple['steps'] if step.get('name') ==
-                        'Assemble Swift and Foundation from both captured C packages')
+        assembly = (REPO / 'sdlc/scripts/release-workflow').read_text().split(
+            'apple-assemble-stage)\n', 1)[1].split('\n\t;;', 1)[0]
         command = next(line for line in assembly.splitlines() if 'build-xcframework.sh' in line)
         (root / 'bin/uname').write_text('#!/bin/sh\necho Linux\n')
         for cell in apple['strategy']['matrix']['include']:

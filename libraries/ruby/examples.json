@@ -34,17 +34,17 @@
   },
   "annotate": {
    "files": {
-    "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
+    "form.json": "{\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
    },
    "ruby": "ThinkThen::Client.open { |client| p client.annotate(ThinkThen::Client.question_file(\"form.json\"), [\"maybe later\"]).results.first.answers[\"refund\"].value }",
    "expected": "true"
   },
   "recognize": {
-   "ruby": "ThinkThen::Client.open { |client| p client.recognize({version: 1, recognize: {kinds: {person: nil, organization: nil, place: nil}}}, \"Maria Chen joined Northwind Freight in Chicago last spring.\").results.flat_map { |one| one.value.entities.map { |entity| [entity.text, entity.kind] } } }",
+   "ruby": "ThinkThen::Client.open { |client| p client.recognize({recognize: {kinds: {person: nil, organization: nil, place: nil}}}, \"Maria Chen joined Northwind Freight in Chicago last spring.\").results.flat_map { |one| one.value.entities.map { |entity| [entity.text, entity.kind] } } }",
    "expected": "[[\"Maria Chen\", \"person\"], [\"spring.\", \"person\"]]"
   },
   "relate": {
-   "ruby": "ThinkThen::Client.open { |client| p client.relate({version: 1, relate: {relations: [{name: \"caused_by\", source: \"alert\", target: \"alert\", either: false}]}}, [{name: \"Checkout returns 500 at the payment step.\", kind: \"alert\"}, {name: \"The payments database ran out of disk space.\", kind: \"alert\"}]).value.map { |one| [one.relation, one.source.name, one.target.name, one.probability] } }",
+   "ruby": "ThinkThen::Client.open { |client| p client.relate({relate: {relations: [{name: \"caused_by\", source: \"alert\", target: \"alert\", either: false}]}}, [{name: \"Checkout returns 500 at the payment step.\", kind: \"alert\"}, {name: \"The payments database ran out of disk space.\", kind: \"alert\"}]).value.map { |one| [one.relation, one.source.name, one.target.name, one.probability] } }",
    "expected": "[[\"caused_by\", \"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\", 0.9], [\"caused_by\", \"The payments database ran out of disk space.\", \"Checkout returns 500 at the payment step.\", 0.9]]"
   }
  }

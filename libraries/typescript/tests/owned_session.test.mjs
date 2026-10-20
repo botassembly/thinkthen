@@ -89,7 +89,7 @@ test('the ten Client functions retain generated values after close',async t=>{
       filter:[{decide:'Is it urgent?'},['first',{note:'second'}]],
       rank:['Is it urgent?',['first','second']],
       find:['Which line?',['first','second']],
-      annotate:[{version:1,questions:{ok:{decide:'Is it urgent?'}}},['text']],
+      annotate:[{questions:{ok:{decide:'Is it urgent?'}}},['text']],
       recognize:[tt.Client.recognizeQuestion({person:null}),'Ana Lima'],
       relate:[tt.Client.relateQuestion([{name:'knows',source:'person',target:'person',either:false}]),[{name:'Ana',kind:'person'},{name:'Bob',kind:'person'}]]
     };
@@ -276,7 +276,7 @@ test('Client recognize retains every aggregate chunk and its completed failure p
     const root=process.env.HOME,paths=[root+'/one.txt',root+'/two.txt',root+'/bad.txt'];
     writeFileSync(paths[0],'Ana Lima');writeFileSync(paths[1],'Bob Smith');writeFileSync(paths[2],new Uint8Array([255]));
     const client=new tt.Client({cache:false});
-    const question={version:1,recognize:{kinds:{person:null}}};
+    const question={recognize:{kinds:{person:null}}};
     const done=await client.recognize(question,tt.Client.files(paths.slice(0,2),{unit:'file'}));
     const empty=await client.recognize(question,[]);
     const boundary=await client.recognize(tt.Client.recognizeQuestion({person:null},{mode:'boundary_only'}),'Ana Lima');
@@ -313,7 +313,7 @@ test('Client previews complete inputs through native admission without sending',
     const plan=client.plan('decide','Question?',['first','second'],{batch:1});
     let advanced=false;const input=(function*(){advanced=true;yield 'text';})();
     const errors=[];
-    for(const [verb,question,rows,controls] of [['decide','Question?',input,{}],['decide','Question?',['text'],{batch:0}],['recognize',{version:1,recognize:{kinds:{person:null}}},['text'],{}],['decide','Question?',['text'],{signal:AbortSignal.abort()}]]) {
+    for(const [verb,question,rows,controls] of [['decide','Question?',input,{}],['decide','Question?',['text'],{batch:0}],['recognize',{recognize:{kinds:{person:null}}},['text'],{}],['decide','Question?',['text'],{signal:AbortSignal.abort()}]]) {
       try{client.plan(verb,question,rows,controls);throw Error('preview accepted invalid input');}
       catch(error){if(!(error instanceof tt.ClientError))throw error;errors.push(error.kind);}
     }

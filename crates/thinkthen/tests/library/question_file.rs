@@ -16,6 +16,9 @@ const LIMIT: usize = 1_048_576;
 /// A loader, a valid file for it, and the words its sentences name the file by.
 type Loader = fn(&Path) -> Result<(), thinkthen::Error>;
 
+/// An inline declaration parser.
+type Parser = fn(&str) -> Result<(), thinkthen::Error>;
+
 const LOADERS: [(&str, Loader, &str); 4] = [
     (
         "question file",
@@ -25,17 +28,17 @@ const LOADERS: [(&str, Loader, &str); 4] = [
     (
         "relate file",
         |path| Relate::load(path).map(drop),
-        r#"{"version":1,"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"r","source":"a","target":"b"}]}}"#,
     ),
     (
         "recognize file",
         |path| Recognize::load(path).map(drop),
-        r#"{"version":1,"recognize":{}}"#,
+        r#"{"recognize":{}}"#,
     ),
     (
         "question set",
         |path| QuestionSet::load(path).map(drop),
-        r#"{"version":1,"questions":{"q":{"decide":"Is it?"}}}"#,
+        r#"{"questions":{"q":{"decide":"Is it?"}}}"#,
     ),
 ];
 
@@ -121,17 +124,43 @@ fn the_reader_names_each_reason() {
 
 #[test]
 fn recognition_admits_caller_defined_values_and_refuses_blank_customization() {
-    let declaration = r#"{"version":1,"recognize":{"instructions":"Find literal values only.","entity_definition":"An amount with its currency.","kinds":{"amount":"The receipt total, not the TOTAL label."}}}"#;
+    let declaration = r#"{"recognize":{"instructions":"Find literal values only.","entity_definition":"An amount with its currency.","kinds":{"amount":"The receipt total, not the TOTAL label."}}}"#;
     assert!(Recognize::from_json(declaration).is_ok());
     for field in ["instructions", "entity_definition"] {
         for value in [r#""""#, r#"" \n ""#, "null", "42", "[]", "{}", "true"] {
-            let declaration = format!(r#"{{"version":1,"recognize":{{"{field}":{value}}}}}"#);
+            let declaration = format!(r#"{{"recognize":{{"{field}":{value}}}}}"#);
             assert_eq!(
                 Recognize::from_json(&declaration)
                     .expect_err("refusal")
                     .kind(),
                 ErrorKind::Usage
             );
+        }
+    }
+}
+
+#[test]
+fn declaration_files_take_no_version_inline_or_saved() {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("question-file-no-version");
+    std::fs::create_dir_all(&folder).expect("folder");
+    let parsers: [Parser; 3] = [
+        |text| Relate::from_json(text).map(drop),
+        |text| Recognize::from_json(text).map(drop),
+        |text| QuestionSet::from_json(text).map(drop),
+    ];
+    for ((role, load, text), parse) in LOADERS.into_iter().skip(1).zip(parsers) {
+        parse(text).expect("inline file without version");
+        let path = written(&folder, role, text.as_bytes());
+        load(&path).expect("saved file without version");
+        for version in ["1", "2", r#""1""#, "null"] {
+            let invalid = format!("{{\"version\":{version},{}", &text[1..]);
+            let inline = parse(&invalid).expect_err("present version");
+            assert_eq!(inline.kind(), ErrorKind::Usage);
+            assert_eq!(inline.to_string(), "delete the `version` field.");
+            let path = written(&folder, role, invalid.as_bytes());
+            let saved = load(&path).expect_err("saved present version");
+            assert_eq!(saved.kind(), ErrorKind::Local);
+            assert_eq!(saved.to_string(), inline.to_string());
         }
     }
 }

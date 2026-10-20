@@ -20,13 +20,13 @@ fn description(tool: Tool) -> &'static str {
         Tool::Rank => "Order the complete records by the declared question or set.",
         Tool::Find => "Select one unit from a complete set, or none.",
         Tool::Annotate => {
-            "Ask an ordered ordinary question set for each record. question is {version:1,questions:{name:{decide:question_text}}}; entries also accept choose, tag or score."
+            "Ask an ordered ordinary question set for each record. question is {questions:{name:{decide:question_text}}}; entries also accept choose, tag or score."
         }
         Tool::Recognize => {
-            "Recognize caller-defined literal entities and physical text spans. question is {version:1,recognize:{kinds:{kind_name:description}}}."
+            "Recognize caller-defined literal entities and physical text spans. question is {recognize:{kinds:{kind_name:description}}}."
         }
         Tool::Relate => {
-            "Judge relationships over the complete entity set. question is {version:1,relate:{relations:[{name:relation_name}]}}; records hold entities with name and kind."
+            "Judge relationships over the complete entity set. question is {relate:{relations:[{name:relation_name}]}}; records hold entities with name and kind."
         }
     }
 }

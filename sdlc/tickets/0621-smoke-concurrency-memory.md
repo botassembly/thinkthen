@@ -1,6 +1,6 @@
 # 0621: Measure and fix the Linux parity-consumer timeouts
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -8,9 +8,13 @@ Phase: 1
 
 Depends on: 0619
 
+Reviews: revision f37577e, accept
+
+Reviews: revision c902244, accept
+
 ## Outcome
 
-- Changes: `conformance/parity.py`, `conformance/test_parity.py`.
+- Changes: `conformance/parity.py`, `conformance/test_parity.py`, `conformance/c_parity.py`.
 - The cause of each Linux timeout is measured in the capped x86_64 container on Yellow, with a memory and time sample per consumer, before any fix is called a fix.
 - The parity pool in `run_consumers` schedules consumers by their measured peak memory against the container's limit. The measured peak memory and time of each consumer sit in that scheduling table, the one place the code reads them.
 - The serial setting from 412d17372 stays only if the measurement supports it.
@@ -20,6 +24,16 @@ Depends on: 0619
 - On Yellow, after 0619 lands: `pm job run --machine yellow 0621 SHA --memory 14 -- sdlc/scripts/linux-check test-full-cases` passes three times in a row with no timeout, each run's peak memory under the 14 GiB container cap. Hosted run 39102240049 shows the failure before the change.
 - On the M5: `pm job run --machine m5 0621 SHA --memory 8 -- python3 conformance/test_parity.py` passes, with a case that the pool never runs two consumers whose measured peaks exceed the limit together.
 - The hosted Linux pass on the candidate is part of 0687, not of this ticket.
+
+## Amendment, 2026-10-20 (core cut)
+
+0619 closed on a core-only image, so this ticket measures what that image can run now.
+
+- Measure C, Go and Zig in the capped x86_64 core container on Yellow through the existing child commands, with the exact time limits unchanged, recording each consumer's peak memory, time and real error.
+- Build the measured scheduling table from those measurements and prove it with the `conformance/test_parity.py` concurrency case on the M5.
+- Each other consumer's measurement (SQLite, C#, Polars and the rest) joins the table with that language's own wave, once its tools are in the manifest.
+- The three consecutive `test-full-cases` passes on Yellow move to 0691's checkpoint, once every language's toolchain is in the manifest.
+- Do not add tools to the core image for this ticket, and never weaken a missing-tool failure.
 
 ## Evidence
 

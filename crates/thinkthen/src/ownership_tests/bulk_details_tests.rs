@@ -154,7 +154,7 @@ fn fallible_input_keeps_packed_detail_and_grouped_annotation_request_bytes() {
     let engine = engine(listener.base());
     let asked = question();
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let records = ["alpha", "beta", "gamma", "delta"];

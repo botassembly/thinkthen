@@ -10,7 +10,7 @@ use thinkthen::{Engine, Error, ErrorKind, Question, QuestionSet};
 
 use crate::cases::{Checked, at, engine, said, same};
 
-const TWO_GROUPS: &str = r#"{"version":1,"questions":{"summary":{"decide":"Is this concise?","on":"/summary"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
+const TWO_GROUPS: &str = r#"{"questions":{"summary":{"decide":"Is this concise?","on":"/summary"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
 const NOTE: &str = "a private note";
 
 /// A usage error with this exact sentence.
@@ -160,7 +160,7 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
     assert_eq!(number.len(), 2);
     assert!(number.contains(&Value::from("12.5")));
     assert!(number.contains(&Value::from("Refund me.")));
-    let root = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"}}}"#;
+    let root = r#"{"questions":{"whole":{"decide":"Is this long?"}}}"#;
     assert_eq!(states(root, NOTE).expect("answered"), [Value::from(NOTE)]);
     let twice = r#"{"a":1,"a":2}"#;
     usage(
@@ -172,7 +172,7 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
         states(root, malformed).expect("text answers"),
         [Value::from(malformed)]
     );
-    let mixed = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
+    let mixed = r#"{"questions":{"whole":{"decide":"Is this long?"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
     let record = r#"{"body":"Refund me."}"#;
     let mixed = states(mixed, record).expect("answered");
     assert_eq!(mixed.len(), 2);

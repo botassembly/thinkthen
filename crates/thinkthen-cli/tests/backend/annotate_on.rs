@@ -5,10 +5,9 @@ use std::path::PathBuf;
 
 use crate::harness::{Canned, Listener, spawn};
 
-const PART: &str = r#"{"version":1,"questions":{"unresolved":{"decide":"Still open?","on":"/x"}}}"#;
-const BODY: &str =
-    r#"{"version":1,"questions":{"unresolved":{"decide":"Still open?","on":"/body"}}}"#;
-const WHOLE: &str = r#"{"version":1,"questions":{"unresolved":{"decide":"Still open?"}}}"#;
+const PART: &str = r#"{"questions":{"unresolved":{"decide":"Still open?","on":"/x"}}}"#;
+const BODY: &str = r#"{"questions":{"unresolved":{"decide":"Still open?","on":"/body"}}}"#;
+const WHOLE: &str = r#"{"questions":{"unresolved":{"decide":"Still open?"}}}"#;
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.95}}}"#;
 const STREAM: &str = concat!(
     "thinkthen: question `unresolved` reads `on`, and this record's evidence is text with no members\n",

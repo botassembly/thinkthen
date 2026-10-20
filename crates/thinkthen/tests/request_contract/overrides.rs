@@ -139,7 +139,7 @@ fn wording_controls_keep_wire_presence_and_refuse_wrong_verbs_before_file_reads(
 fn relation_threshold_overrides_share_native_preview_and_execution() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let saved = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"threshold":0.5}"#;
+    let saved = r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"threshold":0.5}"#;
     let input = || RequestInput::Records {
         items: ["Ada", "Bea"]
             .into_iter()

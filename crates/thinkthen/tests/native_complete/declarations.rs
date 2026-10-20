@@ -174,8 +174,11 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
     let listener =
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
-    let objects = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"refund":{"decide":"Refund?","name":"authored-name","wording_version":4,"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
-    let text = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#).unwrap();
+    let objects = thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?","name":"authored-name","wording_version":4,"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
+    let text = thinkthen::QuestionSet::from_json(
+        r#"{"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#,
+    )
+    .unwrap();
     let document = r#"{"ready":false,"body":"Refund me."}"#;
     let error = crate::api::annotate(
         &engine,
@@ -209,7 +212,7 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
         .compose(RawRecord::text(document).unwrap())
         .unwrap();
     crate::api::annotate(&engine, &text, [literal], CallOptions::new()).unwrap();
-    let mixed = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"valid":{"decide":"Refund?","item_schema":{"type":"object","properties":{}}},"invalid":{"decide":"Ready?","item_schema":{"type":"string"}}}}"#).unwrap();
+    let mixed = thinkthen::QuestionSet::from_json(r#"{"questions":{"valid":{"decide":"Refund?","item_schema":{"type":"object","properties":{}}},"invalid":{"decide":"Ready?","item_schema":{"type":"string"}}}}"#).unwrap();
     assert_eq!(
         crate::api::annotate(
             &engine,

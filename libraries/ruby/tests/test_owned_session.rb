@@ -108,7 +108,7 @@ class TestOwnedSession < Minitest::Test
           "filter" => [{decide: "Is it urgent?"}, ["first", {note: "second"}]],
           "rank" => ["Is it urgent?", ["first", "second"]],
           "find" => ["Which line?", %w[first second]],
-          "annotate" => [{version: 1, questions: {ok: {decide: "Is it urgent?"}}}, ["text"]],
+          "annotate" => [{questions: {ok: {decide: "Is it urgent?"}}}, ["text"]],
           "recognize" => [T::Client.recognize_question(kinds: {person: nil}), "Ana Lima"],
           "relate" => [T::Client.relate_question(relations: [T::Client.relation("knows", source: "person", target: "person", either: false)]), [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}]]
         }
@@ -314,7 +314,7 @@ class TestOwnedSession < Minitest::Test
           raise "missing preview field" unless T::Plan::FIELDS.all? { |field| plan.key?(field) }
           raise "wrong preview" unless plan.records == 2 && plan.requests == (verb == :tag ? 4 : 2)
         end
-        unsupported = {find: "Question?", annotate: {version: 1, questions: {ok: {decide: "Question?"}}},
+        unsupported = {find: "Question?", annotate: {questions: {ok: {decide: "Question?"}}},
           recognize: T::Client.recognize_question(kinds: {person: nil}),
           relate: T::Client.relate_question(relations: [T::Client.relation("knows")])}
         unsupported.each do |verb, question|
@@ -441,7 +441,7 @@ class TestOwnedSession < Minitest::Test
         framed = client.decide("Question?", T::Client.files([path], framing: "jsonl"), field: ["/body"])
         selector = T::Client.question_file(path)
         raise "path leak" if selector.inspect.include?(path)
-        empty_edges = client.relate({version: 1, relate: {relations: [{name: "knows", source: "person", target: "person", either: false}]}, threshold: 0.95}, [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}])
+        empty_edges = client.relate({relate: {relations: [{name: "knows", source: "person", target: "person", either: false}]}, threshold: 0.95}, [{name: "Ana", kind: "person"}, {name: "Bob", kind: "person"}])
         [missing, authored_null, unresolved, located, framed, empty_edges]
       end
       missing, authored_null, unresolved, located, framed, empty_edges = retained

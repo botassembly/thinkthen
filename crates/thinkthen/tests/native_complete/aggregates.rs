@@ -55,7 +55,7 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
 fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}},"q3":{"type":"noul","noul":0.5}},"usage":{"input_tokens":9}}"#)).unwrap();
     let engine = engine(&listener);
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
     let rows = crate::api::annotate(
         &engine,
         &set,

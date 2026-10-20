@@ -10,7 +10,7 @@ fn rank_set_uses_selected_backend_and_override_without_recording_credentials() {
     let question = home.path("rank-set.json");
     std::fs::write(
         &question,
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("question file");
     let question = format!("@{question}");

@@ -15,6 +15,7 @@ Depends on: 0615, 0618, 0688
 - The source tarball keeps its vendored crates, so a source build with Cargo works offline.
 - `tools/msrv.R` is deleted.
 - The R packet dumper is 0713.
+- Preparing the R package runs from the declared tool list with no host PATH reliance, uses the installed libR path rather than a repository-only documentation helper's stale one, and builds source archives without macOS provenance metadata (`COPYFILE_DISABLE=1` or the equivalent in the existing source-package path), so R's own checks accept them. 0704's failed jobs 1792477498132-23402, 1792477534821-24450 and 1792477671068-28419 show each gap.
 
 ### Proof
 

@@ -123,12 +123,12 @@ fn assert_definition_admission_refusals(backend: &Backend) {
             "invalid canonical request",
         ),
         (
-            r#"{"version":1,"questions":{"ok":{"decide":"private-wording"}},"private-canary":true}"#,
+            r#"{"questions":{"ok":{"decide":"private-wording"}},"private-canary":true}"#,
             r#"{"original":{"kind":"text","text":"private-evidence"}}"#,
             "invalid canonical request",
         ),
         (
-            r#"{"version":1,"questions":{"private-canary":{"decide":12}}}"#,
+            r#"{"questions":{"private-canary":{"decide":12}}}"#,
             r#"{"original":{"kind":"text","text":"private-evidence"}}"#,
             "invalid canonical request",
         ),

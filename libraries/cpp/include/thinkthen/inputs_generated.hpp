@@ -103,9 +103,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         AnnotateDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         AnnotateDefinition& set_batch(const Data& value);
@@ -429,9 +426,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         AuthoredRelate():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         AuthoredRelate& set_context_schema(const AuthoredInputDeclaration& value);
@@ -657,9 +651,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RecognizeDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RecognizeDefinition& set_context_schema(const AuthoredInputDeclaration& value);
@@ -765,9 +756,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionAnnotateDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionAnnotateDefinition& set_batch(const Data& value);
@@ -840,9 +828,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionAuthoredRelate():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionAuthoredRelate& set_context_schema(const AuthoredInputDeclaration& value);
@@ -899,9 +884,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionRecognizeDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionRecognizeDefinition& set_context_schema(const AuthoredInputDeclaration& value);
