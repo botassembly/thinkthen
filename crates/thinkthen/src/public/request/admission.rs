@@ -213,8 +213,10 @@ fn admit_definition_for(
 ) -> Result<RequestDefinition, Error> {
     let definition = match definition {
         RequestDefinition::Atomic(LoadedQuestion::Banded(_)) if function == Function::Filter => {
-            return Err(Error::usage("question kind does not match the requested function")
-                .with_diagnostic(Diagnostic::ThresholdFunction(function)));
+            return Err(
+                Error::usage("question kind does not match the requested function")
+                    .with_diagnostic(Diagnostic::ThresholdFunction(function)),
+            );
         }
         RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
             if function == Function::Rank =>
@@ -624,15 +626,15 @@ fn admit_definition_controls(
                 };
                 return Err(Error::usage(
                     "rank cutoff requires a decide probability and never a band",
-                ).with_diagnostic(diagnostic));
+                )
+                .with_diagnostic(diagnostic));
             }
         }
         RequestDefinition::RankSet(_) if options.threshold.is_some() => {
-            return Err(Error::usage("rank question sets take no command threshold").with_diagnostic(
-                Diagnostic::Refusal(Box::new(crate::core::QuestionFileError::RuleOnRank(
-                    crate::core::Source::CommandLine,
-                ))),
-            ));
+            return Err(Error::usage("rank question sets take no command threshold")
+                .with_diagnostic(Diagnostic::Refusal(Box::new(
+                    crate::core::QuestionFileError::RuleOnRank(crate::core::Source::CommandLine),
+                ))));
         }
         _ => {}
     }

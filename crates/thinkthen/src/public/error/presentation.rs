@@ -313,7 +313,11 @@ impl Error {
             }
             Diagnostic::ThresholdFunction(function) => {
                 use crate::core::{QuestionFileError as E, Source};
-                let source = if self.kind() == ErrorKind::Local { Source::File } else { Source::CommandLine };
+                let source = if self.kind() == ErrorKind::Local {
+                    Source::File
+                } else {
+                    Source::CommandLine
+                };
                 let cause = match function {
                     crate::RequestFunction::Choose => E::BandOnChoose(source),
                     crate::RequestFunction::Tag => E::BandOnTag(source),

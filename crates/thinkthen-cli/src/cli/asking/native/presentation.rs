@@ -179,7 +179,11 @@ pub(super) fn complete(value: &impl Serialize, strip_batch: bool) -> Result<Stri
     let Kind::Object(fields) = document.kind() else {
         return Err(Failure::Defect("a complete result is not an object"));
     };
-    crate::render::json_line(&Document { fields, strip_batch }).map_err(Failure::from)
+    crate::render::json_line(&Document {
+        fields,
+        strip_batch,
+    })
+    .map_err(Failure::from)
 }
 
 struct Document<'a> {

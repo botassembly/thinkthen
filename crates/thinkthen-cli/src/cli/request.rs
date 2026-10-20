@@ -325,13 +325,18 @@ fn arguments(
     })
 }
 fn native(error: crate::Error, function: RequestFunction) -> Failure {
-    if !matches!(function, RequestFunction::Recognize | RequestFunction::Relate) {
+    if !matches!(
+        function,
+        RequestFunction::Recognize | RequestFunction::Relate
+    ) {
         match error.diagnostic() {
             Some(crate::ErrorDiagnostic::ModelBlank) => {
                 return Failure::Usage("a model name is text, not white space");
             }
             Some(crate::ErrorDiagnostic::ModelControl) => {
-                return Failure::Usage("a model name holds no control character or white space but a plain space");
+                return Failure::Usage(
+                    "a model name holds no control character or white space but a plain space",
+                );
             }
             _ => {}
         }
