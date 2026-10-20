@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 0689, 0691, 0692, 0705, 0707, 0708, 0709, 0719, 0720, 0721, 0723, 0724, 0725, 0731, 0732, 0741, 0744
 
+Reviews: revision b045e6b, accept
+
 ## Outcome
 
 - Changes: `sdlc/decisions/`, `sdlc/planning/milestones.md`.
