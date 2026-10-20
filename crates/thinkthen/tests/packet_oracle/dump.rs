@@ -22,6 +22,8 @@ struct Document {
     #[serde(default)]
     batch_probe: bool,
     #[serde(default)]
+    incremental: bool,
+    #[serde(default)]
     held_cancel: bool,
 }
 
@@ -62,7 +64,9 @@ fn execute(document: Document) -> Result<String, Error> {
     let cancel = document.cancel;
     let probe = document.batch_probe;
     let held = document.held_cancel;
-    let feed = if probe || cancel {
+    let streamed_records = document.incremental
+        && matches!(&request.call.arguments.input, thinkthen::RequestInput::Records { .. });
+    let feed = if probe || cancel || streamed_records {
         let items = match &request.call.arguments.input {
             thinkthen::RequestInput::Records { items } => items.clone(),
             _ => Vec::new(),

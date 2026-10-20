@@ -82,6 +82,7 @@ def folded(document):
 def run(consumer, command, root, *, update=False):
     """Keep every required Rust cell, its probes and assertions, then compare packets."""
     from fixture_suite import run as shared_run
+    oracle = None if update else json.loads(ORACLE.read_text())
     actual = {}
 
     def record(stdout, row, step, home):
@@ -101,7 +102,6 @@ def run(consumer, command, root, *, update=False):
     if update:
         ORACLE.write_text(json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
         return 0
-    oracle = json.loads(ORACLE.read_text())
     expected = {case['id']: case['dumps'] for case in oracle['cases']}
     failed = False
     for case in document['cases']:
