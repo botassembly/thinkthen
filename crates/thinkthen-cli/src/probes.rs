@@ -73,7 +73,10 @@ pub(crate) fn probes(engine: &Engine, backend_name: Option<&str>) -> Result<Vec<
                         images: vec![],
                     }
                 },
-                options: RequestOptions::default(),
+                options: RequestOptions {
+                    field: structured.then(|| vec![String::new()]),
+                    ..Default::default()
+                },
             };
             let request = Request::named("annotate", arguments.clone())
                 .and_then(Request::admit)
