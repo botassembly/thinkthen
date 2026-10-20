@@ -26,3 +26,5 @@ Phase: 2
 - The step reads a locally fetched advisory database (`cargo deny fetch db` in `linux-check`), so main's gate can turn red with no commit.
 
 ## Progress
+
+- 2026-10-20 started
