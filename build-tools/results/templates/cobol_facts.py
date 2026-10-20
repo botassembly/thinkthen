@@ -11,7 +11,7 @@ def render(facts, roots=None, prefix="Answer"):
         if native in special:
             return special[native]
         words = native.removeprefix('thinkthen_complete_').split('_')
-        return 'thinkthen_cobol_' + prefix.join(word.title() for word in words)
+        return 'thinkthen_cobol_' + prefix + ''.join(word.title() for word in words)
     def base(kind):
         return re.sub(r'\b(const|struct|union)\b|\*', '', kind).strip()
     while pending:

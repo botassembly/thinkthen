@@ -490,7 +490,7 @@ def bridge():
               '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
-            lines += [' internal const uint '.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').split('_')) + ' = ' + str(value) + ';']
+            lines += [' internal const uint ' + ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_WAIT_').split('_')) + ' = ' + str(value) + ';']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_READY_'):
             suffix = ''.join(part.title() for part in name.removeprefix('THINKTHEN_SESSION_READY_').split('_'))

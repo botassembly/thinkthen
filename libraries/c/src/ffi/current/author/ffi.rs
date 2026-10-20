@@ -6,7 +6,7 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use super::read;
 use crate::current::{self, QuestionHandle};
-use crate::ffi::carriers::{QuestionAuthorInfo, CountedString};
+use crate::ffi::carriers::{CountedString, QuestionAuthorInfo};
 
 // SAFETY: AuthorOwner is constructed only by AuthorOwner::new. Its closed
 // builder stores cloned native metadata and boxed immutable bytes/property

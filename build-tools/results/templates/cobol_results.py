@@ -18,7 +18,7 @@ def render(facts, root, functions):
     def base(kind):
         return re.sub(r'\b(const|struct|union)\b|\*', '', kind).strip()
     def owned(kind):
-        return 'thinkthen_cobol_Receipt'.join(word.title() for word in kind.removeprefix('thinkthen_complete_').split('_'))
+        return 'thinkthen_cobol_Receipt' + ''.join(word.title() for word in kind.removeprefix('thinkthen_complete_').split('_'))
     payloads, roots = {}, []
     for function in functions:
         contract = contracts[function]

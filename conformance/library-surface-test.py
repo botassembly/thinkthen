@@ -837,7 +837,7 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             methods = ['Open', 'ParseQuestion', 'StartSession', 'ExecuteAsync', 'PushAsync', 'ReadAsync',
                        'Decision', 'Choice', 'Tags', 'DecideValueAsync', 'ExtraPublicExport']
             extra.write_text('public class Other {\n'
-                            .join('public void ' + method + '() {}\n' for method in methods)
+                             + ''.join('public void ' + method + '() {}\n' for method in methods)
                              + 'public string FactsJson {get;} public string Failure {get;} }\n'
                              + 'public class RequestOptions { public string SurpriseOption {get;} }\n'
                              + 'public class EngineSettings { public string SurpriseSetting {get;} }\n')

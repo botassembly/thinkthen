@@ -78,7 +78,7 @@ class Reader:
     def name(self, native):
         if native == 'thinkthen_complete_utf8': return 'thinkthen_cobol_AnswerText'
         if native == 'thinkthen_complete_json': return None
-        return 'thinkthen_cobol_' + self.prefix.join(word.title() for word in native.removeprefix('thinkthen_complete_').split('_'))
+        return 'thinkthen_cobol_' + self.prefix + ''.join(word.title() for word in native.removeprefix('thinkthen_complete_').split('_'))
 
     def shape(self, schema, path):
         schema = normalized(schema)

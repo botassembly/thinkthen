@@ -9,7 +9,7 @@ ROOTS = ('completesessionPacket', 'completeplan')
 
 
 def name(key):
-    native = 'TT'.join(part[0].upper() + part[1:] for part in re.findall(
+    native = 'TT' + ''.join(part[0].upper() + part[1:] for part in re.findall(
         r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
     return {'TTAtomicNonZeroUsize':'TTRankedRecord', 'TTAtomicDecideValue':'TTDecisionRecord',
             'TTAtomicBoolean':'TTFilteredRecord', 'TTAtomicArrayOfString':'TTTagRecord',

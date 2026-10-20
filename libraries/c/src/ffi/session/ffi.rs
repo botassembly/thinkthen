@@ -137,10 +137,7 @@ fn usage_status(
             len: text.len(),
         },
     );
-    Ok((
-        view::thinkthen_complete_usage_persistence { kind },
-        advice,
-    ))
+    Ok((view::thinkthen_complete_usage_persistence { kind }, advice))
 }
 
 #[cfg(test)]
@@ -169,8 +166,7 @@ fn packet_json(result: &SessionResultHandle) -> Result<(*const c_char, usize), E
 }
 fn packet_view(
     result: &SessionResultHandle,
-) -> Result<*const crate::session::views_generated::thinkthen_complete_session_packet, ErrorKind>
-{
+) -> Result<*const crate::session::views_generated::thinkthen_complete_session_packet, ErrorKind> {
     result.view()
 }
 
