@@ -51,7 +51,7 @@ int main(int argc, const char *argv[]) {
         require(savedRefusal.kind == TTErrorUsage && !savedRefusal.retryable);
         require([retained.value.value isEqual:@YES]);
         require(retained.value.state == TTPresenceValue && [retained.rawFields[@"value"] count] == 1);
-        require(retained.probability.value.doubleValue > 0 && retained.probability.value.doubleValue <= 1);
+        require([retained.probability.value doubleValue] > 0 && [retained.probability.value doubleValue] <= 1);
         require(retained.facts.value.requestsSent.value.unsignedIntegerValue == 1);
         error = nil;
         // Authored finite numbers survive native copying beyond decimal's exponent range.
@@ -93,9 +93,9 @@ int main(int argc, const char *argv[]) {
         for (NSString *text in @[@"no", @"unsure"]) {
             decisionInput.text = text;
             TTCall *decision = [client decide:question input:decisionInput options:decisionControls feed:nil error:&error];
-            require(decision && !error && decision.value.state == TTPresenceValue);
+            require(decision && !error);
             if ([text isEqual:@"no"]) {
-                require([decision.value.value isEqual:@NO] && decision.probability.value.doubleValue == .1);
+                require([decision.value.value isEqual:@NO] && [decision.probability.value doubleValue] == .1);
             } else require(decision.value.state == TTPresenceNull && decision.probability.state == TTPresenceNull);
         }
         TTAuthoredDecideBuilder *invalidMeaning = [TTAuthoredDecideBuilder new];
@@ -113,7 +113,7 @@ int main(int argc, const char *argv[]) {
             TTQuestionDefinition *authoredQuestion = [TTQuestionDefinition new]; authoredQuestion.value = definition;
             decisionInput.text = [NSString stringWithFormat:@"authored-objc-%lu", (unsigned long)index];
             TTCall *decision = [client decide:authoredQuestion input:decisionInput options:nil feed:nil error:&error];
-            require(decision && !error && decision.value.state == TTPresenceValue);
+            require(decision && !error);
             [authoredCalls addObject:decision];
         }
         TTAuthoredDecideBuilder *schemaDefinition = [TTAuthoredDecideBuilder new];
@@ -142,7 +142,7 @@ int main(int argc, const char *argv[]) {
         for (NSUInteger index = 0; index < authoredCalls.count; index++) {
             require(authoredCalls[index].value.state == (authored[index] == NSNull.null ? TTPresenceNull : TTPresenceValue));
             if (authored[index] != NSNull.null) require([authoredCalls[index].value.value isEqual:authored[index]]);
-            require(authoredCalls[index].probability.value.doubleValue == .9);
+            require([authoredCalls[index].probability.value doubleValue] == .9);
             require([authoredCalls[index].rawFields[@"value"] count] == 1);
         }
         // A new client and unrelated host work progress while a provider is held.

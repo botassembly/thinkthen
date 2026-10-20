@@ -27,5 +27,4 @@ FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError * _Null
 - (nullable TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
 @end
 
-FOUNDATION_EXPORT TTFailureError *TTFailureForCall(TTCallError *failure, id call);
 NS_ASSUME_NONNULL_END

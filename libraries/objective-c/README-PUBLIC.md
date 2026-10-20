@@ -20,14 +20,14 @@ int main(void) { @autoreleasepool {
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *refund = [client decide:refundQuestion input:input options:nil feed:nil error:&error];
         if (!refund || error) return 1;
-        if (refund.probability.value.doubleValue != [@[@0.99, @0.01, @0.54][i] doubleValue]) return 1;
+        if ([refund.probability.value doubleValue] != [@[@0.99, @0.01, @0.54][i] doubleValue]) return 1;
         puts(refund.value.value ? ([refund.value.value boolValue] ? "true" : "false") : "not sure");
     }
     for (NSUInteger i = 0; i < messages.count; i++) { NSString *text = messages[i];
         TTTextInput *input = [TTTextInput new]; input.text = text;
         TTCall *team = [client choose:teamQuestion input:input options:nil feed:nil error:&error];
         if (!team || error) return 1;
-        if (team.probability.value.doubleValue != 1.0) return 1;
+        if ([team.probability.value doubleValue] != 1.0) return 1;
         puts(team.value.value ? [team.value.value UTF8String] : "not sure");
     }
     return 0;
