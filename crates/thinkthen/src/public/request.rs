@@ -167,11 +167,7 @@ impl Request {
                 .ok()
                 .is_some_and(|value| value.member("schema").is_some())
             {
-                return Err(Error::usage("delete the `schema` field.").with_diagnostic(
-                    crate::public::error::diagnostic::Diagnostic::RequestDecode(
-                        RequestDecodeCause::Malformed,
-                    ),
-                ));
+                return Err(Error::usage("delete the `schema` field."));
             }
             definition::validate_wire_definition(text)
                 .and_then(|()| decoding::validate_request_contexts(text))
