@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0689
 
+Reviews: revision 45f4ac6, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/settings`.
