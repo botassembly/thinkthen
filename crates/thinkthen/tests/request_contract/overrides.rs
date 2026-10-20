@@ -7,7 +7,7 @@ fn preview(
     question: &str,
     options: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#))
+    let request = Request::from_json(&format!(r#"{{"call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#))
         ?.admit()?;
     let plan = engine.plan_request(&request, RequestEnvironment::default())?;
     Ok(String::from_utf8(
@@ -101,7 +101,7 @@ fn whole_lists_replace_saved_lists_preserving_order_and_description_content() {
             r#"[{"name":"duplicate"},{"name":"duplicate"}]"#,
             r#"[{"name":" "},{"name":"valid"}]"#,
         ] {
-            let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{{"{key}":{list}}}}}}}"#)).unwrap();
+            let request = Request::from_json(&format!(r#"{{"call":{{"function":"{function}","question":{{"kind":"definition","value":{question}}},"input":{{"kind":"text","text":"evidence"}},"options":{{"{key}":{list}}}}}}}"#)).unwrap();
             assert!(request.admit().is_err());
         }
     }
@@ -130,7 +130,7 @@ fn wording_controls_keep_wire_presence_and_refuse_wrong_verbs_before_file_reads(
         ("decide", r#"{"labels":[]}"#),
         ("choose", r#"{"levels":[]}"#),
     ] {
-        let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"{function}","question":{{"kind":"file","path":"absent-wording-file"}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#)).unwrap();
+        let request = Request::from_json(&format!(r#"{{"call":{{"function":"{function}","question":{{"kind":"file","path":"absent-wording-file"}},"input":{{"kind":"text","text":"evidence"}},"options":{options}}}}}"#)).unwrap();
         assert_eq!(request.admit().unwrap_err().kind(), ErrorKind::Usage);
     }
 }

@@ -70,7 +70,6 @@ def declarations(definitions, input_definitions=None):
             value += ' | ' + scalar
         lines += [f' {function}(q:Question,i:Input,c?:Controls):Promise<Result<Native{function.title()}Result, {value}, {probability}>>;']
     lines += ['}']
-    lines += ['export const REQUEST_VERSION: string;']
     lines += input_declarations(input_definitions or {})
     return '\n'.join(lines)+'\n'
 
@@ -90,7 +89,7 @@ def input_declarations(definitions):
         lines += ['}']
     return lines
 
-def runtime(definitions,version,input_definitions=None):
+def runtime(definitions,input_definitions=None):
     lines=["'use strict';", '// Generated from the shared Rust result graph; do not edit.', 'const graph = {']
     for key,source in definitions.items():
         lines += [json.dumps(key)+': {']
@@ -153,7 +152,7 @@ function convert(schema,value,key) {
 }
 function plan(value) { return convert(graph.completeplan,value,'completeplan'); }
 function packet(value) { return convert(graph.completesessionPacket,value,'completesessionPacket'); }
-''', result_runtime(definitions), 'module.exports = { callResult, callResolution, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
+''', result_runtime(definitions), 'module.exports = { callResult, callResolution, plan, packet, parse, NativeNumber, '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
     return '\n'.join(lines)+'\n'
 
 

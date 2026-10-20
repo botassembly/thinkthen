@@ -65,11 +65,11 @@ def cache_body(owner, value_type, method, expression):
     return f'inline const {value_type}& {owner}::{method}() const {{ auto stored = std::atomic_load(cached_{method}_.get()); if (!stored) {{ auto candidate = std::make_shared<const {value_type}>({expression}); if (std::atomic_compare_exchange_strong(cached_{method}_.get(), &stored, candidate)) stored = std::move(candidate); }} return *stored; }}'
 
 
-def render(definitions,version):
+def render(definitions):
     from generate import ROOT, SCHEMA, graph, immediate_schema, prepare
     extras = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())), ('completeImmediateFacts',)))
     definitions = dict(sorted({**extras, **definitions}.items()))
-    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','#include <atomic>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
+    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','#include <atomic>','namespace tt::results {']
     for key in definitions: lines += [f'class {name(key)};']
     bodies=[]
     for key,raw in definitions.items():

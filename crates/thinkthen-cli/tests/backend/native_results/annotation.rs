@@ -1,6 +1,6 @@
 //! Complete annotation keeps declared readings and original JSON through replay.
 use super::*;
-const SET: &str = r#"{"questions":{"first":{"decide":"First?","on":"/body","name":"first-contract","wording_version":2,"item_schema":{"type":"string"}},"second":{"decide":"Second?","on":"/body"}}}"#;
+const SET: &str = r#"{"questions":{"first":{"decide":"First?","on":"/body","name":"first-contract","item_schema":{"type":"string"}},"second":{"decide":"Second?","on":"/body"}}}"#;
 const INPUT: &[u8] = "{\"body\":\"Text.\",\"n\":1,\"lexical\":\"Keep Café.\"}\n{\"body\":\"Text.\",\"n\":1,\"lexical\":\"Keep Café.\"}\n".as_bytes();
 #[cfg(test)]
 fn expected() -> Value {
@@ -70,7 +70,7 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
     );
     assert_eq!(
         live[0]["answers"]["first"]["question"],
-        json!({"verb":"decide","text":"First?","name":"first-contract","wording_version":2,"item_schema":{"type":"string"},"on":["/body"]})
+        json!({"verb":"decide","text":"First?","name":"first-contract","item_schema":{"type":"string"},"on":["/body"]})
     );
     assert_eq!(live[0]["value"], json!({"first":true,"second":false}));
     assert_eq!(live[0]["meta"]["usage"], json!({"input_tokens":887}));

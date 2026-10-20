@@ -289,8 +289,12 @@ impl Error {
 
     /// A usage error whose message is the refusal the core gave.
     pub(crate) fn refused(error: impl std::fmt::Display + Send + Sync + 'static) -> Self {
-        Self::usage(error.to_string())
-            .with_diagnostic(diagnostic::Diagnostic::Refusal(Box::new(error)))
+        let message = if crate::core::declaration::DeclarationError::is_retired(&error) {
+            crate::core::declaration::DeclarationError::RetiredWording.to_string()
+        } else {
+            error.to_string()
+        };
+        Self::usage(message).with_diagnostic(diagnostic::Diagnostic::Refusal(Box::new(error)))
     }
 
     pub(crate) fn with_diagnostic(mut self, cause: diagnostic::Diagnostic) -> Self {

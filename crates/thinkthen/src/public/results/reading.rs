@@ -110,11 +110,7 @@ impl ResolvedQuestion<'_> {
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
         self.1.and_then(|m| m.name.as_ref())
     }
-    /// Optional author wording version.
-    #[must_use]
-    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
-        self.1.and_then(|m| m.wording_version)
-    }
+
     /// Optional declaration of the effective typed item.
     #[must_use]
     pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
@@ -202,11 +198,7 @@ impl FindReading<'_> {
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
         self.metadata.name.as_ref()
     }
-    /// Optional author wording version.
-    #[must_use]
-    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
-        self.metadata.wording_version
-    }
+
     /// Optional declaration of the effective typed item.
     #[must_use]
     pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {

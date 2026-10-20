@@ -49,6 +49,6 @@ AUTHOR = (
     Layout('InputPropertyView', (('name', 'CountedString'), ('kind', 'u32')), default=True),
     Layout('InputProperties', counted('InputProperties', 'InputPropertyView').fields, default=True),
     Layout('InputDeclarationView', (('kind', 'u32'), ('properties', 'InputProperties'), ('required', 'Strings')), default=True),
-    Layout('QuestionAuthorInfo', (('name', 'OptionalString'), ('wording_version', 'OptionalU64'),
+    Layout('QuestionAuthorInfo', (('name', 'OptionalString'),
         ('item_schema', 'InputDeclarationView'), ('context_schema', 'InputDeclarationView')), default=True),
 )

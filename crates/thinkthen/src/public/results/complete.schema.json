@@ -5204,12 +5204,6 @@
       ],
       "type": "string"
     },
-    "completeWordingVersion": {
-      "format": "uint32",
-      "maximum": 4294967295,
-      "minimum": 1,
-      "type": "integer"
-    },
     "completeannotatedField": {
       "anyOf": [
         {
@@ -5646,13 +5640,6 @@
         "text": {},
         "verb": {
           "const": "find"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [
@@ -5996,13 +5983,6 @@
           "type": [
             "string"
           ]
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "type": "object",
@@ -6182,13 +6162,6 @@
         },
         "verb": {
           "$ref": "#/$defs/completeVerb"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [
@@ -6290,13 +6263,6 @@
         },
         "verb": {
           "const": "relate"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [

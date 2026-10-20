@@ -3,7 +3,7 @@
 #include <thinkthen.h>
 #include <stdint.h>
 #include <string.h>
-static const char request[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
+static const char request[] = "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"feed\",\"name\":\"records\"}}}";
 static const char item[] = "{\"item\":{\"original\":{\"kind\":\"text\",\"text\":\"hold-session\"}}}";
 static void check_at(int value, int line) { if (!value) { fprintf(stderr, "session contract failed at line %d\n", line); exit(1); } }
 #define check(value) check_at((value), __LINE__)

@@ -777,7 +777,7 @@ fn question_packets_preserve_unresolved_null_authored_readings_and_partial_usage
             Canned::ok(&reply.to_string())
         })
         .unwrap();
-        let question = Question::from_json(r#"{"decide":"Does it pass?","true":null,"false":{"reading":"no"},"threshold":"0.2:0.8","name":"gate","wording_version":4,"model":"fixed","batch":1}"#).unwrap();
+        let question = Question::from_json(r#"{"decide":"Does it pass?","true":null,"false":{"reading":"no"},"threshold":"0.2:0.8","name":"gate","model":"fixed","batch":1}"#).unwrap();
         let session = engine(&listener)
             .request_session(Request::new(RequestCall::new(
                 RequestFunction::Decide,
@@ -811,7 +811,7 @@ fn question_packets_preserve_unresolved_null_authored_readings_and_partial_usage
         assert!(detail["question"].as_object().unwrap().contains_key("true"));
         assert_eq!(detail["question"]["false"], json!({"reading":"no"}));
         assert_eq!(detail["question"]["name"], "gate");
-        assert_eq!(detail["question"]["wording_version"], 4);
+
         assert_eq!(detail["question"]["model"], "fixed");
         assert_eq!(detail["question"]["batch"], 1);
         assert_eq!(detail["threshold"], "0.2:0.8");

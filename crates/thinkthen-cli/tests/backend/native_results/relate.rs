@@ -115,7 +115,7 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
 fn a_lone_menu_has_no_observations_answered_model_usage_or_sends() {
     let root = crate::input_sources::folder("complete-command-relate-empty").unwrap();
     let question = root.join("question.json");
-    std::fs::write(&question, r#"{"relate":{"relations":[{"name":"mentors","source":"*","target":"*","single":true}]},"name":"lone","wording_version":4}"#).unwrap();
+    std::fs::write(&question, r#"{"relate":{"relations":[{"name":"mentors","source":"*","target":"*","single":true}]},"name":"lone"}"#).unwrap();
     let listener = Listener::answering(|_| panic!("empty relation sent")).unwrap();
     let output = spawn(
         &[
@@ -141,7 +141,7 @@ fn a_lone_menu_has_no_observations_answered_model_usage_or_sends() {
     assert_eq!(row["meta"]["requests_sent"], 0);
     assert!(row["meta"].get("answered_by").is_none() && row["meta"].get("usage").is_none());
     assert_eq!(row["question"]["name"], "lone");
-    assert_eq!(row["question"]["wording_version"], 4);
+
     assert_eq!(listener.count(), 0);
     validate(&[("completeRelation".into(), row)]);
 }

@@ -103,7 +103,7 @@ int main(int argc, const char *argv[]) {
         if ([fixture[@"cancel"] boolValue] || [fixture[@"held_cancel"] boolValue]) {
             // The explicit session exposes the final native terminal. TTTask
             // deliberately settles cancellation early with facts still pending.
-            NSDictionary *request = @{@"schema":TTRequestVersion, @"call":@{
+            NSDictionary *request = @{@"call":@{
                 @"function":verb, @"question":question,
                 @"input":input, @"options":options}};
             TTSession *session = [client startRequest:[[TTRequest alloc] initWithFields:request] error:&error];

@@ -84,7 +84,6 @@ fn no_plan_document_debug_line_shows_the_evidence() {
     let settings = builder.resolved_settings().expect("settings");
     let engine = builder.build().expect("engine");
     let request = thinkthen::Request::from_json(&format!(r#"{{
-        "schema":"thinkthen.request/1",
         "call":{{"function":"choose",
           "question":{{"kind":"definition","value":{{"choose":"Which one fits?","options":["fallback","other"]}}}},
           "input":{{"kind":"json","value":{{"labels":["{EVIDENCE}","other"]}}}},

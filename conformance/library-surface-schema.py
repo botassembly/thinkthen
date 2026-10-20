@@ -28,7 +28,6 @@ def generated_sources(root, target, request, result):
         return generator.prepare(generator.graph(schema, roots))
     request = json.loads(json.dumps(request))
     request['$defs']['Request'] = {k: v for k, v in request.items() if k != '$defs'}
-    version = request['$defs']['RequestVersion']['oneOf'][0]['const']
     header = (root / 'libraries/c/include/thinkthen.h').read_text()
     outputs = {}
     roots = getattr(template, 'ROOTS', ('completesessionPacket',))
@@ -50,12 +49,11 @@ def generated_sources(root, target, request, result):
         outputs['results_generated.d.ts'] = (template.declarations(results, inputs) if getattr(template, 'INPUT_ROOTS', ())
                                              else template.declarations(results))
     elif target == 'ruby':
-        outputs['results_generated.rb'] = (template.render(results) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = "
-                                           + repr(version) + ".freeze\n  end\nend\n")
+        outputs['results_generated.rb'] = template.render(results)
         if hasattr(template, 'rbs'):
             outputs['results_generated.rbs'] = template.rbs(results)
     elif target == 'cpp':
-        outputs['results_generated.hpp'] = template.render(results, version) + template.usage(header)
+        outputs['results_generated.hpp'] = template.render(results) + template.usage(header)
         outputs['inputs_generated.hpp'] = template.input_render(inputs)
         spec = importlib.util.spec_from_file_location('surface_cpp_abi', root / 'sdlc/scripts/check-c-exports.py')
         abi = importlib.util.module_from_spec(spec)
@@ -72,22 +70,22 @@ def generated_sources(root, target, request, result):
                                       + template.answer_helpers(graph(result, ('completesessionPacket', 'completeplan'))))
     elif target == 'swift':
         outputs['ResultsGenerated.swift'] = template.render(results)
-        outputs['InputsGenerated.swift'] = template.render(inputs, True) + '\npublic let ownedRequestVersion = ' + json.dumps(version) + '\n'
+        outputs['InputsGenerated.swift'] = template.render(inputs, True)
     elif target == 'dart':
         outputs['results_generated.dart'] = template.render(results)
-        outputs['inputs_generated.dart'] = template.render(inputs, True) + '\nconst requestVersion = ' + json.dumps(version) + ';\n'
+        outputs['inputs_generated.dart'] = template.render(inputs, True)
         outputs['calls_generated.dart'] = template.calls(inputs, results)
         spec = importlib.util.spec_from_file_location('surface_dart_abi', root / 'sdlc/scripts/check-c-exports.py')
         abi = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(abi)
         outputs['abi_generated.dart'] = template.bridge(abi.header_abi(root / 'libraries/c/include/thinkthen.h'), results)
     elif target == 'go':
-        outputs['owned_results_generated.go'] = template.render(results, inputs) + '\nconst OwnedRequestVersion = ' + json.dumps(version) + '\n' + template.usage(header)
+        outputs['owned_results_generated.go'] = template.render(results, inputs) + template.usage(header)
     elif target == 'php':
         outputs.update(template.outputs(results, header))
         outputs['inputs_generated.php'] = template.inputs(inputs)
     elif target == 'objc':
-        outputs.update(template.outputs(results, version))
+        outputs.update(template.outputs(results))
     elif target == 'jvm':
         outputs['Results.java'] = template.render(results)
         selected, pending = {}, list(template.INPUT_ROOTS)

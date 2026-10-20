@@ -354,7 +354,7 @@ export const FUNCTIONS = [
       flag('levels', '', '', 'The scale, lowest first.'),
       flag('threshold', '', '', 'A cut, or a band written LOW:HIGH.'),
       flag('on', '', '', 'One JSON Pointer, or a list of them.'),
-      flag('name, wording_version', '', '', 'Optional author name and wording version. They do not change the question digest.'),
+      flag('name', '', '', 'Optional author name. It does not change the question digest.'),
       flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection. They never project or coerce the input.'),
       flag('model, profile', '', '', 'The model to ask and the calibration profile to apply.'),
     ],

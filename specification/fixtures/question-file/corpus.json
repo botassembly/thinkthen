@@ -631,7 +631,6 @@
       "file": {
         "decide": "Refund?",
         "name": "refund",
-        "wording_version": 2,
         "item_schema": {
           "type": "string"
         },
@@ -650,8 +649,7 @@
           "a",
           "b"
         ],
-        "name": "choice_a-2",
-        "wording_version": 2147483647
+        "name": "choice_a-2"
       },
       "valid": true
     },

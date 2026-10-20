@@ -395,7 +395,7 @@ fn relation_member_documents(result: &thinkthen::CompleteRelated, document: &Val
 fn rank_request_cutoff_keeps_complete_probabilities_positions_and_observations() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.79},"q2":{"type":"noul","noul":0.8},"q3":{"type":"noul","noul":0.8}},"usage":{"input_tokens":9}}"#)).unwrap();
     let engine = engine(&listener);
-    let request = thinkthen::Request::from_json(r#"{"schema":"thinkthen.request/1","call":{"function":"rank","question":{"kind":"text","text":"Best?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"below"}},{"original":{"kind":"text","text":"first"}},{"original":{"kind":"text","text":"last"}}]},"options":{"threshold":0.8,"top":3,"batch":"max"}}}"#).unwrap().admit().unwrap();
+    let request = thinkthen::Request::from_json(r#"{"call":{"function":"rank","question":{"kind":"text","text":"Best?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"below"}},{"original":{"kind":"text","text":"first"}},{"original":{"kind":"text","text":"last"}}]},"options":{"threshold":0.8,"top":3,"batch":"max"}}}"#).unwrap().admit().unwrap();
     let thinkthen::RequestOutcome::Complete(call) = engine
         .execute_request(&request, thinkthen::RequestEnvironment::default())
         .unwrap()

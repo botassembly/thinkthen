@@ -33,11 +33,17 @@ pub(super) unsafe fn json_plan<T>(
     request_json: *const c_char,
     request_len: usize,
     output: impl FnOnce(&str) -> Result<T, ErrorKind>,
-) -> Result<T, ErrorKind> {
+) -> Result<T, crate::failures::Failure> {
     // SAFETY: caller supplies the documented live readable UTF-8 extent.
     let text = unsafe { super::text(request_json, request_len) }.map_err(|_| ErrorKind::Usage)?;
-    let request = Request::from_json(text).map_err(|error| error.kind())?;
-    plan(engine, request, output)
+    let request = Request::from_json(text).map_err(|error| -> crate::failures::Failure {
+        if error.request_decode_cause().is_some() {
+            error.kind().into()
+        } else {
+            error.into()
+        }
+    })?;
+    plan(engine, request, output).map_err(Into::into)
 }
 
 // SAFETY: the closed ValueHandle constructor owns only read_json's immutable

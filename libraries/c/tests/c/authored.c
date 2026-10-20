@@ -12,7 +12,7 @@ static void same(thinkthen_string text, const char *expected) {
 int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false}");
     assert(engine);
-    char json[] = "{\"decide\":\"Private question?\",\"name\":\"refund\",\"wording_version\":2,\"item_schema\":{\"type\":\"object\",\"properties\":{\"body\":{\"type\":\"string\"}},\"required\":[\"body\"]},\"context_schema\":{\"type\":\"string\"}}";
+    char json[] = "{\"decide\":\"Private question?\",\"name\":\"refund\",\"item_schema\":{\"type\":\"object\",\"properties\":{\"body\":{\"type\":\"string\"}},\"required\":[\"body\"]},\"context_schema\":{\"type\":\"string\"}}";
     char *source=malloc(sizeof(json));assert(source);memcpy(source,json,sizeof(json));
     thinkthen_question *question = NULL;
     assert(thinkthen_question_parse(engine, THINKTHEN_LOAD_ATOMIC,
@@ -50,7 +50,6 @@ int main(void) {
     thinkthen_question_author_info view;
     assert(thinkthen_question_author(question, &view) == THINKTHEN_OK);
     assert(view.name.present == 1); same(view.name.value, "refund");
-    assert(view.wording_version.present == 1 && view.wording_version.value == 2);
     assert(view.item_schema.kind == THINKTHEN_DECLARATION_OBJECT);
     assert(view.item_schema.properties.len == 1);
     same(view.item_schema.properties.data[0].name, "body");

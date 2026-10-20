@@ -10,8 +10,11 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
     let folder = folder();
     let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
-    let first = Question::from_json(r#"{"decide":"Refund?","name":"refund","wording_version":1,"item_schema":{"type":"string"}}"#).unwrap();
-    let second = Question::from_json(r#"{"decide":"Refund?","name":"other","wording_version":7,"model":"fixed","batch":2,"on":[""],"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
+    let first = Question::from_json(
+        r#"{"decide":"Refund?","name":"refund","item_schema":{"type":"string"}}"#,
+    )
+    .unwrap();
+    let second = Question::from_json(r#"{"decide":"Refund?","name":"other","model":"fixed","batch":2,"on":[""],"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
     let live = crate::api::decide(&engine, &first, "Refund me.", CallOptions::new()).unwrap();
     let live_result = crate::api::decision(&live).unwrap();
     let cached = crate::api::decide(&engine, &second, "Refund me.", CallOptions::new()).unwrap();
@@ -22,7 +25,7 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
         cached_result.identity().observations()
     );
     assert_eq!(cached_result.question().name().unwrap().as_str(), "other");
-    assert_eq!(cached_result.question().wording_version().unwrap().get(), 7);
+
     schema::call(&cached, "completeDecide");
     let output: Value = serde_json::from_str(&cached_result.to_json().unwrap()).unwrap();
     assert_eq!(output["question"]["item_schema"], json!({"type":"string"}));
@@ -116,8 +119,7 @@ fn declarations_admit_typed_projection_false_unicode_and_extras_without_coercion
 }
 
 #[test]
-fn closed_question_metadata_grammar_refuses_unknown_features_and_lexically_noninteger_versions_safely()
- {
+fn closed_question_metadata_grammar_refuses_unknown_features_and_retired_metadata_safely() {
     for addition in [
         r#""name":"../private""#,
         r#""name":"Refund""#,
@@ -136,7 +138,11 @@ fn closed_question_metadata_grammar_refuses_unknown_features_and_lexically_nonin
         assert_eq!(error.kind(), ErrorKind::Usage, "{addition}");
         assert_eq!(
             error.detail().message(),
-            "the question declaration uses an unsupported feature"
+            if addition.contains("wording_version") {
+                "delete the `wording_version` field."
+            } else {
+                "the question declaration uses an unsupported feature"
+            }
         );
         assert!(!format!("{error:?}").contains("private"));
         assert!(!format!("{error:?}").contains("secret"));
@@ -153,20 +159,6 @@ fn closed_question_metadata_grammar_refuses_unknown_features_and_lexically_nonin
             .name()
             .is_none()
     );
-    assert!(
-        crate::api::decision(&call)
-            .unwrap()
-            .question()
-            .wording_version()
-            .is_none()
-    );
-    assert!(
-        !crate::api::decision(&call)
-            .unwrap()
-            .to_json()
-            .unwrap()
-            .contains("wording_version")
-    );
 }
 
 #[test]
@@ -174,7 +166,7 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
     let listener =
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
-    let objects = thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?","name":"authored-name","wording_version":4,"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
+    let objects = thinkthen::QuestionSet::from_json(r#"{"questions":{"refund":{"decide":"Refund?","name":"authored-name","item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
     let text = thinkthen::QuestionSet::from_json(
         r#"{"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#,
     )
@@ -205,7 +197,7 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
         row["answers"]["refund"]["question"]["name"],
         "authored-name"
     );
-    assert_eq!(row["answers"]["refund"]["question"]["wording_version"], 4);
+
     assert_eq!(row["input"], json!({"ready":false,"body":"Refund me."}));
     let literal = RecordReading::new(&[], None, None)
         .unwrap()

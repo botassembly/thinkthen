@@ -32,7 +32,7 @@ pub fn event(event: &RecordObservation<'_>) -> Result<Value, thinkthen::Error> {
             super::put(
                 &mut value,
                 "author",
-                json!({"name":detail.question().name(),"wording_version":detail.question().wording_version()}),
+                json!({"name":detail.question().name()}),
             )?;
             Ok(value)
         }
