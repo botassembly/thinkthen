@@ -41,3 +41,7 @@ Shares `conformance/backend-profiles.json` with 0721 and `conformance/cases.json
 ## Stored-file admission detail
 
 The retired filename is `retries-` followed by a recognized monthly filename, as the removed compatibility fixtures demonstrate. Refuse that filename with the existing invalid-contents move-it sentence without parsing or migrating it. Preserve the generic behavior for unrelated filenames. The existing command refusal table checks zero sends and unchanged bytes for this case. Ian can overturn this API detail.
+
+## Proof ruling, PM 2026-10-20
+
+Component acceptance follows the applicable checks and the pricing and SQLite repairs in 0736 and 0737. The R surface proof belongs to 0681 or 0682 after the R provider enters the manifest; it is not claimed as run here.
