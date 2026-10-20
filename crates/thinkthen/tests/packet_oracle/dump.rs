@@ -1,5 +1,8 @@
 //! Pass through native packet JSON without restating its public carriers.
-#![allow(clippy::print_stdout, reason = "the fixture exposes native producer readiness")]
+#![allow(
+    clippy::print_stdout,
+    reason = "the fixture exposes native producer readiness"
+)]
 use serde::Deserialize;
 use serde_json::{json, value::RawValue};
 use std::io::Write;
@@ -32,7 +35,9 @@ pub(crate) fn run(text: &str) -> Result<String, Box<dyn std::error::Error>> {
 
 fn request(document: &Document) -> Result<Request, Error> {
     #[derive(Deserialize)]
-    struct Authored { raw: Option<String> }
+    struct Authored {
+        raw: Option<String>,
+    }
     let authored: Authored = serde_json::from_str(document.question.get())
         .map_err(|_| usage("invalid fixture question"))?;
     let question = match authored.raw {
@@ -40,8 +45,11 @@ fn request(document: &Document) -> Result<Request, Error> {
         None => document.question.get().to_owned(),
     };
     let function = serde_json::to_string(&document.verb).map_err(|_| usage("invalid function"))?;
-    Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":{function},"question":{question},"input":{},"options":{}}}}}"#,
-        document.input.get(), document.options.get()))
+    Request::from_json(&format!(
+        r#"{{"schema":"thinkthen.request/1","call":{{"function":{function},"question":{question},"input":{},"options":{}}}}}"#,
+        document.input.get(),
+        document.options.get()
+    ))
 }
 
 fn execute(document: Document) -> Result<String, Error> {
@@ -60,8 +68,10 @@ fn execute(document: Document) -> Result<String, Error> {
             _ => Vec::new(),
         };
         request.call.arguments.input = thinkthen::RequestInput::Feed {
-            name: "fixture".into(), framing: thinkthen::RequestFraming::Document,
-            reading: thinkthen::ReaderOptions::default(), images: vec![],
+            name: "fixture".into(),
+            framing: thinkthen::RequestFraming::Document,
+            reading: thinkthen::ReaderOptions::default(),
+            images: vec![],
         };
         Some(items)
     } else {
@@ -73,16 +83,28 @@ fn execute(document: Document) -> Result<String, Error> {
     }
     if probe {
         println!("ready");
-        std::io::stdout().flush().map_err(|_| usage("fixture output failed"))?;
+        std::io::stdout()
+            .flush()
+            .map_err(|_| usage("fixture output failed"))?;
         let mut line = String::new();
-        std::io::stdin().read_line(&mut line).map_err(|_| usage("fixture input failed"))?;
+        std::io::stdin()
+            .read_line(&mut line)
+            .map_err(|_| usage("fixture input failed"))?;
     }
     std::thread::scope(|scope| {
         if let Some(items) = feed {
             let session = &session;
             scope.spawn(move || {
                 for item in items {
-                    if !matches!(session.try_push_with_wait(|| Ok::<_, Error>(thinkthen::RequestSessionDescriptor { item, location: None })), Ok(thinkthen::RequestSessionPushStatus::Accepted)) {
+                    if !matches!(
+                        session.push_with(|| Ok::<_, Error>(
+                            thinkthen::RequestSessionDescriptor {
+                                item,
+                                location: None
+                            }
+                        )),
+                        Ok(thinkthen::RequestSessionPushStatus::Accepted)
+                    ) {
                         break;
                     }
                 }
@@ -105,7 +127,9 @@ fn drain(session: &thinkthen::RequestSession) -> Result<String, Error> {
     loop {
         match session.next_packet(RequestSessionWaitInterest::Settlement)? {
             RequestSessionRead::Result(packet) => packets.push(packet.to_json()?),
-            RequestSessionRead::End => return Ok(format!(r#"{{"packets":[{}]}}"#, packets.join(","))),
+            RequestSessionRead::End => {
+                return Ok(format!(r#"{{"packets":[{}]}}"#, packets.join(",")));
+            }
             RequestSessionRead::Pending => {}
         }
     }
@@ -151,5 +175,6 @@ fn converted<T: serde::Serialize, R: serde::Serialize, P: serde::Serialize>(
     call: &thinkthen::Call<T, R, P>,
 ) -> Result<String, Error> {
     Ok(json!({"packets": [], "host": {"native":true,
-        "results":call.results(), "facts":call.facts().complete(), "call_result":call}}).to_string())
+        "results":call.results(), "facts":call.facts().complete(), "call_result":call}})
+    .to_string())
 }

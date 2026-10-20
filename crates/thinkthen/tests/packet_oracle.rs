@@ -1,5 +1,8 @@
 //! The core session packets are the shared, current library oracle.
-#![allow(clippy::expect_used, reason = "fixture failures stop the oracle comparison")]
+#![allow(
+    clippy::expect_used,
+    reason = "fixture failures stop the oracle comparison"
+)]
 use std::io::{self, Write};
 use std::path::Path;
 
@@ -13,16 +16,28 @@ mod dump;
 fn shared_packet_oracle_is_current() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let worker = std::env::current_exe().expect("core worker binary");
-    let backend = worker.parent().and_then(Path::parent).expect("target debug").join("conformance-backend");
+    let backend = worker
+        .parent()
+        .and_then(Path::parent)
+        .expect("target debug")
+        .join("conformance-backend");
     let mut compare = child::command("python3", &[]);
-    compare.arg(root.join("conformance/children/packet_dump.py"))
-        .arg("--check").arg("--worker").arg(worker)
+    compare
+        .arg(root.join("conformance/children/packet_dump.py"))
+        .arg("--check")
+        .arg("--worker")
+        .arg(worker)
         .env("THINKTHEN_TEST_BACKEND", backend);
     if std::env::var_os("THINKTHEN_UPDATE_PACKETS").is_some() {
         compare.arg("--update");
     }
-    assert!(compare.status().expect("shared packet comparison").success(),
-        "regenerate with THINKTHEN_UPDATE_PACKETS=1 cargo test -p thinkthen --test packet_oracle -- --ignored --exact shared_packet_oracle_is_current");
+    assert!(
+        compare
+            .status()
+            .expect("shared packet comparison")
+            .success(),
+        "regenerate with THINKTHEN_UPDATE_PACKETS=1 cargo test -p thinkthen --test packet_oracle -- --ignored --exact shared_packet_oracle_is_current"
+    );
 }
 
 #[test]
