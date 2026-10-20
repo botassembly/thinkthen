@@ -54,7 +54,7 @@ fn complete_recognition_keeps_every_stage_probability_without_outer_atomic_answe
         serde_json::from_str(&json_line(&canonical).unwrap()).unwrap();
     assert_eq!(
         document.get("schema"),
-        Some(&serde_json::json!("thinkthen.result/2"))
+        Some(&serde_json::json!("thinkthen.result"))
     );
     assert_eq!(
         document.get("value"),

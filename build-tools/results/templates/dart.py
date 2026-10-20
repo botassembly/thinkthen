@@ -248,7 +248,7 @@ def bridge(abi, definitions):
         if symbol in ('thinkthen_engine_free', 'thinkthen_session_free'):
             members += [f'  final {symbol}Pointer = Native.addressOf<NativeFunction<{native}>>(_{symbol});']
     lines += ['final class _NativeAbi {', *members, *abi_helpers(abi), '}']
-    errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E') and not key.endswith('')]
+    errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E')]
     lines += ['enum ErrorKind { ' + ', '.join(key.removeprefix('THINKTHEN_E').lower() + '(' + str(value) + ')' for key, value in errors) + '; final int code; const ErrorKind(this.code); }']
     constants = ('THINKTHEN_SESSION_ACCEPTED', 'THINKTHEN_SESSION_CLOSED',
                  'THINKTHEN_SESSION_END', 'THINKTHEN_SESSION_FULL',

@@ -159,7 +159,7 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
 #[cfg(test)]
 fn assert_decision_document(result: &CompleteDecision) {
     let document: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
-    assert_eq!(document["schema"], "thinkthen.result/2");
+    assert_eq!(document["schema"], "thinkthen.result");
     assert_eq!(document["value"], true);
     assert_eq!(document["meta"]["usage"], json!({"input_tokens":887}));
     assert!(document["meta"]["attempts"][0]["sdk_request_id"].is_string());

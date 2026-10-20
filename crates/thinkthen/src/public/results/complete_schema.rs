@@ -1,7 +1,7 @@
 //! Packaged canonical schema for the additive native complete-call contract.
 /// The strict schema for actual complete calls and safe complete errors.
 ///
-/// Every detailed result uses result/2.
+/// Every detailed result uses the `thinkthen.result` tag.
 /// The document is generated from the same concrete serializers as the native
 /// result schema and included in the crate for consumers such as MCP.
 #[must_use]

@@ -82,7 +82,7 @@ Each relation is one rule as given. It carries `name`, `source`, `target`, `read
 
 ## Detailed result
 
-`--details` prints one `thinkthen.result/2` object with keys `schema`, `answer_id`, `value`, `question`, `answer`, `meta`. `value` is the accepted edge list. `question` carries `verb`, nullable `fields`, ordered resolved `relations`, `threshold`, and optional saved `profile`.
+`--details` prints one `thinkthen.result` object with keys `schema`, `answer_id`, `value`, `question`, `answer`, `meta`. `value` is the accepted edge list. `question` carries `verb`, nullable `fields`, ordered resolved `relations`, `threshold`, and optional saved `profile`.
 
 `answer.questions` preserves every logical pair question and menu. A successful pair entry carries relation identity, `method:"yes_no"`, source, target, probability, inclusive accepted marker, and question key. A successful menu entry carries relation identity, `method:"choice"`, source, the top candidate as `target`, or null when `none` wins or the top two labels tie, the top label's probability, the accepted marker, true only with a target at the cut, and question key. Successful entries carry their stable `answer_id` and full typed `answer`. A failed entry preserves its logical membership and carries the actual `failure_id` and `failure`, but omits answer, probability and accepted; a failed menu's `target` is null.
 

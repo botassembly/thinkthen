@@ -5407,8 +5407,8 @@ static int copy_thinkthen_cobol_ReceiptRelationEndpointRelatedEntity(arena *,con
 thinkthen_cobol_ReceiptRelationEndpointRelatedEntity *);
 static int copy_thinkthen_cobol_ReceiptU32Presence(arena *,const thinkthen_complete_u32_presence_v1 *,
 thinkthen_cobol_ReceiptU32Presence *);
-static int copy_thinkthen_cobol_ReceiptVersion(arena *,const thinkthen_complete_version_v1 *,
-thinkthen_cobol_ReceiptVersion *);
+static int copy_thinkthen_cobol_ReceiptResultTag(arena *,const thinkthen_complete_result_tag_v1 *,
+thinkthen_cobol_ReceiptResultTag *);
 static int copy_thinkthen_cobol_ReceiptRelateQuestionDocument(arena *,const thinkthen_complete_relate_question_document_v1 *,
 thinkthen_cobol_ReceiptRelateQuestionDocument *);
 static int copy_thinkthen_cobol_ReceiptWordingVersionPresence(arena *,const thinkthen_complete_wording_version_presence_v1 *,
@@ -5868,8 +5868,8 @@ thinkthen_cobol_ReceiptU32Presence *out) {
     out->value=input->value;
     return code ? code : a->code;
 }
-static int copy_thinkthen_cobol_ReceiptVersion(arena *a,const thinkthen_complete_version_v1 *input,
-thinkthen_cobol_ReceiptVersion *out) {
+static int copy_thinkthen_cobol_ReceiptResultTag(arena *a,const thinkthen_complete_result_tag_v1 *input,
+thinkthen_cobol_ReceiptResultTag *out) {
     int code=0;
     (void)a;
     out->kind=input->kind;
@@ -8084,9 +8084,9 @@ thinkthen_cobol_ReceiptRecognition *out) {
         out->question=value;
     }
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8245,9 +8245,9 @@ thinkthen_cobol_ReceiptAnnotation *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPositionPresence(a,&input->position,&out->position);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8401,9 +8401,9 @@ thinkthen_cobol_ReceiptAtomicBoolean *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8446,9 +8446,9 @@ thinkthen_cobol_ReceiptAtomicDouble *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8491,9 +8491,9 @@ thinkthen_cobol_ReceiptAtomicArrayOfString *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8536,9 +8536,9 @@ thinkthen_cobol_ReceiptAtomicNullableString *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8581,9 +8581,9 @@ thinkthen_cobol_ReceiptAtomicDecideValue *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8629,9 +8629,9 @@ thinkthen_cobol_ReceiptRelation *out) {
         out->question=value;
     }
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptRelatedEntityEdgeList(a,&input->value,&out->value);
@@ -8736,9 +8736,9 @@ thinkthen_cobol_ReceiptFind *out) {
         out->question=value;
     }
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptJsonPresence(a,&input->threshold,&out->threshold);
@@ -8780,9 +8780,9 @@ thinkthen_cobol_ReceiptAtomicNonZeroUsize *out) {
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->question_name,&out->question_name);
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);
@@ -8821,9 +8821,9 @@ thinkthen_cobol_ReceiptRankMemberResult *out) {
         out->question=value;
     }
     if(input->schema) {
-        thinkthen_cobol_ReceiptVersion *value=allocate(a,1,sizeof(*value));
+        thinkthen_cobol_ReceiptResultTag *value=allocate(a,1,sizeof(*value));
         if(!value) return a->code;
-        if(!code) code=copy_thinkthen_cobol_ReceiptVersion(a,input->schema,value);
+        if(!code) code=copy_thinkthen_cobol_ReceiptResultTag(a,input->schema,value);
         out->schema=value;
     }
     if(!code) code=copy_thinkthen_cobol_ReceiptPhysicalSourcePresence(a,&input->source,&out->source);

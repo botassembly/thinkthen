@@ -28,7 +28,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("position", false, |value| {
                     convert("completePosition", value)
                 }),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -262,7 +262,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -301,7 +301,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -340,7 +340,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -379,7 +379,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -418,7 +418,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -457,7 +457,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completequestionDocument", value)
                 }),
                 ("question_name", false, plain),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -654,7 +654,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completefindQuestionDocument", value)
                 }),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("threshold", true, plain),
                 ("value", true, plain),
             ],
@@ -921,7 +921,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completequestionDocument", value)
                 }),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -955,7 +955,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completerecognizeQuestionDocument", value)
                 }),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("source", false, |value| {
                     if value.is_null() {
                         plain(value)
@@ -1076,7 +1076,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("question", true, |value| {
                     convert("completerelateQuestionDocument", value)
                 }),
-                ("schema", true, |value| convert("completeVersion", value)),
+                ("schema", true, |value| convert("completeResultTag", value)),
                 ("value", true, |value| {
                     array(value, |value| convert("completerelatedEntityEdge", value))
                 }),
@@ -1229,6 +1229,7 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         ),
         "completeRelationMethod" => plain(value),
         "completeRequestFunction" => plain(value),
+        "completeResultTag" => plain(value),
         "completeSdkRequestId" => tagged(plain(value)?, "SdkRequestId", "thinkthen_identity"),
         "completeSendBudgetDenial" => {
             if value.get("kind").and_then(Value::as_str) == Some("before_first_send") {
@@ -1327,7 +1328,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         ),
         "completeUsagePersistence" => plain(value),
         "completeVerb" => plain(value),
-        "completeVersion" => plain(value),
         "completeWordingVersion" => plain(value),
         "completeannotatedField" => {
             if value.is_object() {

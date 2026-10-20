@@ -2,13 +2,13 @@
 
 Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`. ADR 0048 amends `meta` for batches.
 
-## Result/2 for 0.2
+## Detailed results
 
-Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). Result/2 is the only detailed result shape. The generated [result schema](result.schema.json) and packaged `complete_call_schema()` derive from the production serializers.
+Status: **Settled** by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). The generated [result schema](result.schema.json) and packaged `complete_call_schema()` derive from the production serializers.
 
 ### Complete results
 
-Every new complete result carries `schema:"thinkthen.result/2"` and required top-level `answer_id:AnswerId`. Identity is available without opting into probability details. Existing bare CLI, scalar SQL, convenience values and generic C value views retain their projections. C retains its failed-call NULL/error-facts route. An additive complete C route exposes identity; ticket 0426 owns its exports and lifetimes.
+Every new complete result carries `schema:"thinkthen.result"` and required top-level `answer_id:AnswerId`. Identity is available without opting into probability details. Existing bare CLI, scalar SQL, convenience values and generic C value views retain their projections. C retains its failed-call NULL/error-facts route. An additive complete C route exposes identity; ticket 0426 owns its exports and lifetimes.
 
 Optional fields are omitted unless explicitly nullable. Existing question, entity, span, endpoint, location, distribution and confidence fields retain their types and meanings. This table fixes all ten complete result variants. All rows require `schema`, `answer_id` and `meta` in addition to the listed members.
 
@@ -42,7 +42,7 @@ An annotate success entry requires `answer_id,value,question,answer,threshold,re
 This `decide --details --replay` row comes from the existing refund recording. It retains the actual historical observation and reports no current send or attempt. Its original wire-question count was never recorded, so `batch_size` is absent.
 
 ```json decide
-{"schema":"thinkthen.result/2","answer_id":"a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e","value":true,"question":{"verb":"decide","text":"Does the customer ask for money back?"},"answer":{"kind":"yes_no","probability":0.99},"threshold":0.5,"meta":{"tool":"thinkthen 0.2.0","question_sha256":"ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":331,"output_tokens":21},"requests_sent":0,"cached":true,"requests":["1c38c6f52bec903f93aef63060bdc08055463afe00b5759223bfc5a64d30dafe"],"failed_questions":0,"attempts":[],"origin":"replay","question_sources":[{"origin":"replay","answered_by":"jev-1.13.0"}],"observations":[{"observation_id":"017420ba535606f3ab3ec3f9364250b5891432862f33194ab3d520cced234017"}],"answered_by":"jev-1.13.0"},"position":{"file":null,"first":1,"last":7}}
+{"schema":"thinkthen.result","answer_id":"a0fc22705aea025a57253816e3ea7eb7fea014184b2b09e58e0d30414f2dbc9e","value":true,"question":{"verb":"decide","text":"Does the customer ask for money back?"},"answer":{"kind":"yes_no","probability":0.99},"threshold":0.5,"meta":{"tool":"thinkthen 0.2.0","question_sha256":"ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":331,"output_tokens":21},"requests_sent":0,"cached":true,"requests":["1c38c6f52bec903f93aef63060bdc08055463afe00b5759223bfc5a64d30dafe"],"failed_questions":0,"attempts":[],"origin":"replay","question_sources":[{"origin":"replay","answered_by":"jev-1.13.0"}],"observations":[{"observation_id":"017420ba535606f3ab3ec3f9364250b5891432862f33194ab3d520cced234017"}],"answered_by":"jev-1.13.0"},"position":{"file":null,"first":1,"last":7}}
 ```
 
 ### Identity types and stable answers
@@ -73,7 +73,7 @@ Emitted source origins are `live`, `cache`, `replay`. Reserve `proxy` and `memor
 
 When an aggregate has **zero stored or live observations**, required `origin` is JSON null, `question_sources` and `observations` are [], `requests` is [], `requests_sent` is 0, `cached` is false, and `answered_by` is omitted. This also applies in explicit replay mode: no source was retrieved. Retain the `model` fallback as the requested model; `answered_by` remains absent. An empty actionable array with observations is different: it reports those observations' real origins/model.
 
-Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Result/2 must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. This exception changes result/2 truthfulness; all detailed views share this rule.
+Reason: the landed relation planner can produce no questions for a lone entity with a wildcard single-target rule. `engine/facade/relate.rs` initializes its stored flag true and `cli/relate/result.rs` falls back to the requested model even with no reply. Results must not interpret those defaults as a cache hit or an actual model answer. The existing case in `tests/backend/relate/menu.rs` proves this zero-send execution. Null provenance preserves the closed origin vocabulary without inventing a fourth source. All detailed views share this rule.
 
 | Case | origin | question_sources | answered_by | cached |
 | --- | --- | --- | --- | --- |
@@ -90,7 +90,7 @@ Reason: the landed relation planner can produce no questions for a lone entity w
 Add required `facts.call_id` to every successful invocation, including zero-send success, and every started failure. Start means typed admission and route resolution succeeded and engine execution began, before lookup. Pre-start refusals have no invented facts. Terminal errors have no successful result, answer ID or fabricated result meta; they retain final facts and opt-in attempts. Keep the six public error kinds. Repeated SQL rows of one call share its call ID and facts; a summed tally does not invent a single call ID.
 
 The additive native `Call::complete()` view serializes `{value,facts}` with a
-concrete result/2 document (or ordered result/2 records) and complete invocation
+concrete detailed result document (or ordered detailed result records) and complete invocation
 facts. The released generic door and count-only `Facts` serialization retain
 their existing fields. `Error::complete()` serializes `{error,facts?}`: error
 contains the existing safe `kind,message,retryable`, structured
@@ -139,12 +139,6 @@ V is the target function's typed actionable value. Threshold overrides admit onl
 
 Pending equal questions can coalesce and repeat their attributed shares. A repeated call after completion can send again; record mode does not read stored answers. The recording SQLite store upserts the latest response by request digest and answer key. It is not an append-only attempt ledger, so summing retained response bodies cannot reconstruct historical live usage. See the [cache contract](cache.md) and [planning decision](../sdlc/planning/adr/0123-conservative-plan-request-bounds.md).
 
-### Adoption dependencies
-
-0443 owns transport/provenance and Cache-Control; 0444 owns storage validation/migration; 0445 owns attempts and command timing; 0450 owns answer identities/reservations; 0436 owns rank positions. 0426–0431 adopt complete typed carriers and strict readers; 0410/0296 own frames; 0435 owns SQL facts/observations; 0411 owns rereading; 0432 owns parity. 0447/0448 supply admitted image serialization and limits. 0449's single-route contract precedes this adoption. 0426's additive C exports and handle/string lifetimes remain its signature dependency.
-
-Adoption updates generated schema, all ten detailed variants in the shared corpus, strict full-result decoders and examples together. Existing recordings remain historical fixtures until 0444 converts them in one controlled update; result/2 cannot be claimed by changing a schema label alone. The changelog distinguishes this target from behavior already built.
-
 ## One library result per call
 
 Every library except C returns one object with `value`, `probability`, `results` and `facts`. `value` is the language's plain answer. One input has one answer; a list keeps answers in input order. An unresolved answer is null or none. Rank returns original indexes, filter returns selected originals, and find returns the selected unit or null. `results` retains complete canonical records, including all distributions, provenance and physical source fields. `facts` describes the invocation after its workers finish.
@@ -157,7 +151,7 @@ Rust represents this contract with `Call<T, R, P>` and function-specific aliases
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
-Rust complete carriers expose typed values, questions, probabilities, usage and metadata. Their `to_json()` writes canonical result/2. Serializing `CompleteRecord` retains the caller original and occurrence ordinal. Complete annotation `value_json()` preserves primitive named values, abstention null and failed-member markers. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
+Rust complete carriers expose typed values, questions, probabilities, usage and metadata. Their `to_json()` writes canonical detailed result. Serializing `CompleteRecord` retains the caller original and occurrence ordinal. Complete annotation `value_json()` preserves primitive named values, abstention null and failed-member markers. Details Debug withholds values, named probabilities, nearest labels, original documents and URLs.
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains the engine's counters rather than a call result. Each engine counts its own calls and its clones', and a host that keeps several engines adds them; the durable usage totals give the process view.
 
@@ -334,7 +328,7 @@ place a separate error row among successful detailed rows when a question-set
 ```
 
 `at` is the one-based input position. This row has no `input`, `value`,
-`answers`, `meta`, request, or usage. It is not a `thinkthen.result/2` judgment;
+`answers`, `meta`, request, or usage. It is not a `thinkthen.result` judgment;
 consumers distinguish the two by `schema`. The `recordError` definition in
 [`result.schema.json`](result.schema.json) validates this row separately; the
 schema root remains the successful detailed result. [annotate.md](annotate.md)
@@ -348,4 +342,4 @@ For `filter` and `rank`, every answered row in one run must also name the same r
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It says that a cache or recording folder may hold answers from the other version, and it tells the user to rerun with `--no-cache` or to prune that folder with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a `--no-cache` run returns. The library says the same of its cache.
 
-0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Existing native scalar/details/facts carriers remain available; additive complete image calls use the same result/2 identities and provenance as text.
+0447 image location addition preserves text SourceRecord's required line fields. Native ImageSourceRecord has record and file only. CLI image file details add flat file and position.file and omit first/last and first_line/last_line. Attachment details carry ordered source names in position.images beside typed input images; filenames never enter model state or identity. Existing native scalar/details/facts carriers remain available; additive complete image calls use the same detailed result identities and provenance as text.

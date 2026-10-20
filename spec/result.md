@@ -1,6 +1,6 @@
 # Result shapes
 
-This page replays each command's demo through the installed binary with `--details`. Every replayed row and documented example must use result/2 and match its generated schema.
+This page replays each command's demo through the installed binary with `--details`. Every replayed row and documented example must use `thinkthen.result` and match its generated schema.
 
 ```bash
 set -euo pipefail
@@ -24,7 +24,7 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
   fixture="$top/specification/fixtures/recognize/caller-defined"; cat "$fixture/text.txt" | thinkthen recognize @"$fixture/question.json" --url "$(cat "$fixture/url.txt")" --replay "$fixture/recording" --no-cache --details | row recognize
   (cd "$demos/45-map-relationships" && thinkthen relate @relations.json --url https://api.typesafe.ai/v1 --details --replay recording/ < entities.json | row relate)
   awk '/^```/ { if (fenced) { fenced = 0 } else { fenced = 1; label = $2 }; next }
-       fenced && /"schema":"thinkthen\.result\/2"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
+       fenced && /"schema":"thinkthen\.result"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
 } > "$HOME/rows.jsonl"
 jq -r 'select(.from == "replayed" and .command == "choose") | .row |
   [(.value == "billing"), (.answer.probabilities.billing == 1),
@@ -43,8 +43,8 @@ seen = set()
 for line in open(sys.argv[1]):
     case = json.loads(line)
     row = case["row"]
-    assert row["schema"] == "thinkthen.result/2", case["command"]
-    if row["schema"] == "thinkthen.result/2":
+    assert row["schema"] == "thinkthen.result", case["command"]
+    if row["schema"] == "thinkthen.result":
         command = case["command"].split("-")[0]
         if case["from"] == "replayed":
             seen.add(command)

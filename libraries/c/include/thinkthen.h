@@ -347,6 +347,8 @@
 
 #define THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1 3
 
+#define THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1 1
+
 #define THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND_V1 2
 
 #define THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND_V1 1
@@ -496,8 +498,6 @@
 #define THINKTHEN_COMPLETE_VALUE_STRING_V1 3
 
 #define THINKTHEN_COMPLETE_VERB_RECOGNIZE_V1 1
-
-#define THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1 1
 
 /*
  the wire failed or refused
@@ -2776,9 +2776,9 @@ typedef struct thinkthen_complete_question_document_v1 {
   union thinkthen_complete_question_document_data_v1 data;
 } thinkthen_complete_question_document_v1;
 
-typedef struct thinkthen_complete_version_v1 {
+typedef struct thinkthen_complete_result_tag_v1 {
   uint32_t kind;
-} thinkthen_complete_version_v1;
+} thinkthen_complete_result_tag_v1;
 
 typedef struct thinkthen_complete_physical_source_v1 {
   struct thinkthen_complete_utf8_v1 file;
@@ -2798,7 +2798,7 @@ typedef struct thinkthen_complete_rank_member_result_v1 {
   struct thinkthen_complete_image_list_presence_v1 images;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_json_presence_v1 threshold;
   uint64_t value;
@@ -2855,7 +2855,7 @@ typedef struct thinkthen_complete_atomic_decide_value_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   struct thinkthen_complete_decide_value_presence_v1 value;
@@ -2879,7 +2879,7 @@ typedef struct thinkthen_complete_atomic_nullable_string_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   struct thinkthen_complete_utf8_presence_v1 value;
@@ -2903,7 +2903,7 @@ typedef struct thinkthen_complete_atomic_array_of_string_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   struct thinkthen_complete_string_list_v1 value;
@@ -2927,7 +2927,7 @@ typedef struct thinkthen_complete_atomic_double_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   double value;
@@ -2951,7 +2951,7 @@ typedef struct thinkthen_complete_atomic_boolean_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   uint32_t value;
@@ -3098,7 +3098,7 @@ typedef struct thinkthen_complete_annotation_v1 {
   struct thinkthen_complete_u64_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
   struct thinkthen_complete_position_presence_v1 position;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   const struct thinkthen_complete_annotated_row_v1 *value;
   struct thinkthen_complete_extensions_v1 extensions;
@@ -3181,7 +3181,7 @@ typedef struct thinkthen_complete_atomic_non_zero_usize_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_question_document_v1 *question;
   struct thinkthen_complete_utf8_presence_v1 question_name;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_threshold_presence_v1 threshold;
   uint64_t value;
@@ -3253,7 +3253,7 @@ typedef struct thinkthen_complete_find_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_find_question_document_v1 *question;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_json_presence_v1 threshold;
   struct thinkthen_complete_json_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
@@ -3541,7 +3541,7 @@ typedef struct thinkthen_complete_recognition_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_recognize_question_document_v1 *question;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_physical_source_presence_v1 source;
   const struct thinkthen_complete_recognize_v1 *value;
   struct thinkthen_complete_extensions_v1 extensions;
@@ -3733,7 +3733,7 @@ typedef struct thinkthen_complete_relation_v1 {
   const struct thinkthen_complete_meta_v1 *meta;
   struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_relate_question_document_v1 *question;
-  const struct thinkthen_complete_version_v1 *schema;
+  const struct thinkthen_complete_result_tag_v1 *schema;
   struct thinkthen_complete_related_entity_edge_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_relation_v1;

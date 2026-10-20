@@ -11865,7 +11865,7 @@
           "case_ref": "01-decide-yes-captured"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -11956,7 +11956,7 @@
           "case_ref": "06-choose-billing"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12047,7 +12047,7 @@
           "case_ref": "09-tag-two"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12138,7 +12138,7 @@
           "case_ref": "11-score-middle"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12230,7 +12230,7 @@
           "case_ref": "13-filter-records"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12324,7 +12324,7 @@
           "case_ref": "15-rank-records"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12415,7 +12415,7 @@
           "case_ref": "18-find-second"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12507,7 +12507,7 @@
           "case_ref": "17-annotate-mixed"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12600,7 +12600,7 @@
           "case_ref": "41-offsets-past-an-accent-and-an-emoji"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",
@@ -12691,7 +12691,7 @@
           "case_ref": "51-same-kind-alerts"
         },
         "expect": {
-          "schema": "thinkthen.result/2",
+          "schema": "thinkthen.result",
           "fields": {
             "answer_id": "AnswerId",
             "meta.origin": "Origin|null",

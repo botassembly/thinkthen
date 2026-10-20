@@ -14,7 +14,7 @@ public struct Annotation: ValueRepresentable {
   public let `lastLine`: Presence<UInt64>
   public let `meta`: Meta
   public let `position`: Presence<Position>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `value`: AnnotatedRow
   public init(
@@ -22,7 +22,7 @@ public struct Annotation: ValueRepresentable {
     `answers`: [String: AnnotationMember], `file`: Presence<String> = .absent,
     `firstLine`: Presence<UInt64> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: DataValue, `lastLine`: Presence<UInt64> = .absent, `meta`: Meta,
-    `position`: Presence<Position> = .absent, `schema`: ReceiptVersion,
+    `position`: Presence<Position> = .absent, `schema`: ResultTag,
     `source`: Presence<PhysicalSource> = .absent, `value`: AnnotatedRow
   ) {
     self.extensions = extensions
@@ -56,7 +56,7 @@ public struct Annotation: ValueRepresentable {
       lastLine: try readPresence(object, "last_line", UInt64.self),
       meta: try Meta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", Position.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       value: try AnnotatedRow.read(jsonRequired(object, "value")))
     value._sourceJSON = json
@@ -876,7 +876,7 @@ public struct AtomicArrayOfString: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: [String]
@@ -885,7 +885,7 @@ public struct AtomicArrayOfString: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: [String]
   ) {
     self.extensions = extensions
@@ -920,7 +920,7 @@ public struct AtomicArrayOfString: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try [String].read(jsonRequired(object, "value")))
@@ -962,7 +962,7 @@ public struct AtomicDecideValue: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: DecideValue
@@ -971,7 +971,7 @@ public struct AtomicDecideValue: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: DecideValue
   ) {
     self.extensions = extensions
@@ -1006,7 +1006,7 @@ public struct AtomicDecideValue: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try DecideValue.read(jsonRequired(object, "value")))
@@ -1048,7 +1048,7 @@ public struct AtomicNonZeroUsize: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: UInt64
@@ -1057,7 +1057,7 @@ public struct AtomicNonZeroUsize: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: UInt64
   ) {
     self.extensions = extensions
@@ -1092,7 +1092,7 @@ public struct AtomicNonZeroUsize: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try UInt64.read(jsonRequired(object, "value")))
@@ -1134,7 +1134,7 @@ public struct AtomicNullableString: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: String?
@@ -1143,7 +1143,7 @@ public struct AtomicNullableString: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: String?
   ) {
     self.extensions = extensions
@@ -1178,7 +1178,7 @@ public struct AtomicNullableString: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try String?.read(jsonRequired(object, "value")))
@@ -1220,7 +1220,7 @@ public struct AtomicBoolean: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: Bool
@@ -1229,7 +1229,7 @@ public struct AtomicBoolean: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: Bool
   ) {
     self.extensions = extensions
@@ -1264,7 +1264,7 @@ public struct AtomicBoolean: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try Bool.read(jsonRequired(object, "value")))
@@ -1306,7 +1306,7 @@ public struct AtomicDouble: ValueRepresentable {
   public let `meta`: Meta
   public let `question`: QuestionDocument
   public let `questionName`: Presence<String>
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: ReceiptThreshold?
   public let `value`: Double
@@ -1315,7 +1315,7 @@ public struct AtomicDouble: ValueRepresentable {
     `images`: Presence<[ReceiptImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<DataValue> = .absent, `members`: Presence<[RankMember]> = .absent,
     `meta`: Meta, `question`: QuestionDocument, `questionName`: Presence<String> = .absent,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent,
     `threshold`: ReceiptThreshold?, `value`: Double
   ) {
     self.extensions = extensions
@@ -1350,7 +1350,7 @@ public struct AtomicDouble: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try ReceiptThreshold?.read(jsonRequired(object, "threshold")),
       value: try Double.read(jsonRequired(object, "value")))
@@ -1940,7 +1940,7 @@ public struct Find: ValueRepresentable {
   public let `meta`: Meta
   public let `position`: Presence<Position>
   public let `question`: FindQuestionDocument
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `threshold`: DataValue
   public let `value`: DataValue
   public init(
@@ -1948,7 +1948,7 @@ public struct Find: ValueRepresentable {
     `candidates`: Presence<[FindCandidate]> = .absent, `file`: Presence<String> = .absent,
     `firstLine`: Presence<UInt64> = .absent, `index`: UInt64?,
     `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
-    `question`: FindQuestionDocument, `schema`: ReceiptVersion, `threshold`: DataValue,
+    `question`: FindQuestionDocument, `schema`: ResultTag, `threshold`: DataValue,
     `value`: DataValue
   ) {
     self.extensions = extensions
@@ -1984,7 +1984,7 @@ public struct Find: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", Position.self),
       question: try FindQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       threshold: try DataValue.read(jsonRequired(object, "threshold")),
       value: try DataValue.read(jsonRequired(object, "value")))
     value._sourceJSON = json
@@ -2914,14 +2914,14 @@ public struct RankMemberResult: ValueRepresentable {
   public let `images`: Presence<[ReceiptImage]>
   public let `meta`: Meta
   public let `question`: QuestionDocument
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `threshold`: DataValue
   public let `value`: UInt64
   public init(
     extensions: [String: DataValue] = [:], `answer`: Answer, `answerId`: AnswerId,
     `images`: Presence<[ReceiptImage]> = .absent, `meta`: Meta, `question`: QuestionDocument,
-    `schema`: ReceiptVersion, `source`: Presence<PhysicalSource> = .absent, `threshold`: DataValue,
+    `schema`: ResultTag, `source`: Presence<PhysicalSource> = .absent, `threshold`: DataValue,
     `value`: UInt64
   ) {
     self.extensions = extensions
@@ -2947,7 +2947,7 @@ public struct RankMemberResult: ValueRepresentable {
       images: try readPresence(object, "images", [ReceiptImage].self),
       meta: try Meta.read(jsonRequired(object, "meta")),
       question: try QuestionDocument.read(jsonRequired(object, "question")),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       threshold: try DataValue.read(jsonRequired(object, "threshold")),
       value: try UInt64.read(jsonRequired(object, "value")))
@@ -2985,7 +2985,7 @@ public struct Recognition: ValueRepresentable {
   public let `meta`: Meta
   public let `position`: Presence<Position>
   public let `question`: RecognizeQuestionDocument
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `source`: Presence<PhysicalSource>
   public let `value`: Recognize
   public init(
@@ -2993,7 +2993,7 @@ public struct Recognition: ValueRepresentable {
     `file`: Presence<String> = .absent, `firstLine`: Presence<UInt64> = .absent,
     `index`: Presence<UInt64> = .absent, `input`: Presence<DataValue> = .absent,
     `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
-    `question`: RecognizeQuestionDocument, `schema`: ReceiptVersion,
+    `question`: RecognizeQuestionDocument, `schema`: ResultTag,
     `source`: Presence<PhysicalSource> = .absent, `value`: Recognize
   ) {
     self.extensions = extensions
@@ -3029,7 +3029,7 @@ public struct Recognition: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", Position.self),
       question: try RecognizeQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", PhysicalSource.self),
       value: try Recognize.read(jsonRequired(object, "value")))
     value._sourceJSON = json
@@ -3324,7 +3324,7 @@ public struct Relation: ValueRepresentable {
   public let `meta`: Meta
   public let `position`: Presence<Position>
   public let `question`: RelateQuestionDocument
-  public let `schema`: ReceiptVersion
+  public let `schema`: ResultTag
   public let `value`: [RelatedEntityEdge]
   public init(
     extensions: [String: DataValue] = [:], `answer`: Answers, `answerId`: AnswerId,
@@ -3332,7 +3332,7 @@ public struct Relation: ValueRepresentable {
     `index`: Presence<UInt64> = .absent, `input`: Presence<DataValue> = .absent,
     `inputSources`: Presence<[SessionInputSource]> = .absent,
     `lastLine`: Presence<UInt64> = .absent, `meta`: Meta, `position`: Presence<Position> = .absent,
-    `question`: RelateQuestionDocument, `schema`: ReceiptVersion, `value`: [RelatedEntityEdge]
+    `question`: RelateQuestionDocument, `schema`: ResultTag, `value`: [RelatedEntityEdge]
   ) {
     self.extensions = extensions
     self.`answer` = `answer`
@@ -3368,7 +3368,7 @@ public struct Relation: ValueRepresentable {
       meta: try Meta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", Position.self),
       question: try RelateQuestionDocument.read(jsonRequired(object, "question")),
-      schema: try ReceiptVersion.read(jsonRequired(object, "schema")),
+      schema: try ResultTag.read(jsonRequired(object, "schema")),
       value: try [RelatedEntityEdge].read(jsonRequired(object, "value")))
     value._sourceJSON = json
     return value
@@ -3813,6 +3813,23 @@ public enum ReceiptFunction: ValueRepresentable {
     }
   }
 }
+public enum ResultTag: ValueRepresentable {
+  case `thinkthenResult`
+  case unknown(String)
+  static func read(_ json: DataValue) throws -> ResultTag {
+    let value = try String.read(json)
+    switch value {
+    case "thinkthen.result": return .`thinkthenResult`
+    default: return .unknown(value)
+    }
+  }
+  var json: DataValue {
+    switch self {
+    case .`thinkthenResult`: return .string("thinkthen.result")
+    case .unknown(let value): return .string(value)
+    }
+  }
+}
 public typealias SdkRequestId = String
 public indirect enum SendBudgetDenial: ValueRepresentable {
   case `beforeFirstSend`(SendBudgetDenialBeforeFirstSend)
@@ -4230,23 +4247,6 @@ public enum Verb: ValueRepresentable {
   var json: DataValue {
     switch self {
     case .`recognize`: return .string("recognize")
-    case .unknown(let value): return .string(value)
-    }
-  }
-}
-public enum ReceiptVersion: ValueRepresentable {
-  case `thinkthenResult_2`
-  case unknown(String)
-  static func read(_ json: DataValue) throws -> ReceiptVersion {
-    let value = try String.read(json)
-    switch value {
-    case "thinkthen.result/2": return .`thinkthenResult_2`
-    default: return .unknown(value)
-    }
-  }
-  var json: DataValue {
-    switch self {
-    case .`thinkthenResult_2`: return .string("thinkthen.result/2")
     case .unknown(let value): return .string(value)
     }
   }
@@ -11636,13 +11636,13 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_version_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_result_tag_v1>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   switch value.kind {
-  case 1: return .string("thinkthen.result/2")
+  case 1: return .string("thinkthen.result")
   default: throw ValueConversionError("Unknown native enum value")
   }
 }

@@ -51,7 +51,7 @@ judge() {
 			;;
 		esac
 		jq -c --argjson case "$case" \
-			'{schema, value, input: $case, question, answer, threshold, meta}' \
+			'. + {input: $case}' \
 			row.json >>"$target"
 	done <cases.jsonl
 	printf 'wrote %s rows to %s\n' "$(wc -l <"$target" | tr -d ' ')" "$target"

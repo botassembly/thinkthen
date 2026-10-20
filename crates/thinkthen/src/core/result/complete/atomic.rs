@@ -168,7 +168,7 @@ impl Atomic {
     ) -> super::wire::AtomicDocument<'a, T, V> {
         let row = self;
         super::wire::AtomicDocument {
-            schema: super::wire::Version::V2,
+            schema: super::wire::ResultTag::Result,
             answer_id: self.identity.answer_id(),
             value,
             input,

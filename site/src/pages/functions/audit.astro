@@ -28,6 +28,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
     <li><code>tied</code>: the labeled <code>choose</code> or <code>find</code> answers where two or more options share the top. A <code>find</code> answer counts as tied only when <code>none</code> is among them. A tie is tied under every rule. It stays apart from <code>unsure</code>. <code>tied_holding_key</code> counts the ties where the right answer was one of the tied options.</li>
   </ul>
   <p>Further measures follow, then <code>suggested</code>, a threshold tuned on one part of the records and checked on the other. The <a href={spec}>audit specification</a> defines every member. <code>--table</code> prints the same results for a person.</p>
+  <p>These examples use complete synthetic packets rebuilt through a local test backend from the saved probabilities.</p>
   <Terminal run={counts} caption={counts.see} />
 
   <h2 id="any-bar">Any threshold, at no cost</h2>

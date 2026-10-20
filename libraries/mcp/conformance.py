@@ -131,12 +131,12 @@ def project(packet, verb):
         return out
     facts = packet['facts']
     results = packet['value'] if isinstance(packet['value'], list) else [packet['value']]
-    out = {'code': 0, 'schema': results[0]['schema'] if results else 'thinkthen.result/2',
+    out = {'code': 0, 'schema': results[0]['schema'] if results else 'thinkthen.result',
            'call_id': facts['call_id'], 'requests_sent': facts['requests_sent'],
            'cache_answers': facts['cache_answers'], 'records': facts['records'], 'rows': []}
     out.update({key: facts[key] for key in ('input_tokens', 'output_tokens') if key in facts})
     for at, result in enumerate(results):
-        assert result['schema'] == 'thinkthen.result/2', result
+        assert result['schema'] == 'thinkthen.result', result
         meta = result['meta']
         answer = result.get('answer', {})
         row = {'value': result['value'], 'index': result.get('index'),
@@ -157,7 +157,7 @@ def project(packet, verb):
             row['members'] = []
             for member in result['members']:
                 child = member['result']
-                assert child['schema'] == 'thinkthen.result/2', child
+                assert child['schema'] == 'thinkthen.result', child
                 assert re.fullmatch('[0-9a-f]{64}', child['answer_id']), 'invalid native member ID'
                 row['members'].append(dict(name=member['name'], value=child['value'],
                     answer_id=child['answer_id'], probability=child['answer']['probability'],

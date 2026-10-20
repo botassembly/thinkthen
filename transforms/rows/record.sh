@@ -35,7 +35,7 @@ judge() {
 			;;
 		esac
 		jq -c --argjson case "$example" \
-			'{schema, value, input: $case, question, answer, threshold, meta}' \
+			'. + {input: $case}' \
 			row.json >>"$out"
 	done <cases.jsonl
 	rm -f row.json

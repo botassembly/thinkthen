@@ -131,7 +131,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -316,7 +316,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -580,7 +580,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -770,7 +770,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.2:0.8",
                 "value": null
               }
@@ -960,7 +960,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.2:0.8",
                 "value": true
               }
@@ -1154,7 +1154,7 @@
                   "true": "Prompt action is needed.",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "Prompt action is needed."
               }
@@ -1375,7 +1375,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -1591,7 +1591,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -1909,7 +1909,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -2128,7 +2128,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.6",
                 "value": null
               }
@@ -2347,7 +2347,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.4",
                 "value": null
               }
@@ -2606,7 +2606,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -2866,7 +2866,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -3199,7 +3199,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": []
               }
@@ -3419,7 +3419,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1"
               }
@@ -3625,7 +3625,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1.6"
               }
@@ -3824,7 +3824,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1.6"
               }
@@ -4086,7 +4086,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -4289,7 +4289,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -4486,7 +4486,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -4689,7 +4689,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -5303,7 +5303,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -5360,7 +5360,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -5417,7 +5417,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -5762,7 +5762,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -5819,7 +5819,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -5876,7 +5876,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -6523,7 +6523,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "1.2",
@@ -7170,7 +7170,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "1.2",
@@ -7883,7 +7883,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": null,
                   "severity": "1.2",
@@ -8256,7 +8256,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "body": true,
                   "summary": true
@@ -8502,7 +8502,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Second passage."
               }
@@ -8718,7 +8718,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": null
               }
@@ -9190,7 +9190,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -9322,7 +9322,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -9454,7 +9454,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -9586,7 +9586,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -9718,7 +9718,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -9960,7 +9960,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -10092,7 +10092,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -10224,7 +10224,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -10356,7 +10356,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -10488,7 +10488,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -10620,7 +10620,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -10752,7 +10752,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -10884,7 +10884,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -11016,7 +11016,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -11148,7 +11148,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -11549,7 +11549,7 @@
                   "text": "How strong is the claim?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.99"
               }
@@ -11781,7 +11781,7 @@
                   "text": "Does this line show the word?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.6",
                 "value": [
                   "the refund word"
@@ -12004,7 +12004,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "spam": true
                 }
@@ -12166,7 +12166,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "spam": false
                 }
@@ -12328,7 +12328,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "spam": true
                 }
@@ -12614,7 +12614,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "strength": "1.7"
                 }
@@ -12804,7 +12804,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "strength": "1.05"
                 }
@@ -12994,7 +12994,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "strength": "1.7"
                 }
@@ -13383,7 +13383,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "spam": true,
                   "strength": "1.7"
@@ -13639,7 +13639,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "team": "billing"
                 }
@@ -13891,7 +13891,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "severity": "1"
                 }
@@ -14201,7 +14201,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "topics": [
                     "billing",
@@ -14402,7 +14402,7 @@
                   "text": "Does the writer ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -14723,7 +14723,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -15310,7 +15310,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -15882,7 +15882,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -16427,7 +16427,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -17085,7 +17085,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -17891,7 +17891,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -18583,7 +18583,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -19338,7 +19338,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -20258,7 +20258,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -21957,7 +21957,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -24741,7 +24741,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.71",
@@ -28776,7 +28776,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.99",
@@ -29420,7 +29420,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -29908,7 +29908,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30084,7 +30084,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30255,7 +30255,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30431,7 +30431,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30593,7 +30593,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30819,7 +30819,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -30939,7 +30939,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -31174,7 +31174,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -31345,7 +31345,7 @@
                   "text": "Is this a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -86627,7 +86627,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.9",
@@ -149554,7 +149554,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.9",
@@ -157392,7 +157392,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -157582,7 +157582,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -157786,7 +157786,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -157937,7 +157937,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -158176,7 +158176,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -158397,7 +158397,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -158632,7 +158632,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -158814,7 +158814,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -159091,7 +159091,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -159356,7 +159356,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -159637,7 +159637,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -159863,7 +159863,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -160113,7 +160113,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1"
               }
@@ -160333,7 +160333,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1"
               }
@@ -160567,7 +160567,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -160748,7 +160748,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -160956,7 +160956,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -161159,7 +161159,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -161361,7 +161361,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -161564,7 +161564,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -161780,7 +161780,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -161931,7 +161931,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -162270,7 +162270,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -162327,7 +162327,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -162384,7 +162384,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -162729,7 +162729,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -162786,7 +162786,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -162843,7 +162843,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -163146,7 +163146,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "source": {
                     "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
@@ -163208,7 +163208,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "source": {
                     "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
@@ -163456,7 +163456,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Second passage."
               }
@@ -163684,7 +163684,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Second passage."
               }
@@ -163929,7 +163929,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n"
               }
@@ -164551,7 +164551,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "1.2",
@@ -165203,7 +165203,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "1.2",
@@ -165915,7 +165915,7 @@
                     "output_tokens": "1"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
@@ -166561,7 +166561,7 @@
                     "output_tokens": "1"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
@@ -166933,7 +166933,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -167286,7 +167286,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -168359,7 +168359,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "source": {
                     "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
@@ -169270,7 +169270,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "source": {
                     "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
@@ -171823,7 +171823,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.71",
@@ -174380,7 +174380,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.71",
@@ -174917,7 +174917,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.8",
@@ -175420,7 +175420,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -175616,7 +175616,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -175852,7 +175852,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -176088,7 +176088,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -176321,7 +176321,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -176548,7 +176548,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -176815,7 +176815,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -177082,7 +177082,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -177314,7 +177314,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.15"
               }
@@ -177540,7 +177540,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.15"
               }
@@ -177806,7 +177806,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -178072,7 +178072,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "fixture-source/specification/fixtures/images/red.png"
                 },
@@ -178411,7 +178411,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": []
               }
             },
@@ -178574,7 +178574,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -178750,7 +178750,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -178915,7 +178915,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -179089,7 +179089,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -179265,7 +179265,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -179430,7 +179430,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -179697,7 +179697,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -179945,7 +179945,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -180130,7 +180130,7 @@
                   "text": "Refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -180617,7 +180617,7 @@
                     "output_tokens": "4"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "body": true,
                   "summary": true
@@ -180815,7 +180815,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -181005,7 +181005,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -181195,7 +181195,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.2:0.8",
                 "value": null
               }
@@ -181440,7 +181440,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "billing"
               }
@@ -181699,7 +181699,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -181958,7 +181958,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": []
               }
@@ -182178,7 +182178,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1"
               }
@@ -182368,7 +182368,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -182571,7 +182571,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -182821,7 +182821,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Second passage."
               }
@@ -183037,7 +183037,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": null
               }
@@ -183646,7 +183646,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": null,
                   "severity": "1.2",
@@ -183991,7 +183991,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -186461,7 +186461,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.71",
@@ -186770,7 +186770,7 @@
                   "text": "Does this need attention?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": false
               }
@@ -186998,7 +186998,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -187221,7 +187221,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -187582,7 +187582,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -187827,7 +187827,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -188072,7 +188072,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -188295,7 +188295,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -188713,7 +188713,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -188975,7 +188975,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -189207,7 +189207,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -189471,7 +189471,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -189928,7 +189928,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -190080,7 +190080,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -190298,7 +190298,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -190450,7 +190450,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -190691,7 +190691,7 @@
                   "text": "Is red visible?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -190942,7 +190942,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -191188,7 +191188,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -191572,7 +191572,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -191840,7 +191840,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -192108,7 +192108,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -192354,7 +192354,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -192795,7 +192795,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -193080,7 +193080,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -193335,7 +193335,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -193622,7 +193622,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -194102,7 +194102,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -194277,7 +194277,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -194518,7 +194518,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -194693,7 +194693,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -194934,7 +194934,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -195109,7 +195109,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -195350,7 +195350,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -195525,7 +195525,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -195789,7 +195789,7 @@
                   "text": "Which color?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "red"
               }
@@ -196040,7 +196040,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -196286,7 +196286,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -196670,7 +196670,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -196938,7 +196938,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -197206,7 +197206,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -197452,7 +197452,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -197893,7 +197893,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -198178,7 +198178,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -198433,7 +198433,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -198720,7 +198720,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -199200,7 +199200,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -199375,7 +199375,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -199616,7 +199616,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -199791,7 +199791,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -200055,7 +200055,7 @@
                   "text": "How red?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.8"
               }
@@ -200333,7 +200333,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -200722,7 +200722,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -200985,7 +200985,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -201262,7 +201262,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -201458,7 +201458,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -201873,7 +201873,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -202183,7 +202183,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -202452,7 +202452,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -203132,7 +203132,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -203322,7 +203322,7 @@
                   "text": "Working directory wording",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -203512,7 +203512,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -203702,7 +203702,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -203892,7 +203892,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -204112,7 +204112,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -204297,7 +204297,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -204477,7 +204477,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -204691,7 +204691,7 @@
                   "verb": "choose",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -204907,7 +204907,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -205118,7 +205118,7 @@
                   "verb": "choose",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }
@@ -205370,7 +205370,7 @@
                   "verb": "tag",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -205632,7 +205632,7 @@
                   "text": "Which labels apply?",
                   "verb": "tag"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -205891,7 +205891,7 @@
                   "verb": "tag",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": [
                   "billing",
@@ -206112,7 +206112,7 @@
                   "verb": "score",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "1"
               }
@@ -206327,7 +206327,7 @@
                   "text": "How severe is this?",
                   "verb": "score"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.15"
               }
@@ -206537,7 +206537,7 @@
                   "verb": "score",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "0.15"
               }
@@ -206720,7 +206720,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -206929,7 +206929,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207126,7 +207126,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207258,7 +207258,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207390,7 +207390,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207584,7 +207584,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207711,7 +207711,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -207838,7 +207838,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -208163,7 +208163,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -208222,7 +208222,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -208281,7 +208281,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -208621,7 +208621,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -208678,7 +208678,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -208735,7 +208735,7 @@
                     "text": "How relevant is this?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -209074,7 +209074,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -209124,7 +209124,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -209174,7 +209174,7 @@
                     "verb": "decide",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -209402,7 +209402,7 @@
                   "verb": "find",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "Second passage."
               }
@@ -209627,7 +209627,7 @@
                   "text": "Which passage answers the question?",
                   "verb": "find"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "First passage."
               }
@@ -209845,7 +209845,7 @@
                   "verb": "find",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": null,
                 "value": "First passage."
               }
@@ -210472,7 +210472,7 @@
                     "output_tokens": "2"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "1.2",
@@ -211123,7 +211123,7 @@
                     "output_tokens": "1"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "0.15",
@@ -211781,7 +211781,7 @@
                     "output_tokens": "1"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "refund": true,
                   "severity": "0.15",
@@ -212113,7 +212113,7 @@
                     "verb": "recognize",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -212575,7 +212575,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -213022,7 +213022,7 @@
                     "verb": "recognize",
                     "wording_version": "2"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -215475,7 +215475,7 @@
                   "verb": "relate",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.71",
@@ -218196,7 +218196,7 @@
                   "threshold": "0.5",
                   "verb": "relate"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.9",
@@ -221245,7 +221245,7 @@
                   "verb": "relate",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": [
                   {
                     "probability": "0.9",
@@ -221969,7 +221969,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "records.jsonl",
                   "first_line": "1",
@@ -222176,7 +222176,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "source": {
                   "file": "records.jsonl",
                   "first_line": "2",
@@ -222518,7 +222518,7 @@
                     "output_tokens": "1"
                   }
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "value": {
                   "result": true
                 }
@@ -222787,7 +222787,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -222983,7 +222983,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -223195,7 +223195,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -223563,7 +223563,7 @@
                   "text": "Does this ask for a refund?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -223755,7 +223755,7 @@
                   "verb": "decide",
                   "wording_version": "2147483647"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -223993,7 +223993,7 @@
                   "verb": "decide",
                   "wording_version": "2"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -224617,7 +224617,7 @@
                           "verb": "decide",
                           "wording_version": "4"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "1"
                       }
@@ -224676,7 +224676,7 @@
                           "text": "Second?",
                           "verb": "decide"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "1"
                       }
@@ -224739,7 +224739,7 @@
                     "wording_version": "4"
                   },
                   "question_name": "first",
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "1"
                 },
@@ -224807,7 +224807,7 @@
                           "verb": "decide",
                           "wording_version": "4"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "2"
                       }
@@ -224866,7 +224866,7 @@
                           "text": "Second?",
                           "verb": "decide"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "3"
                       }
@@ -224929,7 +224929,7 @@
                     "wording_version": "4"
                   },
                   "question_name": "first",
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "2"
                 },
@@ -224997,7 +224997,7 @@
                           "verb": "decide",
                           "wording_version": "4"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "3"
                       }
@@ -225056,7 +225056,7 @@
                           "text": "Second?",
                           "verb": "decide"
                         },
-                        "schema": "thinkthen.result/2",
+                        "schema": "thinkthen.result",
                         "threshold": null,
                         "value": "2"
                       }
@@ -225118,7 +225118,7 @@
                     "verb": "decide"
                   },
                   "question_name": "second",
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": null,
                   "value": "3"
                 }
@@ -225427,7 +225427,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -225957,7 +225957,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -226324,7 +226324,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -226997,7 +226997,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -227363,7 +227363,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -228037,7 +228037,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -228404,7 +228404,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -229120,7 +229120,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -229487,7 +229487,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -230131,7 +230131,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -230473,7 +230473,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -231148,7 +231148,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -231490,7 +231490,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -232110,7 +232110,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -232452,7 +232452,7 @@
                     "threshold": "0.5",
                     "verb": "recognize"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "value": {
                     "entities": [
                       {
@@ -232706,7 +232706,7 @@
                     "text": "Does the customer ask for money back?",
                     "verb": "decide"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": "0.5",
                   "value": true
                 }
@@ -232772,7 +232772,7 @@
                   "text": "Does the customer ask for money back?",
                   "verb": "decide"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": true
               }
@@ -232861,7 +232861,7 @@
                     "text": "Which team owns this?",
                     "verb": "choose"
                   },
-                  "schema": "thinkthen.result/2",
+                  "schema": "thinkthen.result",
                   "threshold": "0.5",
                   "value": "billing"
                 }
@@ -232938,7 +232938,7 @@
                   "text": "Which team owns this?",
                   "verb": "choose"
                 },
-                "schema": "thinkthen.result/2",
+                "schema": "thinkthen.result",
                 "threshold": "0.5",
                 "value": "billing"
               }

@@ -148,7 +148,7 @@ fn generated(reference: &str) -> String {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": if reference == "completeCall" { "urn:thinkthen:complete-call" } else { "urn:thinkthen:result" },
         "title": "thinkthen native results",
-        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a scalar result against its verb's definition; complete definitions describe result/2 and its call envelope."),
+        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a scalar result against its verb's definition; complete definitions describe complete results and their call envelope."),
         "$ref": format!("#/$defs/{reference}"),
         "$defs": definitions,
     });
