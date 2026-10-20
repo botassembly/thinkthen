@@ -588,32 +588,40 @@ class PublicAssertions(unittest.TestCase):
                 self.assertEqual(env[name], value)
             self.assertNotEqual(env['HOME'], '/caller')
 
-    def test_full_consumers_run_alone_and_keep_every_public_cell(self):
+    def test_full_consumers_respect_measured_memory_and_keep_every_public_cell(self):
         import threading
         import time
-        ids = ['rust', 'rust-polars', 'one', 'two', 'three']
+        ids = ['rust', 'rust-polars', 'one', 'two', 'three', 'unmeasured']
         contract = {'functions': ['decide'], 'consumers': [
             {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', name]}
             for name in ids], 'required_cases': list(self.cases.values())}
-        active, peak = 0, 0
+        gib = 1024 ** 3
+        limit = 10 * gib
+        peaks = {'rust': 3 * gib, 'rust-polars': 5 * gib, 'one': 6 * gib,
+                 'two': 5 * gib, 'three': 4 * gib}
+        resources = {name: {'peak_memory_bytes': memory, 'duration_seconds': len(ids) - ids.index(name)}
+                     for name, memory in peaks.items()}
+        active, peak = set(), 0
         lock = threading.Lock()
         def command(args, **kwargs):
-            nonlocal active, peak
+            nonlocal peak
             name = args[-2]
             with lock:
-                active += 1
-                peak = max(peak, active)
+                active.add(name)
+                peak = max(peak, len(active))
+                self.assertLessEqual(sum(peaks.get(member, limit) for member in active), limit)
+                self.assertFalse({'rust', 'rust-polars'} <= active)
             time.sleep(.03)
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
             kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
             with lock:
-                active -= 1
+                active.remove(name)
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity, 'CONSUMER_RESOURCES', resources), patch.object(parity, 'container_memory_limit', return_value=limit), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
-            self.assertEqual(peak, 1)
+            self.assertGreater(peak, 1)
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))
             self.assertTrue(all(0 <= row['duration_seconds'] < 3 for row in matrix))
             self.assertTrue(all(row['duration_seconds'] != 0.25 for row in matrix))
