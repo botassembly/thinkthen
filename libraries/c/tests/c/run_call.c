@@ -1,4 +1,7 @@
 /* Installed blocking caller: callbacks stay here; errors move to another thread. */
+#ifndef _WIN32
+#define _POSIX_C_SOURCE 200809L
+#endif
 #include <thinkthen.h>
 #include "platform.h"
 #include <string.h>
@@ -58,6 +61,35 @@ static THREAD_RESULT print_result(void *argument) {
     fwrite(json.data,1,json.len,stdout);putchar('\n');
     return THREAD_DONE;
 }
+/* No platform state base disables usage persistence during constructor capture.
+   Restore the owned home before calls resolve their named question files. */
+static thinkthen_engine *engine_without_usage(const char *settings) {
+    const char *names[]={"HOME","XDG_STATE_HOME","LOCALAPPDATA"};
+    char *saved[3]={NULL,NULL,NULL};
+    for(size_t i=0;i<3;++i) {
+        const char *value=getenv(names[i]);
+        if(value) {
+            saved[i]=malloc(strlen(value)+1);
+            if(!saved[i])abort();
+            strcpy(saved[i],value);
+        }
+#ifdef _WIN32
+        if(_putenv_s(names[i],""))abort();
+#else
+        if(unsetenv(names[i]))abort();
+#endif
+    }
+    thinkthen_engine *engine=thinkthen_engine_new_with(settings);
+    for(size_t i=0;i<3;++i) {
+#ifdef _WIN32
+        if(_putenv_s(names[i],saved[i]?saved[i]:""))abort();
+#else
+        if(saved[i]?setenv(names[i],saved[i],1):unsetenv(names[i]))abort();
+#endif
+        free(saved[i]);
+    }
+    return engine;
+}
 /* Large image cases stay in an owned input file instead of OS argument storage. */
 static char *arguments(const char *path, int *count, char ***values) {
     FILE *input=fopen(path,"rb");
@@ -83,7 +115,7 @@ int main(int argc,char **argv) {
     binary_streams();
     char *bytes=arguments(argv[1],&argc,&argv);
     if(!bytes||argc<8)return 2;
-    thinkthen_engine *engine=thinkthen_engine_new_with(argv[1]);
+    thinkthen_engine *engine=engine_without_usage(argv[1]);
     if(!engine) {
         int status=constructor_error();
         free(argv);free(bytes);return status;

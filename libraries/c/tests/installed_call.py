@@ -53,7 +53,7 @@ def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
             assert backend.read(admitted) == admitted
             process.stdin.write('!'); process.stdin.flush()
             assert read_process_line(process.stdout) == 'cancel-fired\n'
-            backend.process.stdin.write('release\n'); backend.process.stdin.flush()
+            # Keep the reply held through cancellation settlement, as the oracle does.
             stdout, stderr = process.communicate(timeout=60)
             output = subprocess.CompletedProcess(args, process.returncode, stdout, stderr)
         finally:
@@ -173,7 +173,7 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
     """Run every case helper and comparison inside its owned working folder."""
     with case_home(scratch, 'blocking-c-') as home:
         (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
-        isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_USAGE='off')
+        isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8')
         backend = shared.Backend(backend_binary, isolated)
         try:
             shared.prepare(home, value)
@@ -267,7 +267,7 @@ def run(native, scratch):
     for probe in corpus['call_behaviors']:
         with case_home(scratch, 'blocking-c-stop-') as home:
             (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
-            isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'), THINKTHEN_USAGE='off')
+            isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
             backend = shared.Backend(backend_binary, isolated)
             try:
                 isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held-cancel" else "full"}/v1',
