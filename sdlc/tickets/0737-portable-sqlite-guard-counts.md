@@ -20,3 +20,7 @@ Phase: 2
 ## Evidence
 
 M5 job 0724/1792505486688-96923, based on main 969e17b, printed the expected counts of zero catch_unwind and two contained guards but exited one before SQLite portable/settings tests. Its developer traced the string comparison to BSD wc whitespace. This ticket verifies that cause and preserves the guard assertions.
+
+## Progress
+
+- 2026-10-20 started
