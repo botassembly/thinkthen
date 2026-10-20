@@ -66,6 +66,8 @@ COPY sdlc/tools/ruby.json /tmp/tools/ruby.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/ruby.json
 COPY sdlc/tools/swift.json /tmp/tools/swift.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/swift.json
+COPY sdlc/tools/duckdb.json /tmp/tools/duckdb.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/duckdb.json
 COPY sdlc/tools/zig.json /tmp/tools/zig.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/zig.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json finish
