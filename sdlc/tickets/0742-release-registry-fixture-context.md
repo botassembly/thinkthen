@@ -1,10 +1,12 @@
 # 0742 — Keep constructor documentation within the public README contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Reviews: revision 22d5af5, accept
+
+Landed: 3236f1f
 
 ## Outcome
 
