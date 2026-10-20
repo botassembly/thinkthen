@@ -385,7 +385,7 @@ int main(void) {
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "usage refusal owns session error slot");
     check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "saved failed constructor");
     const char *old_error = thinkthen_error_message(NULL);
-    const char *bad_requests[] = {"", "{}", "{\"schema\":\"thinkthen.request/1\"}", "{\"unknown\":0}"};
+    const char *bad_requests[] = {"", "{}", "{\"call\":{},\"call\":{}}", "{\"unknown\":0}"};
     for (size_t i = 0; i < sizeof bad_requests / sizeof bad_requests[0]; ++i) {
         thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
         check(thinkthen_session_new(engine, bad_requests[i], strlen(bad_requests[i]), &out) == THINKTHEN_EUSAGE, "bad request refuses");

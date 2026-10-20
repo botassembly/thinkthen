@@ -363,7 +363,7 @@ int main(void) {
           "retired schema refusal preserves outputs");
     check(!strcmp(thinkthen_session_error_message(), "delete the `schema` field."),
           "exact retired request schema diagnostic");
-    refused(engine, "{\"PRIVATE\":true}", THINKTHEN_EUSAGE);
+    refused(engine, "{\"call\":{},\"call\":{},\"PRIVATE\":true}", THINKTHEN_EUSAGE);
     refused(engine, "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}", THINKTHEN_EUSAGE);
     refused(engine, "{\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}", THINKTHEN_ELOCAL);
     /* Counted input deliberately omits the trailing NUL. */
