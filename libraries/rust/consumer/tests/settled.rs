@@ -169,8 +169,17 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                     RequestEnvironment::default(),
                 )
                 .map_err(failure)?;
-            let tree = call.value_tree().map_err(failure)?;
-            assert!(matches!(tree, RequestValueTree::Map(_)));
+            let RequestValueTree::Map(tree) = call.value_tree().map_err(failure)? else {
+                return Err("native value tree requires a map".into());
+            };
+            for name in ["pick", "index"] {
+                if let Some(expected) = expected.get(name).and_then(Value::as_array) {
+                    let Some(RequestValueTree::List(actual)) = tree.get(name) else {
+                        return Err(format!("{id}: {name} lost its collection shape"));
+                    };
+                    assert_eq!(actual.len(), expected.len(), "{id}: {name} cardinality");
+                }
+            }
             let answer: Value =
                 serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
                     .map_err(failure)?;
