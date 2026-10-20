@@ -10,6 +10,8 @@ Depends on: 0619
 
 Reviews: revision f37577e, accept
 
+Reviews: revision c902244, accept
+
 ## Outcome
 
 - Changes: `conformance/parity.py`, `conformance/test_parity.py`, `conformance/c_parity.py`.
