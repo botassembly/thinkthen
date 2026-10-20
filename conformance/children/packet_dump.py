@@ -115,6 +115,8 @@ def run(consumer, command, root, *, update=False):
 
     # Relative source selectors keep core-created originals deterministic too;
     # opaque authored JSON remains untouched by metadata normalization.
+    # The standalone currency worker and Rust checker own this single-threaded
+    # process. The context restores its caller's directory even on failure.
     with chdir(root):
         failures = shared_run(consumer, command, root, packet_transform=record)
     if failures:
