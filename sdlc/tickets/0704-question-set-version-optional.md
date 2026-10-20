@@ -24,3 +24,7 @@ This changes the question-set contract before the core freeze (0688), so every l
 ## Amendment, 2026-10-19
 
 The no-version ruling (`sdlc/decisions/2026-10-19-no-version-numbers-before-1-0.md`) supersedes "missing reads as 1". 0704 now removes `version` from question sets, recognize files and relate files outright: the member is gone from the parsers, the question-file and request schemas, MCP tool schemas, generated wrapper inputs, docs, site examples and fixtures, and a file that still carries it is refused with one sentence naming the member to delete. The question-set hash keeps its current constant so `questions_sha256` values do not change. Proof: Rust tests parse each of the three without the member and refuse each with it, with the exact sentence.
+
+## Progress
+
+- 2026-10-20 started
