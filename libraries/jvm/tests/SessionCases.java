@@ -158,7 +158,7 @@ public final class SessionCases {
     }
     static Object scalar(Object value) { return Values.json(value); }
     static void location(Map<String,Object> row,Object source) { for(String field:List.of("file","firstLine","lastLine")) { Object value=property(source,field); if(value!=null) row.put(field.equals("firstLine")?"first_line":field.equals("lastLine")?"last_line":field,value); } }
-    static Map<String,Object> author(Object question) { var result=new LinkedHashMap<String,Object>(); Object name=property(question,"name"),version=property(question,"wordingVersion"); if(name!=null)result.put("name",name);if(version!=null)result.put("wording_version",version);return result; }
+    static Map<String,Object> author(Object question) { var result=new LinkedHashMap<String,Object>(); Object name=property(question,"name"); if(name!=null)result.put("name",name);return result; }
     static Object entity(Entity entity) { return Map.of("text",entity.text(),"start",entity.start(),"end",entity.end(),"length",entity.length(),"kind",entity.kind(),"strength",entity.strength()); }
     static Object endpoint(Object value) { return Map.of("name",property(value,"name"),"kind",property(value,"kind")); }
     static Object edge(Object value,boolean recognized) {var result=new LinkedHashMap<String,Object>();result.put("relation",property(value,"relation"));result.put("source",recognized?entity((Entity)property(value,"source")):endpoint(property(value,"source")));result.put("target",recognized?entity((Entity)property(value,"target")):endpoint(property(value,"target")));result.put("probability",property(value,"probability"));if(Boolean.TRUE.equals(property(value,"either")))result.put("either",true);return result;}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:thinkthen:question-file",
   "title": "thinkthen question file",
-  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one entry definition. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read. Author metadata is excluded from semantic identity. Required declaration names must be declared properties, and wording_version rejects fractional or exponent spellings in native parsing; those semantic/lexical checks exceed structural JSON Schema.",
+  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one entry definition. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read. Author metadata is excluded from semantic identity. Required declaration names must be declared properties; that semantic check exceeds structural JSON Schema.",
   "anyOf": [
     {
       "$ref": "#/$defs/decide"

@@ -51,7 +51,7 @@ pub fn main() !void {
             return error.EngineBuild;
         },
     };
-    var question = switch (try tt.Question.init(&engine, .atomic, .{ .Authored_decide = .{ .decide = .{ .string = "Does it pass?" }, .name = "pass", .threshold = .{ .number = 0.7 }, .wording_version = 2 } })) {
+    var question = switch (try tt.Question.init(&engine, .atomic, .{ .Authored_decide = .{ .decide = .{ .string = "Does it pass?" }, .name = "pass", .threshold = .{ .number = 0.7 } } })) {
         .ok => |value| value,
         .failed => |failure| {
             tt.releaseFailure(a, failure);
