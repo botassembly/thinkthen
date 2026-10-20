@@ -9,22 +9,22 @@ use std::io::Write;
 use thinkthen::{EngineBuilder, Error, Request, RequestSessionRead, RequestSessionWaitInterest};
 
 #[derive(Deserialize)]
-struct Document {
-    verb: String,
+pub(crate) struct Document {
+    pub(crate) verb: String,
     question: Box<RawValue>,
     input: Box<RawValue>,
     options: Box<RawValue>,
-    settings: Box<RawValue>,
+    pub(crate) settings: Box<RawValue>,
     #[serde(default)]
-    call_result_contract: bool,
+    pub(crate) call_result_contract: bool,
     #[serde(default)]
-    cancel: bool,
+    pub(crate) cancel: bool,
     #[serde(default)]
     batch_probe: bool,
     #[serde(default)]
     incremental: bool,
     #[serde(default)]
-    held_cancel: bool,
+    pub(crate) held_cancel: bool,
 }
 
 pub(crate) fn run(text: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -35,7 +35,7 @@ pub(crate) fn run(text: &str) -> Result<String, Box<dyn std::error::Error>> {
     }
 }
 
-fn request(document: &Document) -> Result<Request, Error> {
+pub(crate) fn request(document: &Document) -> Result<Request, Error> {
     #[derive(Deserialize)]
     struct Authored {
         raw: Option<String>,
@@ -54,7 +54,7 @@ fn request(document: &Document) -> Result<Request, Error> {
     ))
 }
 
-fn fixture_engine(settings: &str) -> Result<thinkthen::Engine, Error> {
+pub(crate) fn fixture_engine(settings: &str) -> Result<thinkthen::Engine, Error> {
     // Validate the whole closed document before applying public setters. A bare
     // builder keeps ambient configuration and asynchronous usage storage out.
     EngineBuilder::validate_settings_json(settings)?;
