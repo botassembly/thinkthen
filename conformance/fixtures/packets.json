@@ -157618,7 +157618,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -157626,7 +157626,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -157751,7 +157751,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -157769,7 +157769,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -157777,7 +157777,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -157902,7 +157902,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -158434,7 +158434,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -158442,7 +158442,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -158597,7 +158597,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -158616,7 +158616,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -158624,7 +158624,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -158779,7 +158779,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -159398,7 +159398,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -159406,7 +159406,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -159602,7 +159602,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -159624,7 +159624,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -159632,7 +159632,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -159828,7 +159828,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -160370,7 +160370,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -160378,7 +160378,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -160532,7 +160532,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -160551,7 +160551,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -160559,7 +160559,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -160713,7 +160713,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -161612,7 +161612,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -161620,7 +161620,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -161745,7 +161745,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -161763,7 +161763,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -161771,7 +161771,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -161896,7 +161896,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -162894,7 +162894,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -162902,7 +162902,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -162978,7 +162978,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -162986,7 +162986,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -163111,7 +163111,7 @@
                   },
                   "schema": "thinkthen.result/2",
                   "source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -163173,7 +163173,7 @@
                   },
                   "schema": "thinkthen.result/2",
                   "source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -163713,7 +163713,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -163721,7 +163721,7 @@
                     {
                       "index": "1",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -163825,7 +163825,7 @@
                     "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                     "probability": "0.9",
                     "source": {
-                      "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                       "first_line": "1",
                       "last_line": "4"
                     }
@@ -163835,7 +163835,7 @@
                     "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                     "probability": "0.05",
                     "source": {
-                      "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                       "first_line": "1",
                       "last_line": "4"
                     }
@@ -165259,7 +165259,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165267,7 +165267,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -165331,7 +165331,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165339,7 +165339,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -165417,7 +165417,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165425,7 +165425,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -165506,7 +165506,7 @@
                   "failed_questions": "0",
                   "input": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165514,7 +165514,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -165880,7 +165880,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -165905,7 +165905,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165913,7 +165913,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -165977,7 +165977,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -165985,7 +165985,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -166063,7 +166063,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -166071,7 +166071,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -166152,7 +166152,7 @@
                   "failed_questions": "0",
                   "input": "Support contract\nAcme provides support under this contract.\nAda reviews customer requests.\nAn urgent billing dispute needs attention today.\n",
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -166160,7 +166160,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -166526,7 +166526,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                  "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                   "first_line": "1",
                   "last_line": "4"
                 },
@@ -168324,7 +168324,7 @@
                   },
                   "schema": "thinkthen.result/2",
                   "source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -168332,7 +168332,7 @@
                     "entities": [
                       {
                         "end": "13",
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "kind": "person",
                         "last_line": "1",
@@ -168343,7 +168343,7 @@
                       },
                       {
                         "end": "127",
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "4",
                         "kind": "person",
                         "last_line": "4",
@@ -169235,7 +169235,7 @@
                   },
                   "schema": "thinkthen.result/2",
                   "source": {
-                    "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                    "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                     "first_line": "1",
                     "last_line": "4"
                   },
@@ -169243,7 +169243,7 @@
                     "entities": [
                       {
                         "end": "16",
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "kind": "person",
                         "last_line": "1",
@@ -169254,7 +169254,7 @@
                       },
                       {
                         "end": "139",
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "4",
                         "kind": "person",
                         "last_line": "4",
@@ -169298,7 +169298,7 @@
                     "entities": [
                       {
                         "end": "13",
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "kind": "person",
                         "last_line": "1",
@@ -169309,7 +169309,7 @@
                       },
                       {
                         "end": "127",
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "4",
                         "kind": "person",
                         "last_line": "4",
@@ -169324,7 +169324,7 @@
                     "entities": [
                       {
                         "end": "16",
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "kind": "person",
                         "last_line": "1",
@@ -169335,7 +169335,7 @@
                       },
                       {
                         "end": "139",
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "4",
                         "kind": "person",
                         "last_line": "4",
@@ -174537,7 +174537,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -174545,7 +174545,7 @@
                     {
                       "index": "1",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -174611,7 +174611,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -174619,7 +174619,7 @@
                     {
                       "index": "1",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                        "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                         "first_line": "1",
                         "last_line": "4"
                       }
@@ -174803,7 +174803,7 @@
                   {
                     "index": "0",
                     "source": {
-                      "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                       "first_line": "1",
                       "last_line": "4"
                     }
@@ -174811,7 +174811,7 @@
                   {
                     "index": "1",
                     "source": {
-                      "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                       "first_line": "1",
                       "last_line": "4"
                     }
@@ -174886,7 +174886,7 @@
                     "probability": "0.8",
                     "relation": "linked",
                     "source": {
-                      "file": "$ROOT/specification/fixtures/files/documents/01-policy.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                       "first_line": "1",
                       "kind": "*",
                       "last_line": "4",
@@ -174895,7 +174895,7 @@
                       "record": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n"
                     },
                     "target": {
-                      "file": "$ROOT/specification/fixtures/files/documents/02-contract.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                       "first_line": "1",
                       "kind": "*",
                       "last_line": "4",
@@ -174921,7 +174921,7 @@
                     "probability": "0.8",
                     "relation": "linked",
                     "source": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/01-policy.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/01-policy.txt",
                       "first_line": "1",
                       "kind": "*",
                       "last_line": "4",
@@ -174930,7 +174930,7 @@
                       "record": "Refund policy\nCustomers may request a refund within 30 days.\nAda approves refunds for Acme.\nBilling disputes require a receipt.\n"
                     },
                     "target": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/files/documents/02-contract.txt",
+                      "file": "fixture-source/specification/fixtures/files/documents/02-contract.txt",
                       "first_line": "1",
                       "kind": "*",
                       "last_line": "4",
@@ -175612,18 +175612,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -175638,7 +175638,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -175729,7 +175729,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -175780,7 +175780,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": "0.5",
                 "value": true
@@ -175857,18 +175857,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -175883,7 +175883,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -175974,7 +175974,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -176016,7 +176016,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": "0.5",
                 "value": true
@@ -176545,18 +176545,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -176571,7 +176571,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -176687,7 +176687,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -176743,7 +176743,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": "0.5",
                 "value": "billing"
@@ -176821,18 +176821,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -176847,7 +176847,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -176963,7 +176963,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -177010,7 +177010,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": "0.5",
                 "value": "billing"
@@ -177537,18 +177537,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -177563,7 +177563,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -177678,7 +177678,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -177734,7 +177734,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": null,
                 "value": "0.15"
@@ -177812,18 +177812,18 @@
                       }
                     ],
                     "location": {
-                      "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                      "file": "fixture-source/specification/fixtures/images/red.png"
                     },
                     "text": null
                   },
                   "input_source": {
-                    "file": "$ROOT/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "input_sources": [
                     {
                       "index": "0",
                       "source": {
-                        "file": "$ROOT/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       }
                     }
                   ],
@@ -177838,7 +177838,7 @@
                         }
                       ],
                       "location": {
-                        "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                        "file": "fixture-source/specification/fixtures/images/red.png"
                       },
                       "text": null
                     }
@@ -177953,7 +177953,7 @@
                     }
                   ],
                   "location": {
-                    "file": "/Users/ian/workspace/worktrees/thinkthen-0642-job/specification/fixtures/images/red.png"
+                    "file": "fixture-source/specification/fixtures/images/red.png"
                   },
                   "text": null
                 },
@@ -178000,7 +178000,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$ROOT/specification/fixtures/images/red.png"
+                  "file": "fixture-source/specification/fixtures/images/red.png"
                 },
                 "threshold": null,
                 "value": "0.15"
@@ -221710,7 +221710,7 @@
                     "body": "first"
                   },
                   "input_source": {
-                    "file": "$FOLDER/records.jsonl",
+                    "file": "records.jsonl",
                     "first_line": "1",
                     "last_line": "1"
                   },
@@ -221718,7 +221718,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$FOLDER/records.jsonl",
+                        "file": "records.jsonl",
                         "first_line": "1",
                         "last_line": "1"
                       }
@@ -221897,7 +221897,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$FOLDER/records.jsonl",
+                  "file": "records.jsonl",
                   "first_line": "1",
                   "last_line": "1"
                 },
@@ -221917,7 +221917,7 @@
                     "body": "second"
                   },
                   "input_source": {
-                    "file": "$FOLDER/records.jsonl",
+                    "file": "records.jsonl",
                     "first_line": "2",
                     "last_line": "2"
                   },
@@ -221925,7 +221925,7 @@
                     {
                       "index": "0",
                       "source": {
-                        "file": "$FOLDER/records.jsonl",
+                        "file": "records.jsonl",
                         "first_line": "2",
                         "last_line": "2"
                       }
@@ -222104,7 +222104,7 @@
                 },
                 "schema": "thinkthen.result/2",
                 "source": {
-                  "file": "$FOLDER/records.jsonl",
+                  "file": "records.jsonl",
                   "first_line": "2",
                   "last_line": "2"
                 },
