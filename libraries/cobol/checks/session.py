@@ -150,19 +150,19 @@ copy "tt-native-generated.cpy".
 01 written usage binary-double unsigned value 123.
 01 status-code usage binary-long signed.
 procedure division.
- allocate tt-n-complete-utf8-v1
- set v-data of tt-n-complete-utf8-v1 to address of evidence
- move 8193 to v-len of tt-n-complete-utf8-v1
- call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
+ allocate tt-n-complete-utf8
+ set v-data of tt-n-complete-utf8 to address of evidence
+ move 8193 to v-len of tt-n-complete-utf8
+ call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8
     output-text written returning status-code
  if status-code not = tt-n-cobol-overflow-k or written not = 123
     or output-text not = all "z" move 1 to return-code goback end-if
- move 8192 to v-len of tt-n-complete-utf8-v1
- call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
+ move 8192 to v-len of tt-n-complete-utf8
+ call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8
     output-text written returning status-code
  if status-code not = 0 or written not = 8192 or output-text not = all "x"
     move 2 to return-code goback end-if
- free tt-n-complete-utf8-v1
+ free tt-n-complete-utf8
  move 0 to return-code goback.
 ''')
         compile_caller(source, root / 'capacity')
