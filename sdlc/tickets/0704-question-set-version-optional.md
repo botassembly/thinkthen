@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision 6f31533, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/core/question_set/parsing.rs`, `crates/thinkthen/tests/`, `specification/`, `site/src/`, `libraries/*/README.md`, `databases/*/README.md`.
