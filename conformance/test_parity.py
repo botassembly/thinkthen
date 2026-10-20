@@ -90,6 +90,29 @@ class NativeFixtureEnvironment(unittest.TestCase):
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
 
+    def test_explicit_dependency_homes_do_not_require_a_host_account(self):
+        sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import parity as native_parity
+        import native_fixture
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            tools = {name: str(root / name) for name in (
+                'CARGO_HOME', 'RUSTUP_HOME', 'THINKTHEN_TOOLCHAINS', 'PUB_CACHE',
+                'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')}
+            with patch.object(os, 'environ', tools), patch.object(Path, 'home', side_effect=RuntimeError('no host account')):
+                env = parity.consumer_environment(root, '12345')
+                for name, value in tools.items():
+                    self.assertEqual(env[name], value)
+                self.assertEqual(env['R_LIBS_USER'], str(Path(tools['THINKTHEN_TOOLCHAINS']) / 'r-library'))
+                with patch.object(os, 'environ', {}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run') as compiler:
+                    native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
+                                       extra_env={name: tools[name] for name in ('CARGO_HOME', 'RUSTUP_HOME')},
+                                       rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+                compiled = compiler.call_args.kwargs['env']
+                for name in ('CARGO_HOME', 'RUSTUP_HOME'):
+                    self.assertEqual(compiled[name], tools[name])
+                self.assertNotEqual(compiled['HOME'], env['HOME'])
+
     def test_shared_routine_selects_call_result_once_without_followup(self):
         sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
         import session_cases

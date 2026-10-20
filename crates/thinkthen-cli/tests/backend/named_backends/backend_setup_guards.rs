@@ -7,7 +7,7 @@ use serde_json::json;
 fn profile_only_default_builtin_is_inherited_and_an_unnamed_custom_route_is_not() {
     let home = Home::new("default-setup-0400");
     let target = listener();
-    home.config(&json!({"schema":"thinkthen.config/1","backends":{"typesafe":{"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}}}}).to_string());
+    home.config(&json!({"backends":{"typesafe":{"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}}}}).to_string());
     let input = home.evidence(&["alpha"]);
     let planned = home.run(
         &[
@@ -53,7 +53,7 @@ fn setup_entries_cannot_bypass_owner_or_named_key_host_guards() {
     let target = listener();
     let profile =
         json!({"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":100});
-    home.config(&json!({"schema":"thinkthen.config/1","backends":{"typesafe":{"usd_per_million_input":"2","usd_per_million_output":"0","profile":profile}}}).to_string());
+    home.config(&json!({"backends":{"typesafe":{"usd_per_million_input":"2","usd_per_million_output":"0","profile":profile}}}).to_string());
     let input = home.evidence(&["alpha"]);
     let configuration = crate::child::Folder::Config
         .under(&home.root)
@@ -106,7 +106,7 @@ fn setup_entries_cannot_bypass_owner_or_named_key_host_guards() {
 fn selected_setup_does_not_hide_an_invalid_unselected_entry() {
     let home = Home::new("all-setups-0400");
     let target = listener();
-    home.config(&json!({"schema":"thinkthen.config/1","backend":"small","backends":{
+    home.config(&json!({"backend":"small","backends":{
         "small":{"url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m","usd_per_million_input":"2","usd_per_million_output":"0"},
         "unused":{"url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m","profile":{"schema":"invalid-marker-0400"}}
     }}).to_string());
@@ -149,7 +149,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
         let profile =
             json!({"schema":"thinkthen.backend-profile/1","name":"probe-limit",field:limit});
         home.config(
-            &json!({"schema":"thinkthen.config/1","backends":{"small":{
+            &json!({"backends":{"small":{
                 "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
             }}})
             .to_string(),
@@ -173,7 +173,7 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
             assert_eq!(target.count(), 0, "{field}, plan={plan}");
         }
         // At a non-loopback address a missing key would otherwise fail first.
-        home.config(&json!({"schema":"thinkthen.config/1","backends":{"small":{
+        home.config(&json!({"backends":{"small":{
             "url":"https://probe.example.invalid/v1","key_env":"LOCAL_D1_KEY","model":"jev-1.13.0","profile":profile
         }}}).to_string());
         let proxy = Proxy::start();
@@ -199,7 +199,7 @@ fn an_explicit_command_profile_still_outranks_the_setup_request_limit() {
     let home = Home::new("explicit-request-profile-0400");
     let target = listener();
     home.config(
-        &json!({"schema":"thinkthen.config/1","backend":"small","backends":{"small":{
+        &json!({"backend":"small","backends":{"small":{
             "url":target.base(),"key_env":"LOCAL_D1_KEY","model":"m",
             "profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":1}
         }}})

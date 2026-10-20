@@ -28,7 +28,7 @@ BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
 SUFFIX = "dylib" if sys.platform == "darwin" else "so"
 LIB = pathlib.Path(os.environ.get("THINKTHEN_SQLITE_EXTENSION", BUILT / "release" / f"libthinkthen0.{SUFFIX}"))
 BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend")))
-CLI = os.environ.get("THINKTHEN_SQLITE_CLI", str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
+CLI = (os.environ["THINKTHEN_SQLITE_CLI"] if "THINKTHEN_SQLITE_CLI" in os.environ else str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
 LOOPBACK_KEY = "sk-sqlite-loopback"
 LIVE: list[subprocess.Popen] = []
 

@@ -72,7 +72,7 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$w
 config="$work/config/thinkthen"
 [ "$(uname -s)" != Darwin ] || config="$work/home/Library/Application Support/thinkthen"
 mkdir -p "$config"
-printf '%s\n' '{"schema":"thinkthen.config/1","usd_per_million_input":"0.042","usd_per_million_output":"0.168"}' \
+printf '%s\n' '{"usd_per_million_input":"0.042","usd_per_million_output":"0.168"}' \
   > "$config/config.json"
 printf '%s' "$(printf '%s' "$example" | jq -r '.body')" \
   | HOME="$work/home" XDG_CONFIG_HOME="$work/config" thinkthen decide "$question" --threshold 0.2:0.8 --details \

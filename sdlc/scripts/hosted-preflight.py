@@ -367,7 +367,7 @@ def dart_locks(check):
 def qualify(check, stage, target):
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
-    cache = Path(os.environ.get('THINKTHEN_TOOLCHAINS', Path.home() / '.cache/thinkthen-toolchains'))
+    cache = Path((os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ else Path.home() / '.cache/thinkthen-toolchains'))
     if stage == 'apple-coverage':
         check.tools(('cc', 'swift', 'xcrun', 'lipo'))
         check.command([sys.executable, '-c', 'from jsonschema import Draft202012Validator'])
@@ -431,7 +431,7 @@ def qualify(check, stage, target):
         check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['public-api']['version']) + r'\s*$')
         check.command(['rustc', '+' + pins['rust-nightly']['version'], '--version'], re.escape(pins['rust-nightly']['rustc_date']))
         check.command(['python3', '-c', 'import yaml; print(yaml.__version__)'], '^' + re.escape(manifest['python_packages']['PyYAML']) + r'\s*$')
-        advisory = Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))) / 'advisory-dbs'
+        advisory = Path((os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))) / 'advisory-dbs'
         databases = list(advisory.glob('*/.git'))
         check.check('cargo-deny advisory cache', lambda: require(databases, 'fetched advisory database missing'))
         for database in databases:

@@ -9,7 +9,7 @@ def isolated(folder, **extra):
 def configuration(folder, value):
     directory = folder / ("Library/Application Support/thinkthen" if sys.platform == "darwin" else "config/thinkthen")
     directory.mkdir(parents=True, exist_ok=True)
-    (directory / "config.json").write_text(json.dumps({"schema": "thinkthen.config/1", **value}))
+    (directory / "config.json").write_text(json.dumps(value))
     if sys.platform == "win32":
         private_windows_configuration(directory / "config.json")
 

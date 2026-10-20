@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 fn rank_set_uses_selected_backend_and_override_without_recording_credentials() {
     let target = listener();
     let home = Home::new("rank-set-0401-backend");
-    home.config(&json!({"schema":"thinkthen.config/1","backends":{"selected":{"url":target.base(),"path":"decisions","key_env":CONFIGURED.0,"model":"chosen"}}}).to_string());
+    home.config(&json!({"backends":{"selected":{"url":target.base(),"path":"decisions","key_env":CONFIGURED.0,"model":"chosen"}}}).to_string());
     let question = home.path("rank-set.json");
     std::fs::write(
         &question,

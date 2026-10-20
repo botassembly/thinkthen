@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--fetch', action='store_true')
     args = parser.parse_args()
-    cache = Path(os.environ.get('THINKTHEN_TOOLCHAINS', Path.home() / '.cache/thinkthen-toolchains')) / 'duckdb/community'
+    cache = Path((os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ else Path.home() / '.cache/thinkthen-toolchains')) / 'duckdb/community'
     lock = cache.parent.parent / '.duckdb-cache-mutation.lock'
     if args.fetch and os.environ.get('THINKTHEN_DUCKDB_CACHE_LOCK_HELD') != str(lock):
         return subprocess.call([sys.executable, str(ROOT / 'tools/cache_lock.py'), str(lock),

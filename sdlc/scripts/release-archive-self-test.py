@@ -1071,10 +1071,26 @@ def main():
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
+                          "TARGET=*) target=${arg#*=} ;; "
                           "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
                           "python3 \"$root/src/databases/duckdb/tools/cache_lock.py\" \"$root/cache.lock\" "
                           "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
                           "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
+                          "cd \"$root/src\"\n"
+                          "export THINKTHEN_TOOLCHAINS=\"$root/cache/toolchains\"\n"
+                          "python3 - <<'PYHOST'\n"
+                          "import os, sys\nfrom pathlib import Path\n"
+                          "sys.path.insert(0, 'databases/duckdb/tools')\n"
+                          "from inputs import versions\n"
+                          "for version in versions():\n"
+                          "    runtime = Path('databases/duckdb/build/community') / version / 'build/release'\n"
+                          "    runtime.mkdir(parents=True)\n"
+                          "    (runtime / 'duckdb').write_bytes(b'fixture DuckDB host')\n"
+                          "    wheels = Path(os.environ['THINKTHEN_TOOLCHAINS']) / 'duckdb/community' / version / 'wheels'\n"
+                          "    wheels.mkdir(parents=True)\n"
+                          "    (wheels / 'fixture.whl').write_bytes(b'fixture DuckDB wheel')\n"
+                          "PYHOST\n"
+                          "sh sdlc/scripts/release-workflow duckdb-host-pack \"$root/duckdb-hosts\" \"$target\" \"$selected\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
                           "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
                           "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
@@ -1093,6 +1109,11 @@ def main():
             raise AssertionError("launcher passed another selected commit")
         if (output / "selected-tar").read_text().strip() != "/work/source.tar":
             raise AssertionError("launcher passed another tar path")
+        duckdb_versions = runpy.run_path(str(REPO / "databases/duckdb/tools/inputs.py"))["versions"]()
+        host_archives = output.parent / "duckdb-hosts"
+        expected_hosts = {f"duckdb-hosts-{version}-{host}-{commit}.tar.gz" for version in duckdb_versions}
+        if {path.name for path in host_archives.iterdir()} != expected_hosts:
+            raise AssertionError("launcher omitted or added a DuckDB host archive")
         with (output / "source.tar").open("rb") as packed:
             actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
         if actual != commit:
@@ -1101,7 +1122,13 @@ def main():
         fake_go.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_GO_VERSION\"\n")
         fake_go.chmod(0o755)
         no_python = fake_bin / "python3"
-        no_python.write_text("#!/bin/sh\nexit 1\n")
+        # Keep the real platform/input admission before the unavailable Python
+        # dependency and generator plants, so each refusal reaches its owner.
+        no_python.write_text(f"#!{sys.executable}\n"
+                             "import os, sys\nfrom pathlib import Path\n"
+                             f"if len(sys.argv) > 1 and Path(sys.argv[1]).resolve() == Path({str(REPO / 'sdlc/scripts/check_verdict.py')!r}):\n"
+                             "    os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
+                             "sys.exit(1)\n")
         no_python.chmod(0o755)
         for version, diagnostic in (
             ("go version go1.21.9 linux/amd64", "Go 1.22 or newer is required"),
@@ -1116,9 +1143,11 @@ def main():
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
         installed_env = os.environ | {"PATH": fixture_path(fake_bin),
                                       "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
-                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
-                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
+                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64"}
         for family in ("go", "cpp"):
+            # Supply a real wrapper so admission reaches the missing C archive.
+            wrapper = next((base / "paired").glob(f"thinkthen-{family}-*.tar.gz"))
+            installed_env["THINKTHEN_ARTIFACT"] = str(wrapper)
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}

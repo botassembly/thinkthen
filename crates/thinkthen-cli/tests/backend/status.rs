@@ -180,8 +180,7 @@ fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
     fs::create_dir_all(config.parent().expect("config parent")).expect("config folder");
     for disabled in [false, true] {
         if disabled {
-            fs::write(&config, br#"{"schema":"thinkthen.config/1","cache":false}"#)
-                .expect("disabled cache setting");
+            fs::write(&config, br#"{"cache":false}"#).expect("disabled cache setting");
         }
         let (code, value, stderr) = inspect(&home);
         assert_eq!(code, Some(0));
@@ -205,8 +204,9 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
     fs::create_dir_all(Folder::Config.under(&home)).expect("config folder");
     fs::write(
         Folder::Config.under(&home).join("config.json"),
-        r#"{"schema":"thinkthen.config/1","url":"https://configured.example/v1","model":"fixed","cache":false,"cache_bytes":42}"#,
-    ).expect("configuration");
+        r#"{"url":"https://configured.example/v1","model":"fixed","cache":false,"cache_bytes":42}"#,
+    )
+    .expect("configuration");
     let mut status = command(&home);
     for folder in [Folder::Config, Folder::Cache, Folder::Usage] {
         let (name, value) = folder.variable(&home);

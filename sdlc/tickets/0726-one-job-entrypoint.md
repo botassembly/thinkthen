@@ -1,10 +1,12 @@
 # 0726 — One entrypoint for every machine job
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Reviews: revision 2ae50ac, accept
+
+Reviews: revision f9a916b, accept
 
 ## Outcome
 
@@ -30,3 +32,4 @@ The coordinator reported on 2026-10-19 that several targeted M5 launches omitted
 
 - 2026-10-19 started
 - 2026-10-19 next: Fresh review accepts only launcher and usage component2ae50ac9c after M5 job1792448043684-55720 passed; the accepted component rides the wave-one shared gate while this parent stays open for gate wiring after0619.
+- 2026-10-19 landed 83e91ac29; next: The accepted launcher and usage component landed with the shared wave-one gate1792449069638-30218, and this parent stays open for approved Linux-lint/native-test gate wiring after0619.
