@@ -1,12 +1,16 @@
 # 0621: Measure and fix the Linux parity-consumer timeouts
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0619
+
+Reviews: revision f37577e, accept
+
+Reviews: revision c902244, accept
 
 ## Outcome
 
