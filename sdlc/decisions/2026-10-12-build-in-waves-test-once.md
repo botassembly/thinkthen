@@ -1,5 +1,7 @@
 # Build the rest of 0.2 in waves and test once
 
+Superseded by [0.2.1 rebuilds the basis](2026-10-18-0-2-1-rebuilds-the-basis.md) on 2026-10-18. Lanes land on main through the gate, and no integration branch runs. The text below is history.
+
 Date: 2026-10-12. Ian can overturn this ruling.
 
 Ian asked how to pause testing, make the remaining changes quickly and in parallel across the languages, and then test safely, so that the team spends less time waiting on test runs.
