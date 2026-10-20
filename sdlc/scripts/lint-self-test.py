@@ -124,6 +124,8 @@ if sys.argv[1:3] == ['image', 'inspect']:
                  (None, None, ['lint'], 'checkpoint'),
                  ('0746', None, ['package'], 'checkpoint'),
                  ('0746', None, ['test-full-cases'], 'checkpoint')]
+        # A container label does not establish that pm admitted this job.
+        self.env['PM_TICKET'] = '0746'
         for ticket, requested, checks, expected in cases:
             with self.subTest(ticket=ticket, requested=requested, checks=checks):
                 calls.write_text('')
