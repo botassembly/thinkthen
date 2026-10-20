@@ -28,3 +28,4 @@ Changes: `crates/thinkthen-cli/tests/backend/annotate/scheduling.rs`, `crates/th
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: product: gate 1792524577676-83762 stopped at the known unpatched TLS advisory prerequisite before lint or tests; predecessor focused proof 1792524391492-24102 passed fifteen pipe cases, and final 440d71942 preserves original assertions while allowing legitimate cancellation before reply release, awaiting 0744 integration before final checks.
