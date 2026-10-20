@@ -21,7 +21,7 @@ Depends on: 0655
 
 ### Proof
 
-On the M5 through `pm job run --machine m5 0654 SHA --memory 8 -- sh libraries/cpp/check.sh`, the gate installs the CMake package, builds the dumper outside the repository, and matches the 0642 oracle for every shared case.
+On the M5 through `pm job run --machine m5 0654 SHA --memory 8 -- sdlc/scripts/job sh libraries/cpp/check.sh`, the gate installs the CMake package, builds the dumper outside the repository, and matches the 0642 oracle for every shared case.
 
 ## Evidence
 

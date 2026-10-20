@@ -18,7 +18,7 @@ Depends on: 0662, 0688
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0661 SHA --memory 8 -- sh libraries/python/check.sh` runs `mypy --strict` over the type tests, which annotate every result type using only public imports from the installed wheel. Before the change mypy refuses the imports from `thinkthen.types`, and `decide(...).value` types as the broad `_ReadingValue`.
+- On the M5 natively: `pm job run --machine m5 0661 SHA --memory 8 -- sdlc/scripts/job sh libraries/python/check.sh` runs `mypy --strict` over the type tests, which annotate every result type using only public imports from the installed wheel. Before the change mypy refuses the imports from `thinkthen.types`, and `decide(...).value` types as the broad `_ReadingValue`.
 - `python3 conformance/library-surface.py --library python` passes.
 
 ## Evidence

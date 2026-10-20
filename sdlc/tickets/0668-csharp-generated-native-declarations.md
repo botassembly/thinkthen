@@ -24,10 +24,10 @@ Depends on: 0669, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --bridge --check && python3 build-tools/results/generate.py --check'`. Before the change, `answer_rules.py` fails once the C# template's exception is removed.
+- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sdlc/scripts/job sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --bridge --check && python3 build-tools/results/generate.py --check'`. Before the change, `answer_rules.py` fails once the C# template's exception is removed.
 - On the M5, `dotnet build libraries/csharp/ThinkThen.csproj` and `dotnet format libraries/csharp/ThinkThen.csproj --verify-no-changes` pass; the format check fails on current main.
 - `git grep -nE 'DllImport|LibraryImport' libraries/csharp` finds them only in the generated declaration file.
-- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sh libraries/csharp/check.sh`, after 0669 declares `darwin-arm64`, the installed NuGet consumer runs all ten named calls, cancellation and failures against a recorded backend, and its comparison against `conformance/fixtures/packets.json` passes. Linux arm64: `pm job run --machine m5 0668 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/csharp`; Linux x86_64: the same command with `--machine gator --memory 7`.
+- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sdlc/scripts/job sh libraries/csharp/check.sh`, after 0669 declares `darwin-arm64`, the installed NuGet consumer runs all ten named calls, cancellation and failures against a recorded backend, and its comparison against `conformance/fixtures/packets.json` passes. Linux arm64: `pm job run --machine m5 0668 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/csharp`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

@@ -16,7 +16,7 @@ Depends on: 0648, 0651, 0655, 0658, 0662, 0665, 0667, 0668, 0671, 0673, 0676, 06
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0711 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py --self-test && python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --check'` passes. Before the change the check still reads exception files.
+- On the M5: `pm job run --machine m5 0711 SHA --memory 8 -- sdlc/scripts/job sh -c 'python3 build-tools/results/answer_rules.py --self-test && python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --check'` passes. Before the change the check still reads exception files.
 - Done once by hand and not committed: a planted `probability = yes * no` line in any template fails the check.
 - `sdlc/scripts/lint` passes once at closure on the M5.
 

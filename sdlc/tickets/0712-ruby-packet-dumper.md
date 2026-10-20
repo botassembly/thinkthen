@@ -17,7 +17,7 @@ Depends on: 0683, 0684, 0688
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0712 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/ruby/check.sh'`. The installed consumer's comparison passes for every routine case.
+- On the M5: `pm job run --machine m5 0712 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/ruby/check.sh'`. The installed consumer's comparison passes for every routine case.
 - Done once by hand and not committed: changing one expected value in the oracle fails the Ruby comparison with a diff.
 
 ## Evidence

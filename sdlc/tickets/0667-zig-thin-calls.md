@@ -21,7 +21,7 @@ Depends on: 0666, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0667 SHA --memory 8 -- sh libraries/zig/check.sh`, an outside Zig project depending on the unpacked package runs the examples and the existing installed consumers pass. 0666 adds darwin-arm64 to Zig's `check_platforms`, so this ticket follows it.
+- On the M5 through `pm job run --machine m5 0667 SHA --memory 8 -- sdlc/scripts/job sh libraries/zig/check.sh`, an outside Zig project depending on the unpacked package runs the examples and the existing installed consumers pass. 0666 adds darwin-arm64 to Zig's `check_platforms`, so this ticket follows it.
 - `python3 build-tools/results/answer_rules.py` passes with the Zig template exception removed. Before the change it fails on that file.
 - The installed Zig consumer and its comparison against `conformance/fixtures/packets.json` belong to 0716.
 - Linux arm64: `pm job run --machine m5 0667 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/zig`; Linux x86_64: the same command with `--machine gator --memory 7`.

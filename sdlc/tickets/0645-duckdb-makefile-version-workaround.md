@@ -18,7 +18,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0645 SHA --memory 8 -- sdlc/scripts/lint` passes, including `python3 databases/duckdb/tools/input_version_cases.py`, which covers the new `version.env` fields.
+- On the M5 in the Linux container: `pm job run --machine m5 0645 SHA --memory 16 -- sdlc/scripts/linux-check lint` passes, including `python3 databases/duckdb/tools/input_version_cases.py`, which covers the new `version.env` fields.
 - Linux arm64: `pm job run --machine m5 0645 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/duckdb`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `python3 databases/duckdb/tools/source_hosts.py` builds both pinned hosts and runs `test_release` with `--require thinkthen`, and `sh databases/duckdb/check.sh` passes on both versions. The loaded extension reports the pinned DuckDB version through `pragma version`. Before the change, removing the `abi-override` block makes the 2.0 preview host build with the wrong ABI identifier and fail to load the extension.
 
 ## Evidence

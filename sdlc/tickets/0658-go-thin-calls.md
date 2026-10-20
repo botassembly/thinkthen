@@ -22,7 +22,7 @@ Depends on: 0657, 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0658 SHA --memory 8 -- sh libraries/go/check.sh`, the gate builds the installed module, compiles `examples/decide`, and the existing installed consumers pass. Before the change the README example needs `refund.Value.(bool)`; after it, the example compiles with no type assertion.
+- On the M5 through `pm job run --machine m5 0658 SHA --memory 8 -- sdlc/scripts/job sh libraries/go/check.sh`, the gate builds the installed module, compiles `examples/decide`, and the existing installed consumers pass. Before the change the README example needs `refund.Value.(bool)`; after it, the example compiles with no type assertion.
 - A Go test in the installed module's `go test` run feeds an out-of-range native code and gets `KindDefect`. It fails before the change through `sessionFailure`.
 - `python3 build-tools/results/answer_rules.py` passes with the two Go exceptions removed. Before the change it fails on those files.
 - Go's installed consumer and its comparison against `conformance/fixtures/packets.json` belong to 0656.

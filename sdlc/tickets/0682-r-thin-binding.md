@@ -20,7 +20,7 @@ Depends on: 0688
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0682 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && THINKTHEN_TEST_PROFILE=full sh libraries/r/check.sh'`. The installed package runs the shared cases through `tests/native_case.R`, every named call in `tests/verbs.R`, and the interrupt tests `tests/ordinary_interrupt.R` and `tests/interrupt.R`: an interrupt while the provider is held returns control promptly and the receipt settles `cancelled`.
+- On the M5: `pm job run --machine m5 0682 SHA --memory 8 -- sdlc/scripts/job sh -c 'cargo build --locked --offline -p conformance-backend && THINKTHEN_TEST_PROFILE=full sh libraries/r/check.sh'`. The installed package runs the shared cases through `tests/native_case.R`, every named call in `tests/verbs.R`, and the interrupt tests `tests/ordinary_interrupt.R` and `tests/interrupt.R`: an interrupt while the provider is held returns control promptly and the receipt settles `cancelled`.
 - `git grep -n 'pskill' libraries/r/thinkthen` finds nothing; on main it finds `.tt_interrupt`.
 - `python3 build-tools/results/answer_rules.py` passes with the R template gone from `LEGACY_FILES`.
 
