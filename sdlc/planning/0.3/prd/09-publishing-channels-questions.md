@@ -1,7 +1,7 @@
 ---
 date: 2026-10-13
 status: draft PRD
-source: Ian's goal of traction measured by GitHub stars and YouTube views (0.3 README, 2026-10-13); duckdb/community-extensions#2936, its review and its CI log; thinkthen tickets 0415, 0543, 0576 and 0577; [`sdlc/planning/release-process.md`](../../../release-process.md); `.github/workflows/release.yml` and `install-check.yml`; `libraries/`, `databases/`, `install.sh`, `install.ps1`; the 2026-10-09 native package design; the marketing launch, go-live, site, libraries, playbook, 0.2 marketing and copy notes; the house writing rules; the live registry pages read on 2026-10-13; each channel's published rules, cited below
+source: Ian's goal of traction measured by GitHub stars and YouTube views (0.3 README, 2026-10-13); duckdb/community-extensions#2936, its review and its CI log; thinkthen tickets 0415, 0543, 0576 and 0577; [`sdlc/planning/release-process.md`](../../release-process.md); `.github/workflows/release.yml` and `install-check.yml`; `libraries/`, `databases/`, `install.sh`, `install.ps1`; the 2026-10-09 native package design; the marketing launch, go-live, site, libraries, playbook, 0.2 marketing and copy notes; the house writing rules; the live registry pages read on 2026-10-13; each channel's published rules, cited below
 ---
 
 # PRD 09 working file: publishing channels, the hard questions

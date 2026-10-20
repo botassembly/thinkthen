@@ -1,8 +1,6 @@
 # ThinkThen 0.3
 
-Background, not a plan. The one plan is [milestones.md](../../milestones.md).
-
-The product design for ThinkThen 0.3, kept by the marketing and product lead with Ian. These files say what 0.3 should be and why. They hold no status. When a design settles, the thinkthen PM turns it into issues, experiments and tickets in this repo's [`sdlc/`](../../../), and those records own the work from then on.
+The product design for ThinkThen 0.3, kept by the marketing and product lead with Ian. These files say what 0.3 should be and why. They hold no status. When a design settles, the thinkthen PM turns it into issues, experiments and tickets in this repo's [`sdlc/`](../../), and those records own the work from then on.
 
 ## The release
 
@@ -41,7 +39,7 @@ Out of 0.3: the user interface, the hosted service, the enterprise edition and a
 1. **Capture.** Ian's raw ideas land in his notes and get sorted by product or kept as ideas.
 2. **Shape.** A product idea for a release becomes a file in this folder, `sdlc/planning/<version>/`, worked out with Ian.
 3. **Hand off.** When a file settles, the lead sends the thinkthen PM a message. The PM designs the tickets and the prototypes or experiments that reduce each risk. Experiments run in a separate experiment repo.
-4. **Build.** Tickets in [`sdlc/`](../../../) own the work. This folder is not updated with progress.
+4. **Build.** Tickets in [`sdlc/`](../../) own the work. This folder is not updated with progress.
 
 ## Risks to retire before tickets
 

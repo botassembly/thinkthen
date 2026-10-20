@@ -1,7 +1,7 @@
 ---
 date: 2026-10-11
 status: design input for 0.3
-source: Ian's dictation on 2026-10-11; 0.2's [`specification/mcp.md`](../../../../specification/mcp.md) and ticket 0455
+source: Ian's dictation on 2026-10-11; 0.2's [`specification/mcp.md`](../../../specification/mcp.md) and ticket 0455
 ---
 
 # ThinkThen MCP in 0.3

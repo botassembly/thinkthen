@@ -3,8 +3,6 @@ date: 2026-10-13
 updated: 2026-10-14, after the six 0.3 experiments
 source: the ten ThinkThen 0.3 PRDs written on 2026-10-13, in [prd/](prd/)
 ---
-Background, not a plan. The one plan is [milestones.md](../../milestones.md).
-
 ### Ian's PRD feedback
 
 1. Let's reconsider some of the commands that we need to have library exposure with, especially around admin. I definitely want to be able to run toolbox commands from every library and every surface, but I don't know if I need to set up a toolbox using R or Python. I definitely want to support it using the Rust SDK and the CLI. The only question at this point is TypeScript and whether that waits for the buildout of the UI, if we need it.

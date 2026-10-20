@@ -14,5 +14,6 @@ Read status, order and lanes through `pm daily`, `pm next` and `pm lanes`. [mile
 - `open-concerns.md`: the contested points across the ADRs and the plan as of 2026-09-19, each with options, a recommendation, and the reason. Ian ruled on it the same day, and ADR 0010 records the rulings.
 - [databases/](databases/README.md): the three database extensions Ian ruled in on 2026-09-20, DuckDB, SQLite, and PostgreSQL, each in Rust over the same engine. The eight SQL functions, the rules all three keep, what other people have already published, and one page per database. A fast follow that never holds the launch.
 - [libraries/](libraries/README.md): the seven surfaces (the command, Rust, Python, JavaScript, Ruby, R, and C), the goals and anti-goals each one shares, and one page per surface. A study for the rewrite of ADR 0017.
-- [archive/](archive/): background, not plans: the Windows stages, the Polars plan, the quality plan, the documentation plan, and the 0.3 product designs with Ian's decision list.
+- [archive/](archive/): background, not plans: the Windows stages, the Polars plan, the quality plan, and the documentation plan.
+- [0.3/](0.3/README.md): the product plans for ThinkThen 0.3: the design files, ten PRDs with their worked questions, and the decision list for Ian.
 - `adr/`: architecture decision records, numbered from 0001. Each says whether Ian can overturn it cheaply.
