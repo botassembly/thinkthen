@@ -84,6 +84,64 @@ fn first_row(
 }
 
 #[test]
+fn batch_one_keeps_the_next_descriptor_queued_until_the_held_row_finishes() {
+    let release = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&release);
+    let (sent, received) = mpsc::channel();
+    let listener = Listener::answering_with_events(
+        move |body| {
+            let answer = response(body);
+            if String::from_utf8_lossy(body).contains("first") {
+                answer.after_release(Arc::clone(&held))
+            } else {
+                answer
+            }
+        },
+        sent,
+    )
+    .unwrap();
+    let mut arguments = request(feed()).call.arguments().clone();
+    arguments.options.batch = Some(RequestBatch::Count(1));
+    let session = engine(&listener)
+        .request_session(Request::for_function(RequestFunction::Decide, arguments))
+        .unwrap();
+    let mut packets = Vec::new();
+    push(&session, "first", &mut packets).unwrap();
+    received.recv_timeout(Duration::from_secs(5)).unwrap();
+    assert!(matches!(
+        session.try_push(descriptor("second")).unwrap(),
+        RequestSessionPush::Accepted
+    ));
+    // Readiness must leave this next descriptor in the bounded input cell
+    // while the first provider response is held, even with scheduler capacity.
+    let ready = session.wait(
+        RequestSessionWaitInterest::Input,
+        Duration::from_millis(100),
+    );
+    session.finish(None).unwrap();
+    assert!(release.wait());
+    packets.extend(drain(&session));
+    assert_eq!(
+        ready,
+        RequestSessionReady::Timeout,
+        "batch one pulled another native input before completing its held row"
+    );
+    assert_eq!(
+        packets
+            .iter()
+            .filter(|packet| matches!(packet, RequestSessionResult::Row(_)))
+            .count(),
+        2
+    );
+    let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+        panic!("terminal follows both completed rows")
+    };
+    assert!(terminal.error.is_none());
+    assert_eq!(terminal.facts.as_ref().unwrap().records(), 2);
+    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 2);
+}
+
+#[test]
 fn first_rows_precede_eof_after_headers_and_multiple_blank_descriptors() {
     for pause in [None, Some(Duration::ZERO)] {
         for (framing, inputs) in [
