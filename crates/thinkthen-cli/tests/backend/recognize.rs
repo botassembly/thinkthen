@@ -382,14 +382,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     ]
     .map(|key| plan[key].clone());
     let url = format!("{}/systemone", listener.base());
-    let expected = serde_json::json!([
-        url,
-        "local-1",
-        "THINKTHEN_API_KEY",
-        4,
-        1,
-        8
-    ]);
+    let expected = serde_json::json!([url, "local-1", "THINKTHEN_API_KEY", 4, 1, 8]);
     assert_eq!(Value::from(head.to_vec()), expected);
     assert_eq!(listener.connections(), 0);
     let result = json(&run(&listener, &[&KINDS[..], &["--details"]].concat(), ADA));
