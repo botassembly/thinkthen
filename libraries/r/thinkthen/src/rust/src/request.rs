@@ -122,12 +122,13 @@ fn column_value(
     } else {
         List::from_values([probability])
     };
+    let missing_value = |value: &Robj| value.is_null() || value.inherits("thinkthen_absent");
     let ordinary = rows.iter().enumerate().all(|(at, (_, value))| {
         (if choices {
             value.as_str().is_some()
         } else {
             value.as_bool().is_some()
-        }) || (value.is_null() && probabilities.elt(at).is_ok_and(|value| value.is_null()))
+        }) || (missing_value(&value) && probabilities.elt(at).is_ok_and(|value| missing_value(&value)))
     });
     let missing: Robj = if choices {
         Rstr::na().into()
