@@ -371,8 +371,8 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
             .expect("counts JSON");
     assert_eq!(counts["requests"], 9); // one prepared request, at most two per each of four pieces
     assert_eq!(counts["upper_bound"], true);
+    assert!(plan.get("schema").is_none(), "{plan}");
     let head = [
-        "schema",
         "url",
         "model",
         "key_env",
@@ -383,7 +383,6 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     .map(|key| plan[key].clone());
     let url = format!("{}/systemone", listener.base());
     let expected = serde_json::json!([
-        "thinkthen.recognize-plan/2",
         url,
         "local-1",
         "THINKTHEN_API_KEY",

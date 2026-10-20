@@ -95,11 +95,11 @@ fn two_backends_at_one_address_and_model_share_answers_and_never_keys() {
         "the second backend sent nothing"
     );
     assert_eq!(target.count(), 2);
-    // A spend guard reads these two paths; `thinkthen.status/2` keeps them where status/1 had them.
+    // A spend guard reads these two paths; `thinkthen.status` keeps their existing locations.
     let status = home.run(&["status", "--json"], &[]);
     let (stdout, _) = said(&status);
     let value: serde_json::Value = serde_json::from_str(&stdout).expect("one JSON object");
-    assert_eq!(value["schema"], "thinkthen.status/2");
+    assert_eq!(value["schema"], "thinkthen.status");
     assert_eq!(
         value.pointer("/usage/total/requests_sent"),
         Some(&serde_json::json!(2))
@@ -305,7 +305,7 @@ fn status_names_the_backend_its_key_variable_and_each_source() {
     let json = home.run(&["status", "--json"], &[]);
     let (stdout, _) = said(&json);
     let value: serde_json::Value = serde_json::from_str(&stdout).expect("one JSON object");
-    assert_eq!(value["schema"], "thinkthen.status/2");
+    assert_eq!(value["schema"], "thinkthen.status");
     assert_eq!(
         value["backend"],
         serde_json::json!({"name": "local-d1", "url": "http://127.0.0.1:9/v1/systemone", "url_source": "backend", "model": "jev-1.13.0", "model_source": "backend", "key_variable": "LOCAL_D1_KEY", "api_key_set": true})
