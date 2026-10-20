@@ -10,14 +10,14 @@ Phase: 2
 
 No routine test comes near the 5-second nextest limit, and a retry reruns only the tests that failed.
 
-## Amendment, 2026-10-20 (timing root cause)
+### Scope
 
-Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../records/2026-10-20-five-delays-root-cause.md), rule 4 of [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md). It gates qualification (0687), not the freeze, and runs alongside language lanes.
+- Changes: `.config/nextest.toml` and the test files named under Evidence.
+- Keeps: every check's coverage.
 
-- Scope adds the nine cases that timed out on Yellow in checkpoint 0691/1792518201049-861514 (`sdlc/records/0688-yellow-checkpoint-routine-deadlines.md`): seven SQLite fixture cases, the relate ceiling case and the speed fixture. Use that record's recommendations: build legacy fixtures in one transaction and copy valid seeds; keep the large planning regression in the long suite with a smaller routine boundary case; run one complete speed table and restrict each planted fault to its row.
-- No test uses a sleep or a deadline as synchronization. Fixture setup stays outside the timed part. Every assertion and production durability check stays.
-- Changes widen to the test files of those cases and `.config/nextest.toml`.
-- Proof: `pm job run --machine gator 0605 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes five times in a row with no timeout, and the slowest routine test stays under 2.5 seconds there; Yellow serves when Gator is held. The configured landing gate passes.
+### Proof
+
+Five consecutive routine runs with no timeout, and the slowest test under 2.5 seconds. After landing, measure again and record the result here.
 
 ## Evidence
 
@@ -28,11 +28,13 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 - The slowest tests take 3.0 to 3.4 seconds, and 89 tests take over 1 second.
 - Cost before: 33.4 minutes of reruns over 22 revisions, plus failed revisions. Expected after: no timeout reruns, and a failed-only retry when one is needed.
 
-## Scope
+## Amendment, 2026-10-20
 
-- Changes: `.config/nextest.toml` and the test files named above.
-- Keeps: every check's coverage.
+Timing root cause.
 
-## Proof
+Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../records/2026-10-20-five-delays-root-cause.md), rule 4 of [the freeze decision](../decisions/2026-10-20-freeze-names-the-contract.md). It gates qualification (0687), not the freeze, and runs alongside language lanes.
 
-Five consecutive routine runs with no timeout, and the slowest test under 2.5 seconds. After landing, measure again and record the result here.
+- Scope adds the nine cases that timed out on Yellow in checkpoint 0691/1792518201049-861514 (`sdlc/records/0688-yellow-checkpoint-routine-deadlines.md`): seven SQLite fixture cases, the relate ceiling case and the speed fixture. Use that record's recommendations: build legacy fixtures in one transaction and copy valid seeds; keep the large planning regression in the long suite with a smaller routine boundary case; run one complete speed table and restrict each planted fault to its row.
+- No test uses a sleep or a deadline as synchronization. Fixture setup stays outside the timed part. Every assertion and production durability check stays.
+- Changes widen to the test files of those cases and `.config/nextest.toml`.
+- Proof: `pm job run --machine gator 0605 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes five times in a row with no timeout, and the slowest routine test stays under 2.5 seconds there; Yellow serves when Gator is held. The configured landing gate passes.
