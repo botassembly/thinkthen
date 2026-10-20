@@ -23,3 +23,5 @@ Changes: `**/Cargo.lock`, `Cargo.lock`. Change a manifest only if the existing c
 - Every proof uses the standard job, linux-check or configured gate entrypoint; preserve failed receipts and classify their reasons as product, setup or invocation.
 
 ## Progress
+
+- 2026-10-20 started
