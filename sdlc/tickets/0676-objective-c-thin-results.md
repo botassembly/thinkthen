@@ -33,3 +33,8 @@ Depends on: 0688
 - `build-tools/results/templates/objc.py` converts decimal text to `NSDecimalNumber` by hand, and `objc_calls.py` generates `TTCallValue` and `TTCallProbability` from `host_answers.call_results`. Both templates are in `LEGACY_FILES` in `build-tools/results/answer_rules.py`.
 - Objective-C maps numbers and answers by hand, and that mapping thrashed whenever the core result shape changed: five commits on decimal-range number conversion (6e7b37620, 4a22a18ea, 86b7857dc, 2d512ee33, a44dc2295), about eight on the filter answer accessor (e0c9359d3 through 0d16adfe8), and repeated reshaping of call value and probability (d8e403036, c32c2ad3f, 1d5c7285c).
 - `checks/foundation_installed.py` needs the assembled Apple package with `CThinkThen.xcframework` and starts no native build.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: Generate through pm job run --machine m5 0676 SHA --disk 20 --memory 8 -- sdlc/scripts/job python3 build-tools/results/generate.py --target objc, verify with the same command plus --check, and run sdlc/scripts/job python3 build-tools/results/answer_rules.py through the same wrapper.
