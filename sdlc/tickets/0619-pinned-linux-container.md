@@ -93,6 +93,7 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: Combined M5 job1792456808870-32467 passed configured Linux lint/test plus native macOS test atb7befb48b6 with both reviewed images prepared; shared configuration spec/demo proof and Yellow full-cases diagnosis are active, and capped full cases, package, stress and x86 receipts remain before whole closure.
 - 2026-10-19 landed 88cbe872b; next: Reviewed container and configured gate components landed with shared M5 gate1792456808870-32467; both architecture full-cases jobs continue on the same sourceb7befb48b6, and package, stress, x86 failure receipts and capped timing proof remain before whole closure.
 - 2026-10-19 next: ARM full-cases1792458506351-10765 failed before functional surfaces: release-boundary phases and six smokes passed, but Rjsonlite, DuckDB1.5.6 toolchain, SQLite3.50.0 amalgamation and Pythonoffline iniconfig2.3.0 were absent; a fresh developer owns the whole prepared-assets inventory, while x86 diagnostics continue and timing/docs component89211325c is freshly accepted with numeric limits unchanged.
+- 2026-10-19 next: PM amendmentabdaeef73 narrows closure to both core images,configured Linux/native gate and existing core package/smoke parts; reviewed5a7fc0684 retains genuine generator dependencies and starts admitted Yellow core-image proof, while noncore toolchains move to their waves,full-cases/stress to0691,DuckDB setup to0694 and static-musl command packaging stays0633.
 
 ## Amendment, 2026-10-18
 
