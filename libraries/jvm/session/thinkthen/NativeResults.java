@@ -71,7 +71,7 @@ copy.put("meta", thinkthen_complete_meta_v1(pointer(p.asSlice(112))));
 var positionSlot = p.asSlice(120);
 int positionState = positionSlot.get(ValueLayout.JAVA_INT, 0);
 if (positionState == 1) copy.put("position", null); else if (positionState == 2) copy.put("position", thinkthen_complete_position_v1(pointer(positionSlot.asSlice(8))));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -583,7 +583,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -618,7 +618,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -652,7 +652,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -684,7 +684,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -718,7 +718,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -750,7 +750,7 @@ copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(1
 var question_nameSlot = p.asSlice(112);
 int question_nameState = question_nameSlot.get(ValueLayout.JAVA_INT, 0);
 if (question_nameState == 1) copy.put("question_name", null); else if (question_nameState == 2) copy.put("question_name", text(question_nameSlot.asSlice(8)));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -981,7 +981,7 @@ var positionSlot = p.asSlice(120);
 int positionState = positionSlot.get(ValueLayout.JAVA_INT, 0);
 if (positionState == 1) copy.put("position", null); else if (positionState == 2) copy.put("position", thinkthen_complete_position_v1(pointer(positionSlot.asSlice(8))));
 copy.put("question", thinkthen_complete_find_question_document_v1(pointer(p.asSlice(136))));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(144))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(144))));
 var thresholdSlot = p.asSlice(152);
 int thresholdState = thresholdSlot.get(ValueLayout.JAVA_INT, 0);
 if (thresholdState == 1) copy.put("threshold", null); else if (thresholdState == 2) copy.put("threshold", json(pointer(thresholdSlot.asSlice(8))));
@@ -1300,7 +1300,7 @@ int imagesState = imagesSlot.get(ValueLayout.JAVA_INT, 0);
 if (imagesState == 1) copy.put("images", null); else if (imagesState == 2) copy.put("images", thinkthen_complete_image_list_v1(imagesSlot.asSlice(8)));
 copy.put("meta", thinkthen_complete_meta_v1(pointer(p.asSlice(40))));
 copy.put("question", thinkthen_complete_question_document_v1(pointer(p.asSlice(48))));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(56))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(56))));
 var sourceSlot = p.asSlice(64);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -1335,7 +1335,7 @@ var positionSlot = p.asSlice(112);
 int positionState = positionSlot.get(ValueLayout.JAVA_INT, 0);
 if (positionState == 1) copy.put("position", null); else if (positionState == 2) copy.put("position", thinkthen_complete_position_v1(pointer(positionSlot.asSlice(8))));
 copy.put("question", thinkthen_complete_recognize_question_document_v1(pointer(p.asSlice(128))));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(136))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(136))));
 var sourceSlot = p.asSlice(144);
 int sourceState = sourceSlot.get(ValueLayout.JAVA_INT, 0);
 if (sourceState == 1) copy.put("source", null); else if (sourceState == 2) copy.put("source", thinkthen_complete_physical_source_v1(pointer(sourceSlot.asSlice(8))));
@@ -1512,7 +1512,7 @@ var positionSlot = p.asSlice(136);
 int positionState = positionSlot.get(ValueLayout.JAVA_INT, 0);
 if (positionState == 1) copy.put("position", null); else if (positionState == 2) copy.put("position", thinkthen_complete_position_v1(pointer(positionSlot.asSlice(8))));
 copy.put("question", thinkthen_complete_relate_question_document_v1(pointer(p.asSlice(152))));
-copy.put("schema", thinkthen_complete_version_v1(pointer(p.asSlice(160))));
+copy.put("schema", thinkthen_complete_result_tag_v1(pointer(p.asSlice(160))));
 copy.put("value", thinkthen_complete_related_entity_edge_list_v1(p.asSlice(168)));
 copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(184))));
 return Collections.unmodifiableMap(copy);
@@ -1631,6 +1631,11 @@ case 7: yield "find";
 case 8: yield "annotate";
 case 9: yield "recognize";
 case 10: yield "relate";
+default: throw new IllegalStateException("Unknown native enum kind"); };
+}
+static Object thinkthen_complete_result_tag_v1(MemorySegment p) {
+return switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: yield "thinkthen.result";
 default: throw new IllegalStateException("Unknown native enum kind"); };
 }
 static Object thinkthen_complete_sdk_request_id_v1(MemorySegment p) {
@@ -1781,11 +1786,6 @@ default: throw new IllegalStateException("Unknown native enum kind"); };
 static Object thinkthen_complete_verb_v1(MemorySegment p) {
 return switch (p.get(ValueLayout.JAVA_INT, 0)) {
 case 1: yield "recognize";
-default: throw new IllegalStateException("Unknown native enum kind"); };
-}
-static Object thinkthen_complete_version_v1(MemorySegment p) {
-return switch (p.get(ValueLayout.JAVA_INT, 0)) {
-case 1: yield "thinkthen.result/2";
 default: throw new IllegalStateException("Unknown native enum kind"); };
 }
 static Object thinkthen_complete_wording_version_v1(MemorySegment p) {

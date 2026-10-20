@@ -104,7 +104,7 @@ def project(packet,verb):
         else:out['completed']=[]
         if e.get('stopped',{}).get('at') is not None:out['stopped_at']=e['stopped']['at']
         return out
-    facts=packet['facts'];out={'code':0,'schema':'thinkthen.result/2','call_id':facts['call_id'],'requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'rows':[]}
+    facts=packet['facts'];out={'code':0,'schema':'thinkthen.result','call_id':facts['call_id'],'requests_sent':facts['requests_sent'],'cache_answers':facts['cache_answers'],'rows':[]}
     if 'answer' in packet:
         out['settled'] = packet['answer']
     if 'call_result' in packet:
@@ -160,7 +160,7 @@ def assert_required(packet,row,value,bodies,root):
     results=packet['results'] if isinstance(packet['results'],list) else [packet['results']]
     expect=value['expect']
     for result in results:
-        assert result['schema']=='thinkthen.result/2'
+        assert result['schema']=='thinkthen.result'
         paths=value.get('image_paths') or (value.get('paths') if value.get('source_unit')==4 else [])
         if paths:
             assert 'images' in result,'native canonical image propagation prerequisite is missing'

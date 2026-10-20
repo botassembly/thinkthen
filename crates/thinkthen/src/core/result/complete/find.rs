@@ -46,7 +46,7 @@ impl Find {
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "completeFind"))]
 pub(crate) struct Document<'a, T: Serialize> {
-    schema: super::wire::Version,
+    schema: super::wire::ResultTag,
     answer_id: &'a crate::core::AnswerId,
     value: Option<&'a T>,
     index: Option<usize>,
@@ -89,7 +89,7 @@ impl Find {
     ) -> Result<S::Ok, S::Error> {
         let row = &self.reading;
         Document {
-            schema: super::wire::Version::V2,
+            schema: super::wire::ResultTag::Result,
             answer_id: self.identity.answer_id(),
             value,
             index: self.selected(),

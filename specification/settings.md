@@ -155,7 +155,7 @@ A design adds each of these, and no code has it yet. The ticket that lands one m
 
 ## SDK contract adoption for 0.2
 
-[Result/2](result.md#result2-target-for-02), [cache/2](cache.md) and [recording timing](recording.md#optional-timing-history-for-02) are settled targets under ADR 0120. The table's surface spellings describe landed settings until their implementation tickets adopt the targets. No new CLI flag, environment variable or configuration writer is added by this contract.
+[Results](result.md#detailed-results), [cache/2](cache.md) and [recording timing](recording.md#optional-timing-history-for-02) are settled targets under ADR 0120. The table's surface spellings describe landed settings until their implementation tickets adopt the targets. No new CLI flag, environment variable or configuration writer is added by this contract.
 
 The caller's existing record/replay/cache/refresh/no-cache controls retain precedence. Refresh bypasses held answers on the engine's fixed route, sends no-cache on retries/splits, and honors response storage instructions. Offline replay remains read-only and sends nothing; migration validates original v1 bytes before normalization. The optional timing sidecar belongs to 0445's existing attempts/recording controls; it requires no new command here.
 

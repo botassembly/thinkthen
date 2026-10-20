@@ -162,7 +162,7 @@ impl Serialize for Members<'_> {
     schemars(rename = "completeAnnotation")
 )]
 pub(crate) struct Document<'a, T: Serialize> {
-    schema: super::wire::Version,
+    schema: super::wire::ResultTag,
     answer_id: &'a AnswerId,
     input: &'a T,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -190,7 +190,7 @@ impl Annotation {
         Document {
             index,
             source: self.source.as_ref(),
-            schema: super::wire::Version::V2,
+            schema: super::wire::ResultTag::Result,
             answer_id: self.identity.answer_id(),
             input,
             value: &self.reading.value,

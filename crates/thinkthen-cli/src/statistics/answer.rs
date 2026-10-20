@@ -300,7 +300,7 @@ fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureE
 
 /// A detailed v2 decision carries a typed answer, independently of its authored value.
 fn detailed_decision(entry: &Json) -> bool {
-    entry.member("schema").and_then(Json::as_str) == Some("thinkthen.result/2")
+    entry.member("schema").and_then(Json::as_str) == Some("thinkthen.result")
         && verb_named(entry) == Some("decide")
         && entry
             .member("answer")

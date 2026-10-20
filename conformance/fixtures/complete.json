@@ -4,7 +4,7 @@
     {
       "type": "DecideResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": false,
         "question": {
@@ -89,7 +89,7 @@
     {
       "type": "ChooseResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": null,
         "question": {
@@ -170,7 +170,7 @@
     {
       "type": "TagResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": [],
         "question": {
@@ -242,7 +242,7 @@
     {
       "type": "ScoreResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": 1.5,
         "question": {
@@ -319,7 +319,7 @@
     {
       "type": "FilterResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": false,
         "question": {
@@ -409,7 +409,7 @@
     {
       "type": "RankResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": 2,
         "question": {
@@ -491,7 +491,7 @@
     {
       "type": "FindResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": null,
         "question": {
@@ -561,7 +561,7 @@
     {
       "type": "AnnotateResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "input": {
           "whole": [
@@ -688,7 +688,7 @@
     {
       "type": "RecognizeResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": {
           "entities": [
@@ -820,7 +820,7 @@
     {
       "type": "RelateResult",
       "result": {
-        "schema": "thinkthen.result/2",
+        "schema": "thinkthen.result",
         "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "value": [
           {
@@ -988,7 +988,7 @@
   "empty": {
     "type": "RelateResult",
     "result": {
-      "schema": "thinkthen.result/2",
+      "schema": "thinkthen.result",
       "answer_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "value": [],
       "question": {
@@ -1337,7 +1337,7 @@
           "input_tokens": 9
         }
       },
-      "schema": "thinkthen.result/2",
+      "schema": "thinkthen.result",
       "value": {
         "failed": {
           "failed": {
@@ -1497,7 +1497,7 @@
         "threshold": 0.5,
         "verb": "relate"
       },
-      "schema": "thinkthen.result/2",
+      "schema": "thinkthen.result",
       "value": [
         {
           "probability": 0.9,

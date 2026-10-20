@@ -1966,7 +1966,7 @@ typedef struct thinkthen_cobol_ReceiptU64Presence thinkthen_cobol_ReceiptU64Pres
 typedef struct thinkthen_cobol_ReceiptUtf8Presence thinkthen_cobol_ReceiptUtf8Presence;
 typedef struct thinkthen_cobol_ReceiptRelationEndpointRelatedEntity thinkthen_cobol_ReceiptRelationEndpointRelatedEntity;
 typedef struct thinkthen_cobol_ReceiptU32Presence thinkthen_cobol_ReceiptU32Presence;
-typedef struct thinkthen_cobol_ReceiptVersion thinkthen_cobol_ReceiptVersion;
+typedef struct thinkthen_cobol_ReceiptResultTag thinkthen_cobol_ReceiptResultTag;
 typedef struct thinkthen_cobol_ReceiptRelateQuestionDocument thinkthen_cobol_ReceiptRelateQuestionDocument;
 typedef struct thinkthen_cobol_ReceiptWordingVersionPresence thinkthen_cobol_ReceiptWordingVersionPresence;
 typedef struct thinkthen_cobol_ReceiptWordingVersion thinkthen_cobol_ReceiptWordingVersion;
@@ -2186,7 +2186,7 @@ struct thinkthen_cobol_ReceiptU32Presence {
     uint32_t presence;
     uint32_t value;
 };
-struct thinkthen_cobol_ReceiptVersion {
+struct thinkthen_cobol_ReceiptResultTag {
     uint32_t kind;
 };
 struct thinkthen_cobol_ReceiptWordingVersionPresence {
@@ -2974,7 +2974,7 @@ struct thinkthen_cobol_ReceiptRecognition {
     const thinkthen_cobol_ReceiptMeta *meta;
     thinkthen_cobol_ReceiptPositionPresence position;
     const thinkthen_cobol_ReceiptRecognizeQuestionDocument *question;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     const thinkthen_cobol_ReceiptRecognize *value;
     thinkthen_cobol_ReceiptExtensions extensions;
@@ -3057,7 +3057,7 @@ struct thinkthen_cobol_ReceiptAnnotation {
     thinkthen_cobol_ReceiptU64Presence last_line;
     const thinkthen_cobol_ReceiptMeta *meta;
     thinkthen_cobol_ReceiptPositionPresence position;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     const thinkthen_cobol_ReceiptAnnotatedRow *value;
     thinkthen_cobol_ReceiptExtensions extensions;
@@ -3126,7 +3126,7 @@ struct thinkthen_cobol_ReceiptAtomicBoolean {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     uint32_t value;
@@ -3142,7 +3142,7 @@ struct thinkthen_cobol_ReceiptAtomicDouble {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     double value;
@@ -3158,7 +3158,7 @@ struct thinkthen_cobol_ReceiptAtomicArrayOfString {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     thinkthen_cobol_ReceiptStringList value;
@@ -3174,7 +3174,7 @@ struct thinkthen_cobol_ReceiptAtomicNullableString {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     thinkthen_cobol_ReceiptUtf8Presence value;
@@ -3190,7 +3190,7 @@ struct thinkthen_cobol_ReceiptAtomicDecideValue {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     thinkthen_cobol_ReceiptDecideValuePresence value;
@@ -3208,7 +3208,7 @@ struct thinkthen_cobol_ReceiptRelation {
     const thinkthen_cobol_ReceiptMeta *meta;
     thinkthen_cobol_ReceiptPositionPresence position;
     const thinkthen_cobol_ReceiptRelateQuestionDocument *question;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptRelatedEntityEdgeList value;
     thinkthen_cobol_ReceiptExtensions extensions;
 };
@@ -3266,7 +3266,7 @@ struct thinkthen_cobol_ReceiptFind {
     const thinkthen_cobol_ReceiptMeta *meta;
     thinkthen_cobol_ReceiptPositionPresence position;
     const thinkthen_cobol_ReceiptFindQuestionDocument *question;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptJsonPresence threshold;
     thinkthen_cobol_ReceiptJsonPresence value;
     thinkthen_cobol_ReceiptExtensions extensions;
@@ -3281,7 +3281,7 @@ struct thinkthen_cobol_ReceiptAtomicNonZeroUsize {
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
     thinkthen_cobol_ReceiptUtf8Presence question_name;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptThresholdPresence threshold;
     uint64_t value;
@@ -3293,7 +3293,7 @@ struct thinkthen_cobol_ReceiptRankMemberResult {
     thinkthen_cobol_ReceiptImageListPresence images;
     const thinkthen_cobol_ReceiptMeta *meta;
     const thinkthen_cobol_ReceiptQuestionDocument *question;
-    const thinkthen_cobol_ReceiptVersion *schema;
+    const thinkthen_cobol_ReceiptResultTag *schema;
     thinkthen_cobol_ReceiptPhysicalSourcePresence source;
     thinkthen_cobol_ReceiptJsonPresence threshold;
     uint64_t value;

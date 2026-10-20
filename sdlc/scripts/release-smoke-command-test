@@ -43,7 +43,7 @@ plant() {
 		        result = {"tools": [{"name": name} for name in
 		                  "decide choose tag score filter rank find annotate recognize relate".split()]}
 		    elif method == "tools/call":
-		        value = {"value": {"schema": "thinkthen.result/2", "value": True,
+		        value = {"value": {"schema": "thinkthen.result", "value": True,
 		                           "meta": {"origin": "replay"}}, "facts": {"requests_sent": 0}}
 		        result = {"structuredContent": value, "isError": False,
 		                  "content": [{"type": "text", "text": json.dumps(value)}]}

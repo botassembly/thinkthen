@@ -4,7 +4,7 @@ from typing import Any, Literal, Union
 
 _COLUMN_SCHEMAS = {
     "completeAnnotation": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "input": None,
         "value": ("ref", "completeannotatedRow"),
@@ -80,7 +80,7 @@ _COLUMN_SCHEMAS = {
     "completeAnswerShape_anyOf_1_items": None,
     "completeAnswers": {"questions": [("ref", "completeRelationMember")]},
     "completeAtomic_Array_of_string": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": ["string"],
         "question": ("ref", "completequestionDocument"),
@@ -95,7 +95,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeAtomic_DecideValue": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": ("ref", "completeDecideValue"),
         "question": ("ref", "completequestionDocument"),
@@ -110,7 +110,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeAtomic_NonZeroUsize": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": "integer",
         "question": ("ref", "completequestionDocument"),
@@ -125,7 +125,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeAtomic_Nullable_string": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": "string",
         "question": ("ref", "completequestionDocument"),
@@ -140,7 +140,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeAtomic_boolean": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": "boolean",
         "question": ("ref", "completequestionDocument"),
@@ -155,7 +155,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeAtomic_double": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": "number",
         "question": ("ref", "completequestionDocument"),
@@ -244,7 +244,7 @@ _COLUMN_SCHEMAS = {
     },
     "completeFailureId": "string",
     "completeFind": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": None,
         "index": "integer",
@@ -348,7 +348,7 @@ _COLUMN_SCHEMAS = {
         "result": ("ref", "completeRankMemberResult"),
     },
     "completeRankMemberResult": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": "integer",
         "question": ("ref", "completequestionDocument"),
@@ -359,7 +359,7 @@ _COLUMN_SCHEMAS = {
         "source": ("ref", "completePhysicalSource"),
     },
     "completeRecognition": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": ("ref", "completerecognize"),
         "question": ("ref", "completerecognizeQuestionDocument"),
@@ -407,7 +407,7 @@ _COLUMN_SCHEMAS = {
         "relation": "string",
     },
     "completeRelation": {
-        "schema": ("ref", "completeVersion"),
+        "schema": ("ref", "completeResultTag"),
         "answer_id": ("ref", "completeAnswerId"),
         "value": [("ref", "completerelatedEntityEdge")],
         "question": ("ref", "completerelateQuestionDocument"),
@@ -470,6 +470,7 @@ _COLUMN_SCHEMAS = {
     },
     "completeRelationMethod": "string",
     "completeRequestFunction": "string",
+    "completeResultTag": "string",
     "completeSdkRequestId": "string",
     "completeSendBudgetDenial": None,
     "completeSendBudgetDenial_before_additional_send": {"kind": "string"},
@@ -503,7 +504,6 @@ _COLUMN_SCHEMAS = {
     "completeUsage": {"input_tokens": "integer", "output_tokens": "integer"},
     "completeUsagePersistence": "string",
     "completeVerb": "string",
-    "completeVersion": "string",
     "completeWordingVersion": "integer",
     "completeannotatedField": None,
     "completeannotatedRow": None,
@@ -2418,6 +2418,7 @@ NativeRequestFunction = Union[
     Literal["recognize"],
     Literal["relate"],
 ]
+NativeResultTag = Literal["thinkthen.result"]
 NativeSdkRequestId = str
 NativeSendBudgetDenial = Union[
     NativeSendBudgetDenialBeforeFirstSend,
@@ -2449,7 +2450,6 @@ NativeUsagePersistence = Union[
     Literal["disabled"], Literal["pending"], Literal["written"], Literal["failed"]
 ]
 NativeVerb = Literal["recognize"]
-NativeVersion = Literal["thinkthen.result/2"]
 NativeWordingVersion = int
 NativeAnnotatedField = Union[bool, None, str, list[str], float, NativeFailed]
 NativeAnnotatedRow = dict[str, NativeAnnotatedField]

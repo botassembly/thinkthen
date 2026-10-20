@@ -17,7 +17,7 @@ const proof = 'https://github.com/botassembly/thinkthen/blob/main/specification/
   <p class="lede">Save one run's answers. Then grade them against your own labels and read them at any threshold. No request goes out. Tuning costs nothing.</p>
 
   <h2 id="audit">Let audit pick the threshold</h2>
-  <p>A saved run asked "Is this song on the album Abbey Road?" of ten Beatles songs at the threshold 0.5. The answer key holds the right answer for each song.</p>
+  <p>A saved run asked "Is this song on the album Abbey Road?" of ten Beatles songs at the threshold 0.5. The answer key holds the right answer for each song. These examples use complete synthetic packets rebuilt through a local test backend from the saved probabilities.</p>
   <Code code={key.text} file={key.name} caption="One right answer a song." copy={false} />
   <p><code>runs audit</code> grades the saved answers against the answer key. It tunes a threshold on one part of the songs and checks it on the rest, over many splits, and names the threshold that wins most often.</p>
   <Terminal run={suggest} caption={suggest.see} />

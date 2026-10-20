@@ -265,7 +265,7 @@ def assertions(row, value, got, count):
             assert count == expect.get('requests_sent', expect.get('count')), (count, expect)
         return
     assert got['code'] == 0, got
-    assert got['schema'] == 'thinkthen.result/2' and len(got['call_id']) == 64, got
+    assert got['schema'] == 'thinkthen.result' and len(got['call_id']) == 64, got
     if value.get('zero_observations'):
         answer = got['rows'][0]
         assert count == 0 and got['requests_sent'] == 0 and answer['value'] == [], got

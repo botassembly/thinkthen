@@ -82,7 +82,7 @@ if command == "choose":
     replayed = cache_file.exists()
     cache_file.touch()
     result = {
-        "schema": "thinkthen.result/1", "value": "IGNORED-BY-PROBE",
+        "schema": "thinkthen.result", "value": "IGNORED-BY-PROBE",
         "question": {"verb": "choose", "text": question, "options": options},
         "answer": {"kind": "choice", "pick": pick, "probabilities": probabilities},
         "threshold": None,
@@ -105,7 +105,7 @@ else:
     for row in records:
         probability = 0.99 if marker in row["text"] else 0.01
         rendered.append({
-            "schema": "thinkthen.result/1", "value": None, "input": row,
+            "schema": "thinkthen.result", "value": None, "input": row,
             "question": {"verb": "decide", "text": question},
             "answer": {"kind": "yes_no", "probability": probability},
             "threshold": None,

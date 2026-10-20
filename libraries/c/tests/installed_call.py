@@ -84,7 +84,7 @@ def project(payload, value):
                                for index, original in enumerate(result['input'])]
         rows.append(project_row(result, dict(value, context_present=False, contexts=None,
                                              candidate_orders=None), len(rows)))
-    return {'code': 0, 'schema': 'thinkthen.result/2', 'rows': rows,
+    return {'code': 0, 'schema': 'thinkthen.result', 'rows': rows,
             **payload['facts'], 'call_result': payload, 'settled': payload.get('answer')}
 
 

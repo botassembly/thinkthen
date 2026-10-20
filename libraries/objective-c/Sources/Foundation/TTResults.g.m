@@ -8230,7 +8230,7 @@ id TTNative_thinkthen_complete_session_packet_relate_aggregate_v1(const struct t
 id TTNative_thinkthen_complete_session_input_source_list_presence_v1(const struct thinkthen_complete_session_input_source_list_presence_v1 *value);
 id TTNative_thinkthen_complete_position_presence_v1(const struct thinkthen_complete_position_presence_v1 *value);
 id TTNative_thinkthen_complete_relation_v1(const struct thinkthen_complete_relation_v1 *value);
-id TTNative_thinkthen_complete_version_v1(const struct thinkthen_complete_version_v1 *value);
+id TTNative_thinkthen_complete_result_tag_v1(const struct thinkthen_complete_result_tag_v1 *value);
 id TTNative_thinkthen_complete_relate_fields_presence_v1(const struct thinkthen_complete_relate_fields_presence_v1 *value);
 id TTNative_thinkthen_complete_relation_rule_list_v1(const struct thinkthen_complete_relation_rule_list_v1 *value);
 id TTNative_thinkthen_complete_relate_question_document_v1(const struct thinkthen_complete_relate_question_document_v1 *value);
@@ -10859,7 +10859,7 @@ id TTNative_thinkthen_complete_relation_v1(const struct thinkthen_complete_relat
     if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
     else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
     items[@"question"] = TTNative_thinkthen_complete_relate_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     items[@"value"] = TTNative_thinkthen_complete_related_entity_edge_list_v1(&(value->value));
     for (size_t i = 0;
     i < value->extensions.len;
@@ -10869,10 +10869,10 @@ id TTNative_thinkthen_complete_relation_v1(const struct thinkthen_complete_relat
     }
     return [items copy];
 }
-id TTNative_thinkthen_complete_version_v1(const struct thinkthen_complete_version_v1 *value) {
+id TTNative_thinkthen_complete_result_tag_v1(const struct thinkthen_complete_result_tag_v1 *value) {
     if (!value) TTInvalidResult();
     switch(value->kind) {
-        case THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1: return @"thinkthen.result/2";
+        case THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1: return @"thinkthen.result";
         default: TTInvalidResult();
     }
 }
@@ -11308,7 +11308,7 @@ id TTNative_thinkthen_complete_recognition_v1(const struct thinkthen_complete_re
     if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
     else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
     items[@"question"] = TTNative_thinkthen_complete_recognize_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     items[@"value"] = TTNative_thinkthen_complete_recognize_v1(value->value);
@@ -11671,7 +11671,7 @@ id TTNative_thinkthen_complete_annotation_v1(const struct thinkthen_complete_ann
     items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
     if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
     else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     items[@"value"] = TTNative_thinkthen_complete_annotated_row_v1(value->value);
@@ -11824,7 +11824,7 @@ id TTNative_thinkthen_complete_find_v1(const struct thinkthen_complete_find_v1 *
     if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"position"] = NSNull.null;
     else if (value->position.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"position"] = TTNative_thinkthen_complete_position_v1(value->position.value);
     items[@"question"] = TTNative_thinkthen_complete_find_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
     else if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"threshold"] = TTNative_thinkthen_complete_json_v1(value->threshold.value);
     if (value->value.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"value"] = NSNull.null;
@@ -11973,7 +11973,7 @@ id TTNative_thinkthen_complete_atomic_non_zero_usize_v1(const struct thinkthen_c
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12009,7 +12009,7 @@ id TTNative_thinkthen_complete_rank_member_result_v1(const struct thinkthen_comp
     else if (value->images.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"images"] = TTNative_thinkthen_complete_image_list_v1(&(value->images.value));
     items[@"meta"] = TTNative_thinkthen_complete_meta_v1(value->meta);
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12087,7 +12087,7 @@ id TTNative_thinkthen_complete_atomic_boolean_v1(const struct thinkthen_complete
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12142,7 +12142,7 @@ id TTNative_thinkthen_complete_atomic_double_v1(const struct thinkthen_complete_
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12197,7 +12197,7 @@ id TTNative_thinkthen_complete_atomic_array_of_string_v1(const struct thinkthen_
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12252,7 +12252,7 @@ id TTNative_thinkthen_complete_atomic_nullable_string_v1(const struct thinkthen_
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
@@ -12312,7 +12312,7 @@ id TTNative_thinkthen_complete_atomic_decide_value_v1(const struct thinkthen_com
     items[@"question"] = TTNative_thinkthen_complete_question_document_v1(value->question);
     if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"question_name"] = NSNull.null;
     else if (value->question_name.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"question_name"] = TTNativeString(value->question_name.value);
-    items[@"schema"] = TTNative_thinkthen_complete_version_v1(value->schema);
+    items[@"schema"] = TTNative_thinkthen_complete_result_tag_v1(value->schema);
     if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"source"] = NSNull.null;
     else if (value->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[@"source"] = TTNative_thinkthen_complete_physical_source_v1(value->source.value);
     if (value->threshold.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[@"threshold"] = NSNull.null;
