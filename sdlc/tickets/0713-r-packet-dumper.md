@@ -6,18 +6,18 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0642, 0682, 0688
+Depends on: 0681, 0682, 0688
 
 ## Outcome
 
 - Changes: `libraries/r/tests/`, `libraries/r/check.sh`.
-- An R dumper in `libraries/r/tests/` follows the 0642 contract: it reads each shared case's request, calls the installed package's public functions, and prints the packet JSON that Rust returned plus only the values, presence states and errors R itself converted.
-- `check.sh` compares the dumper's output against the packet oracle `conformance/fixtures/packets.json` through the 0642 comparison in `conformance/children`, in place of the `native_fixture.run('r', ...)` call over `tests/native_case.R`.
-- `tests/native_case.R` and the R fixture scripts whose cases the dump now covers are deleted. Scripts that prove R-only behavior the dump cannot show stay: interrupts, forked children, hooks, startup, named backends and feeds.
+- An installed R consumer in `libraries/r/tests/` calls the installed package's public functions. The installed consumer runs each shared case through the language's run call over 0689's value tree and compares the converted answer, probability, presence and error fields against `conformance/fixtures/packets.json`. It does not print Rust's Call JSON back.
+- `check.sh` runs that consumer in place of the `native_fixture.run('r', ...)` call over `tests/native_case.R`.
+- `tests/native_case.R` and the R fixture scripts whose cases the consumer now covers are deleted. Scripts that prove R-only behavior the consumer cannot show stay: interrupts, forked children, hooks, startup, named backends and feeds.
 
 ### Proof
 
-- On the M5: `pm job run --machine m5 0713 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/r/check.sh'`. The installed package's dump matches the oracle for every routine case.
+- On the M5: `pm job run --machine m5 0713 SHA --memory 8 -- sh -c 'cargo build --locked --offline -p conformance-backend && sh libraries/r/check.sh'`. The installed consumer's comparison passes for every routine case.
 - Done once by hand and not committed: changing one expected value in the oracle fails the R comparison with a diff.
 
 ## Evidence

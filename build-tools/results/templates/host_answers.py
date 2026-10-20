@@ -140,10 +140,10 @@ def scalar_input_selectors(definitions):
 
 
 def usage_operations(functions):
-    return [(symbol, symbol.removeprefix('thinkthen_engine_').removesuffix('_v1'))
+    return [(symbol, symbol.removeprefix('thinkthen_engine_'))
             for symbol, prototype in functions.items()
             if symbol.startswith('thinkthen_engine_') and any(
-                'thinkthen_complete_usage_persistence_v1' in argument
+                'thinkthen_complete_usage_persistence' in argument
                 for argument in prototype['arguments'])]
 
 

@@ -1328,7 +1328,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         ),
         "completeUsagePersistence" => plain(value),
         "completeVerb" => plain(value),
-        "completeWordingVersion" => plain(value),
         "completeannotatedField" => {
             if value.is_object() {
                 convert("completefailed", value)
@@ -1493,13 +1492,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("profile", false, plain),
                 ("text", true, plain),
                 ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
             ],
         ),
         "completenameOdds" => object(
@@ -1611,13 +1603,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("on", false, |value| array(value, plain)),
                 ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
                 ("options", true, |value| array(value, plain)),
                 ("text", true, plain),
                 ("verb", true, plain),
@@ -1661,13 +1646,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("on", false, |value| array(value, plain)),
                 ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
                 ("false", false, plain),
                 ("text", true, plain),
                 ("true", false, plain),
@@ -1712,13 +1690,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("on", false, |value| array(value, plain)),
                 ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
                 ("levels", true, |value| array(value, plain)),
                 ("text", true, plain),
                 ("verb", true, plain),
@@ -1762,13 +1733,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("on", false, |value| array(value, plain)),
                 ("profile", false, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
                 ("labels", true, |value| array(value, plain)),
                 ("text", true, plain),
                 ("verb", true, plain),
@@ -1869,13 +1833,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completethreshold", value)
                 }),
                 ("verb", true, |value| convert("completeVerb", value)),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
             ],
         ),
         "completerecognize_entities" => object(
@@ -1957,13 +1914,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                     convert("completethreshold", value)
                 }),
                 ("verb", true, plain),
-                ("wording_version", false, |value| {
-                    if value.is_null() {
-                        plain(value)
-                    } else {
-                        convert("completeWordingVersion", value)
-                    }
-                }),
             ],
         ),
         "completerelatedEntity" => object(

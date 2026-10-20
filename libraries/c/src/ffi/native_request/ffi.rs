@@ -9,7 +9,7 @@ mod operations;
 use crate::EngineHandle;
 use crate::failures::{self, Failure};
 use crate::session::SessionHandle;
-use crate::session::views::thinkthen_complete_utf8_v1;
+use crate::session::views::thinkthen_complete_utf8;
 pub use operations::*;
 use serde::Serialize;
 use serde::ser::SerializeMap;
@@ -91,7 +91,7 @@ impl Context {
         self.depth -= 1;
         result
     }
-    unsafe fn text(&self, value: thinkthen_complete_utf8_v1) -> Result<String, CarrierError> {
+    unsafe fn text(&self, value: thinkthen_complete_utf8) -> Result<String, CarrierError> {
         if value.len > self.scalar_capacity {
             return Err(CarrierError::Overflow);
         }
@@ -124,7 +124,7 @@ unsafe fn optional<T>(
     Ok(())
 }
 
-unsafe fn surface(value: thinkthen_complete_utf8_v1) -> Result<Surface, ErrorKind> {
+unsafe fn surface(value: thinkthen_complete_utf8) -> Result<Surface, ErrorKind> {
     // SAFETY: the surface is a counted live UTF-8 view under the entry contract.
     unsafe { super::text(value.data, value.len) }
         .map_err(|_| ErrorKind::Usage)?
@@ -134,7 +134,7 @@ unsafe fn surface(value: thinkthen_complete_utf8_v1) -> Result<Surface, ErrorKin
 
 unsafe fn push_typed(
     session: &SessionHandle,
-    descriptor: *const carriers::thinkthen_request_session_descriptor_v1,
+    descriptor: *const carriers::thinkthen_request_session_descriptor,
     blocking: bool,
 ) -> Result<u32, Failure> {
     let decode = || {
@@ -142,7 +142,7 @@ unsafe fn push_typed(
         // SAFETY: native admission invokes conversion only with intake room;
         // the caller retains the descriptor throughout this operation.
         let json = unsafe {
-            carriers::read_thinkthen_request_session_descriptor_v1(descriptor, &mut context)
+            carriers::read_thinkthen_request_session_descriptor(descriptor, &mut context)
         }?
         .json()?;
         thinkthen::RequestSessionDescriptor::from_json(&json).map_err(Failure::from)
@@ -163,7 +163,7 @@ unsafe fn push_typed(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_finish_typed(
     session: *const SessionHandle,
-    failure: *const carriers::thinkthen_request_reader_failure_v1,
+    failure: *const carriers::thinkthen_request_reader_failure,
 ) -> std::ffi::c_int {
     failures::session_native_call(|| {
         // SAFETY: the caller retains the live session and optional failure tree.
@@ -172,10 +172,9 @@ pub unsafe extern "C" fn thinkthen_session_finish_typed(
             None
         } else {
             let mut context = Context::new(session.1);
-            let json = unsafe {
-                carriers::read_thinkthen_request_reader_failure_v1(failure, &mut context)
-            }?
-            .json()?;
+            let json =
+                unsafe { carriers::read_thinkthen_request_reader_failure(failure, &mut context) }?
+                    .json()?;
             Some(RequestReaderFailure::from_json(&json).map_err(Failure::from)?)
         };
         session.0.finish(failure).map_err(Failure::from)
@@ -183,14 +182,14 @@ pub unsafe extern "C" fn thinkthen_session_finish_typed(
 }
 
 unsafe fn typed_request(
-    function: thinkthen_complete_utf8_v1,
-    arguments: *const carriers::thinkthen_request_arguments_v1,
+    function: thinkthen_complete_utf8,
+    arguments: *const carriers::thinkthen_request_arguments,
     surface: Surface,
 ) -> Result<Request, failures::Failure> {
     let mut context = Context::new(surface);
     // SAFETY: the caller retains the counted argument tree throughout conversion.
     let Value::Object(values) =
-        unsafe { carriers::read_thinkthen_request_arguments_v1(arguments, &mut context) }?
+        unsafe { carriers::read_thinkthen_request_arguments(arguments, &mut context) }?
     else {
         return Err(ErrorKind::Usage.into());
     };
@@ -215,9 +214,9 @@ unsafe fn typed_request(
 
 unsafe fn typed_session(
     engine: &EngineHandle,
-    function: thinkthen_complete_utf8_v1,
-    arguments: *const carriers::thinkthen_request_arguments_v1,
-    surface_name: thinkthen_complete_utf8_v1,
+    function: thinkthen_complete_utf8,
+    arguments: *const carriers::thinkthen_request_arguments,
+    surface_name: thinkthen_complete_utf8,
 ) -> Result<*mut SessionHandle, failures::Failure> {
     // SAFETY: the caller retains its engine, function and carrier tree.
     unsafe {
@@ -231,9 +230,9 @@ unsafe fn typed_session(
 
 unsafe fn typed_plan<T>(
     engine: &EngineHandle,
-    function: thinkthen_complete_utf8_v1,
-    arguments: *const carriers::thinkthen_request_arguments_v1,
-    surface_name: thinkthen_complete_utf8_v1,
+    function: thinkthen_complete_utf8,
+    arguments: *const carriers::thinkthen_request_arguments,
+    surface_name: thinkthen_complete_utf8,
     output: impl FnOnce(&str) -> Result<T, ErrorKind>,
 ) -> Result<T, failures::Failure> {
     // SAFETY: counted selectors and carriers remain live until admission returns.
@@ -242,14 +241,14 @@ unsafe fn typed_plan<T>(
 }
 
 unsafe fn settings_typed(
-    settings: *const carriers::thinkthen_request_engine_settings_v1,
+    settings: *const carriers::thinkthen_request_engine_settings,
 ) -> Result<thinkthen::Engine, Failure> {
     let json = if settings.is_null() {
         "{}".to_owned()
     } else {
         // SAFETY: the host retains the settings carrier tree throughout admission.
         unsafe {
-            carriers::read_thinkthen_request_engine_settings_v1(
+            carriers::read_thinkthen_request_engine_settings(
                 settings,
                 &mut Context::new(Surface::C),
             )

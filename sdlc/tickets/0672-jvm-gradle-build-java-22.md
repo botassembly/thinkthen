@@ -6,21 +6,22 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
 - Changes: `libraries/jvm/build-session.py`, `libraries/jvm/build.sh`, `libraries/jvm/pom.xml`, `libraries/jvm/tests/toolchains.py`, `libraries/jvm/tests/package_check.py`, `libraries/jvm/check.sh`, `libraries/jvm/README.md`, `libraries/jvm/settings.gradle.kts`, `libraries/jvm/build.gradle.kts`, `sdlc/tools/jvm.json`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-managed-pair.py`, `sdlc/decisions/`.
-- Gradle builds and packs the artifacts from `libraries/jvm/settings.gradle.kts` and `libraries/jvm/build.gradle.kts`. `build-session.py`, `build.sh`'s compiler calls and the environment-variable toolchain lookup in `tests/toolchains.py` are deleted. `sdlc/tools.json` pins Gradle and a Java 22 runtime beside the existing JDK.
+- Gradle builds and packs the artifacts from `libraries/jvm/settings.gradle.kts` and `libraries/jvm/build.gradle.kts`. `build-session.py`, `build.sh`'s compiler calls and the environment-variable toolchain lookup in `tests/toolchains.py` are deleted. `sdlc/tools/jvm.json` pins Gradle and a Java 22 runtime beside the existing JDK.
 - Java 22 stays the floor. A decision record in `sdlc/decisions/` states the reason, the final foreign-function API, and the README says so.
 - Java, Kotlin and Scala ship as separate artifacts with declared standard-library dependencies, and the Scala artifact carries a Scala-version suffix.
 - The release path (`sdlc/scripts/release-workflow`, `sdlc/scripts/package-inventory.py`, `sdlc/scripts/release-managed-pair.py`) packs and checks the Gradle output.
 - The packet dumper and the event-driven session tests are 0722's.
+- The JVM's Linux tools are declared in `sdlc/tools/jvm.json` and join the Linux image through 0740; a missing tool fails the check, never skips.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0672 SHA --memory 8 -- python3 libraries/jvm/tests/package_check.py`, Gradle publishes the artifacts into a scratch Maven repository. A clean Gradle consumer and a clean Maven consumer each resolve them and run a named call on Java 22 and on the pinned newest JDK, with no library path override. On current main no Gradle or Maven build exists, so the consumers cannot resolve anything.
-- The installed JVM check (`sh libraries/jvm/check.sh`) needs bubblewrap and is declared for `linux-x86_64` only, so it runs at the 0619 container checkpoint on Yellow (x86_64).
+- The installed JVM check (`sh libraries/jvm/check.sh`) needs bubblewrap, so it runs in the Linux image. Linux x86_64: `pm job run --machine gator 0672 SHA --memory 7 -- sdlc/scripts/linux-check surface libraries/jvm`. Linux arm64 joins only if this ticket declares bubblewrap and the JVM tools for linux-arm64 in `sdlc/tools/jvm.json`.
 
 ## Evidence
 

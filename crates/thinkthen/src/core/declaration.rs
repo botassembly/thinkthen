@@ -25,7 +25,7 @@ impl QuestionName {
                 .iter()
                 .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'_' || *c == b'-')
         {
-            return Err(DeclarationError);
+            return Err(DeclarationError::Unsupported);
         }
         Ok(Self(value.to_owned()))
     }
@@ -33,25 +33,6 @@ impl QuestionName {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
-    }
-}
-
-/// An optional author wording version, with no inferred default.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(transparent)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-pub struct WordingVersion(#[cfg_attr(test, schemars(range(min = 1, max = 2147483647)))] u32);
-impl WordingVersion {
-    pub(crate) fn validated(value: u32) -> Result<Self, DeclarationError> {
-        if !(1..=2_147_483_647).contains(&value) {
-            return Err(DeclarationError);
-        }
-        Ok(Self(value))
-    }
-    /// The declared positive version number.
-    #[must_use]
-    pub const fn get(self) -> u32 {
-        self.0
     }
 }
 
@@ -96,7 +77,7 @@ pub struct InputProperty {
 impl InputProperty {
     pub(crate) fn validated(name: &str, kind: InputPropertyType) -> Result<Self, DeclarationError> {
         if name.is_empty() || name.chars().any(char::is_control) {
-            return Err(DeclarationError);
+            return Err(DeclarationError::Unsupported);
         }
         Ok(Self {
             name: name.to_owned(),
@@ -133,14 +114,14 @@ impl ObjectDeclaration {
     ) -> Result<Self, DeclarationError> {
         for (at, property) in properties.iter().enumerate() {
             if properties.iter().take(at).any(|p| p.name == property.name) {
-                return Err(DeclarationError);
+                return Err(DeclarationError::Unsupported);
             }
         }
         for (at, name) in required.iter().enumerate() {
             if required.iter().take(at).any(|held| held == name)
                 || !properties.iter().any(|p| &p.name == name)
             {
-                return Err(DeclarationError);
+                return Err(DeclarationError::Unsupported);
             }
         }
         Ok(Self {
@@ -203,10 +184,47 @@ impl Serialize for InputDeclaration {
     }
 }
 
-/// A safe refusal for malformed names, versions or declaration features.
+/// A safe refusal for malformed names or declaration features.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-#[error("the question declaration uses an unsupported feature")]
-pub(crate) struct DeclarationError;
+pub(crate) enum DeclarationError {
+    #[error("the question declaration uses an unsupported feature")]
+    Unsupported,
+    #[error("delete the `wording_version` field.")]
+    RetiredWording,
+}
+
+impl DeclarationError {
+    pub(crate) fn is_retired(cause: &(dyn std::any::Any + Send + Sync)) -> bool {
+        matches!(cause.downcast_ref::<Self>(), Some(Self::RetiredWording))
+            || matches!(
+                cause.downcast_ref::<crate::core::QuestionFileError>(),
+                Some(crate::core::QuestionFileError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
+            || matches!(
+                cause.downcast_ref::<crate::core::QuestionSetError>(),
+                Some(crate::core::QuestionSetError::Question {
+                    error: crate::core::QuestionFileError::Declaration(Self::RetiredWording),
+                    ..
+                })
+            )
+            || matches!(cause.downcast_ref::<crate::core::QuestionSetError>(),
+                Some(crate::core::QuestionSetError::UnknownKey(key)) if key == "wording_version")
+            || matches!(
+                cause.downcast_ref::<crate::core::RecognizeConfigError>(),
+                Some(crate::core::RecognizeConfigError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
+            || matches!(
+                cause.downcast_ref::<crate::core::RelateConfigError>(),
+                Some(crate::core::RelateConfigError::Declaration(
+                    Self::RetiredWording
+                ))
+            )
+    }
+}
 
 /// Caller metadata, excluded from every semantic serializer and digest.
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize)]
@@ -216,8 +234,6 @@ pub(crate) struct QuestionMetadata {
     pub(crate) reading: AuthoredReading,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) name: Option<QuestionName>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) wording_version: Option<WordingVersion>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) item_schema: Option<InputDeclaration>,
     #[serde(skip_serializing_if = "Option::is_none")]

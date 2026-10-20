@@ -14,7 +14,7 @@ package body Thinkthen.Native_Sessions is
    use Thinkthen.Session_C;
    Default_Client : Engine;
    use type System.Address;
-   type View_Access is access constant thinkthen_complete_session_packet_v1;
+   type View_Access is access constant thinkthen_complete_session_packet;
    procedure Check (Code : int) renames Thinkthen_Kinds.Check;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) is
    begin
@@ -22,7 +22,7 @@ package body Thinkthen.Native_Sessions is
    end Start;
    procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) is
       Storage : Thinkthen.Requests.Native.Arena;
-      type Arguments_Access is access constant thinkthen_request_arguments_v1;
+      type Arguments_Access is access constant thinkthen_request_arguments;
       function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);
       Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));
       Bytes : chars_ptr := New_String (Function_Name);
@@ -48,7 +48,7 @@ package body Thinkthen.Native_Sessions is
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;
                    Status : out Push_Status) is
       Storage : Thinkthen.Requests.Native.Arena;
-      type Descriptor_Access is access constant thinkthen_request_session_descriptor_v1;
+      type Descriptor_Access is access constant thinkthen_request_session_descriptor;
       function Pointer is new Ada.Unchecked_Conversion (System.Address, Descriptor_Access);
       Descriptor : constant Descriptor_Access := Pointer (Thinkthen.Requests.Native.Convert (Item, Storage));
       Native_Status : aliased Unsigned_32;
@@ -62,7 +62,7 @@ package body Thinkthen.Native_Sessions is
    end Finish;
    procedure Finish (Owner : in out Session; Failure : Thinkthen.Requests.T_RequestReaderFailure) is
       Storage : Thinkthen.Requests.Native.Arena;
-      type Failure_Access is access constant thinkthen_request_reader_failure_v1;
+      type Failure_Access is access constant thinkthen_request_reader_failure;
       function Pointer is new Ada.Unchecked_Conversion (System.Address, Failure_Access);
       Descriptor : constant Failure_Access := Pointer (Thinkthen.Requests.Native.Convert (Failure, Storage));
    begin
@@ -90,7 +90,7 @@ package body Thinkthen.Native_Sessions is
       Ready := Native_Ready;
    end Wait;
    procedure Next_Packet (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status;
-                          Interest : Unsigned_32 := K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) is
+                          Interest : Unsigned_32 := K_THINKTHEN_SESSION_WAIT_SETTLEMENT) is
       Native_Status : aliased Unsigned_32;
       New_Handle : aliased Thinkthen.Session_C.Packet_Access := null;
    begin
@@ -108,16 +108,16 @@ package body Thinkthen.Native_Sessions is
       Value.Handle := Packet_Address (New_Handle);
       Status := Read_Status'Val (Native_Status);
    end Try_Read;
-   function View (Value : Packet) return access constant thinkthen_complete_session_packet_v1 is
+   function View (Value : Packet) return access constant thinkthen_complete_session_packet is
       Result : aliased View_Access := null;
    begin
       Check (thinkthen_session_result_view (Packet_Pointer (Value.Handle), Result'Address));
       return Result;
    end View;
    function Status (Value : Packet) return Error_Status is
-      Packet_View : constant access constant thinkthen_complete_session_packet_v1 := View (Value);
+      Packet_View : constant access constant thinkthen_complete_session_packet := View (Value);
    begin
-      if Packet_View.kind /= K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
+      if Packet_View.kind /= K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL then
          return Success;
       end if;
       if State (Packet_View.data.terminal.failure.presence) /= Present then
@@ -137,7 +137,7 @@ package body Thinkthen.Native_Sessions is
       end if;
       return Natural (Value);
    end Index;
-   function Text (Value : thinkthen_complete_utf8_v1) return String is
+   function Text (Value : thinkthen_complete_utf8) return String is
       Length : constant Natural := Index (Value.len);
 
    begin
@@ -154,11 +154,11 @@ package body Thinkthen.Native_Sessions is
 function Plan (Client : Engine; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) return Thinkthen.Values.Value is
 use Thinkthen.Session_C; use Interfaces.C; use Interfaces.C.Strings;
 Storage : Thinkthen.Requests.Native.Arena;
-type Arguments_Access is access constant thinkthen_request_arguments_v1;
+type Arguments_Access is access constant thinkthen_request_arguments;
 function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);
 Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));
 Function_Bytes : chars_ptr := Null_Ptr; Surface : chars_ptr := Null_Ptr;
-type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json_v1; Code : int;
+type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json; Code : int;
 begin
 Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");
 Code := thinkthen_request_plan_typed_value (Engine_Pointer (Client.Handle), (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address);

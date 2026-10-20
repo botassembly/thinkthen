@@ -23,7 +23,7 @@ final class Request
         $question = $question instanceof \ThinkThen\Inputs\QuestionSource
             ? $question
             : (is_string($question) ? new Input\QuestionText($question) : new Input\QuestionDefinition($question));
-        $request = $this->ffi->new('struct thinkthen_named_request_v1');
+        $request = $this->ffi->new('struct thinkthen_named_request');
         foreach (['function' => $function, 'question_json' => \ThinkThen\Internal\Encoder::encode($question),
             'input_json' => \ThinkThen\Internal\Encoder::encode($source), 'options_json' => \ThinkThen\Internal\Encoder::encode($options)] as $field => $text) {
             $request->$field = $this->utf8($text, $this->buffers);
@@ -35,7 +35,7 @@ final class Request
         $bytes = $this->ffi->new('char['.(strlen($text) + 1).']');
         \FFI::memcpy($bytes, $text, strlen($text));
         $buffers[] = $bytes;
-        $view = $this->ffi->new('struct thinkthen_complete_utf8_v1');
+        $view = $this->ffi->new('struct thinkthen_complete_utf8');
         $view->data = \FFI::addr($bytes[0]);
         $view->len = strlen($text);
         return $view;

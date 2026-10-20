@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0688
+Depends on: 0591, 0647, 0688, 0740
 
 ## Outcome
 
@@ -17,11 +17,11 @@ Depends on: 0688
 
 ### Proof
 
-- At the 0619 container checkpoint, in the arm64 container on the M5: `sh databases/postgresql/check.sh 16`, `17` and `18` pass, and `SELECT thinkthen_warm('a', 'b')` fails with `function thinkthen_warm(unknown, unknown) does not exist`. Before the change it fails with `thinkthen_warm was removed; pack records with thinkthen_decide_many`.
+- Linux arm64: `pm job run --machine m5 0715 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/postgresql`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `sh databases/postgresql/check.sh 16`, `17` and `18` pass, and `SELECT thinkthen_warm('a', 'b')` fails with `function thinkthen_warm(unknown, unknown) does not exist`. Before the change it fails with `thinkthen_warm was removed; pack records with thinkthen_decide_many`.
 
 ## Evidence
 
 - Split from 0644, which keeps the DuckDB stubs and workspace. 0714 takes SQLite. The three land in any order.
 - `databases/postgresql/src/removed.rs` holds "plain refusals for pre-0.1 forms replaced by named and keyed calls", each declared through `crate::descriptions::describe!`. `databases/postgresql/check.sh` asserts their sentences in `removed_forms_refuse_before_send`, and `tests/function_descriptions.py` asserts the description of `thinkthen_decide(text,text[])`.
 - That is backward-compatibility code, which the 2026-10-12 no-compatibility-before-1.0 ruling forbids.
-- The pinned PostgreSQL servers run in the Linux container, so the installed check runs at the 0619 checkpoint and not natively on the M5. 0647 also rewrites `check.sh`; whichever lands second rebases on the first.
+- The pinned PostgreSQL servers run in the Linux container, so the installed check runs through 0740's surface command and not natively on the M5. 0647 also rewrites `check.sh`; whichever lands second rebases on the first.

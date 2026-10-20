@@ -18,5 +18,10 @@
     "mode": "bridge",
     "path": "libraries/csharp/src/NamedCalls.g.cs",
     "producer": "results"
+  },
+  {
+    "mode": "fixture-questions",
+    "path": "libraries/csharp/tests/source/FixtureQuestions.g.cs",
+    "producer": "libraries/csharp/tests/generate_fixture_questions.py"
   }
 ]

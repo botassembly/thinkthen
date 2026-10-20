@@ -207,7 +207,7 @@ begin
          loop
             Drain_One;
             exit when Read = Finished or else
-              (Read = Result and then View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1);
+              (Read = Result and then View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL);
          end loop;
       exception
          when others => Thinkthen.Native_Sessions.Cancel (Owner); raise;

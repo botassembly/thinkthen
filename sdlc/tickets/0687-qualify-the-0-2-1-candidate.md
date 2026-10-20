@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: release
 
-Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0693, 0647, 0649, 0652, 0655, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696, 0711, 0710, 0712, 0713, 0714, 0715, 0716, 0717, 0718, 0722
+Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 0645, 0693, 0647, 0649, 0652, 0655, 0656, 0660, 0661, 0663, 0664, 0666, 0669, 0670, 0672, 0674, 0675, 0677, 0680, 0681, 0684, 0685, 0690, 0691, 0694, 0695, 0696, 0711, 0710, 0712, 0713, 0714, 0715, 0716, 0717, 0718, 0722, 0740
 
 ## Outcome
 
@@ -24,7 +24,7 @@ Depends on: 0564, 0617, 0620, 0621, 0624, 0630, 0631, 0632, 0634, 0640, 0644, 06
 ### Proof
 
 - One list in `sdlc/records/0687-qualification.md` names every required receipt above by job and log, each on the same candidate SHA. A missing or failing receipt fails this ticket.
-- On the M5: `pm job run --machine m5 0687 SHA --memory 16 -- sh -c 'sdlc/scripts/test-full-cases --run && sdlc/scripts/package && sdlc/scripts/test-stress --run'` passes on the candidate SHA. The Linux arm64 and x86_64 runs come from the 0619 containers on the M5 and Yellow; Windows and Intel macOS come from the hosted rehearsal (`gh workflow run release.yml --ref rc/0.2.1-rc.N -f mode=rehearse`) and `windows.yml` on the same tag.
+- On the M5: `pm job run --machine m5 0687 SHA --memory 16 -- sh -c 'sdlc/scripts/test-full-cases --run && sdlc/scripts/package && sdlc/scripts/test-stress --run'` passes on the candidate SHA. The Linux arm64 and x86_64 runs come from 0691's checkpoint run on the candidate SHA and from `pm job run --machine m5 0687 SHA --memory 16 -- sdlc/scripts/linux-check surface PATH` per surface on the M5, with the same command and `--machine gator --memory 7` on Gator; Windows and Intel macOS come from the hosted rehearsal (`gh workflow run release.yml --ref rc/0.2.1-rc.N -f mode=rehearse`) and `windows.yml` on the same tag.
 
 ## Evidence
 

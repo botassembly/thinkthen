@@ -57,7 +57,7 @@ def check_offsets(case, actual, conformance):
 
 def main():
     corpus = json.loads(CORPUS.read_text())
-    assert corpus["schema"] == "thinkthen.type-corpus/1"
+    assert corpus["schema"] == "thinkthen.type-corpus"
     names = [case["name"] for case in corpus["cases"]]
     assert len(names) == len(set(names)), "duplicate type case"
     checks = validators(json.loads(SCHEMA.read_text()))

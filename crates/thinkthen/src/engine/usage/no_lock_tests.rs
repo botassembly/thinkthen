@@ -20,7 +20,7 @@ type Case<'a> = (&'a str, Option<&'a [u8]>, u32, Result<u64, &'a str>);
 fn a_folder_without_a_lock_reads_its_months_without_the_lock() {
     use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
 
-    let valid = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":2,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    let valid = b"{\"requests_sent\":2,\"retries\":0,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     let malformed = "cannot read the usage totals: 2026-09.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.";
     let unsafe_mode = "cannot read the usage totals: 2026-09.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.";
     let cases: [Case<'_>; 5] = [

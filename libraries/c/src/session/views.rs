@@ -40,9 +40,9 @@ impl Storage {
         self.allocations.push(Box::new(values));
         (data, len)
     }
-    pub(crate) fn text(&mut self, value: &str) -> thinkthen_complete_utf8_v1 {
+    pub(crate) fn text(&mut self, value: &str) -> thinkthen_complete_utf8 {
         let (data, len) = self.slice(value.as_bytes().to_vec());
-        thinkthen_complete_utf8_v1 {
+        thinkthen_complete_utf8 {
             data: data.cast(),
             len,
         }
@@ -51,11 +51,11 @@ impl Storage {
         &mut self,
         node: &Node,
         known: &[&str],
-    ) -> Result<thinkthen_complete_extensions_v1, ErrorKind> {
+    ) -> Result<thinkthen_complete_extensions, ErrorKind> {
         let mut values = Vec::new();
         for (name, node) in node.object()? {
             if !known.contains(&name.as_str()) {
-                values.push(thinkthen_complete_extension_v1 {
+                values.push(thinkthen_complete_extension {
                     name: self.text(name),
                     json: self.text(node.raw.get()),
                     value: read_json(node, self)?,
@@ -63,14 +63,14 @@ impl Storage {
             }
         }
         let (data, len) = self.slice(values);
-        Ok(thinkthen_complete_extensions_v1 { data, len })
+        Ok(thinkthen_complete_extensions { data, len })
     }
 }
 
 pub(crate) fn read_text(
     node: &Node,
     store: &mut Storage,
-) -> Result<thinkthen_complete_utf8_v1, ErrorKind> {
+) -> Result<thinkthen_complete_utf8, ErrorKind> {
     Ok(store.text(node.text()?))
 }
 pub(crate) fn read_boolean(node: &Node, _store: &mut Storage) -> Result<u32, ErrorKind> {
@@ -92,14 +92,14 @@ pub(crate) fn read_presence<T>(
     store: &mut Storage,
 ) -> Result<(u32, T), ErrorKind> {
     use super::views_generated::{
-        THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, THINKTHEN_COMPLETE_PRESENCE_NULL_V1,
-        THINKTHEN_COMPLETE_PRESENCE_VALUE_V1,
+        THINKTHEN_COMPLETE_PRESENCE_MISSING, THINKTHEN_COMPLETE_PRESENCE_NULL,
+        THINKTHEN_COMPLETE_PRESENCE_VALUE,
     };
     match node {
         None if required => Err(ErrorKind::Defect),
-        None => Ok((THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, empty)),
-        Some(node) if node.kind() == "null" => Ok((THINKTHEN_COMPLETE_PRESENCE_NULL_V1, empty)),
-        Some(node) => Ok((THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, read(node, store)?)),
+        None => Ok((THINKTHEN_COMPLETE_PRESENCE_MISSING, empty)),
+        Some(node) if node.kind() == "null" => Ok((THINKTHEN_COMPLETE_PRESENCE_NULL, empty)),
+        Some(node) => Ok((THINKTHEN_COMPLETE_PRESENCE_VALUE, read(node, store)?)),
     }
 }
 
@@ -237,7 +237,7 @@ impl<'a> Node<'a> {
 }
 
 #[derive(Debug)]
-pub(crate) struct Projection<T = super::views_generated::thinkthen_complete_session_packet_v1> {
+pub(crate) struct Projection<T = super::views_generated::thinkthen_complete_session_packet> {
     _storage: Storage,
     pub(crate) root: *const T,
 }
@@ -245,7 +245,7 @@ impl Projection {
     pub(crate) fn new(text: &str) -> Result<Self, ErrorKind> {
         Self::with(text, |node, storage| {
             let packet =
-                super::views_generated::read_thinkthen_complete_session_packet_v1(node, storage)?;
+                super::views_generated::read_thinkthen_complete_session_packet(node, storage)?;
             Ok(storage.hold(packet))
         })
     }
@@ -267,7 +267,7 @@ impl<T> Projection<T> {
 
 /// Independent immutable canonical value owner. Free after every borrower finishes.
 #[derive(Debug)]
-pub struct ValueHandle(pub(crate) Projection<thinkthen_complete_json_v1>);
+pub struct ValueHandle(pub(crate) Projection<thinkthen_complete_json>);
 impl ValueHandle {
     pub(crate) fn new(text: &str) -> Result<Self, ErrorKind> {
         Projection::with(text, read_json).map(Self)

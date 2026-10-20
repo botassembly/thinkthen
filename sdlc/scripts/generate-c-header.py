@@ -2,6 +2,8 @@
 """Generate or check the committed C interface with the reviewed external tool."""
 import argparse
 import difflib
+import hashlib
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -31,6 +33,20 @@ def check_tool():
         raise RuntimeError(f'C header generation requires {VERSION}; found {found}')
 
 
+def interface_header(header):
+    # Hash C tokens, excluding comments and package release metadata. The digest
+    # macro is added afterwards, so generation never hashes its own output.
+    quoted = rb'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
+    declarations = re.sub(quoted + rb'|/\*.*?\*/|//[^\n]*',
+                          lambda match: b' ' if match[0].startswith(b'/') else match[0],
+                          header, flags=re.S)
+    declarations = re.sub(rb'(?m)^#define THINKTHEN_VERSION_(?:MAJOR|MINOR|PATCH) [^\n]*\n', b'', declarations)
+    tokens = re.findall(quoted + rb'|[A-Za-z_][A-Za-z_0-9]*|[0-9]+|[^\s]', declarations)
+    number = int.from_bytes(hashlib.sha256(b' '.join(tokens)).digest()[:4], 'big')
+    return header.replace(b'#define THINKTHEN_H',
+                          f'#define THINKTHEN_H\n\n#define THINKTHEN_INTERFACE_NUMBER {number}u'.encode(), 1)
+
+
 def generate(root=ROOT, replacements=None):
     # Version staging supplies a source-only fixture. Its version edits cannot
     # change the result graph; the command checks that graph before generating.
@@ -50,8 +66,8 @@ def generate(root=ROOT, replacements=None):
             source = staged / 'lib.rs'
         # Source mode follows modules without Cargo metadata or dependency
         # traversal, so it cannot resolve dependencies or rewrite a lockfile.
-        return subprocess.check_output(
-            ['cbindgen', '--quiet', '--config', str(crate / 'cbindgen.toml'), str(source)], env=env)
+        return interface_header(subprocess.check_output(
+            ['cbindgen', '--quiet', '--config', str(crate / 'cbindgen.toml'), str(source)], env=env))
 
 
 def main():

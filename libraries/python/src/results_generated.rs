@@ -554,7 +554,6 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         "completeUsage" => object(py, "NativeUsage", "completeUsage", value),
         "completeUsagePersistence" => plain(py, value),
         "completeVerb" => plain(py, value),
-        "completeWordingVersion" => plain(py, value),
         "completeannotatedField" => {
             if value.is_object() {
                 convert(py, "completefailed", value)
@@ -1970,13 +1969,6 @@ pub(crate) fn field(
         ("completefindQuestionDocument", "profile") => plain(py, value),
         ("completefindQuestionDocument", "text") => plain(py, value),
         ("completefindQuestionDocument", "verb") => plain(py, value),
-        ("completefindQuestionDocument", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completenameOdds", "edges") => mapping(py, value, |value| plain(py, value)),
         ("completenameOdds", "end") => plain(py, value),
         ("completenameOdds", "kinds") => mapping(py, value, |value| plain(py, value)),
@@ -2035,13 +2027,6 @@ pub(crate) fn field(
         }
         ("completequestionDocument_choose", "on") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_choose", "profile") => plain(py, value),
-        ("completequestionDocument_choose", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completequestionDocument_choose", "options") => {
             array(py, value, |value| plain(py, value))
         }
@@ -2081,13 +2066,6 @@ pub(crate) fn field(
         }
         ("completequestionDocument_decide", "on") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_decide", "profile") => plain(py, value),
-        ("completequestionDocument_decide", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completequestionDocument_decide", "false") => plain(py, value),
         ("completequestionDocument_decide", "text") => plain(py, value),
         ("completequestionDocument_decide", "true") => plain(py, value),
@@ -2126,13 +2104,6 @@ pub(crate) fn field(
         }
         ("completequestionDocument_score", "on") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_score", "profile") => plain(py, value),
-        ("completequestionDocument_score", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completequestionDocument_score", "levels") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_score", "text") => plain(py, value),
         ("completequestionDocument_score", "verb") => plain(py, value),
@@ -2170,13 +2141,6 @@ pub(crate) fn field(
         }
         ("completequestionDocument_tag", "on") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_tag", "profile") => plain(py, value),
-        ("completequestionDocument_tag", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completequestionDocument_tag", "labels") => array(py, value, |value| plain(py, value)),
         ("completequestionDocument_tag", "text") => plain(py, value),
         ("completequestionDocument_tag", "verb") => plain(py, value),
@@ -2252,13 +2216,6 @@ pub(crate) fn field(
             convert(py, "completethreshold", value)
         }
         ("completerecognizeQuestionDocument", "verb") => convert(py, "completeVerb", value),
-        ("completerecognizeQuestionDocument", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completerecognize_entities", "entities") => {
             array(py, value, |value| convert(py, "completeentity", value))
         }
@@ -2317,13 +2274,6 @@ pub(crate) fn field(
         }),
         ("completerelateQuestionDocument", "threshold") => convert(py, "completethreshold", value),
         ("completerelateQuestionDocument", "verb") => plain(py, value),
-        ("completerelateQuestionDocument", "wording_version") => {
-            if value.is_null() {
-                plain(py, value)
-            } else {
-                convert(py, "completeWordingVersion", value)
-            }
-        }
         ("completerelatedEntity", "kind") => plain(py, value),
         ("completerelatedEntity", "name") => plain(py, value),
         ("completerelatedEntityEdge", "either") => plain(py, value),

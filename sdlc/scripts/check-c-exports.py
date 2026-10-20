@@ -197,7 +197,7 @@ def retained_abi(native):
     return {**native,
             'records': {n: v for n, v in native['records'].items() if not n.startswith('thinkthen_complete_')},
             'constants': {n: v for n, v in native['constants'].items() if not n.startswith(('THINKTHEN_COMPLETE_', 'THINKTHEN_SESSION_'))},
-            'functions': {n: v for n, v in native['functions'].items() if not n.startswith('thinkthen_session_') and n not in ('thinkthen_request_plan_json', 'thinkthen_engine_usage_persistence_v1', 'thinkthen_engine_finish_usage_status_v1')}}
+            'functions': {n: v for n, v in native['functions'].items() if not n.startswith('thinkthen_session_') and n not in ('thinkthen_request_plan_json', 'thinkthen_engine_usage_persistence', 'thinkthen_engine_finish_usage_status')}}
 
 
 def compare_abi(expected, actual):
@@ -295,14 +295,14 @@ def self_test(header):
     text = re.sub(r'/\*.*?\*/', '', Path(header).read_text(), flags=re.S)
     plants = [
         ('field', r'const char \*data;\s*size_t len;', 'size_t len; const char *data;'),
-        ('union-arm', r'const (?:struct )?thinkthen_complete_session_judgment_decision_v1 \*decision;', 'uint64_t decision;'),
-        ('enum', r'#define THINKTHEN_SESSION_ACCEPTED_V1 (?:UINT32_C\(0\)|0u?\b)', '#define THINKTHEN_SESSION_ACCEPTED_V1 99'),
+        ('union-arm', r'const (?:struct )?thinkthen_complete_session_judgment_decision \*decision;', 'uint64_t decision;'),
+        ('enum', r'#define THINKTHEN_SESSION_ACCEPTED (?:UINT32_C\(0\)|0u?\b)', '#define THINKTHEN_SESSION_ACCEPTED 99'),
         ('argument', r'size_t descriptor_len\b', 'uint16_t descriptor_len'),
         ('return', 'int thinkthen_session_try_read(', 'uint64_t thinkthen_session_try_read('),
         ('pointer-depth', r'(?:struct )?thinkthen_session_result \*\*out\b', 'struct thinkthen_session_result *out'),
-        ('by-value', r'(?:struct )?thinkthen_complete_utf8_v1 surface', 'const thinkthen_complete_utf8_v1 *surface'),
-        ('callback-return', r'typedef uint32_t \(\*thinkthen_call_producer_v1\)', 'typedef uint64_t (*thinkthen_call_producer_v1)'),
-        ('callback-argument', r'thinkthen_call_producer_v1\)\(void\*, struct thinkthen_complete_utf8_v1\*\)', 'thinkthen_call_producer_v1)(void*, struct thinkthen_complete_utf8_v1**)'),
+        ('by-value', r'(?:struct )?thinkthen_complete_utf8 surface', 'const thinkthen_complete_utf8 *surface'),
+        ('callback-return', r'typedef uint32_t \(\*thinkthen_call_producer\)', 'typedef uint64_t (*thinkthen_call_producer)'),
+        ('callback-argument', r'thinkthen_call_producer\)\(void\*, struct thinkthen_complete_utf8\*\)', 'thinkthen_call_producer)(void*, struct thinkthen_complete_utf8**)'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
         # Clang emits kindless generic associations and empty for-loop children.

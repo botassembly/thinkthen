@@ -45,7 +45,7 @@ static class AsyncFixtureCases
         }  };
         if (Text(data,"verb") == "find" && Yes(q,"none")) return new ThinkThen.Inputs.RequestQuestionDefinition { Value = new ThinkThen.Inputs.RequestDefinitionAuthoredFind {
             Find = Get(q,"find").ValueKind == JsonValueKind.String ? new ThinkThen.Inputs.AuthoredQuestionTextString { Value = Text(q,"find") } : new ThinkThen.Inputs.AuthoredQuestionTextObject { Value = Get(q,"find").Clone() },
-            Name = String(q,"name"), WordingVersion = Get(q,"wording_version").ValueKind == JsonValueKind.Number ? Get(q,"wording_version").GetInt64() : default(ThinkThen.Inputs.AuthoredPresence<long>)
+            Name = String(q,"name")
         }  };
         var kind = Text(data,"verb") switch {
             "annotate" => AuthoredQuestionKind.Set, "rank" => Get(q,"questions").ValueKind!=JsonValueKind.Undefined ? AuthoredQuestionKind.RankSet : AuthoredQuestionKind.Rank,
@@ -106,7 +106,7 @@ static class AsyncFixtureCases
     }
     static async System.Threading.Tasks.Task<OwnedCall> PushAll(Engine engine, ThinkThen.Inputs.RequestQuestion question, JsonElement data, ThinkThen.Inputs.RequestInput? input, ThinkThen.Inputs.RequestOptions options)
     {
-        using var session = engine.StartSession(new ThinkThen.Inputs.Request { Schema = new ThinkThen.Inputs.RequestVersionThinkthenRequest1(), Call = new ThinkThen.Inputs.RequestCall { Function = new ThinkThen.Inputs.RequestFunctionDecide(), Question = question, Input = new ThinkThen.Inputs.RequestInputFeed { Name = "push-all" }, Options = options } });
+        using var session = engine.StartSession(new ThinkThen.Inputs.Request { Call = new ThinkThen.Inputs.RequestCall { Function = new ThinkThen.Inputs.RequestFunctionDecide(), Question = question, Input = new ThinkThen.Inputs.RequestInputFeed { Name = "push-all" }, Options = options } });
         await foreach (var item in Feed(data,input)) if (!await session.PushAsync(item)) break;
         session.Finish();
         var packets = new List<ThinkThen.Results.SessionPacket>();
@@ -176,7 +176,7 @@ static class AsyncFixtureCases
     }
     static object? Property(object value, string name) => Optional(value.GetType().GetProperty(name)?.GetValue(value));
     static Dictionary<string,object?> Author(object question) {
-        var result = new Dictionary<string,object?>(); foreach (var pair in new[] { ("Name","name"),("WordingVersion","wording_version") }) if(Property(question,pair.Item1) is {} value) result[pair.Item2] = value; return result;
+        var result = new Dictionary<string,object?>(); foreach (var pair in new[] { ("Name","name") }) if(Property(question,pair.Item1) is {} value) result[pair.Item2] = value; return result;
     }
     static Dictionary<string,object?> Normalize(OwnedCall call, string verb, bool incremental, bool imageInput)
     {

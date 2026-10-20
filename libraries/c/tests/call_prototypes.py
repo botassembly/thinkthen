@@ -13,7 +13,7 @@ from c_parity import Backend
 PHP = r'''<?php
 $ffi=FFI::cdef('typedef struct { const char *data; size_t len; } Text;
 typedef struct {Text function;Text question_json;Text input_json;Text options_json;} Request;
-void *thinkthen_engine_new_with(const char *);
+void *thinkthen_engine_new_with(const char *,void **);
 void thinkthen_engine_free(void *);
 int32_t thinkthen_run_call(void *,const Request *,uint32_t (*)(void *,Text *),void *,void *,void **,void **);
 Text thinkthen_call_result_json(void *);Text thinkthen_call_error_message(void *);
@@ -32,7 +32,7 @@ $callback=function($context,$out)use(&$count,&$changed,$caller,$threads,$text) {
  if($count++)return 1;
  $out[0]=$text('{"original":{"kind":"text","text":"Evidence."}}');return 0;
 };
-$engine=$ffi->thinkthen_engine_new_with('{"cache":false,"max_retries":0}');
+$engine=$ffi->thinkthen_engine_new_with('{"cache":false,"max_retries":0}',null);
 $result=$ffi->new('void *');$error=$ffi->new('void *');
 $code=$ffi->thinkthen_run_call($engine,FFI::addr($request),$callback,null,null,FFI::addr($result),FFI::addr($error));
 $ffi->thinkthen_engine_free($engine);
@@ -74,14 +74,14 @@ void main(List<String> args) {
   if(thread()!=caller){changed=true;return 2;}if(count++>0)return 1;
   text(out.ref,'{"original":{"kind":"text","text":"Evidence."}}');return 0;
  },exceptionalReturn:2);
- final engineNew=library.lookupFunction<Pointer<Void> Function(Pointer<Uint8>),Pointer<Void> Function(Pointer<Uint8>)>('thinkthen_engine_new_with');
+ final engineNew=library.lookupFunction<Pointer<Void> Function(Pointer<Uint8>,Pointer<Pointer<Void>>),Pointer<Void> Function(Pointer<Uint8>,Pointer<Pointer<Void>>)>('thinkthen_engine_new_with');
  final engineFree=library.lookupFunction<Void Function(Pointer<Void>),void Function(Pointer<Void>)>('thinkthen_engine_free');
  final run=library.lookupFunction<Run,int Function(Pointer<Void>,Pointer<Request>,Pointer<NativeFunction<Producer>>,Pointer<Void>,Pointer<Void>,Pointer<Pointer<Void>>,Pointer<Pointer<Void>>)>('thinkthen_run_call');
  final resultJson=library.lookupFunction<Text Function(Pointer<Void>),Text Function(Pointer<Void>)>('thinkthen_call_result_json');
  final resultFree=library.lookupFunction<Void Function(Pointer<Void>),void Function(Pointer<Void>)>('thinkthen_call_result_free');
  final result=allocate<Pointer<Void>>(sizeOf<Pointer<Void>>());result.value=nullptr;
  final error=allocate<Pointer<Void>>(sizeOf<Pointer<Void>>());error.value=nullptr;
- final engine=engineNew(bytes('{"cache":false,"max_retries":0}'));
+ final engine=engineNew(bytes('{"cache":false,"max_retries":0}'),nullptr);
  final status=run(engine,request,callback.nativeFunction,nullptr,nullptr,result,error);
  engineFree(engine);callback.close();
  if(status!=0||changed||count!=2)throw StateError('call/callback $status $changed $count');

@@ -91,11 +91,7 @@ impl RecognitionReading<'_> {
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
         self.0.metadata.name.as_ref()
     }
-    /// Optional author wording version.
-    #[must_use]
-    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
-        self.0.metadata.wording_version
-    }
+
     /// Optional selected item declaration.
     #[must_use]
     pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {
@@ -156,11 +152,7 @@ impl RelationReading<'_> {
     pub fn name(&self) -> Option<&crate::public::QuestionName> {
         self.spec.metadata.name.as_ref()
     }
-    /// Optional author wording version.
-    #[must_use]
-    pub fn wording_version(&self) -> Option<crate::public::WordingVersion> {
-        self.spec.metadata.wording_version
-    }
+
     /// Optional selected item declaration.
     #[must_use]
     pub fn item_schema(&self) -> Option<&crate::public::InputDeclaration> {

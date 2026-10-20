@@ -25,7 +25,6 @@ public final class Inputs {
         AnnotateQuestion itemSchema(AuthoredInputDeclaration value);
         AnnotateQuestion name(String value);
         AnnotateQuestion on(AuthoredPointers value);
-        AnnotateQuestion wordingVersion(Number value);
     }
     public static final class AnnotateQuestionChoose extends Builder<AnnotateQuestionChoose> implements AnnotateQuestion {
         public AnnotateQuestionChoose() {
@@ -39,7 +38,6 @@ public final class Inputs {
             result.omit("on");
             result.omit("options");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -109,15 +107,6 @@ public final class Inputs {
         public AnnotateQuestionChoose omitThreshold() {
             return omit("threshold");
         }
-        public AnnotateQuestionChoose wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public AnnotateQuestionChoose wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public AnnotateQuestionChoose omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class AnnotateQuestionDecide extends Builder<AnnotateQuestionDecide> implements AnnotateQuestion {
         public AnnotateQuestionDecide() {
@@ -132,7 +121,6 @@ public final class Inputs {
             result.omit("on");
             result.omit("threshold");
             result.omit("true");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -211,15 +199,6 @@ public final class Inputs {
         public AnnotateQuestionDecide omitTrueValue() {
             return omit("true");
         }
-        public AnnotateQuestionDecide wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public AnnotateQuestionDecide wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public AnnotateQuestionDecide omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class AnnotateQuestionScore extends Builder<AnnotateQuestionScore> implements AnnotateQuestion {
         public AnnotateQuestionScore() {
@@ -232,7 +211,6 @@ public final class Inputs {
             result.omit("name");
             result.omit("on");
             result.omit("score");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -293,15 +271,6 @@ public final class Inputs {
         public AnnotateQuestionScore omitScore() {
             return omit("score");
         }
-        public AnnotateQuestionScore wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public AnnotateQuestionScore wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public AnnotateQuestionScore omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class AnnotateQuestionTag extends Builder<AnnotateQuestionTag> implements AnnotateQuestion {
         public AnnotateQuestionTag() {
@@ -315,7 +284,6 @@ public final class Inputs {
             result.omit("on");
             result.omit("tag");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -384,15 +352,6 @@ public final class Inputs {
         }
         public AnnotateQuestionTag omitThreshold() {
             return omit("threshold");
-        }
-        public AnnotateQuestionTag wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public AnnotateQuestionTag wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public AnnotateQuestionTag omitWordingVersion() {
-            return omit("wording_version");
         }
     }
     public static final class AuthoredCriterion {
@@ -1377,12 +1336,10 @@ public final class Inputs {
     }
     public static final class Request extends Builder<Request> {
         public Request() {
-            put("schema", "thinkthen.request/1");
         }
         static Request fromJson(Object value) {
             Request result = new Request();
             result.omit("call");
-            result.omit("schema");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1397,15 +1354,6 @@ public final class Inputs {
         }
         public Request omitCall() {
             return omit("call");
-        }
-        public Request schema(RequestVersion value) {
-            return put("schema", value);
-        }
-        public Request schemaNull() {
-            return put("schema", null);
-        }
-        public Request omitSchema() {
-            return omit("schema");
         }
     }
     public static final class RequestBatch {
@@ -1544,7 +1492,6 @@ public final class Inputs {
             result.omit("options");
             result.omit("profile");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1641,15 +1588,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredChoose omitThreshold() {
             return omit("threshold");
         }
-        public RequestDefinitionAuthoredChoose wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredChoose wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredChoose omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionAuthoredDecide extends Builder<RequestDefinitionAuthoredDecide> implements RequestDefinition {
         public RequestDefinitionAuthoredDecide() {
@@ -1667,7 +1605,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("threshold");
             result.omit("true");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1773,15 +1710,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredDecide omitTrueValue() {
             return omit("true");
         }
-        public RequestDefinitionAuthoredDecide wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredDecide wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredDecide omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionAuthoredFind extends Builder<RequestDefinitionAuthoredFind> implements RequestDefinition {
         public RequestDefinitionAuthoredFind() {
@@ -1795,7 +1723,6 @@ public final class Inputs {
             result.omit("name");
             result.omit("on");
             result.omit("profile");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1865,15 +1792,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredFind omitProfile() {
             return omit("profile");
         }
-        public RequestDefinitionAuthoredFind wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredFind wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredFind omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionAuthoredRelate extends Builder<RequestDefinitionAuthoredRelate> implements RequestDefinition {
         public RequestDefinitionAuthoredRelate() {
@@ -1887,7 +1805,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("relate");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1957,15 +1874,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredRelate omitThreshold() {
             return omit("threshold");
         }
-        public RequestDefinitionAuthoredRelate wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredRelate wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredRelate omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionAuthoredScore extends Builder<RequestDefinitionAuthoredScore> implements RequestDefinition {
         public RequestDefinitionAuthoredScore() {
@@ -1981,7 +1889,6 @@ public final class Inputs {
             result.omit("on");
             result.omit("profile");
             result.omit("score");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -2069,15 +1976,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredScore omitScore() {
             return omit("score");
         }
-        public RequestDefinitionAuthoredScore wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredScore wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredScore omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionAuthoredTag extends Builder<RequestDefinitionAuthoredTag> implements RequestDefinition {
         public RequestDefinitionAuthoredTag() {
@@ -2094,7 +1992,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("tag");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -2191,15 +2088,6 @@ public final class Inputs {
         public RequestDefinitionAuthoredTag omitThreshold() {
             return omit("threshold");
         }
-        public RequestDefinitionAuthoredTag wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionAuthoredTag wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionAuthoredTag omitWordingVersion() {
-            return omit("wording_version");
-        }
     }
     public static final class RequestDefinitionRecognizeDefinition extends Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
         public RequestDefinitionRecognizeDefinition() {
@@ -2215,7 +2103,6 @@ public final class Inputs {
             result.omit("recognize");
             result.omit("relation_threshold");
             result.omit("threshold");
-            result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -2302,15 +2189,6 @@ public final class Inputs {
         }
         public RequestDefinitionRecognizeDefinition omitThreshold() {
             return omit("threshold");
-        }
-        public RequestDefinitionRecognizeDefinition wordingVersion(Number value) {
-            return put("wording_version", value);
-        }
-        public RequestDefinitionRecognizeDefinition wordingVersionNull() {
-            return put("wording_version", null);
-        }
-        public RequestDefinitionRecognizeDefinition omitWordingVersion() {
-            return omit("wording_version");
         }
     }
     public enum RequestFraming {
@@ -3379,16 +3257,6 @@ public final class Inputs {
             return value;
         }
     }
-    public enum RequestVersion {
-        THINKTHENREQUEST1("thinkthen.request/1");
-        private final String value;
-        RequestVersion(String value) {
-            this.value = value;
-        }
-        Object json() {
-            return value;
-        }
-    }
     public static final class SessionSourceLocation extends Builder<SessionSourceLocation> {
         public SessionSourceLocation() {
         }
@@ -3537,7 +3405,6 @@ public final class Inputs {
         if (value instanceof RequestFraming item) return item.json();
         if (value instanceof RequestFunction item) return item.json();
         if (value instanceof RequestThreshold item) return item.json();
-        if (value instanceof RequestVersion item) return item.json();
         if (value instanceof SourceUnit item) return item.json();
         return value;
     }

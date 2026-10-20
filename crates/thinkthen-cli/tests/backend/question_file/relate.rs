@@ -131,7 +131,7 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
         (
             "recognize",
             "names-native",
-            r#"{"recognize":{"kinds":{"person":null}},"on":"/body","name":"names-native","wording_version":3,"item_schema":{"type":"string"}}"#,
+            r#"{"recognize":{"kinds":{"person":null}},"on":"/body","name":"names-native","item_schema":{"type":"string"}}"#,
             br#"{"body":"Ada met Grace."}"#.as_slice(),
             br#"{"body":7}"#.as_slice(),
             vec!["--jsonl"],
@@ -139,7 +139,7 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
         (
             "relate",
             "links-native",
-            r#"{"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"met","source":"person","target":"person"}]},"name":"links-native","wording_version":4,"item_schema":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"}}}}"#,
+            r#"{"relate":{"fields":{"name":"/title","kind":"/type"},"relations":[{"name":"met","source":"person","target":"person"}]},"name":"links-native","item_schema":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"}}}}"#,
             br#"[{"title":"Ada","type":"person"},{"title":"Grace","type":"person"}]"#.as_slice(),
             br#"[{"title":7,"type":"person"}]"#.as_slice(),
             vec![],

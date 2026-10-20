@@ -26,7 +26,7 @@ pub const Question = struct {
         return init(engine, .relate, .{ .Authored_relate = definition });
     }
     pub fn name(self: Question) !?[]const u8 {
-        var value: c.thinkthen_question_author_v1 = undefined;
+        var value: c.thinkthen_question_author_info = undefined;
         try tt.session.checked(c.thinkthen_question_author(@ptrCast(self.handle), &value));
         return if (value.name.present != 0) tt.session.bytes(value.name.value) else null;
     }
@@ -69,7 +69,7 @@ pub const Request = opaque {
         allocator.free(owned.options);
         allocator.destroy(owned);
     }
-    fn descriptor(self: *const Request) c.thinkthen_named_request_v1 {
+    fn descriptor(self: *const Request) c.thinkthen_named_request {
         const owned = self.storage();
         return .{ .function = utf8(owned.function), .question_json = utf8(owned.question), .input_json = utf8(owned.input), .options_json = utf8(owned.options) };
     }
@@ -88,7 +88,7 @@ pub const Request = opaque {
         try tt.session.checked(c.thinkthen_request_plan_named_value(@ptrCast(engine.handle), &request, &raw));
         const owner = raw orelse return error.Defect;
         defer c.thinkthen_value_free(owner);
-        var view: [*c]const c.thinkthen_complete_json_v1 = null;
+        var view: [*c]const c.thinkthen_complete_json = null;
         try tt.session.checked(c.thinkthen_value_view(owner, &view));
         var arena = std.heap.ArenaAllocator.init(self.storage().allocator);
         errdefer arena.deinit();
@@ -96,7 +96,7 @@ pub const Request = opaque {
         return .{ .arena = arena, .value = try values.readAs(results.Plan, value) };
     }
 };
-fn utf8(value: []const u8) c.thinkthen_complete_utf8_v1 {
+fn utf8(value: []const u8) c.thinkthen_complete_utf8 {
     return .{ .data = value.ptr, .len = value.len };
 }
 pub const Plan = struct {

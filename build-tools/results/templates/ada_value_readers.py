@@ -6,7 +6,7 @@ def outputs():
 with Thinkthen.Values;
 with Thinkthen.Session_C;
 private package Thinkthen.Native_Values is
-   function Read (P : access constant Thinkthen.Session_C.thinkthen_complete_json_v1) return Thinkthen.Values.Value;
+   function Read (P : access constant Thinkthen.Session_C.thinkthen_complete_json) return Thinkthen.Values.Value;
 end Thinkthen.Native_Values;
 """
     body = """-- Generated canonical value copy adapter. Do not edit.
@@ -23,19 +23,19 @@ package body Thinkthen.Native_Values is
     return {'thinkthen-native_values.ads': spec, 'thinkthen-native_values.adb': body}
 
 
-JSON_READER = '''function Read_Json (P : access constant thinkthen_complete_json_v1) return Value;
-function Read_Json (P : access constant thinkthen_complete_json_v1) return Value is
+JSON_READER = '''function Read_Json (P : access constant thinkthen_complete_json) return Value;
+function Read_Json (P : access constant thinkthen_complete_json) return Value is
 begin
    if P = null then raise Constraint_Error with "missing native value"; end if;
    case P.kind is
-      when K_THINKTHEN_COMPLETE_JSON_NULL_V1 => return Null_Item;
-      when K_THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 => return Boolean_Item (P.data.boolean /= 0);
-      when K_THINKTHEN_COMPLETE_JSON_NUMBER_V1 => return Number_Item (Text (P.data.number));
-      when K_THINKTHEN_COMPLETE_JSON_STRING_V1 => return String_Item (Text (P.data.string));
-      when K_THINKTHEN_COMPLETE_JSON_ARRAY_V1 =>
+      when K_THINKTHEN_COMPLETE_JSON_NULL => return Null_Item;
+      when K_THINKTHEN_COMPLETE_JSON_BOOLEAN => return Boolean_Item (P.data.boolean /= 0);
+      when K_THINKTHEN_COMPLETE_JSON_NUMBER => return Number_Item (Text (P.data.number));
+      when K_THINKTHEN_COMPLETE_JSON_STRING => return String_Item (Text (P.data.string));
+      when K_THINKTHEN_COMPLETE_JSON_ARRAY =>
          declare
             Count : constant Natural := Index (P.data.c_array.len);
-            type Item_Pointer is access constant thinkthen_complete_json_v1;
+            type Item_Pointer is access constant thinkthen_complete_json;
             type Items_Type is array (1 .. Count) of Item_Pointer with Convention => C;
             type Items_Access is access constant Items_Type;
             function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
@@ -45,10 +45,10 @@ begin
             for I in 1 .. Count loop Copy (I) := Read_Json (Items (I)); end loop;
             return Array_Item (Copy);
          end;
-      when K_THINKTHEN_COMPLETE_JSON_OBJECT_V1 =>
+      when K_THINKTHEN_COMPLETE_JSON_OBJECT =>
          declare
             Count : constant Natural := Index (P.data.object.len);
-            type Items_Type is array (1 .. Count) of thinkthen_complete_json_entry_v1 with Convention => C;
+            type Items_Type is array (1 .. Count) of thinkthen_complete_json_entry with Convention => C;
             type Items_Access is access constant Items_Type;
             function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
             Items : Items_Access;

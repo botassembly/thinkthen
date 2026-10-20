@@ -166,7 +166,7 @@ def render(definitions, inputs=False):
 
 def bridge(abi):
     lines = ['// Generated from the compiler-derived C header. Do not edit.', 'import CThinkThen']
-    for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', '_V1'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1')]:
+    for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', ''), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '')]:
         lines += [f'{"public " if cls != "QuestionGrammar" else ""}enum {cls}: UInt32, Sendable {{']
         lines += ['    case ' + literal_member(key.removeprefix(prefix).removesuffix(suffix).lower()) + ' = ' + str(value)
                   for key, value in abi['constants'].items() if key.startswith(prefix) and key.endswith(suffix)]
@@ -273,7 +273,6 @@ def named_calls(definitions):
     selectors = [(child, definitions[child]['properties']['kind']['const'])
                  for child, _ in definitions['RequestInput']['variants']]
     lines = ['extension Client {']
-    version = literal_member(definitions['RequestVersion']['oneOf'][0]['const'])
     for function, info in results.items():
         inputs = selectors if info['call_shape'] == 'input' else [(None, None)]
         for child, kind in inputs:
@@ -287,7 +286,7 @@ def named_calls(definitions):
             feed = ', feed: AsyncThrowingStream<SessionDescriptor, any Error>' if kind == 'feed' else ''
             passed_feed = ', feed: feed' if kind == 'feed' else ''
             lines += [signature + feed + f') async throws -> CallResult<{target}, {probability}, {receipts}> {{',
-                      f'        let call = try await execute(Request(call: CallRequest(function: .{literal_member(function)}, input: {expression}, options: options, question: question), schema: .{version}){passed_feed})',
+                      f'        let call = try await execute(Request(call: CallRequest(function: .{literal_member(function)}, input: {expression}, options: options, question: question)){passed_feed})',
                       f'        return try call.{function}Result{suffix}()', '    }']
             if single:
                 payload = 'String' if kind == 'text' else 'DataValue'

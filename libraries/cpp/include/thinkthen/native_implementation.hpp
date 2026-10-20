@@ -8,14 +8,14 @@ Data Data::parse(const std::string& text) {
     thinkthen_value* raw=nullptr;
     if(thinkthen_value_parse(text.data(),text.size(),&raw)) throw std::invalid_argument("invalid original value");
     std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owner(raw,&thinkthen_value_free);
-    const thinkthen_complete_json_v1* view=nullptr;
+    const thinkthen_complete_json* view=nullptr;
     if(thinkthen_value_view(owner.get(),&view)) throw std::invalid_argument("invalid original value owner");
     return results::detail::native_value(view);
 }
 Data Data::read(std::istream& input) { return parse(std::string(std::istreambuf_iterator<char>(input),{})); }
 namespace detail {
 Data parse_original(const std::string& text) { return Data::parse(text); }
-void fail(int code,const thinkthen_error_view_v1* view,const char* message) {
+void fail(int code,const thinkthen_error_details* view,const char* message) {
     ::tt::Failure error(code,message);
     if(view) { error.retryable=view->retryable!=0; if(view->facts) error.facts.emplace(results::detail::Loader::input<results::ImmediateFacts>(results::detail::native_value(view->facts))); }
     throw error;
@@ -52,19 +52,19 @@ void Call::finish() {
 bool Call::admit(const inputs::RequestSessionDescriptor& item,bool blocking) {
     if(!state_) throw std::logic_error("C++ call is closed");
     if(state_->closed) return false;
-    auto bytes=::tt::detail::serialize(::tt::results::detail::document(item)); uint32_t status=THINKTHEN_SESSION_CLOSED_V1;
+    auto bytes=::tt::detail::serialize(::tt::results::detail::document(item)); uint32_t status=THINKTHEN_SESSION_CLOSED;
     detail::check(blocking ? thinkthen_session_push(state_->session.get(),bytes.data(),bytes.size(),&status) : thinkthen_session_try_push(state_->session.get(),bytes.data(),bytes.size(),&status));
-    state_->closed=status==THINKTHEN_SESSION_CLOSED_V1; return status==THINKTHEN_SESSION_ACCEPTED_V1;
+    state_->closed=status==THINKTHEN_SESSION_CLOSED; return status==THINKTHEN_SESSION_ACCEPTED;
 }
 Poll Call::read(bool blocking,bool settlement) {
     if(!state_) throw std::logic_error("C++ call is closed");
-    uint32_t status=THINKTHEN_SESSION_PENDING_V1; thinkthen_session_result* raw=nullptr;
-    uint32_t interest=settlement ? THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 : THINKTHEN_SESSION_WAIT_RESULT_V1;
+    uint32_t status=THINKTHEN_SESSION_PENDING; thinkthen_session_result* raw=nullptr;
+    uint32_t interest=settlement ? THINKTHEN_SESSION_WAIT_SETTLEMENT : THINKTHEN_SESSION_WAIT_RESULT;
     detail::check(blocking ? thinkthen_session_next_packet(state_->session.get(),interest,&status,&raw) : thinkthen_session_try_read(state_->session.get(),&status,&raw));
     std::unique_ptr<thinkthen_session_result,detail::PacketDeleter> packet(raw);
-    if(status==THINKTHEN_SESSION_PENDING_V1) return {PollState::pending,{}};
-    if(status==THINKTHEN_SESSION_END_V1) return {PollState::end,{}};
-    const thinkthen_complete_session_packet_v1* view=nullptr;
+    if(status==THINKTHEN_SESSION_PENDING) return {PollState::pending,{}};
+    if(status==THINKTHEN_SESSION_END) return {PollState::end,{}};
+    const thinkthen_complete_session_packet* view=nullptr;
     detail::check(thinkthen_session_result_view(packet.get(),&view));
     auto value=results::detail::Loader::input<results::SessionPacket>(results::detail::native_value(view));
     if(auto terminal=value.as_SessionPacketTerminal()) if(terminal->failure().state==results::PresenceState::value) throw ::tt::Failure(std::move(*terminal));
@@ -73,7 +73,7 @@ Poll Call::read(bool blocking,bool settlement) {
 void Call::wait(bool input) {
     if(!state_) throw std::logic_error("C++ call is closed");
     uint32_t ready=0;
-    detail::check(thinkthen_session_wait(state_->session.get(),input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,UINT32_MAX,&ready));
+    detail::check(thinkthen_session_wait(state_->session.get(),input ? THINKTHEN_SESSION_WAIT_INPUT : THINKTHEN_SESSION_WAIT_SETTLEMENT,UINT32_MAX,&ready));
 }
 const std::vector<results::SessionPacket>& Call::completed() {
     if(!state_) throw std::logic_error("C++ call is closed");
@@ -92,7 +92,7 @@ void Client::close() noexcept { state_.reset(); }
 Call Client::start(const std::string& function,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
     if(!state_) throw std::logic_error("C++ client is closed");
     auto q=::tt::detail::serialize(::tt::results::detail::document(question)), in=::tt::detail::serialize(::tt::results::detail::document(input)), opts=::tt::detail::serialize(::tt::results::detail::document(options));
-    thinkthen_named_request_v1 request{{function.data(),function.size()},{q.data(),q.size()},{in.data(),in.size()},{opts.data(),opts.size()}};
+    thinkthen_named_request request{{function.data(),function.size()},{q.data(),q.size()},{in.data(),in.size()},{opts.data(),opts.size()}};
     auto state=std::make_unique<Call::State>(nullptr); thinkthen_session* raw=nullptr;
     detail::check(thinkthen_session_new_named_with_surface(state_->live(),&request,{"cpp",3},&raw));
     state->session.reset(raw); return Call(std::move(state));
@@ -102,16 +102,16 @@ results::Plan Client::plan_impl(const inputs::RequestCall& call) const {
     const auto& value=::tt::results::detail::document(call); auto function=value.at("function").get<std::string>();
     auto question=::tt::detail::serialize(value.at("question")), input=::tt::detail::serialize(value.at("input"));
     auto options=value.contains("options") ? ::tt::detail::serialize(value.at("options")) : std::string("{}");
-    thinkthen_named_request_v1 request{{function.data(),function.size()},{question.data(),question.size()},{input.data(),input.size()},{options.data(),options.size()}};
+    thinkthen_named_request request{{function.data(),function.size()},{question.data(),question.size()},{input.data(),input.size()},{options.data(),options.size()}};
     thinkthen_value* raw=nullptr; detail::check(thinkthen_request_plan_named_value(state_->live(),&request,&raw));
     std::unique_ptr<thinkthen_value,decltype(&thinkthen_value_free)> owned(raw,&thinkthen_value_free);
-    const thinkthen_complete_json_v1* view=nullptr; detail::check(thinkthen_value_view(owned.get(),&view));
+    const thinkthen_complete_json* view=nullptr; detail::check(thinkthen_value_view(owned.get(),&view));
     return results::detail::Loader::input<results::Plan>(results::detail::native_value(view));
 }
 UsageStatus Client::usage_impl(bool finish) const {
     if(!state_) throw std::logic_error("C++ client is closed");
-    thinkthen_complete_usage_persistence_v1 status{}; thinkthen_complete_utf8_v1 advice{};
-    detail::check(finish ? thinkthen_engine_finish_usage_status_v1(state_->live(),&status,&advice) : thinkthen_engine_usage_persistence_v1(state_->live(),&status,&advice));
+    thinkthen_complete_usage_persistence status{}; thinkthen_complete_utf8 advice{};
+    detail::check(finish ? thinkthen_engine_finish_usage_status(state_->live(),&status,&advice) : thinkthen_engine_usage_persistence(state_->live(),&status,&advice));
     return {static_cast<UsagePersistenceState>(status.kind),advice.data ? std::optional<std::string>(std::string(advice.data,advice.len)) : std::nullopt};
 }
 }

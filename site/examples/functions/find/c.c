@@ -28,7 +28,7 @@ snprintf(input_json + at, sizeof input_json - at, "]}");
 
 thinkthen_engine *tt = thinkthen_engine_new();
 assert(tt != NULL);
-thinkthen_named_request_v1 request = {
+thinkthen_named_request request = {
     .function = {"find", 4},
     .question_json = {question_json, strlen(question_json)},
     .input_json = {input_json, strlen(input_json)},
@@ -40,13 +40,13 @@ int rc = thinkthen_run_call(tt, &request,
     NULL, NULL, NULL, &deadline_call, &error);
 thinkthen_engine_free(tt);
 if (rc != THINKTHEN_OK) {
-    thinkthen_complete_utf8_v1 message =
+    thinkthen_complete_utf8 message =
         thinkthen_call_error_message(error);
     fwrite(message.data, 1, message.len, stderr);
     thinkthen_call_error_free(error);
 }
 assert(rc == THINKTHEN_OK);
-thinkthen_complete_utf8_v1 json =
+thinkthen_complete_utf8 json =
     thinkthen_call_result_json(deadline_call);
 assert(json.data != NULL && json.len > 0);
 fwrite(json.data, 1, json.len, stdout);

@@ -163,7 +163,6 @@ def project(packet, verb):
                     answer_id=child['answer_id'], probability=child['answer']['probability'],
                     author=child['question'].get('name'),
                     observations=len(child['meta']['observations']), sources=len(child['meta']['question_sources']),
-                    **{key: child['question'][key] for key in ('wording_version',) if key in child['question']},
                     **metadata(child['meta'])))
         assert re.fullmatch('[0-9a-f]{64}', row['answer_id']), 'invalid native answer ID'
         assert meta['cached'] is (meta['origin'] in ('cache', 'replay')), 'native cache fact differs from origin'
@@ -178,12 +177,12 @@ def project(packet, verb):
         for key in ('probability', 'probabilities'):
             if key in answer:
                 row[key] = answer[key]
-        row.update({k: result['question'][k] for k in ('name', 'wording_version') if k in result.get('question', {})})
+        row.update({k: result['question'][k] for k in ('name',) if k in result.get('question', {})})
         row.update(result.get('source', {}))
         for key in ('file', 'first_line', 'last_line'):
             if key in result:
                 row[key] = result[key]
-        row['member_authors'] = [{k: a['question'][k] for k in ('name', 'wording_version') if k in a['question']}
+        row['member_authors'] = [{k: a['question'][k] for k in ('name',) if k in a['question']}
                                  for a in result.get('answers', {}).values()]
         for member in result.get('answers', {}).values():
             identity = member.get('answer_id', member.get('failure_id'))
@@ -242,7 +241,7 @@ def known_fields(step, got, bodies):
             for key, value in metadata.items():
                 assert question[key] == value, question
             if 'no_inferred_metadata' in expected:
-                assert all(key in metadata or key not in question for key in ('name', 'wording_version')), question
+                assert all(key in metadata or key not in question for key in ('name',)), question
         for key in ('ordered_properties', 'required_properties'):
             if key in expected:
                 declaration = row['question']['item_schema']
@@ -449,7 +448,7 @@ def run(port, binary):
                                 for key in ('question_digest', 'answer_id', 'observation_ids'):
                                     assert actual[key] == original[key], key
                                 questions = [a['question'] for a in original['answers'].values()] if step['verb'] == 'annotate' else [original['question']]
-                                assert all(k not in q for q in questions for k in ('name', 'wording_version')), original
+                                assert all(k not in q for q in questions for k in ('name',)), original
                         if value.get('image_variants'):
                             assert_images(step, got, bodies)
                         if row['kind'] in ('images', 'image-location') and got['code'] == 0:

@@ -4251,7 +4251,6 @@ public enum Verb: ValueRepresentable {
     }
   }
 }
-public typealias WordingVersion = UInt64
 public indirect enum AnnotatedField: ValueRepresentable {
   case `boolean`(Bool)
   case `null`
@@ -4794,14 +4793,13 @@ public struct FindQuestionDocument: ValueRepresentable {
   public let `profile`: Presence<String>
   public let `text`: DataValue
   public let `verb`: String
-  public let `wordingVersion`: Presence<WordingVersion>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
     `contextSchema`: Presence<InputDeclaration> = .absent,
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
     `none`: Bool, `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `text`: DataValue, `verb`: String = "find", `wordingVersion`: Presence<WordingVersion> = .absent
+    `text`: DataValue, `verb`: String = "find"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -4815,13 +4813,12 @@ public struct FindQuestionDocument: ValueRepresentable {
     self.`profile` = `profile`
     self.`text` = `text`
     self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> FindQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
-      "profile", "text", "verb", "wording_version",
+      "profile", "text", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -4835,8 +4832,7 @@ public struct FindQuestionDocument: ValueRepresentable {
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
       text: try DataValue.read(jsonRequired(object, "text")),
-      verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
+      verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
@@ -4844,7 +4840,7 @@ public struct FindQuestionDocument: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
-      "profile", "text", "verb", "wording_version",
+      "profile", "text", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -4858,7 +4854,6 @@ public struct FindQuestionDocument: ValueRepresentable {
     writePresence(`profile`, "profile", &object)
     object["text"] = `text`.json
     object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -5143,7 +5138,6 @@ public struct QuestionDocumentChoose: ValueRepresentable {
   public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<WordingVersion>
   public let `options`: [String]
   public let `text`: DataValue
   public let `verb`: String
@@ -5152,9 +5146,8 @@ public struct QuestionDocumentChoose: ValueRepresentable {
     `contextSchema`: Presence<InputDeclaration> = .absent,
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
-    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<WordingVersion> = .absent, `options`: [String], `text`: DataValue,
-    `verb`: String = "choose"
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent, `options`: [String],
+    `text`: DataValue, `verb`: String = "choose"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5165,7 +5158,6 @@ public struct QuestionDocumentChoose: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
     self.`options` = `options`
     self.`text` = `text`
     self.`verb` = `verb`
@@ -5174,7 +5166,7 @@ public struct QuestionDocumentChoose: ValueRepresentable {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "options", "text", "verb",
+      "options", "text", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5186,7 +5178,6 @@ public struct QuestionDocumentChoose: ValueRepresentable {
       name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       options: try [String].read(jsonRequired(object, "options")),
       text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
@@ -5197,7 +5188,7 @@ public struct QuestionDocumentChoose: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "options", "text", "verb",
+      "options", "text", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5208,7 +5199,6 @@ public struct QuestionDocumentChoose: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     object["options"] = `options`.json
     object["text"] = `text`.json
     object["verb"] = `verb`.json
@@ -5226,7 +5216,6 @@ public struct QuestionDocumentDecide: ValueRepresentable {
   public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<WordingVersion>
   public let `false`: Presence<DataValue>
   public let `text`: DataValue
   public let `true`: Presence<DataValue>
@@ -5237,8 +5226,8 @@ public struct QuestionDocumentDecide: ValueRepresentable {
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
     `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<WordingVersion> = .absent, `false`: Presence<DataValue> = .absent,
-    `text`: DataValue, `true`: Presence<DataValue> = .absent, `verb`: String = "decide"
+    `false`: Presence<DataValue> = .absent, `text`: DataValue,
+    `true`: Presence<DataValue> = .absent, `verb`: String = "decide"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5249,7 +5238,6 @@ public struct QuestionDocumentDecide: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
     self.`false` = `false`
     self.`text` = `text`
     self.`true` = `true`
@@ -5259,7 +5247,7 @@ public struct QuestionDocumentDecide: ValueRepresentable {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "false", "text", "true", "verb",
+      "false", "text", "true", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5271,7 +5259,6 @@ public struct QuestionDocumentDecide: ValueRepresentable {
       name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       false: try readPresence(object, "false", DataValue.self),
       text: try DataValue.read(jsonRequired(object, "text")),
       true: try readPresence(object, "true", DataValue.self),
@@ -5283,7 +5270,7 @@ public struct QuestionDocumentDecide: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "false", "text", "true", "verb",
+      "false", "text", "true", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5294,7 +5281,6 @@ public struct QuestionDocumentDecide: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     writePresence(`false`, "false", &object)
     object["text"] = `text`.json
     writePresence(`true`, "true", &object)
@@ -5313,7 +5299,6 @@ public struct QuestionDocumentScore: ValueRepresentable {
   public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<WordingVersion>
   public let `levels`: [String]
   public let `text`: DataValue
   public let `verb`: String
@@ -5322,9 +5307,8 @@ public struct QuestionDocumentScore: ValueRepresentable {
     `contextSchema`: Presence<InputDeclaration> = .absent,
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
-    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<WordingVersion> = .absent, `levels`: [String], `text`: DataValue,
-    `verb`: String = "score"
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent, `levels`: [String],
+    `text`: DataValue, `verb`: String = "score"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5335,7 +5319,6 @@ public struct QuestionDocumentScore: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
     self.`levels` = `levels`
     self.`text` = `text`
     self.`verb` = `verb`
@@ -5344,7 +5327,7 @@ public struct QuestionDocumentScore: ValueRepresentable {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "levels", "text", "verb",
+      "levels", "text", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5356,7 +5339,6 @@ public struct QuestionDocumentScore: ValueRepresentable {
       name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       levels: try [String].read(jsonRequired(object, "levels")),
       text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
@@ -5367,7 +5349,7 @@ public struct QuestionDocumentScore: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "levels", "text", "verb",
+      "levels", "text", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5378,7 +5360,6 @@ public struct QuestionDocumentScore: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     object["levels"] = `levels`.json
     object["text"] = `text`.json
     object["verb"] = `verb`.json
@@ -5396,7 +5377,6 @@ public struct QuestionDocumentTag: ValueRepresentable {
   public let `name`: Presence<ReceiptQuestionName>
   public let `on`: Presence<[String]>
   public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<WordingVersion>
   public let `labels`: [String]
   public let `text`: DataValue
   public let `verb`: String
@@ -5405,9 +5385,8 @@ public struct QuestionDocumentTag: ValueRepresentable {
     `contextSchema`: Presence<InputDeclaration> = .absent,
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
-    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<WordingVersion> = .absent, `labels`: [String], `text`: DataValue,
-    `verb`: String = "tag"
+    `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent, `labels`: [String],
+    `text`: DataValue, `verb`: String = "tag"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5418,7 +5397,6 @@ public struct QuestionDocumentTag: ValueRepresentable {
     self.`name` = `name`
     self.`on` = `on`
     self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
     self.`labels` = `labels`
     self.`text` = `text`
     self.`verb` = `verb`
@@ -5427,7 +5405,7 @@ public struct QuestionDocumentTag: ValueRepresentable {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "labels", "text", "verb",
+      "labels", "text", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5439,7 +5417,6 @@ public struct QuestionDocumentTag: ValueRepresentable {
       name: try readPresence(object, "name", ReceiptQuestionName.self),
       on: try readPresence(object, "on", [String].self),
       profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self),
       labels: try [String].read(jsonRequired(object, "labels")),
       text: try DataValue.read(jsonRequired(object, "text")),
       verb: try String.read(jsonRequired(object, "verb")))
@@ -5450,7 +5427,7 @@ public struct QuestionDocumentTag: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "labels", "text", "verb",
+      "labels", "text", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5461,7 +5438,6 @@ public struct QuestionDocumentTag: ValueRepresentable {
     writePresence(`name`, "name", &object)
     writePresence(`on`, "on", &object)
     writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
     object["labels"] = `labels`.json
     object["text"] = `text`.json
     object["verb"] = `verb`.json
@@ -5549,7 +5525,6 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
   public let `stageContext`: Presence<ReceiptRecognitionStageContext>
   public let `threshold`: ReceiptThreshold
   public let `verb`: Verb
-  public let `wordingVersion`: Presence<WordingVersion>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
     `contextSchema`: Presence<InputDeclaration> = .absent,
@@ -5562,8 +5537,7 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
     `relationThreshold`: Presence<ReceiptThreshold> = .absent,
     `relations`: Presence<[RelationRule]> = .absent, `snippetPieces`: Presence<UInt64> = .absent,
     `stageContext`: Presence<ReceiptRecognitionStageContext> = .absent,
-    `threshold`: ReceiptThreshold, `verb`: Verb,
-    `wordingVersion`: Presence<WordingVersion> = .absent
+    `threshold`: ReceiptThreshold, `verb`: Verb
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5584,14 +5558,13 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
     self.`stageContext` = `stageContext`
     self.`threshold` = `threshold`
     self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> RecognizeQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
       "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
-      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
+      "snippet_pieces", "stage_context", "threshold", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5612,8 +5585,7 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
       snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
       stageContext: try readPresence(object, "stage_context", ReceiptRecognitionStageContext.self),
       threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
-      verb: try Verb.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
+      verb: try Verb.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
@@ -5622,7 +5594,7 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
     let known: Set<String> = [
       "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
       "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
-      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
+      "snippet_pieces", "stage_context", "threshold", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5643,7 +5615,6 @@ public struct RecognizeQuestionDocument: ValueRepresentable {
     writePresence(`stageContext`, "stage_context", &object)
     object["threshold"] = `threshold`.json
     object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -5754,15 +5725,13 @@ public struct RelateQuestionDocument: ValueRepresentable {
   public let `relations`: [RelationRule]
   public let `threshold`: ReceiptThreshold
   public let `verb`: String
-  public let `wordingVersion`: Presence<WordingVersion>
   public init(
     extensions: [String: DataValue] = [:], `batch`: Presence<ReceiptBatch> = .absent,
     `contextSchema`: Presence<InputDeclaration> = .absent, `fields`: ReceiptRelateFields?,
     `itemSchema`: Presence<InputDeclaration> = .absent, `labelDetails`: Presence<[Label]> = .absent,
     `model`: Presence<String> = .absent, `name`: Presence<ReceiptQuestionName> = .absent,
     `on`: Presence<[String]> = .absent, `profile`: Presence<String> = .absent,
-    `relations`: [RelationRule], `threshold`: ReceiptThreshold, `verb`: String = "relate",
-    `wordingVersion`: Presence<WordingVersion> = .absent
+    `relations`: [RelationRule], `threshold`: ReceiptThreshold, `verb`: String = "relate"
   ) {
     self.extensions = extensions
     self.`batch` = `batch`
@@ -5777,13 +5746,12 @@ public struct RelateQuestionDocument: ValueRepresentable {
     self.`relations` = `relations`
     self.`threshold` = `threshold`
     self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
   }
   static func read(_ json: DataValue) throws -> RelateQuestionDocument {
     let object = try jsonObject(json)
     let known: Set<String> = [
       "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
-      "profile", "relations", "threshold", "verb", "wording_version",
+      "profile", "relations", "threshold", "verb",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -5798,8 +5766,7 @@ public struct RelateQuestionDocument: ValueRepresentable {
       profile: try readPresence(object, "profile", String.self),
       relations: try [RelationRule].read(jsonRequired(object, "relations")),
       threshold: try ReceiptThreshold.read(jsonRequired(object, "threshold")),
-      verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", WordingVersion.self))
+      verb: try String.read(jsonRequired(object, "verb")))
     value._sourceJSON = json
     return value
   }
@@ -5807,7 +5774,7 @@ public struct RelateQuestionDocument: ValueRepresentable {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
       "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
-      "profile", "relations", "threshold", "verb", "wording_version",
+      "profile", "relations", "threshold", "verb",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`batch`, "batch", &object)
@@ -5822,7 +5789,6 @@ public struct RelateQuestionDocument: ValueRepresentable {
     object["relations"] = `relations`.json
     object["threshold"] = `threshold`.json
     object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -8559,24 +8525,24 @@ func nativeElements<T>(_ pointer: UnsafePointer<T>?, _ count: Int) throws -> [T]
   guard let pointer else { throw ValueConversionError("Missing native collection") }
   return Array(UnsafeBufferPointer(start: pointer, count: count))
 }
-func copyNativeLeaf(_ pointer: UnsafePointer<thinkthen_complete_json_v1>?) throws -> DataValue {
+func copyNativeLeaf(_ pointer: UnsafePointer<thinkthen_complete_json>?) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native leaf") }
   return try DataValue.copyNative(pointer)
 }
-func copyNativeExtensions(_ value: thinkthen_complete_extensions_v1) throws -> [ValueMember] {
+func copyNativeExtensions(_ value: thinkthen_complete_extensions) throws -> [ValueMember] {
   try nativeElements(value.data, value.len).map {
     ValueMember(nativeString($0.name), try copyNativeLeaf($0.value))
   }
 }
 
 func nativeValue(_ owner: OpaquePointer) throws -> DataValue {
-  var view: UnsafePointer<thinkthen_complete_json_v1>?
+  var view: UnsafePointer<thinkthen_complete_json>?
   try sessionCheck(thinkthen_value_view(owner, &view))
   guard let view else { throw ValueConversionError("Missing native value view") }
   return try DataValue.copyNative(view)
 }
 
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8603,30 +8569,30 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_terminal_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_terminal>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`answer`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("answer", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("answer", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("answer", try copyNativeGraph(value.`answer`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`facts`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("facts", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("facts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("facts", try copyNativeGraph(value.`facts`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`failure`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("failure", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("failure", try copyNativeGraph(value.`failure`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -8634,8 +8600,8 @@ private func copyNativeGraph(
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolution_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolution>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -8646,7 +8612,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_error_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_error>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8654,25 +8620,25 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_er
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("error", try copyNativeGraph(value.`error`)))
   switch value.`facts`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("facts", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("facts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("facts", try copyNativeGraph(value.`facts`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`attempts`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("attempts", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("attempts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "attempts",
@@ -8686,28 +8652,27 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v
     ValueMember("cache_answers", .number(NumberLiteral(unchecked: String(value.`cache_answers`)))))
   members.append(ValueMember("call_id", try copyNativeGraph(value.`call_id`)))
   switch value.`estimated_cost_usd`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("estimated_cost_usd", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("estimated_cost_usd", .string(nativeString(value.`estimated_cost_usd`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`held_model_mismatch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("held_model_mismatch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("held_model_mismatch", .bool(value.`held_model_mismatch`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input_tokens`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("input_tokens", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "input_tokens", .number(NumberLiteral(unchecked: String(value.`input_tokens`.value)))))
@@ -8718,10 +8683,10 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v
       "largest_request_bytes",
       .number(NumberLiteral(unchecked: String(value.`largest_request_bytes`)))))
   switch value.`largest_request_estimated_input_tokens`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("largest_request_estimated_input_tokens", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "largest_request_estimated_input_tokens",
@@ -8730,17 +8695,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`output_tokens`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("output_tokens", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("output_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`.value)))))
@@ -8753,26 +8717,26 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v
   members.append(
     ValueMember("token_estimate_method", .string(nativeString(value.`token_estimate_method`))))
   switch value.`usage_persistence`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("usage_persistence", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("usage_persistence", try copyNativeGraph(value.`usage_persistence`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_persistence_observation_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_persistence_observation>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`advice`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("advice", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("advice", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("advice", .string(nativeString(value.`advice`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -8780,8 +8744,8 @@ private func copyNativeGraph(
   members.append(ValueMember("state", try copyNativeGraph(value.`state`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_persistence_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_persistence>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -8793,14 +8757,14 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_p
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_id_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_id>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .string(nativeString(value.value))
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8809,26 +8773,26 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt
   members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
   members.append(ValueMember("outcome", try copyNativeGraph(value.`outcome`)))
   switch value.`request_id`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("request_id", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("request_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("request_id", .string(nativeString(value.`request_id`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("request_sha256", .string(nativeString(value.`request_sha256`))))
   members.append(ValueMember("sdk_request_id", try copyNativeGraph(value.`sdk_request_id`)))
   switch value.`server_ms`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("server_ms", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("server_ms", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("server_ms", .number(NumberLiteral(unchecked: String(value.`server_ms`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`status`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("status", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("status", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("status", .number(NumberLiteral(unchecked: String(value.`status`.value)))))
   default: throw ValueConversionError("Unknown native presence")
@@ -8836,15 +8800,15 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt
   members.append(ValueMember("wall_ms", .number(NumberLiteral(unchecked: String(value.`wall_ms`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_sdk_request_id_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_sdk_request_id>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .string(nativeString(value.value))
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt_outcome_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt_outcome>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -8855,17 +8819,17 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_attempt
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_error_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_error>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`estimated_input_denial`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("estimated_input_denial", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "estimated_input_denial", try copyNativeGraph(value.`estimated_input_denial`.value)))
@@ -8875,10 +8839,10 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_error_v
   members.append(ValueMember("message", .string(nativeString(value.`message`))))
   members.append(ValueMember("retryable", .bool(value.`retryable` != 0)))
   switch value.`send_budget_denial`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("send_budget_denial", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("send_budget_denial", try copyNativeGraph(value.`send_budget_denial`.value)))
   default: throw ValueConversionError("Unknown native presence")
@@ -8886,32 +8850,32 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_error_v
   members.append(ValueMember("stopped", try copyNativeGraph(value.`stopped`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stopped_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stopped>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`at`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("at", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("at", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("at", .number(NumberLiteral(unchecked: String(value.`at`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("cause", try copyNativeGraph(value.`cause`)))
   members.append(ValueMember("retryable", .bool(value.`retryable` != 0)))
   switch value.`status`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("status", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("status", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("status", .number(NumberLiteral(unchecked: String(value.`status`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stop_cause_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stop_cause>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8931,7 +8895,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_stop_ca
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_send_denial_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_send_denial>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8943,9 +8907,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_send_de
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_retry_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_send_denial_before_retry>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -8955,7 +8919,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_additional_send_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_additional_send>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -8964,7 +8928,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_first_send_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_send_denial_before_first_send>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -8972,7 +8936,7 @@ private func copyNativeGraph(
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_kind_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_kind>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8987,7 +8951,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -8999,7 +8963,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_d
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial_retry_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_denial_retry>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9012,7 +8976,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_d
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_denial_additional_request_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_denial_additional_request>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9022,7 +8986,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_denial_initial_request_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_denial_initial_request>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9031,7 +8995,7 @@ private func copyNativeGraph(
   members.append(ValueMember("limit", .number(NumberLiteral(unchecked: String(value.`limit`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9050,47 +9014,46 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_settled_answer_annotate_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_annotate>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_15_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_15>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9110,7 +9073,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_15_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_15_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9124,8 +9087,8 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_judgment_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_judgment>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9142,7 +9105,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_5_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_5>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9162,7 +9125,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolutions_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolutions>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9177,7 +9140,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_2_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_2>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9194,7 +9157,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_8_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_8_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9204,7 +9167,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_3_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_3>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9221,7 +9184,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_6_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_6_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9231,7 +9194,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_4_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_4>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9248,7 +9211,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_4_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_4_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9258,7 +9221,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_relate_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_relate>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9266,39 +9229,38 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_14_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_14>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9314,7 +9276,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_14_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_14_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9324,24 +9286,24 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_relations_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_relations>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .array(
     try nativeElements(value.value.data, value.value.len).map { item in try copyNativeGraph(item) })
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_edge_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_edge>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`either`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("either", .bool(value.`either`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -9352,8 +9314,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9363,23 +9325,23 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_source_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_source>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
@@ -9387,9 +9349,9 @@ private func copyNativeGraph(
   }
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
@@ -9397,16 +9359,16 @@ private func copyNativeGraph(
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
   switch value.`record`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("record", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("record", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("record", try copyNativeLeaf(value.`record`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_related_entity_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_related_entity>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9415,8 +9377,8 @@ private func copyNativeGraph(
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_10_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_10>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9436,7 +9398,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_10_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_10_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9450,47 +9412,46 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_settled_answer_recognize_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_recognize>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_13_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_13>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9506,7 +9467,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_13_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_13_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9516,7 +9477,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_recognition_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_recognition>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9528,7 +9489,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_mode_proposals_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_mode_proposals>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9543,33 +9504,33 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_proposal_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_proposal>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
@@ -9581,7 +9542,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundar
   members.append(ValueMember("text", .string(nativeString(value.`text`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_mode_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_mode>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9592,7 +9553,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundar
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_entities_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_entities>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9605,9 +9566,9 @@ private func copyNativeGraph(
           try copyNativeGraph(item)
         })))
   switch value.`relations`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "relations",
@@ -9619,16 +9580,16 @@ private func copyNativeGraph(
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_edge_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_edge>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`either`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("either", .bool(value.`either`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -9639,7 +9600,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9647,16 +9608,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
@@ -9664,9 +9625,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_
   }
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
@@ -9678,7 +9639,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_
   members.append(ValueMember("text", .string(nativeString(value.`text`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_find_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_find>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9686,45 +9647,44 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_12_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_12>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return try copyNativeLeaf(value.value)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_rank_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_rank>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9732,39 +9692,38 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_11_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_11>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9784,7 +9743,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_11_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_11_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9798,7 +9757,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_filter_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_filter>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9806,38 +9765,37 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_9_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_9>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9858,7 +9816,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_9_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_9_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -9872,14 +9830,14 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_original_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_original>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return try copyNativeLeaf(value.value)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_score_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_score>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9887,38 +9845,37 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_8_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_8>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9934,7 +9891,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_tag_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_tag>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9942,38 +9899,37 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_7_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_7>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -9994,7 +9950,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_7_any_of_1_items_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_7_any_of_1_items>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10008,7 +9964,7 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_choose_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_choose>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10016,38 +9972,37 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_6_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_6>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10063,7 +10018,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_decide_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_decide>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10071,38 +10026,37 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("function", .string(nativeString(value.`function`))))
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`probability`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probability", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10110,7 +10064,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   return try copyNativeLeaf(value.value)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_observation_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_observation>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10120,7 +10074,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observation_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observation>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10131,9 +10085,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observation_row_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observation_row>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -10142,7 +10096,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observed_row_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_observed_row>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10157,7 +10111,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_relations_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_relations>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10172,7 +10126,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_relation_edge_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_relation_edge>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10186,8 +10140,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_document_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_document>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10197,16 +10151,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_find_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_find>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`.value)))))
   default: throw ValueConversionError("Unknown native presence")
@@ -10214,7 +10168,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_recognized_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_recognized>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10223,7 +10177,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_recognition_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_recognition>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10238,9 +10192,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
         })))
   members.append(ValueMember("mode", try copyNativeGraph(value.`mode`)))
   switch value.`proposals`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("proposals", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("proposals", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "proposals",
@@ -10251,9 +10205,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`relations`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "relations",
@@ -10265,8 +10219,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_edge_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_edge>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10279,8 +10233,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_mode_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_mode>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10291,7 +10245,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_annotated_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_annotated>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10306,7 +10260,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_annotation_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_annotation>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10316,8 +10270,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10330,9 +10284,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_failed_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_failed>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -10340,7 +10294,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_field_kind_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_field_kind>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10350,7 +10304,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10360,7 +10314,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure
   members.append(ValueMember("kind", try copyNativeGraph(value.`kind`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_cause_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_cause>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10375,7 +10329,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_tags_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_tags>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10391,9 +10345,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_score_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_score>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -10401,40 +10355,40 @@ private func copyNativeGraph(
   members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_choice_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_value_choice>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_decision_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_value_decision>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", .bool(value.`value`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_judgment_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observed_row_judgment>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10443,8 +10397,8 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10456,7 +10410,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_tags_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_tags>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10472,9 +10426,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_score_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_score>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -10482,40 +10436,40 @@ private func copyNativeGraph(
   members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_choice_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_judgment_choice>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_decision_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_judgment_decision>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", .bool(value.`value`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_observation_question_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_observation_question>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10524,41 +10478,41 @@ private func copyNativeGraph(
   members.append(ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`)))))
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
   switch value.`member`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("member", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("member", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("member", .string(nativeString(value.`member`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(
     ValueMember("position", .number(NumberLiteral(unchecked: String(value.`position`)))))
   switch value.`stage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("stage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("stage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("stage", .string(nativeString(value.`stage`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_question_detail_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_question_detail>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`answer_id`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("answer_id", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("answer_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("cached", .bool(value.`cached` != 0)))
   switch value.`confidence`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
     )
@@ -10568,31 +10522,30 @@ private func copyNativeGraph(
     ValueMember(
       "failed_questions", .number(NumberLiteral(unchecked: String(value.`failed_questions`)))))
   switch value.`failure`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("failure", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("failure", try copyNativeGraph(value.`failure`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`failure_id`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("failure_id", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("failure_id", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input_source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("input_source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input_source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input_source", try copyNativeGraph(value.`input_source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -10619,10 +10572,9 @@ private func copyNativeGraph(
           try copyNativeGraph(item)
         })))
   switch value.`probabilities`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("probabilities", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("probabilities", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("probabilities", try copyNativeGraph(value.`probabilities`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -10636,17 +10588,17 @@ private func copyNativeGraph(
           item in try copyNativeGraph(item)
         })))
   switch value.`raw_pick`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("raw_pick", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("raw_pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("raw_pick", .string(nativeString(value.`raw_pick`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`reported_usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("reported_usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("reported_usage", try copyNativeGraph(value.`reported_usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -10660,30 +10612,30 @@ private func copyNativeGraph(
   members.append(
     ValueMember("requests_sent", .number(NumberLiteral(unchecked: String(value.`requests_sent`)))))
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("url", .string(nativeString(value.`url`))))
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_value_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_value>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10701,7 +10653,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_value_v
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_token_usage_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_token_usage>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10713,7 +10665,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_token_u
     ValueMember("output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_threshold_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_threshold>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10724,27 +10676,25 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_thresho
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`input_tokens`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("input_tokens", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "input_tokens", .number(NumberLiteral(unchecked: String(value.`input_tokens`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`output_tokens`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("output_tokens", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("output_tokens", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "output_tokens", .number(NumberLiteral(unchecked: String(value.`output_tokens`.value)))))
@@ -10752,17 +10702,17 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_usage_v
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_source_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_source>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("answered_by", .string(nativeString(value.`answered_by`))))
   switch value.`batch_size`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch_size", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch_size", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("batch_size", .number(NumberLiteral(unchecked: String(value.`batch_size`.value))))
     )
@@ -10771,7 +10721,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_questio
   members.append(ValueMember("origin", try copyNativeGraph(value.`origin`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_origin_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_origin>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10785,8 +10735,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_origin_
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10798,40 +10748,38 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_questio
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_question_document_score_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_score>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -10841,23 +10789,23 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -10868,19 +10816,10 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(
@@ -10891,48 +10830,40 @@ private func copyNativeGraph(
           .string(nativeString(item))
         })))
   switch value.`text`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_wording_version_v1>?)
-  throws -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  return .number(NumberLiteral(unchecked: String(value.value)))
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_name_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_name>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .string(nativeString(value.value))
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_label_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_label>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`description`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("description", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("description", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("description", try copyNativeLeaf(value.`description`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_declaration_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_declaration>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10943,7 +10874,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_d
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_object_root_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_object_root>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -10956,9 +10887,9 @@ private func copyNativeGraph(
           ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
         })))
   switch value.`required`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("required", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("required", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "required",
@@ -10971,7 +10902,7 @@ private func copyNativeGraph(
   members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_object_type_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_object_type>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10981,7 +10912,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_object_
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_property_type_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_property_type>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -10995,7 +10926,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_input_p
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_array_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_array>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11004,7 +10935,7 @@ private func copyNativeGraph(
   members.append(ValueMember("type", .string(nativeString(value.`type`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_root_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_root>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11013,7 +10944,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_
   members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_type_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_type>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11024,7 +10955,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_string_
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_boolean_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_boolean>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11033,7 +10964,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_number_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_number>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11042,7 +10973,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_string_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_property_type_string>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11051,7 +10982,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_string_root_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_input_declaration_string_root>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11059,7 +10990,7 @@ private func copyNativeGraph(
   members.append(ValueMember("type", try copyNativeGraph(value.`type`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_string_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_string>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11069,7 +11000,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_s
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11080,40 +11011,38 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_v
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_tag_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_tag>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -11123,23 +11052,23 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_questio
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -11150,19 +11079,10 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_questio
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(
@@ -11173,49 +11093,47 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_questio
           .string(nativeString(item))
         })))
   switch value.`text`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_question_document_choose_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_choose>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -11225,23 +11143,23 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -11252,19 +11170,10 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(
@@ -11275,49 +11184,47 @@ private func copyNativeGraph(
           .string(nativeString(item))
         })))
   switch value.`text`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_question_document_decide_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_question_document_decide>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -11327,23 +11234,23 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -11354,46 +11261,37 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
   switch value.`false_`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("false", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("false", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("false", try copyNativeLeaf(value.`false_`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`text`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`true_`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("true", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("true", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("true", try copyNativeLeaf(value.`true_`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_probabilities_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_probabilities>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11405,7 +11303,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_named_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_named>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11421,7 +11319,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_named_probability_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_named_probability>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11432,7 +11330,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_yes_no_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_probabilities_yes_no>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11441,7 +11339,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11452,16 +11350,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observa
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_observation_failure_id_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_failure_id>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_id_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure_id>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11469,7 +11367,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failure
   return .string(nativeString(value.value))
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_observation_observation_id_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_observation_observation_id>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11477,14 +11375,14 @@ private func copyNativeGraph(
   members.append(ValueMember("observation_id", try copyNativeGraph(value.`observation_id`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_id_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_observation_id>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .string(nativeString(value.value))
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_input_source_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_input_source>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11494,41 +11392,41 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session
   members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_physical_source_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_physical_source>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("file", .string(nativeString(value.`file`))))
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_id_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_id>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   return .string(nativeString(value.value))
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_request_function_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_request_function>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11547,7 +11445,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_request
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_relate_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_relate_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11557,7 +11455,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11566,41 +11464,40 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input_sources`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("input_sources", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input_sources", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "input_sources",
@@ -11610,18 +11507,18 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   switch value.`position`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -11636,7 +11533,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_result_tag_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_result_tag>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11646,47 +11543,45 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_result_
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relate_question_document_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relate_question_document>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`fields`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("fields", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("fields", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("fields", try copyNativeGraph(value.`fields`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -11696,23 +11591,23 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -11723,9 +11618,9 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -11738,18 +11633,9 @@ private func copyNativeGraph(
         })))
   members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_rule_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_rule>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11759,9 +11645,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   members.append(ValueMember("reads", .string(nativeString(value.`reads`))))
   switch value.`single`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("single", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("single", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("single", .bool(value.`single`.value != 0)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -11769,7 +11655,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   members.append(ValueMember("target", .string(nativeString(value.`target`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relate_fields_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relate_fields>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11779,31 +11665,31 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relate_
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_position_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_position>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first", .number(NumberLiteral(unchecked: String(value.`first`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -11814,33 +11700,31 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_positio
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last", .number(NumberLiteral(unchecked: String(value.`last`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1>?) throws
-  -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta>?) throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`answered_by`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("answered_by", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("answered_by", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("answered_by", .string(nativeString(value.`answered_by`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`attempts`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("attempts", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("attempts", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "attempts",
@@ -11851,27 +11735,25 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`batch_setting`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("batch_setting", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch_setting", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch_setting", try copyNativeGraph(value.`batch_setting`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`batch_warning`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("batch_warning", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch_warning", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch_warning", try copyNativeGraph(value.`batch_warning`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("cached", .bool(value.`cached` != 0)))
   switch value.`context_sha256`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_sha256", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("context_sha256", .string(nativeString(value.`context_sha256`.value))))
   default: throw ValueConversionError("Unknown native presence")
@@ -11888,26 +11770,26 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1
           try copyNativeGraph(item)
         })))
   switch value.`origin`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("origin", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("origin", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("origin", try copyNativeGraph(value.`origin`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile_warning`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("profile_warning", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("profile_warning", try copyNativeGraph(value.`profile_warning`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`question_sha256`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("question_sha256", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("question_sha256", .string(nativeString(value.`question_sha256`.value))))
   default: throw ValueConversionError("Unknown native presence")
@@ -11920,10 +11802,10 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1
           item in try copyNativeGraph(item)
         })))
   switch value.`questions_sha256`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("questions_sha256", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("questions_sha256", .string(nativeString(value.`questions_sha256`.value))))
   default: throw ValueConversionError("Unknown native presence")
@@ -11940,16 +11822,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_meta_v1
   members.append(ValueMember("tool", .string(nativeString(value.`tool`))))
   members.append(ValueMember("url", .string(nativeString(value.`url`))))
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_profile_warning_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_profile_warning>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -11958,7 +11840,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_profile
   members.append(ValueMember("tuned_for", .string(nativeString(value.`tuned_for`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_warning_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_warning>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11968,7 +11850,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_w
   members.append(ValueMember("tuned_for", try copyNativeGraph(value.`tuned_for`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_setting_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_setting>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11979,7 +11861,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_batch_s
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answers_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answers>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -11994,8 +11876,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answers
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_member_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_member>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12006,7 +11888,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_member_failure_id_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_relation_member_failure_id>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12033,17 +11915,17 @@ private func copyNativeGraph(
   members.append(ValueMember("request", .string(nativeString(value.`request`))))
   members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
   switch value.`target`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("target", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("target", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("target", try copyNativeGraph(value.`target`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -12051,7 +11933,7 @@ private func copyNativeGraph(
   members.append(ValueMember("failure_id", try copyNativeGraph(value.`failure_id`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12061,8 +11943,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related
   members.append(ValueMember("name", .string(nativeString(value.`name`))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_method_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_method>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12072,7 +11954,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   default: throw ValueConversionError("Unknown native enum value")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_direction_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_direction>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12084,7 +11966,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_member_answer_id_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_relation_member_answer_id>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12111,17 +11993,17 @@ private func copyNativeGraph(
   members.append(ValueMember("request", .string(nativeString(value.`request`))))
   members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
   switch value.`target`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("target", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("target", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("target", try copyNativeGraph(value.`target`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -12132,7 +12014,7 @@ private func copyNativeGraph(
     ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12145,16 +12027,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_score_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_score>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`confidence`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
     )
@@ -12172,7 +12054,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_tag_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_tag>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12189,16 +12071,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_choice_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_choice>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`confidence`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
     )
@@ -12216,7 +12098,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_yes_no_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_yes_no>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12228,7 +12110,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_recognize_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_recognize_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12244,7 +12126,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12253,65 +12135,65 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   switch value.`position`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12322,9 +12204,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   default: throw ValueConversionError("Unknown native packet alternative")
   }
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_recognize_mode_proposals_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_mode_proposals>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
@@ -12338,7 +12220,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_entities_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_entities>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12352,9 +12234,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
           try copyNativeGraph(item)
         })))
   switch value.`relations`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "relations",
@@ -12367,48 +12249,46 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_recognize_question_document_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_recognize_question_document>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`entity_definition`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("entity_definition", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("entity_definition", try copyNativeLeaf(value.`entity_definition`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`instructions`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("instructions", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("instructions", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("instructions", try copyNativeLeaf(value.`instructions`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -12420,10 +12300,9 @@ private func copyNativeGraph(
           ValueMember(nativeString(item.name), try copyNativeLeaf(item.value))
         })))
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -12433,30 +12312,30 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`mode`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("mode", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("mode", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("mode", try copyNativeGraph(value.`mode`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -12467,25 +12346,25 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`relation_threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("relation_threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("relation_threshold", try copyNativeGraph(value.`relation_threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`relations`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "relations",
@@ -12496,38 +12375,27 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`snippet_pieces`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("snippet_pieces", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "snippet_pieces", .number(NumberLiteral(unchecked: String(value.`snippet_pieces`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`stage_context`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("stage_context", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("stage_context", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("stage_context", try copyNativeGraph(value.`stage_context`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`)))
   members.append(ValueMember("verb", try copyNativeGraph(value.`verb`)))
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_verb_v1>?) throws
-  -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_verb>?) throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12537,36 +12405,36 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_verb_v1
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_recognition_stage_context_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_stage_context>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`boundary`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("boundary", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("boundary", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("boundary", .string(nativeString(value.`boundary`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`kind_edge`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kind_edge", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("kind_edge", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("kind_edge", .string(nativeString(value.`kind_edge`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`relation`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relation", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("relation", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("relation", .string(nativeString(value.`relation`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_odds_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_odds>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12577,7 +12445,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_boundary_odds_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_boundary_odds>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12598,7 +12466,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_piece_odds_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_piece_odds>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12617,7 +12485,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_piece_o
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_recognize_answer_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_recognition_odds_recognize_answer>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12652,7 +12520,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_proposal_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_proposal>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12661,16 +12529,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
   members.append(ValueMember("kept", .bool(value.`kept` != 0)))
   switch value.`kind`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kind", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("kind", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("kind", .string(nativeString(value.`kind`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`selected`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("selected", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("selected", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("selected", try copyNativeGraph(value.`selected`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -12679,16 +12547,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
       "span_probability", .number(NumberLiteral(unchecked: String(value.`span_probability`)))))
   members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
   switch value.`strength`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("strength", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("strength", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("strength", .number(NumberLiteral(unchecked: String(value.`strength`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_place_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_place>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12698,7 +12566,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_place_v
   members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_pair_odds_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_pair_odds>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12711,16 +12579,16 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_pair_od
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_name_odds_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_name_odds>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`edges`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("edges", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("edges", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "edges",
@@ -12733,9 +12601,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_name_od
   }
   members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
   switch value.`kinds`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("kinds", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("kinds", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "kinds",
@@ -12750,7 +12618,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_name_od
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12766,7 +12634,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12781,64 +12649,64 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
           ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
         })))
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   switch value.`position`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_row_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_row>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12848,8 +12716,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
       ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
     })
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_field_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotated_field>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12867,7 +12735,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
   default: throw ValueConversionError("Unknown native value alternative")
   }
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failed_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failed>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -12876,8 +12744,8 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_failed_
   members.append(ValueMember("failed", try copyNativeGraph(value.`failed`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_member_v1>?)
-  throws -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotation_member>?) throws
+  -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12888,7 +12756,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_annotat
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_failure_id_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_failure_id>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12912,23 +12780,23 @@ private func copyNativeGraph(
         })))
   members.append(ValueMember("request", .string(nativeString(value.`request`))))
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_answer_id_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_annotation_member_answer_id>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12952,30 +12820,30 @@ private func copyNativeGraph(
         })))
   members.append(ValueMember("request", .string(nativeString(value.`request`))))
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`usage`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("usage", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("usage", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("usage", try copyNativeGraph(value.`usage`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_find_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_find_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12985,8 +12853,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_v1>?) throws
-  -> DataValue
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find>?) throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -12994,9 +12861,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_v1
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`candidates`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("candidates", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("candidates", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "candidates",
@@ -13007,97 +12874,95 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_v1
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
     )
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   switch value.`position`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("position", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("position", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("position", try copyNativeGraph(value.`position`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeLeaf(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeLeaf(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_find_question_document_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_question_document>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`batch`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("batch", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("batch", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("batch", try copyNativeGraph(value.`batch`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`context_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL):
     members.append(ValueMember("context_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("context_schema", try copyNativeGraph(value.`context_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`item_schema`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("item_schema", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("item_schema", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("item_schema", try copyNativeGraph(value.`item_schema`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`label_details`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("label_details", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("label_details", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "label_details",
@@ -13107,24 +12972,24 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`model`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("model", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("model", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("model", .string(nativeString(value.`model`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("name", try copyNativeGraph(value.`name`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("none", .bool(value.`none` != 0)))
   switch value.`on`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("on", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("on", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "on",
@@ -13135,73 +13000,64 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`profile`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("profile", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("profile", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("profile", .string(nativeString(value.`profile`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`text`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("text", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("text", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("text", try copyNativeLeaf(value.`text`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("verb", .string(nativeString(value.`verb`))))
-  switch value.`wording_version`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("wording_version", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("wording_version", try copyNativeGraph(value.`wording_version`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_candidate_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_candidate>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(
     ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_answer_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_answer>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   switch value.`confidence`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("confidence", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("confidence", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("confidence", .number(NumberLiteral(unchecked: String(value.`confidence`.value))))
     )
@@ -13220,7 +13076,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_find_an
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_rank_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_rank_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13236,7 +13092,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_non_zero_usize_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_non_zero_usize>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13245,9 +13101,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13258,24 +13114,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "members",
@@ -13288,32 +13144,31 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13323,7 +13178,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_me
   members.append(ValueMember("result", try copyNativeGraph(value.`result`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member_result_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_member_result>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13332,9 +13187,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_me
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13348,23 +13203,23 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_rank_me
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeLeaf(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("value", .number(NumberLiteral(unchecked: String(value.`value`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13376,7 +13231,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_v
   members.append(ValueMember("width", .number(NumberLiteral(unchecked: String(value.`width`)))))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_media_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_media>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13388,7 +13243,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_image_m
   }
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13404,7 +13259,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_boolean_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_boolean>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13413,9 +13268,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13426,24 +13281,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "members",
@@ -13456,25 +13311,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -13482,7 +13336,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_score_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_score_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13498,7 +13352,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_double_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_double>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13507,9 +13361,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13520,24 +13374,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "members",
@@ -13550,25 +13404,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -13576,7 +13429,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13592,18 +13445,18 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_atomic_array_of_string_v1>?
-) throws -> DataValue {
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_array_of_string>?)
+  throws -> DataValue
+{
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13614,24 +13467,24 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "members",
@@ -13644,25 +13497,24 @@ private func copyNativeGraph(
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
@@ -13676,7 +13528,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_aggregate_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_aggregate>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13692,107 +13544,7 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_atomic_nullable_string_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
-  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
-  switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember(
-        "images",
-        .array(
-          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
-            try copyNativeGraph(item)
-          })))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember(
-        "members",
-        .array(
-          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
-            try copyNativeGraph(item)
-          })))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
-  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
-  switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
-  switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  return .orderedObject(members)
-}
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_aggregate_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("function", .string(nativeString(value.`function`))))
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  members.append(
-    ValueMember(
-      "value",
-      .array(
-        try nativeElements(value.`value`.data, value.`value`.len).map { item in
-          try copyNativeGraph(item)
-        })))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_decide_value_v1>?)
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_nullable_string>?)
   throws -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13801,9 +13553,9 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
   members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
   switch value.`images`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("images", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "images",
@@ -13814,24 +13566,24 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`index`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`input`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("input", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`members`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("members", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(
       ValueMember(
         "members",
@@ -13844,38 +13596,136 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_
   members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
   members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
   switch value.`question_name`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
-    members.append(ValueMember("question_name", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
   switch value.`source`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("source", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`threshold`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("threshold", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   switch value.`value`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(ValueMember("value", .string(nativeString(value.`value`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_aggregate>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(
+    ValueMember(
+      "value",
+      .array(
+        try nativeElements(value.`value`.data, value.`value`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_atomic_decide_value>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("answer", try copyNativeGraph(value.`answer`)))
+  members.append(ValueMember("answer_id", try copyNativeGraph(value.`answer_id`)))
+  switch value.`images`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("images", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(
+      ValueMember(
+        "images",
+        .array(
+          try nativeElements(value.`images`.value.data, value.`images`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(
+      ValueMember("index", .number(NumberLiteral(unchecked: String(value.`index`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`input`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("input", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(ValueMember("input", try copyNativeLeaf(value.`input`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`members`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("members", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(
+      ValueMember(
+        "members",
+        .array(
+          try nativeElements(value.`members`.value.data, value.`members`.value.len).map { item in
+            try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("meta", try copyNativeGraph(value.`meta`)))
+  members.append(ValueMember("question", try copyNativeGraph(value.`question`)))
+  switch value.`question_name`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("question_name", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(ValueMember("question_name", .string(nativeString(value.`question_name`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("schema", try copyNativeGraph(value.`schema`)))
+  switch value.`source`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("source", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(ValueMember("source", try copyNativeGraph(value.`source`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`threshold`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("threshold", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
+    members.append(ValueMember("threshold", try copyNativeGraph(value.`threshold`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE):
     members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_decide_value_v1>?) throws
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_decide_value>?) throws
   -> DataValue
 {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
@@ -13883,7 +13733,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_decide_
   return try copyNativeLeaf(value.value)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_row_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_annotate_row>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13894,7 +13744,40 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_row_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_filter_row>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_score_row>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_row>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_row>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13905,7 +13788,7 @@ private func copyNativeGraph(
   return .orderedObject(members)
 }
 private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_score_row_v1>?
+  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_row>?
 ) throws -> DataValue {
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
@@ -13915,40 +13798,7 @@ private func copyNativeGraph(
   members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
   return .orderedObject(members)
 }
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_tag_row_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("function", .string(nativeString(value.`function`))))
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_choose_row_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("function", .string(nativeString(value.`function`))))
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_session_packet_decide_row_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("function", .string(nativeString(value.`function`))))
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  members.append(ValueMember("value", try copyNativeGraph(value.`value`)))
-  return .orderedObject(members)
-}
-func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet_v1>) throws
+func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_session_packet>) throws
   -> DataValue
 {
   try copyNativeGraph(Optional(pointer))

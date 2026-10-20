@@ -6,20 +6,21 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0615, 0618, 0619, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
 - Changes: `libraries/cobol/check.sh`, `libraries/cobol/checks/`, `libraries/cobol/README.md`, `libraries/cobol/README-PUBLIC.md`, `sdlc/tools/cobol.json`, `sdlc/scripts/release-pack.d/cobol`, `site/src/data/catalog/cobol.mjs`.
-- COBOL adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools.json`, beside linux-x86_64. The release archive for each carries that target's native library.
+- COBOL adds darwin-arm64 and linux-arm64 to its supported and checked platforms in `sdlc/tools/cobol.json`, beside linux-x86_64. The release archive for each carries that target's native library.
 - The gate and its drivers find the native library by the platform's file name, not a fixed `libthinkthen.so.0`, and `checks/exports.py` confirms the generated copybook layout on each target.
 - The README states the platforms the archive supports. It no longer says the declarations fit only Linux x86_64.
 - The per-case fixture drivers stay; 0651 replaces them with one packet dumper when it deletes the session family they use.
+- COBOL's Linux tools, including cobc, are declared in `sdlc/tools/cobol.json` and join the Linux image through 0740; a missing tool fails the check, never skips.
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0650 SHA --memory 8 -- sh libraries/cobol/check.sh`, the gate passes on darwin-arm64. Before the change the same command exits 77 because the manifest lists COBOL as unsupported there.
-- At the 0619 container checkpoint, the release suite passes the COBOL gate in the arm64 container on the M5 and in the x86_64 container on Yellow.
+- On the M5 through `pm job run --machine m5 0650 SHA --memory 8 -- sh libraries/cobol/check.sh`, the gate passes on darwin-arm64. Before the change the same command fails on the missing `cobc` tool, because the manifest declares `cobc` for Linux only.
+- Linux arm64: `pm job run --machine m5 0650 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/cobol`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

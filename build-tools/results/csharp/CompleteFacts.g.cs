@@ -2300,7 +2300,6 @@ public sealed class FindQuestionDocument : ResultObject
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
 public sealed class NameOdds : ResultObject
 {
@@ -2406,7 +2405,6 @@ public sealed class QuestionDocumentChoose : QuestionDocument
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
     public IReadOnlyList<string> Options => Array.AsReadOnly(RequiredElement("options").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
@@ -2426,7 +2424,6 @@ public sealed class QuestionDocumentDecide : QuestionDocument
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
     public Presence<JsonElement> False => Optional<JsonElement>("false", member => member.Clone());
     public JsonElement Text => RequiredElement("text").Clone();
     public Presence<JsonElement> True => Optional<JsonElement>("true", member => member.Clone());
@@ -2447,7 +2444,6 @@ public sealed class QuestionDocumentScore : QuestionDocument
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
     public IReadOnlyList<string> Levels => Array.AsReadOnly(RequiredElement("levels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
@@ -2467,7 +2463,6 @@ public sealed class QuestionDocumentTag : QuestionDocument
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
     public IReadOnlyList<string> Labels => Array.AsReadOnly(RequiredElement("labels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
@@ -2535,7 +2530,6 @@ public sealed class RecognizeQuestionDocument : ResultObject
     member => new RecognitionStageContext(member));
     public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
     public Verb Verb => new Verb(RequiredElement("verb").GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
 public sealed class RecognizeEntities : Recognize
 {
@@ -2578,7 +2572,6 @@ public sealed class RelateQuestionDocument : ResultObject
     public IReadOnlyList<RelationRule> Relations => Array.AsReadOnly(RequiredElement("relations").EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray());
     public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
     public string Verb => RequiredElement("verb").GetString()!;
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
 public sealed class RelatedEntity : ResultObject
 {

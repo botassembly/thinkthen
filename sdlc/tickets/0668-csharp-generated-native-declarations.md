@@ -6,11 +6,11 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0669, 0688, 0727
+Depends on: 0669, 0688, 0740
 
 ## Outcome
 
-- Changes: `libraries/csharp/src/`, `libraries/csharp/tests/`, `libraries/csharp/examples/`, `libraries/csharp/check.sh`, `libraries/csharp/README.md`, `build-tools/results/generate.py`, `build-tools/results/templates/csharp.py`, `build-tools/results/csharp/`, `build-tools/results/legacy/csharp.txt`, `conformance/library-surface/csharp.json`.
+- Changes: `libraries/csharp/src/`, `libraries/csharp/tests/`, `libraries/csharp/examples/`, `libraries/csharp/check.sh`, `libraries/csharp/README.md`, `build-tools/results/generate.py`, `build-tools/results/templates/csharp.py`, `build-tools/results/csharp/`, `build-tools/results/legacy/csharp.txt`, `conformance/library-surface/csharp.json`, `sdlc/scripts/children`.
 - C# calls `thinkthen_run_call` with the canonical JSON request (`sdlc/decisions/2026-10-19-c-input-json.md`) and reads the owned call result JSON (`sdlc/decisions/2026-10-19-c-call-owned-json.md`). Every native import is generated into one `LibraryImport` class from the C header.
 - The hand-written `Native` class in `ThinkThen.cs` and the `NativeSession` declaration class are deleted.
 - Any answer or probability shaping in hand code or in the C# template is deleted in favor of the packet's values.
@@ -18,15 +18,16 @@ Depends on: 0669, 0688, 0727
 - `build-tools/results/templates/csharp.py` leaves this language's exception file `build-tools/results/legacy/csharp.txt`.
 - The C# entry in `conformance/library-surface/csharp.json` names the lifecycle owners that remain.
 - The `V1` layout probes in `tests/package_check.py` and the `IgnoresAccessChecksTo` test hook are deleted.
-- The C# conformance runner becomes a packet dumper following the 0642 contract, and the old fixture consumer (`tests/public_types.py` with `tests/source/TypeCase.cs`) is deleted.
+- The C# conformance runner becomes an installed consumer, and the old fixture consumer (`tests/public_types.py` with `tests/source/TypeCase.cs`) is deleted. The installed consumer runs each shared case through the language's run call and compares the answer, probability, presence and owned error fields it converted against `conformance/fixtures/packets.json`, as 0640 does for C. It does not print Rust's Call JSON back.
 - Sources follow standard .NET formatting, enforced in `check.sh` by `dotnet format --verify-no-changes`.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --bridge --check && python3 build-tools/results/generate.py --check'`. Before the change, `answer_rules.py` fails once the C# template's exception is removed.
 - On the M5, `dotnet build libraries/csharp/ThinkThen.csproj` and `dotnet format libraries/csharp/ThinkThen.csproj --verify-no-changes` pass; the format check fails on current main.
 - `git grep -nE 'DllImport|LibraryImport' libraries/csharp` finds them only in the generated declaration file.
-- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sh libraries/csharp/check.sh`, after 0669 declares `darwin-arm64`, the installed NuGet consumer runs all ten named calls, cancellation and failures against a recorded backend, and its packet dump matches the 0642 oracle. Linux runs at the 0619 container checkpoint.
+- On the M5 through `pm job run --machine m5 0668 SHA --memory 8 -- sh libraries/csharp/check.sh`, after 0669 declares `darwin-arm64`, the installed NuGet consumer runs all ten named calls, cancellation and failures against a recorded backend, and its comparison against `conformance/fixtures/packets.json` passes. Linux arm64: `pm job run --machine m5 0668 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/csharp`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence
 

@@ -15,7 +15,7 @@ def render(definitions, names, schemas):
     metadata = {}
     native_render(definitions, metadata)
     pending = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor'), ('RequestReaderFailure', 'RequestReaderFailure'), ('EngineSettings', 'EngineSettings')]
-    done, bodies, pointers = set(), [], {'thinkthen_complete_json_v1', 'thinkthen_complete_json_entry_v1'}
+    done, bodies, pointers = set(), [], {'thinkthen_complete_json', 'thinkthen_complete_json_entry'}
     def call(host, native):
         if (host, native) not in done and (host, native) not in pending:
             pending.append((host, native))
@@ -79,7 +79,7 @@ def render(definitions, names, schemas):
             mapping = source['type'] == 'object'
             value = (source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}) if mapping else source.get('items', {})
             function, child_type = child(value, native + ('_value' if mapping else '_item'), host + '_element')
-            array_type = typ.removesuffix('_v1') + '_entry_v1' if mapping else 'System.Address'
+            array_type = typ + '_entry' if mapping else 'System.Address'
             pointers.add(array_type) if mapping else None
             locals += [f'type Items is array (size_t range <>) of aliased {array_type} with Convention => C;', 'Length : constant size_t := size_t (Value.Length);', f'Address : constant System.Address := Allocate (Storage, Length * ({array_type}\'Size / 8));', "Values : Items (1 .. Length) with Import, Address => Address;", 'Position : size_t := 1;']
             body = ['for Item of Value loop']
@@ -96,10 +96,10 @@ def render(definitions, names, schemas):
             native_type = 'double' if kind == 'number' else 'Interfaces.Unsigned_32' if kind == 'boolean' else 'Interfaces.Unsigned_64' if source.get('format','').startswith('u') else 'Interfaces.Integer_64'
             expression = f'{native_type} (Value)' if kind != 'boolean' else '(if Value then 1 else 0)'
             body = ['Result.value := ' + expression + ';']
-        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json_v1'),):
-            body = ['Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));']
+        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json'),):
+            body = ['Result.value := P_thinkthen_complete_json (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));']
         else:
-            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8_v1'),):
+            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8'),):
                 raise ValueError('unsupported Ada native scalar fields: ' + native)
             body = ['Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);']
         if not body:
@@ -188,7 +188,7 @@ begin
    Pointers.To_Pointer (Address).all := Value;
    return Address;
 end Store;
-function UTF8 (Value : String; Storage : in out Arena) return thinkthen_complete_utf8_v1 is
+function UTF8 (Value : String; Storage : in out Arena) return thinkthen_complete_utf8 is
    Address : constant System.Address := Allocate (Storage, size_t (Value'Length));
    Bytes : char_array (1 .. size_t (Value'Length)) with Import, Address => Address;
    function Pointer is new Ada.Unchecked_Conversion (System.Address, Interfaces.C.Strings.chars_ptr);
@@ -204,11 +204,11 @@ def plan(function_schema, header):
     return ['function Plan (Client : Engine; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) return Thinkthen.Values.Value is',
             'use Thinkthen.Session_C; use Interfaces.C; use Interfaces.C.Strings;',
             'Storage : Thinkthen.Requests.Native.Arena;',
-            'type Arguments_Access is access constant thinkthen_request_arguments_v1;',
+            'type Arguments_Access is access constant thinkthen_request_arguments;',
             'function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);',
             'Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));',
             'Function_Bytes : chars_ptr := Null_Ptr; Surface : chars_ptr := Null_Ptr;',
-            'type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json_v1; Code : int;',
+            'type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json; Code : int;',
             'begin', 'Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");',
             "Code := thinkthen_request_plan_typed_value (Engine_Pointer (Client.Handle), (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address);",
             'Free (Function_Bytes); Free (Surface);',

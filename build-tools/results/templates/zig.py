@@ -315,10 +315,10 @@ pub const Number = union(enum) { signed: i64, unsigned: u64, decimal: f64 };
 pub const Value = union(enum) {
     null_value, boolean: bool, number: Number, string: []const u8, array: []const Value, object: Map(Value),
 };
-fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
+fn text(v: c.thinkthen_complete_utf8) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
-fn readNumber(v: c.thinkthen_complete_utf8_v1) !Number {
+fn readNumber(v: c.thinkthen_complete_utf8) !Number {
     const source = text(v);
     if (std.mem.indexOfAny(u8, source, ".eE") != null) return .{ .decimal = try std.fmt.parseFloat(f64, source) };
     if (source.len != 0 and source[0] == '-') return .{ .signed = try std.fmt.parseInt(i64, source, 10) };
@@ -353,7 +353,7 @@ pub fn readObject(a: std.mem.Allocator, v: anytype) anyerror!Map(Value) {
     for (entries, 0..) |*out, i| out.* = .{ .key = try a.dupe(u8, text(v.data[i].name)), .value = try readValue(a, v.data[i].value[0]) };
     return .{ .entries = entries };
 }
-pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json_v1) anyerror!Value {
+pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json) anyerror!Value {
     return switch (v.kind) {
         1 => .null_value,
         2 => .{ .boolean = v.data.boolean != 0 },

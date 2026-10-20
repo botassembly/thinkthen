@@ -25,7 +25,7 @@ pub unsafe extern "C" fn thinkthen_question_free(owner: *mut crate::current::Que
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_author(
     owner: *const crate::current::QuestionHandle,
-    out: *mut crate::ffi::carriers::QuestionAuthorV1,
+    out: *mut crate::ffi::carriers::QuestionAuthorInfo,
 ) -> std::ffi::c_int {
     failures::guard(None, failures::DEFECT, || {
         let outcome = (|| {
@@ -51,14 +51,14 @@ pub unsafe extern "C" fn thinkthen_question_author(
 /// Import counted saved-question grammar through the explicitly chosen native role.
 /// Grammar failures return EUSAGE; no guessing or parser fallback. The immutable
 /// owner copies every byte and does not judge. Engine-thread failures stay independent
-/// from immediate session and constructor slots.
+/// from immediate session diagnostics and owned construction errors.
 /// # Safety
 /// engine is live; json has readable counted UTF-8; out is aligned writable storage.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_parse(
     engine: *const crate::EngineHandle,
     role: u32,
-    json: crate::ffi::carriers::StringV1,
+    json: crate::ffi::carriers::CountedString,
     out: *mut *mut crate::current::QuestionHandle,
 ) -> std::ffi::c_int {
     // SAFETY: the caller retains its nullable engine throughout admission.
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn thinkthen_question_parse(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_value(
     owner: *const crate::current::QuestionHandle,
-    out: *mut *const crate::session::views::thinkthen_complete_json_v1,
+    out: *mut *const crate::session::views::thinkthen_complete_json,
 ) -> std::ffi::c_int {
     failures::guard(None, failures::DEFECT, || {
         let outcome = (|| {

@@ -94,7 +94,6 @@ namespace tt::inputs {
     class RequestSessionDescriptor;
     class RequestSource;
     class RequestThreshold;
-    class RequestVersion;
     class SessionSourceLocation;
     class SourceUnit;
     class AnnotateDefinition : public Node {
@@ -135,7 +134,6 @@ namespace tt::inputs {
         AnnotateQuestionChoose& set_on(const AuthoredPointers& value);
         AnnotateQuestionChoose& set_options(const AuthoredOptions& value);
         AnnotateQuestionChoose& set_threshold(const AuthoredCut& value);
-        AnnotateQuestionChoose& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionDecide : public Node {
         AnnotateQuestionDecide(const Data& value, int):Node(value) {
@@ -153,7 +151,6 @@ namespace tt::inputs {
         AnnotateQuestionDecide& set_on(const AuthoredPointers& value);
         AnnotateQuestionDecide& set_threshold(const AuthoredThreshold& value);
         AnnotateQuestionDecide& set_true(const AuthoredCriterion& value);
-        AnnotateQuestionDecide& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionScore : public Node {
         AnnotateQuestionScore(const Data& value, int):Node(value) {
@@ -169,7 +166,6 @@ namespace tt::inputs {
         AnnotateQuestionScore& set_name(const std::string& value);
         AnnotateQuestionScore& set_on(const AuthoredPointers& value);
         AnnotateQuestionScore& set_score(const AuthoredQuestionText& value);
-        AnnotateQuestionScore& set_wording_version(const uint64_t& value);
     };
     class AnnotateQuestionTag : public Node {
         AnnotateQuestionTag(const Data& value, int):Node(value) {
@@ -186,7 +182,6 @@ namespace tt::inputs {
         AnnotateQuestionTag& set_on(const AuthoredPointers& value);
         AnnotateQuestionTag& set_tag(const AuthoredQuestionText& value);
         AnnotateQuestionTag& set_threshold(const AuthoredCut& value);
-        AnnotateQuestionTag& set_wording_version(const uint64_t& value);
     };
     class AuthoredChoose : public Node {
         AuthoredChoose(const Data& value, int):Node(value) {
@@ -206,7 +201,6 @@ namespace tt::inputs {
         AuthoredChoose& set_options(const AuthoredOptions& value);
         AuthoredChoose& set_profile(const AuthoredProfile& value);
         AuthoredChoose& set_threshold(const AuthoredCut& value);
-        AuthoredChoose& set_wording_version(const uint64_t& value);
     };
     class AuthoredCriterion : public Node {
         AuthoredCriterion(const Data& value, int):Node(value) {
@@ -241,7 +235,6 @@ namespace tt::inputs {
         AuthoredDecide& set_profile(const AuthoredProfile& value);
         AuthoredDecide& set_threshold(const AuthoredThreshold& value);
         AuthoredDecide& set_true(const AuthoredCriterion& value);
-        AuthoredDecide& set_wording_version(const uint64_t& value);
     };
     class AuthoredDescription : public Node {
         AuthoredDescription(const Data& value, int):Node(value) {
@@ -265,7 +258,6 @@ namespace tt::inputs {
         AuthoredFind& set_name(const std::string& value);
         AuthoredFind& set_on(const AuthoredPointers& value);
         AuthoredFind& set_profile(const AuthoredProfile& value);
-        AuthoredFind& set_wording_version(const uint64_t& value);
     };
     class AuthoredInputDeclaration : public Node {
         AuthoredInputDeclaration(const Data& value, int):Node(value) {
@@ -435,7 +427,6 @@ namespace tt::inputs {
         AuthoredRelate& set_profile(const AuthoredProfile& value);
         AuthoredRelate& set_relate(const RelateQuestion& value);
         AuthoredRelate& set_threshold(const AuthoredCut& value);
-        AuthoredRelate& set_wording_version(const uint64_t& value);
     };
     class AuthoredRelation : public Node {
         AuthoredRelation(const Data& value, int):Node(value) {
@@ -469,7 +460,6 @@ namespace tt::inputs {
         AuthoredScore& set_on(const AuthoredPointers& value);
         AuthoredScore& set_profile(const AuthoredProfile& value);
         AuthoredScore& set_score(const AuthoredQuestionText& value);
-        AuthoredScore& set_wording_version(const uint64_t& value);
     };
     class AuthoredTag : public Node {
         AuthoredTag(const Data& value, int):Node(value) {
@@ -489,7 +479,6 @@ namespace tt::inputs {
         AuthoredTag& set_profile(const AuthoredProfile& value);
         AuthoredTag& set_tag(const AuthoredQuestionText& value);
         AuthoredTag& set_threshold(const AuthoredCut& value);
-        AuthoredTag& set_wording_version(const uint64_t& value);
     };
     class AuthoredThreshold : public Node {
         AuthoredThreshold(const Data& value, int):Node(value) {
@@ -662,7 +651,6 @@ namespace tt::inputs {
         RecognizeDefinition& set_recognize(const RecognizeQuestion& value);
         RecognizeDefinition& set_relation_threshold(const AuthoredCut& value);
         RecognizeDefinition& set_threshold(const AuthoredCut& value);
-        RecognizeDefinition& set_wording_version(const uint64_t& value);
     };
     class RecognizeQuestion : public Node {
         RecognizeQuestion(const Data& value, int):Node(value) {
@@ -708,13 +696,9 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         Request():Node(Data(Data::Object{
-            {
-                "schema",Data("thinkthen.request/1")
-            }
         })) {
         }
         Request& set_call(const RequestCall& value);
-        Request& set_schema(const RequestVersion& value);
     };
     class RequestBatch : public Node {
         RequestBatch(const Data& value, int):Node(value) {
@@ -782,7 +766,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredChoose& set_options(const AuthoredOptions& value);
         RequestDefinitionAuthoredChoose& set_profile(const AuthoredProfile& value);
         RequestDefinitionAuthoredChoose& set_threshold(const AuthoredCut& value);
-        RequestDefinitionAuthoredChoose& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredDecide : public Node {
         RequestDefinitionAuthoredDecide(const Data& value, int):Node(value) {
@@ -803,7 +786,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredDecide& set_profile(const AuthoredProfile& value);
         RequestDefinitionAuthoredDecide& set_threshold(const AuthoredThreshold& value);
         RequestDefinitionAuthoredDecide& set_true(const AuthoredCriterion& value);
-        RequestDefinitionAuthoredDecide& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredFind : public Node {
         RequestDefinitionAuthoredFind(const Data& value, int):Node(value) {
@@ -820,7 +802,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredFind& set_name(const std::string& value);
         RequestDefinitionAuthoredFind& set_on(const AuthoredPointers& value);
         RequestDefinitionAuthoredFind& set_profile(const AuthoredProfile& value);
-        RequestDefinitionAuthoredFind& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredRelate : public Node {
         RequestDefinitionAuthoredRelate(const Data& value, int):Node(value) {
@@ -837,7 +818,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredRelate& set_profile(const AuthoredProfile& value);
         RequestDefinitionAuthoredRelate& set_relate(const RelateQuestion& value);
         RequestDefinitionAuthoredRelate& set_threshold(const AuthoredCut& value);
-        RequestDefinitionAuthoredRelate& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredScore : public Node {
         RequestDefinitionAuthoredScore(const Data& value, int):Node(value) {
@@ -856,7 +836,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredScore& set_on(const AuthoredPointers& value);
         RequestDefinitionAuthoredScore& set_profile(const AuthoredProfile& value);
         RequestDefinitionAuthoredScore& set_score(const AuthoredQuestionText& value);
-        RequestDefinitionAuthoredScore& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionAuthoredTag : public Node {
         RequestDefinitionAuthoredTag(const Data& value, int):Node(value) {
@@ -876,7 +855,6 @@ namespace tt::inputs {
         RequestDefinitionAuthoredTag& set_profile(const AuthoredProfile& value);
         RequestDefinitionAuthoredTag& set_tag(const AuthoredQuestionText& value);
         RequestDefinitionAuthoredTag& set_threshold(const AuthoredCut& value);
-        RequestDefinitionAuthoredTag& set_wording_version(const uint64_t& value);
     };
     class RequestDefinitionRecognizeDefinition : public Node {
         RequestDefinitionRecognizeDefinition(const Data& value, int):Node(value) {
@@ -895,7 +873,6 @@ namespace tt::inputs {
         RequestDefinitionRecognizeDefinition& set_recognize(const RecognizeQuestion& value);
         RequestDefinitionRecognizeDefinition& set_relation_threshold(const AuthoredCut& value);
         RequestDefinitionRecognizeDefinition& set_threshold(const AuthoredCut& value);
-        RequestDefinitionRecognizeDefinition& set_wording_version(const uint64_t& value);
     };
     class RequestFraming : public Node {
         RequestFraming(const Data& value, int):Node(value) {
@@ -1260,13 +1237,6 @@ namespace tt::inputs {
         public:
         explicit RequestThreshold(const std::variant<double, std::string>& value);
     };
-    class RequestVersion : public Node {
-        RequestVersion(const Data& value, int):Node(value) {
-        }
-        friend struct ::tt::results::detail::Loader;
-        public:
-        explicit RequestVersion(const std::string& value);
-    };
     class SessionSourceLocation : public Node {
         SessionSourceLocation(const Data& value, int):Node(value) {
         }
@@ -1339,10 +1309,6 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline AnnotateQuestionChoose& AnnotateQuestionChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_context_schema(const AuthoredInputDeclaration& value) {
         set_member("context_schema",results::detail::encode(value));
         return *this;
@@ -1375,10 +1341,6 @@ namespace tt::inputs {
         set_member("true",results::detail::encode(value));
         return *this;
     }
-    inline AnnotateQuestionDecide& AnnotateQuestionDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_context_schema(const AuthoredInputDeclaration& value) {
         set_member("context_schema",results::detail::encode(value));
         return *this;
@@ -1401,10 +1363,6 @@ namespace tt::inputs {
     }
     inline AnnotateQuestionScore& AnnotateQuestionScore::set_score(const AuthoredQuestionText& value) {
         set_member("score",results::detail::encode(value));
-        return *this;
-    }
-    inline AnnotateQuestionScore& AnnotateQuestionScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_context_schema(const AuthoredInputDeclaration& value) {
@@ -1433,10 +1391,6 @@ namespace tt::inputs {
     }
     inline AnnotateQuestionTag& AnnotateQuestionTag::set_threshold(const AuthoredCut& value) {
         set_member("threshold",results::detail::encode(value));
-        return *this;
-    }
-    inline AnnotateQuestionTag& AnnotateQuestionTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredChoose& AuthoredChoose::set_batch(const AuthoredQuestionBatch& value) {
@@ -1477,10 +1431,6 @@ namespace tt::inputs {
     }
     inline AuthoredChoose& AuthoredChoose::set_threshold(const AuthoredCut& value) {
         set_member("threshold",results::detail::encode(value));
-        return *this;
-    }
-    inline AuthoredChoose& AuthoredChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredCriterion::AuthoredCriterion(const std::variant<std::string, Data, std::vector<Data>,
@@ -1532,10 +1482,6 @@ namespace tt::inputs {
         set_member("true",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredDecide& AuthoredDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline AuthoredDescription::AuthoredDescription(const std::variant<std::string, Data, std::vector<Data>,
     std::nullptr_t>& value):Node(results::detail::encode(value)) {
     }
@@ -1565,10 +1511,6 @@ namespace tt::inputs {
     }
     inline AuthoredFind& AuthoredFind::set_profile(const AuthoredProfile& value) {
         set_member("profile",results::detail::encode(value));
-        return *this;
-    }
-    inline AuthoredFind& AuthoredFind::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredInputDeclaration::AuthoredInputDeclaration(const AuthoredInputDeclarationString& value):Node(::tt::results::detail::document(value)) {
@@ -1643,10 +1585,6 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredRelate& AuthoredRelate::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline AuthoredRelation& AuthoredRelation::set_either(const bool& value) {
         set_member("either",results::detail::encode(value));
         return *this;
@@ -1707,10 +1645,6 @@ namespace tt::inputs {
         set_member("score",results::detail::encode(value));
         return *this;
     }
-    inline AuthoredScore& AuthoredScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline AuthoredTag& AuthoredTag::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
@@ -1749,10 +1683,6 @@ namespace tt::inputs {
     }
     inline AuthoredTag& AuthoredTag::set_threshold(const AuthoredCut& value) {
         set_member("threshold",results::detail::encode(value));
-        return *this;
-    }
-    inline AuthoredTag& AuthoredTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline AuthoredThreshold::AuthoredThreshold(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
@@ -1948,10 +1878,6 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline RecognizeDefinition& RecognizeDefinition::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline RecognizeQuestion& RecognizeQuestion::set_entity_definition(const AuthoredQuestionText& value) {
         set_member("entity_definition",results::detail::encode(value));
         return *this;
@@ -1999,10 +1925,6 @@ namespace tt::inputs {
     }
     inline Request& Request::set_call(const RequestCall& value) {
         set_member("call",results::detail::encode(value));
-        return *this;
-    }
-    inline Request& Request::set_schema(const RequestVersion& value) {
-        set_member("schema",results::detail::encode(value));
         return *this;
     }
     inline RequestBatch::RequestBatch(const std::variant<uint64_t, std::string>& value):Node(results::detail::encode(value)) {
@@ -2096,10 +2018,6 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredChoose& RequestDefinitionAuthoredChoose::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_batch(const AuthoredQuestionBatch& value) {
         set_member("batch",results::detail::encode(value));
         return *this;
@@ -2144,10 +2062,6 @@ namespace tt::inputs {
         set_member("true",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredDecide& RequestDefinitionAuthoredDecide::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_context_schema(const AuthoredInputDeclaration& value) {
         set_member("context_schema",results::detail::encode(value));
         return *this;
@@ -2176,10 +2090,6 @@ namespace tt::inputs {
         set_member("profile",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredFind& RequestDefinitionAuthoredFind::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_context_schema(const AuthoredInputDeclaration& value) {
         set_member("context_schema",results::detail::encode(value));
         return *this;
@@ -2206,10 +2116,6 @@ namespace tt::inputs {
     }
     inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_threshold(const AuthoredCut& value) {
         set_member("threshold",results::detail::encode(value));
-        return *this;
-    }
-    inline RequestDefinitionAuthoredRelate& RequestDefinitionAuthoredRelate::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_batch(const AuthoredQuestionBatch& value) {
@@ -2246,10 +2152,6 @@ namespace tt::inputs {
     }
     inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_score(const AuthoredQuestionText& value) {
         set_member("score",results::detail::encode(value));
-        return *this;
-    }
-    inline RequestDefinitionAuthoredScore& RequestDefinitionAuthoredScore::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_batch(const AuthoredQuestionBatch& value) {
@@ -2292,10 +2194,6 @@ namespace tt::inputs {
         set_member("threshold",results::detail::encode(value));
         return *this;
     }
-    inline RequestDefinitionAuthoredTag& RequestDefinitionAuthoredTag::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
-        return *this;
-    }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_context_schema(const AuthoredInputDeclaration& value) {
         set_member("context_schema",results::detail::encode(value));
         return *this;
@@ -2330,10 +2228,6 @@ namespace tt::inputs {
     }
     inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_threshold(const AuthoredCut& value) {
         set_member("threshold",results::detail::encode(value));
-        return *this;
-    }
-    inline RequestDefinitionRecognizeDefinition& RequestDefinitionRecognizeDefinition::set_wording_version(const uint64_t& value) {
-        set_member("wording_version",results::detail::encode(value));
         return *this;
     }
     inline RequestFraming::RequestFraming(const std::string& value):Node(results::detail::encode(value)) {
@@ -2633,8 +2527,6 @@ namespace tt::inputs {
         return *this;
     }
     inline RequestThreshold::RequestThreshold(const std::variant<double, std::string>& value):Node(results::detail::encode(value)) {
-    }
-    inline RequestVersion::RequestVersion(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline SessionSourceLocation& SessionSourceLocation::set_file(const std::string& value) {
         set_member("file",results::detail::encode(value));

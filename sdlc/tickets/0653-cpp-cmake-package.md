@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0619, 0641, 0688, 0728
+Depends on: 0688, 0740
 
 ## Outcome
 
@@ -21,7 +21,7 @@ Depends on: 0619, 0641, 0688, 0728
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0653 SHA --memory 8 -- sh libraries/cpp/check.sh`, an outside CMake project uses `find_package(thinkthen-cpp)` against the installed package and runs an example, with no `-D` native paths. Before the change, configure refuses without `THINKTHEN_NATIVE_SHARED`, `THINKTHEN_NATIVE_STATIC` and `THINKTHEN_C_HEADER`, and the package config names `libthinkthen.so.0`, which macOS does not have.
-- At the 0619 container checkpoint, the release suite passes the C++ gate in the arm64 container on the M5. Windows, Intel macOS and Linux x86_64 are proven on the candidate in 0687.
+- Linux arm64: `pm job run --machine m5 0653 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/cpp`; Linux x86_64: the same command with `--machine gator --memory 7`. Windows and Intel macOS are proven on the candidate in 0687.
 
 ## Evidence
 

@@ -12,15 +12,15 @@ def name(key):
     key = key.replace('RequestQuestion', 'QuestionSelector', 1) if key.startswith('RequestQuestion') else key.removeprefix('Request')
     key = key.removeprefix('Authored_')
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key)
-    return 'thinkthen_request_' + '_'.join(word.lower() for word in words) + '_v1'
+    return 'thinkthen_request_' + '_'.join(word.lower() for word in words)
 
 
 def union_member(parent, target, siblings=()):
     """Use the canonical alternative title for a public C payload field."""
-    member = name(target).removeprefix("thinkthen_request_").removesuffix("_v1")
-    prefix = name(parent).removeprefix("thinkthen_request_").removesuffix("_v1")
+    member = name(target).removeprefix("thinkthen_request_")
+    prefix = name(parent).removeprefix("thinkthen_request_")
     short = member.removeprefix(prefix + "_")
-    if sum(name(item).removeprefix("thinkthen_request_").removesuffix("_v1").removeprefix(prefix + "_") == short for item in siblings) > 1:
+    if sum(name(item).removeprefix("thinkthen_request_").removeprefix(prefix + "_") == short for item in siblings) > 1:
         short = prefix.rsplit("_", 1)[-1] + "_" + short if member.startswith(prefix + "_") else member
     if short in {"unsigned", "signed", "char", "int", "float", "double", "long", "short", "void", "bool", "class", "struct", "union", "enum"}:
         short += "_value"
@@ -97,14 +97,14 @@ def carrier_graph(definitions, roots=('RequestArguments', 'RequestSessionDescrip
 
 def value_tree_reader():
     """Lower the one canonical JSON layout grammar into counted recursive admission."""
-    lines = ['unsafe fn read_json_value(pointer: *const thinkthen_complete_json_v1, context: &mut Context) -> Result<Value, CarrierError> {',
+    lines = ['unsafe fn read_json_value(pointer: *const thinkthen_complete_json, context: &mut Context) -> Result<Value, CarrierError> {',
         '// SAFETY: the caller retains its aligned node and all counted children.',
         'let input = unsafe { borrow(pointer)? };',
         'context.enter(|context| {',
         '// SAFETY: only the validated tag selects a payload; each extent is checked.',
         'unsafe { match input.kind {']
     for kind in JSON_KINDS:
-        symbol = 'THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1'
+        symbol = 'THINKTHEN_COMPLETE_JSON_' + kind.upper()
         payload = 'input.data.' + kind
         if kind == 'null':
             body = ['Value::literal("null")']
@@ -183,7 +183,7 @@ def render(definitions, metadata=None):
                 alternatives = [source['primitive_schemas'][kind] for kind in source['primitive_variants']]
             elif isinstance(source.get('type'), list):
                 alternatives = [{**source, 'type':kind} for kind in source['type']]
-            union = typ.removesuffix('_v1') + '_data_v1'
+            union = typ + '_data'
             arms = []
             body = ['match input.kind {']
             targets = [child(alternative, key + "_arm_" + str(index)) for index, alternative in enumerate(alternatives, 1)]
@@ -193,7 +193,7 @@ def render(definitions, metadata=None):
                     raise ValueError('duplicate canonical request union field: ' + key + '.' + arm)
                 if metadata is not None:
                     metadata.setdefault('arms', {})[(key, index)] = arm
-                symbol = typ.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                symbol = typ.upper() + '_' + arm.upper()
                 declarations.append('pub const ' + symbol + ': u32 = ' + str(index) + ';')
                 arms.append('    pub ' + arm + ': *const ' + name(target) + ',')
                 body.append(symbol + ' => ' + read(target, 'input.data.' + arm) + ',')
@@ -206,15 +206,15 @@ def render(definitions, metadata=None):
             body = ['let mut values = Vec::new();', 'for item in extent(input.data, input.len)? { values.push(' + read(target, '*item') + '); }', 'Value::Array(values)']
         elif source.get('type') == 'object':
             target = child(source.get('additionalProperties', {}), key + '_value')
-            entry = typ.removesuffix('_v1') + '_entry_v1'
-            structure(entry, [('key', 'thinkthen_complete_utf8_v1'), ('value', '*const ' + name(target))])
+            entry = typ + '_entry'
+            structure(entry, [('key', 'thinkthen_complete_utf8'), ('value', '*const ' + name(target))])
             fields = [('data', '*const ' + entry), ('len', 'usize')]
             body = ['let mut values = Vec::new();', 'for item in extent(input.data, input.len)? { values.push((context.text(item.key)?, ' + read(target, 'item.value') + ')); }', 'Value::Object(values)']
         elif source.get('enum'):
             fields = [('kind', 'u32')]
             body = ['match input.kind {']
             for index, value in enumerate(source['enum'], 1):
-                symbol = typ.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', str(value)).upper() + '_V1'
+                symbol = typ.upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', str(value)).upper()
                 declarations.append('pub const ' + symbol + ': u32 = ' + str(index) + ';')
                 body.append(symbol + ' => Value::literal(' + quoted(json.dumps(value)) + ')?,')
             body += ['_ => return Err(CarrierError::Invalid),', '}']
@@ -227,10 +227,10 @@ def render(definitions, metadata=None):
             fields = [('value', scalar)]
             body = [({'boolean':'Value::Boolean(match input.value { 0 => false, 1 => true, _ => return Err(CarrierError::Invalid) })', 'number':'Value::Number(serde_json::Number::from_f64(input.value).ok_or(CarrierError::Invalid)?)', 'integer':'Value::Number(input.value.into())'})[kind]]
         elif source.get('type') == 'string':
-            fields = [('text', 'thinkthen_complete_utf8_v1')]
+            fields = [('text', 'thinkthen_complete_utf8')]
             body = ['Value::Text(context.text(input.text)?)']
         else:
-            fields = [('value', '*const thinkthen_complete_json_v1')]
+            fields = [('value', '*const thinkthen_complete_json')]
             body = ['let value = read_json_value(input.value, context)?;',
                 'if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity { return Err(CarrierError::Overflow); }',
                 'value']
@@ -256,4 +256,4 @@ def render(definitions, metadata=None):
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned request carriers and conversion")]
 use super::{CarrierError, Context, Value, borrow, extent, optional};
 use crate::session::views::{JSON_IMPORTS};
-'''.replace('JSON_IMPORTS', ', '.join(['thinkthen_complete_utf8_v1', 'thinkthen_complete_json_v1', *('THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1' for kind in JSON_KINDS)])) + '\n'.join(declarations + [value_tree_reader()] + readers) + '\n'
+'''.replace('JSON_IMPORTS', ', '.join(['thinkthen_complete_utf8', 'thinkthen_complete_json', *('THINKTHEN_COMPLETE_JSON_' + kind.upper() for kind in JSON_KINDS)])) + '\n'.join(declarations + [value_tree_reader()] + readers) + '\n'

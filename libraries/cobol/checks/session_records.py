@@ -42,7 +42,7 @@ class Records:
         facts = template.abi_module(ROOT).header_abi(ROOT / "libraries/c/include/thinkthen.h")
         self.constants = facts["constants"]
         for name, typ in [('utf8', Utf8), ('json_array', JsonArray), ('json_entry', JsonEntry), ('json', JsonValue)]:
-            record = facts['records']['thinkthen_complete_' + name + '_v1']
+            record = facts['records']['thinkthen_complete_' + name]
             assert ct.sizeof(typ) == record['size'], name
             for field, _ in typ._fields_:
                 assert getattr(typ, field).offset == record['fields'][field]['offset'], (name, field)
@@ -68,22 +68,22 @@ class Records:
             return Utf8(self.keep(ct.create_string_buffer(data)), len(data))
         constants = self.constants
         if value is None:
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_NULL_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_NULL']
         elif isinstance(value, bool):
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_BOOLEAN_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_BOOLEAN']
             row.data.boolean = value
         elif isinstance(value, (int, float)):
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_NUMBER_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_NUMBER']
             row.data.number = text(json.dumps(value))
         elif isinstance(value, str):
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_STRING_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_STRING']
             row.data.string = text(value)
         elif isinstance(value, list):
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_ARRAY_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_ARRAY']
             items = (ct.c_void_p * len(value))(*(self.native_value(item) for item in value))
             row.data.array = JsonArray(self.keep(items), len(value))
         else:
-            row.kind = constants['THINKTHEN_COMPLETE_JSON_OBJECT_V1']
+            row.kind = constants['THINKTHEN_COMPLETE_JSON_OBJECT']
             items = (JsonEntry * len(value))(*(JsonEntry(text(key), self.native_value(item)) for key, item in value.items()))
             row.data.object = JsonArray(self.keep(items), len(value))
         return self.keep(row)

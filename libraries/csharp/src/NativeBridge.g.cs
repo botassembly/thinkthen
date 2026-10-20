@@ -2,25 +2,25 @@
 using System.Runtime.InteropServices;
 namespace ThinkThen;
 [StructLayout(LayoutKind.Sequential)]
-internal struct StringV1 {
+internal struct String {
     public IntPtr data;
     public nuint len;
 }
 [StructLayout(LayoutKind.Sequential)]
-internal struct CompleteUsagePersistenceV1 {
+internal struct CompleteUsagePersistence {
     public uint kind;
 }
 [StructLayout(LayoutKind.Sequential)]
-internal struct CompleteUtf8V1 {
+internal struct CompleteUtf8 {
     public IntPtr data;
     public nuint len;
 }
 [StructLayout(LayoutKind.Sequential)]
-internal struct NamedRequestV1 {
-    public CompleteUtf8V1 function;
-    public CompleteUtf8V1 question_json;
-    public CompleteUtf8V1 input_json;
-    public CompleteUtf8V1 options_json;
+internal struct NamedRequest {
+    public CompleteUtf8 function;
+    public CompleteUtf8 question_json;
+    public CompleteUtf8 input_json;
+    public CompleteUtf8 options_json;
 }
 public enum FailureKind : int {
     Backend = 2, Cancelled = 5, Deadline = 3, Defect = 6, Local = 4, Usage = 1
@@ -29,21 +29,21 @@ public enum UsagePersistenceState : uint {
     Disabled = 1, Failed = 4, Pending = 2, Written = 3
 }
 internal static class NativeUsage {
-    [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_usage_persistence_v1(EngineHandle engine,
-    out CompleteUsagePersistenceV1 output1, out CompleteUtf8V1 output2);
-    [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_finish_usage_status_v1(EngineHandle engine,
-    out CompleteUsagePersistenceV1 output1, out CompleteUtf8V1 output2);
+    [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_usage_persistence(EngineHandle engine,
+    out CompleteUsagePersistence output1, out CompleteUtf8 output2);
+    [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_finish_usage_status(EngineHandle engine,
+    out CompleteUsagePersistence output1, out CompleteUtf8 output2);
 }
 internal static class NativeNamed {
     [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new_named_with_surface(EngineHandle engine,
-    in NamedRequestV1 request, CompleteUtf8V1 surface, out IntPtr session);
+    in NamedRequest request, CompleteUtf8 surface, out IntPtr session);
 }
 internal static class NativeWait {
     internal const uint Input = 1;
     internal const uint InterruptibleSettlement = 4;
     internal const uint Result = 0;
-    internal const uint SettlementArm = 3;
     internal const uint Settlement = 2;
+    internal const uint SettlementArm = 3;
     internal const uint ReadyCancelled = 4;
     internal const uint ReadyClosed = 2;
     internal const uint ReadyEnd = 3;

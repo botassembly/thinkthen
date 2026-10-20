@@ -1,5 +1,5 @@
 {
-  "schema": "thinkthen.recording/1",
+  "schema": "thinkthen.recording",
   "adapter": "systemone",
   "url": "https://api.liquid.ai/decisions/v1/systemone",
   "request": {

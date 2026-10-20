@@ -41,8 +41,6 @@ pub const AnnotateQuestionChoose = struct {
     options: ?AuthoredOptions = null,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AnnotateQuestionDecide = struct {
@@ -61,8 +59,6 @@ pub const AnnotateQuestionDecide = struct {
     threshold: ?AuthoredThreshold = null,
 
     true: ?AuthoredCriterion = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AnnotateQuestionScore = struct {
@@ -77,8 +73,6 @@ pub const AnnotateQuestionScore = struct {
     on: ?AuthoredPointers = null,
 
     score: AuthoredQuestionText,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AnnotateQuestionTag = struct {
@@ -95,8 +89,6 @@ pub const AnnotateQuestionTag = struct {
     tag: AuthoredQuestionText,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredChoose = struct {
@@ -119,8 +111,6 @@ pub const AuthoredChoose = struct {
     profile: ?AuthoredProfile = null,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredCriterion = union(enum) {
@@ -161,8 +151,6 @@ pub const AuthoredDecide = struct {
     threshold: ?AuthoredThreshold = null,
 
     true: ?AuthoredCriterion = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredDescription = AuthoredDescriptionValue;
@@ -181,8 +169,6 @@ pub const AuthoredFind = struct {
     on: ?AuthoredPointers = null,
 
     profile: ?AuthoredProfile = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredInputDeclaration = union(enum) {
@@ -287,8 +273,6 @@ pub const AuthoredRelate = struct {
     relate: RelateQuestion,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredRelation = struct {
@@ -323,8 +307,6 @@ pub const AuthoredScore = struct {
     profile: ?AuthoredProfile = null,
 
     score: AuthoredQuestionText,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredTag = struct {
@@ -347,8 +329,6 @@ pub const AuthoredTag = struct {
     tag: AuthoredQuestionText,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const AuthoredThreshold = union(enum) {
@@ -485,8 +465,6 @@ pub const RecognizeDefinition = struct {
     relation_threshold: ?AuthoredCut = null,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RecognizeQuestion = struct {
@@ -519,8 +497,6 @@ pub const RelateQuestion = struct {
 
 pub const Request = struct {
     call: RequestCall,
-
-    schema: RequestVersion = .@"thinkthen.request/1",
 };
 
 pub const RequestBatch = union(enum) {
@@ -587,8 +563,6 @@ pub const RequestDefinitionAuthoredChoose = struct {
     profile: ?AuthoredProfile = null,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionAuthoredDecide = struct {
@@ -613,8 +587,6 @@ pub const RequestDefinitionAuthoredDecide = struct {
     threshold: ?AuthoredThreshold = null,
 
     true: ?AuthoredCriterion = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionAuthoredFind = struct {
@@ -631,8 +603,6 @@ pub const RequestDefinitionAuthoredFind = struct {
     on: ?AuthoredPointers = null,
 
     profile: ?AuthoredProfile = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionAuthoredRelate = struct {
@@ -649,8 +619,6 @@ pub const RequestDefinitionAuthoredRelate = struct {
     relate: RelateQuestion,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionAuthoredScore = struct {
@@ -671,8 +639,6 @@ pub const RequestDefinitionAuthoredScore = struct {
     profile: ?AuthoredProfile = null,
 
     score: AuthoredQuestionText,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionAuthoredTag = struct {
@@ -695,8 +661,6 @@ pub const RequestDefinitionAuthoredTag = struct {
     tag: AuthoredQuestionText,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestDefinitionRecognizeDefinition = struct {
@@ -717,8 +681,6 @@ pub const RequestDefinitionRecognizeDefinition = struct {
     relation_threshold: ?AuthoredCut = null,
 
     threshold: ?AuthoredCut = null,
-
-    wording_version: ?i64 = null,
 };
 
 pub const RequestFraming = enum { document, lines, jsonl, csv, tsv };
@@ -974,8 +936,6 @@ pub const RequestThreshold = union(enum) {
 
     string: []const u8,
 };
-
-pub const RequestVersion = enum { @"thinkthen.request/1" };
 
 pub const SessionSourceLocation = struct {
     file: []const u8,

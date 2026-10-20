@@ -6,7 +6,7 @@ Milestone: 0.2.1
 
 Phase: 3
 
-Depends on: 0672, 0688, 0727
+Depends on: 0672, 0688, 0740
 
 ## Outcome
 
@@ -18,13 +18,14 @@ Depends on: 0672, 0688, 0727
 - The hand-written encoder `Json.java` is replaced by generated serialization of the request JSON.
 - Old public names are removed, with no compatibility shims. The JVM entry in `conformance/library-surface/jvm.json` names the lifecycle owners and members that remain.
 - `jvm.py` and `jvm_host.py` leave this language's exception file `build-tools/results/legacy/jvm.txt`.
+- Failures expose the native failing record position through `thinkthen_call_error_position`, absent when null, and construction failures through 0741's owned error: the binding passes the owned error argument to engine construction, raises the host's error from it, and frees it exactly once, as `libraries/BINDING-AUTHOR.md` says.
 
 ### Proof
 
 - On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- sh -c 'python3 build-tools/results/answer_rules.py && python3 build-tools/results/generate.py --target jvm --check && sh libraries/jvm/build.sh'`, the generator is current and the three host JARs compile. Before the change, `answer_rules.py` fails once the two JVM exceptions are removed.
 - On the M5 through `pm job run --machine m5 0673 SHA --memory 8 -- python3 libraries/jvm/tests/package_check.py`, after 0672 adds the Gradle build, the clean Gradle and Maven consumers run a named call through `thinkthen_run_call` on Java 22 and the newest pinned JDK.
 - `git grep -n 'ValueLayout\|MemoryLayout' libraries/jvm/session` finds only the declarations that call `thinkthen_run_call` and free its handles; on current main it finds the layout readers.
-- The JVM check needs bubblewrap and is declared for `linux-x86_64` only in `sdlc/tools.json`, so the installed-package checks (`session_installed.py`, `usage_installed.py`, `package_check.py`) run all ten named calls for Java, Kotlin and Scala against a recorded backend at the 0619 container checkpoint on Yellow (x86_64), through `sh libraries/jvm/check.sh`. Each packet dump matches the 0642 oracle.
+- The JVM check needs bubblewrap, so the installed-package checks (`session_installed.py`, `usage_installed.py`, `package_check.py`) run all ten named calls for Java, Kotlin and Scala against a recorded backend in the Linux image, through `sh libraries/jvm/check.sh`. Linux x86_64: `pm job run --machine gator 0673 SHA --memory 7 -- sdlc/scripts/linux-check surface libraries/jvm`. Linux arm64 joins only if 0672 declares bubblewrap and the JVM tools for linux-arm64 in `sdlc/tools/jvm.json`.
 
 ## Evidence
 

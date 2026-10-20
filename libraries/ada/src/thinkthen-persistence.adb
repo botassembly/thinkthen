@@ -4,14 +4,14 @@ with Thinkthen.Native_Sessions;
 with Thinkthen.Session_C; use Thinkthen.Session_C;
 package body Thinkthen.Persistence is
 function Observe (Client : Engine; Finish : Boolean) return Observation is
-State : aliased thinkthen_complete_usage_persistence_v1;
-Advice : aliased thinkthen_complete_utf8_v1;
+State : aliased thinkthen_complete_usage_persistence;
+Advice : aliased thinkthen_complete_utf8;
 Code : Interfaces.C.int;
 begin
 if Finish then
-Code := thinkthen_engine_finish_usage_status_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
+Code := thinkthen_engine_finish_usage_status (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 else
-Code := thinkthen_engine_usage_persistence_v1 (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
+Code := thinkthen_engine_usage_persistence (Engine_Pointer (Client.Handle), State'Access, Advice'Access);
 end if;
 Thinkthen_Kinds.Check (Code);
 return (State => Persistence_State (Thinkthen_Kinds.Persistence_State_For (State.kind)),

@@ -13,7 +13,7 @@ fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_author
     })
     .unwrap();
     let engine = engine(&listener);
-    let authored = r#"{"name":"selected","wording_version":2,"decide":"Refund?","model":"fixed","batch":1,"on":["/payload"],"item_schema":{"type":"string"}}"#;
+    let authored = r#"{"name":"selected","decide":"Refund?","model":"fixed","batch":1,"on":["/payload"],"item_schema":{"type":"string"}}"#;
     let question = Question::from_json(authored).unwrap();
     let restored = Question::from_json(&question.to_json().unwrap()).unwrap();
     assert_eq!(restored, question);

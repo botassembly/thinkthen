@@ -178,7 +178,7 @@ def container_memory_limit():
 def inventory():
     document = json.loads(DOCUMENT.read_text())
     parity = document['parity']
-    if parity['schema'] != 'thinkthen.parity-cases/1':
+    if parity['schema'] != 'thinkthen.parity-cases':
         raise ValueError('unknown parity case schema')
     cases = parity['required_cases']
     consumers = parity['consumers']

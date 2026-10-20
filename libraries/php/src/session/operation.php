@@ -53,13 +53,13 @@ final class Operation
         $status = $this->ffi->new('uint32_t');
         $owner = $this->ffi->new('struct thinkthen_session_result *');
         $code = $blocking
-            ? $this->ffi->thinkthen_session_next_packet($this->session, \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, \FFI::addr($status), \FFI::addr($owner))
+            ? $this->ffi->thinkthen_session_next_packet($this->session, \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT, \FFI::addr($status), \FFI::addr($owner))
             : $this->ffi->thinkthen_session_try_read($this->session, \FFI::addr($status), \FFI::addr($owner));
         $this->check($code);
-        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_END_V1 && $this->terminal === null) throw new DefectFailure('native session ended without terminal facts');
-        if ($status->cdata !== \ThinkThen\Internal\Session\THINKTHEN_SESSION_RESULT_V1) return null;
+        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_END && $this->terminal === null) throw new DefectFailure('native session ended without terminal facts');
+        if ($status->cdata !== \ThinkThen\Internal\Session\THINKTHEN_SESSION_RESULT) return null;
         try {
-            $view = $this->ffi->new('const thinkthen_complete_session_packet_v1 *');
+            $view = $this->ffi->new('const thinkthen_complete_session_packet *');
             $this->check($this->ffi->thinkthen_session_result_view($owner, \FFI::addr($view)));
             $packet = \ThinkThen\Internal\Decoder::native($view);
             $this->packets[] = $packet;
@@ -75,7 +75,7 @@ final class Operation
         \ThinkThen\Internal\requireBlockingContext();
         if ($this->session === null) throw new UsageFailure('operation is closed');
         $ready = $this->ffi->new('uint32_t');
-        $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
+        $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT;
         // Tokens and async signals need the VM to observe host cancellation.
         $cooperative = $this->token !== null || (function_exists('pcntl_async_signals') && pcntl_async_signals());
         $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, $cooperative ? 50 : 0xffffffff, \FFI::addr($ready)));
@@ -131,8 +131,8 @@ final class Operation
         }
         $status = $this->ffi->new('uint32_t');
         $this->check($this->ffi->thinkthen_session_try_push($this->session, $this->pending, strlen($this->pending), \FFI::addr($status)));
-        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_ACCEPTED_V1) { $this->pending = null; $this->advance = true; }
-        elseif ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_CLOSED_V1) { $this->pending = null; $this->producer = null; }
+        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_ACCEPTED) { $this->pending = null; $this->advance = true; }
+        elseif ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_CLOSED) { $this->pending = null; $this->producer = null; }
     }
     public function cancel(): void
     {

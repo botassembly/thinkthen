@@ -184,7 +184,7 @@ class Installed(unittest.TestCase):
         record = {'public': 'Only selected evidence.', 'private': 'PRIVATE-SAVED-EVIDENCE',
                   'context': {'ready': False}, 'choices': ['zebra', 'alpha']}
         question = {'choose': 'Which?', 'on': '/private', 'model': 'old', 'threshold': 0.95,
-                    'name': 'override', 'wording_version': 7, 'item_schema': {'type': 'string'},
+                    'name': 'override', 'item_schema': {'type': 'string'},
                     'context_schema': {'type': 'object', 'properties': {}}}
         command = (BINARY, 'mcp', '--url', f'http://127.0.0.1:{server.server_port}/v1',
                    '--no-cache', '--max-retries', '0')
@@ -197,7 +197,6 @@ class Installed(unittest.TestCase):
                 self.assertEqual(row['input'], record)
                 self.assertIsNone(row['value'])
                 self.assertEqual(row['question']['name'], 'override')
-                self.assertEqual(row['question']['wording_version'], 7)
                 self.assertEqual(row['question']['item_schema'], {'type': 'string'})
                 self.assertEqual(row['question']['context_schema'], question['context_schema'])
                 self.assertEqual(row['threshold'], 0.95)
@@ -299,13 +298,12 @@ class Installed(unittest.TestCase):
     def test_names_files_and_literal_at_text_use_the_native_loaders(self):
         directory = self.home / 'config/thinkthen/questions'
         directory.mkdir(parents=True)
-        q = {'decide': 'Refund?', 'name': 'refund', 'wording_version': 2}
+        q = {'decide': 'Refund?', 'name': 'refund'}
         path = directory / 'refund.json'
         path.write_text(json.dumps(q))
         with self.launch('generic', '--no-cache') as client:
             named = client.decide(question_name='refund', evidence='Please refund.')
             self.assertEqual(named['value']['question']['name'], 'refund')
-            self.assertEqual(named['value']['question']['wording_version'], 2)
             file = client.decide(question_file=str(path), evidence='Please refund.')
             self.assertEqual(named['value']['question'], file['value']['question'])
             self.assertIs(file['value']['value'], True)

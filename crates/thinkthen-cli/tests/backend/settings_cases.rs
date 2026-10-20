@@ -151,7 +151,7 @@ fn command_args(case: &Value, step: &Value, corpus: &Value, base: &str) -> Vec<S
 fn command_settings_match_the_shared_cases() {
     let corpus: Value =
         serde_json::from_str(include_str!("../../../../conformance/settings.json")).expect("cases");
-    assert_eq!(corpus["schema"], "thinkthen.settings-cases/1");
+    assert_eq!(corpus["schema"], "thinkthen.settings-cases");
     for case in corpus["cases"].as_array().expect("cases") {
         if case["setting"] == "max_requests" {
             continue;

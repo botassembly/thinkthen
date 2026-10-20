@@ -29,10 +29,10 @@ pub const Value = union(enum) {
     array: []const Value,
     object: Map(Value),
 };
-fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
+fn text(v: c.thinkthen_complete_utf8) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
-fn readNumber(v: c.thinkthen_complete_utf8_v1) !Number {
+fn readNumber(v: c.thinkthen_complete_utf8) !Number {
     const source = text(v);
     if (std.mem.indexOfAny(u8, source, ".eE") != null) return .{ .decimal = try std.fmt.parseFloat(f64, source) };
     if (source.len != 0 and source[0] == '-') return .{ .signed = try std.fmt.parseInt(i64, source, 10) };
@@ -71,7 +71,7 @@ pub fn readObject(a: std.mem.Allocator, v: anytype) anyerror!Map(Value) {
     for (entries, 0..) |*out, i| out.* = .{ .key = try a.dupe(u8, text(v.data[i].name)), .value = try readValue(a, v.data[i].value[0]) };
     return .{ .entries = entries };
 }
-pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json_v1) anyerror!Value {
+pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json) anyerror!Value {
     return switch (v.kind) {
         1 => .null_value,
         2 => .{ .boolean = v.data.boolean != 0 },
@@ -867,14 +867,11 @@ pub const QuestionDocumentScore = struct {
     name: Presence(QuestionName),
     on: Presence([]const []const u8),
     profile: Presence([]const u8),
-    wording_version: Presence(WordingVersion),
     levels: []const []const u8,
     text: Presence(Value),
     verb: []const u8,
     extensions: Map(Value),
 };
-
-pub const WordingVersion = u64;
 
 pub const QuestionName = []const u8;
 
@@ -952,7 +949,6 @@ pub const QuestionDocumentTag = struct {
     name: Presence(QuestionName),
     on: Presence([]const []const u8),
     profile: Presence([]const u8),
-    wording_version: Presence(WordingVersion),
     labels: []const []const u8,
     text: Presence(Value),
     verb: []const u8,
@@ -968,7 +964,6 @@ pub const QuestionDocumentChoose = struct {
     name: Presence(QuestionName),
     on: Presence([]const []const u8),
     profile: Presence([]const u8),
-    wording_version: Presence(WordingVersion),
     options: []const []const u8,
     text: Presence(Value),
     verb: []const u8,
@@ -984,7 +979,6 @@ pub const QuestionDocumentDecide = struct {
     name: Presence(QuestionName),
     on: Presence([]const []const u8),
     profile: Presence([]const u8),
-    wording_version: Presence(WordingVersion),
     false: Presence(Value),
     text: Presence(Value),
     true: Presence(Value),
@@ -1090,7 +1084,6 @@ pub const RelateQuestionDocument = struct {
     relations: []const RelationRule,
     threshold: Threshold,
     verb: []const u8,
-    wording_version: Presence(WordingVersion),
     extensions: Map(Value),
 };
 
@@ -1311,7 +1304,6 @@ pub const RecognizeQuestionDocument = struct {
     stage_context: Presence(RecognitionStageContext),
     threshold: Threshold,
     verb: Verb,
-    wording_version: Presence(WordingVersion),
     extensions: Map(Value),
 };
 
@@ -1488,7 +1480,6 @@ pub const FindQuestionDocument = struct {
     profile: Presence([]const u8),
     text: Presence(Value),
     verb: []const u8,
-    wording_version: Presence(WordingVersion),
     extensions: Map(Value),
 };
 
@@ -1729,7 +1720,7 @@ pub const FailureFieldKind = enum { backend };
 
 pub const BatchString = enum { max };
 
-pub fn readImmediateFacts(a: std.mem.Allocator, v: c.thinkthen_complete_immediate_facts_v1) anyerror!ImmediateFacts {
+pub fn readImmediateFacts(a: std.mem.Allocator, v: c.thinkthen_complete_immediate_facts) anyerror!ImmediateFacts {
     return .{
         .attempts = switch (v.attempts.presence) {
             0 => .missing,
@@ -1802,7 +1793,7 @@ pub fn readImmediateFacts(a: std.mem.Allocator, v: c.thinkthen_complete_immediat
     };
 }
 
-pub fn readPersistenceObservation(a: std.mem.Allocator, v: c.thinkthen_complete_persistence_observation_v1) anyerror!PersistenceObservation {
+pub fn readPersistenceObservation(a: std.mem.Allocator, v: c.thinkthen_complete_persistence_observation) anyerror!PersistenceObservation {
     return .{
         .advice = switch (v.advice.presence) {
             0 => .missing,
@@ -1816,7 +1807,7 @@ pub fn readPersistenceObservation(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readUsagePersistence(a: std.mem.Allocator, v: c.thinkthen_complete_usage_persistence_v1) anyerror!UsagePersistence {
+pub fn readUsagePersistence(a: std.mem.Allocator, v: c.thinkthen_complete_usage_persistence) anyerror!UsagePersistence {
     _ = a;
     return switch (v.kind) {
         1 => .disabled,
@@ -1827,11 +1818,11 @@ pub fn readUsagePersistence(a: std.mem.Allocator, v: c.thinkthen_complete_usage_
     };
 }
 
-pub fn readCallId(a: std.mem.Allocator, v: c.thinkthen_complete_call_id_v1) anyerror!CallId {
+pub fn readCallId(a: std.mem.Allocator, v: c.thinkthen_complete_call_id) anyerror!CallId {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readAttempt(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_v1) anyerror!Attempt {
+pub fn readAttempt(a: std.mem.Allocator, v: c.thinkthen_complete_attempt) anyerror!Attempt {
     return .{
         .ordinal = v.ordinal,
         .outcome = try readAttemptOutcome(a, v.outcome[0]),
@@ -1860,11 +1851,11 @@ pub fn readAttempt(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_v1) any
     };
 }
 
-pub fn readSdkRequestId(a: std.mem.Allocator, v: c.thinkthen_complete_sdk_request_id_v1) anyerror!SdkRequestId {
+pub fn readSdkRequestId(a: std.mem.Allocator, v: c.thinkthen_complete_sdk_request_id) anyerror!SdkRequestId {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readAttemptOutcome(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_outcome_v1) anyerror!AttemptOutcome {
+pub fn readAttemptOutcome(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_outcome) anyerror!AttemptOutcome {
     _ = a;
     return switch (v.kind) {
         1 => .ok,
@@ -1874,7 +1865,7 @@ pub fn readAttemptOutcome(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_
     };
 }
 
-pub fn readSessionPacket(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_v1) anyerror!SessionPacket {
+pub fn readSessionPacket(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet) anyerror!SessionPacket {
     return switch (v.kind) {
         1 => .{ .decide_row = try readSessionPacketDecideRow(a, v.data.decide_row[0]) },
         2 => .{ .choose_row = try readSessionPacketChooseRow(a, v.data.choose_row[0]) },
@@ -1898,7 +1889,7 @@ pub fn readSessionPacket(a: std.mem.Allocator, v: c.thinkthen_complete_session_p
     };
 }
 
-pub fn readSessionPacketTerminal(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_terminal_v1) anyerror!SessionPacketTerminal {
+pub fn readSessionPacketTerminal(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_terminal) anyerror!SessionPacketTerminal {
     return .{
         .answer = switch (v.answer.presence) {
             0 => .missing,
@@ -1924,7 +1915,7 @@ pub fn readSessionPacketTerminal(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readAnswerResolution(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolution_v1) anyerror!AnswerResolution {
+pub fn readAnswerResolution(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolution) anyerror!AnswerResolution {
     _ = a;
     return switch (v.kind) {
         1 => .resolved,
@@ -1934,7 +1925,7 @@ pub fn readAnswerResolution(a: std.mem.Allocator, v: c.thinkthen_complete_answer
     };
 }
 
-pub fn readCallError(a: std.mem.Allocator, v: c.thinkthen_complete_call_error_v1) anyerror!CallError {
+pub fn readCallError(a: std.mem.Allocator, v: c.thinkthen_complete_call_error) anyerror!CallError {
     return .{
         .@"error" = try readError(a, v.@"error"[0]),
         .facts = switch (v.facts.presence) {
@@ -1948,7 +1939,7 @@ pub fn readCallError(a: std.mem.Allocator, v: c.thinkthen_complete_call_error_v1
     };
 }
 
-pub fn readFacts(a: std.mem.Allocator, v: c.thinkthen_complete_facts_v1) anyerror!Facts {
+pub fn readFacts(a: std.mem.Allocator, v: c.thinkthen_complete_facts) anyerror!Facts {
     return .{
         .attempts = switch (v.attempts.presence) {
             0 => .missing,
@@ -2016,7 +2007,7 @@ pub fn readFacts(a: std.mem.Allocator, v: c.thinkthen_complete_facts_v1) anyerro
     };
 }
 
-pub fn readError(a: std.mem.Allocator, v: c.thinkthen_complete_error_v1) anyerror!Error {
+pub fn readError(a: std.mem.Allocator, v: c.thinkthen_complete_error) anyerror!Error {
     return .{
         .estimated_input_denial = switch (v.estimated_input_denial.presence) {
             0 => .missing,
@@ -2038,7 +2029,7 @@ pub fn readError(a: std.mem.Allocator, v: c.thinkthen_complete_error_v1) anyerro
     };
 }
 
-pub fn readStopped(a: std.mem.Allocator, v: c.thinkthen_complete_stopped_v1) anyerror!Stopped {
+pub fn readStopped(a: std.mem.Allocator, v: c.thinkthen_complete_stopped) anyerror!Stopped {
     return .{
         .at = switch (v.at.presence) {
             0 => .missing,
@@ -2058,7 +2049,7 @@ pub fn readStopped(a: std.mem.Allocator, v: c.thinkthen_complete_stopped_v1) any
     };
 }
 
-pub fn readStopCause(a: std.mem.Allocator, v: c.thinkthen_complete_stop_cause_v1) anyerror!StopCause {
+pub fn readStopCause(a: std.mem.Allocator, v: c.thinkthen_complete_stop_cause) anyerror!StopCause {
     _ = a;
     return switch (v.kind) {
         1 => .usage,
@@ -2076,7 +2067,7 @@ pub fn readStopCause(a: std.mem.Allocator, v: c.thinkthen_complete_stop_cause_v1
     };
 }
 
-pub fn readSendBudgetDenial(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_v1) anyerror!SendBudgetDenial {
+pub fn readSendBudgetDenial(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial) anyerror!SendBudgetDenial {
     return switch (v.kind) {
         1 => .{ .before_first_send = try readSendBudgetDenialBeforeFirstSend(a, v.data.before_first_send[0]) },
         2 => .{ .before_additional_send = try readSendBudgetDenialBeforeAdditionalSend(a, v.data.before_additional_send[0]) },
@@ -2085,7 +2076,7 @@ pub fn readSendBudgetDenial(a: std.mem.Allocator, v: c.thinkthen_complete_send_d
     };
 }
 
-pub fn readSendBudgetDenialBeforeRetry(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_retry_v1) anyerror!SendBudgetDenialBeforeRetry {
+pub fn readSendBudgetDenialBeforeRetry(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_retry) anyerror!SendBudgetDenialBeforeRetry {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .last_status = v.last_status,
@@ -2093,21 +2084,21 @@ pub fn readSendBudgetDenialBeforeRetry(a: std.mem.Allocator, v: c.thinkthen_comp
     };
 }
 
-pub fn readSendBudgetDenialBeforeAdditionalSend(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_additional_send_v1) anyerror!SendBudgetDenialBeforeAdditionalSend {
+pub fn readSendBudgetDenialBeforeAdditionalSend(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_additional_send) anyerror!SendBudgetDenialBeforeAdditionalSend {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readSendBudgetDenialBeforeFirstSend(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_first_send_v1) anyerror!SendBudgetDenialBeforeFirstSend {
+pub fn readSendBudgetDenialBeforeFirstSend(a: std.mem.Allocator, v: c.thinkthen_complete_send_denial_before_first_send) anyerror!SendBudgetDenialBeforeFirstSend {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readFailureKind(a: std.mem.Allocator, v: c.thinkthen_complete_failure_kind_v1) anyerror!FailureKind {
+pub fn readFailureKind(a: std.mem.Allocator, v: c.thinkthen_complete_failure_kind) anyerror!FailureKind {
     _ = a;
     return switch (v.kind) {
         1 => .usage,
@@ -2120,7 +2111,7 @@ pub fn readFailureKind(a: std.mem.Allocator, v: c.thinkthen_complete_failure_kin
     };
 }
 
-pub fn readEstimatedInputDenial(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_v1) anyerror!EstimatedInputDenial {
+pub fn readEstimatedInputDenial(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial) anyerror!EstimatedInputDenial {
     return switch (v.kind) {
         1 => .{ .initial_request = try readEstimatedInputDenialInitialRequest(a, v.data.initial_request[0]) },
         2 => .{ .additional_request = try readEstimatedInputDenialAdditionalRequest(a, v.data.additional_request[0]) },
@@ -2129,7 +2120,7 @@ pub fn readEstimatedInputDenial(a: std.mem.Allocator, v: c.thinkthen_complete_in
     };
 }
 
-pub fn readEstimatedInputDenialRetry(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_retry_v1) anyerror!EstimatedInputDenialRetry {
+pub fn readEstimatedInputDenialRetry(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_retry) anyerror!EstimatedInputDenialRetry {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .last_status = v.last_status,
@@ -2138,7 +2129,7 @@ pub fn readEstimatedInputDenialRetry(a: std.mem.Allocator, v: c.thinkthen_comple
     };
 }
 
-pub fn readEstimatedInputDenialAdditionalRequest(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_additional_request_v1) anyerror!EstimatedInputDenialAdditionalRequest {
+pub fn readEstimatedInputDenialAdditionalRequest(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_additional_request) anyerror!EstimatedInputDenialAdditionalRequest {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .limit = v.limit,
@@ -2146,7 +2137,7 @@ pub fn readEstimatedInputDenialAdditionalRequest(a: std.mem.Allocator, v: c.thin
     };
 }
 
-pub fn readEstimatedInputDenialInitialRequest(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_initial_request_v1) anyerror!EstimatedInputDenialInitialRequest {
+pub fn readEstimatedInputDenialInitialRequest(a: std.mem.Allocator, v: c.thinkthen_complete_input_denial_initial_request) anyerror!EstimatedInputDenialInitialRequest {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .limit = v.limit,
@@ -2154,7 +2145,7 @@ pub fn readEstimatedInputDenialInitialRequest(a: std.mem.Allocator, v: c.thinkth
     };
 }
 
-pub fn readSettledAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_v1) anyerror!SettledAnswer {
+pub fn readSettledAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer) anyerror!SettledAnswer {
     return switch (v.kind) {
         1 => .{ .decide = try readSettledAnswerDecide(a, v.data.decide[0]) },
         2 => .{ .choose = try readSettledAnswerChoose(a, v.data.choose[0]) },
@@ -2170,7 +2161,7 @@ pub fn readSettledAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_settled_a
     };
 }
 
-pub fn readSettledAnswerAnnotate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_annotate_v1) anyerror!SettledAnswerAnnotate {
+pub fn readSettledAnswerAnnotate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_annotate) anyerror!SettledAnswerAnnotate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2202,7 +2193,7 @@ pub fn readSettledAnswerAnnotate(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readAnswerShape15(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15_v1) anyerror!AnswerShape15 {
+pub fn readAnswerShape15(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15) anyerror!AnswerShape15 {
     return switch (v.kind) {
         1 => .{ .object = blk: {
             const entries = try a.alloc(Map(SettledJudgment).Entry, v.data.object.len);
@@ -2225,7 +2216,7 @@ pub fn readAnswerShape15(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sh
     };
 }
 
-pub fn readAnswerShape15AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15_any_of_1_items_v1) anyerror!AnswerShape15AnyOf1Items {
+pub fn readAnswerShape15AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_15_any_of_1_items) anyerror!AnswerShape15AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .object = blk: {
             const entries = try a.alloc(Map(SettledJudgment).Entry, v.data.object.len);
@@ -2240,7 +2231,7 @@ pub fn readAnswerShape15AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSettledJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_settled_judgment_v1) anyerror!SettledJudgment {
+pub fn readSettledJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_settled_judgment) anyerror!SettledJudgment {
     return switch (v.kind) {
         1 => .{ .boolean = v.data.boolean != 0 },
         2 => .null_value,
@@ -2258,7 +2249,7 @@ pub fn readSettledJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_settled
     };
 }
 
-pub fn readAnswerShape5(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_5_v1) anyerror!AnswerShape5 {
+pub fn readAnswerShape5(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_5) anyerror!AnswerShape5 {
     return switch (v.kind) {
         1 => .{ .string = try readAnswerResolution(a, v.data.string[0]) },
         2 => .{ .object = blk: {
@@ -2281,7 +2272,7 @@ pub fn readAnswerShape5(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerResolutions(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolutions_v1) anyerror!AnswerResolutions {
+pub fn readAnswerResolutions(a: std.mem.Allocator, v: c.thinkthen_complete_answer_resolutions) anyerror!AnswerResolutions {
     return switch (v.kind) {
         1 => .{ .string = try readAnswerResolution(a, v.data.string[0]) },
         2 => .{ .object = blk: {
@@ -2296,7 +2287,7 @@ pub fn readAnswerResolutions(a: std.mem.Allocator, v: c.thinkthen_complete_answe
     };
 }
 
-pub fn readAnswerShape2(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_2_v1) anyerror!AnswerShape2 {
+pub fn readAnswerShape2(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_2) anyerror!AnswerShape2 {
     return switch (v.kind) {
         1 => .{ .number = v.data.number },
         2 => .null_value,
@@ -2312,7 +2303,7 @@ pub fn readAnswerShape2(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerShape8AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_any_of_1_items_v1) anyerror!AnswerShape8AnyOf1Items {
+pub fn readAnswerShape8AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_any_of_1_items) anyerror!AnswerShape8AnyOf1Items {
     _ = a;
     return switch (v.kind) {
         1 => .{ .number = v.data.number },
@@ -2321,7 +2312,7 @@ pub fn readAnswerShape8AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readAnswerShape3(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_3_v1) anyerror!AnswerShape3 {
+pub fn readAnswerShape3(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_3) anyerror!AnswerShape3 {
     return switch (v.kind) {
         1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
         2 => .null_value,
@@ -2337,7 +2328,7 @@ pub fn readAnswerShape3(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerShape6AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6_any_of_1_items_v1) anyerror!AnswerShape6AnyOf1Items {
+pub fn readAnswerShape6AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6_any_of_1_items) anyerror!AnswerShape6AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
         2 => .null_value,
@@ -2345,7 +2336,7 @@ pub fn readAnswerShape6AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readAnswerShape4(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_v1) anyerror!AnswerShape4 {
+pub fn readAnswerShape4(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4) anyerror!AnswerShape4 {
     return switch (v.kind) {
         1 => .{ .integer = v.data.integer },
         2 => .null_value,
@@ -2361,7 +2352,7 @@ pub fn readAnswerShape4(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerShape4AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_any_of_1_items_v1) anyerror!AnswerShape4AnyOf1Items {
+pub fn readAnswerShape4AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_4_any_of_1_items) anyerror!AnswerShape4AnyOf1Items {
     _ = a;
     return switch (v.kind) {
         1 => .{ .integer = v.data.integer },
@@ -2370,7 +2361,7 @@ pub fn readAnswerShape4AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSettledAnswerRelate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_relate_v1) anyerror!SettledAnswerRelate {
+pub fn readSettledAnswerRelate(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_relate) anyerror!SettledAnswerRelate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2402,7 +2393,7 @@ pub fn readSettledAnswerRelate(a: std.mem.Allocator, v: c.thinkthen_complete_set
     };
 }
 
-pub fn readAnswerShape14(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14_v1) anyerror!AnswerShape14 {
+pub fn readAnswerShape14(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14) anyerror!AnswerShape14 {
     return switch (v.kind) {
         1 => .{ .array = try readSettledRelations(a, v.data.array[0]) },
         2 => .null_value,
@@ -2418,7 +2409,7 @@ pub fn readAnswerShape14(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sh
     };
 }
 
-pub fn readAnswerShape14AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14_any_of_1_items_v1) anyerror!AnswerShape14AnyOf1Items {
+pub fn readAnswerShape14AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_14_any_of_1_items) anyerror!AnswerShape14AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .array = try readSettledRelations(a, v.data.array[0]) },
         2 => .null_value,
@@ -2426,7 +2417,7 @@ pub fn readAnswerShape14AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSettledRelations(a: std.mem.Allocator, v: c.thinkthen_complete_settled_relations_v1) anyerror!SettledRelations {
+pub fn readSettledRelations(a: std.mem.Allocator, v: c.thinkthen_complete_settled_relations) anyerror!SettledRelations {
     return blk: {
         const items = try a.alloc(RelatedEntityEdge, v.value.len);
         for (items, 0..) |*out, i| {
@@ -2437,7 +2428,7 @@ pub fn readSettledRelations(a: std.mem.Allocator, v: c.thinkthen_complete_settle
     };
 }
 
-pub fn readRelatedEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity_edge_v1) anyerror!RelatedEntityEdge {
+pub fn readRelatedEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity_edge) anyerror!RelatedEntityEdge {
     return .{
         .either = switch (v.either.presence) {
             0 => .missing,
@@ -2453,7 +2444,7 @@ pub fn readRelatedEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_relat
     };
 }
 
-pub fn readRelationEndpoint(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_v1) anyerror!RelationEndpoint {
+pub fn readRelationEndpoint(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint) anyerror!RelationEndpoint {
     return switch (v.kind) {
         1 => .{ .related_entity = try readRelationEndpointRelatedEntity(a, v.data.related_entity[0]) },
         2 => .{ .source = try readRelationEndpointSource(a, v.data.source[0]) },
@@ -2461,7 +2452,7 @@ pub fn readRelationEndpoint(a: std.mem.Allocator, v: c.thinkthen_complete_relati
     };
 }
 
-pub fn readRelationEndpointSource(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_source_v1) anyerror!RelationEndpointSource {
+pub fn readRelationEndpointSource(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_source) anyerror!RelationEndpointSource {
     return .{
         .file = switch (v.file.presence) {
             0 => .missing,
@@ -2494,7 +2485,7 @@ pub fn readRelationEndpointSource(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readRelationEndpointRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_related_entity_v1) anyerror!RelationEndpointRelatedEntity {
+pub fn readRelationEndpointRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_relation_endpoint_related_entity) anyerror!RelationEndpointRelatedEntity {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .name = try a.dupe(u8, text(v.name)),
@@ -2502,7 +2493,7 @@ pub fn readRelationEndpointRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_co
     };
 }
 
-pub fn readAnswerShape10(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10_v1) anyerror!AnswerShape10 {
+pub fn readAnswerShape10(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10) anyerror!AnswerShape10 {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
@@ -2525,7 +2516,7 @@ pub fn readAnswerShape10(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sh
     };
 }
 
-pub fn readAnswerShape10AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10_any_of_1_items_v1) anyerror!AnswerShape10AnyOf1Items {
+pub fn readAnswerShape10AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_10_any_of_1_items) anyerror!AnswerShape10AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(AnswerShape8AnyOf1Items, v.data.array.len);
@@ -2540,7 +2531,7 @@ pub fn readAnswerShape10AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSettledAnswerRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_recognize_v1) anyerror!SettledAnswerRecognize {
+pub fn readSettledAnswerRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_recognize) anyerror!SettledAnswerRecognize {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2572,7 +2563,7 @@ pub fn readSettledAnswerRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readAnswerShape13(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13_v1) anyerror!AnswerShape13 {
+pub fn readAnswerShape13(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13) anyerror!AnswerShape13 {
     return switch (v.kind) {
         1 => .{ .object = try readSettledRecognition(a, v.data.object[0]) },
         2 => .null_value,
@@ -2588,7 +2579,7 @@ pub fn readAnswerShape13(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sh
     };
 }
 
-pub fn readAnswerShape13AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13_any_of_1_items_v1) anyerror!AnswerShape13AnyOf1Items {
+pub fn readAnswerShape13AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_13_any_of_1_items) anyerror!AnswerShape13AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .object = try readSettledRecognition(a, v.data.object[0]) },
         2 => .null_value,
@@ -2596,7 +2587,7 @@ pub fn readAnswerShape13AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSettledRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_v1) anyerror!SettledRecognition {
+pub fn readSettledRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition) anyerror!SettledRecognition {
     return switch (v.kind) {
         1 => .{ .entities = try readSettledRecognitionEntities(a, v.data.entities[0]) },
         2 => .{ .mode_proposals = try readSettledRecognitionModeProposals(a, v.data.mode_proposals[0]) },
@@ -2604,7 +2595,7 @@ pub fn readSettledRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_sett
     };
 }
 
-pub fn readSettledRecognitionModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_mode_proposals_v1) anyerror!SettledRecognitionModeProposals {
+pub fn readSettledRecognitionModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_mode_proposals) anyerror!SettledRecognitionModeProposals {
     return .{
         .mode = try readBoundaryMode(a, v.mode[0]),
         .proposals = blk: {
@@ -2619,7 +2610,7 @@ pub fn readSettledRecognitionModeProposals(a: std.mem.Allocator, v: c.thinkthen_
     };
 }
 
-pub fn readBoundaryProposal(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_proposal_v1) anyerror!BoundaryProposal {
+pub fn readBoundaryProposal(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_proposal) anyerror!BoundaryProposal {
     return .{
         .end = v.end,
         .file = switch (v.file.presence) {
@@ -2648,7 +2639,7 @@ pub fn readBoundaryProposal(a: std.mem.Allocator, v: c.thinkthen_complete_bounda
     };
 }
 
-pub fn readBoundaryMode(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_mode_v1) anyerror!BoundaryMode {
+pub fn readBoundaryMode(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_mode) anyerror!BoundaryMode {
     _ = a;
     return switch (v.kind) {
         1 => .boundary_only,
@@ -2656,7 +2647,7 @@ pub fn readBoundaryMode(a: std.mem.Allocator, v: c.thinkthen_complete_boundary_m
     };
 }
 
-pub fn readSettledRecognitionEntities(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_entities_v1) anyerror!SettledRecognitionEntities {
+pub fn readSettledRecognitionEntities(a: std.mem.Allocator, v: c.thinkthen_complete_settled_recognition_entities) anyerror!SettledRecognitionEntities {
     return .{
         .entities = blk: {
             const items = try a.alloc(Entity, v.entities.len);
@@ -2683,7 +2674,7 @@ pub fn readSettledRecognitionEntities(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge_v1) anyerror!EntityEdge {
+pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge) anyerror!EntityEdge {
     return .{
         .either = switch (v.either.presence) {
             0 => .missing,
@@ -2699,7 +2690,7 @@ pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge_
     };
 }
 
-pub fn readEntity(a: std.mem.Allocator, v: c.thinkthen_complete_entity_v1) anyerror!Entity {
+pub fn readEntity(a: std.mem.Allocator, v: c.thinkthen_complete_entity) anyerror!Entity {
     return .{
         .end = v.end,
         .file = switch (v.file.presence) {
@@ -2729,7 +2720,7 @@ pub fn readEntity(a: std.mem.Allocator, v: c.thinkthen_complete_entity_v1) anyer
     };
 }
 
-pub fn readSettledAnswerFind(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_find_v1) anyerror!SettledAnswerFind {
+pub fn readSettledAnswerFind(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_find) anyerror!SettledAnswerFind {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2761,11 +2752,11 @@ pub fn readSettledAnswerFind(a: std.mem.Allocator, v: c.thinkthen_complete_settl
     };
 }
 
-pub fn readAnswerShape12(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_12_v1) anyerror!AnswerShape12 {
+pub fn readAnswerShape12(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_12) anyerror!AnswerShape12 {
     return try readValue(a, v.value[0]);
 }
 
-pub fn readSettledAnswerRank(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_rank_v1) anyerror!SettledAnswerRank {
+pub fn readSettledAnswerRank(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_rank) anyerror!SettledAnswerRank {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2797,7 +2788,7 @@ pub fn readSettledAnswerRank(a: std.mem.Allocator, v: c.thinkthen_complete_settl
     };
 }
 
-pub fn readAnswerShape11(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11_v1) anyerror!AnswerShape11 {
+pub fn readAnswerShape11(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11) anyerror!AnswerShape11 {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(u64, v.data.array.len);
@@ -2820,7 +2811,7 @@ pub fn readAnswerShape11(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sh
     };
 }
 
-pub fn readAnswerShape11AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11_any_of_1_items_v1) anyerror!AnswerShape11AnyOf1Items {
+pub fn readAnswerShape11AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_11_any_of_1_items) anyerror!AnswerShape11AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(u64, v.data.array.len);
@@ -2835,7 +2826,7 @@ pub fn readAnswerShape11AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSettledAnswerFilter(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_filter_v1) anyerror!SettledAnswerFilter {
+pub fn readSettledAnswerFilter(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_filter) anyerror!SettledAnswerFilter {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2867,7 +2858,7 @@ pub fn readSettledAnswerFilter(a: std.mem.Allocator, v: c.thinkthen_complete_set
     };
 }
 
-pub fn readAnswerShape9(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9_v1) anyerror!AnswerShape9 {
+pub fn readAnswerShape9(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9) anyerror!AnswerShape9 {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(SettledOriginal, v.data.array.len);
@@ -2890,7 +2881,7 @@ pub fn readAnswerShape9(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerShape9AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9_any_of_1_items_v1) anyerror!AnswerShape9AnyOf1Items {
+pub fn readAnswerShape9AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_9_any_of_1_items) anyerror!AnswerShape9AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc(SettledOriginal, v.data.array.len);
@@ -2905,11 +2896,11 @@ pub fn readAnswerShape9AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSettledOriginal(a: std.mem.Allocator, v: c.thinkthen_complete_settled_original_v1) anyerror!SettledOriginal {
+pub fn readSettledOriginal(a: std.mem.Allocator, v: c.thinkthen_complete_settled_original) anyerror!SettledOriginal {
     return try readValue(a, v.value[0]);
 }
 
-pub fn readSettledAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_score_v1) anyerror!SettledAnswerScore {
+pub fn readSettledAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_score) anyerror!SettledAnswerScore {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2941,7 +2932,7 @@ pub fn readSettledAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_sett
     };
 }
 
-pub fn readAnswerShape8(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8_v1) anyerror!AnswerShape8 {
+pub fn readAnswerShape8(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_8) anyerror!AnswerShape8 {
     return switch (v.kind) {
         1 => .{ .number = v.data.number },
         2 => .null_value,
@@ -2957,7 +2948,7 @@ pub fn readAnswerShape8(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readSettledAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_tag_v1) anyerror!SettledAnswerTag {
+pub fn readSettledAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_tag) anyerror!SettledAnswerTag {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -2989,7 +2980,7 @@ pub fn readSettledAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_settle
     };
 }
 
-pub fn readAnswerShape7(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7_v1) anyerror!AnswerShape7 {
+pub fn readAnswerShape7(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7) anyerror!AnswerShape7 {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc([]const u8, v.data.array.len);
@@ -3012,7 +3003,7 @@ pub fn readAnswerShape7(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readAnswerShape7AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7_any_of_1_items_v1) anyerror!AnswerShape7AnyOf1Items {
+pub fn readAnswerShape7AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_7_any_of_1_items) anyerror!AnswerShape7AnyOf1Items {
     return switch (v.kind) {
         1 => .{ .array = blk: {
             const items = try a.alloc([]const u8, v.data.array.len);
@@ -3027,7 +3018,7 @@ pub fn readAnswerShape7AnyOf1Items(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSettledAnswerChoose(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_choose_v1) anyerror!SettledAnswerChoose {
+pub fn readSettledAnswerChoose(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_choose) anyerror!SettledAnswerChoose {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -3059,7 +3050,7 @@ pub fn readSettledAnswerChoose(a: std.mem.Allocator, v: c.thinkthen_complete_set
     };
 }
 
-pub fn readAnswerShape6(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6_v1) anyerror!AnswerShape6 {
+pub fn readAnswerShape6(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_6) anyerror!AnswerShape6 {
     return switch (v.kind) {
         1 => .{ .string = try a.dupe(u8, text(v.data.string)) },
         2 => .null_value,
@@ -3075,7 +3066,7 @@ pub fn readAnswerShape6(a: std.mem.Allocator, v: c.thinkthen_complete_answer_sha
     };
 }
 
-pub fn readSettledAnswerDecide(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_decide_v1) anyerror!SettledAnswerDecide {
+pub fn readSettledAnswerDecide(a: std.mem.Allocator, v: c.thinkthen_complete_settled_answer_decide) anyerror!SettledAnswerDecide {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .index = switch (v.index.presence) {
@@ -3107,11 +3098,11 @@ pub fn readSettledAnswerDecide(a: std.mem.Allocator, v: c.thinkthen_complete_set
     };
 }
 
-pub fn readAnswerShape(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape_v1) anyerror!AnswerShape {
+pub fn readAnswerShape(a: std.mem.Allocator, v: c.thinkthen_complete_answer_shape) anyerror!AnswerShape {
     return try readValue(a, v.value[0]);
 }
 
-pub fn readSessionPacketObservation(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_observation_v1) anyerror!SessionPacketObservation {
+pub fn readSessionPacketObservation(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_observation) anyerror!SessionPacketObservation {
     return .{
         .function = try readRequestFunction(a, v.function[0]),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -3120,7 +3111,7 @@ pub fn readSessionPacketObservation(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSessionObservation(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation_v1) anyerror!SessionObservation {
+pub fn readSessionObservation(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation) anyerror!SessionObservation {
     return switch (v.kind) {
         1 => .{ .question = try readSessionObservationQuestion(a, v.data.question[0]) },
         2 => .{ .row = try readSessionObservationRow(a, v.data.row[0]) },
@@ -3128,7 +3119,7 @@ pub fn readSessionObservation(a: std.mem.Allocator, v: c.thinkthen_complete_sess
     };
 }
 
-pub fn readSessionObservationRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation_row_v1) anyerror!SessionObservationRow {
+pub fn readSessionObservationRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation_row) anyerror!SessionObservationRow {
     return .{
         .index = v.index,
         .kind = try a.dupe(u8, text(v.kind)),
@@ -3137,7 +3128,7 @@ pub fn readSessionObservationRow(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readSessionObservedRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_v1) anyerror!SessionObservedRow {
+pub fn readSessionObservedRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row) anyerror!SessionObservedRow {
     return switch (v.kind) {
         1 => .{ .judgment = try readSessionObservedRowJudgment(a, v.data.judgment[0]) },
         2 => .{ .annotated = try readSessionObservedRowAnnotated(a, v.data.annotated[0]) },
@@ -3148,7 +3139,7 @@ pub fn readSessionObservedRow(a: std.mem.Allocator, v: c.thinkthen_complete_sess
     };
 }
 
-pub fn readSessionObservedRowRelations(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_relations_v1) anyerror!SessionObservedRowRelations {
+pub fn readSessionObservedRowRelations(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_relations) anyerror!SessionObservedRowRelations {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = blk: {
@@ -3163,7 +3154,7 @@ pub fn readSessionObservedRowRelations(a: std.mem.Allocator, v: c.thinkthen_comp
     };
 }
 
-pub fn readSessionRelationEdge(a: std.mem.Allocator, v: c.thinkthen_complete_session_relation_edge_v1) anyerror!SessionRelationEdge {
+pub fn readSessionRelationEdge(a: std.mem.Allocator, v: c.thinkthen_complete_session_relation_edge) anyerror!SessionRelationEdge {
     return .{
         .either = v.either != 0,
         .probability = v.probability,
@@ -3174,7 +3165,7 @@ pub fn readSessionRelationEdge(a: std.mem.Allocator, v: c.thinkthen_complete_ses
     };
 }
 
-pub fn readEntityDocument(a: std.mem.Allocator, v: c.thinkthen_complete_entity_document_v1) anyerror!EntityDocument {
+pub fn readEntityDocument(a: std.mem.Allocator, v: c.thinkthen_complete_entity_document) anyerror!EntityDocument {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .name = try a.dupe(u8, text(v.name)),
@@ -3182,7 +3173,7 @@ pub fn readEntityDocument(a: std.mem.Allocator, v: c.thinkthen_complete_entity_d
     };
 }
 
-pub fn readSessionObservedRowFind(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_find_v1) anyerror!SessionObservedRowFind {
+pub fn readSessionObservedRowFind(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_find) anyerror!SessionObservedRowFind {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = switch (v.value.presence) {
@@ -3195,7 +3186,7 @@ pub fn readSessionObservedRowFind(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readSessionObservedRowRecognized(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_recognized_v1) anyerror!SessionObservedRowRecognized {
+pub fn readSessionObservedRowRecognized(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_recognized) anyerror!SessionObservedRowRecognized {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = try readSessionRecognition(a, v.value[0]),
@@ -3203,7 +3194,7 @@ pub fn readSessionObservedRowRecognized(a: std.mem.Allocator, v: c.thinkthen_com
     };
 }
 
-pub fn readSessionRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_session_recognition_v1) anyerror!SessionRecognition {
+pub fn readSessionRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_session_recognition) anyerror!SessionRecognition {
     return .{
         .entities = blk: {
             const items = try a.alloc(Entity, v.entities.len);
@@ -3244,7 +3235,7 @@ pub fn readSessionRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_sess
     };
 }
 
-pub fn readRecognitionEdgeDocument(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_edge_v1) anyerror!RecognitionEdgeDocument {
+pub fn readRecognitionEdgeDocument(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_edge) anyerror!RecognitionEdgeDocument {
     return .{
         .either = v.either != 0,
         .probability = v.probability,
@@ -3255,7 +3246,7 @@ pub fn readRecognitionEdgeDocument(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readRecognitionMode(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_mode_v1) anyerror!RecognitionMode {
+pub fn readRecognitionMode(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_mode) anyerror!RecognitionMode {
     _ = a;
     return switch (v.kind) {
         1 => .whole,
@@ -3264,7 +3255,7 @@ pub fn readRecognitionMode(a: std.mem.Allocator, v: c.thinkthen_complete_recogni
     };
 }
 
-pub fn readSessionObservedRowAnnotated(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_annotated_v1) anyerror!SessionObservedRowAnnotated {
+pub fn readSessionObservedRowAnnotated(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_annotated) anyerror!SessionObservedRowAnnotated {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = blk: {
@@ -3279,7 +3270,7 @@ pub fn readSessionObservedRowAnnotated(a: std.mem.Allocator, v: c.thinkthen_comp
     };
 }
 
-pub fn readSessionAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_session_annotation_v1) anyerror!SessionAnnotation {
+pub fn readSessionAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_session_annotation) anyerror!SessionAnnotation {
     return .{
         .name = try a.dupe(u8, text(v.name)),
         .value = try readAnnotationValue(a, v.value[0]),
@@ -3287,7 +3278,7 @@ pub fn readSessionAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_sessi
     };
 }
 
-pub fn readAnnotationValue(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_v1) anyerror!AnnotationValue {
+pub fn readAnnotationValue(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value) anyerror!AnnotationValue {
     return switch (v.kind) {
         1 => .{ .decision = try readAnnotationValueDecision(a, v.data.decision[0]) },
         2 => .{ .choice = try readAnnotationValueChoice(a, v.data.choice[0]) },
@@ -3298,7 +3289,7 @@ pub fn readAnnotationValue(a: std.mem.Allocator, v: c.thinkthen_complete_annotat
     };
 }
 
-pub fn readAnnotationValueFailed(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_failed_v1) anyerror!AnnotationValueFailed {
+pub fn readAnnotationValueFailed(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_failed) anyerror!AnnotationValueFailed {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = try readFailure(a, v.value[0]),
@@ -3306,7 +3297,7 @@ pub fn readAnnotationValueFailed(a: std.mem.Allocator, v: c.thinkthen_complete_a
     };
 }
 
-pub fn readFailure(a: std.mem.Allocator, v: c.thinkthen_complete_failure_v1) anyerror!Failure {
+pub fn readFailure(a: std.mem.Allocator, v: c.thinkthen_complete_failure) anyerror!Failure {
     return .{
         .cause = try readFailureCause(a, v.cause[0]),
         .kind = try readFailureFieldKind(a, v.kind[0]),
@@ -3314,7 +3305,7 @@ pub fn readFailure(a: std.mem.Allocator, v: c.thinkthen_complete_failure_v1) any
     };
 }
 
-pub fn readFailureCause(a: std.mem.Allocator, v: c.thinkthen_complete_failure_cause_v1) anyerror!FailureCause {
+pub fn readFailureCause(a: std.mem.Allocator, v: c.thinkthen_complete_failure_cause) anyerror!FailureCause {
     _ = a;
     return switch (v.kind) {
         1 => .missing_answer,
@@ -3327,7 +3318,7 @@ pub fn readFailureCause(a: std.mem.Allocator, v: c.thinkthen_complete_failure_ca
     };
 }
 
-pub fn readAnnotationValueTags(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_tags_v1) anyerror!AnnotationValueTags {
+pub fn readAnnotationValueTags(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_tags) anyerror!AnnotationValueTags {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = blk: {
@@ -3342,7 +3333,7 @@ pub fn readAnnotationValueTags(a: std.mem.Allocator, v: c.thinkthen_complete_ann
     };
 }
 
-pub fn readAnnotationValueScore(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_score_v1) anyerror!AnnotationValueScore {
+pub fn readAnnotationValueScore(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_score) anyerror!AnnotationValueScore {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = v.value,
@@ -3350,7 +3341,7 @@ pub fn readAnnotationValueScore(a: std.mem.Allocator, v: c.thinkthen_complete_an
     };
 }
 
-pub fn readAnnotationValueChoice(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_choice_v1) anyerror!AnnotationValueChoice {
+pub fn readAnnotationValueChoice(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_choice) anyerror!AnnotationValueChoice {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = switch (v.value.presence) {
@@ -3363,7 +3354,7 @@ pub fn readAnnotationValueChoice(a: std.mem.Allocator, v: c.thinkthen_complete_a
     };
 }
 
-pub fn readAnnotationValueDecision(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_decision_v1) anyerror!AnnotationValueDecision {
+pub fn readAnnotationValueDecision(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_value_decision) anyerror!AnnotationValueDecision {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = switch (v.value.presence) {
@@ -3376,7 +3367,7 @@ pub fn readAnnotationValueDecision(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSessionObservedRowJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_judgment_v1) anyerror!SessionObservedRowJudgment {
+pub fn readSessionObservedRowJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_session_observed_row_judgment) anyerror!SessionObservedRowJudgment {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = try readSessionJudgment(a, v.value[0]),
@@ -3384,7 +3375,7 @@ pub fn readSessionObservedRowJudgment(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readSessionJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_v1) anyerror!SessionJudgment {
+pub fn readSessionJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment) anyerror!SessionJudgment {
     return switch (v.kind) {
         1 => .{ .decision = try readSessionJudgmentDecision(a, v.data.decision[0]) },
         2 => .{ .choice = try readSessionJudgmentChoice(a, v.data.choice[0]) },
@@ -3394,7 +3385,7 @@ pub fn readSessionJudgment(a: std.mem.Allocator, v: c.thinkthen_complete_session
     };
 }
 
-pub fn readSessionJudgmentTags(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_tags_v1) anyerror!SessionJudgmentTags {
+pub fn readSessionJudgmentTags(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_tags) anyerror!SessionJudgmentTags {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = blk: {
@@ -3409,7 +3400,7 @@ pub fn readSessionJudgmentTags(a: std.mem.Allocator, v: c.thinkthen_complete_ses
     };
 }
 
-pub fn readSessionJudgmentScore(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_score_v1) anyerror!SessionJudgmentScore {
+pub fn readSessionJudgmentScore(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_score) anyerror!SessionJudgmentScore {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = v.value,
@@ -3417,7 +3408,7 @@ pub fn readSessionJudgmentScore(a: std.mem.Allocator, v: c.thinkthen_complete_se
     };
 }
 
-pub fn readSessionJudgmentChoice(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_choice_v1) anyerror!SessionJudgmentChoice {
+pub fn readSessionJudgmentChoice(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_choice) anyerror!SessionJudgmentChoice {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = switch (v.value.presence) {
@@ -3430,7 +3421,7 @@ pub fn readSessionJudgmentChoice(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readSessionJudgmentDecision(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_decision_v1) anyerror!SessionJudgmentDecision {
+pub fn readSessionJudgmentDecision(a: std.mem.Allocator, v: c.thinkthen_complete_session_judgment_decision) anyerror!SessionJudgmentDecision {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = switch (v.value.presence) {
@@ -3443,7 +3434,7 @@ pub fn readSessionJudgmentDecision(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSessionObservationQuestion(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation_question_v1) anyerror!SessionObservationQuestion {
+pub fn readSessionObservationQuestion(a: std.mem.Allocator, v: c.thinkthen_complete_session_observation_question) anyerror!SessionObservationQuestion {
     return .{
         .detail = try readSessionQuestionDetail(a, v.detail[0]),
         .index = v.index,
@@ -3465,7 +3456,7 @@ pub fn readSessionObservationQuestion(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readSessionQuestionDetail(a: std.mem.Allocator, v: c.thinkthen_complete_session_question_detail_v1) anyerror!SessionQuestionDetail {
+pub fn readSessionQuestionDetail(a: std.mem.Allocator, v: c.thinkthen_complete_session_question_detail) anyerror!SessionQuestionDetail {
     return .{
         .answer_id = switch (v.answer_id.presence) {
             0 => .missing,
@@ -3590,7 +3581,7 @@ pub fn readSessionQuestionDetail(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readJudgmentValue(a: std.mem.Allocator, v: c.thinkthen_complete_value_v1) anyerror!JudgmentValue {
+pub fn readJudgmentValue(a: std.mem.Allocator, v: c.thinkthen_complete_value) anyerror!JudgmentValue {
     return switch (v.kind) {
         1 => .{ .boolean = v.data.boolean != 0 },
         2 => .null_value,
@@ -3608,7 +3599,7 @@ pub fn readJudgmentValue(a: std.mem.Allocator, v: c.thinkthen_complete_value_v1)
     };
 }
 
-pub fn readTokenUsage(a: std.mem.Allocator, v: c.thinkthen_complete_token_usage_v1) anyerror!TokenUsage {
+pub fn readTokenUsage(a: std.mem.Allocator, v: c.thinkthen_complete_token_usage) anyerror!TokenUsage {
     return .{
         .input_tokens = v.input_tokens,
         .output_tokens = v.output_tokens,
@@ -3616,7 +3607,7 @@ pub fn readTokenUsage(a: std.mem.Allocator, v: c.thinkthen_complete_token_usage_
     };
 }
 
-pub fn readThreshold(a: std.mem.Allocator, v: c.thinkthen_complete_threshold_v1) anyerror!Threshold {
+pub fn readThreshold(a: std.mem.Allocator, v: c.thinkthen_complete_threshold) anyerror!Threshold {
     return switch (v.kind) {
         1 => .{ .number = v.data.number },
         2 => .{ .string = try a.dupe(u8, text(v.data.string)) },
@@ -3624,7 +3615,7 @@ pub fn readThreshold(a: std.mem.Allocator, v: c.thinkthen_complete_threshold_v1)
     };
 }
 
-pub fn readUsage(a: std.mem.Allocator, v: c.thinkthen_complete_usage_v1) anyerror!Usage {
+pub fn readUsage(a: std.mem.Allocator, v: c.thinkthen_complete_usage) anyerror!Usage {
     return .{
         .input_tokens = switch (v.input_tokens.presence) {
             0 => .missing,
@@ -3642,7 +3633,7 @@ pub fn readUsage(a: std.mem.Allocator, v: c.thinkthen_complete_usage_v1) anyerro
     };
 }
 
-pub fn readQuestionSource(a: std.mem.Allocator, v: c.thinkthen_complete_question_source_v1) anyerror!QuestionSource {
+pub fn readQuestionSource(a: std.mem.Allocator, v: c.thinkthen_complete_question_source) anyerror!QuestionSource {
     return .{
         .answered_by = try a.dupe(u8, text(v.answered_by)),
         .batch_size = switch (v.batch_size.presence) {
@@ -3656,7 +3647,7 @@ pub fn readQuestionSource(a: std.mem.Allocator, v: c.thinkthen_complete_question
     };
 }
 
-pub fn readOrigin(a: std.mem.Allocator, v: c.thinkthen_complete_origin_v1) anyerror!Origin {
+pub fn readOrigin(a: std.mem.Allocator, v: c.thinkthen_complete_origin) anyerror!Origin {
     _ = a;
     return switch (v.kind) {
         1 => .live,
@@ -3668,7 +3659,7 @@ pub fn readOrigin(a: std.mem.Allocator, v: c.thinkthen_complete_origin_v1) anyer
     };
 }
 
-pub fn readQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_v1) anyerror!QuestionDocument {
+pub fn readQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_question_document) anyerror!QuestionDocument {
     return switch (v.kind) {
         1 => .{ .decide = try readQuestionDocumentDecide(a, v.data.decide[0]) },
         2 => .{ .choose = try readQuestionDocumentChoose(a, v.data.choose[0]) },
@@ -3678,7 +3669,7 @@ pub fn readQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_questi
     };
 }
 
-pub fn readQuestionDocumentScore(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_score_v1) anyerror!QuestionDocumentScore {
+pub fn readQuestionDocumentScore(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_score) anyerror!QuestionDocumentScore {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -3742,12 +3733,6 @@ pub fn readQuestionDocumentScore(a: std.mem.Allocator, v: c.thinkthen_complete_q
             2 => .{ .value = try a.dupe(u8, text(v.profile.value)) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
-            else => return error.InvalidNativeDiscriminator,
-        },
         .levels = blk: {
             const items = try a.alloc([]const u8, v.levels.len);
             for (items, 0..) |*out, i| {
@@ -3767,16 +3752,11 @@ pub fn readQuestionDocumentScore(a: std.mem.Allocator, v: c.thinkthen_complete_q
     };
 }
 
-pub fn readWordingVersion(a: std.mem.Allocator, v: c.thinkthen_complete_wording_version_v1) anyerror!WordingVersion {
-    _ = a;
-    return v.value;
-}
-
-pub fn readQuestionName(a: std.mem.Allocator, v: c.thinkthen_complete_question_name_v1) anyerror!QuestionName {
+pub fn readQuestionName(a: std.mem.Allocator, v: c.thinkthen_complete_question_name) anyerror!QuestionName {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readLabel(a: std.mem.Allocator, v: c.thinkthen_complete_label_v1) anyerror!Label {
+pub fn readLabel(a: std.mem.Allocator, v: c.thinkthen_complete_label) anyerror!Label {
     return .{
         .description = switch (v.description.presence) {
             0 => .missing,
@@ -3789,7 +3769,7 @@ pub fn readLabel(a: std.mem.Allocator, v: c.thinkthen_complete_label_v1) anyerro
     };
 }
 
-pub fn readInputDeclaration(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration_v1) anyerror!InputDeclaration {
+pub fn readInputDeclaration(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration) anyerror!InputDeclaration {
     return switch (v.kind) {
         1 => .{ .string_root = try readInputDeclarationStringRoot(a, v.data.string_root[0]) },
         2 => .{ .object_root = try readInputDeclarationObjectRoot(a, v.data.object_root[0]) },
@@ -3797,7 +3777,7 @@ pub fn readInputDeclaration(a: std.mem.Allocator, v: c.thinkthen_complete_input_
     };
 }
 
-pub fn readInputDeclarationObjectRoot(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration_object_root_v1) anyerror!InputDeclarationObjectRoot {
+pub fn readInputDeclarationObjectRoot(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration_object_root) anyerror!InputDeclarationObjectRoot {
     return .{
         .properties = blk: {
             const entries = try a.alloc(Map(InputPropertyType).Entry, v.properties.len);
@@ -3825,7 +3805,7 @@ pub fn readInputDeclarationObjectRoot(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readObjectType(a: std.mem.Allocator, v: c.thinkthen_complete_object_type_v1) anyerror!ObjectType {
+pub fn readObjectType(a: std.mem.Allocator, v: c.thinkthen_complete_object_type) anyerror!ObjectType {
     _ = a;
     return switch (v.kind) {
         1 => .object,
@@ -3833,7 +3813,7 @@ pub fn readObjectType(a: std.mem.Allocator, v: c.thinkthen_complete_object_type_
     };
 }
 
-pub fn readInputPropertyType(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_v1) anyerror!InputPropertyType {
+pub fn readInputPropertyType(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type) anyerror!InputPropertyType {
     return switch (v.kind) {
         1 => .{ .string = try readInputPropertyTypeString(a, v.data.string[0]) },
         2 => .{ .number = try readInputPropertyTypeNumber(a, v.data.number[0]) },
@@ -3843,7 +3823,7 @@ pub fn readInputPropertyType(a: std.mem.Allocator, v: c.thinkthen_complete_input
     };
 }
 
-pub fn readInputPropertyTypeArray(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_array_v1) anyerror!InputPropertyTypeArray {
+pub fn readInputPropertyTypeArray(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_array) anyerror!InputPropertyTypeArray {
     return .{
         .items = try readStringRoot(a, v.items[0]),
         .type = try a.dupe(u8, text(v.type)),
@@ -3851,14 +3831,14 @@ pub fn readInputPropertyTypeArray(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readStringRoot(a: std.mem.Allocator, v: c.thinkthen_complete_string_root_v1) anyerror!StringRoot {
+pub fn readStringRoot(a: std.mem.Allocator, v: c.thinkthen_complete_string_root) anyerror!StringRoot {
     return .{
         .type = try readStringType(a, v.type[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readStringType(a: std.mem.Allocator, v: c.thinkthen_complete_string_type_v1) anyerror!StringType {
+pub fn readStringType(a: std.mem.Allocator, v: c.thinkthen_complete_string_type) anyerror!StringType {
     _ = a;
     return switch (v.kind) {
         1 => .string,
@@ -3866,35 +3846,35 @@ pub fn readStringType(a: std.mem.Allocator, v: c.thinkthen_complete_string_type_
     };
 }
 
-pub fn readInputPropertyTypeBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_boolean_v1) anyerror!InputPropertyTypeBoolean {
+pub fn readInputPropertyTypeBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_boolean) anyerror!InputPropertyTypeBoolean {
     return .{
         .type = try a.dupe(u8, text(v.type)),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readInputPropertyTypeNumber(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_number_v1) anyerror!InputPropertyTypeNumber {
+pub fn readInputPropertyTypeNumber(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_number) anyerror!InputPropertyTypeNumber {
     return .{
         .type = try a.dupe(u8, text(v.type)),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readInputPropertyTypeString(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_string_v1) anyerror!InputPropertyTypeString {
+pub fn readInputPropertyTypeString(a: std.mem.Allocator, v: c.thinkthen_complete_input_property_type_string) anyerror!InputPropertyTypeString {
     return .{
         .type = try a.dupe(u8, text(v.type)),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readInputDeclarationStringRoot(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration_string_root_v1) anyerror!InputDeclarationStringRoot {
+pub fn readInputDeclarationStringRoot(a: std.mem.Allocator, v: c.thinkthen_complete_input_declaration_string_root) anyerror!InputDeclarationStringRoot {
     return .{
         .type = try readStringType(a, v.type[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readBatch(a: std.mem.Allocator, v: c.thinkthen_complete_batch_v1) anyerror!Batch {
+pub fn readBatch(a: std.mem.Allocator, v: c.thinkthen_complete_batch) anyerror!Batch {
     return switch (v.kind) {
         1 => .{ .integer = v.data.integer },
         2 => .{ .string = try readBatchString(a, v.data.string[0]) },
@@ -3902,7 +3882,7 @@ pub fn readBatch(a: std.mem.Allocator, v: c.thinkthen_complete_batch_v1) anyerro
     };
 }
 
-pub fn readQuestionDocumentTag(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_tag_v1) anyerror!QuestionDocumentTag {
+pub fn readQuestionDocumentTag(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_tag) anyerror!QuestionDocumentTag {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -3964,12 +3944,6 @@ pub fn readQuestionDocumentTag(a: std.mem.Allocator, v: c.thinkthen_complete_que
             0 => .missing,
             1 => .null_value,
             2 => .{ .value = try a.dupe(u8, text(v.profile.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
         .labels = blk: {
@@ -3991,7 +3965,7 @@ pub fn readQuestionDocumentTag(a: std.mem.Allocator, v: c.thinkthen_complete_que
     };
 }
 
-pub fn readQuestionDocumentChoose(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_choose_v1) anyerror!QuestionDocumentChoose {
+pub fn readQuestionDocumentChoose(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_choose) anyerror!QuestionDocumentChoose {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -4053,12 +4027,6 @@ pub fn readQuestionDocumentChoose(a: std.mem.Allocator, v: c.thinkthen_complete_
             0 => .missing,
             1 => .null_value,
             2 => .{ .value = try a.dupe(u8, text(v.profile.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
         .options = blk: {
@@ -4080,7 +4048,7 @@ pub fn readQuestionDocumentChoose(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readQuestionDocumentDecide(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_decide_v1) anyerror!QuestionDocumentDecide {
+pub fn readQuestionDocumentDecide(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_decide) anyerror!QuestionDocumentDecide {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -4142,12 +4110,6 @@ pub fn readQuestionDocumentDecide(a: std.mem.Allocator, v: c.thinkthen_complete_
             0 => .missing,
             1 => .null_value,
             2 => .{ .value = try a.dupe(u8, text(v.profile.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
         .false = switch (v.false_.presence) {
@@ -4173,7 +4135,7 @@ pub fn readQuestionDocumentDecide(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readSessionProbabilities(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities_v1) anyerror!SessionProbabilities {
+pub fn readSessionProbabilities(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities) anyerror!SessionProbabilities {
     return switch (v.kind) {
         1 => .{ .yes_no = try readSessionProbabilitiesYesNo(a, v.data.yes_no[0]) },
         2 => .{ .named = try readSessionProbabilitiesNamed(a, v.data.named[0]) },
@@ -4181,7 +4143,7 @@ pub fn readSessionProbabilities(a: std.mem.Allocator, v: c.thinkthen_complete_se
     };
 }
 
-pub fn readSessionProbabilitiesNamed(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities_named_v1) anyerror!SessionProbabilitiesNamed {
+pub fn readSessionProbabilitiesNamed(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities_named) anyerror!SessionProbabilitiesNamed {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = blk: {
@@ -4196,7 +4158,7 @@ pub fn readSessionProbabilitiesNamed(a: std.mem.Allocator, v: c.thinkthen_comple
     };
 }
 
-pub fn readSessionNamedProbability(a: std.mem.Allocator, v: c.thinkthen_complete_session_named_probability_v1) anyerror!SessionNamedProbability {
+pub fn readSessionNamedProbability(a: std.mem.Allocator, v: c.thinkthen_complete_session_named_probability) anyerror!SessionNamedProbability {
     return .{
         .name = try a.dupe(u8, text(v.name)),
         .probability = v.probability,
@@ -4204,7 +4166,7 @@ pub fn readSessionNamedProbability(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readSessionProbabilitiesYesNo(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities_yes_no_v1) anyerror!SessionProbabilitiesYesNo {
+pub fn readSessionProbabilitiesYesNo(a: std.mem.Allocator, v: c.thinkthen_complete_session_probabilities_yes_no) anyerror!SessionProbabilitiesYesNo {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .value = v.value,
@@ -4212,7 +4174,7 @@ pub fn readSessionProbabilitiesYesNo(a: std.mem.Allocator, v: c.thinkthen_comple
     };
 }
 
-pub fn readObservation(a: std.mem.Allocator, v: c.thinkthen_complete_observation_v1) anyerror!Observation {
+pub fn readObservation(a: std.mem.Allocator, v: c.thinkthen_complete_observation) anyerror!Observation {
     return switch (v.kind) {
         1 => .{ .observation_id = try readObservationObservationId(a, v.data.observation_id[0]) },
         2 => .{ .failure_id = try readObservationFailureId(a, v.data.failure_id[0]) },
@@ -4220,29 +4182,29 @@ pub fn readObservation(a: std.mem.Allocator, v: c.thinkthen_complete_observation
     };
 }
 
-pub fn readObservationFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_failure_id_v1) anyerror!ObservationFailureId {
+pub fn readObservationFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_failure_id) anyerror!ObservationFailureId {
     return .{
         .failure_id = try readFailureId(a, v.failure_id[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_failure_id_v1) anyerror!FailureId {
+pub fn readFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_failure_id) anyerror!FailureId {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readObservationObservationId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_observation_id_v1) anyerror!ObservationObservationId {
+pub fn readObservationObservationId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_observation_id) anyerror!ObservationObservationId {
     return .{
         .observation_id = try readObservationId(a, v.observation_id[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readObservationId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_id_v1) anyerror!ObservationId {
+pub fn readObservationId(a: std.mem.Allocator, v: c.thinkthen_complete_observation_id) anyerror!ObservationId {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readSessionInputSource(a: std.mem.Allocator, v: c.thinkthen_complete_session_input_source_v1) anyerror!SessionInputSource {
+pub fn readSessionInputSource(a: std.mem.Allocator, v: c.thinkthen_complete_session_input_source) anyerror!SessionInputSource {
     return .{
         .index = v.index,
         .source = try readPhysicalSource(a, v.source[0]),
@@ -4250,7 +4212,7 @@ pub fn readSessionInputSource(a: std.mem.Allocator, v: c.thinkthen_complete_sess
     };
 }
 
-pub fn readPhysicalSource(a: std.mem.Allocator, v: c.thinkthen_complete_physical_source_v1) anyerror!PhysicalSource {
+pub fn readPhysicalSource(a: std.mem.Allocator, v: c.thinkthen_complete_physical_source) anyerror!PhysicalSource {
     return .{
         .file = try a.dupe(u8, text(v.file)),
         .first_line = switch (v.first_line.presence) {
@@ -4269,11 +4231,11 @@ pub fn readPhysicalSource(a: std.mem.Allocator, v: c.thinkthen_complete_physical
     };
 }
 
-pub fn readAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_answer_id_v1) anyerror!AnswerId {
+pub fn readAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_answer_id) anyerror!AnswerId {
     return try a.dupe(u8, text(v.value));
 }
 
-pub fn readRequestFunction(a: std.mem.Allocator, v: c.thinkthen_complete_request_function_v1) anyerror!RequestFunction {
+pub fn readRequestFunction(a: std.mem.Allocator, v: c.thinkthen_complete_request_function) anyerror!RequestFunction {
     _ = a;
     return switch (v.kind) {
         1 => .decide,
@@ -4290,7 +4252,7 @@ pub fn readRequestFunction(a: std.mem.Allocator, v: c.thinkthen_complete_request
     };
 }
 
-pub fn readSessionPacketRelateAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_relate_aggregate_v1) anyerror!SessionPacketRelateAggregate {
+pub fn readSessionPacketRelateAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_relate_aggregate) anyerror!SessionPacketRelateAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -4299,7 +4261,7 @@ pub fn readSessionPacketRelateAggregate(a: std.mem.Allocator, v: c.thinkthen_com
     };
 }
 
-pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) anyerror!Relation {
+pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation) anyerror!Relation {
     return .{
         .answer = try readAnswers(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -4367,7 +4329,7 @@ pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) a
     };
 }
 
-pub fn readResultTag(a: std.mem.Allocator, v: c.thinkthen_complete_result_tag_v1) anyerror!ResultTag {
+pub fn readResultTag(a: std.mem.Allocator, v: c.thinkthen_complete_result_tag) anyerror!ResultTag {
     _ = a;
     return switch (v.kind) {
         1 => .@"thinkthen.result",
@@ -4375,7 +4337,7 @@ pub fn readResultTag(a: std.mem.Allocator, v: c.thinkthen_complete_result_tag_v1
     };
 }
 
-pub fn readRelateQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_relate_question_document_v1) anyerror!RelateQuestionDocument {
+pub fn readRelateQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_relate_question_document) anyerror!RelateQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -4455,17 +4417,11 @@ pub fn readRelateQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_
         },
         .threshold = try readThreshold(a, v.threshold[0]),
         .verb = try a.dupe(u8, text(v.verb)),
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
-            else => return error.InvalidNativeDiscriminator,
-        },
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readRelationRule(a: std.mem.Allocator, v: c.thinkthen_complete_relation_rule_v1) anyerror!RelationRule {
+pub fn readRelationRule(a: std.mem.Allocator, v: c.thinkthen_complete_relation_rule) anyerror!RelationRule {
     return .{
         .either = v.either != 0,
         .name = try a.dupe(u8, text(v.name)),
@@ -4482,7 +4438,7 @@ pub fn readRelationRule(a: std.mem.Allocator, v: c.thinkthen_complete_relation_r
     };
 }
 
-pub fn readRelateFields(a: std.mem.Allocator, v: c.thinkthen_complete_relate_fields_v1) anyerror!RelateFields {
+pub fn readRelateFields(a: std.mem.Allocator, v: c.thinkthen_complete_relate_fields) anyerror!RelateFields {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .name = try a.dupe(u8, text(v.name)),
@@ -4490,7 +4446,7 @@ pub fn readRelateFields(a: std.mem.Allocator, v: c.thinkthen_complete_relate_fie
     };
 }
 
-pub fn readPosition(a: std.mem.Allocator, v: c.thinkthen_complete_position_v1) anyerror!Position {
+pub fn readPosition(a: std.mem.Allocator, v: c.thinkthen_complete_position) anyerror!Position {
     return .{
         .file = switch (v.file.presence) {
             0 => .missing,
@@ -4527,7 +4483,7 @@ pub fn readPosition(a: std.mem.Allocator, v: c.thinkthen_complete_position_v1) a
     };
 }
 
-pub fn readMeta(a: std.mem.Allocator, v: c.thinkthen_complete_meta_v1) anyerror!Meta {
+pub fn readMeta(a: std.mem.Allocator, v: c.thinkthen_complete_meta) anyerror!Meta {
     return .{
         .answered_by = switch (v.answered_by.presence) {
             0 => .missing,
@@ -4630,7 +4586,7 @@ pub fn readMeta(a: std.mem.Allocator, v: c.thinkthen_complete_meta_v1) anyerror!
     };
 }
 
-pub fn readProfileWarning(a: std.mem.Allocator, v: c.thinkthen_complete_profile_warning_v1) anyerror!ProfileWarning {
+pub fn readProfileWarning(a: std.mem.Allocator, v: c.thinkthen_complete_profile_warning) anyerror!ProfileWarning {
     return .{
         .running = try a.dupe(u8, text(v.running)),
         .tuned_for = try a.dupe(u8, text(v.tuned_for)),
@@ -4638,7 +4594,7 @@ pub fn readProfileWarning(a: std.mem.Allocator, v: c.thinkthen_complete_profile_
     };
 }
 
-pub fn readBatchWarning(a: std.mem.Allocator, v: c.thinkthen_complete_batch_warning_v1) anyerror!BatchWarning {
+pub fn readBatchWarning(a: std.mem.Allocator, v: c.thinkthen_complete_batch_warning) anyerror!BatchWarning {
     return .{
         .running = try readBatchSetting(a, v.running[0]),
         .tuned_for = try readBatchSetting(a, v.tuned_for[0]),
@@ -4646,7 +4602,7 @@ pub fn readBatchWarning(a: std.mem.Allocator, v: c.thinkthen_complete_batch_warn
     };
 }
 
-pub fn readBatchSetting(a: std.mem.Allocator, v: c.thinkthen_complete_batch_setting_v1) anyerror!BatchSetting {
+pub fn readBatchSetting(a: std.mem.Allocator, v: c.thinkthen_complete_batch_setting) anyerror!BatchSetting {
     return switch (v.kind) {
         1 => .{ .integer = v.data.integer },
         2 => .{ .string = try a.dupe(u8, text(v.data.string)) },
@@ -4654,7 +4610,7 @@ pub fn readBatchSetting(a: std.mem.Allocator, v: c.thinkthen_complete_batch_sett
     };
 }
 
-pub fn readAnswers(a: std.mem.Allocator, v: c.thinkthen_complete_answers_v1) anyerror!Answers {
+pub fn readAnswers(a: std.mem.Allocator, v: c.thinkthen_complete_answers) anyerror!Answers {
     return .{
         .questions = blk: {
             const items = try a.alloc(RelationMember, v.questions.len);
@@ -4668,7 +4624,7 @@ pub fn readAnswers(a: std.mem.Allocator, v: c.thinkthen_complete_answers_v1) any
     };
 }
 
-pub fn readRelationMember(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member_v1) anyerror!RelationMember {
+pub fn readRelationMember(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member) anyerror!RelationMember {
     return switch (v.kind) {
         1 => .{ .answer_id = try readRelationMemberAnswerId(a, v.data.answer_id[0]) },
         2 => .{ .failure_id = try readRelationMemberFailureId(a, v.data.failure_id[0]) },
@@ -4676,7 +4632,7 @@ pub fn readRelationMember(a: std.mem.Allocator, v: c.thinkthen_complete_relation
     };
 }
 
-pub fn readRelationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member_failure_id_v1) anyerror!RelationMemberFailureId {
+pub fn readRelationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member_failure_id) anyerror!RelationMemberFailureId {
     return .{
         .direction = try readRelationDirection(a, v.direction[0]),
         .method = try readRelationMethod(a, v.method[0]),
@@ -4720,7 +4676,7 @@ pub fn readRelationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity_v1) anyerror!RelatedEntity {
+pub fn readRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_related_entity) anyerror!RelatedEntity {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .name = try a.dupe(u8, text(v.name)),
@@ -4728,7 +4684,7 @@ pub fn readRelatedEntity(a: std.mem.Allocator, v: c.thinkthen_complete_related_e
     };
 }
 
-pub fn readRelationMethod(a: std.mem.Allocator, v: c.thinkthen_complete_relation_method_v1) anyerror!RelationMethod {
+pub fn readRelationMethod(a: std.mem.Allocator, v: c.thinkthen_complete_relation_method) anyerror!RelationMethod {
     _ = a;
     return switch (v.kind) {
         1 => .yes_no,
@@ -4737,7 +4693,7 @@ pub fn readRelationMethod(a: std.mem.Allocator, v: c.thinkthen_complete_relation
     };
 }
 
-pub fn readRelationDirection(a: std.mem.Allocator, v: c.thinkthen_complete_relation_direction_v1) anyerror!RelationDirection {
+pub fn readRelationDirection(a: std.mem.Allocator, v: c.thinkthen_complete_relation_direction) anyerror!RelationDirection {
     _ = a;
     return switch (v.kind) {
         1 => .source_to_target,
@@ -4746,7 +4702,7 @@ pub fn readRelationDirection(a: std.mem.Allocator, v: c.thinkthen_complete_relat
     };
 }
 
-pub fn readRelationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member_answer_id_v1) anyerror!RelationMemberAnswerId {
+pub fn readRelationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_relation_member_answer_id) anyerror!RelationMemberAnswerId {
     return .{
         .direction = try readRelationDirection(a, v.direction[0]),
         .method = try readRelationMethod(a, v.method[0]),
@@ -4792,7 +4748,7 @@ pub fn readRelationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_answer_v1) anyerror!Answer {
+pub fn readAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_answer) anyerror!Answer {
     return switch (v.kind) {
         1 => .{ .yes_no = try readAnswerYesNo(a, v.data.yes_no[0]) },
         2 => .{ .choice = try readAnswerChoice(a, v.data.choice[0]) },
@@ -4802,7 +4758,7 @@ pub fn readAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_answer_v1) anyer
     };
 }
 
-pub fn readAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_answer_score_v1) anyerror!AnswerScore {
+pub fn readAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_answer_score) anyerror!AnswerScore {
     return .{
         .confidence = switch (v.confidence.presence) {
             0 => .missing,
@@ -4824,7 +4780,7 @@ pub fn readAnswerScore(a: std.mem.Allocator, v: c.thinkthen_complete_answer_scor
     };
 }
 
-pub fn readAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_answer_tag_v1) anyerror!AnswerTag {
+pub fn readAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_answer_tag) anyerror!AnswerTag {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .probabilities = blk: {
@@ -4839,7 +4795,7 @@ pub fn readAnswerTag(a: std.mem.Allocator, v: c.thinkthen_complete_answer_tag_v1
     };
 }
 
-pub fn readAnswerChoice(a: std.mem.Allocator, v: c.thinkthen_complete_answer_choice_v1) anyerror!AnswerChoice {
+pub fn readAnswerChoice(a: std.mem.Allocator, v: c.thinkthen_complete_answer_choice) anyerror!AnswerChoice {
     return .{
         .confidence = switch (v.confidence.presence) {
             0 => .missing,
@@ -4861,7 +4817,7 @@ pub fn readAnswerChoice(a: std.mem.Allocator, v: c.thinkthen_complete_answer_cho
     };
 }
 
-pub fn readAnswerYesNo(a: std.mem.Allocator, v: c.thinkthen_complete_answer_yes_no_v1) anyerror!AnswerYesNo {
+pub fn readAnswerYesNo(a: std.mem.Allocator, v: c.thinkthen_complete_answer_yes_no) anyerror!AnswerYesNo {
     return .{
         .kind = try a.dupe(u8, text(v.kind)),
         .probability = v.probability,
@@ -4869,7 +4825,7 @@ pub fn readAnswerYesNo(a: std.mem.Allocator, v: c.thinkthen_complete_answer_yes_
     };
 }
 
-pub fn readSessionPacketRecognizeAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_recognize_aggregate_v1) anyerror!SessionPacketRecognizeAggregate {
+pub fn readSessionPacketRecognizeAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_recognize_aggregate) anyerror!SessionPacketRecognizeAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -4885,7 +4841,7 @@ pub fn readSessionPacketRecognizeAggregate(a: std.mem.Allocator, v: c.thinkthen_
     };
 }
 
-pub fn readRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_v1) anyerror!Recognition {
+pub fn readRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_recognition) anyerror!Recognition {
     return .{
         .answer = try readRecognitionOdds(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -4939,7 +4895,7 @@ pub fn readRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_recognition
     };
 }
 
-pub fn readRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_v1) anyerror!Recognize {
+pub fn readRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_recognize) anyerror!Recognize {
     return switch (v.kind) {
         1 => .{ .entities = try readRecognizeEntities(a, v.data.entities[0]) },
         2 => .{ .mode_proposals = try readRecognizeModeProposals(a, v.data.mode_proposals[0]) },
@@ -4947,7 +4903,7 @@ pub fn readRecognize(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_v1)
     };
 }
 
-pub fn readRecognizeModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_mode_proposals_v1) anyerror!RecognizeModeProposals {
+pub fn readRecognizeModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_mode_proposals) anyerror!RecognizeModeProposals {
     return .{
         .mode = try readBoundaryMode(a, v.mode[0]),
         .proposals = blk: {
@@ -4962,7 +4918,7 @@ pub fn readRecognizeModeProposals(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readRecognizeEntities(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_entities_v1) anyerror!RecognizeEntities {
+pub fn readRecognizeEntities(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_entities) anyerror!RecognizeEntities {
     return .{
         .entities = blk: {
             const items = try a.alloc(Entity, v.entities.len);
@@ -4989,7 +4945,7 @@ pub fn readRecognizeEntities(a: std.mem.Allocator, v: c.thinkthen_complete_recog
     };
 }
 
-pub fn readRecognizeQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_question_document_v1) anyerror!RecognizeQuestionDocument {
+pub fn readRecognizeQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_question_document) anyerror!RecognizeQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -5112,17 +5068,11 @@ pub fn readRecognizeQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_comple
         },
         .threshold = try readThreshold(a, v.threshold[0]),
         .verb = try readVerb(a, v.verb[0]),
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
-            else => return error.InvalidNativeDiscriminator,
-        },
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readVerb(a: std.mem.Allocator, v: c.thinkthen_complete_verb_v1) anyerror!Verb {
+pub fn readVerb(a: std.mem.Allocator, v: c.thinkthen_complete_verb) anyerror!Verb {
     _ = a;
     return switch (v.kind) {
         1 => .recognize,
@@ -5130,7 +5080,7 @@ pub fn readVerb(a: std.mem.Allocator, v: c.thinkthen_complete_verb_v1) anyerror!
     };
 }
 
-pub fn readRecognitionStageContext(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_stage_context_v1) anyerror!RecognitionStageContext {
+pub fn readRecognitionStageContext(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_stage_context) anyerror!RecognitionStageContext {
     return .{
         .boundary = switch (v.boundary.presence) {
             0 => .missing,
@@ -5154,7 +5104,7 @@ pub fn readRecognitionStageContext(a: std.mem.Allocator, v: c.thinkthen_complete
     };
 }
 
-pub fn readRecognitionOdds(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds_v1) anyerror!RecognitionOdds {
+pub fn readRecognitionOdds(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds) anyerror!RecognitionOdds {
     return switch (v.kind) {
         1 => .{ .recognize_answer = try readRecognitionOddsRecognizeAnswer(a, v.data.recognize_answer[0]) },
         2 => .{ .boundary_odds = try readRecognitionOddsBoundaryOdds(a, v.data.boundary_odds[0]) },
@@ -5162,7 +5112,7 @@ pub fn readRecognitionOdds(a: std.mem.Allocator, v: c.thinkthen_complete_recogni
     };
 }
 
-pub fn readRecognitionOddsBoundaryOdds(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds_boundary_odds_v1) anyerror!RecognitionOddsBoundaryOdds {
+pub fn readRecognitionOddsBoundaryOdds(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds_boundary_odds) anyerror!RecognitionOddsBoundaryOdds {
     return .{
         .pieces = blk: {
             const items = try a.alloc(PieceOdds, v.pieces.len);
@@ -5184,7 +5134,7 @@ pub fn readRecognitionOddsBoundaryOdds(a: std.mem.Allocator, v: c.thinkthen_comp
     };
 }
 
-pub fn readPieceOdds(a: std.mem.Allocator, v: c.thinkthen_complete_piece_odds_v1) anyerror!PieceOdds {
+pub fn readPieceOdds(a: std.mem.Allocator, v: c.thinkthen_complete_piece_odds) anyerror!PieceOdds {
     return .{
         .end = v.end,
         .start = v.start,
@@ -5200,7 +5150,7 @@ pub fn readPieceOdds(a: std.mem.Allocator, v: c.thinkthen_complete_piece_odds_v1
     };
 }
 
-pub fn readRecognitionOddsRecognizeAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds_recognize_answer_v1) anyerror!RecognitionOddsRecognizeAnswer {
+pub fn readRecognitionOddsRecognizeAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_odds_recognize_answer) anyerror!RecognitionOddsRecognizeAnswer {
     return .{
         .names = blk: {
             const items = try a.alloc(NameOdds, v.names.len);
@@ -5238,7 +5188,7 @@ pub fn readRecognitionOddsRecognizeAnswer(a: std.mem.Allocator, v: c.thinkthen_c
     };
 }
 
-pub fn readRecognitionProposal(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_proposal_v1) anyerror!RecognitionProposal {
+pub fn readRecognitionProposal(a: std.mem.Allocator, v: c.thinkthen_complete_recognition_proposal) anyerror!RecognitionProposal {
     return .{
         .end = v.end,
         .kept = v.kept != 0,
@@ -5266,7 +5216,7 @@ pub fn readRecognitionProposal(a: std.mem.Allocator, v: c.thinkthen_complete_rec
     };
 }
 
-pub fn readPlace(a: std.mem.Allocator, v: c.thinkthen_complete_place_v1) anyerror!Place {
+pub fn readPlace(a: std.mem.Allocator, v: c.thinkthen_complete_place) anyerror!Place {
     return .{
         .end = v.end,
         .start = v.start,
@@ -5274,7 +5224,7 @@ pub fn readPlace(a: std.mem.Allocator, v: c.thinkthen_complete_place_v1) anyerro
     };
 }
 
-pub fn readPairOdds(a: std.mem.Allocator, v: c.thinkthen_complete_pair_odds_v1) anyerror!PairOdds {
+pub fn readPairOdds(a: std.mem.Allocator, v: c.thinkthen_complete_pair_odds) anyerror!PairOdds {
     return .{
         .probability = v.probability,
         .relation = try a.dupe(u8, text(v.relation)),
@@ -5284,7 +5234,7 @@ pub fn readPairOdds(a: std.mem.Allocator, v: c.thinkthen_complete_pair_odds_v1) 
     };
 }
 
-pub fn readNameOdds(a: std.mem.Allocator, v: c.thinkthen_complete_name_odds_v1) anyerror!NameOdds {
+pub fn readNameOdds(a: std.mem.Allocator, v: c.thinkthen_complete_name_odds) anyerror!NameOdds {
     return .{
         .edges = switch (v.edges.presence) {
             0 => .missing,
@@ -5318,7 +5268,7 @@ pub fn readNameOdds(a: std.mem.Allocator, v: c.thinkthen_complete_name_odds_v1) 
     };
 }
 
-pub fn readSessionPacketAnnotateAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_annotate_aggregate_v1) anyerror!SessionPacketAnnotateAggregate {
+pub fn readSessionPacketAnnotateAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_annotate_aggregate) anyerror!SessionPacketAnnotateAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -5334,7 +5284,7 @@ pub fn readSessionPacketAnnotateAggregate(a: std.mem.Allocator, v: c.thinkthen_c
     };
 }
 
-pub fn readAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_v1) anyerror!Annotation {
+pub fn readAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_annotation) anyerror!Annotation {
     return .{
         .answer_id = try readAnswerId(a, v.answer_id[0]),
         .answers = blk: {
@@ -5394,7 +5344,7 @@ pub fn readAnnotation(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_v
     };
 }
 
-pub fn readAnnotatedRow(a: std.mem.Allocator, v: c.thinkthen_complete_annotated_row_v1) anyerror!AnnotatedRow {
+pub fn readAnnotatedRow(a: std.mem.Allocator, v: c.thinkthen_complete_annotated_row) anyerror!AnnotatedRow {
     return blk: {
         const entries = try a.alloc(Map(AnnotatedField).Entry, v.value.len);
         for (entries, 0..) |*out, i| {
@@ -5405,7 +5355,7 @@ pub fn readAnnotatedRow(a: std.mem.Allocator, v: c.thinkthen_complete_annotated_
     };
 }
 
-pub fn readAnnotatedField(a: std.mem.Allocator, v: c.thinkthen_complete_annotated_field_v1) anyerror!AnnotatedField {
+pub fn readAnnotatedField(a: std.mem.Allocator, v: c.thinkthen_complete_annotated_field) anyerror!AnnotatedField {
     return switch (v.kind) {
         1 => .{ .boolean = v.data.boolean != 0 },
         2 => .null_value,
@@ -5424,14 +5374,14 @@ pub fn readAnnotatedField(a: std.mem.Allocator, v: c.thinkthen_complete_annotate
     };
 }
 
-pub fn readFailed(a: std.mem.Allocator, v: c.thinkthen_complete_failed_v1) anyerror!Failed {
+pub fn readFailed(a: std.mem.Allocator, v: c.thinkthen_complete_failed) anyerror!Failed {
     return .{
         .failed = try readFailure(a, v.failed[0]),
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readAnnotationMember(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member_v1) anyerror!AnnotationMember {
+pub fn readAnnotationMember(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member) anyerror!AnnotationMember {
     return switch (v.kind) {
         1 => .{ .answer_id = try readAnnotationMemberAnswerId(a, v.data.answer_id[0]) },
         2 => .{ .failure_id = try readAnnotationMemberFailureId(a, v.data.failure_id[0]) },
@@ -5439,7 +5389,7 @@ pub fn readAnnotationMember(a: std.mem.Allocator, v: c.thinkthen_complete_annota
     };
 }
 
-pub fn readAnnotationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member_failure_id_v1) anyerror!AnnotationMemberFailureId {
+pub fn readAnnotationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member_failure_id) anyerror!AnnotationMemberFailureId {
     return .{
         .failure = try readFailure(a, v.failure[0]),
         .failure_id = try readFailureId(a, v.failure_id[0]),
@@ -5477,7 +5427,7 @@ pub fn readAnnotationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_comple
     };
 }
 
-pub fn readAnnotationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member_answer_id_v1) anyerror!AnnotationMemberAnswerId {
+pub fn readAnnotationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_annotation_member_answer_id) anyerror!AnnotationMemberAnswerId {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -5521,7 +5471,7 @@ pub fn readAnnotationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSessionPacketFindAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_find_aggregate_v1) anyerror!SessionPacketFindAggregate {
+pub fn readSessionPacketFindAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_find_aggregate) anyerror!SessionPacketFindAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -5530,7 +5480,7 @@ pub fn readSessionPacketFindAggregate(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find_v1) anyerror!Find {
+pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find) anyerror!Find {
     return .{
         .answer = try readFindAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -5596,7 +5546,7 @@ pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find_v1) anyerror!
     };
 }
 
-pub fn readFindQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_find_question_document_v1) anyerror!FindQuestionDocument {
+pub fn readFindQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_find_question_document) anyerror!FindQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -5668,17 +5618,11 @@ pub fn readFindQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_fi
             else => return error.InvalidNativeDiscriminator,
         },
         .verb = try a.dupe(u8, text(v.verb)),
-        .wording_version = switch (v.wording_version.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try readWordingVersion(a, v.wording_version.value[0]) },
-            else => return error.InvalidNativeDiscriminator,
-        },
         .extensions = try readObject(a, v.extensions),
     };
 }
 
-pub fn readFindCandidate(a: std.mem.Allocator, v: c.thinkthen_complete_find_candidate_v1) anyerror!FindCandidate {
+pub fn readFindCandidate(a: std.mem.Allocator, v: c.thinkthen_complete_find_candidate) anyerror!FindCandidate {
     return .{
         .index = switch (v.index.presence) {
             0 => .missing,
@@ -5703,7 +5647,7 @@ pub fn readFindCandidate(a: std.mem.Allocator, v: c.thinkthen_complete_find_cand
     };
 }
 
-pub fn readFindAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_find_answer_v1) anyerror!FindAnswer {
+pub fn readFindAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_find_answer) anyerror!FindAnswer {
     return .{
         .confidence = switch (v.confidence.presence) {
             0 => .missing,
@@ -5725,7 +5669,7 @@ pub fn readFindAnswer(a: std.mem.Allocator, v: c.thinkthen_complete_find_answer_
     };
 }
 
-pub fn readSessionPacketRankAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_rank_aggregate_v1) anyerror!SessionPacketRankAggregate {
+pub fn readSessionPacketRankAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_rank_aggregate) anyerror!SessionPacketRankAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -5741,7 +5685,7 @@ pub fn readSessionPacketRankAggregate(a: std.mem.Allocator, v: c.thinkthen_compl
     };
 }
 
-pub fn readAtomicNonZeroUsize(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_non_zero_usize_v1) anyerror!AtomicNonZeroUsize {
+pub fn readAtomicNonZeroUsize(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_non_zero_usize) anyerror!AtomicNonZeroUsize {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -5809,7 +5753,7 @@ pub fn readAtomicNonZeroUsize(a: std.mem.Allocator, v: c.thinkthen_complete_atom
     };
 }
 
-pub fn readRankMember(a: std.mem.Allocator, v: c.thinkthen_complete_rank_member_v1) anyerror!RankMember {
+pub fn readRankMember(a: std.mem.Allocator, v: c.thinkthen_complete_rank_member) anyerror!RankMember {
     return .{
         .name = try a.dupe(u8, text(v.name)),
         .result = try readRankMemberResult(a, v.result[0]),
@@ -5817,7 +5761,7 @@ pub fn readRankMember(a: std.mem.Allocator, v: c.thinkthen_complete_rank_member_
     };
 }
 
-pub fn readRankMemberResult(a: std.mem.Allocator, v: c.thinkthen_complete_rank_member_result_v1) anyerror!RankMemberResult {
+pub fn readRankMemberResult(a: std.mem.Allocator, v: c.thinkthen_complete_rank_member_result) anyerror!RankMemberResult {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -5854,7 +5798,7 @@ pub fn readRankMemberResult(a: std.mem.Allocator, v: c.thinkthen_complete_rank_m
     };
 }
 
-pub fn readImage(a: std.mem.Allocator, v: c.thinkthen_complete_image_v1) anyerror!Image {
+pub fn readImage(a: std.mem.Allocator, v: c.thinkthen_complete_image) anyerror!Image {
     return .{
         .base64 = try a.dupe(u8, text(v.base64)),
         .height = v.height,
@@ -5864,7 +5808,7 @@ pub fn readImage(a: std.mem.Allocator, v: c.thinkthen_complete_image_v1) anyerro
     };
 }
 
-pub fn readImageMedia(a: std.mem.Allocator, v: c.thinkthen_complete_image_media_v1) anyerror!ImageMedia {
+pub fn readImageMedia(a: std.mem.Allocator, v: c.thinkthen_complete_image_media) anyerror!ImageMedia {
     _ = a;
     return switch (v.kind) {
         1 => .@"image/jpeg",
@@ -5873,7 +5817,7 @@ pub fn readImageMedia(a: std.mem.Allocator, v: c.thinkthen_complete_image_media_
     };
 }
 
-pub fn readSessionPacketFilterAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_filter_aggregate_v1) anyerror!SessionPacketFilterAggregate {
+pub fn readSessionPacketFilterAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_filter_aggregate) anyerror!SessionPacketFilterAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -5889,7 +5833,7 @@ pub fn readSessionPacketFilterAggregate(a: std.mem.Allocator, v: c.thinkthen_com
     };
 }
 
-pub fn readAtomicBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_boolean_v1) anyerror!AtomicBoolean {
+pub fn readAtomicBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_boolean) anyerror!AtomicBoolean {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -5957,7 +5901,7 @@ pub fn readAtomicBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_bo
     };
 }
 
-pub fn readSessionPacketScoreAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_score_aggregate_v1) anyerror!SessionPacketScoreAggregate {
+pub fn readSessionPacketScoreAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_score_aggregate) anyerror!SessionPacketScoreAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -5973,7 +5917,7 @@ pub fn readSessionPacketScoreAggregate(a: std.mem.Allocator, v: c.thinkthen_comp
     };
 }
 
-pub fn readAtomicDouble(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_double_v1) anyerror!AtomicDouble {
+pub fn readAtomicDouble(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_double) anyerror!AtomicDouble {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -6041,7 +5985,7 @@ pub fn readAtomicDouble(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_dou
     };
 }
 
-pub fn readSessionPacketTagAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_tag_aggregate_v1) anyerror!SessionPacketTagAggregate {
+pub fn readSessionPacketTagAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_tag_aggregate) anyerror!SessionPacketTagAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6057,7 +6001,7 @@ pub fn readSessionPacketTagAggregate(a: std.mem.Allocator, v: c.thinkthen_comple
     };
 }
 
-pub fn readAtomicArrayOfString(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_array_of_string_v1) anyerror!AtomicArrayOfString {
+pub fn readAtomicArrayOfString(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_array_of_string) anyerror!AtomicArrayOfString {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -6132,7 +6076,7 @@ pub fn readAtomicArrayOfString(a: std.mem.Allocator, v: c.thinkthen_complete_ato
     };
 }
 
-pub fn readSessionPacketChooseAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_choose_aggregate_v1) anyerror!SessionPacketChooseAggregate {
+pub fn readSessionPacketChooseAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_choose_aggregate) anyerror!SessionPacketChooseAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6148,7 +6092,7 @@ pub fn readSessionPacketChooseAggregate(a: std.mem.Allocator, v: c.thinkthen_com
     };
 }
 
-pub fn readAtomicNullableString(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_nullable_string_v1) anyerror!AtomicNullableString {
+pub fn readAtomicNullableString(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_nullable_string) anyerror!AtomicNullableString {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -6221,7 +6165,7 @@ pub fn readAtomicNullableString(a: std.mem.Allocator, v: c.thinkthen_complete_at
     };
 }
 
-pub fn readSessionPacketDecideAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_decide_aggregate_v1) anyerror!SessionPacketDecideAggregate {
+pub fn readSessionPacketDecideAggregate(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_decide_aggregate) anyerror!SessionPacketDecideAggregate {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6237,7 +6181,7 @@ pub fn readSessionPacketDecideAggregate(a: std.mem.Allocator, v: c.thinkthen_com
     };
 }
 
-pub fn readAtomicDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_decide_value_v1) anyerror!AtomicDecideValue {
+pub fn readAtomicDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_decide_value) anyerror!AtomicDecideValue {
     return .{
         .answer = try readAnswer(a, v.answer[0]),
         .answer_id = try readAnswerId(a, v.answer_id[0]),
@@ -6310,11 +6254,11 @@ pub fn readAtomicDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_atomi
     };
 }
 
-pub fn readDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_decide_value_v1) anyerror!DecideValue {
+pub fn readDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_decide_value) anyerror!DecideValue {
     return try readValue(a, v.value[0]);
 }
 
-pub fn readSessionPacketAnnotateRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_annotate_row_v1) anyerror!SessionPacketAnnotateRow {
+pub fn readSessionPacketAnnotateRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_annotate_row) anyerror!SessionPacketAnnotateRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6323,7 +6267,7 @@ pub fn readSessionPacketAnnotateRow(a: std.mem.Allocator, v: c.thinkthen_complet
     };
 }
 
-pub fn readSessionPacketFilterRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_filter_row_v1) anyerror!SessionPacketFilterRow {
+pub fn readSessionPacketFilterRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_filter_row) anyerror!SessionPacketFilterRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6332,7 +6276,7 @@ pub fn readSessionPacketFilterRow(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readSessionPacketScoreRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_score_row_v1) anyerror!SessionPacketScoreRow {
+pub fn readSessionPacketScoreRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_score_row) anyerror!SessionPacketScoreRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6341,7 +6285,7 @@ pub fn readSessionPacketScoreRow(a: std.mem.Allocator, v: c.thinkthen_complete_s
     };
 }
 
-pub fn readSessionPacketTagRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_tag_row_v1) anyerror!SessionPacketTagRow {
+pub fn readSessionPacketTagRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_tag_row) anyerror!SessionPacketTagRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6350,7 +6294,7 @@ pub fn readSessionPacketTagRow(a: std.mem.Allocator, v: c.thinkthen_complete_ses
     };
 }
 
-pub fn readSessionPacketChooseRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_choose_row_v1) anyerror!SessionPacketChooseRow {
+pub fn readSessionPacketChooseRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_choose_row) anyerror!SessionPacketChooseRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6359,7 +6303,7 @@ pub fn readSessionPacketChooseRow(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readSessionPacketDecideRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_decide_row_v1) anyerror!SessionPacketDecideRow {
+pub fn readSessionPacketDecideRow(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_decide_row) anyerror!SessionPacketDecideRow {
     return .{
         .function = try a.dupe(u8, text(v.function)),
         .kind = try a.dupe(u8, text(v.kind)),
@@ -6368,7 +6312,7 @@ pub fn readSessionPacketDecideRow(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readFailureFieldKind(a: std.mem.Allocator, v: c.thinkthen_complete_failure_field_kind_v1) anyerror!FailureFieldKind {
+pub fn readFailureFieldKind(a: std.mem.Allocator, v: c.thinkthen_complete_failure_field_kind) anyerror!FailureFieldKind {
     _ = a;
     return switch (v.kind) {
         1 => .backend,
@@ -6376,7 +6320,7 @@ pub fn readFailureFieldKind(a: std.mem.Allocator, v: c.thinkthen_complete_failur
     };
 }
 
-pub fn readBatchString(a: std.mem.Allocator, v: c.thinkthen_complete_batch_string_v1) anyerror!BatchString {
+pub fn readBatchString(a: std.mem.Allocator, v: c.thinkthen_complete_batch_string) anyerror!BatchString {
     _ = a;
     return switch (v.kind) {
         1 => .max,
@@ -6608,7 +6552,6 @@ pub const Types = struct {
     pub const UsagePersistence = @import("results_generated.zig").UsagePersistence;
     pub const Value = @import("results_generated.zig").Value;
     pub const Verb = @import("results_generated.zig").Verb;
-    pub const WordingVersion = @import("results_generated.zig").WordingVersion;
 };
 
 pub const AnswerView = struct {

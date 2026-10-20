@@ -19,16 +19,16 @@ def render(layouts, kinds=()):
                 "    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {",
                 '        f.write_str(' + json.dumps(layout.debug_label) + ')', '    }', '}'])
     for value, kind in enumerate(kinds, 1):
-        lines.append('pub const THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1: u32 = ' + str(value) + ';')
+        lines.append('pub const THINKTHEN_COMPLETE_JSON_' + kind.upper() + ': u32 = ' + str(value) + ';')
     return '\n'.join(lines) + '\n' + (json_projection(kinds) if kinds else '')
 
 
 def json_projection(kinds):
     """Copy the canonical JSON alternatives into one immutable native backing pool."""
-    lines = ['pub(crate) fn read_json(node: &super::Node, store: &mut super::Storage) -> Result<*const thinkthen_complete_json_v1, thinkthen::ErrorKind> {',
+    lines = ['pub(crate) fn read_json(node: &super::Node, store: &mut super::Storage) -> Result<*const thinkthen_complete_json, thinkthen::ErrorKind> {',
              'let (kind, data) = match node.kind() {']
     for kind in kinds:
-        symbol = 'THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1'
+        symbol = 'THINKTHEN_COMPLETE_JSON_' + kind.upper()
         if kind == 'null':
             payload = 'boolean: 0'
             body = []
@@ -40,13 +40,13 @@ def json_projection(kinds):
             body = []
         elif kind in ('array', 'object'):
             body = ['let mut copied = Vec::new();', 'for ' + ('value' if kind == 'array' else '(name, value)') + ' in node.' + kind + '()? {']
-            item = 'read_json(value, store)?' if kind == 'array' else 'thinkthen_complete_json_entry_v1 { name: store.text(name), value: read_json(value, store)? }'
+            item = 'read_json(value, store)?' if kind == 'array' else 'thinkthen_complete_json_entry { name: store.text(name), value: read_json(value, store)? }'
             body.extend(['copied.push(' + item + ');', '}', 'let (data, len) = store.slice(copied);'])
-            payload = kind + ': thinkthen_complete_json_' + kind + '_v1 { data, len }'
+            payload = kind + ': thinkthen_complete_json_' + kind + ' { data, len }'
         else:
             raise ValueError('unsupported canonical JSON kind: ' + kind)
         lines.extend([json.dumps(kind) + ' => {', *body,
-                      '(' + symbol + ', thinkthen_complete_json_data_v1 { ' + payload + ' })', '},'])
+                      '(' + symbol + ', thinkthen_complete_json_data { ' + payload + ' })', '},'])
     lines.extend(['_ => return Err(thinkthen::ErrorKind::Defect),', '};',
-                  'Ok(store.hold(thinkthen_complete_json_v1 { kind, data }))', '}'])
+                  'Ok(store.hold(thinkthen_complete_json { kind, data }))', '}'])
     return '\n'.join(lines) + '\n'

@@ -63,7 +63,7 @@ class PublicSurface(unittest.TestCase):
     def test_native_adapter_omissions_and_extra_members(self):
         mutations = {
             'c': [('include/thinkthen.h', 'thinkthen_session_new_typed_with_surface(', 'missing_dispatch(', 'missing function: decide'),
-                  ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
+                  ('include/thinkthen.h', '} thinkthen_request_item;', '} missing_item;', 'missing helper: item')],
             'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file')] + [
                      ('lib/thinkthen/session.rb', 'private_constant :Carrier', literal, 'unlisted public type/export: .Carrier')
                      for literal in ('if false\n      private_constant :Carrier\n    end',
@@ -637,7 +637,6 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             (root / 'build-tools').symlink_to(ROOT / 'build-tools', target_is_directory=True)
             write('libraries/c/include/thinkthen.h', '')
             definitions = {
-                'RequestVersion': {'oneOf': [{'const': 'fixture'}]},
                 'RequestFunction': {'oneOf': [{'const': 'decide'}]},
                 'RequestCall': {'type': 'object', 'properties': {'function': {'$ref': '#/$defs/RequestFunction'}, 'options': {'$ref': '#/$defs/RequestOptions'}}},
                 'RequestOptions': {'type': 'object', 'properties': {'context': {'type': 'string'}}},
