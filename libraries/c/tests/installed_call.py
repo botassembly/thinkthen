@@ -1,5 +1,6 @@
 """Exercise the installed blocking C entry point with canonical loopback cases."""
 import json
+from contextlib import chdir
 import os
 from pathlib import Path
 import subprocess
@@ -13,9 +14,8 @@ from children import child_env, read_process_line
 import c_parity as shared
 import parity
 from cli_parity import project_row
-from packet_dump import expanded, difference, decimal_json, folded
-from packet_normalize import canonical
-from fixture_suite import selected_case_ids, request, native_request
+from packet_dump import expanded, difference, decimal_json
+from fixture_suite import selected_case_ids, request, native_request, assert_required
 from c_images import assert_images
 from installed_cases import static_flags
 
@@ -83,7 +83,7 @@ def project(payload, value):
             **payload['facts'], 'call_result': payload, 'settled': payload.get('answer')}
 
 
-def check_owned(row, value, payload, count, sent, expected_dump, home):
+def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, home, backend):
     """Pin the owned C fields; native stop locations and prefixes remain Rust proof."""
     projected = project(payload, value)
     expected = value['expect']
@@ -112,35 +112,19 @@ def check_owned(row, value, payload, count, sent, expected_dump, home):
         assert {'value', 'answer', 'facts'} <= payload.keys(), payload
         assert isinstance(payload['facts'], dict) and isinstance(payload['answer'], dict), payload
         assert payload['facts']['requests_sent'] == sent, payload
-        # Engine::call returns complete RequestValue results and a settled answer.
-        # The existing shared assertions pin the exact values and probabilities.
-        assert payload['answer']['function'] == value['verb'], payload
-
-
-def compare_owned(dumps, expected, home, name):
-    """Use shared normalization and diffs over fields the owned C surface exposes."""
-    actual_views, expected_views = [], []
-    for actual, native in zip(dumps, expected, strict=True):
-        expected_call = folded(native)
-        if actual.get('code'):
-            # Code/message/retryability are checked before projection. Only an
-            # actual Facts owner is compared; pre-invocation errors may lack one.
-            if actual['facts'] is not None:
-                actual_views.append({'host': {'facts': actual['facts']}})
-                expected_views.append({'host': {'facts': expected_call['facts']}})
-            continue
-        results = actual['value']
-        wanted = expected_call['results']
-        actual_views.append({'host': {
-            'results': results if isinstance(results, list) else [results],
-            'facts': actual['facts'], 'call_result': {'answer': actual['answer']}}})
-        expected_views.append({'host': {
-            'results': wanted if isinstance(wanted, list) else [wanted],
-            'facts': expected_call['facts'],
-            'call_result': {'answer': expected_call['answer']}}})
-    folders = ((str(home), '$FOLDER'), (str(ROOT), '$ROOT'))
-    actual_views = canonical(actual_views, folders)
-    assert actual_views == expected_views, name + ':\n' + difference(expected_views, actual_views)
+        terminal = next(packet for packet in expected_dump['packets']
+                        if packet['kind'] == 'terminal')
+        assert raw_payload['answer'] == terminal['answer'], row['id'] + ':\n' + difference(
+            terminal['answer'], raw_payload['answer'])
+        body_checks = ('selected_item', 'per_item_context', 'capture_request')
+        bodies = (json.loads(backend.read('capture'))['bodies']
+                  if any(key in value['expect'] for key in body_checks) else [])
+        # Existing shared assertions own detail fields, presence and input mapping.
+        # Pass through the actual native Call; do not manufacture session packets.
+        with chdir(home):
+            assert_required({'native': True, 'results': payload['value'],
+                             'facts': payload['facts'], 'answer': payload['answer']},
+                            row, value, bodies, Path('fixture-source'))
 
 
 def compile_consumer(native, scratch, source, binary, env):
@@ -177,11 +161,11 @@ def run(native, scratch):
         with tempfile.TemporaryDirectory(prefix='blocking-c-', dir=scratch) as folder:
             home = Path(folder)
             (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
-            isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8')
+            isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_USAGE='off')
             backend = shared.Backend(backend_binary, isolated)
             try:
                 shared.prepare(home, value)
-                dumps, expected_dumps = [], []
+                dumps = []
                 for index, step in enumerate(value.get('steps', [value])):
                     if step.get('copy_store'):
                         (home / 'refreshed').mkdir()
@@ -209,10 +193,10 @@ def run(native, scratch):
                     before = int(backend.read('count'))
                     mode = 'fed' if step.get('incremental') else 'plain'
                     payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
-                    expected_dumps.append(oracle[name][index])
                     count = int(backend.read('count'))
-                    check_owned(row, step, payload, count - before if step.get('count_delta') else count,
-                                count - before, oracle[name][index], home)
+                    check_owned(row, step, payload, dumps[-1],
+                                count - before if step.get('count_delta') else count,
+                                count - before, oracle[name][index], home, backend)
                     if step.get('stored_answers') == 0:
                         database = home / 'saved/thinkthen.sqlite'
                         if database.exists():
@@ -229,7 +213,6 @@ def run(native, scratch):
                         first = project(payload, step)['rows']
                         second = project(repeated, step)['rows']
                         assert [r['answer_id'] for r in second] == [r['answer_id'] for r in first]
-                compare_owned(dumps, expected_dumps, home, name)
                 print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
                       'checks': row.get('checks', ['named', 'runtime']), 'status': 'pass'}), flush=True)
             finally:
@@ -239,7 +222,7 @@ def run(native, scratch):
         with tempfile.TemporaryDirectory(prefix='blocking-c-stop-', dir=scratch) as folder:
             home = Path(folder)
             (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
-            isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
+            isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'), THINKTHEN_USAGE='off')
             backend = shared.Backend(backend_binary, isolated)
             try:
                 isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held-cancel" else "full"}/v1',
