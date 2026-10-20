@@ -31,3 +31,4 @@ Phase: 2
 
 - 2026-10-20 started
 - 2026-10-20 next: PM approved the existing owned-error pattern: thinkthen_call_error_position returns a borrowed const size_t pointer, NULL for absent position or null owner, valid until owned error free; implement and prove native positions without message inference.
+- 2026-10-20 next: Source 5ecebaaaf captures native positions and adds the approved borrowed accessor plus independent ownership fixture; pinned header generation and installed red/green proof follow 0640 harness integration, with Python and Ruby independent losses referred to PM.
