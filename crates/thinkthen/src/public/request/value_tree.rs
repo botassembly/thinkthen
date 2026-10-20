@@ -54,7 +54,7 @@ impl Call<RequestValue> {
                     }
                 }
             }
-            fields.insert("answer".into(), answer);
+            fields.remove("answer");
         }
         Ok(tree)
     }

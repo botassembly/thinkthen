@@ -60,16 +60,15 @@ fn partial_annotation_absence_and_find_none_are_distinct() -> Result<(), Box<dyn
             .build()?;
         let call = engine.call(verb, request.call.arguments, RequestEnvironment::default())?;
         let tree = call.value_tree()?;
-        let answer = field(&tree, "answer");
-        let value = field(answer, "value");
+        let value = field(&tree, "value");
         if verb == "annotate" {
             assert_eq!(field(value, "team"), &RequestValueTree::Absent);
             assert_eq!(field(value, "refund"), &RequestValueTree::Null);
         } else {
             assert_eq!(value, &RequestValueTree::Null);
-            assert_eq!(field(answer, "index"), &RequestValueTree::Absent);
+            assert_eq!(field(&tree, "index"), &RequestValueTree::Absent);
             assert_eq!(
-                field(answer, "resolution"),
+                field(&tree, "resolution"),
                 &RequestValueTree::String("resolved".into())
             );
         }
@@ -95,7 +94,7 @@ fn authored_objects_keep_exact_numbers_and_native_looking_keys() -> Result<(), B
     )?;
     let call = engine.call("decide", request.call.arguments, RequestEnvironment::default())?;
     let tree = call.value_tree()?;
-    let value = field(field(&tree, "answer"), "value");
+    let value = field(&tree, "value");
     assert_eq!(field(value, "value"), &RequestValueTree::Null);
     assert_eq!(
         field(value, "resolution"),
