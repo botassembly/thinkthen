@@ -38,7 +38,7 @@ fn entities() -> Vec<Entity> {
 fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
     let listener = relation_listener();
     let ask = Relate::from_json(
-        r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]},"model":"size-override"}"#,
+        r#"{"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]},"model":"size-override"}"#,
     )
     .expect("relation");
     let build = || crate::api::builder(listener.base(), "sk-size-local").no_cache();
@@ -91,7 +91,10 @@ fn priced_relate_failure_keeps_complete_started_facts() {
         .no_cache()
         .build()
         .expect("engine");
-    let ask = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}}"#).expect("relation");
+    let ask = Relate::from_json(
+        r#"{"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}}"#,
+    )
+    .expect("relation");
     let records = [
         Entity::new("Ada", "person").expect("entity"),
         Entity::new("Bea", "person").expect("entity"),

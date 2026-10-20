@@ -125,7 +125,7 @@ fn materialized_convenience_rank_find_recognize_and_entities_validate_before_any
         ErrorKind::Usage
     );
     let recognize = thinkthen::Recognize::from_json(
-        r#"{"version":1,"recognize":{},"item_schema":{"type":"object","properties":{}}}"#,
+        r#"{"recognize":{},"item_schema":{"type":"object","properties":{}}}"#,
     )
     .unwrap();
     assert_eq!(
@@ -135,7 +135,7 @@ fn materialized_convenience_rank_find_recognize_and_entities_validate_before_any
             .kind(),
         ErrorKind::Usage
     );
-    let relate = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#).unwrap();
+    let relate = Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#).unwrap();
     let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     for complete in [false, true] {
         let entities = [
@@ -181,7 +181,7 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(
-        r#"{"version":1,"questions":{"selected":{"decide":"Refund?","on":["/payload"]}}}"#,
+        r#"{"questions":{"selected":{"decide":"Refund?","on":["/payload"]}}}"#,
     )
     .unwrap();
     let location = thinkthen::SourceLocation::new("input.txt".into(), Some(3), Some(3)).unwrap();
@@ -317,7 +317,7 @@ fn annotation_documents_send_structural_json_without_inventing_a_location() {
         Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
     }).unwrap();
     let engine = engine(&listener);
-    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"result":{"decide":"Refund?","item_schema":{"type":"object","properties":{"body":{"type":"string"},"ready":{"type":"boolean"}},"required":["body"]}}}}"#).unwrap();
+    let set = thinkthen::QuestionSet::from_json(r#"{"questions":{"result":{"decide":"Refund?","item_schema":{"type":"object","properties":{"body":{"type":"string"},"ready":{"type":"boolean"}},"required":["body"]}}}}"#).unwrap();
     let input =
         thinkthen::QuestionInput::annotation_document(r#"{"body":"x","ready":false}"#).unwrap();
     let thinkthen::QuestionInput::Record(record) = &input else {

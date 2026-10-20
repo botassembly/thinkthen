@@ -21,7 +21,7 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
 
   <h3 id="top-level">The top level</h3>
   <ul>
-    <li><code>version</code> is the number 1.</li>
+    <li>Question sets carry no <code>version</code> field.</li>
     <li><code>questions</code> holds the questions, each under its name.</li>
     <li><code>threshold</code> applies to every <code>decide</code> question that names none. Here <code>urgent</code> takes the band 0.2:0.8.</li>
     <li><code>profile</code> names the backend profile the thresholds were set for.</li>
@@ -38,6 +38,6 @@ const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/a
   <p>A text record has no parts. A question with <code>on</code> refuses it at exit 2. Under <code>--lines</code>, such a set is refused before any input is read.</p>
 
   <h3 id="refusals">What the file refuses</h3>
-  <p>An unknown key anywhere in the file, a missing <code>questions</code> object, a wrong <code>version</code> and a bad name each stop the run at exit 5, before any request. The message names the key at fault.</p>
+  <p>An unknown key anywhere in the file, a missing <code>questions</code> object, a present <code>version</code> and a bad name each stop the run at exit 5, before any request. The message names the key at fault.</p>
 
   <p class="pagelinks"><a href="/functions/annotate/#edge-cases">annotate's edge cases</a> · <a href={spec}>The question-set specification</a></p>

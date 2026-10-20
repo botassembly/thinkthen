@@ -207,11 +207,11 @@ fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
         ),
         (
             "recognize",
-            r#"{"version":1,"recognize":{},"on":"/body","item_schema":{"type":"string"}}"#,
+            r#"{"recognize":{},"on":"/body","item_schema":{"type":"string"}}"#,
         ),
         (
             "relate",
-            r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#,
+            r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#,
         ),
     ];
     for (function, question) in cases {
@@ -259,7 +259,7 @@ fn cli_whole_set_functions_validate_typed_selected_values_before_sending() {
 fn cli_rank_sets_admit_every_member_declaration_before_lookup_or_send() {
     let root = Folder::new().unwrap();
     let set = root.path().join("rank.json");
-    fs::write(&set, r#"{"version":1,"questions":{"first":{"decide":"Ready?"},"second":{"decide":"Useful?","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
+    fs::write(&set, r#"{"questions":{"first":{"decide":"Ready?"},"second":{"decide":"Useful?","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let input = root.path().join("items.txt");
     fs::write(&input, "alpha\nbeta\n").unwrap();

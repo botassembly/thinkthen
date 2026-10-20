@@ -178,7 +178,7 @@ static class SessionChecks
             var plan = AuthoredPlan(engine, deepQuestion, original);
             if (plan.Requests != 1) throw new Exception("deep authored plan");
         }
-        _ = FixtureQuestions.Parse(AuthoredQuestionKind.Set, "{\"version\":1,\"questions\":{\"first\":{\"decide\":\"Is it?\"}}}");
+        _ = FixtureQuestions.Parse(AuthoredQuestionKind.Set, "{\"questions\":{\"first\":{\"decide\":\"Is it?\"}}}");
         var preview = engine.Plan(Request(new RequestInputText { Text = "café\0preview" }));
         if (preview.Records != 1 || preview.Requests != 1 || preview.FirstBodyUtf8.State != PresenceState.Value ||
             !preview.FirstBodyUtf8.Value.Contains("café") || preview.EstimatedInputTokens.Lower > preview.EstimatedInputTokens.Upper)

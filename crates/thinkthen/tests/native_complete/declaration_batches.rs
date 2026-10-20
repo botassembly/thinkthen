@@ -179,7 +179,7 @@ fn annotation_member_declarations_admit_the_whole_stream_batch_before_any_member
     let listener =
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
-    let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Refund?","item_schema":{"type":"string"}},"second":{"decide":"Urgent?","item_schema":{"type":"string"}}}}"#).unwrap();
+    let set = thinkthen::QuestionSet::from_json(r#"{"questions":{"first":{"decide":"Refund?","item_schema":{"type":"string"}},"second":{"decide":"Urgent?","item_schema":{"type":"string"}}}}"#).unwrap();
     let mut batch = crate::api::annotation_rows(
         crate::api::rows(
             &engine,

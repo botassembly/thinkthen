@@ -8,7 +8,7 @@ ThinkThen::Client.open do |client|
     ["Kindle", "product"]
   ]
   who_makes = client.relate(
-    {version: 1, relate: {relations: [
+    {relate: {relations: [
       {name: "makes", source: "company", target: "product",
        either: false}
     ]}},

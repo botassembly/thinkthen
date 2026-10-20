@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "questions": {
     "steps": {
       "decide": "Does the report give steps to reproduce?"

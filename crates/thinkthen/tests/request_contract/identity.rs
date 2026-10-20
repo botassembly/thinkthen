@@ -36,7 +36,7 @@ fn canonical_definitions_match_complete_result_identities() {
         ),
         (
             "annotate",
-            r#"{"version":1,"profile":"calibrated","questions":{"z":{"decide":"Last?"},"a":{"decide":"First?"}}}"#,
+            r#"{"profile":"calibrated","questions":{"z":{"decide":"Last?"},"a":{"decide":"First?"}}}"#,
             RequestInput::Text {
                 text: "Alpha".into(),
                 images: vec![],
@@ -44,7 +44,7 @@ fn canonical_definitions_match_complete_result_identities() {
         ),
         (
             "recognize",
-            r#"{"version":1,"recognize":{"stage_context":{"boundary":"stage_context_marker"}}}"#,
+            r#"{"recognize":{"stage_context":{"boundary":"stage_context_marker"}}}"#,
             RequestInput::Text {
                 text: "Alpha".into(),
                 images: vec![],
@@ -81,11 +81,11 @@ fn canonical_definitions_match_complete_result_identities() {
 #[test]
 fn definition_identity_retains_order_and_find_none_without_stage_context() {
     let forward = RequestDefinition::from_authored_json(
-        r#"{"version":1,"questions":{"z":{"decide":"Last?"},"a":{"decide":"First?"}}}"#,
+        r#"{"questions":{"z":{"decide":"Last?"},"a":{"decide":"First?"}}}"#,
     )
     .unwrap();
     let reverse = RequestDefinition::from_authored_json(
-        r#"{"version":1,"questions":{"a":{"decide":"First?"},"z":{"decide":"Last?"}}}"#,
+        r#"{"questions":{"a":{"decide":"First?"},"z":{"decide":"Last?"}}}"#,
     )
     .unwrap();
     assert_ne!(
@@ -94,7 +94,7 @@ fn definition_identity_retains_order_and_find_none_without_stage_context() {
     );
     let recognize = |context| {
         RequestDefinition::from_authored_json(&format!(
-            r#"{{"version":1,"recognize":{{"stage_context":{{"boundary":"{context}"}}}}}}"#
+            r#"{{"recognize":{{"stage_context":{{"boundary":"{context}"}}}}}}"#
         ))
         .unwrap()
         .question_sha256()
@@ -116,7 +116,7 @@ fn definition_identity_retains_order_and_find_none_without_stage_context() {
 fn relation_modes_match_complete_readings_and_templates_have_no_invented_identity() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let definition = RequestDefinition::from_authored_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap();
+    let definition = RequestDefinition::from_authored_json(r#"{"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap();
     let records = definition
         .relation_sha256(RelationIdentityMode::Records)
         .unwrap();

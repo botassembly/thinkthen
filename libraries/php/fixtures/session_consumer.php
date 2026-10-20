@@ -28,7 +28,7 @@ $asks = [
     'filter' => ['Is it urgent?', ['filter-yes', 'no']],
     'rank' => ['Is it urgent?', ['rank-yes', 'no']],
     'find' => ['Which line?', ['find-first', 'find-second']],
-    'annotate' => [['version' => 1, 'questions' => ['ok' => ['decide' => 'Is it urgent?']]], ['text']],
+    'annotate' => [['questions' => ['ok' => ['decide' => 'Is it urgent?']]], ['text']],
     'recognize' => [new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null], stage_context: new RecognitionStageContext(boundary: '', kind_edge: '', relation: ''))), 'Maria Chen'],
     'relate' => [new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person', either: false)])),
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
@@ -141,7 +141,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     };
     $once = $client->decide('Is it?', $serialized);
     check($serialized->calls === 1 && $once->results[0]->input === 'serializer-first', 'serializer must run once and retain its first value');
-    $annotated = $client->annotate(['version' => 1, 'questions' => [
+    $annotated = $client->annotate(['questions' => [
         'ok' => ['decide' => 'Is it urgent?'], 'tags' => ['tag' => 'Which?', 'labels' => ['first', 'second']],
     ]], ['map-record']);
     $row = $annotated->results[0];

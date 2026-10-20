@@ -56,7 +56,7 @@ fn record() -> RecordInput<QuestionInput> {
 fn annotation_primitive_null_and_failed_members_retain_values() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1}},"q3":{"type":"noul","noul":0.5}}}"#)).unwrap();
     let engine = engine(&listener);
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?","true":{"authored":"structured"}},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"good":{"decide":"Good?","true":{"authored":"structured"}},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
     let native_call = engine
         .annotate_with(&set, ["Original."], CallOptions::new())
         .unwrap();

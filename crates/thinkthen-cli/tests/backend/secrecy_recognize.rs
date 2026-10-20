@@ -123,7 +123,7 @@ fn reserved_kinds_refuse_at_exit_2_on_the_command_line_and_5_from_a_file() {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-reserved.json");
     fs::write(
         &path,
-        format!(r#"{{"version":1,"recognize":{{"kinds":{{"entity":"{KIND}"}}}}}}"#),
+        format!(r#"{{"recognize":{{"kinds":{{"entity":"{KIND}"}}}}}}"#),
     )
     .expect("question file");
     quiet(

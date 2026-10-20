@@ -77,7 +77,7 @@ fn sql_saved_recognize_keeps_selected_evidence_and_refuses_decoded_sources()
 -> Result<(), Box<dyn std::error::Error>> {
     exercise(
         "recognize",
-        r#"{"version":1,"recognize":{"kinds":{"person":null}},"on":["/body"]}"#,
+        r#"{"recognize":{"kinds":{"person":null}},"on":["/body"]}"#,
     )
 }
 fn exercise(verb: &str, authored: &str) -> Result<(), Box<dyn std::error::Error>> {

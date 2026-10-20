@@ -26,7 +26,7 @@ impl fmt::Debug for QuestionSet {
 }
 
 impl QuestionSet {
-    /// Read one version-one question set. A member whose `on` names a part
+    /// Read one question set. A member whose `on` names a part
     /// of a record reads that part from each record as JSON text.
     ///
     /// # Errors

@@ -124,7 +124,7 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     );
 
     let set = format!("{place}/set.json");
-    let entry = r#"{"version":1,"questions":{"ok":{"decide":"Is it yes?","batch":5}}}"#;
+    let entry = r#"{"questions":{"ok":{"decide":"Is it yes?","batch":5}}}"#;
     fs::write(&set, entry).expect("a question set");
     let annotate = spawn(&["annotate", &set, "--lines", "--plan"], &[], b"line 1\n")
         .expect("the command runs");

@@ -35,7 +35,7 @@ fn every_command_refuses_recording_storage_before_key_lookup_or_a_request() {
     let questions = folder("recording-preflight-questions.json");
     fs::write(
         &questions,
-        r#"{"version":1,"questions":{"refund":{"decide":"asks for a refund"}}}"#,
+        r#"{"questions":{"refund":{"decide":"asks for a refund"}}}"#,
     )
     .expect("question set written");
     let cases: [(&[&str], &[u8]); 8] = [

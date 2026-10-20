@@ -39,7 +39,7 @@
     },
     "annotate": {
       "arm": "generic",
-      "ts": "tt.annotate({ version: 1, questions: { wants_refund: { decide: \"Does the customer ask for a refund?\" }, urgency: { score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] } } }, [\"maybe later\"]).then(call => call.value)",
+      "ts": "tt.annotate({ questions: { wants_refund: { decide: \"Does the customer ask for a refund?\" }, urgency: { score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] } } }, [\"maybe later\"]).then(call => call.value)",
       "expected": "[{\"wants_refund\":true,\"urgency\":0.15}]"
     },
     "recognize": {

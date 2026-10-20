@@ -8,7 +8,7 @@ use std::path::PathBuf;
 fn a_refused_batch_halves_once_and_keeps_request_order() {
     let file = set(
         "batch-halve",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).expect("request JSON");
@@ -86,7 +86,7 @@ fn a_refused_batch_halves_once_and_keeps_request_order() {
 fn a_failed_second_half_prints_first_half_and_names_next_row() {
     let file = set(
         "batch-second-half-stop",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).expect("request JSON");
@@ -130,7 +130,7 @@ fn a_failed_second_half_prints_first_half_and_names_next_row() {
 fn a_missing_whole_replay_finds_the_recorded_halves_without_sending() {
     let file = set(
         "batch-replay-halves",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let directory = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-batch-replay-halves");
     let _ = fs::remove_dir_all(&directory);

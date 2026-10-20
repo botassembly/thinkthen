@@ -235,7 +235,7 @@ fn thinkthen_recognize(
 crate::descriptions::describe! {
 ["Recognize names using an authored JSON spec or privileged/confined @file; return names, character offsets, kinds and strengths. ", crate::descriptions::REQUIRED_TABLE, "Failures raise SQL errors."].concat();
 [name = "thinkthen_recognize", parallel_restricted];
-/// Every name a version-one recognize spec asks for, as rows.
+/// Every name a recognize spec asks for, as rows.
 #[allow(
     clippy::type_complexity,
     reason = "pgrx reads the columns from the signature, not an alias"

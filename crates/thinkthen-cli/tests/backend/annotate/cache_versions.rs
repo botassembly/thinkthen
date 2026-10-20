@@ -46,7 +46,7 @@ fn run(listener: &Listener, cache: &Path, name: &str, right: &str, model: &[&str
     let file = set(
         name,
         &format!(
-            r#"{{"version":1,"questions":{{"left_answer":{{"decide":"left?","on":"/left"}},"right_answer":{{"decide":"{right}","on":"/right"}}}}}}"#
+            r#"{{"questions":{{"left_answer":{{"decide":"left?","on":"/left"}},"right_answer":{{"decide":"{right}","on":"/right"}}}}}}"#
         ),
     );
     let arguments = [

@@ -1788,7 +1788,6 @@ export interface AnnotateDefinition {
   readonly profile?: Profile;
   readonly questions: Readonly<Record<string, AnnotateQuestion>>;
   readonly threshold?: Threshold;
-  readonly version: 1;
 }
 export type AnnotateQuestion =
   | AnnotateQuestionDecide
@@ -1941,7 +1940,6 @@ export interface Relate {
   readonly profile?: Profile;
   readonly relate: RelateQuestion;
   readonly threshold?: Cut;
-  readonly version: 1;
   readonly wording_version?: number;
 }
 export interface Relation {
@@ -2037,7 +2035,6 @@ export interface RecognizeDefinition {
   readonly recognize: RecognizeQuestion;
   readonly relation_threshold?: Cut;
   readonly threshold?: Cut;
-  readonly version: 1;
   readonly wording_version?: number;
 }
 export interface RecognizeQuestion {
@@ -2072,7 +2069,6 @@ export interface AnnotateRequestDefinition {
   readonly profile?: Profile;
   readonly questions: Readonly<Record<string, AnnotateQuestion>>;
   readonly threshold?: Threshold;
-  readonly version: 1;
   readonly choose?: never;
   readonly decide?: never;
   readonly find?: never;
@@ -2100,7 +2096,6 @@ export interface ChooseDefinition {
   readonly relate?: never;
   readonly score?: never;
   readonly tag?: never;
-  readonly version?: never;
 }
 export interface DecideDefinition {
   readonly batch?: QuestionBatch;
@@ -2122,7 +2117,6 @@ export interface DecideDefinition {
   readonly relate?: never;
   readonly score?: never;
   readonly tag?: never;
-  readonly version?: never;
 }
 export interface FindDefinition {
   readonly context_schema?: InputDeclaration;
@@ -2140,7 +2134,6 @@ export interface FindDefinition {
   readonly relate?: never;
   readonly score?: never;
   readonly tag?: never;
-  readonly version?: never;
 }
 export interface RelateDefinition {
   readonly context_schema?: InputDeclaration;
@@ -2150,7 +2143,6 @@ export interface RelateDefinition {
   readonly profile?: Profile;
   readonly relate: RelateQuestion;
   readonly threshold?: Cut;
-  readonly version: 1;
   readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;
@@ -2178,7 +2170,6 @@ export interface ScoreDefinition {
   readonly recognize?: never;
   readonly relate?: never;
   readonly tag?: never;
-  readonly version?: never;
 }
 export interface TagDefinition {
   readonly batch?: QuestionBatch;
@@ -2199,7 +2190,6 @@ export interface TagDefinition {
   readonly recognize?: never;
   readonly relate?: never;
   readonly score?: never;
-  readonly version?: never;
 }
 export interface RecognizeRequestDefinition {
   readonly context_schema?: InputDeclaration;
@@ -2211,7 +2201,6 @@ export interface RecognizeRequestDefinition {
   readonly recognize: RecognizeQuestion;
   readonly relation_threshold?: Cut;
   readonly threshold?: Cut;
-  readonly version: 1;
   readonly wording_version?: number;
   readonly choose?: never;
   readonly decide?: never;

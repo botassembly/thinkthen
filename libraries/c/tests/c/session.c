@@ -218,7 +218,7 @@ static int collection_sessions(thinkthen_engine *engine) {
     for (size_t i = 0; i < 2; ++i) {
         char function[7], question[256], input[256], request[1024];
         strcpy(function, names[i]);
-        strcpy(question, i ? "{\"kind\":\"definition\",\"value\":{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"follows\",\"source\":\"*\",\"target\":\"*\",\"reads\":\"follows\"}]}}}" : "{\"kind\":\"text\",\"text\":\"Which?\"}");
+        strcpy(question, i ? "{\"kind\":\"definition\",\"value\":{\"relate\":{\"relations\":[{\"name\":\"follows\",\"source\":\"*\",\"target\":\"*\",\"reads\":\"follows\"}]}}}" : "{\"kind\":\"text\",\"text\":\"Which?\"}");
         strcpy(input, i ? "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"First\",\"kind\":\"alert\"}}},{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"Second\",\"kind\":\"alert\"}}}]}" : "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"First unit.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Second unit.\"}}]}");
         int length = snprintf(request, sizeof request,
             "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"%s\",\"question\":%s,\"input\":%s,\"options\":{}}}",

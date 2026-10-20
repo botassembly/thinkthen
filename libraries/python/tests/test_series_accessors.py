@@ -119,7 +119,7 @@ def test_polars_annotation_frames_keep_complete_failure_schema(backend, tmp_path
                 self.end_headers(); self.wfile.write(response)
         server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
         threading.Thread(target=server.serve_forever, daemon=True).start()
-        form = {'version': 1, 'questions': {'first': {'decide': 'First?'}, 'second': {'decide': 'Second?'}}}
+        form = {'questions': {'first': {'decide': 'First?'}, 'second': {'decide': 'Second?'}}}
         marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
         expected = {'body': pl.String, 'first': pl.Boolean, 'second': pl.Boolean,
                     'failed': pl.Struct({'first': marker, 'second': marker})}
@@ -207,7 +207,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             assert related.facts.requests_sent == 1
             assert [(edge.source.name, edge.target.name) for edge in related.results[0].value] == [('Ada', 'Bo'), ('Bo', 'Ada')]
             failed_engine = tt.Engine(cache=False, max_retries=0, base_url=__import__('os').environ['THINKTHEN_BASE_URL'].replace('/generic/', '/arm/malformed/missing_answer/'))
-            failed = failed_engine.annotate({'version': 1, 'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, series(['note', None]))
+            failed = failed_engine.annotate({'questions': {'late': {'decide': 'Late?'}, 'bad': {'decide': 'Refund?'}}}, series(['note', None]))
             embedded = cell(failed.value, 0)['bad']
             assert cell(failed.value, 1) is None and embedded.failed.kind == 'backend'
             assert embedded.failed.cause == 'missing_answer' and failed.facts.requests_sent == 1
@@ -281,7 +281,7 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
         found = call("find", "Which?")
         assert probabilities(found) == [.9, None, None]
         print("find", found.value[0] if shape == "polars" else found.value, [list(row.answer.probabilities.items()) for row in found.results])
-        form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
+        form = {{"questions": {{"late": {{"decide": "Late?"}}}}}}
         annotated = call("annotate", form)
         print("annotate", list(annotated.value.to_list()[0]), annotated.facts["records"])
         if shape == "pandas": assert annotated.value.index.to_list() == [9, 9, 2]
@@ -450,7 +450,7 @@ def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, 
             if verb == 'choose': kw['options'] = ['a', 'b']
             if verb == 'score': kw['levels'] = ['low', 'high']
             if verb == 'tag': kw['labels'] = ['a', 'b']
-            if verb == 'annotate': args = [{'version':1, 'questions': {'late': {'decide':'Late?'}}}]
+            if verb == 'annotate': args = [{'questions': {'late': {'decide':'Late?'}}}]
             if verb == 'recognize': args = []
             call = getattr(empty.tt, verb)(*args, **kw)
             assert call.facts['records'] == call.facts['requests_sent'] == 0

@@ -3819,7 +3819,6 @@
  02 v-m-profile usage pointer.
  02 v-m-questions usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
 01 tt-n-cobol-AnnotateQuestion based.
  02 v-kind usage binary-double unsigned.
  02 v-value usage pointer.
@@ -3969,7 +3968,6 @@
  02 v-m-profile usage pointer.
  02 v-m-relate usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
  02 v-m-wording-version usage pointer.
 01 tt-n-cobol-Relation based.
  02 v-reserved usage binary-double unsigned.
@@ -4087,7 +4085,6 @@
  02 v-m-recognize usage pointer.
  02 v-m-relation-threshold usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
  02 v-m-wording-version usage pointer.
 01 tt-n-cobol-RecognizeQuestion based.
  02 v-reserved usage binary-double unsigned.
@@ -4128,7 +4125,6 @@
  02 v-m-profile usage pointer.
  02 v-m-questions usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
 01 tt-n-cobol-DefinitionChoose based.
  02 v-reserved usage binary-double unsigned.
  02 v-m-batch usage pointer.
@@ -4175,7 +4171,6 @@
  02 v-m-profile usage pointer.
  02 v-m-relate usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
  02 v-m-wording-version usage pointer.
 01 tt-n-cobol-DefinitionScore based.
  02 v-reserved usage binary-double unsigned.
@@ -4213,7 +4208,6 @@
  02 v-m-recognize usage pointer.
  02 v-m-relation-threshold usage pointer.
  02 v-m-threshold usage pointer.
- 02 v-m-version usage pointer.
  02 v-m-wording-version usage pointer.
 01 tt-n-cobol-RequestFraming based.
  02 v-kind usage binary-double unsigned.
@@ -4393,8 +4387,6 @@
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-AnnotateDefinitionVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-AnnotateQuestionChooseName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4525,8 +4517,6 @@
 01 tt-n-cobol-RelateName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-RelateVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RelateWordingVersion based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-RelationEither based.
@@ -4663,8 +4653,6 @@
 01 tt-n-cobol-RecognizeDefinitionName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-RecognizeDefinitionVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RecognizeDefinitionWordingVersion based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-RecognizeQuestionKinds based.
@@ -4696,8 +4684,6 @@
  02 v-keys usage pointer.
  02 v-values usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DefinitionAnnotateDefinitionVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DefinitionChooseName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4716,8 +4702,6 @@
 01 tt-n-cobol-DefinitionRelateName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DefinitionRelateVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DefinitionRelateWordingVersion based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-DefinitionScoreName based.
@@ -4733,8 +4717,6 @@
 01 tt-n-cobol-DefinitionRecognizeDefinitionName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DefinitionRecognizeDefinitionVersion based.
- 02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DefinitionRecognizeDefinitionWordingVersion based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-RequestFramingDocumentValue based.

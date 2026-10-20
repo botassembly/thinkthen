@@ -202,7 +202,7 @@ fn pulled_annotations_preserve_partial_member_failure_original_location_and_owne
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}}}}"#)).unwrap();
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(
-        r#"{"version":1,"questions":{"good":{"decide":"Good?"},"bad":{"decide":"Bad?"}}}"#,
+        r#"{"questions":{"good":{"decide":"Good?"},"bad":{"decide":"Bad?"}}}"#,
     )
     .unwrap();
     let reading = RecordReading::new(&[], None, None).unwrap();

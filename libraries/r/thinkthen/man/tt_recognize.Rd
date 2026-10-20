@@ -61,7 +61,7 @@ text <- paste0(
   "in Denver."
 )
 facts <- tt_recognize(
-  list(version = 1, recognize = list(kinds = kinds)),
+  list(recognize = list(kinds = kinds)),
   text
 )$value
 entity_names <- vapply(facts$entities, `[[`, "", "text")

@@ -89,7 +89,7 @@ fn a_later_invalid_annotation_keeps_the_valid_record_prefix() {
     .expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"left":{"decide":"Left?","on":"/left"},"right":{"decide":"Right?","on":"/right"}}}"#,
+        r#"{"questions":{"left":{"decide":"Left?","on":"/left"},"right":{"decide":"Right?","on":"/right"}}}"#,
     )
     .expect("set");
     let records = [r#"{"left":"a","right":"b"}"#, r#"{"left":"c"}"#];
@@ -364,7 +364,7 @@ fn annotation_observer_keeps_named_success_and_failure_in_set_order() {
     let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());

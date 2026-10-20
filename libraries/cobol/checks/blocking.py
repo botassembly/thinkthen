@@ -48,9 +48,9 @@ questions = {
  'decide': {'decide': 'Refund?'}, 'choose': {'choose': 'Which?', 'options': ['a', 'b']},
  'tag': {'tag': 'Which?', 'labels': ['a', 'b']}, 'score': {'score': 'How much?', 'levels': ['low', 'high']},
  'filter': {'decide': 'Refund?'}, 'rank': {'decide': 'Relevant?'}, 'find': {'find': 'Which?'},
- 'annotate': {'version': 1, 'questions': {'refund': {'decide': 'Refund?'}}},
- 'recognize': {'version': 1, 'recognize': {'kinds': {'person': 'A name.'}}},
- 'relate': {'version': 1, 'relate': {'relations': [{'name': 'linked', 'source': 'person', 'target': 'person'}]}},
+ 'annotate': {'questions': {'refund': {'decide': 'Refund?'}}},
+ 'recognize': {'recognize': {'kinds': {'person': 'A name.'}}},
+ 'relate': {'relate': {'relations': [{'name': 'linked', 'source': 'person', 'target': 'person'}]}},
 }
 OUTPUT_TYPES = {function: record_type('thinkthen_cobol_Answer' + function.title() + 'Result') for function in questions}
 

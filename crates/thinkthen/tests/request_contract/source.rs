@@ -173,7 +173,7 @@ fn saved_rank_set_refusals_retain_native_file_causes() {
         let value = if field == "on" { json!("") } else { json!(0.5) };
         std::fs::write(
             &path,
-            json!({"version":1,"questions":{"first":{"decide":"Fits?",field:value}}}).to_string(),
+            json!({"questions":{"first":{"decide":"Fits?",field:value}}}).to_string(),
         )
         .unwrap();
         for question in [

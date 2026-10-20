@@ -1,6 +1,6 @@
 //! Complete annotation keeps declared readings and original JSON through replay.
 use super::*;
-const SET: &str = r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/body","name":"first-contract","wording_version":2,"item_schema":{"type":"string"}},"second":{"decide":"Second?","on":"/body"}}}"#;
+const SET: &str = r#"{"questions":{"first":{"decide":"First?","on":"/body","name":"first-contract","wording_version":2,"item_schema":{"type":"string"}},"second":{"decide":"Second?","on":"/body"}}}"#;
 const INPUT: &[u8] = "{\"body\":\"Text.\",\"n\":1,\"lexical\":\"Keep Café.\"}\n{\"body\":\"Text.\",\"n\":1,\"lexical\":\"Keep Café.\"}\n".as_bytes();
 #[cfg(test)]
 fn expected() -> Value {

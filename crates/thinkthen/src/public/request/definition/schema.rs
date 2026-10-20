@@ -72,7 +72,6 @@ fn recognize(
         .unwrap()
         .clone();
     properties.remove("find");
-    properties.insert("version".into(), json!({"const":1}));
     for name in ["threshold", "relation_threshold"] {
         properties.insert(name.into(), reference("cut"));
     }
@@ -89,7 +88,7 @@ fn recognize(
             "mode": mode
         }}),
     );
-    json!({"title":"RecognizeDefinition","type":"object","required":["version","recognize"],
+    json!({"title":"RecognizeDefinition","type":"object","required":["recognize"],
         "additionalProperties":false,"properties":properties})
 }
 fn set(definitions: &serde_json::Map<String, Value>) -> Value {
@@ -102,9 +101,9 @@ fn set(definitions: &serde_json::Map<String, Value>) -> Value {
         }
         member
     });
-    json!({"title":"AnnotateDefinition","type":"object","required":["version","questions"],"additionalProperties":false,
+    json!({"title":"AnnotateDefinition","type":"object","required":["questions"],"additionalProperties":false,
     "properties":{
-        "version":{"const":1},"threshold":reference("threshold"),"profile":reference("profile"),
+        "threshold":reference("threshold"),"profile":reference("profile"),
         "batch":{},
         "questions":{"type":"object","minProperties":1,"x-preserve-order":true,
             "additionalProperties":{"title":"AnnotateQuestion","anyOf":members}}

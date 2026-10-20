@@ -4,7 +4,7 @@ use super::*;
 fn recognition_details_replay_original_stages_and_counts_across_source_coordinate_changes() {
     let root = crate::input_sources::folder("complete-command-recognize").unwrap();
     let question = root.join("question.json");
-    std::fs::write(&question, r#"{"version":1,"recognize":{"kinds":{"person":null,"organization":null}},"name":"names","wording_version":2,"item_schema":{"type":"string"}}"#).unwrap();
+    std::fs::write(&question, r#"{"recognize":{"kinds":{"person":null,"organization":null}},"name":"names","wording_version":2,"item_schema":{"type":"string"}}"#).unwrap();
     let input = root.join("text.txt");
     std::fs::write(&input, "Ada met Acme.\n\nAda met Acme.\n").unwrap();
     let recording = root.join("recording");

@@ -7,7 +7,7 @@ use thinkthen::{RequestEnvironment, RequestValue};
 
 use thinkthen::{Engine, QuestionSet};
 
-const FORM: &str = r#"{"version": 1, "questions": {
+const FORM: &str = r#"{"questions": {
     "wants_refund": {"decide": "Does the customer ask for a refund?"},
     "team": {"choose": "Which team owns this?", "options": ["billing", "shipping", "account"]}
 }}"#;

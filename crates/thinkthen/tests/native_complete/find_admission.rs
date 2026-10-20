@@ -182,7 +182,7 @@ fn find_count_and_byte_refusals_leave_panicking_tails_unread() {
 fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
     let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
     let engine = engine(&listener);
-    let ask = thinkthen::Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#).unwrap();
+    let ask = thinkthen::Relate::from_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#).unwrap();
     let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     for complete in [false, true] {
         let entities = (0..256)

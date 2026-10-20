@@ -2,7 +2,7 @@
 use thinkthen::{RawRecord, RecordEvidence, RecordInput, RecordReading, Relate, SourceLocation};
 #[cfg(test)]
 pub(crate) fn ask() -> Relate {
-    Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]}}"#).unwrap()
+    Relate::from_records_json(r#"{"relate":{"relations":[{"name":"follows","source":"person","target":"person","reads":"follows"}]}}"#).unwrap()
 }
 #[cfg(test)]
 pub(crate) fn item(

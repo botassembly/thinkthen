@@ -144,7 +144,7 @@ fn annotation_member_pointers_read_the_selected_record_and_keep_the_whole_origin
         crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(
-        r#"{"version":1,"questions":{"refund":{"decide":"Refund?","on":"/message"}}}"#,
+        r#"{"questions":{"refund":{"decide":"Refund?","on":"/message"}}}"#,
     )
     .unwrap();
     let original = r#"{"private":false,"selected":{"message":"Refund please.","other":null},"context":"Guide."}"#;

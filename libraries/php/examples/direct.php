@@ -14,7 +14,7 @@ try {
         'filter' => $client->filter('Does this ask for a refund?', ['Refund please.', 'Thank you.'])->value,
         'rank' => $client->rank('Does this ask for a refund?', ['Refund now.', 'Thank you.'])->value,
         'find' => $client->find('Which line asks for a refund?', ['Refund please.', 'Thank you.'])->value,
-        'annotate' => $client->annotate(['version' => 1, 'questions' => ['refund' => ['decide' => 'Does this ask for a refund?']]], ['Refund please.'])->value,
+        'annotate' => $client->annotate(['questions' => ['refund' => ['decide' => 'Does this ask for a refund?']]], ['Refund please.'])->value,
         'recognize' => $client->recognize(new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null])), 'Maria Chen')->value,
         'relate' => $client->relate(new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person')])), [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']])->value,
     ];

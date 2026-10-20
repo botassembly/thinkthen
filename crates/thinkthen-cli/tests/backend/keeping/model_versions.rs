@@ -85,7 +85,7 @@ fn ordinary_and_split_replies_keep_only_a_consistent_filter_prefix() -> io::Resu
 fn discarded_rank_rows_still_require_consistent_live_models() -> io::Result<()> {
     let set = crate::rank_set::saved(
         "rank-discarded-model",
-        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"}}}"#,
     )?;
     let input = RECORDS.lines().take(2).collect::<Vec<_>>().join("\n") + "\n";
     for (question, flags) in [
