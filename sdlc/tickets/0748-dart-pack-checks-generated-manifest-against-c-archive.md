@@ -28,3 +28,4 @@ Phase: 2
 
 - 2026-10-20 started
 - 2026-10-20 next: setup: focused Gator job 1792531904700-1471139 exited 2 before product execution because the host standard job resolver could not provision its pinned tools; cd18107da is pushed, no unchanged retry or host workaround will run, and the required container lint/test and configured gate wait for accepted 0744 main integration.
+- 2026-10-20 next: setup: Gator 1792532412154-1497053 passed the repaired manifest and planted guards before a PHP prerequisite blocked the later SDK refusal fixture, repaired with isolated version and FFI stubs at 9d5ff63b7 under the same unchanged assertions; the required Gator check is running on that source and the unadmitted M5 waiter was cancelled for freeze priority.
