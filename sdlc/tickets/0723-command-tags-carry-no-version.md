@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision fa4e259, accept
+
 ## Outcome
 
 - Changes: `crates/thinkthen/src/public/results/tally.rs`, `conformance/cli_parity.py`, `crates/thinkthen-cli/src/cli/annotate/error_row.rs`, `crates/thinkthen-cli/src/cli/facts.rs`, `crates/thinkthen-cli/src/cli/recognize/dry_run.rs`, `crates/thinkthen-cli/src/cli/relate/dry_run.rs`, `crates/thinkthen-cli/src/cli/status.rs`, `crates/thinkthen-cli/tests/backend/annotate/record_failure.rs`, `crates/thinkthen-cli/tests/backend/facts.rs`, `crates/thinkthen-cli/tests/backend/facts/`, `crates/thinkthen-cli/tests/backend/named_backends/command.rs`, `crates/thinkthen-cli/tests/backend/recognize.rs`, `crates/thinkthen-cli/tests/backend/relate/details.rs`, `crates/thinkthen-cli/tests/backend/status.rs`, `crates/thinkthen-cli/tests/windows/interrupt.rs`, `demos/16-triage-pipeline/review-jsonl`, `demos/16-triage-pipeline/self-test`, `demos/45-map-relationships/README.md`, `probes/annotate-batching/measure.py`, `probes/paid_evidence.py`, `probes/tag-score/measure.py`, `site/examples/reference/annotate/5-continue.out`, `site/examples/reference/annotate/5-continue.sh`, `site/examples/reference/status/1-json.out`, `site/examples/start/answer-cache/4-facts.out`, `site/src/components/AnnotateEdges.astro`, `site/src/data/flags.mjs`, `site/src/data/overhead.json`, `site/src/pages/start/configuration.astro`, `spec/recognize.md`, `spec/relate.md`, `specification/annotate.md`, `specification/channels.md`, `specification/fixtures/types/corpus.json`, `specification/question-file.md`, `specification/recognize.md`, `specification/recording.md`, `specification/records.md`, `specification/relate.md`, `specification/result.md`, `specification/settings.md`, `specification/types.md`.
