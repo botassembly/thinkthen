@@ -1,12 +1,14 @@
 # 0708: Stored answer rows carry no key version
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Reviews: revision d1dfcc8, accept
+
+Reviews: revision 91f6a46, accept
 
 ## Outcome
 

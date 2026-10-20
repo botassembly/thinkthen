@@ -1,6 +1,6 @@
 # 0636: Check settled answers and run-call behavior once in shared conformance
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

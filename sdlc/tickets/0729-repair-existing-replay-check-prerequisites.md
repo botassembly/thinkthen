@@ -1,6 +1,6 @@
 # 0729 — repair-existing-replay-check-prerequisites
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
