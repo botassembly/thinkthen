@@ -29,7 +29,7 @@ fn declarations_require_exact_ids_closed_fields_and_literal_aliases() {
         assert!(parsed.image_profile.is_some());
         assert!(!format!("{parsed:?}").contains("local-0036"));
     }
-    let valid = r#"{"schema":"thinkthen.backend-profile/2","name":"p","image_profile":{"id":"clef-llamacpp-v0.6.0-0036","model_alias":"PRIVATE_ALIAS"}}"#;
+    let valid = r#"{"name":"p","image_profile":{"id":"clef-llamacpp-v0.6.0-0036","model_alias":"PRIVATE_ALIAS"}}"#;
     let parsed = BackendProfile::parse(valid).unwrap();
     let declaration = parsed.image_profile.as_ref().unwrap();
     assert!(declaration.matches("PRIVATE_ALIAS"));
@@ -37,7 +37,7 @@ fn declarations_require_exact_ids_closed_fields_and_literal_aliases() {
     assert!(!declaration.matches(" PRIVATE_ALIAS"));
     assert!(!format!("{parsed:?}").contains("PRIVATE_ALIAS"));
     for invalid in [
-        valid.replace("/2", "/1"),
+        valid.replace("\"name\":", "\"schema\":null,\"name\":"),
         valid.replace("clef-llamacpp-v0.6.0-0036", "clef"),
         valid.replace("PRIVATE_ALIAS", " PRIVATE_ALIAS"),
         valid.replace("PRIVATE_ALIAS", ""),

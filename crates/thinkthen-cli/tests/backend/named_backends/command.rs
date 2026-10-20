@@ -406,7 +406,7 @@ fn legacy_builtin_repairs_preserve_builtin_settings_and_custom_routing() {
         for keep_settings in [false, true] {
             let mut config = serde_json::json!({"backend":name});
             if keep_settings {
-                config["backends"] = serde_json::json!({name:{"requests_per_minute":600,"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":2}}});
+                config["backends"] = serde_json::json!({name:{"requests_per_minute":600,"profile":{"name":"small","max_questions":2}}});
             }
             home.config(&config.to_string());
             let output = decide(&home, &["--plan"], &[]);

@@ -22,7 +22,7 @@
       "id": "profile-refuses-before-sending",
       "setting": "profile",
       "arm": "generic/v1",
-      "profile": {"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4},
+      "profile": {"name": "small", "max_evidence_bytes": 4},
       "steps": [
         {"settings": {"profile": "$PROFILE"}, "text": "refund now", "error": "usage", "count": 0}
       ]

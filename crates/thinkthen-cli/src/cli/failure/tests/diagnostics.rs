@@ -15,7 +15,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         Failure::Status(401, false),
         Failure::Transport(TransportKind::Refused),
         Failure::InvalidUtf8 { record: false },
-        Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned()),
+        Failure::Record(
+            "the record is over 16 MiB, which is far past what a backend reads in one request"
+                .to_owned(),
+        ),
         Failure::QuestionMiss {
             key: "abc".to_owned(),
             context: None,
@@ -27,7 +30,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             replayed: 0,
             recording: false,
             held: false,
-            cause: Box::new(Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned())),
+            cause: Box::new(Failure::Record(
+                "the record is over 16 MiB, which is far past what a backend reads in one request"
+                    .to_owned(),
+            )),
         },
         Failure::Stopped {
             at: 2,
@@ -35,7 +41,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             replayed: 0,
             recording: false,
             held: true,
-            cause: Box::new(Failure::Record("the record is over 16 MiB, which is far past what a backend reads in one request".to_owned())),
+            cause: Box::new(Failure::Record(
+                "the record is over 16 MiB, which is far past what a backend reads in one request"
+                    .to_owned(),
+            )),
         },
         Failure::QuietOverKept("filter"),
         Failure::RawOverKept("rank"),
@@ -49,7 +58,11 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         },
         Failure::Profile {
             path: "safe-profile.json".into(),
-            error: Box::new(crate::Engine::builder().profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"INVALID","max_questions":1}"#).unwrap_err()),
+            error: Box::new(
+                crate::Engine::builder()
+                    .profile_json(r#"{"name":"INVALID","max_questions":1}"#)
+                    .unwrap_err(),
+            ),
         },
         Failure::ProfileLimit {
             profile: "safe-profile".to_owned(),

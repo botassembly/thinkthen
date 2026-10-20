@@ -6,8 +6,7 @@ use std::io::Write as _;
 use std::process::Command;
 use thinkthen::{Engine, EngineBuilder, Question};
 
-const PROFILE: &str =
-    r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":3}"#;
+const PROFILE: &str = r#"{"name":"small","max_evidence_bytes":3}"#;
 const PAIR_ERROR: &str = "configuration backend fields `usd_per_million_input` and `usd_per_million_output` come together as decimal strings from 0 through 1000000 with at most six fractional digits";
 const BUILTIN_ERROR: &str = "a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
 
@@ -50,15 +49,14 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         ),
         (
             json!({"profile":{"schema":"sk-field-marker-0400"}}),
-            "configuration backend field `profile` has schema `thinkthen.backend-profile/1`"
-                .to_owned(),
+            "configuration backend field `profile` must delete the `schema` member".to_owned(),
         ),
         (
-            json!({"profile":{"schema":"thinkthen.backend-profile/1","name":"small"}}),
+            json!({"profile":{"name":"small"}}),
             "configuration backend field `profile` names at least one limit".to_owned(),
         ),
         (
-            json!({"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1,"unknown":"sk-field-marker-0400"}}),
+            json!({"profile":{"name":"small","max_questions":1,"unknown":"sk-field-marker-0400"}}),
             "configuration backend field `profile` holds no unknown keys".to_owned(),
         ),
     ];
@@ -108,7 +106,7 @@ fn malformed_setup_fields_refuse_with_exact_value_free_sentences_and_zero_sends(
         assert_eq!(target.count(), 0);
     }
     let raw = format!(
-        r#"{{"backends":{{"small":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"m","profile":{{"schema":"thinkthen.backend-profile/1","name":"small","max_questions":1,"max_questions":2}}}}}}}}"#,
+        r#"{{"backends":{{"small":{{"url":"{}","key_env":"LOCAL_D1_KEY","model":"m","profile":{{"name":"small","max_questions":1,"max_questions":2}}}}}}}}"#,
         target.base()
     );
     home.config(&raw);
@@ -140,11 +138,7 @@ fn setup_profile_refuses_before_live_replay_cache_and_explicit_file_wins() {
         assert_eq!(target.count(), 0);
     }
     let profile = home.root.join("explicit.json");
-    std::fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"explicit","max_evidence_bytes":100}"#,
-    )
-    .unwrap();
+    std::fs::write(&profile, r#"{"name":"explicit","max_evidence_bytes":100}"#).unwrap();
     let out = ask(
         &home,
         target.base(),
@@ -205,7 +199,9 @@ fn backend_setup_builder_child() {
         builder = builder.prices_usd_per_million("3", "0").unwrap();
     }
     if case == "profile" {
-        builder=builder.profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"explicit","max_evidence_bytes":100}"#).unwrap();
+        builder = builder
+            .profile_json(r#"{"name":"explicit","max_evidence_bytes":100}"#)
+            .unwrap();
     }
     let mut out = std::io::stdout().lock();
     writeln!(out, "setup-debug {builder:?}").unwrap();
@@ -287,7 +283,7 @@ fn both_sides_reuses_wire_form_and_profiles_prices_keep_recording_identity() {
         config(
             &home,
             target.base(),
-            json!({"both_sides":both,"path":"nested/decisions","requests_per_minute":60000,"usd_per_million_input":"2","usd_per_million_output":"0","profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":100}}),
+            json!({"both_sides":both,"path":"nested/decisions","requests_per_minute":60000,"usd_per_million_input":"2","usd_per_million_output":"0","profile":{"name":"small","max_evidence_bytes":100}}),
         );
         let out = ask(
             &home,
@@ -316,7 +312,7 @@ fn both_sides_reuses_wire_form_and_profiles_prices_keep_recording_identity() {
     config(
         &home,
         target.base(),
-        json!({"usd_per_million_input":"2","usd_per_million_output":"0","profile":{"schema":"thinkthen.backend-profile/1","name":"different","max_evidence_bytes":100}}),
+        json!({"usd_per_million_input":"2","usd_per_million_output":"0","profile":{"name":"different","max_evidence_bytes":100}}),
     );
     let out = ask(
         &home,
@@ -397,7 +393,7 @@ fn setup_profile_refuses_cache_lookup_and_supplies_running_calibration_name() {
     config(
         &home,
         target.base(),
-        json!({"profile":{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":100}}),
+        json!({"profile":{"name":"small","max_evidence_bytes":100}}),
     );
     let question = home.root.join("question.json");
     std::fs::write(

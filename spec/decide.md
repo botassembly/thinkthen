@@ -201,7 +201,7 @@ An explicit profile refuses an oversized request before a key or connection. The
 
 ```bash
 cat > profile.json <<'JSON'
-{"schema":"thinkthen.backend-profile/1","name":"body-test","max_request_bytes":169}
+{"name":"body-test","max_request_bytes":169}
 JSON
 printf 'four' | env -u THINKTHEN_API_KEY thinkthen decide 'asks for a refund' --plan --profile profile.json | grep -c 'The text is \\"four\\"' | mustmatch "1"
 status=0
