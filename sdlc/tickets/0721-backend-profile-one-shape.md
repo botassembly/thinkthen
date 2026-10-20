@@ -24,3 +24,7 @@ Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbe
 Starts from `BackendProfile::parse` in `crates/thinkthen/src/core/backend_profile.rs`, which branches on `version_two` and refuses a missing schema with the `ProfileError` "has schema" variant, and the profile command in `crates/thinkthen/src/cli/profile.rs`. About 40 Rust test files write profiles with the member.
 
 Shares `conformance/backend-profiles.json` with 0724, which drops that file's own manifest tag. Paths under `crates/thinkthen/src/cli/` move when 0639 lands; the claim follows the move.
+
+## Progress
+
+- 2026-10-20 started
