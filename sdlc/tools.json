@@ -510,6 +510,12 @@
     "swift_signing_keys": {
       "url": "https://www.swift.org/keys/all-keys.asc",
       "sha256": "67abcc2cff49a9dd4536b12bc4a7c2b82c434ddaa42b90516c9734f4dd5481af"
-    }
+    },
+    "tool_groups": [
+      "lint",
+      "test",
+      "spec",
+      "c"
+    ]
   }
 }

@@ -33,7 +33,7 @@ memory = pin['yellow_memory_gib'] if is_yellow else pin['memory_gib']
 # The image identity includes all construction inputs and the pinned base.
 digest = hashlib.sha256()
 inputs = ('rust-toolchain.toml', 'sdlc/tools.json', 'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
-          'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
+          'sdlc/scripts/tools.py',
           'conformance/children/children.py',
           *[str(path.relative_to(ROOT)) for path in sorted((ROOT / 'sdlc/tools').glob('*.json'))])
 for path in inputs:
@@ -78,6 +78,14 @@ command = [args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label'
            '-w', str(source), '-e', 'HOME=' + str(owned / 'home'),
            '-e', 'CARGO_HOME=' + str(owned / 'cargo'),
            '-e', 'CARGO_BUILD_JOBS=2', '-e', 'RUSTUP_TOOLCHAIN=' + manifest['tools']['rust']['version']]
+# Resolve dependency locations once, before a gate replaces HOME. The tool
+# resolver uses this same mounted uv cache; no host package cache is imported.
+home = owned / 'home'
+toolchains = home / '.cache/thinkthen-toolchains'
+for name, value in dict(THINKTHEN_TOOLCHAINS=toolchains,
+                        UV_CACHE_DIR=Path(manifest['linux_prefix']) / 'uv-cache',
+                        npm_config_cache=home / '.npm').items():
+    command += ['-e', name + '=' + str(value)]
 # Cargo embeds these fixture paths at compile time. Host-shared filesystems
 # can bypass Unix permissions and locks and reject filename bytes, even for
 # a nonroot container user. Keep fixtures on Linux while retaining builds,
@@ -98,9 +106,9 @@ for relative in locks.splitlines():
 # Advisory data is a separate prerequisite from Cargo registry dependencies.
 # Fetch it in this same mounted home before the offline checks consume it.
 script += 'cargo deny fetch db\n'
-# Check the whole manifest before any gate work, including the mounted advisory DB.
-groups = {group for tool in manifest['tools'].values() for group in tool['groups']}
-script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(sorted(groups))) + '\n'
+# Validate the prepared core gate requirements before starting any check. Other
+# language checks retain their own required groups and fail if tools are absent.
+script += 'python3 sdlc/scripts/tools.py --check ' + shlex.quote(','.join(pin['tool_groups'])) + '\n'
 for check in args.checks:
     script += 'sdlc/scripts/job sdlc/scripts/' + check + (' --run' if check in ('test-full-cases', 'test-stress') else '') + '\n'
 raise SystemExit(subprocess.run([*command, *cache_mounts, image, 'sh', '-c', script]).returncode)

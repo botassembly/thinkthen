@@ -379,6 +379,42 @@ class GateRouting(unittest.TestCase):
                     self.assertEqual(routed, expected)
 
 
+class SurfaceToolGroups(unittest.TestCase):
+    def test_registry_requires_core_tools_and_language_checks_still_require_their_tools(self):
+        with tempfile.TemporaryDirectory(prefix='surface-tools-') as folder:
+            root = Path(folder)
+            for name in ('surfaces', 'resolved-tools', 'tools.py', 'verdict.sh', 'allow-list'):
+                target = root / 'sdlc/scripts' / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / 'sdlc/scripts' / name, target)
+            manifest = {'linux_prefix': str(root / 'resolved'), 'python_packages': {},
+                        'databases': {}, 'libraries': {'fixture': {'check_platforms': [
+                            'darwin-arm64', 'darwin-x86_64', 'linux-arm64', 'linux-x86_64']}},
+                        'tools': {
+                            'rust': {'commands': [], 'version': 'unused', 'groups': ['common'],
+                                     'platforms': ['darwin', 'linux']},
+                            'core': {'commands': ['fixture-core-tool'], 'groups': ['lint'],
+                                     'platforms': ['darwin', 'linux']},
+                            'language': {'commands': ['fixture-language-tool'], 'groups': ['fixture'],
+                                         'platforms': ['darwin', 'linux']}}}
+            (root / 'sdlc/tools.json').write_text(json.dumps(manifest))
+            (root / '--registry').mkdir()
+            env = child_env(home=root / 'home', PATH='/usr/bin:/bin')
+            cases = ((['--registry'], 'core', 'language'),
+                     (['--registry', '--full-functional'], 'core', 'language'),
+                     (['--full-functional', '--registry'], 'core', 'language'),
+                     (['--full-functional'], 'language', 'core'),
+                     (['--stress'], 'language', 'core'),
+                     (['--full-functional', '--artifacts', '--registry'], 'language', 'core'))
+            for arguments, required, unselected in cases:
+                with self.subTest(arguments=arguments):
+                    result = subprocess.run(['sh', str(root / 'sdlc/scripts/surfaces'), *arguments],
+                                            cwd=root, env=env, text=True, capture_output=True)
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn('missing tools: fixture-' + required + '-tool', result.stderr)
+                    self.assertNotIn('fixture-' + unselected + '-tool', result.stderr)
+
+
 class LinuxSourceIdentity(unittest.TestCase):
     def test_reused_clone_discards_source_edits_and_keeps_build_output(self):
         with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
@@ -422,6 +458,14 @@ class LinuxSourceIdentity(unittest.TestCase):
                        '--docker', str(docker), 'test']
             first = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertEqual(first.returncode, 0, first.stderr)
+            runs = [json.loads(line) for line in calls.read_text().splitlines()
+                    if json.loads(line)[0] == 'run']
+            script = runs[-1][-1]
+            groups = load_manifest(root / 'sdlc/tools.json')['linux']['tool_groups']
+            self.assertIn('python3 sdlc/scripts/tools.py --check ' + ','.join(groups), script)
+            self.assertNotIn('tools/setup.sh', script)
+            self.assertNotIn('databases/sqlite/setup.sh', script)
+            self.assertNotIn('flutter pub get', script)
             source = next(root.glob('.linux-*/src')).resolve()
             run = next(json.loads(line) for line in calls.read_text().splitlines()
                        if json.loads(line)[0] == 'run')

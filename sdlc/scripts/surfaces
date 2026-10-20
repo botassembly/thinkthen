@@ -7,13 +7,6 @@
 # surface has a check.sh. Cargo surfaces also pass
 # `cargo deny`; the named non-Cargo package manifests are checked separately.
 set -eu
-tools_group=surfaces
-. "$(dirname -- "$0")/resolved-tools"
-
-# Required checks fail whenever they do not run.
-. "$(dirname -- "$0")/verdict.sh"
-# Sanitize the environment before starting build tools.
-[ "$*" = --registry ] || . "$(dirname -- "$0")/allow-list"
 profile=routine
 registry_only=0
 fetch_only=0
@@ -23,6 +16,7 @@ artifact_dir=
 # `--publish TAG` copies the release files this run packs to ROOT/TAG through publish-builds.
 # ROOT is `--publish-root`, else THINKTHEN_PUBLISH_ROOT; with neither, it refuses. Only the coordinator asks for it.
 publish_tag= publish_root=
+parse_options() {
 while [ "$#" -gt 0 ]; do
     case $1 in
     --full-functional) profile=full ;;
@@ -38,6 +32,18 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
+}
+# Keep the entrypoint arguments for the resolver's re-exec, and choose tools
+# from the parsed mode rather than treating an option value as --registry.
+parse_options "$@"
+tools_group=surfaces
+[ "$registry_only" -eq 0 ] || tools_group=lint
+. "$(dirname -- "$0")/resolved-tools"
+
+# Required checks fail whenever they do not run.
+. "$(dirname -- "$0")/verdict.sh"
+# Sanitize the environment before starting build tools.
+[ "$registry_only" -eq 1 ] || . "$(dirname -- "$0")/allow-list"
 if [ -n "$artifact_dir" ] && { [ -n "$parity_baseline" ] || [ "$profile" != full ] || [ "$registry_only" -eq 1 ] || [ -n "$publish_tag" ]; }; then
     echo 'surfaces: installed artifacts require full parity without baseline, registry or publication' >&2; exit 2
 fi
