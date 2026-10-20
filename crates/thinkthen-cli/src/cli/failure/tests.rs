@@ -34,7 +34,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         })
         .expect("row held");
     let question_set = thinkthen::QuestionSet::from_json(&format!(
-        r#"{{"version":1,"questions":{{"{KEY}.{EVIDENCE}":{{"decide":"Fits?"}},"{KEY}.{EVIDENCE}":{{"decide":"Fits?"}}}}}}"#
+        r#"{{"questions":{{"{KEY}.{EVIDENCE}":{{"decide":"Fits?"}},"{KEY}.{EVIDENCE}":{{"decide":"Fits?"}}}}}}"#
     )).expect_err("duplicate question name");
     let shown = format!(
         "{judged:?} {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",

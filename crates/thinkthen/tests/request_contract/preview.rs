@@ -469,7 +469,7 @@ fn annotation_preview_retains_group_counts_without_adding_generic_json_fields() 
         .build()
         .unwrap();
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Urgent?"}}}"#,
+        r#"{"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Urgent?"}}}"#,
     )
     .unwrap();
     for rows in [vec![], vec![item("Alpha."), item("Beta.")]] {
@@ -554,7 +554,7 @@ fn recognition_preview_discloses_only_first_record_requests_with_full_input_coun
 fn relation_preview_retains_rule_order_empty_counts_and_native_requests() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let ask = Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"zeta","source":"*","target":"*","reads":"private_relation_preview_marker"},{"name":"alpha","source":"*","target":"*","reads":"linked","either":true}]}}"#).unwrap();
+    let ask = Relate::from_records_json(r#"{"relate":{"relations":[{"name":"zeta","source":"*","target":"*","reads":"private_relation_preview_marker"},{"name":"alpha","source":"*","target":"*","reads":"linked","either":true}]}}"#).unwrap();
     let records = ["Ada", "Bob"].map(|name| RequestItem {
         original: Some(RequestOriginal::Json {
             value: RawRecord::json(&format!(r#"{{"name":"{name}","kind":"person"}}"#)).unwrap(),
@@ -606,7 +606,7 @@ fn relation_preview_retains_rule_order_empty_counts_and_native_requests() {
 fn recognition_wording_overrides_saved_values_independently_before_preview() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let saved = thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{"instructions":"saved_task_marker","entity_definition":"saved_entity_marker"}}"#).unwrap();
+    let saved = thinkthen::Recognize::from_json(r#"{"recognize":{"instructions":"saved_task_marker","entity_definition":"saved_entity_marker"}}"#).unwrap();
     for (instructions, entity_definition, task, entity) in [
         (None, None, "saved_task_marker", "saved_entity_marker"),
         (
@@ -700,7 +700,7 @@ fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_deta
         let mut parts = Vec::new();
         let mut token_bytes = 0usize;
         for text in ["combine-private-evidence", "second evidence"] {
-            let question = QuestionSet::from_json(r#"{"version":1,"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#).unwrap();
+            let question = QuestionSet::from_json(r#"{"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#).unwrap();
             let request = Request::named(
                 "annotate",
                 args(

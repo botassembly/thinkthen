@@ -69,7 +69,7 @@ mod tests {
             "/label",
         ]);
         let relation = inline(&arguments).unwrap();
-        let native = Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows","either":true}],"fields":{"name":"/label","kind":"/kind"}},"threshold":0.7}"#).unwrap();
+        let native = Relate::from_records_json(r#"{"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows","either":true}],"fields":{"name":"/label","kind":"/kind"}},"threshold":0.7}"#).unwrap();
         for mode in [
             crate::RelationIdentityMode::Records,
             crate::RelationIdentityMode::Lines,

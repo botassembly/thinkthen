@@ -6,7 +6,7 @@ use crate::{Description, Kind, Recognize, RelationRule, RequestOptions, Threshol
 const KINDS: &str = "recognize takes distinct, nonblank kinds";
 const RELATION: &str =
     "a recognize relation has a distinct name, source, target, optional reads, and optional either";
-const SHAPE: &str = "a recognize question file is one closed version-one object";
+const SHAPE: &str = "a recognize question file is one closed object";
 const THRESHOLD: &str = "recognize thresholds are single cuts above zero and at most one";
 const BOUNDARY: &str = "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context";
 
@@ -155,7 +155,7 @@ mod tests {
         ]);
         let question = inline(&arguments).unwrap();
         let native = Recognize::from_json(
-            r#"{"version":1,"recognize":{"kinds":{"place":"Where","person":" "}}}"#,
+            r#"{"recognize":{"kinds":{"place":"Where","person":" "}}}"#,
         )
         .unwrap();
         assert_eq!(

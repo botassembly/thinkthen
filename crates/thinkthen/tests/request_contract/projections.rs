@@ -647,7 +647,7 @@ fn recognition_text_limits_apply_before_sending_and_belong_to_recognition() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     for limit in [1, 2] {
-        let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"recognize","question":{{"kind":"definition","value":{{"version":1,"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
+        let request = Request::from_json(&format!(r#"{{"schema":"thinkthen.request/1","call":{{"function":"recognize","question":{{"kind":"definition","value":{{"recognize":{{}}}}}},"input":{{"kind":"text","text":"Ada"}},"options":{{"max_text_bytes":{limit}}}}}}}"#)).unwrap();
         let arguments = request.call.arguments().clone();
         let error = engine
             .call("recognize", arguments, RequestEnvironment::default())
@@ -721,7 +721,7 @@ fn ranked_score_projection_retains_native_weighting_ties_and_decision_absence() 
     let engine = super::engine(&listener);
     let definitions = [
         Question::rank("Fits?").unwrap().into(),
-        RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Ready?"}}}"#).unwrap().into(),
+        RankSet::from_json(r#"{"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Ready?"}}}"#).unwrap().into(),
     ];
     for definition in definitions {
         let call = engine

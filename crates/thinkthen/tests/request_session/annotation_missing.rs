@@ -11,7 +11,7 @@ use std::sync::Mutex;
 type Policy = Arc<dyn Fn(usize, &str) -> bool + Send + Sync>;
 fn annotation() -> Request {
     let question = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"fit":{"decide":"Fits?","on":["/body"]}}}"#,
+        r#"{"questions":{"fit":{"decide":"Fits?","on":["/body"]}}}"#,
     )
     .unwrap();
     Request::named(
