@@ -75,6 +75,19 @@ SQLITE
         cc -std=c11 sqlite-consumer.c -o sqlite-consumer \
             $(pkg-config --cflags thinkthen) "$PWD/lib/libthinkthen.a" \
             "$static_selection" $(pkg-config --libs --static thinkthen) -lsqlite3
+        for binary in consumer sqlite-consumer; do
+            case $(uname -s) in
+            Darwin) dependencies=$(otool -L "$binary") ;;
+            *) dependencies=$(readelf -d "$binary") ;;
+            esac
+            case $dependencies in
+            *libthinkthen*)
+                printf '%s\n' "$dependencies" >&2
+                echo "libraries/c: $binary links the shared engine instead of the static archive" >&2
+                exit 1
+                ;;
+            esac
+        done
         env -i ./sqlite-consumer
     )
     python3 tests/installed-session.py "$THINKTHEN_ARTIFACT"
