@@ -717,9 +717,8 @@ fn request_contract_refuses_retired_metadata_in_every_declaration_before_sends()
                 function,
                 RequestArguments {
                     question: RequestQuestion::File { path: path.clone() },
-                    input: RequestInput::Text {
-                        text: "private-evidence".into(),
-                        images: vec![],
+                    input: RequestInput::Records {
+                        items: vec![item("private-evidence")],
                     },
                     options: RequestOptions::default(),
                 },
