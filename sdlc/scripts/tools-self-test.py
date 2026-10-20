@@ -181,17 +181,15 @@ class ToolResolution(unittest.TestCase):
         self.check([], False, requirement={**pin, 'version': 'nightly-1900-01-01',
                                          'groups': ['test']}, diagnostic='selected')
 
-    def test_reports_an_unavailable_cargo_subcommand_before_starting_work(self):
-        self.check(['sh'], False, requirement={
-            'commands': ['sh'], 'groups': ['test'], 'platforms': ['darwin', 'linux'],
-            'probes': [{'argv': ['sh', '-c', 'exit 1'], 'contains': 'cargo fmt'}],
-        }, diagnostic='selected')
-
-    def test_reports_unprepared_advisories_before_starting_work(self):
-        self.check(['sh'], False, requirement={
-            'commands': ['sh'], 'groups': ['test'], 'platforms': ['darwin', 'linux'],
-            'readiness': {'argv': ['sh', '-c', 'exit 1'], 'contains': 'advisories ok'},
-        }, diagnostic='selected')
+    def test_reports_failed_prerequisite_output_before_starting_work(self):
+        probe = {'argv': ['sh', '-c', 'echo prerequisite-stdout; echo prerequisite-stderr >&2; exit 23'],
+                 'contains': 'prepared'}
+        for kind in ('probe', 'probes', 'readiness'):
+            with self.subTest(kind=kind):
+                self.check(['sh'], False, requirement={
+                    'commands': ['sh'], 'groups': ['test'], 'platforms': ['darwin', 'linux'],
+                    kind: [probe] if kind == 'probes' else probe,
+                }, diagnostic='prerequisite-stdout\nprerequisite-stderr')
 
     @unittest.skipUnless(platform.system() == 'Darwin', 'macOS owns native Cargo resolution')
     def test_cargo_dispatch_ignores_ambient_plugins_and_aliases_but_shares_cache_locks(self):
