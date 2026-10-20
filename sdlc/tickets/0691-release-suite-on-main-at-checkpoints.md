@@ -47,3 +47,4 @@ Rule 6 of the 0.2.1 ruling says candidates are main revisions and the release su
 
 - 2026-10-18 started
 - 2026-10-20 next: Fresh fixing review accepted 63cc2ab41 with current-main integration and corrected checkpoint instructions; PM ruled that existing container package and configured C checks plus lint and test satisfy the amendment, named Rust and C smokes run natively on M5, and no linux-check extension is added, while the unchanged checkpoint regression runs in the pending integrated closing gate.
+- 2026-10-20 next: Combined six-ticket gate stopped before tests at CLAUDE.md 5056/5000 characters in receipt gate-runs/thinkthen/0632/m5/d2ef97a52a0fe9781e13c7cb478125837a3d591d; fresh fixing review accepted 8c9d297b1 with all rules preserved at 4998 characters, and the integrated gate will rerun on the repaired batch.
