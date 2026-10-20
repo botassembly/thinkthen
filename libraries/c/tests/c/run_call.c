@@ -43,6 +43,16 @@ static THREAD_RESULT print_error(void *argument) {
     if(facts.len)fwrite(facts.data,1,facts.len,stdout);else fputs("null",stdout);
     puts("}");return THREAD_DONE;
 }
+/* Constructors still expose their separate immediate diagnostic while shipped.
+   A refusal here creates no engine, call result or owned call error. */
+static int constructor_error(void) {
+    const thinkthen_error_view_v1 *error=thinkthen_error_view(NULL);
+    if(!error||error->facts)return 3;
+    printf("{\"constructor\":true,\"code\":%d,\"retryable\":%s,\"message\":",
+           error->code,error->retryable?"true":"false");
+    quoted(error->message);puts(",\"facts\":null}");
+    return 0;
+}
 static THREAD_RESULT print_result(void *argument) {
     thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(argument);
     fwrite(json.data,1,json.len,stdout);putchar('\n');
@@ -73,7 +83,11 @@ int main(int argc,char **argv) {
     binary_streams();
     char *bytes=arguments(argv[1],&argc,&argv);
     if(!bytes||argc<8)return 2;
-    thinkthen_engine *engine=thinkthen_engine_new_with(argv[1]);if(!engine)return 3;
+    thinkthen_engine *engine=thinkthen_engine_new_with(argv[1]);
+    if(!engine) {
+        int status=constructor_error();
+        free(argv);free(bytes);return status;
+    }
     thinkthen_named_request_v1 request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
     thinkthen_call_cancel *cancel=thinkthen_call_cancel_new();if(!cancel)return 3;
     if(!strcmp(argv[6],"cancel"))thinkthen_call_cancel_fire(cancel);

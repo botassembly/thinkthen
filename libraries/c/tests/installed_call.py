@@ -21,9 +21,12 @@ from installed_cases import static_flags
 
 
 def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
-    source = native_request(request(value, Path('fixture-source'), home, settings,
-                                    relative_sources=True))
+    with chdir(home):
+        source = native_request(request(value, Path('fixture-source'), home, settings,
+                                        relative_sources=True))
     items = source['input'].get('items', [])
+    if mode == 'fed' and source['input']['kind'] == 'source':
+        mode = 'plain'
     if source['cancel']:
         # An empty feed plus a pre-fired token cannot race a full-input send.
         mode, items = 'fed', []
@@ -160,7 +163,8 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
                     backend.close()
                     backend = shared.Backend(backend_binary, isolated)
                     shared.prepare(home, step)
-                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{step["arm"]}',
+                arm = step.get('override_arm', step['arm'] if value.get('image_variants') else value['arm'])
+                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{arm}',
                                 THINKTHEN_API_KEY='sk-conformance-loopback')
                 settings = {'cache': False, 'batch': 1, 'throttle': 1, 'max_retries': 0,
                             'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0',
