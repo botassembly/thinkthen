@@ -1,12 +1,14 @@
 # 0739: Run find probe checks with the supplied installed command
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Reviews: revision 7ee93b6, accept
+
+Landed: 3236f1f
 
 ## Outcome
 
