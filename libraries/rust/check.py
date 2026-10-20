@@ -141,8 +141,8 @@ def value_tree_cases(root, worker):
                             assert 'batch_setting' not in result['meta'], name
                             # Direct typed scalar calls omit the whole-call occurrence fields.
                             # Project only the approved expected fixture into Engine::call's scope.
-                            result.update(input=original['text'], index=0)
-                            result['meta']['batch_setting'] = 1
+                            result.update(input=original['text'], index=decimal_json('0'))
+                            result['meta']['batch_setting'] = decimal_json('1')
                         tree = actual['host']
                         assert {'value', 'probability', 'resolution', 'results', 'facts'} <= tree.keys(), name
                         assert 'answer' not in tree, name + ': duplicate answer alias'
