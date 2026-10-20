@@ -1,12 +1,14 @@
 # 0741: Report engine construction failures through an owned C error
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Reviews: revision d721b6d, accept
+
+Landed: 3236f1f
 
 ## Outcome
 
