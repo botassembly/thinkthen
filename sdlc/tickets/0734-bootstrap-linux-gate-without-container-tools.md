@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0619, 0726
 
+Reviews: revision 4b5fb48, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/gate`, `sdlc/scripts/tools-self-test.py`, `sdlc/scripts/README.md`.
