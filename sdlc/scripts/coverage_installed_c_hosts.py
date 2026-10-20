@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+import sys
 from tools import commands
 import tarfile
 
@@ -36,8 +37,10 @@ def prepare(context):
     shutil.copy2(context['c_shared'], native / 'lib/libthinkthen.so')
     (native / 'lib/libthinkthen.so.0').symlink_to('libthinkthen.so')
     command(['sh', str(root / 'libraries/c/localize.sh'),
-             str(context['c_target'] / 'debug/libthinkthen_c.a'), str(native / 'lib/libthinkthen.a')],
-            root, {**env, 'THINKTHEN_COVERAGE_INITIALIZER': str(context['initializer'])},
+             str(context['c_target'] / 'debug/libthinkthen_c.a'), str(native / 'lib/libthinkthen.a'),
+             '-u', '___llvm_profile_runtime' if sys.platform == 'darwin' else '__llvm_profile_runtime',
+             str(context['initializer'])],
+            root, env,
             stage / 'localize.log')
     native_archive = stage / 'c.tar.gz'
     archive(native, native_archive, ('include', 'lib'))

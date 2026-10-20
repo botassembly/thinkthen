@@ -31,6 +31,29 @@ int main(void) {
 }
 ```
 
+Save the caller as `consumer.c`. On Linux or macOS, compile it from the extracted directory:
+
+```sh
+export PKG_CONFIG_PATH="$PWD/lib/pkgconfig"
+case $(uname -s) in
+  Darwin) static_selection=-Wl,-dead_strip_dylibs ;;
+  *) static_selection=-Wl,--as-needed ;;
+esac
+cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) \
+  "$PWD/lib/libthinkthen.a" "$static_selection" $(pkg-config --libs --static thinkthen)
+./consumer
+```
+
+The archive supplies the static engine; pkg-config supplies its native dependencies. Shared consumers use `pkg-config --cflags --libs thinkthen` and deploy the platform shared library with their application.
+
+On Windows, open an MSVC developer command prompt in the extracted archive:
+
+```bat
+cl /nologo /W4 /I include consumer.c lib\thinkthen.dll.lib /Fe:consumer.exe
+set "PATH=%CD%\bin;%PATH%"
+consumer.exe
+```
+
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them. These examples were checked with saved answers; live answers and probabilities can differ. See the [package guide](https://thinkthen.dev/languages/c/) for results, failures, record inputs and offline replay.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

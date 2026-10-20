@@ -22,15 +22,30 @@ The older session and generated view exports remain for migrating language hosts
 
 ## Use a prebuilt development archive
 
-Extract the matching C archive supplied by your reviewed development build. It carries the generated `include/thinkthen.h`, static engine, shared library and relocatable `lib/pkgconfig/thinkthen.pc`. A C caller compiles its own program; it needs no Rust compiler. The package-relative static archive supplies the engine without a runtime library search path. For Linux, from the extracted directory:
+Extract the matching C archive supplied by your reviewed development build. It carries the generated `include/thinkthen.h`, static engine, shared library and relocatable `lib/pkgconfig/thinkthen.pc`. A C caller compiles its own program; it needs no Rust compiler. The package-relative static archive supplies the engine without a runtime library search path. From the extracted directory on Linux or macOS:
 
 ```sh
-PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
-  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --cflags thinkthen) \
-  "$PWD/lib/libthinkthen.a" \
-  $(PKG_CONFIG_PATH="$PWD/lib/pkgconfig" pkg-config --libs --static thinkthen | sed 's/-lthinkthen//')
+export PKG_CONFIG_PATH="$PWD/lib/pkgconfig"
+case $(uname -s) in
+  Darwin) static_selection=-Wl,-dead_strip_dylibs ;;
+  *) static_selection=-Wl,--as-needed ;;
+esac
+cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) \
+  "$PWD/lib/libthinkthen.a" "$static_selection" $(pkg-config --libs --static thinkthen)
 ./consumer
 ```
+
+On Windows, run this command from an MSVC developer command prompt in the extracted archive:
+
+```bat
+cl /nologo /W4 /I include consumer.c lib\thinkthen.dll.lib /Fe:consumer.exe
+set "PATH=%CD%\bin;%PATH%"
+consumer.exe
+```
+
+The import library links the caller to `bin/thinkthen.dll`.
+
+`pkg-config --libs --static` adds native system dependencies. The explicit archive selects the static engine; the linker option drops the neighboring shared library from the executable. For shared integration, use `pkg-config --cflags --libs thinkthen` and deploy the shared library on the platform library search path.
 
 [examples/session.c](examples/session.c) is a complete caller using the blocking call. It parses the owned result with `thinkthen_value_parse`, reads the boolean answer and numeric probability through typed JSON views, and prints those two values. The parsed value has its own owner, so the example releases the call result before reading the views. Supply the backend environment before a live call. The focused local package check extracts the archive into a temporary folder outside the repository and compiles the example and blocking C consumer there. It checks the owned complete results, settled answer and probability, facts and observable errors against the shared cases and expectations. Error checks pin the C status, safe message, retryability, owner and send count. A refusal during engine construction is labeled separately and checked through its existing constructor diagnostic; it creates no owned call error. Rust retains proof of native packet envelopes and error fields that the current C interface does not expose. Independent session, plan, memory, threading and cancellation checks remain while those APIs ship. A synthetic loopback backend supplies every answer:
 
@@ -38,19 +53,23 @@ PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
 THINKTHEN_TEST_PROFILE=full python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE
 ```
 
-The [native package design](../../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime prerequisites. This example proves Linux static integration; other platform qualification belongs to the authorized release candidate.
+The [native package design](../../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime prerequisites. Platform qualification belongs to the authorized release candidate.
 
 ## Build from source
 
 ```sh
 cargo build --release
 mkdir -p lib
-cp target/release/libthinkthen_c.so lib/libthinkthen.so
-ln -sf libthinkthen.so lib/libthinkthen.so.0
+case $(uname -s) in
+  Darwin) extension=dylib; soname=libthinkthen.0.dylib ;;
+  *) extension=so; soname=libthinkthen.so.0 ;;
+esac
+cp "target/release/libthinkthen_c.$extension" "lib/libthinkthen.$extension"
+ln -sf "libthinkthen.$extension" "lib/$soname"
 cc -std=c11 -I include examples/session.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib" -o session
 ```
 
-A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `localize.sh` writes the release `libthinkthen.a` so that it defines only the header's `thinkthen_` functions as global names, and a program can link its own SQLite beside it. On macOS it needs the `rust-objcopy` that ships inside the Rust toolchain. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
+A release carries `libthinkthen.a` and the platform shared library. `build.rs` restricts shared exports through the platform linker. Static archives still need a partial link: `localize.sh` joins their members and keeps only `thinkthen_` functions global, so a program can link its own SQLite beside them. On macOS it needs the `rust-objcopy` that ships inside the Rust toolchain. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
 
 `thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, request-byte ceiling, cache, timeout, retries, profile, batch default, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
