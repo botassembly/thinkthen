@@ -69,7 +69,7 @@ def checked_usage(delta, rows, refuse):
 
 
 def checked_facts(facts, delta, records, refuse):
-    if not isinstance(facts, dict) or facts.get('schema') != 'thinkthen.run/1' or facts.get('records') != records:
+    if not isinstance(facts, dict) or facts.get('schema') != 'thinkthen.run' or facts.get('records') != records:
         refuse('the final facts are missing or incomplete')
     for key in ('requests_sent', 'input_tokens', 'output_tokens'):
         if type(facts.get(key)) is not int or facts[key] != delta[key]:

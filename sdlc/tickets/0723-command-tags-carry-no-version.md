@@ -1,27 +1,45 @@
 # 0723: Command output tags and plans carry no version
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision fa4e259, accept
+
+Reviews: revision 51c63d4, accept
+
+Reviews: revision 08312ed, accept
+
 ## Outcome
 
-- Changes: `conformance/cli_parity.py`, `crates/thinkthen/src/cli/annotate/error_row.rs`, `crates/thinkthen/src/cli/facts.rs`, `crates/thinkthen/src/cli/recognize/dry_run.rs`, `crates/thinkthen/src/cli/relate/dry_run.rs`, `crates/thinkthen/src/cli/status.rs`, `crates/thinkthen/tests/backend/annotate/record_failure.rs`, `crates/thinkthen/tests/backend/facts.rs`, `crates/thinkthen/tests/backend/facts/`, `crates/thinkthen/tests/backend/named_backends/command.rs`, `crates/thinkthen/tests/backend/recognize.rs`, `crates/thinkthen/tests/backend/relate/details.rs`, `crates/thinkthen/tests/backend/status.rs`, `crates/thinkthen/tests/windows/interrupt.rs`, `demos/16-triage-pipeline/review-jsonl`, `demos/16-triage-pipeline/self-test`, `demos/45-map-relationships/README.md`, `probes/annotate-batching/measure.py`, `probes/paid_evidence.py`, `probes/tag-score/measure.py`, `site/examples/reference/annotate/5-continue.out`, `site/examples/reference/annotate/5-continue.sh`, `site/examples/reference/status/1-json.out`, `site/examples/start/answer-cache/4-facts.out`, `site/src/components/AnnotateEdges.astro`, `site/src/data/flags.mjs`, `site/src/data/overhead.json`, `site/src/pages/start/configuration.astro`, `spec/recognize.md`, `spec/relate.md`, `specification/annotate.md`, `specification/channels.md`, `specification/fixtures/types/corpus.json`, `specification/question-file.md`, `specification/recognize.md`, `specification/recording.md`, `specification/records.md`, `specification/relate.md`, `specification/result.md`, `specification/settings.md`, `specification/types.md`.
+- Changes: `crates/thinkthen/src/public/results/tally.rs`, `conformance/cli_parity.py`, `crates/thinkthen-cli/src/cli/annotate/error_row.rs`, `crates/thinkthen-cli/src/cli/facts.rs`, `crates/thinkthen-cli/src/cli/recognize/dry_run.rs`, `crates/thinkthen-cli/src/cli/relate/dry_run.rs`, `crates/thinkthen-cli/src/cli/status.rs`, `crates/thinkthen-cli/tests/backend/annotate/record_failure.rs`, `crates/thinkthen-cli/tests/backend/facts.rs`, `crates/thinkthen-cli/tests/backend/facts/`, `crates/thinkthen-cli/tests/backend/named_backends/command.rs`, `crates/thinkthen-cli/tests/backend/recognize.rs`, `crates/thinkthen-cli/tests/backend/relate/details.rs`, `crates/thinkthen-cli/tests/backend/status.rs`, `crates/thinkthen-cli/tests/windows/interrupt.rs`, `demos/16-triage-pipeline/review-jsonl`, `demos/16-triage-pipeline/self-test`, `demos/45-map-relationships/README.md`, `probes/annotate-batching/measure.py`, `probes/paid_evidence.py`, `probes/tag-score/measure.py`, `site/examples/reference/annotate/5-continue.out`, `site/examples/reference/annotate/5-continue.sh`, `site/examples/reference/status/1-json.out`, `site/examples/start/answer-cache/4-facts.out`, `site/src/components/AnnotateEdges.astro`, `site/src/data/flags.mjs`, `site/src/data/overhead.json`, `site/src/pages/start/configuration.astro`, `spec/recognize.md`, `spec/relate.md`, `specification/annotate.md`, `specification/channels.md`, `specification/fixtures/types/corpus.json`, `specification/question-file.md`, `specification/recognize.md`, `specification/recording.md`, `specification/records.md`, `specification/relate.md`, `specification/result.md`, `specification/settings.md`, `specification/types.md`.
 - The command's other output tags keep their name and lose their number: `thinkthen.record-error`, `thinkthen.run` and `thinkthen.status`. Readers match the unnumbered tag.
 - The `--plan` objects for recognize and relate drop their `schema` member, like the other verbs.
 - The specification, site pages and examples, demos 16 and 45, and the probe measurement scripts change with them. `sdlc/scripts/spec` and `sdlc/scripts/demos` replay every changed page.
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0723 SHA --memory 8 -- cargo nextest run -p thinkthen facts status recognize relate record_failure`, the tests pin the unnumbered tags and plans without `schema`; they fail before the change on the numbered strings.
+- On the M5 through `pm job run --machine m5 0723 SHA --memory 8 -- cargo nextest run -p thinkthen-cli -E 'test(facts) | test(status) | test(recognize) | test(relate) | test(record_failure)'`, the tests pin the unnumbered tags and plans without `schema`; they fail before the change on the numbered strings.
 - On the M5 through pm job, `git grep -nE 'thinkthen\.(record-error|run|status|recognize-plan|relate-plan)/[0-9]' -- . ':!sdlc'` finds nothing, and `sdlc/scripts/spec` and `sdlc/scripts/demos` pass.
 
 ## Evidence
 
 Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbers-before-1-0.md). Split from 0707, which keeps the result tag; these tags have their own writers and fixtures and land alone.
 
-Starts from the writers: `crates/thinkthen/src/cli/annotate/error_row.rs` (`thinkthen.record-error/1`), `crates/thinkthen/src/cli/facts.rs` (`thinkthen.run/1`), `crates/thinkthen/src/cli/status.rs` (`thinkthen.status/2`), and the dry-run plans in `crates/thinkthen/src/cli/recognize/dry_run.rs` (`thinkthen.recognize-plan/2`) and `crates/thinkthen/src/cli/relate/dry_run.rs` (`thinkthen.relate-plan/1`). Readers: `conformance/cli_parity.py`, `probes/paid_evidence.py` and the probe `measure.py` scripts, and `demos/16-triage-pipeline/review-jsonl`.
+Starts from the writers: `crates/thinkthen-cli/src/cli/annotate/error_row.rs` (`thinkthen.record-error/1`), `crates/thinkthen-cli/src/cli/facts.rs` (`thinkthen.run/1`), `crates/thinkthen-cli/src/cli/status.rs` (`thinkthen.status/2`), and the dry-run plans in `crates/thinkthen-cli/src/cli/recognize/dry_run.rs` (`thinkthen.recognize-plan/2`) and `crates/thinkthen-cli/src/cli/relate/dry_run.rs` (`thinkthen.relate-plan/1`). Readers: `conformance/cli_parity.py`, `probes/paid_evidence.py` and the probe `measure.py` scripts, and `demos/16-triage-pipeline/review-jsonl`.
 
-Shares specification pages with 0707 and 0706; any order lands. Paths under `crates/thinkthen/src/cli/` move when 0639 lands; the claim follows the move.
+Shares specification pages with 0707 and 0706; any order lands. Paths under `crates/thinkthen-cli/src/cli/` move when 0639 lands; the claim follows the move.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: Independent command writers readers plans and public examples are pushed at c9f9ec588 with fixture checkpoint 0f6be3a74; two shared backend test files remain held until 0721 lands, then the remaining references and admitted M5 red-green replay proof follow.
+- 2026-10-20 next: Source 5b1785abe includes the accepted backend parent and complete command-tag fixture updates; M5 job1792488209366-26374 exited2 before any proof because native lint selected the Linux GCC pin, so the retained receipt proves no test result and targeted red-green plus replay checks resume after the approved0733 manifest correction.
+- 2026-10-20 next: Fresh review acceptedfa4e259ab with four intended old-code failures and233 CLI passes plus spec demos type and site receipts; approved replay-model repair passed policy10tallycases CLI rebuild and all3answer-cache examples in1792490555939-96723, while native lint reached Linux-only Ada generation and the pending configured Linux closing gate supplies full lint format clippy and documentation proof.
+- 2026-10-20 next: Combined gate receipt gate-runs/thinkthen/0632/m5/3f8e556e878c76e8122ff1f176084dc2c9267f23 stopped at recognize-test formatting; fixing review accepted 08312edaf with assertions unchanged, and M5 job 1792495381103-15325 applied the identical pinned formatter patch before passing format both clippy profiles docs and inventory, while the integrated gate remains required.
+
+## Replay facts repair, PM ruling 2026-10-20
+
+The shared tally retains a model reported by stored replies even when replay records no sends and no cache answers, as the result specification already requires. Add the model-is-none guard to the existing early return and extend the existing tally cases for equal and mixed replay models. Keep the site expected model assertion unchanged. No other source path joins this repair.

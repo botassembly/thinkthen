@@ -37,7 +37,7 @@ const [form, onBody] = files(dir);
 <Subheading id="on-error-continue">A missing pointer and exit 7</Subheading>
 <p>A question may read one part of each record with <code>on</code>, a JSON Pointer. Here each question reads <code>/body</code>.</p>
 <Code code={onBody.text} file={onBody.name} caption={`${onBody.name}, the same questions on /body`} />
-<p>A record without that part stops the run at exit 2. <code>--on-error continue</code> skips it instead. It needs <code>--jsonl</code>, <code>--details</code> and <code>--batch 1</code>, and it refuses <code>--plan</code>. It recovers only a missing pointer. The skipped record gets one <code>thinkthen.record-error/1</code> row in its place, and no request goes out for it. Standard error counts the skipped records. A run that skipped any record exits 7.</p>
+<p>A record without that part stops the run at exit 2. <code>--on-error continue</code> skips it instead. It needs <code>--jsonl</code>, <code>--details</code> and <code>--batch 1</code>, and it refuses <code>--plan</code>. It recovers only a missing pointer. The skipped record gets one <code>thinkthen.record-error</code> row in its place, and no request goes out for it. Standard error counts the skipped records. A run that skipped any record exits 7.</p>
 <Terminal run={carryOn} caption={carryOn.see} />
 
 <Subheading id="failed-questions">Failed questions and exit 6</Subheading>

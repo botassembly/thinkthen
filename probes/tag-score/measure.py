@@ -230,7 +230,7 @@ def self_test(bench):
     rows = [{'meta': {'usage': {'input_tokens': 3, 'output_tokens': 2}}},
             {'meta': {'usage': {'input_tokens': 4, 'output_tokens': 1}}}]
     assert checked_usage({'input_tokens': 7, 'output_tokens': 3}, rows) == 10
-    checked_facts({'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2, 'input_tokens': 7,
+    checked_facts({'schema': 'thinkthen.run', 'records': 219, 'requests_sent': 2, 'input_tokens': 7,
                    'output_tokens': 3}, {'requests_sent': 2, 'input_tokens': 7, 'output_tokens': 3})
     for bad in ({'input_tokens': 7}, {'input_tokens': 7, 'output_tokens': 4}):
         try:
@@ -241,8 +241,8 @@ def self_test(bench):
         else:
             raise AssertionError('missing or mismatched usage passed')
     assert spearman([1, 2, 3], [10, 20, 30]) == 1.0
-    for bad in ({'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2, 'input_tokens': 7},
-                {'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2,
+    for bad in ({'schema': 'thinkthen.run', 'records': 219, 'requests_sent': 2, 'input_tokens': 7},
+                {'schema': 'thinkthen.run', 'records': 219, 'requests_sent': 2,
                  'input_tokens': 7, 'output_tokens': 4}):
         try:
             with contextlib.redirect_stderr(io.StringIO()):

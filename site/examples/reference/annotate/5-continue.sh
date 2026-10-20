@@ -10,7 +10,7 @@ thinkthen annotate on-body.json \
   --on-error continue \
   > rows.jsonl
 skipped_code=$?
-jq -c 'if .schema == "thinkthen.record-error/1"
+jq -c 'if .schema == "thinkthen.record-error"
   then .
   else {id: .input.id, value}
   end' rows.jsonl

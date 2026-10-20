@@ -467,7 +467,7 @@ else:
                     raise AssertionError('missing usage passed')
         with contextlib.redirect_stderr(io.StringIO()):
             try:
-                evidence.checked_facts({'schema': 'thinkthen.run/1', 'records': 182,
+                evidence.checked_facts({'schema': 'thinkthen.run', 'records': 182,
                     'requests_sent': 1, 'input_tokens': 3},
                     {'requests_sent': 1, 'input_tokens': 3, 'output_tokens': 1}, 182, refuse)
             except SystemExit as error:

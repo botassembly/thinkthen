@@ -235,7 +235,7 @@ impl TallyStart<'_> {
             Some(total) => state.cost_micro_usd = total,
             None => state.missing_cost = true,
         }
-        if facts.requests_sent == 0 && facts.cache_answers == 0 {
+        if facts.requests_sent == 0 && facts.cache_answers == 0 && facts.model.is_none() {
             return Ok(());
         }
         match (&state.model, &facts.model) {
@@ -312,6 +312,12 @@ mod tests {
             (vec![facts(0, 0, None), facts(0, 1, Some("m"))], Some("m")),
             (vec![facts(1, 0, Some("m")), facts(1, 0, None)], None),
             (vec![facts(1, 0, Some("m")), facts(0, 1, Some("n"))], None),
+            (vec![facts(0, 0, Some("m"))], Some("m")),
+            (
+                vec![facts(0, 0, Some("m")), facts(0, 0, Some("m"))],
+                Some("m"),
+            ),
+            (vec![facts(0, 0, Some("m")), facts(0, 0, Some("n"))], None),
         ];
         for (calls, model) in cases {
             let tally = Tally::new();

@@ -41,7 +41,7 @@ fn line(output: &std::process::Output) -> Value {
     let stderr = crate::harness::said(output);
     let last = stderr.lines().last().expect("run facts line");
     let facts: Value = serde_json::from_str(last).expect("valid run facts");
-    assert_eq!(facts["schema"], "thinkthen.run/1");
+    assert_eq!(facts["schema"], "thinkthen.run");
     assert!(
         facts["seconds"]
             .as_f64()

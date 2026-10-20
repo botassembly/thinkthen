@@ -31,8 +31,8 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen relate @relations.json --url https://api.typesafe.ai/v1 \
   --plan < entities.json \
   | sed -n '1p' \
-  | jq -c '{schema,entity_count,logical_questions,request_count}' \
-  | mustmatch '{"schema":"thinkthen.relate-plan/1","entity_count":2,"logical_questions":2,"request_count":1}'
+  | jq -c '{schema:has("schema"),entity_count,logical_questions,request_count}' \
+  | mustmatch '{"schema":false,"entity_count":2,"logical_questions":2,"request_count":1}'
 ```
 
 ## Step 2: keep a self-contained edge

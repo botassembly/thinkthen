@@ -71,7 +71,7 @@ pub(crate) fn write(
     call_id: Option<crate::CallId>,
 ) {
     let line = Line {
-        schema: "thinkthen.run/1",
+        schema: "thinkthen.run",
         call_id,
         records: snapshot.facts.records(),
         requests_sent: snapshot.counts.requests_sent(),

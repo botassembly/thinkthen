@@ -71,7 +71,7 @@ fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
         "thinkthen: usage counters could not be updated; check the usage folder permissions and free space"
     );
     let facts: Value = serde_json::from_str(lines[1]).expect("final run facts");
-    assert_eq!(facts["schema"], "thinkthen.run/1");
+    assert_eq!(facts["schema"], "thinkthen.run");
     assert_eq!(facts["records"], 1);
     assert_eq!(facts["requests_sent"], 1);
     assert_eq!(listener.requests().len(), 1);
