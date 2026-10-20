@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install job-owned macOS tools or consume the pinned Linux image's tool prefix."""
 import argparse
+from graphlib import TopologicalSorter
 import json
 import os
 from pathlib import Path
@@ -165,7 +166,14 @@ def resolve(manifest, groups, root, check=False):
     env['PATH'] = os.pathsep.join(paths + [SYSTEM_PATH])
     failures = []
     installer = None
-    for name, tool in requirements.items():
+    # Providers name the installer executable (cargo:*, npm:* or rustup).
+    # Prepare its declared owner before using it, independent of manifest order.
+    owners = {command: name for name, tool in requirements.items() for command in tool['commands']}
+    dependencies = {name: {owners[provider]} - {name} if provider in owners else set()
+                    for name, tool in requirements.items()
+                    for provider in [tool.get('provider', '').split(':')[0]]}
+    for name in TopologicalSorter(dependencies).static_order():
+        tool = requirements[name]
         if host != 'darwin' or 'provider' not in tool or tool['provider'] in ('python-package', 'ruby-bundled'):
             continue
         if tool['provider'] == 'rustup':
