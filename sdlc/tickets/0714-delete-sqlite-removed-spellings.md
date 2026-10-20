@@ -29,3 +29,7 @@ Depends on: 0688
 - Tests that assert removed spellings: `tests/test_error_format.py`, `tests/test_probability.py`, `tests/test_settings.py`, `tests/test_trusted_schema.py` and `tests/test_values.py`.
 - That is backward-compatibility code, which the 2026-10-12 no-compatibility-before-1.0 ruling forbids.
 - 0695 also rewrites `databases/sqlite/tests/`; whichever lands second rebases on the first.
+
+## Progress
+
+- 2026-10-20 started
