@@ -10,6 +10,8 @@ Depends on: 0633
 
 Reviews: revision a30dd15, accept
 
+Reviews: revision 33d8873, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/release-smoke`, `sdlc/scripts/installer-test`.
