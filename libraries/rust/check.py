@@ -41,18 +41,16 @@ def main():
     target = Path(os.environ.get('CARGO_TARGET_DIR', str(root / 'libraries/rust/target')))
     binary = target / 'debug/thinkthen-rust-consumer'
     binary.parent.mkdir(parents=True, exist_ok=True)
-    # The retained shared fixture finds its backend through CARGO_TARGET_DIR.
-    backend = os.environ.get('THINKTHEN_TEST_BACKEND')
-    if backend:
-        os.environ['CARGO_TARGET_DIR'] = str(Path(backend).parents[1])
     sys.path.insert(0, str(root / 'conformance/children'))
-    from native_fixture import run
+    from packet_dump import run
     compiler_env = {'RUSTUP_TOOLCHAIN': compiler}
     profile = os.environ.get('THINKTHEN_TEST_PROFILE', 'routine')
-    if profile != 'stress' and run('rust', [str(binary)], root,
-                                 rust_manifest=project / 'Cargo.toml',
-                                 extra_env=compiler_env):
-        return True
+    if profile != 'stress':
+        subprocess.run(['cargo', 'build', '--locked', '--offline', '--manifest-path',
+                        str(project / 'Cargo.toml'), '--target-dir', str(target)],
+                       env={**os.environ, **compiler_env}, check=True)
+        if run('rust', [str(binary)], root):
+            return True
     if len(sys.argv) > 2 or profile == 'routine':
         command = ['cargo', 'test', '--locked', '--offline', '--manifest-path',
                    str(project / 'Cargo.toml'), '--target-dir', str(target)]
