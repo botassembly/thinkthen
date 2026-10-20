@@ -17,7 +17,10 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 - Scope adds the nine cases that timed out on Yellow in checkpoint 0691/1792518201049-861514 (`sdlc/records/0688-yellow-checkpoint-routine-deadlines.md`): seven SQLite fixture cases, the relate ceiling case and the speed fixture. Use that record's recommendations: build legacy fixtures in one transaction and copy valid seeds; keep the large planning regression in the long suite with a smaller routine boundary case; run one complete speed table and restrict each planted fault to its row.
 - No test uses a sleep or a deadline as synchronization. Fixture setup stays outside the timed part. Every assertion and production durability check stays.
 - Changes widen to the test files of those cases and `.config/nextest.toml`.
-- Proof: `pm job run --machine gator 0605 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes five times in a row with no timeout, and the slowest routine test stays under 2.5 seconds there; Yellow serves when Gator is held. The configured landing gate passes.
+- Proof: `pm job run --machine gator 0605 SHA --disk 20 --memory 7 -- sdlc/scripts/linux-check lint test` passes five times in a row with no timeout, and the slowest routine test stays under 2.5 seconds there; Yellow serves when Gator is held. The configured landing gate passes.
+- Focused store proof: `pm job run --machine m5 0605 SHA --disk 20 --memory 8 -- sdlc/scripts/job cargo test --locked --offline -p thinkthen --lib engine::store::tests`.
+- The retained large regression runs once through `pm job run --machine m5 0605 SHA --disk 20 --memory 8 -- sdlc/scripts/job cargo test --locked --offline -p thinkthen-cli --test backend relate::ceiling::release_only_full_line_set_plans_inside_the_child_deadline -- --ignored --exact`.
+- Before fresh review, run the configured routine gate with `pm job run --machine m5 0605 SHA --disk 20 --memory 8 -- sdlc/scripts/gate` after coordinator integration of accepted current main.
 
 ## Evidence
 
@@ -30,7 +33,7 @@ Ian approved moving this ticket to 0.2.1 after [the five-delays analysis](../rec
 
 ## Scope
 
-- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
+- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, `crates/thinkthen-cli/tests/backend/default_cache/prune.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
 - Keeps: every check's coverage.
 
 ## Proof
