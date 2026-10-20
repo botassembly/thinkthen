@@ -2,6 +2,8 @@
 
 Status: OPEN.
 
+Progress: Started Ruby native call migration; pushed unfinished work and stopped before checks under Ian’s standdown; native error, observation and terminal tree access remains unresolved.
+
 Milestone: 0.2.1
 
 Phase: 3
