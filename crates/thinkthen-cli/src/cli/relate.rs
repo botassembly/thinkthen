@@ -137,6 +137,7 @@ fn execute(
         request,
         crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
+            interrupt: Some(environment.cancel().interrupt()),
             retain_success_on_cancel: true,
             eager: true,
             ..Default::default()

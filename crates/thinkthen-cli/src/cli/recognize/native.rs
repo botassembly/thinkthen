@@ -152,6 +152,7 @@ pub(super) fn run(
         request(admitted, running.context.as_deref()),
         crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
+            interrupt: Some(running.environment.cancel().interrupt()),
             retain_success_on_cancel: true,
             incremental_recognition: true,
             eager,

@@ -65,6 +65,7 @@ pub(super) fn run(
         request,
         crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
+            interrupt: Some(environment.cancel().interrupt()),
             on_missing_annotation_pointer: None,
             incremental_recognition: false,
             incremental_ranking: function == crate::RequestFunction::Rank,

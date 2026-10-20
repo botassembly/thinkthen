@@ -224,6 +224,11 @@ pub enum RequestSessionReady {
 /// Owned session controls, separate from canonical Request JSON.
 #[derive(Default, Clone)]
 pub struct RequestSessionFeedOptions {
+    /// Check caller interruption on the session worker before native sends and
+    /// while waiting. True stops further work; sent attempts still settle.
+    /// Panics become native defects. The callback must not wait on this session.
+    /// Defaults to no callback and never enters canonical request JSON.
+    pub interrupt: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     /// Owned ordinary annotation pointer policy, defaulting to no continuation.
     /// The worker calls this only for an absent question-set `on` pointer, with
     /// zero-based original ordinal and pointer borrowed for the callback. True
@@ -271,6 +276,7 @@ pub struct RequestSessionFeedOptions {
 impl std::fmt::Debug for RequestSessionFeedOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RequestSessionFeedOptions")
+            .field("interrupt", &self.interrupt.is_some())
             .field("retain_success_on_cancel", &self.retain_success_on_cancel)
             .field("incremental_recognition", &self.incremental_recognition)
             .field("incremental_ranking", &self.incremental_ranking)
@@ -612,6 +618,9 @@ fn run(
         .cancel(&queue.cancel)
         .retain_success_on_cancel(options.retain_success_on_cancel)
         .observe(&observer);
+    if let Some(check) = options.interrupt.as_deref() {
+        controls = controls.interrupt(check);
+    }
     if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
         controls = controls.on_missing_annotation_pointer(callback);
     }
@@ -757,6 +766,9 @@ fn run_recovering(
         .cancel(&queue.cancel)
         .retain_success_on_cancel(options.retain_success_on_cancel)
         .observe(&observe);
+    if let Some(check) = options.interrupt.as_deref() {
+        controls = controls.interrupt(check);
+    }
     if feed_request {
         controls = controls.readiness(&readiness);
     }

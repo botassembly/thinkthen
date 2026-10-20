@@ -11,6 +11,10 @@ impl Signal {
     pub(crate) fn fired(&self) -> bool {
         self.0.load(Ordering::Acquire)
     }
+    pub(crate) fn interrupt(&self) -> Arc<dyn Fn() -> bool + Send + Sync> {
+        let signal = self.clone();
+        Arc::new(move || signal.fired())
+    }
     pub(super) fn flag(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.0)
     }

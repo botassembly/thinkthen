@@ -19,6 +19,7 @@ pub(super) fn execute(
         request,
         crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
+            interrupt: Some(environment.cancel().interrupt()),
             retain_success_on_cancel: true,
             record_reading: Some(super::composition(common)?),
             ..Default::default()

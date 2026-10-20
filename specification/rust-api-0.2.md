@@ -64,6 +64,8 @@ Offline command analysis shares the existing validated `Probability` and `Thresh
 
 Offline command reports inspect `RawRecord::content` through additional borrowed `QuestionContent` operations: member and array access, ordered field and element iteration, exact number and boolean access, and the existing native pointer grammar. The library keeps duplicate, nonfinite and depth validation; command reporting does not receive or copy the private JSON tree or implement another parser. These views retain false, null, numeric distinctions and authored order without reparsing originals.
 
+`RequestSessionFeedOptions::interrupt` owns an optional caller interrupt check. It forwards to `CallOptions::interrupt` on the session worker, including the native check before another send. True stops further work while sent attempts settle; callback panics become native defects. It defaults to no callback, applies in both session modes, and never enters request JSON. The command supplies its process signal latch so a held attempt can drain without sending queued input.
+
 `RequestSessionFeedOptions::retain_success_on_cancel` defaults to false. Explicit opt-in retains only an otherwise successful native result when cancellation arrives during final settlement; active work still stops. Both ordinary and recovering sessions apply the same policy to inline, source and feed requests. The command opts in to preserve its existing earned whole-set result under SIGINT, drains final output and facts with Settlement interest, and retains its existing signal exit. Rust callers, C adapters and MCP keep dominant cancellation unless they explicitly request this policy. The operation reuses the existing private settlement rule and exposes no scheduler, sink or readiness internals.
 
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
@@ -380,6 +382,7 @@ impl Error for ThresholdError
 fn validate_pointer(&str) -> Result<(), Error>
 fn EngineBuilder::from_config() -> Result<EngineBuilder, Error>
 ResolvedSettings::key_variables: Vec<String>
+RequestSessionFeedOptions::interrupt: Option<Arc<(dyn Fn() -> bool + Send + Sync)>>
 RequestSessionFeedOptions::retain_success_on_cancel: bool
 RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>
 RequestSessionFeedOptions::incremental_recognition: bool

@@ -72,6 +72,7 @@ pub(super) fn run(
         crate::Request::for_function(crate::RequestFunction::Annotate, arguments),
         crate::Surface::Cli,
         crate::RequestSessionFeedOptions {
+            interrupt: Some(judging.environment.cancel().interrupt()),
             on_missing_annotation_pointer: judging.continue_missing().then_some(callback),
             input_pause: judging.environment.input_pause(),
             retain_success_on_cancel: true,
