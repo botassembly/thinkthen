@@ -10,7 +10,7 @@ Depends on: 0612, 0629, 0642
 
 ## Outcome
 
-- Changes: `crates/thinkthen/src/public/request/value_tree.rs`, `crates/thinkthen/src/public/request.rs`, `crates/thinkthen/src/lib.rs`, `crates/thinkthen/tests/`, `libraries/rust/consumer/`, `specification/rust-api-0.2.md`.
+- Changes: `crates/thinkthen/src/public/request/value_tree.rs`, `crates/thinkthen/src/public/request.rs`, `crates/thinkthen/src/lib.rs`, `crates/thinkthen/tests/`, `libraries/rust/consumer/`, `libraries/rust/check.py`, `specification/rust-api-0.2.md`.
 - One Rust layer, beside `Engine::call` from 0629, turns a settled `Call<RequestValue>` into a neutral value tree: maps, lists, strings, numbers kept exactly, booleans, null and an explicit absent marker, with the answer, probability, pick and resolution from 0612.
 - pyo3, napi, magnus and extendr will only map that tree to host objects and hold no per-function or per-type result code. Each language's switch to the tree is its own phase 3 ticket: 0662, 0665, 0682 and 0683. This ticket changes no language bridge.
 - The new public types and methods are declared in `specification/rust-api-0.2.md` in the same change: an Authority entry for 0689 and the declarations in its Added public declarations block, so `sdlc/scripts/inventory` in `lint` passes.
