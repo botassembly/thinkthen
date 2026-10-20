@@ -1,6 +1,6 @@
 # 0738: Layered check image evidence
 
-M5 job 1792510701041-20887 passed on source 638e052bf. A scratch Zig 0.15.1 preparation reused all 42 earlier build steps. Restoring Zig 0.15.2 and editing the mounted resolver left the image tag unchanged; lint passed with three resolver execution markers. The resolver fixtures passed with three native macOS cases skipped in the Linux container, and hosted workflow fixtures passed.
+M5 job 1792510701041-20887 passed on source 638e052bf. A scratch Zig 0.15.1 preparation reused all 42 earlier tool COPY/RUN steps. Restoring Zig 0.15.2 and editing the mounted resolver left the image tag unchanged; lint passed with three resolver execution markers. The resolver fixtures passed with three native macOS cases skipped in the Linux container, and hosted workflow fixtures passed.
 
 The resulting image was thinkthen-check:arm64-663d85f170a9e4515cec, sha256:755d2886972b7c125457d1ea224f5bec6cc5f6b58d6850297a70f9e3bc09252a. One tagged arm64 ThinkThen image remained.
 
