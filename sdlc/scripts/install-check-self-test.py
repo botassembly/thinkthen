@@ -83,6 +83,7 @@ class NativeInstallation(unittest.TestCase):
         library = f'libthinkthen.{extension}'
         soname = 'libthinkthen.0.dylib' if darwin else 'libthinkthen.so.0'
         script = Path(__file__).resolve().with_name('installed.sh')
+        static_note = 'note: native-static-libs: -ldl -lpthread\n'
         for shell in ('sh', 'bash'):
             for setting in ('unset', 'relative', 'absolute', 'spaces', 'configured'):
                 for missing in (False, True):
@@ -100,7 +101,7 @@ class NativeInstallation(unittest.TestCase):
                         caller.mkdir()
                         tools.mkdir()
                         # Skip compilation; real Cargo still resolves the helper-owned target.
-                        (tools / 'cargo').write_text('#!/bin/sh\nif [ "$1" = build ]; then\n'
+                        (tools / 'cargo').write_text('#!/bin/sh\nif [ "$1" = rustc ]; then\n'
                             'printf "%s" "$CARGO_TARGET_DIR" > "$NATIVE_BUILD_LOG"\n'
                             'printf "%s" "$CARGO_ENCODED_RUSTFLAGS" > "$NATIVE_FLAGS_LOG"\n'
                             'printf "%s" "$CFLAGS" > "$NATIVE_C_FLAGS_LOG"\n'
@@ -108,6 +109,7 @@ class NativeInstallation(unittest.TestCase):
                             'mkdir -p "$CARGO_TARGET_DIR/debug"\n'
                             '[ ! -f "$NATIVE_SHARED" ] || cp "$NATIVE_SHARED" "$CARGO_TARGET_DIR/debug/$NATIVE_LIBRARY"\n'
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
+                            f'printf "%s\\n" "{static_note.rstrip()}" >&2\n'
                             'exit 0; fi\nexec "$NATIVE_CARGO" "$@"\n')
                         (tools / 'cargo').chmod(0o755)
                         env = {'PATH': fixture_path(tools),
@@ -159,15 +161,16 @@ class NativeInstallation(unittest.TestCase):
                                              ' -ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users')
                         if missing:
                             self.assertEqual(done.returncode, 1)
-                            self.assertEqual(done.stderr, f'native_install: missing native artifact: {owned}/debug/{artifact_name}\n')
+                            self.assertEqual(done.stderr, static_note + f'native_install: missing native artifact: {owned}/debug/{artifact_name}\n')
                             self.assertFalse(out.exists())
                         else:
-                            self.assertEqual((done.returncode, done.stderr), (0, ''))
+                            self.assertEqual((done.returncode, done.stderr), (0, static_note))
                             self.assertEqual((out / 'lib' / library).read_bytes(), artifact.read_bytes())
                             self.assertEqual((out / 'lib/libthinkthen.a').read_bytes(), b'fixture static')
                             self.assertEqual((out / 'lib' / soname).readlink(), Path(library))
                             self.assertEqual((out / 'include/thinkthen.h').read_text(), 'fixture header')
                             self.assertIn(f'prefix={out}\n', (out / 'lib/pkgconfig/thinkthen.pc').read_text())
+                            self.assertIn('Libs.private: -ldl -lpthread\n', (out / 'lib/pkgconfig/thinkthen.pc').read_text())
 
 
 class RefusalTable(unittest.TestCase):

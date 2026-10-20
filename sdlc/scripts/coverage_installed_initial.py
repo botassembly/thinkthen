@@ -1,6 +1,7 @@
 """Prepare routine installed C and Python collections for the coverage driver."""
 from pathlib import Path
 import shutil
+import sys
 from tools import commands
 import tarfile
 
@@ -24,8 +25,10 @@ def prepare(context):
     shared = package / 'lib' / context['c_shared'].name.replace('thinkthen_c', 'thinkthen')
     shutil.copy2(context['c_shared'], shared)
     command(['sh', str(root / 'libraries/c/localize.sh'),
-             str(context['c_target'] / 'debug/libthinkthen_c.a'), str(package / 'lib/libthinkthen.a')],
-            root, {**env, 'THINKTHEN_COVERAGE_INITIALIZER': str(context['initializer'])}, run / 'localize-c.log')
+             str(context['c_target'] / 'debug/libthinkthen_c.a'), str(package / 'lib/libthinkthen.a'),
+             '-u', '___llvm_profile_runtime' if sys.platform == 'darwin' else '__llvm_profile_runtime',
+             str(context['initializer'])],
+            root, env, run / 'localize-c.log')
     (package / 'lib/pkgconfig/thinkthen.pc').write_text(
         'prefix=${pcfiledir}/../..\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\n'
         'Name: thinkthen\nDescription: ThinkThen C door\nVersion: 0.2.0\n'

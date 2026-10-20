@@ -6,11 +6,12 @@
 # the members the header's functions need into one object. Every global name
 # but the header's `thinkthen_` functions then turns local, and the object
 # alone becomes the archive.
-# Usage: sh localize.sh CARGO_ARCHIVE OUT_ARCHIVE
+# Usage: sh localize.sh CARGO_ARCHIVE OUT_ARCHIVE [PARTIAL_LINK_ARG...]
 set -eu
-[ "$#" = 2 ] || { echo 'usage: localize.sh CARGO_ARCHIVE OUT_ARCHIVE' >&2; exit 2; }
+[ "$#" -ge 2 ] || { echo 'usage: localize.sh CARGO_ARCHIVE OUT_ARCHIVE [PARTIAL_LINK_ARG...]' >&2; exit 2; }
 from=$1
 out=$2
+shift 2
 # Mach-O names carry a leading underscore.
 prefix=
 [ "$(uname -s)" != Darwin ] || prefix=_
@@ -19,11 +20,7 @@ names=$(nm -g --defined-only -- "$from" 2>/dev/null |
 [ -n "$names" ] || { echo "localize.sh: $from defines no thinkthen_ function" >&2; exit 1; }
 . "$(dirname -- "$0")/../../sdlc/scripts/scratch.sh"
 scratch_dir work
-set --
 if [ -n "$prefix" ]; then
-	if [ -n "${THINKTHEN_COVERAGE_INITIALIZER:-}" ]; then
-		set -- "$@" -Wl,-u,___llvm_profile_runtime
-	fi
 	# Apple's linker turns every name off the list local. Rust's standard
 	# library embeds LLVM bitcode newer than Apple's tools read, and after the
 	# partial link Apple's nm and linker read the object as that bitcode. The
@@ -33,20 +30,16 @@ if [ -n "$prefix" ]; then
 		set -- "$@" "-Wl,-u,$name"
 	done
 	cc -r -nostdlib -arch "$(lipo -archs "$from")" -Wl,-exported_symbols_list,"$work/names" "$@" \
-		-o "$work/joined.o" ${THINKTHEN_COVERAGE_INITIALIZER:+"$THINKTHEN_COVERAGE_INITIALIZER"} "$from" 2>"$work/ld.log" || { cat "$work/ld.log" >&2; exit 1; }
+		-o "$work/joined.o" "$from" 2>"$work/ld.log" || { cat "$work/ld.log" >&2; exit 1; }
 	objcopy=$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin/rust-objcopy
 	[ -x "$objcopy" ] || { echo "localize.sh: no rust-objcopy at $objcopy" >&2; exit 1; }
 	"$objcopy" --remove-section=__LLVM,__bitcode --remove-section=__LLVM,__cmdline "$work/joined.o" "$work/thinkthen.o"
 	ZERO_AR_DATE=1 ar rcs "$work/out.a" "$work/thinkthen.o"
 else
-	if [ -n "${THINKTHEN_COVERAGE_INITIALIZER:-}" ]; then
-		# Filename selection does not pull the archive member that registers the flush.
-		set -- "$@" -u __llvm_profile_runtime
-	fi
 	for name in $names; do
 		set -- "$@" -u "$name"
 	done
-	ld -r "$@" -o "$work/joined.o" ${THINKTHEN_COVERAGE_INITIALIZER:+"$THINKTHEN_COVERAGE_INITIALIZER"} "$from"
+	ld -r "$@" -o "$work/joined.o" "$from"
 	set --
 	for name in $names; do
 		set -- "$@" "--keep-global-symbol=$name"

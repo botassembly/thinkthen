@@ -214,7 +214,10 @@ fn the_example_prints_its_answer_and_probability() {
     successful(&output);
     let answer: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("typed answer and probability");
-    assert_eq!(answer, serde_json::json!({"answer": true, "probability": 0.9}));
+    assert_eq!(
+        answer,
+        serde_json::json!({"answer": true, "probability": 0.9})
+    );
     assert_eq!(backend.count(), 1);
 }
 

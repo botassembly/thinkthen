@@ -72,7 +72,11 @@ native_install() {
 	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || native_cxxflags="${native_cxxflags:+$native_cxxflags }-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users"
 	CARGO_TARGET_DIR="$native_build" CARGO_ENCODED_RUSTFLAGS="$native_flags" \
 		CFLAGS="$native_cflags" CXXFLAGS="$native_cxxflags" \
-		cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
+		cargo rustc --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib \
+		-- --print native-static-libs 2>"$native_build/build.log" || { native_build_status=$?; cat "$native_build/build.log" >&2; return "$native_build_status"; }
+	cat "$native_build/build.log" >&2
+	native_private=$(sed -n 's/^note: native-static-libs: //p' "$native_build/build.log" | tail -n 1)
+	[ -n "$native_private" ] || { echo 'native_install: C build reported no native static libraries' >&2; return 1; }
 	native_metadata=$(CARGO_TARGET_DIR="$native_build" cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
 		--manifest-path "$1/libraries/c/Cargo.toml") || return
 	native_target=$(printf '%s\n' "$native_metadata" | jq -er '.target_directory') || return
@@ -91,7 +95,7 @@ native_install() {
 	sh "$1/libraries/c/localize.sh" "$native_target/debug/libthinkthen_c.a" "$2/lib/libthinkthen.a" || return
 	ln -sfn "libthinkthen.$native_dl" "$2/lib/$native_soname"
 	printf '%s\n' "prefix=$2" 'libdir=${prefix}/lib' 'includedir=${prefix}/include' 'Name: thinkthen' \
-		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' 'Cflags: -I${includedir}' \
+		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' "Libs.private: $native_private" 'Cflags: -I${includedir}' \
 		>"$2/lib/pkgconfig/thinkthen.pc"
 }
 

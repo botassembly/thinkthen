@@ -4,10 +4,16 @@ part_c() {
 	[ "$TARGET" != x86_64-pc-windows-msvc ] || extension=zip
 	expected_archive=$OUT/thinkthen-c-$V-$TARGET.$extension
 	profile=debug
-	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
+	[ -n "$reuse" ] || profile=release
 	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
 	# the copy there holds the builder's home. --reuse rebuilds it here with the remaps above.
-	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
+	set --
+	[ "$profile" != release ] || set -- --release
+	(cd libraries/c && cargo rustc --locked --quiet --offline "$@" --lib -- --print native-static-libs) \
+		2>"$stage/c-build.log" || { c_build_status=$?; cat "$stage/c-build.log" >&2; return "$c_build_status"; }
+	cat "$stage/c-build.log" >&2
+	private=$(sed -n 's/^note: native-static-libs: //p' "$stage/c-build.log" | tail -n 1)
+	[ -n "$private" ] || { echo 'release-pack: C build reported no native static libraries' >&2; return 1; }
 	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		from=$(built libraries/c)/$profile
 		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$expected_archive"
@@ -22,12 +28,9 @@ part_c() {
 	if [ "$dl" = dylib ]; then
 		cp -- "$from/libthinkthen_c.dylib" "$folder/lib/libthinkthen.dylib"
 		ln -s libthinkthen.dylib "$folder/lib/libthinkthen.0.dylib"
-		# The rehearsal on macOS measures its static link line (Phase 3).
-		private=
 	else
 		cp -- "$from/libthinkthen_c.so" "$folder/lib/libthinkthen.so"
 		ln -s libthinkthen.so "$folder/lib/libthinkthen.so.0"
-		private='-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc'
 	fi
 	cat >"$folder/lib/pkgconfig/thinkthen.pc" <<-EOF
 		prefix=\${pcfiledir}/../..

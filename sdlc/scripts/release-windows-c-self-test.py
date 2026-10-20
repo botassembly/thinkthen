@@ -190,7 +190,8 @@ def pack_routing(root):
         'cygpath': '#!/bin/sh\nprintf "%s\\n" "$2"\n',
         'cargo': f'#!{sys.executable}\n' +
             "import os, pathlib, shutil, sys\n" +
-            "args=sys.argv[1:]; assert 'build' in args and '--locked' in args\n" +
+            "args=sys.argv[1:]; assert args[0] in ('build', 'rustc') and '--locked' in args\n" +
+            "if args[0]=='rustc': print('note: native-static-libs: advapi32.lib userenv.lib', file=sys.stderr)\n" +
             "assert os.environ.get('CARGO_NET_OFFLINE')=='true'\n" +
             "profile='release' if '--release' in args else 'debug'\n" +
             "out=pathlib.Path(os.environ['CARGO_TARGET_DIR'])\n" +

@@ -47,6 +47,49 @@ PY
 fi
 python3 tests/test_installed_consumers.py
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    # Compile outside the checkout with the README's unedited pkg-config flags.
+    scratch_dir consumer
+    tar -xzf "$THINKTHEN_ARTIFACT" -C "$consumer"
+    cp examples/session.c "$consumer/consumer.c"
+    (
+        cd "$consumer"
+        export PKG_CONFIG_PATH="$PWD/lib/pkgconfig"
+        case $(uname -s) in
+        Darwin) static_selection=-Wl,-dead_strip_dylibs ;;
+        *) static_selection=-Wl,--as-needed ;;
+        esac
+        cc -std=c11 consumer.c -o consumer $(pkg-config --cflags thinkthen) \
+            "$PWD/lib/libthinkthen.a" "$static_selection" $(pkg-config --libs --static thinkthen)
+        cat >sqlite-consumer.c <<'SQLITE'
+#include <thinkthen.h>
+#include <sqlite3.h>
+int main(void) {
+    uint32_t interface_number = 0;
+    sqlite3 *database = NULL;
+    if (!thinkthen_version(&interface_number) || interface_number != THINKTHEN_INTERFACE_NUMBER)
+        return 1;
+    if (sqlite3_open(":memory:", &database) != SQLITE_OK) return 2;
+    return sqlite3_close(database) != SQLITE_OK;
+}
+SQLITE
+        cc -std=c11 sqlite-consumer.c -o sqlite-consumer \
+            $(pkg-config --cflags thinkthen) "$PWD/lib/libthinkthen.a" \
+            "$static_selection" $(pkg-config --libs --static thinkthen) -lsqlite3
+        for binary in consumer sqlite-consumer; do
+            case $(uname -s) in
+            Darwin) dependencies=$(otool -L "$binary") ;;
+            *) dependencies=$(readelf -d "$binary") ;;
+            esac
+            case $dependencies in
+            *libthinkthen*)
+                printf '%s\n' "$dependencies" >&2
+                echo "libraries/c: $binary links the shared engine instead of the static archive" >&2
+                exit 1
+                ;;
+            esac
+        done
+        env -i ./sqlite-consumer
+    )
     python3 tests/installed-session.py "$THINKTHEN_ARTIFACT"
     exit
 fi
@@ -67,8 +110,12 @@ fi
 	cargo build --quiet --locked --offline --lib
 	target=${CARGO_TARGET_DIR:-target}/debug
 	# Lay the door out as a release archive does, so the soname resolves.
-	cp -- "$target/libthinkthen_c.so" "$cache/libthinkthen.so"
-	ln -s libthinkthen.so "$cache/libthinkthen.so.0"
+	case $(uname -s) in
+	Darwin) library=libthinkthen.dylib source_library=libthinkthen_c.dylib soname=libthinkthen.0.dylib ;;
+	*) library=libthinkthen.so source_library=libthinkthen_c.so soname=libthinkthen.so.0 ;;
+	esac
+	cp -- "$target/$source_library" "$cache/$library"
+	ln -s "$library" "$cache/$soname"
 	cc -std=c11 -Wall -Wextra -Werror -I include examples/session.c -L "$cache" -lthinkthen \
 	    -Wl,-rpath,"$cache" -o "$cache/session"
 }
