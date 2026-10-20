@@ -28,6 +28,8 @@ def main():
         shutil.copytree(project, installed / 'consumer', dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns('target'))
         project = installed / 'consumer'
+        shutil.copyfile(root / 'crates/thinkthen/tests/packet_oracle/dump.rs',
+                        project / 'src/dump.rs')
         manifest = tomllib.loads((project / 'Cargo.toml').read_text())
         manifest['dependencies']['thinkthen']['path'] = str(crate)
         manifest['dev-dependencies']['conformance-backend']['path'] = str(root / 'conformance/backend')

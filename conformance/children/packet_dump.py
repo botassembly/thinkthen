@@ -120,9 +120,10 @@ def run(consumer, command, root):
     backend_path = Path(os.environ.get('THINKTHEN_TEST_BACKEND',
                          str(Path(os.environ.get('CARGO_TARGET_DIR', str(root / 'target'))) /
                              'debug/conformance-backend')))
-    oracle = decimal_json(ORACLE.read_text())
+    oracle = json.loads(ORACLE.read_text())
     failures = 0
     for case in oracle['cases']:
+        failed = False
         with tempfile.TemporaryDirectory(prefix='thinkthen-packet-') as tmp:
             home = Path(tmp)
             env = child_env(home=home)
@@ -138,11 +139,12 @@ def run(consumer, command, root):
                     raise AssertionError(difference(want, got))
             except Exception as error:
                 failures += 1
+                failed = True
                 print(f'{case["id"]}: {error}', file=sys.stderr)
             finally:
                 backend.close()
         print('parity: ' + json.dumps({'consumer': consumer, 'case': case['id'],
-              'checks': ['named', 'runtime'], 'status': 'fail' if failures else 'pass'}), flush=True)
+              'checks': ['named', 'runtime'], 'status': 'fail' if failed else 'pass'}), flush=True)
     return failures
 
 
@@ -151,9 +153,9 @@ def main():
         print(json.dumps(requests()))
         return 0
     if '--check' in sys.argv:
-        raw = decimal_json(sys.stdin.read())
+        raw = json.loads(sys.stdin.read())
         for case in raw['cases']:
-            case['dump'] = canonical(case['dump'])
+            case['dump'] = canonical(decimal_json(json.dumps(case['dump'])))
         if '--update' in sys.argv:
             ORACLE.write_text(json.dumps(raw, ensure_ascii=False, sort_keys=True, indent=2) + '\n')
             return 0
