@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 7ee93b6, accept
+
 ## Outcome
 
 - Changes: `probes/find-0040/self-test`, `probes/probability-total-0038/self-test`.
