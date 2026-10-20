@@ -8,6 +8,8 @@ Phase: 2
 
 Reviews: revision 0c86668, accept
 
+Reviews: revision 57d0d77, accept
+
 ## Outcome
 
 - Changes: `databases/sqlite/check.sh`, `sdlc/tickets/0695-sqlite-replays-shared-cases.md` (remove duplicate guard ownership and record deferred routine failures).
