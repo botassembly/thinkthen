@@ -53,8 +53,7 @@ pub(super) fn check(
         raw["largest_request_bytes"].as_u64()
     );
     assert_eq!(
-        (view.largest_request_estimated_input_tokens.presence
-            == THINKTHEN_COMPLETE_PRESENCE_VALUE)
+        (view.largest_request_estimated_input_tokens.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE)
             .then_some(view.largest_request_estimated_input_tokens.value),
         raw["largest_request_estimated_input_tokens"].as_u64()
     );

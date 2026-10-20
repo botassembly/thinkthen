@@ -1,7 +1,7 @@
 //! Owned native author snapshots for parsed questions.
 pub(crate) mod author;
 pub(crate) mod question;
-use crate::ffi::carriers::{OptionalString, CountedString, Strings};
+use crate::ffi::carriers::{CountedString, OptionalString, Strings};
 use std::fmt;
 
 /// Immutable question metadata, independent of every constructor buffer.

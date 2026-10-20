@@ -172,10 +172,9 @@ pub unsafe extern "C" fn thinkthen_session_finish_typed(
             None
         } else {
             let mut context = Context::new(session.1);
-            let json = unsafe {
-                carriers::read_thinkthen_request_reader_failure(failure, &mut context)
-            }?
-            .json()?;
+            let json =
+                unsafe { carriers::read_thinkthen_request_reader_failure(failure, &mut context) }?
+                    .json()?;
             Some(RequestReaderFailure::from_json(&json).map_err(Failure::from)?)
         };
         session.0.finish(failure).map_err(Failure::from)

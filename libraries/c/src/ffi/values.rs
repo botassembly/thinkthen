@@ -111,8 +111,7 @@ pub(crate) const PROPERTY_STRING: u32 = InputPropertyKind::THINKTHEN_PROPERTY_ST
 pub(crate) const PROPERTY_NUMBER: u32 = InputPropertyKind::THINKTHEN_PROPERTY_NUMBER as u32;
 
 /// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_BOOLEAN`.
-pub(crate) const PROPERTY_BOOLEAN: u32 =
-    InputPropertyKind::THINKTHEN_PROPERTY_BOOLEAN as u32;
+pub(crate) const PROPERTY_BOOLEAN: u32 = InputPropertyKind::THINKTHEN_PROPERTY_BOOLEAN as u32;
 
 /// Validated uint32 descriptor spelling for `THINKTHEN_PROPERTY_STRING_LIST`.
 pub(crate) const PROPERTY_STRING_LIST: u32 =
