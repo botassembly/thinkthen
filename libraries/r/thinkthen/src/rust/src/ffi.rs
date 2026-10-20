@@ -248,6 +248,7 @@ fn tt_error_native(kind: Robj, message: Robj) -> Crossed<()> {
         message,
         retryable: false,
         complete: None,
+        completed: None,
     })
 }
 

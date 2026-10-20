@@ -265,3 +265,9 @@ fn tree_json(value: &thinkthen::RequestValueTree) -> Crossed<Value> {
         T::Null | T::Absent => Value::Null,
     })
 }
+
+pub(crate) fn completed(function: thinkthen::RequestFunction, text: &str) -> Crossed<Robj> {
+    let rows = decoded(text)?;
+    let kind = function_kind(function)?;
+    if rows.is_array() { array(&rows, |row| convert(kind, row)) } else { Ok(List::from_values([convert(kind, &rows)?]).into()) }
+}

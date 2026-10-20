@@ -24,6 +24,7 @@ pub(crate) struct NativeError {
     retryable: bool,
     message: String,
     complete: Option<String>,
+    completed: Option<(thinkthen::RequestFunction, String)>,
 }
 impl From<NativeError> for extendr_api::Robj {
     fn from(error: NativeError) -> Self {
@@ -47,6 +48,7 @@ impl From<NativeError> for extendr_api::Robj {
             retryable = error.retryable,
             complete = complete.unwrap_or_else(|| ().into()),
             facts = facts.unwrap_or_else(|| ().into()),
+            completed = error.completed.as_ref().and_then(|(function, text)| crate::native_results::completed(*function, text).ok()).unwrap_or_else(|| ().into()),
             call = NULL
         );
         let _ = value.set_class([
@@ -64,6 +66,7 @@ fn carry(error: &Error) -> NativeError {
         retryable: error.retryable(),
         message: error.to_string(),
         complete: serde_json::to_string(&error.complete()).ok(),
+        completed: None,
     }
 }
 fn usage(message: &str) -> NativeError {
@@ -78,6 +81,7 @@ fn interrupted() -> NativeError {
         retryable: false,
         message: "the call was interrupted".into(),
         complete: None,
+        completed: None,
     }
 }
 

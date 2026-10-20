@@ -96,7 +96,11 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
             Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => return Err(crate::defect("native call worker ended without settlement")),
         }
     };
-    let call = outcome.map_err(|error| crate::carry(&error))?;
+    let call = outcome.map_err(|error| {
+        let mut carried = crate::carry(&error);
+        carried.completed = error.completed().and_then(|value| serde_json::to_string(value).ok()).map(|text| (function, text));
+        carried
+    })?;
     let scalar = matches!(request.admitted.request().call.arguments().input,
         thinkthen::RequestInput::Text { .. } | thinkthen::RequestInput::Json { .. });
     let value = calls::result(&call, function, request.column.as_ref(), scalar)?;
