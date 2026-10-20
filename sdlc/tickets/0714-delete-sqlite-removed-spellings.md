@@ -2,6 +2,8 @@
 
 Status: OPEN.
 
+Progress: SQLite registration cleanup is pushed; native checks passed formatting, lint and unit tests before the standdown cancelled the remaining gate.
+
 Milestone: 0.2.1
 
 Phase: 3
