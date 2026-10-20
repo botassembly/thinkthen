@@ -22,3 +22,7 @@ Reviews: revision 772d146, accept
 ## Evidence
 
 M5 job 0724/1792505486688-96923, based on main 969e17b, passed the focused Rust checks but failed four demos/28 pricing cases. It reports zero USD and division by zero after main a06b0ebe5 rebuilt the saved rows as cached synthetic replay packets. This ticket verifies the cause and repairs the fixture data without weakening the lesson.
+
+## Progress
+
+- 2026-10-20 started
