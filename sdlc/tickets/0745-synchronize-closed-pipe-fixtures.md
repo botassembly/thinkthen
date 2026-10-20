@@ -25,3 +25,5 @@ Changes: `crates/thinkthen-cli/tests/backend/annotate/scheduling.rs`, `crates/th
 - Classify failed-run reasons as product, setup or invocation and retain every failed receipt; do not rerun an unchanged failure until green.
 
 ## Progress
+
+- 2026-10-20 started
