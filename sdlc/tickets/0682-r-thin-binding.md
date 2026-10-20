@@ -39,3 +39,5 @@ R has the largest hand-written Rust layer among the direct bridges: about 1,550 
 ## Progress
 
 - 2026-10-20 started
+
+- 2026-10-20 stopped at Ian’s request; ordinary calls and interrupt cleanup are pushed, while feed migration and installed R proof remain open.
