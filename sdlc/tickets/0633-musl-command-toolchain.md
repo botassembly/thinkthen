@@ -8,6 +8,8 @@ Phase: 2
 
 Depends on: 0619
 
+Reviews: revision 05b7b81, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/release-pack`, `sdlc/tools.json`, `sdlc/linux/Dockerfile`.
