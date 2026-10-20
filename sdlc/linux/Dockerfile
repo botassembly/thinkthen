@@ -68,6 +68,7 @@ COPY sdlc/tools/swift.json /tmp/tools/swift.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/swift.json
 COPY sdlc/tools/zig.json /tmp/tools/zig.json
 RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json /tmp/tools/zig.json
+RUN python3 /opt/thinkthen-image/sdlc/linux/install.py /tmp/tools.json finish
 ENV PATH=/opt/thinkthen-tools/bin:/usr/bin:/bin \
     RUSTUP_HOME=/opt/thinkthen-tools/rustup \
     THINKTHEN_LINUX_IMAGE=1

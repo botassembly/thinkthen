@@ -50,12 +50,12 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-linux-image-') as temporary:
                     '--build-arg', 'BASE=' + base, '-f', str(context / 'sdlc/linux/Dockerfile'), '-t', tag, str(context)], cwd=ROOT, env=dict(os.environ, DOCKER_BUILDKIT='0'), check=True)
 image = subprocess.check_output([args.docker, 'image', 'inspect', '--format', '{{.Id}}', tag], text=True).strip()
 print('linux-check: image=' + image + ' base=' + base, flush=True)
+# Runtime validation reads the checkout scripts without baking them into layers.
+subprocess.run([args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
+                '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
+                '-v', str(ROOT) + ':/opt/thinkthen-checkout:ro', '-w', '/opt/thinkthen-checkout',
+                image, 'python3', 'sdlc/scripts/tools.py', ','.join(pin['tool_groups'])], check=True)
 if args.checks == ['prepare']:
-    # Runtime validation reads the checkout scripts without baking them into layers.
-    subprocess.run([args.docker, 'run', '--rm', '--label', 'pm.repo=thinkthen', '--label', 'pm.ticket=' + ticket,
-                    '--cpus', str(pin['cpus']), '--memory', str(memory) + 'g',
-                    '-v', str(ROOT) + ':/opt/thinkthen-checkout:ro', '-w', '/opt/thinkthen-checkout',
-                    image, 'python3', 'sdlc/scripts/tools.py', ','.join(pin['tool_groups'])], check=True)
     running = subprocess.check_output([args.docker, 'ps', '-q'], text=True).split()
     live = set()
     if running:

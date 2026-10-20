@@ -144,6 +144,16 @@ def main():
                RUSTUP_HOME=str(root / 'rustup'), CARGO_HOME=str(root / 'cargo'),
                CARGO_BUILD_JOBS='2', MAKEFLAGS='-j2', MAKE_OPTS='-j2', MAKEOPTS='-j2',
                CARGO_PROFILE_RELEASE_DEBUG='0')
+    if sys.argv[2] == 'finish':
+        # Skip already-readable files so Docker does not copy earlier layers.
+        for path in (root, *root.rglob('*')):
+            if path.is_symlink():
+                continue
+            mode = path.stat().st_mode & 0o7777
+            readable = mode | 0o444 | (0o111 if path.is_dir() or mode & 0o111 else 0)
+            if readable != mode:
+                path.chmod(readable)
+        return
     if sys.argv[2] == 'bootstrap':
         pin = manifest['bootstrap']
         archive = root / 'mise.tar.gz'
@@ -230,8 +240,6 @@ def main():
             if tool.get('provider') == 'python-package':
                 for command in tool['commands']:
                     (root / 'bin' / command).symlink_to(Path(scripts) / command)
-    # Keep each installed layer readable by the unprivileged check container.
-    subprocess.run(['chmod', '-R', 'a+rX', str(root)], env=env, check=True)
 
 
 if __name__ == '__main__':
