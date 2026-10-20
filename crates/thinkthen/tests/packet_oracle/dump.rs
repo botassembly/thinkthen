@@ -65,8 +65,8 @@ fn fixture_engine(settings: &str) -> Result<thinkthen::Engine, Error> {
         .api_key("sk-conformance-loopback")?;
     for (name, value) in values {
         builder = if name == "profile" {
-            let path: String = serde_json::from_str(value.get())
-                .map_err(|_| usage("invalid fixture profile"))?;
+            let path: String =
+                serde_json::from_str(value.get()).map_err(|_| usage("invalid fixture profile"))?;
             builder.profile(path)?
         } else {
             builder.setting(&name, value.get())?
