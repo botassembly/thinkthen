@@ -96,17 +96,19 @@ fn execute(document: Document) -> Result<String, Error> {
                 session.cancel();
             });
         }
-        let mut packets = Vec::new();
-        loop {
-            match session.next_packet(RequestSessionWaitInterest::Settlement)? {
-                RequestSessionRead::Result(packet) => {
-                    packets.push(packet.to_json()?);
-                }
-                RequestSessionRead::End => return Ok(format!(r#"{{"packets":[{}]}}"#, packets.join(","))),
-                RequestSessionRead::Pending => {}
-            }
-        }
+        drain(&session)
     })
+}
+
+fn drain(session: &thinkthen::RequestSession) -> Result<String, Error> {
+    let mut packets = Vec::new();
+    loop {
+        match session.next_packet(RequestSessionWaitInterest::Settlement)? {
+            RequestSessionRead::Result(packet) => packets.push(packet.to_json()?),
+            RequestSessionRead::End => return Ok(format!(r#"{{"packets":[{}]}}"#, packets.join(","))),
+            RequestSessionRead::Pending => {}
+        }
+    }
 }
 
 fn usage(text: &str) -> Error {
