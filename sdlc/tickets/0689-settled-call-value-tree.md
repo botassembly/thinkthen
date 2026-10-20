@@ -26,3 +26,7 @@ Depends on: 0612, 0629, 0642
 - `crates/thinkthen/src/public/request/call.rs` defines `Engine::call`, which returns the settled `Call<RequestValue>`. `crates/thinkthen/src/public/request/result.rs` defines `RequestValue`, an untagged enum of typed complete records per function (`Decisions`, `Choices`, ..., `Related`), and `RequestOutcome`.
 - Python, TypeScript, Ruby and R bind to Rust directly, yet each converts results through its own generated or hand-written layer: Python's `libraries/python/src/results_generated.rs` (2,762 lines) and `native_result.rs`, R's `libraries/r/thinkthen/src/rust/src/results_generated.rs` (3,195) and `native_results.rs`, Ruby's Rust sources under `libraries/ruby/src/`, and TypeScript's generated `libraries/typescript/results_generated.js` (4,771 lines). Each layer must change when the result shape changes, which defeats the point of a direct Rust bridge.
 - The 0629 landing first failed its gate because new public declarations were missing from `specification/rust-api-0.2.md`, though prose described them.
+
+## Progress
+
+- 2026-10-20 started
