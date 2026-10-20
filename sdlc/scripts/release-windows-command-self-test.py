@@ -76,7 +76,8 @@ exec '{sys.executable}' "$@"''',
         (tools / tool).chmod(0o755)
     log = base / "host-calls"
     env = os.environ | {"PATH": fixture_path(tools),
-                        "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log)}
+                        "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log),
+                        "THINKTHEN_RESOLVED_TOOLS": ""}
     expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "setup-stage", "host", TARGET, env=env))
     assert log.read_text().splitlines() == [
         "rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt",

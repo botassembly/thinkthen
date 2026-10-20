@@ -47,16 +47,29 @@ def hosted_manifest_pins():
         env = dict(os.environ, PATH=fixture_path(binary), PIN_LOG=str(log),
                    PIN_PYTHON=sys.executable, PIN_RUST=manifest['tools']['rust']['version'],
                    PIN_SYSROOT=str(sysroot), RUSTUP_HOME=str(root / "rustup"))
-        result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "setup-stage", "host",
-                                 "x86_64-pc-windows-msvc"], env=env, text=True, capture_output=True)
-        assert result.returncode == 0, result.stderr
-        calls = log.read_text().splitlines()
-        packages = [line for line in calls if line.startswith("pip ")]
-        assert len(packages) == 1, calls
-        for name in ("maturin", "uv"):
-            assert name + "==" + manifest['tools'][name]['version'] in packages[0].split(), packages
-        assert "jsonschema==" + manifest['python_packages']['jsonschema'] in packages[0].split(), packages
-        assert "rustup toolchain install " + manifest['tools']['rust']['version'] in "\n".join(calls), calls
+        for resolved, version, wanted in (("", manifest['tools']['rust']['version'], 0),
+                                           ("common", manifest['tools']['rust']['version'], 0),
+                                           ("common", "0.0.0", 1)):
+            log.write_text("")
+            selected = dict(env, THINKTHEN_RESOLVED_TOOLS=resolved, PIN_RUST=version)
+            result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "setup-stage", "host",
+                                     "x86_64-pc-windows-msvc"], env=selected, text=True, capture_output=True)
+            assert result.returncode == wanted, result.stderr
+            calls = log.read_text().splitlines()
+            if wanted:
+                assert "Rust version differs from tools.json" in result.stderr and not calls, (result, calls)
+                continue
+            packages = [line for line in calls if line.startswith("pip ")]
+            assert len(packages) == 1, calls
+            for name in ("maturin", "uv"):
+                assert name + "==" + manifest['tools'][name]['version'] in packages[0].split(), packages
+            assert "jsonschema==" + manifest['python_packages']['jsonschema'] in packages[0].split(), packages
+            installed = [line for line in calls if line.startswith("rustup toolchain install ")]
+            if resolved:
+                assert not installed, calls
+            else:
+                assert len(installed) == 1 and manifest['tools']['rust']['version'] in installed[0].split(), calls
+
 
 
 def executable(path):

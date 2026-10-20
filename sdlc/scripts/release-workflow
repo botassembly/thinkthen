@@ -21,6 +21,15 @@ key = sys.argv[1]
 print(manifest['python_packages'][key] if key in manifest['python_packages'] else manifest['tools'][key]['version'])
 PYPIN
 }
+prepare_rust() {
+	rust_pin=$(manifest_version rust)
+	# The job resolver already installed and checked this toolchain and its components.
+	# Its runtime Cargo home shares dependency caches, not the rustup installation.
+	if [ -z "${THINKTHEN_RESOLVED_TOOLS:-}" ]; then
+		rustup toolchain install "$rust_pin" --profile minimal "$@"
+	fi
+	[ "$(rustc --version | cut -d ' ' -f 2)" = "$rust_pin" ] || fail 'Rust version differs from tools.json'
+}
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 go_cpp_names() {
 	dir=$1 target=$2
@@ -135,8 +144,7 @@ install_dart() {
 host_setup() (
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
 	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
-	rustup toolchain install "$(manifest_version rust)" --profile minimal --component clippy --component rustfmt
-	[ "$(rustc --version | cut -d ' ' -f 2)" = "$(manifest_version rust)" ] || fail 'Rust version differs from tools.json'
+	prepare_rust --component clippy --component rustfmt
 	if [ "$2" = x86_64-pc-windows-msvc ]; then
 		python3 - "$(rustc --print sysroot)" "${RUSTUP_HOME:-$HOME/.rustup}" <<'PYWIN'
 from pathlib import Path
@@ -488,7 +496,7 @@ crate-stage)
 	SHA=$2
 test "$(git rev-parse HEAD)" = "$SHA"
 node site/scripts/check-binding-samples.mjs
-rustup toolchain install "$(manifest_version rust)" --profile minimal
+prepare_rust
 cargo fetch --locked
 cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
 cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
@@ -510,7 +518,7 @@ sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages object
 apple-prepare-stage)
 	[ "$#" = 1 ] || fail 'apple-prepare-stage'
 set -eu
-rustup toolchain install "$(manifest_version rust)" --profile minimal
+prepare_rust
 cargo fetch --locked
 python3 -m pip install --disable-pip-version-check "jsonschema==$(manifest_version jsonschema)"
 CARGO_NET_OFFLINE=true python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline -p conformance-backend
