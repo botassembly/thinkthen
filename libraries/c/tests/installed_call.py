@@ -112,7 +112,8 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
         # Only these pre-fired cancellations may stop before native facts exist.
         if row['id'] in ('23-cancelled-fault', 'boundary-cancelled') and payload['facts'] is None:
             expected_fields = {**expected_fields, 'facts': None}
-        assert (payload['facts'] is None) == (expected_fields.get('facts') is None), payload
+        assert (payload['facts'] is None) == (expected_fields.get('facts') is None), difference(
+            {'facts': expected_fields.get('facts')}, {'facts': raw_payload['facts']})
         if payload['facts'] is not None:
             assert payload['facts']['requests_sent'] == sent, payload
         actual_fields = {'host': {'facts': raw_payload['facts']}}
