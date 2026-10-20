@@ -186,6 +186,9 @@ fn send(
         environment.settle_native(facts);
         tally.finish(facts)?;
     }
+    if let Some(reason) = error.estimated_input_denial() {
+        return Err(estimated_input(engine, reason));
+    }
     let cause = match error.diagnostic() {
         Some(crate::ErrorDiagnostic::PartialReply {
             cause: Some(sentence),
@@ -206,6 +209,17 @@ fn send(
         report.failed(probe, sentence);
     }
     Ok(gate.is_none() && can_continue)
+}
+fn estimated_input(engine: &Engine, reason: thinkthen::EstimatedInputDenial) -> Failure {
+    let reason = match reason {
+        thinkthen::EstimatedInputDenial::InitialRequest { limit }
+            if engine.usage().requests_sent() > 0 =>
+        {
+            thinkthen::EstimatedInputDenial::AdditionalRequest { limit }
+        }
+        other => other,
+    };
+    Failure::EstimatedInput(reason)
 }
 fn classify(cause: &Failure) -> Option<(Option<&'static str>, bool)> {
     Some(match cause {

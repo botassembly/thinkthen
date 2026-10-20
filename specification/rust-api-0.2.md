@@ -70,6 +70,8 @@ Offline command reports inspect `RawRecord::content` through additional borrowed
 
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
 
+`AttemptObservation::transport_failed` exposes the existing precise connection/body transport flag. The broader `AttemptOutcome::Transport` also represents a bounded reply-byte refusal, so the command's backend check uses the precise flag to continue after an oversized reply while stopping after an actual transport failure. This read-only projection changes no attempt serialization, counters or provider behavior. Ian can overturn this API detail.
+
 ### Retired public declarations
 
 ```text
@@ -244,6 +246,7 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+const fn AttemptObservation::transport_failed(&self) -> bool
 fn CompleteRank::score(&self) -> Option<f64>
 fn EngineBuilder::select_throttle(self, u8) -> Result<EngineBuilder, Error>
 fn FileReader::next_bytes(&mut self) -> Option<Result<SourceRecord<Vec<u8>>, Error>>

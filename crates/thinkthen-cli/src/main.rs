@@ -7,7 +7,7 @@ use std::process::ExitCode;
 #[cfg(test)]
 use thinkthen::RelationIdentityMode;
 use thinkthen::{
-    AdmittedRequest, Answer, AttemptOutcome, BatchSetting, CachePruneOptions, CacheSettings, Call,
+    AdmittedRequest, Answer, BatchSetting, CachePruneOptions, CacheSettings, Call,
     CallId, CallOptions, CancelToken, Candidate, CompleteAnnotated, CompleteChoice,
     CompleteDecision, CompleteError, CompleteFacts, CompleteFilter, CompleteFound, CompleteRank,
     CompleteRecognized, CompleteRecord, CompleteRelated, CompleteScore, CompleteTags, Counters,

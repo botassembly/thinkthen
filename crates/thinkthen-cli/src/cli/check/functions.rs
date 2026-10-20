@@ -32,7 +32,7 @@ pub(super) fn check(
     for (name, row) in ROWS {
         let stopped = AtomicBool::new(false);
         let observe = |attempt: AttemptObservation| {
-            if attempt.outcome() == crate::AttemptOutcome::Transport
+            if attempt.transport_failed()
                 || matches!(attempt.status(), Some(401..=404))
             {
                 stopped.store(true, Ordering::Relaxed);
@@ -61,7 +61,7 @@ pub(super) fn check(
                     tally.finish(facts)?;
                 }
                 if let Some(reason) = error.estimated_input_denial() {
-                    return Err(crate::failure::Failure::EstimatedInput(reason));
+                    return Err(super::estimated_input(engine, reason));
                 }
                 if error.stopped().status() == Some(429) && !error.stopped().retryable() {
                     stopped.store(true, Ordering::Relaxed);
