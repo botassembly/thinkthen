@@ -34,6 +34,7 @@ impl Wake {
 pub(crate) struct Readiness<'a> {
     ready: &'a (dyn Fn() -> bool + Sync),
     pub(crate) pause: Option<Duration>,
+    pub(crate) parallel_batch_one: bool,
     wake: Wake,
 }
 impl<'a> Readiness<'a> {
@@ -41,8 +42,14 @@ impl<'a> Readiness<'a> {
         Self {
             ready,
             pause,
+            parallel_batch_one: true,
             wake: Wake::default(),
         }
+    }
+    /// Native sessions retain row-at-a-time pacing independently of readiness.
+    pub(crate) fn sequential_batch_one(mut self) -> Self {
+        self.parallel_batch_one = false;
+        self
     }
     pub(crate) fn ready(&self) -> bool {
         (self.ready)()
