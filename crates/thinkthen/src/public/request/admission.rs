@@ -12,103 +12,9 @@ pub struct AdmittedRequest {
     pub(super) request: Request,
     pub(super) definition: Option<RequestDefinition>,
     pub(super) native_originals: bool,
-    #[cfg(feature = "cli")]
-    pub(super) cli_atomic: Option<crate::cli::atomic::Prepared>,
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
-    #[cfg(feature = "cli")]
-    pub(crate) fn retain_cli_atomic(
-        mut self,
-        prepared: Option<crate::cli::atomic::Prepared>,
-    ) -> Self {
-        self.cli_atomic = prepared;
-        self
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn resolve_cli_atomic(
-        &mut self,
-        verb: crate::core::Verb,
-        typed: &crate::core::Typed,
-    ) -> Result<crate::cli::atomic::Prepared, Error> {
-        if let Some(prepared) = &self.cli_atomic {
-            return Ok(prepared.clone());
-        }
-        let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = crate::cli::atomic::saved(verb, &text, typed)?;
-        let definition = crate::cli::atomic::definition(&prepared)?;
-        let definition = admit_definition(self.request.call.function(), definition)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        self.cli_atomic = Some(prepared.clone());
-        Ok(prepared)
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn resolve_cli_rank(
-        &mut self,
-        typed: &crate::core::Typed,
-    ) -> Result<crate::cli::atomic::Prepared, Error> {
-        if let Some(prepared) = &self.cli_atomic {
-            return Ok(prepared.clone());
-        }
-        let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = crate::cli::atomic::rank(&text, true, typed)?;
-        let definition = admit_definition(
-            self.request.call.function(),
-            crate::cli::atomic::definition(&prepared)?,
-        )?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        self.cli_atomic = Some(prepared.clone());
-        Ok(prepared)
-    }
-    #[cfg(feature = "cli")]
-    pub(crate) fn retain_cli_definition(
-        mut self,
-        definition: RequestDefinition,
-    ) -> Result<Self, Error> {
-        let definition = admit_definition(self.request.call.function(), definition)?;
-        admit_definition_controls(&definition, &self.request.call.arguments().options)?;
-        self.definition = Some(definition);
-        Ok(self)
-    }
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn with_composed_feed(mut self, name: &str) -> Self {
-        let args = self.request.call.arguments_mut();
-        args.input = RequestInput::Feed {
-            name: name.to_owned(),
-            framing: super::RequestFraming::Document,
-            reading: crate::ReaderOptions::default(),
-            images: Vec::new(),
-        };
-        args.options.field = None;
-        args.options.context_field = None;
-        args.options.options_field = None;
-        args.options.examples_field = None;
-        args.options.seed_spans_field = None;
-        self
-    }
-
-    #[cfg(feature = "cli")]
-    pub(crate) fn cli_definition(&mut self) -> Result<&mut RequestDefinition, Error> {
-        if self.definition.is_none() {
-            self.resolve_once()?;
-        }
-        self.definition
-            .as_mut()
-            .ok_or_else(|| Error::defect("admitted question lost its definition"))
-    }
-
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn resolve_once(&mut self) -> Result<RequestDefinition, Error> {
-        let definition = self.resolve_question_for(Some(self.request.call.function()))?;
-        if self.definition.is_none() {
-            self.admit_inline(&definition)?;
-        }
-        self.definition = Some(definition.clone());
-        Ok(definition)
-    }
-
     /// Retain a saved definition read and parsed by an authorized host.
     ///
     /// The host owns file permission, reading, saved grammar and caller-setting
@@ -176,6 +82,17 @@ impl AdmittedRequest {
             RequestDefinition::from_authored_json(&text)
         }
         .map_err(|error| error.into_local())?;
+        // Saved rank sets must retain the authored rank parser's exact cause;
+        // the generic decoded set keeps only whether rank admission succeeded.
+        let value = if self.request.call.function() == Function::Rank
+            && matches!(value, RequestDefinition::DecodedSet { .. })
+        {
+            crate::RankSet::from_json(&text)
+                .map(RequestDefinition::RankSet)
+                .map_err(|error| error.into_local())?
+        } else {
+            value
+        };
         let value =
             admit_definition(self.request.call.function(), value).map_err(|e| e.into_local())?;
         admit_definition_controls(&value, &self.request.call.arguments().options)
@@ -233,7 +150,7 @@ fn admit_header(
             value.clone(),
             native_originals,
         )?),
-        RequestQuestion::Text { text } => Some(text_question(function, text)?),
+        RequestQuestion::Text { text } => Some(text_question(function, text, &args.options)?),
         RequestQuestion::File { path } => {
             path_header(path)?;
             None
@@ -256,8 +173,6 @@ fn admit_header(
         definition,
         native_originals,
         attachment_limit,
-        #[cfg(feature = "cli")]
-        cli_atomic: None,
     };
     if let Some(definition) = &admitted.definition {
         admit_definition_controls(definition, &admitted.request.call.arguments().options)?;
@@ -265,8 +180,15 @@ fn admit_header(
     }
     Ok(admitted)
 }
-fn text_question(function: Function, text: &str) -> Result<RequestDefinition, Error> {
+fn text_question(
+    function: Function,
+    text: &str,
+    options: &RequestOptions,
+) -> Result<RequestDefinition, Error> {
     match function {
+        Function::Choose | Function::Tag | Function::Score => {
+            super::wording::text(function, text, options)
+        }
         Function::Decide | Function::Filter => Ok(Question::decide(text)?.cut().into()),
         Function::Rank => Ok(Question::rank(text)?.into()),
         Function::Find => Ok(RequestDefinition::Atomic(LoadedQuestion::Question(
@@ -289,6 +211,12 @@ fn admit_definition_for(
     native_originals: bool,
 ) -> Result<RequestDefinition, Error> {
     let definition = match definition {
+        RequestDefinition::Atomic(LoadedQuestion::Banded(_)) if function == Function::Filter => {
+            return Err(
+                Error::usage("question kind does not match the requested function")
+                    .with_diagnostic(Diagnostic::ThresholdFunction(function)),
+            );
+        }
         RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
             if function == Function::Rank =>
         {
@@ -371,31 +299,24 @@ fn admit_options(
     input: &RequestInput,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    for (name, supplied) in [
+        ("yes", options.yes.is_some()),
+        ("no", options.no.is_some()),
+        ("labels", options.labels.is_some()),
+        ("levels", options.levels.is_some()),
+    ] {
+        if supplied && !function.allows_option(name) {
+            return Err(Error::usage(format!(
+                "{name} does not apply to this function"
+            )));
+        }
+    }
     if let Some(model) = &options.model {
         crate::core::ModelName::new(model).map_err(|cause| {
             Error::usage("invalid model name").with_diagnostic(Diagnostic::Model(cause))
         })?;
     }
-    if options.mode.is_some() && function != Function::Recognize {
-        return Err(Error::usage("mode belongs to recognize"));
-    }
-    if let Some(rule) = &options.relation_threshold
-        && (function != Function::Recognize || !rule.native()?.is_cut())
-    {
-        return Err(Error::usage("relation threshold is a recognize single cut"));
-    }
-    if let Some(value) = options.snippet_pieces {
-        usize::try_from(value)
-            .map_err(|_| Error::usage("snippet pieces must be representable by the host"))?;
-    }
-    if let Some(mode) = options.mode {
-        mode.validate_controls(
-            false,
-            options.relation_threshold.is_some(),
-            &options.stage_context.clone().unwrap_or_default(),
-        )
-        .map_err(Error::refused)?;
-    }
+    admit_recognition_controls(function, options)?;
     if let Some(rule) = &options.threshold {
         if !function.allows_option("threshold") {
             return Err(Error::usage("this function does not accept this threshold")
@@ -448,6 +369,49 @@ fn admit_options(
         crate::CallOptions::new().deadline_ms(ms)?;
     }
     admit_pointers(options)
+}
+
+fn admit_recognition_controls(function: Function, options: &RequestOptions) -> Result<(), Error> {
+    if options.instructions.is_some() || options.entity_definition.is_some() {
+        if function != Function::Recognize {
+            return Err(Error::usage("recognition wording belongs to recognize"));
+        }
+        for value in [&options.instructions, &options.entity_definition]
+            .into_iter()
+            .flatten()
+        {
+            crate::core::QuestionText::new(value).map_err(Error::refused)?;
+        }
+    }
+    if let Some(limit) = options.max_text_bytes {
+        if function != Function::Recognize {
+            return Err(Error::usage("max text bytes belongs to recognize"));
+        }
+        if limit == 0 {
+            return Err(Error::usage("max text bytes must be positive"));
+        }
+    }
+    if options.mode.is_some() && function != Function::Recognize {
+        return Err(Error::usage("mode belongs to recognize"));
+    }
+    if let Some(rule) = &options.relation_threshold
+        && (function != Function::Recognize || !rule.native()?.is_cut())
+    {
+        return Err(Error::usage("relation threshold is a recognize single cut"));
+    }
+    if let Some(value) = options.snippet_pieces {
+        usize::try_from(value)
+            .map_err(|_| Error::usage("snippet pieces must be representable by the host"))?;
+    }
+    if let Some(mode) = options.mode {
+        mode.validate_controls(
+            false,
+            options.relation_threshold.is_some(),
+            &options.stage_context.clone().unwrap_or_default(),
+        )
+        .map_err(Error::refused)?;
+    }
+    Ok(())
 }
 
 fn admit_pointers(options: &RequestOptions) -> Result<(), Error> {
@@ -640,6 +604,7 @@ fn admit_definition_controls(
     definition: &RequestDefinition,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    super::wording::validate(definition, options)?;
     match definition {
         RequestDefinition::Rank(q) => {
             let rule = options
@@ -651,13 +616,24 @@ fn admit_definition_controls(
             if rule.is_some_and(|rule| !rule.is_cut())
                 || (q.kind() == QuestionKind::Score && rule.is_some())
             {
+                let diagnostic = if q.kind() == QuestionKind::Score {
+                    Diagnostic::Refusal(Box::new(crate::core::QuestionFileError::RuleOnRank(
+                        crate::core::Source::CommandLine,
+                    )))
+                } else {
+                    Diagnostic::ThresholdFunction(Function::Rank)
+                };
                 return Err(Error::usage(
                     "rank cutoff requires a decide probability and never a band",
-                ));
+                )
+                .with_diagnostic(diagnostic));
             }
         }
         RequestDefinition::RankSet(_) if options.threshold.is_some() => {
-            return Err(Error::usage("rank question sets take no command threshold"));
+            return Err(Error::usage("rank question sets take no command threshold")
+                .with_diagnostic(Diagnostic::Refusal(Box::new(
+                    crate::core::QuestionFileError::RuleOnRank(crate::core::Source::CommandLine),
+                ))));
         }
         _ => {}
     }
@@ -673,6 +649,13 @@ pub(super) fn apply_recognition(
     spec: &mut crate::core::RecognizeSpec,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    if let Some(value) = &options.instructions {
+        spec.instructions = Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
+    }
+    if let Some(value) = &options.entity_definition {
+        spec.entity_definition =
+            Some(crate::core::QuestionText::new(value).map_err(Error::refused)?);
+    }
     if let Some(value) = options.snippet_pieces {
         spec.snippet_pieces = value;
     }

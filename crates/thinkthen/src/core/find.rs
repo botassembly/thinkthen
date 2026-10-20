@@ -43,14 +43,16 @@ pub(crate) struct Find {
 }
 
 impl Find {
-    /// Explicit none occupies one option in the existing 255-option primitive bound.
-    pub(crate) const fn maximum(none: bool) -> usize {
-        if none { 254 } else { 255 }
+    /// Explicit none occupies one option in the existing primitive bound.
+    pub(crate) const fn count_range(none: bool) -> std::ops::RangeInclusive<usize> {
+        if none { 1..=254 } else { 2..=255 }
+    }
+    pub(crate) fn maximum(none: bool) -> usize {
+        *Self::count_range(none).end()
     }
     /// Admit the complete unit count under the existing option bound.
     pub(crate) fn validate_count(count: usize, none: bool) -> Result<(), FindError> {
-        let minimum = if none { 1 } else { 2 };
-        if !(minimum..=Self::maximum(none)).contains(&count) {
+        if !Self::count_range(none).contains(&count) {
             return Err(FindError::Count);
         }
         Ok(())
@@ -157,18 +159,33 @@ impl Find {
 
     /// Digest the public question, excluding generated ids and unit count.
     pub(crate) fn question_sha256(&self) -> Result<String, FindError> {
-        let canonical = self.canonical_question()?;
-        Ok(hex(&Sha256::digest(canonical.as_bytes())))
+        Self::identity(&self.text, self.none, self.profile.as_ref())
     }
 
-    fn canonical_question(&self) -> Result<String, FindError> {
+    pub(crate) fn identity(
+        text: &QuestionText,
+        none: bool,
+        profile: Option<&ProfileName>,
+    ) -> Result<String, FindError> {
+        let canonical = Self::canonical(text, none, profile)?;
+        Ok(hex(&Sha256::digest(canonical.as_bytes())))
+    }
+    fn canonical(
+        text: &QuestionText,
+        none: bool,
+        profile: Option<&ProfileName>,
+    ) -> Result<String, FindError> {
         serde_json::to_string(&FindQuestion {
             verb: "find",
-            text: &self.text,
-            none: self.none,
-            profile: self.profile.as_ref(),
+            text,
+            none,
+            profile,
         })
         .map_err(|_| FindError::Render)
+    }
+    #[cfg(test)]
+    fn canonical_question(&self) -> Result<String, FindError> {
+        Self::canonical(&self.text, self.none, self.profile.as_ref())
     }
 
     /// Build the dedicated detailed result.

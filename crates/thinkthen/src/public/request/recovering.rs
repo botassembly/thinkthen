@@ -16,6 +16,7 @@ impl Engine {
         request: &'a AdmittedRequest,
         mut environment: RequestEnvironment<'a>,
     ) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
+        environment.controls.admit_recovery()?;
         let function = request.request.call.function();
         if matches!(
             function,
@@ -145,6 +146,7 @@ impl Engine {
         mut environment: RequestEnvironment<'a>,
         sink: &dyn Fn(RequestRecoveredRow),
     ) -> Result<Call<()>, Error> {
+        environment.controls.admit_recovery()?;
         let function = request.request.call.function();
         let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
             || !matches!(

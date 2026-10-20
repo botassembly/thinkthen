@@ -39,8 +39,10 @@ def attributes(source):
 
 
 def invocations():
-    return tuple(dict.fromkeys((output.producer, output.target, output.mode)
-                              for output in OUTPUTS))
+    # Generate C carriers and their header before host projections read its ABI.
+    commands = dict.fromkeys((output.producer, output.target, output.mode)
+                             for output in OUTPUTS)
+    return tuple(sorted(commands, key=lambda command: command[1] != 'c'))
 
 
 def paths(target, mode):

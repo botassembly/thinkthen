@@ -1,14 +1,5 @@
 //! Public conversion preserves pre-conversion identities and original exchange bodies.
 use super::*;
-use std::process::Command;
-
-#[cfg(test)]
-fn convert(place: &Path) -> std::process::Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command.env_clear().args(["cache", "convert"]).arg(place);
-    command.output().unwrap()
-}
-
 #[test]
 fn explicit_original_bodies_survive_sqlite_to_fixture_conversion_and_zero_send_replay() {
     let response = r#"{ "model":"fixed", "answers":{"q1":{"type":"noul","noul":0.9,"unknown_probability":0.02,"abstained":false}},"usage":{"input_tokens":887} }"#;
@@ -21,12 +12,7 @@ fn explicit_original_bodies_survive_sqlite_to_fixture_conversion_and_zero_send_r
     assert_eq!(sent.len(), 1);
     assert_eq!(listener.count(), 1);
     drop(engine);
-    let converted = convert(&place);
-    assert!(
-        converted.status.success(),
-        "{}",
-        String::from_utf8_lossy(&converted.stderr)
-    );
+    thinkthen::convert_cache(&place).unwrap();
     assert!(!place.join("thinkthen.sqlite").exists());
     let fixture = std::fs::read_to_string(place.join("thinkthen.jsonl")).unwrap();
     let original: Value = fixture

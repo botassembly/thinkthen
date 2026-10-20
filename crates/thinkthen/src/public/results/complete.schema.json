@@ -7879,6 +7879,6 @@
   "$id": "urn:thinkthen:complete-call",
   "$ref": "#/$defs/completeCall",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a scalar result against its verb's definition; complete definitions describe result/2 and its call envelope.",
+  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests; THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a scalar result against its verb's definition; complete definitions describe result/2 and its call envelope.",
   "title": "thinkthen native results"
 }

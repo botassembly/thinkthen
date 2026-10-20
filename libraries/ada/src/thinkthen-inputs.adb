@@ -1605,6 +1605,29 @@ function Get_Name (Item : Thinkthen.Inputs.Option_Schema) return Thinkthen.Input
 begin
 return Native.Wrap (Item.Data.T_name);
 end Get_Name;
+function Make_Option_Schema2 (Name : String) return Thinkthen.Inputs.Option_Schema2 is ((Data => (T_name => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Name)), others => <>)));
+function With_Description (Item : Thinkthen.Inputs.Option_Schema2; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Option_Schema2 is
+Result : Thinkthen.Inputs.Option_Schema2 := Item;
+begin
+Result.Data.T_description := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Description;
+function Get_Description (Item : Thinkthen.Inputs.Option_Schema2) return Thinkthen.Inputs.Value is
+begin
+if not Item.Data.T_description.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_description.Value);
+end Get_Description;
+function Has_Description (Item : Thinkthen.Inputs.Option_Schema2) return Boolean is (Item.Data.T_description.Present);
+function With_Name (Item : Thinkthen.Inputs.Option_Schema2; Field : String) return Thinkthen.Inputs.Option_Schema2 is
+Result : Thinkthen.Inputs.Option_Schema2 := Item;
+begin
+Result.Data.T_name := Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field));
+return Result;
+end With_Name;
+function Get_Name (Item : Thinkthen.Inputs.Option_Schema2) return Thinkthen.Inputs.Text is
+begin
+return Native.Wrap (Item.Data.T_name);
+end Get_Name;
 function Kind (Item : Thinkthen.Inputs.Recognition_Example) return Recognition_Example_Kind is (Recognition_Example_Kind'Val (Requests.T_RecognitionExample_Kind'Pos (Item.Data.Kind)));
 function Recognition_Example_From_String (Item : String) return Thinkthen.Inputs.Recognition_Example is ((Data => (Kind => Requests.T_RecognitionExample_Text_Case, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.Recognition_Example) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -3238,6 +3261,18 @@ if not Item.Data.T_deadline_ms.Present then raise Constraint_Error with "missing
 return Native.Wrap (Item.Data.T_deadline_ms.Value);
 end Get_Deadline_Ms;
 function Has_Deadline_Ms (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_deadline_ms.Present);
+function With_Entity_Definition (Item : Thinkthen.Inputs.Options; Field : String) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_entity_definition := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Entity_Definition;
+function Get_Entity_Definition (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_entity_definition.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_entity_definition.Value);
+end Get_Entity_Definition;
+function Has_Entity_Definition (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_entity_definition.Present);
 function With_Examples (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Recognition_Example_List) return Thinkthen.Inputs.Options is
 Result : Thinkthen.Inputs.Options := Item;
 begin
@@ -3286,6 +3321,42 @@ if not Item.Data.T_files_only.Present then raise Constraint_Error with "missing 
 return Native.Wrap (Item.Data.T_files_only.Value);
 end Get_Files_Only;
 function Has_Files_Only (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_files_only.Present);
+function With_Instructions (Item : Thinkthen.Inputs.Options; Field : String) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_instructions := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Instructions;
+function Get_Instructions (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_instructions.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_instructions.Value);
+end Get_Instructions;
+function Has_Instructions (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_instructions.Present);
+function With_Labels (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Option_Schema2_List) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_labels := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Labels;
+function Get_Labels (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Option_Schema2_List is
+begin
+if not Item.Data.T_labels.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_labels.Value);
+end Get_Labels;
+function Has_Labels (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_labels.Present);
+function With_Levels (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Option_Schema2_List) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_levels := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Levels;
+function Get_Levels (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Option_Schema2_List is
+begin
+if not Item.Data.T_levels.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_levels.Value);
+end Get_Levels;
+function Has_Levels (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_levels.Present);
 function With_Max_Requests_Total (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Options is
 Result : Thinkthen.Inputs.Options := Item;
 begin
@@ -3298,6 +3369,18 @@ if not Item.Data.T_max_requests_total.Present then raise Constraint_Error with "
 return Native.Wrap (Item.Data.T_max_requests_total.Value);
 end Get_Max_Requests_Total;
 function Has_Max_Requests_Total (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_max_requests_total.Present);
+function With_Max_Text_Bytes (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_max_text_bytes := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Text_Bytes;
+function Get_Max_Text_Bytes (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Unsigned is
+begin
+if not Item.Data.T_max_text_bytes.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_text_bytes.Value);
+end Get_Max_Text_Bytes;
+function Has_Max_Text_Bytes (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_max_text_bytes.Present);
 function With_Mode (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Recognition_Mode) return Thinkthen.Inputs.Options is
 Result : Thinkthen.Inputs.Options := Item;
 begin
@@ -3322,6 +3405,18 @@ if not Item.Data.T_model.Present then raise Constraint_Error with "missing input
 return Native.Wrap (Item.Data.T_model.Value);
 end Get_Model;
 function Has_Model (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_model.Present);
+function With_No (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_no := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_No;
+function Get_No (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Value is
+begin
+if not Item.Data.T_no.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_no.Value);
+end Get_No;
+function Has_No (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_no.Present);
 function With_None (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Boolean_Value) return Thinkthen.Inputs.Options is
 Result : Thinkthen.Inputs.Options := Item;
 begin
@@ -3430,6 +3525,18 @@ if not Item.Data.T_top.Present then raise Constraint_Error with "missing input f
 return Native.Wrap (Item.Data.T_top.Value);
 end Get_Top;
 function Has_Top (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_top.Present);
+function With_Yes (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Options is
+Result : Thinkthen.Inputs.Options := Item;
+begin
+Result.Data.T_yes := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Yes;
+function Get_Yes (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Value is
+begin
+if not Item.Data.T_yes.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_yes.Value);
+end Get_Yes;
+function Has_Yes (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_yes.Present);
 function Kind (Item : Thinkthen.Inputs.Original) return Original_Kind is (Original_Kind'Val (Requests.T_RequestOriginal_Kind'Pos (Item.Data.Kind)));
 function Original_From_text (Item : Thinkthen.Inputs.Original_text) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_text_Case, V_0 => Native.Unwrap (Item))));
 function Text_Original (Item : String) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_text_Case, V_0 => (T_text => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));

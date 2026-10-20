@@ -26,7 +26,55 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 [0643](../sdlc/tickets/0643-database-settings-in-rust.md), accepted at revision `2478857b6`, adds `EngineBuilder::setting` to apply a setting name and raw JSON value through the shared settings parser. The method retains the reviewed settings validation and SQL profile handling.
 
+[0639](../sdlc/tickets/0639-split-cli-and-mcp-crates.md) keeps MCP execution in the existing `Engine::call` family. `CallOptions::retained_attachment_limit` bounds aggregate retained compressed attachment bytes; inline preflight precedes admission clones. `RequestDescriptor` and `RequestFeed::from_descriptors` retain deferred whole-file originals, whole-feed structural admission and eager composition under one attachment budget. Descriptor admission precedes question resolution, source reads and sends; every repeated image occurrence charges the budget. `Error::completed` exposes only the actual completed prefix of a failed call. This explicit access can expose sensitive originals; Debug, Display, complete error serialization and standard error sources omit it. These supported transport operations avoid exposing private engine or domain modules. Ian can overturn these API details.
+
+The same ticket exposes the existing explicit cache maintenance operations for `cache convert`, `cache unused`, `cache prune` and offline status counts. The caller owns the named directory and parses command options. The library keeps store locking, ownership checks, current-time capture, selection rules and failure classification. `CacheCounts`, `CacheConversion`, `CachePruneOptions`, `CachePruneSelection` and `CachePruned` are reexports of the existing store values; they add no second implementation or maintenance capability.
+
+`current_usage_month` and `read_usage` expose the existing count-only store for offline status. The caller owns the explicit directory and selected month. `UsageTotals` projects the existing public `Counters` for that month and all recorded months. Reads retain shared locking, permissions and safe path-specific failure messages and never change persisted state.
+
+The command's final facts use the existing count-only `Facts` request-size getters and `Engine::http_time`. HTTP time uses the native monotonic union of actual HTTP and body-read intervals, so overlapping sends count once. `Engine::usage_failure` projects only a generated filename, or the fact that the directory failed, and a closed category. It exposes no caller path or operating-system error text. The command owns its one-time persistence warning and retains the existing writer-disable behavior.
+
+The annotation command uses `Engine::plan_request` through the same native grouped preview packer. `PlanEstimate::question_requests` exposes the uninterrupted wire count and per-group counts in authored order. `drops_detail` retains the selected adapter's description warning. These observations and the existing size getters let command rendering keep its plan and count lines without exposing the native backend or summary. Added detail storage stays out of generic plan JSON and Debug output.
+
+Recognition and relation command dry runs use the same `Engine::plan_request`. `prepared_requests` borrows native digests and encoded bodies without rebuilding them. Recognition retains the first record's request disclosure and tokenizer, name and relation bounds; aggregate counts still cover every input. Relations retain native entity admission, authored rule order, methods, logical counts and per-rule request counts, including empty input. These explicit body and rule views can expose original evidence and authored text. Their Debug output withholds that content. They add no fields to generic plan serialization. Existing adapter accounting and staged upper-bound caveats still apply. `token_estimate_note` retains the actual adapter caveat for every preview, including empty input, while staying out of generic plan serialization. `Engine::is_built_in` delegates the native resolved-endpoint comparison for the command's existing built-in batching warning, including the default service and alternate-path distinction. `Engine::provider_name`, `model_is_mutable_alias` and `profile_name` borrow the actual built adapter, model and profile observations needed by backend checks, recording warnings and threshold mismatch presentation. They read nothing and send nothing; the command owns warning text, conditions and once-only timing.
+
+`RequestOptions::max_text_bytes` carries the recognition command's explicit positive original-text ceiling into the existing recognition admission. Omission keeps the native ceiling; other verbs refuse the option. Ordinary, streaming and recovering recognition share the same private control and byte comparison. The command keeps its argument parsing and presentation. `instructions` and `entity_definition` replace saved recognition task wording independently; absence retains each saved value. Blank text and use with another verb refuse during header admission. Ordinary execution and preview share the native recognition overlay. Atomic `yes`, `no`, `labels` and `levels` use the existing native question resolver. Supplied meanings replace saved meanings, and supplied lists replace the entire saved list with native order, duplicate and cardinality checks. Absent controls retain saved content; explicit null meanings and descriptions remain authored content. The command owns option spelling and source labels.
+
+`CallOptions::shared_state_groups` selects native shared-state preparation for admitted annotation groups within the existing call family. The CLI backend check uses it to retain the four fixed probes' original evidence state, question order and authored descriptions. Native preparation remains private. The same selection reaches preview and execution, including packing, profile admission, adapter descriptions, decoding and accounting. Other functions refuse before question or input source access. Shared-state groups retain the existing native partial-reply behavior, with usable and failed members in authored order. Every-member-failed replies retain the existing native refusal. HTTP, transport, malformed response, admission, observer and cancellation behavior, observation ordering, worker joins and call facts stay unchanged. Ordinary annotation retains quoted preparation by default. The CLI fixes its probe batch at the existing `BatchSetting::Max` to prepare each small root group as one request; full-group native profile admission refuses instead of splitting an invalid probe. `CompleteAnnotationMember::leader` borrows the retained native choice pick or score level before threshold reading, including tied/below-threshold choices, and returns none for decide, tag or failure; it never infers from probabilities. No C setting, raw request submission or result packet is added.
+
+`EngineBuilder::cache_settings` exposes the captured cache path, enablement, platform-default flag, pruning target and existing source tiers without resolving a route. The CLI environment uses this for cache maintenance and its shared-configuration warning, so unknown backends and irrelevant invalid addresses do not refuse explicit-path maintenance. `resolved_settings` reuses the same cache derivation. Environment cache capture, selection, warning timing and output remain command responsibilities. This operation reads no credentials or answers and creates no directory.
+
+`EngineBuilder::from_config` captures only platform configuration and default cache/state paths. The command owns capture and relevance of request environment settings, applies the effective tier with existing builder setters, and records its own displayed tier labels. `ResolvedSettings::key_variables` exposes only the selected route's existing ordered credential-variable names after backend/address host guards. The command then captures that route's keys once and applies the final credential-in-address check. `from_env` retains its existing eager admission behavior. No private configuration or backend type crosses this boundary.
+
+The command applies its captured request rate with `EngineBuilder::requests_per_minute` and its existing debug retry-delay input with `retry_wait`. These setters retain the shared posting-address pacer, native retry policy and default one-second wait. They introduce no extra environment reads or execution owner.
+
+`EngineBuilder::configuration_shared` retains the existing early permission warning without resolving a route. `EngineBuilder::resolved_settings` projects the already captured configuration, route, key presence, cache selection and usage path for offline status and request-plan presentation. It sends nothing and opens nothing. The view exposes a credential variable name and presence only; address-secret guards run before the view returns, and its Debug representation withholds addresses, model names and local paths. Command rendering stays outside the library. The captured metadata and the existing selected backend retain one source of tier provenance.
+
+`Error::with_source` retains an adapter-owned typed cause through standard error-source access. This removes the library's need to name a command reader's error type. The caller owns that source's disclosure policy; an existing cause is preserved. Ordinary error Debug, Display and complete serialization omit the source; explicit standard source access retains it. The named-call producer wrapper still preserves the original native `Error` as its direct source.
+
+`RequestDefinition::question_sha256` exposes the existing canonical identity used by complete results for atomic, ordered-set, find and recognition questions. Atomic identities retain the resolved threshold and profile; recognition uses the native stage-context normalization. `relation_sha256` requires explicit record or line interpretation, so offline audit accepts both existing relation identities without rewriting saved JSON. A dynamic choose template has no complete question identity before per-record options arrive and returns Usage. These operations read no file and send nothing. The command retains digest mismatch precedence and owns all file mutation.
+
+`ParsedJson::from_json` admits any native ordered JSON shape for read-only consumers without the execution record byte ceiling. `ParsedJson::content` borrows the original content; clones share that parsed value and Debug withholds it. The type has no execution conversion, implicit serialization or owned-content API. Offline commands retain their own object-only admission and selector behavior. `RawRecord` and request construction retain their existing byte admission.
+
+`Error::diagnostic` supplies typed retained causes needed by command diagnostics. `ErrorDiagnostic` projects existing transport, status, storage, bounded context, request range and safe parser facts. `TransportFailure` reexports the existing closed connection subtype. `ProviderFailure` contains only provider identifiers already admitted by the current key/request echo filters and excludes provider bodies and free-text messages. The command keeps its own sentences and option advice. Native errors never become standard error sources through this projection. JSON, profile, threshold and configuration refusals expose closed classifications and numeric parser locations. These classifications omit parser prose, duplicate paths, authored values and credential bytes; configuration sentences retain only the existing safe producer wording.
+
+MCP discovery now reads `request_schema`, `RequestFunction::ALL`, `allows_option` and `images` through the public library. These expose the existing committed schema, canonical function order and discovery predicates without copying schemas or function tables into the command package. Full native admission remains authoritative for option validation.
+
+Offline command analysis shares the existing validated `Probability` and `Threshold` types. Their canonical constructors, decimal/band parser, default, display and serialization retain the native rules. `Threshold::apply` projects the existing classifier to `Option<bool>`; the private outcome enum stays private. `validate_pointer` applies the existing closed pointer grammar before a host opens files. These operations do not parse or copy original JSON through another representation.
+
+Offline command reports inspect `RawRecord::content` through additional borrowed `QuestionContent` operations: member and array access, ordered field and element iteration, exact number and boolean access, and the existing native pointer grammar. The library keeps duplicate, nonfinite and depth validation; command reporting does not receive or copy the private JSON tree or implement another parser. These views retain false, null, numeric distinctions and authored order without reparsing originals.
+
+`RequestSessionFeedOptions::interrupt` owns an optional caller interrupt check. The explicitly owned check may run concurrently on native workers at their existing interruption checkpoints before another send. Borrowed `CallOptions::interrupt` retains its caller-thread contract. True stops further work while sent attempts settle; callback panics become native defects. It defaults to no callback, applies in both session modes, and never enters request JSON. The command supplies its process signal latch so a held attempt can drain without sending queued input.
+
+`RequestSessionFeedOptions::retain_success_on_cancel` defaults to false. Explicit opt-in retains only an otherwise successful native result when cancellation arrives during final settlement; active work still stops. Both ordinary and recovering sessions apply the same policy to inline, source and feed requests. The command opts in to preserve its existing earned whole-set result under SIGINT, drains final output and facts with Settlement interest, and retains its existing signal exit. Rust callers, C adapters and MCP keep dominant cancellation unless they explicitly request this policy. The operation reuses the existing private settlement rule and exposes no scheduler, sink or readiness internals.
+
 The former `Ranked`, `SetRanked` and `AnnotatedRecord` value carriers are retired. Canonical complete records retain their inputs and fields inside the call. The generated rank schema describes the current complete records and session packets.
+
+`AttemptObservation::transport_failed` exposes the existing precise connection/body transport flag. The broader `AttemptOutcome::Transport` also represents a bounded reply-byte refusal, so the command's backend check uses the precise flag to continue after an oversized reply while stopping after an actual transport failure. This read-only projection changes no attempt serialization, counters or provider behavior. Ian can overturn this API detail.
+
+`ErrorDiagnostic::FindCount { none: bool }` projects the existing native candidate-count refusal without changing its public message, error kind, facts or wire representation. The command maps this typed cause to its existing sentence after native item-schema admission, preserving validation order without matching message text. Saved-definition admission itself retains Usage; the command applies saved-file classification only within its authorized file-parsing boundary. Ian can overturn this API detail.
+
+`QuestionFileReference::parse` retains name, size and anchored-root admission for every role. The Find role delegates key membership to its existing closed parser at this host parsing boundary so malformed saved files retain their local classification and exact grammar cause. Relate uses its existing parser to distinguish a valid different-function file from malformed content before applying the explicit role refusal. Native named and reference loaders retain their strict role admission and Usage classification; other roles retain their existing role checks. Typed causes survive the saved-file classification without becoming standard error sources. Ian can overturn this API detail.
 
 ### Retired public declarations
 
@@ -202,6 +250,431 @@ struct SetRanked<T>
 ### Added public declarations
 
 ```text
+const fn AttemptObservation::transport_failed(&self) -> bool
+fn CompleteRank::score(&self) -> Option<f64>
+fn EngineBuilder::select_throttle(self, u8) -> Result<EngineBuilder, Error>
+fn FileReader::next_bytes(&mut self) -> Option<Result<SourceRecord<Vec<u8>>, Error>>
+fn RecordReading::compose_images(&self, ImageEvidence) -> Result<RecordInput<QuestionInput>, Error>
+fn RecordReading::read_annotation_document(&self, &[u8]) -> Result<RawRecord, Error>
+fn RecordReading::read_document(&self, &[u8]) -> Result<RecordInput<RecordEvidence>, Error>
+fn RecordReading::read_original(&self, &[u8], RequestFraming) -> Result<RawRecord, Error>
+fn storage_writable_by_another(&Path) -> bool
+ErrorDiagnostic::InputJson
+ErrorDiagnostic::InputJson::column: usize
+ErrorDiagnostic::InputJson::line: usize
+struct PreparedRequest<'a>
+PreparedRequest::digest: &'a str
+PreparedRequest::body: &'a [u8]
+impl Clone for PreparedRequest
+impl Copy for PreparedRequest
+impl Debug for PreparedRequest
+struct RecognitionPlan
+RecognitionPlan::pieces: usize
+RecognitionPlan::name_requests_upper_bound: usize
+RecognitionPlan::relation_pairs_upper_bound: Option<usize>
+impl Clone for RecognitionPlan
+impl Copy for RecognitionPlan
+impl Debug for RecognitionPlan
+impl Eq for RecognitionPlan
+impl PartialEq for RecognitionPlan
+struct PlannedRelation<'a>
+PlannedRelation::name: &'a str
+PlannedRelation::source: &'a str
+PlannedRelation::target: &'a str
+PlannedRelation::reads: &'a str
+PlannedRelation::either: bool
+PlannedRelation::method: RelationMethod
+PlannedRelation::logical_questions: usize
+PlannedRelation::request_count: usize
+impl Clone for PlannedRelation
+impl Copy for PlannedRelation
+impl Debug for PlannedRelation
+struct RelationPlan<'a>
+impl Clone for RelationPlan
+impl Copy for RelationPlan
+impl Debug for RelationPlan
+const fn RelationPlan::entity_count(&self) -> usize
+fn RelationPlan::rules(&self) -> impl ExactSizeIterator<Item = PlannedRelation<'_>>
+fn PlanEstimate::prepared_requests(&self) -> impl ExactSizeIterator<Item = PreparedRequest<'_>>
+const fn PlanEstimate::recognition(&self) -> Option<&RecognitionPlan>
+fn PlanEstimate::relations(&self) -> Option<RelationPlan<'_>>
+RequestOptions::max_text_bytes: Option<usize>
+RequestOptions::yes: Option<Description>
+RequestOptions::no: Option<Description>
+RequestOptions::labels: Option<Vec<RecordOption>>
+RequestOptions::levels: Option<Vec<RecordOption>>
+RequestOptions::instructions: Option<String>
+RequestOptions::entity_definition: Option<String>
+fn EngineBuilder::requests_per_minute(self, u32) -> Result<EngineBuilder, Error>
+fn EngineBuilder::retry_wait(self, Duration) -> EngineBuilder
+const fn PlanEstimate::largest_request_bytes(&self) -> usize
+const fn PlanEstimate::largest_request_estimated_input_tokens(&self) -> u64
+const fn PlanEstimate::token_estimate_method(&self) -> &'static str
+const fn PlanEstimate::token_estimate_note(&self) -> &'static str
+fn EngineBuilder::preload_ca_bundle(self) -> Result<EngineBuilder, Error>
+ResolvedSettings::model_is_mutable_alias: bool
+ResolvedSettings::is_built_in: bool
+fn Engine::is_built_in(&self) -> bool
+fn Engine::provider_name(&self) -> &'static str
+fn Engine::model_is_mutable_alias(&self) -> bool
+fn Engine::profile_name(&self) -> Option<&str>
+const fn PlanEstimate::drops_detail(&self) -> bool
+fn PlanEstimate::question_requests(&self) -> Option<(usize, &[usize])>
+const fn Facts::largest_request_bytes(&self) -> usize
+const fn Facts::largest_request_estimated_input_tokens(&self) -> Option<u64>
+const fn Facts::token_estimate_method(&self) -> &'static str
+fn Engine::http_time(&self) -> Option<Duration>
+fn Engine::usage_failure(&self) -> Option<UsageFailure>
+struct UsageFailure
+UsageFailure::file_name: Option<String>
+UsageFailure::category: UsageFailureCategory
+impl Clone for UsageFailure
+impl Debug for UsageFailure
+impl Eq for UsageFailure
+impl PartialEq for UsageFailure
+enum UsageFailureCategory
+UsageFailureCategory::InvalidContents
+UsageFailureCategory::UnsafeOrUnreadable
+impl Clone for UsageFailureCategory
+impl Copy for UsageFailureCategory
+impl Debug for UsageFailureCategory
+impl Eq for UsageFailureCategory
+impl PartialEq for UsageFailureCategory
+struct Probability
+enum ProbabilityError
+ProbabilityError::NotFinite
+ProbabilityError::OutOfRange
+fn Probability::new(f64) -> Result<Probability, ProbabilityError>
+const fn Probability::as_f64(self) -> f64
+impl Clone for Probability
+impl Copy for Probability
+impl Debug for Probability
+impl PartialEq for Probability
+impl Serialize for Probability
+impl From<Probability> for f64
+impl Clone for ProbabilityError
+impl Copy for ProbabilityError
+impl Debug for ProbabilityError
+impl PartialEq for ProbabilityError
+impl Eq for ProbabilityError
+impl Display for ProbabilityError
+impl Error for ProbabilityError
+struct Threshold
+enum ThresholdError
+ThresholdError::NotANumber
+ThresholdError::NotFinite
+ThresholdError::CutOutOfRange
+ThresholdError::BandOutOfRange
+ThresholdError::BandNotRising
+fn Threshold::cut(f64) -> Result<Threshold, ThresholdError>
+fn Threshold::band(f64, f64) -> Result<Threshold, ThresholdError>
+const fn Threshold::cut_value(self) -> Option<f64>
+fn Threshold::apply(self, Probability) -> Option<bool>
+impl Clone for Threshold
+impl Copy for Threshold
+impl Debug for Threshold
+impl PartialEq for Threshold
+impl Default for Threshold
+impl FromStr for Threshold
+impl Display for Threshold
+impl Serialize for Threshold
+type Threshold::Err = ThresholdError
+impl Clone for ThresholdError
+impl Copy for ThresholdError
+impl Debug for ThresholdError
+impl PartialEq for ThresholdError
+impl Eq for ThresholdError
+impl Display for ThresholdError
+impl Error for ThresholdError
+fn validate_pointer(&str) -> Result<(), Error>
+fn EngineBuilder::from_config() -> Result<EngineBuilder, Error>
+ResolvedSettings::key_variables: Vec<String>
+RequestSessionFeedOptions::interrupt: Option<Arc<(dyn Fn() -> bool + Send + Sync)>>
+RequestSessionFeedOptions::retain_success_on_cancel: bool
+RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>
+RequestSessionFeedOptions::incremental_recognition: bool
+RequestSessionFeedOptions::incremental_ranking: bool
+RequestSessionFeedOptions::input_pause: Option<Duration>
+const fn CallOptions::on_missing_annotation_pointer(self, &'a (dyn Fn(usize, &str) -> bool + Sync)) -> CallOptions<'a>
+fn find_candidate_count_range(bool) -> RangeInclusive<usize>
+fn PlanEstimate::combine(&self, &PlanEstimate) -> Result<PlanEstimate, Error>
+ErrorDiagnostic::MissingPointer
+ErrorDiagnostic::MissingPointer::pointer: &'a str
+fn QuestionContent::member(self, &str) -> Option<QuestionContent<'a>>
+fn QuestionContent::element(self, usize) -> Option<QuestionContent<'a>>
+fn QuestionContent::fields(self) -> Option<impl ExactSizeIterator<Item = (&'a str, QuestionContent<'a>)> + 'a>
+fn QuestionContent::elements(self) -> Option<impl ExactSizeIterator<Item = QuestionContent<'a>> + 'a>
+fn QuestionContent::number(self) -> Option<&'a Number>
+const fn QuestionContent::boolean(self) -> Option<bool>
+fn QuestionContent::pointer(self, &str) -> Result<Option<QuestionContent<'a>>, Error>
+const fn request_schema() -> &'static str
+const RequestFunction::ALL: [Self; 10]
+fn RequestFunction::allows_option(self, &str) -> bool
+const fn RequestFunction::images(self) -> bool
+fn EngineBuilder::configuration_shared(&self) -> bool
+enum RelationIdentityMode
+impl Clone for RelationIdentityMode
+impl Copy for RelationIdentityMode
+impl Debug for RelationIdentityMode
+impl Eq for RelationIdentityMode
+impl PartialEq for RelationIdentityMode
+RelationIdentityMode::Records
+RelationIdentityMode::Lines
+fn RequestDefinition::question_sha256(&self) -> Result<String, Error>
+fn RequestDefinition::relation_sha256(&self, RelationIdentityMode) -> Result<String, Error>
+struct ParsedJson
+impl Clone for ParsedJson
+impl Debug for ParsedJson
+fn ParsedJson::from_json(&str) -> Result<ParsedJson, Error>
+fn ParsedJson::content(&self) -> QuestionContent<'_>
+enum JsonFailure
+impl Clone for JsonFailure
+impl Copy for JsonFailure
+impl Debug for JsonFailure
+impl Eq for JsonFailure
+impl PartialEq for JsonFailure
+JsonFailure::DuplicateName
+JsonFailure::NotFinite
+JsonFailure::TooDeep
+JsonFailure::Syntax
+JsonFailure::Syntax::line: usize
+JsonFailure::Syntax::column: usize
+enum ConfigurationFailure
+impl Clone for ConfigurationFailure
+impl Copy for ConfigurationFailure
+impl Debug for ConfigurationFailure
+impl Eq for ConfigurationFailure
+impl PartialEq for ConfigurationFailure
+ConfigurationFailure::Unreadable
+ConfigurationFailure::Prices
+ConfigurationFailure::Grammar
+enum ProfileFailure
+impl Clone for ProfileFailure
+impl Copy for ProfileFailure
+impl Debug for ProfileFailure
+impl Eq for ProfileFailure
+impl PartialEq for ProfileFailure
+ProfileFailure::Json(JsonFailure)
+ProfileFailure::Object
+ProfileFailure::Schema
+ProfileFailure::Name
+ProfileFailure::UnknownKey
+ProfileFailure::Limit(&'static str)
+ProfileFailure::NoLimit
+ProfileFailure::ImageProfile
+enum ErrorDiagnostic<'a>
+impl Debug for ErrorDiagnostic
+fn Error::diagnostic(&self) -> Option<ErrorDiagnostic<'_>>
+ErrorDiagnostic::Json(JsonFailure)
+ErrorDiagnostic::RecordJson(JsonFailure)
+ErrorDiagnostic::QuestionJson
+ErrorDiagnostic::QuestionJson::failure: JsonFailure
+ErrorDiagnostic::QuestionJson::from_file: bool
+ErrorDiagnostic::Threshold(ThresholdError)
+ErrorDiagnostic::Profile
+ErrorDiagnostic::Profile::failure: ProfileFailure
+ErrorDiagnostic::Profile::from_file: bool
+ErrorDiagnostic::Configuration
+ErrorDiagnostic::Configuration::failure: ConfigurationFailure
+ErrorDiagnostic::Configuration::message: &'a str
+ErrorDiagnostic::Transport(TransportFailure)
+ErrorDiagnostic::Status(u16)
+ErrorDiagnostic::Provider
+ErrorDiagnostic::Provider::cause: Box<Self>
+ErrorDiagnostic::Provider::provider: ProviderFailure<'a>
+ErrorDiagnostic::SendBudget(SendBudgetDenial)
+ErrorDiagnostic::EstimatedInput
+ErrorDiagnostic::EstimatedInput::reason: &'a EstimatedInputDenial
+ErrorDiagnostic::EstimatedInput::images: bool
+ErrorDiagnostic::TokenLimit
+ErrorDiagnostic::ReplyTooLarge(u64)
+ErrorDiagnostic::Reply(String)
+ErrorDiagnostic::ReplayMiss(&'a str)
+ErrorDiagnostic::StoreAmbiguous
+ErrorDiagnostic::StoreHotJournal
+ErrorDiagnostic::StoreVersion(&'a str)
+ErrorDiagnostic::Entry
+ErrorDiagnostic::Entry::name: &'a str
+ErrorDiagnostic::Entry::reason: &'a str
+ErrorDiagnostic::RecordingStorage
+ErrorDiagnostic::RecordingForbidden
+ErrorDiagnostic::RecordingPathIsFile
+ErrorDiagnostic::DefaultCachePrivate
+ErrorDiagnostic::UsageUnreadable(&'a str)
+ErrorDiagnostic::CacheEntry
+ErrorDiagnostic::Defect(&'static str)
+ErrorDiagnostic::Usage(&'static str)
+ErrorDiagnostic::ProfileLimit
+ErrorDiagnostic::ProfileLimit::profile: &'a str
+ErrorDiagnostic::ProfileLimit::dimension: &'static str
+ErrorDiagnostic::ProfileLimit::limit: usize
+ErrorDiagnostic::ProfileLimit::actual: usize
+ErrorDiagnostic::Cancelled
+ErrorDiagnostic::Deadline(String)
+ErrorDiagnostic::NoKey(&'a str)
+ErrorDiagnostic::WidthActive(String)
+ErrorDiagnostic::ModelsDiffer(Option<(&'a str, &'a str)>)
+ErrorDiagnostic::UsageOverflow
+ErrorDiagnostic::RecognitionKinds
+ErrorDiagnostic::RecognitionExamples(String)
+ErrorDiagnostic::RecognitionLogical
+ErrorDiagnostic::TextTooLong
+ErrorDiagnostic::TextTooLong::bytes: usize
+ErrorDiagnostic::TextTooLong::limit: usize
+ErrorDiagnostic::RecognitionRelationLimit(String)
+ErrorDiagnostic::Range
+ErrorDiagnostic::Range::first: usize
+ErrorDiagnostic::Range::last: usize
+ErrorDiagnostic::Range::cause: Box<Self>
+ErrorDiagnostic::PartialReply
+ErrorDiagnostic::PartialReply::first: usize
+ErrorDiagnostic::PartialReply::last: usize
+ErrorDiagnostic::PartialReply::cause: Option<String>
+ErrorDiagnostic::Context
+ErrorDiagnostic::Context::initial: bool
+ErrorDiagnostic::Context::dimension: &'static str
+ErrorDiagnostic::Context::limit: usize
+ErrorDiagnostic::Context::actual: usize
+ErrorDiagnostic::Context::profile: Option<&'a str>
+ErrorDiagnostic::RelationEntityCount(usize)
+ErrorDiagnostic::FindCount
+ErrorDiagnostic::FindCount::none: bool
+ErrorDiagnostic::ModelControl
+ErrorDiagnostic::ModelBlank
+ErrorDiagnostic::Pointer
+ErrorDiagnostic::Pointer::option: &'static str
+ErrorDiagnostic::Pointer::selector: &'a str
+ErrorDiagnostic::Pointer::reason: String
+ErrorDiagnostic::Batch
+ErrorDiagnostic::AnnotationThreshold
+ErrorDiagnostic::QuestionUnreadable(String)
+ErrorDiagnostic::QuestionTooLarge
+ErrorDiagnostic::QuestionNotUtf8
+ErrorDiagnostic::Question
+ErrorDiagnostic::Question::message: String
+ErrorDiagnostic::Question::from_file: bool
+ErrorDiagnostic::QuestionSet(String)
+ErrorDiagnostic::Reading(String)
+ErrorDiagnostic::Record(String)
+ErrorDiagnostic::InvalidUtf8
+ErrorDiagnostic::Rendering(String)
+ErrorDiagnostic::RecognitionConfiguration
+ErrorDiagnostic::RecognitionConfiguration::message: String
+ErrorDiagnostic::RecognitionConfiguration::from_file: bool
+ErrorDiagnostic::RelationConfiguration
+ErrorDiagnostic::RelationConfiguration::message: String
+ErrorDiagnostic::RelationConfiguration::from_file: bool
+ErrorDiagnostic::EntitySet(String)
+struct ProviderFailure<'a>
+impl Debug for ProviderFailure
+impl Clone for ProviderFailure
+impl Copy for ProviderFailure
+ProviderFailure::backend: &'static str
+ProviderFailure::quota: bool
+ProviderFailure::alternate_backend_hint: bool
+ProviderFailure::error_type: Option<&'a str>
+ProviderFailure::code: Option<&'a str>
+enum TransportFailure
+TransportFailure::Timeout
+TransportFailure::NameLookup
+TransportFailure::Refused
+TransportFailure::PrematureClose
+TransportFailure::Tls
+TransportFailure::Other
+impl Debug for TransportFailure
+impl Clone for TransportFailure
+impl Copy for TransportFailure
+impl Eq for TransportFailure
+impl PartialEq for TransportFailure
+fn Error::with_source(self, impl Error + Send + Sync + 'static) -> Error
+struct CacheSettings
+impl Clone for CacheSettings
+impl Debug for CacheSettings
+fn CompleteAnnotationMember::leader(&self) -> Option<&str>
+const fn CallOptions::shared_state_groups(self) -> CallOptions<'a>
+fn EngineBuilder::cache_settings(&self) -> CacheSettings
+CacheSettings::configuration_shared: bool
+CacheSettings::cache_enabled: bool
+CacheSettings::cache_enabled_source: &'static str
+CacheSettings::cache_path: Option<PathBuf>
+CacheSettings::cache_path_source: &'static str
+CacheSettings::cache_is_platform_default: bool
+CacheSettings::cache_target_bytes: u64
+CacheSettings::cache_target_source: &'static str
+struct ResolvedSettings
+impl Debug for ResolvedSettings
+impl Clone for ResolvedSettings
+fn EngineBuilder::resolved_settings(&self) -> Result<ResolvedSettings, Error>
+ResolvedSettings::configuration_path: Option<PathBuf>
+ResolvedSettings::configuration_present: bool
+ResolvedSettings::configuration_shared: bool
+ResolvedSettings::backend_name: Option<String>
+ResolvedSettings::url: String
+ResolvedSettings::url_source: &'static str
+ResolvedSettings::model: String
+ResolvedSettings::model_source: &'static str
+ResolvedSettings::key_variable: String
+ResolvedSettings::api_key_set: bool
+ResolvedSettings::cache_enabled: bool
+ResolvedSettings::cache_enabled_source: &'static str
+ResolvedSettings::cache_path: Option<PathBuf>
+ResolvedSettings::cache_path_source: &'static str
+ResolvedSettings::cache_is_platform_default: bool
+ResolvedSettings::cache_target_bytes: u64
+ResolvedSettings::cache_target_source: &'static str
+ResolvedSettings::usage_path: Option<PathBuf>
+struct UsageTotals
+UsageTotals::month: Counters
+UsageTotals::total: Counters
+impl Debug for UsageTotals
+impl Clone for UsageTotals
+impl Copy for UsageTotals
+impl Eq for UsageTotals
+impl PartialEq for UsageTotals
+fn current_usage_month() -> String
+fn read_usage(&Path, &str) -> Result<UsageTotals, Error>
+struct CacheCounts
+CacheCounts::answers: u64
+CacheCounts::bytes: u64
+CacheCounts::old_entries: u64
+impl Debug for CacheCounts
+impl Default for CacheCounts
+struct CacheConversion
+CacheConversion::answers: usize
+impl Debug for CacheConversion
+impl Default for CacheConversion
+struct CachePruneOptions
+CachePruneOptions::max_size: u64
+CachePruneOptions::older_than: Option<Duration>
+CachePruneOptions::answered_by_other_than: Option<String>
+impl Debug for CachePruneOptions
+struct CachePruneSelection
+CachePruneSelection::keys: Vec<Vec<u8>>
+CachePruneSelection::bytes: u64
+CachePruneSelection::kept: u64
+CachePruneSelection::kept_bytes: u64
+impl Debug for CachePruneSelection
+impl Default for CachePruneSelection
+struct CachePruned
+CachePruned::removed: u64
+CachePruned::removed_bytes: u64
+CachePruned::remaining: u64
+CachePruned::remaining_bytes: u64
+impl Debug for CachePruned
+impl Default for CachePruned
+fn cache_counts(&Path, bool) -> Result<CacheCounts, Error>
+fn cache_unused(&Path, &HashSet<String>) -> Result<Vec<String>, Error>
+fn convert_cache(&Path) -> Result<CacheConversion, Error>
+fn preview_cache_prune(&Path, &CachePruneOptions) -> Result<CachePruneSelection, Error>
+fn prune_cache(&Path, &CachePruneOptions) -> Result<CachePruned, Error>
+struct RequestDescriptor
+RequestDescriptor::item: RequestItem
+RequestDescriptor::source: Option<RequestSource>
+impl Debug for RequestDescriptor
+fn CallOptions::retained_attachment_limit(self, usize) -> Result<CallOptions<'a>, Error>
+fn RequestFeed::from_descriptors(impl Into<String>, Vec<RequestDescriptor>) -> RequestFeed<'a>
+fn Error::completed(&self) -> Option<&RequestValue>
+const fn RequestFunction::name(self) -> &'static str
 RequestCall::arguments: RequestArguments
 RequestCall::function: RequestFunction
 RequestColumnValues::Choices(Vec<Option<String>>)
@@ -423,3 +896,118 @@ struct SettledOriginal
 struct SettledRecognition
 struct SettledRelations
 ```
+
+The command admits the selected certificate bundle with `EngineBuilder::preload_ca_bundle`
+before named-cache and alias warnings. The explicit operation reuses the native bundle
+loader and privately retains its parsed roots for build; selecting a bundle invalidates
+that retained state. Ordinary builders remain lazy. `ResolvedSettings::model_is_mutable_alias`
+uses the actual resolved adapter and model so the command can warn before storage opens.
+Neither operation exposes certificate bytes, provider bodies, or credentials.
+
+`ResolvedSettings::is_built_in` reuses that same native resolved-backend predicate
+without building storage or transport. The command reads it to retain its request-size
+warning before profile and certificate admission; no URL rule is copied at the edge.
+
+`EngineBuilder::select_throttle(self, u8) -> Result<EngineBuilder, Error>` selects
+the existing fork-aware process throttle immediately, retaining it for build. Selection
+persists after a builder drop or a later failure. The same selection succeeds and a
+different one retains the typed conflict. Ordinary `throttle` remains lazy. Commands
+call this only at their original explicit-jobs admission point; omitted jobs select nothing.
+
+`storage_writable_by_another(&Path) -> bool` is the existing best-effort named-folder
+warning signal, reusing native directory metadata ownership/world-write rules. It returns
+false for missing paths, files, metadata failures and non-Unix platforms. It is no security
+or storage-validity guarantee. The command retains its private-default exemption, record
+before replay path selection, and warning order before any storage build.
+
+`ErrorDiagnostic::InputJson { line: usize, column: usize }` preserves a retained native
+whole-document syntax cause separately from `RecordJson(JsonFailure)`. Only numeric
+location facts are projected; ordinary error shape, kind, facts and source stay unchanged.
+
+`RecordReading::read_document(&self, &[u8]) -> Result<RecordInput<RecordEvidence>, Error>`
+uses the native whole-document reader with its already admitted fields, then the existing
+composition. Without fields it retains literal text; fields select JSON. Native size,
+UTF-8, syntax, context and options admission retain their precedence. It opens nothing
+and introduces no execution conversion. Annotation-specific document reading and JSONL
+retain their separate contracts.
+
+`CompleteRank::score(&self) -> Option<f64>` borrows the retained native weighted score
+for score ranks, separate from final position and raw leader. Decision ranks return None.
+Set ranks use their existing `result()` projection. No probability weighting is copied.
+
+`FileReader::next_bytes` transfers the next `SourceRecord<Vec<u8>>` from the same bounded
+physical cursor as its ordinary iterator. It retains blank units, empty documents, original
+endings and coordinates without admitting UTF-8 or execution. Cut-record abandonment and
+bounded overread stay native. Caller-supplied text and table reader IO errors survive only
+through explicit standard source access; safe ordinary error output stays unchanged.
+
+`RecordReading::read_original(&self, &[u8], RequestFraming) -> Result<RawRecord, Error>`
+reuses native record decoding with already admitted fields. Table framing requires the
+existing table reader. `read_annotation_document(&self, &[u8]) -> Result<RawRecord, Error>`
+retains exact native syntax-only text fallback. Both retain blank originals for later
+preflight; neither bypasses size, UTF-8, JSON, selection or execution admission.
+
+`RecordReading::compose_images(&self, ImageEvidence) -> Result<RecordInput<QuestionInput>, Error>`
+exposes the existing native image-source composition operation for the command preview.
+It refuses incompatible record pointers before composing, preserves the complete validated
+set and its order, and leaves route, declaration, budget and execution admission intact.
+The implementation and ownership stay unchanged; no alternate submission path is added.
+
+`find_candidate_count_range(none: bool) -> RangeInclusive<usize>` observes the one
+native complete-set count policy. Native find validation uses that same range.
+The command uses its endpoint before framing another candidate, keeps its separate
+empty-input success, and retains the native minimum/count refusal before sends.
+
+`PlanEstimate::combine(&self, &PlanEstimate) -> Result<PlanEstimate, Error>` combines
+ordered previews through checked native unrounded accounting. Sum fields, maxima and
+request upper-bound semantics remain native. Accounting modes and adapter caveats must
+match. The first nonempty disclosed body survives in order; prepared-request, recognition,
+relation and annotation-group detail views are cleared because no single constituent
+represents the combined invocation. Description-loss disclosure is ORed. Hidden counters
+contain no additional body, stay out of Debug/schema/serde, and do not change equality.
+The backend check retains its command-owned closed four-probe request count separately.
+
+`CallOptions::on_missing_annotation_pointer(&dyn Fn(usize, &str) -> bool + Sync)` and
+`RequestSessionFeedOptions::on_missing_annotation_pointer: Option<Arc<(dyn Fn(usize, &str) -> bool + Send + Sync)>>`
+retain the existing ordinary annotation callback. The default is absent. Only missing
+question-set `on` pointers reach it; zero-based original ordinal and exact selector are
+borrowed for the callback. True skips the whole original; false or panic preserves its
+native failure. Ordinary usable-group and whole-row checks stay unchanged. Other
+functions, previews and general recovering sessions refuse the policy before input.
+The owned form retains its Arc on the native worker and omits it from Debug. Invocation
+holds no queue or scheduler lock. Callers must not wait on the same session and must
+release their own waits on cancellation, output failure, disposal or receiver shutdown.
+The command uses a bounded private event and acknowledgement channel, drains prior
+output before acknowledging, and declines/cancels after a failed output operation.
+`ErrorDiagnostic::MissingPointer { pointer: &str }` directly borrows the retained native
+record cause; it authorizes no recovery and exposes no record content. Error kind,
+facts, ordinary serialization and all existing result packet shapes stay unchanged.
+
+`RequestSessionFeedOptions::incremental_ranking` defaults to false. Ordinary rank sessions with a caller-supplied feed may opt in to the existing native streaming rank intake. Default sessions validate the whole set before sending. Opted-in sessions may send completed batches before a later invalid record; ranked output still waits for the whole set and failures retain actual send facts. Inline and source input, other functions and general recovering sessions refuse the option before source access. The CLI opts in to preserve its existing send behavior. This adds no packet, C, MCP or language-binding field.
+
+`RequestSessionFeedOptions::incremental_recognition` defaults to false. Ordinary
+recognition sessions may opt in to immediate nonempty native recognition
+collections in existing Aggregate packets. Each collection is recorded once in
+settlement before bounded publication. Empty final values do not replay earlier
+rows; Terminal still owns the complete ordered answer, failed prefix and final
+facts. Default sessions retain the existing one final Aggregate, including empty
+input. Other functions and general recovering sessions refuse this flag before
+input. The CLI recognition command requires this option for incremental output
+and native backpressure; it introduces no packet or C interface field.
+
+The existing `RequestOptions::threshold` relation override uses the same native
+single-cut validator as authored relation settings, before both preview and
+execution. It retains saved precedence and does not rewrite the authored file.
+
+`RequestSessionFeedOptions::input_pause: Option<Duration>` selects the existing
+native open-batch pause for a caller-supplied feed. `None` retains the native
+default and an explicit zero retains immediate closure. Other input forms refuse
+this feed control before execution. The CLI passes its existing debug-only pause
+capture; the production default and existing open-pipe/EOF behavior stay native.
+Ordinary and recovering sessions use the same private logical-input stage and
+native readiness/wake path, including recognition. The stage retains at most one
+decoded descriptor or deferred error/EOF and never holds its queue. Header/blank
+progress schedules a bounded recheck if more work is already available; empty
+input does not spin. Native attachment reads, effective admission and record
+composition stay in the existing iterator after readiness. No readiness callback,
+scheduler, sink, encoded submission, C field or result-packet field is public.

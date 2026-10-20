@@ -10,6 +10,7 @@ use serde::Deserialize;
 use std::{
     cell::RefCell,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 /// Owned input content and physical provenance, separate from selected evidence.
@@ -220,9 +221,48 @@ pub enum RequestSessionReady {
     Timeout,
 }
 
-/// Owned controls for the native session feed, separate from canonical Request JSON.
-#[derive(Debug, Default, Clone)]
+/// Owned session controls, separate from canonical Request JSON.
+#[derive(Default, Clone)]
 pub struct RequestSessionFeedOptions {
+    /// Check caller interruption on native workers before sends and
+    /// while waiting. True stops further work; sent attempts still settle.
+    /// Calls may overlap. Panics become native defects. Never wait on this session.
+    /// Defaults to no callback and never enters canonical request JSON.
+    pub interrupt: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    /// Owned ordinary annotation pointer policy, defaulting to no continuation.
+    /// The worker calls this only for an absent question-set `on` pointer, with
+    /// zero-based original ordinal and pointer borrowed for the callback. True
+    /// skips that original; false or panic retains its native failure. It runs
+    /// without queue/scheduler locks. Never wait on this same session, and release
+    /// caller waits on cancellation or receiver shutdown. General recovering
+    /// sessions and other functions refuse this policy before reading input.
+    #[expect(
+        clippy::type_complexity,
+        reason = "the owned narrow callback retains the ordinary annotation policy without a result or sink facade"
+    )]
+    pub on_missing_annotation_pointer: Option<Arc<dyn Fn(usize, &str) -> bool + Send + Sync>>,
+    /// Retain an otherwise successful native result when cancellation arrives
+    /// during final settlement. Active work still stops on cancellation.
+    /// Defaults to false: ordinary caller cancellation takes precedence over success.
+    /// Applies to inline, source and feed requests in either session mode.
+    pub retain_success_on_cancel: bool,
+    /// Publish each completed recognition collection immediately as an Aggregate
+    /// packet, before input EOF. Defaults to false, preserving one final whole-
+    /// function Aggregate, including empty input and a failed completed prefix.
+    /// With this ordinary recognition-only option, empty collections publish
+    /// nothing and the terminal answer still retains the complete ordered prefix.
+    /// Bounded publication applies backpressure and never replays the final prefix.
+    pub incremental_recognition: bool,
+    /// Rank records as they arrive through the existing native streaming path.
+    /// Defaults to false, preserving whole-set admission before provider sends.
+    /// Only ordinary rank sessions with a caller-supplied feed admit this option; output waits
+    /// for the complete set and a later invalid record retains actual send facts.
+    pub incremental_ranking: bool,
+    /// Override the native open-batch input pause for a caller-supplied feed.
+    /// None retains the native default; zero retains immediate native closure.
+    /// This controls the existing host pause, without another timer. Headers,
+    /// blanks and buffered logical input do not count as an input pause.
+    pub input_pause: Option<Duration>,
     /// Validate the supported input before any provider sends.
     pub eager: bool,
     /// Admit the image route before the caller reads content.
@@ -231,6 +271,32 @@ pub struct RequestSessionFeedOptions {
     pub all_filter_results: bool,
     /// Replace the prepared record projection with an owned native reading.
     pub record_reading: Option<crate::RecordReading>,
+}
+
+impl RequestSessionFeedOptions {
+    fn controls<'a>(&'a self, queue: &'a Queue, surface: Surface) -> CallOptions<'a> {
+        CallOptions::new()
+            .surface(surface)
+            .cancel(&queue.cancel)
+            .retain_success_on_cancel(self.retain_success_on_cancel)
+            .owned_interrupt(self.interrupt.as_ref())
+    }
+}
+
+impl std::fmt::Debug for RequestSessionFeedOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RequestSessionFeedOptions")
+            .field("interrupt", &self.interrupt.is_some())
+            .field("retain_success_on_cancel", &self.retain_success_on_cancel)
+            .field("incremental_recognition", &self.incremental_recognition)
+            .field("incremental_ranking", &self.incremental_ranking)
+            .field("input_pause", &self.input_pause)
+            .field("eager", &self.eager)
+            .field("image_inputs", &self.image_inputs)
+            .field("all_filter_results", &self.all_filter_results)
+            .field("record_reading", &self.record_reading)
+            .finish()
+    }
 }
 
 /// One session with bounded intake and owned unread output.
@@ -417,17 +483,50 @@ impl Engine {
         options: RequestSessionFeedOptions,
         mode: Mode,
     ) -> Result<RequestSession, Error> {
+        if options.on_missing_annotation_pointer.is_some() {
+            if request.call.function() != super::RequestFunction::Annotate {
+                return Err(Error::usage(
+                    "missing annotation pointer continuation requires an annotation request",
+                ));
+            }
+            if matches!(mode, Mode::Recovering) {
+                return Err(Error::usage(
+                    "annotation pointer continuation cannot accompany general row recovery",
+                ));
+            }
+        }
+        if options.incremental_recognition
+            && (request.call.function() != super::RequestFunction::Recognize
+                || matches!(mode, Mode::Recovering))
+        {
+            return Err(Error::usage(
+                "incremental recognition requires an ordinary recognition session",
+            ));
+        }
+        if options.incremental_ranking
+            && (request.call.function() != super::RequestFunction::Rank
+                || matches!(mode, Mode::Recovering))
+        {
+            return Err(Error::usage(
+                "incremental ranking requires an ordinary rank session",
+            ));
+        }
         let admitted = super::admission::admit_session(request)?;
         let feed = matches!(
             admitted.request.call.arguments().input,
             RequestInput::Feed { .. }
         );
         let queue = Arc::new(Queue::default());
+        if let RequestInput::Feed { framing, .. } = admitted.request.call.arguments().input {
+            queue.configure_input(framing);
+        }
         let configured_feed = match &admitted.request.call.arguments().input {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(&queue), &options))
             }
-            _ if options.eager
+            _ if options.incremental_ranking
+                || options.input_pause.is_some()
+                || options.eager
                 || options.image_inputs
                 || options.all_filter_results
                 || options.record_reading.is_some() =>
@@ -499,7 +598,15 @@ fn run(
             answers
                 .borrow_mut()
                 .record(&RequestValue::Recognized(rows.clone()));
-            recognized.borrow_mut().extend(rows);
+            if options.incremental_recognition {
+                if !rows.is_empty() {
+                    queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
+                        rows,
+                    )));
+                }
+            } else {
+                recognized.borrow_mut().extend(rows);
+            }
         }
         value => publish_rows(
             queue,
@@ -516,42 +623,50 @@ fn run(
         }
         _ => None,
     };
-    let environment = RequestEnvironment {
-        controls: CallOptions::new()
-            .surface(surface)
-            .cancel(&queue.cancel)
-            .observe(&observer),
-        feed,
+    let mut controls = options.controls(queue, surface).observe(&observer);
+    if let Some(callback) = options.on_missing_annotation_pointer.as_deref() {
+        controls = controls.on_missing_annotation_pointer(callback);
+    }
+    let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
+    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let registration = feed
+        .as_ref()
+        .map(|_| super::session_input::Registration::new(queue, readiness.wake()));
+    if feed.is_some() {
+        controls = controls.readiness(&readiness);
+    }
+    let environment = RequestEnvironment { controls, feed };
+    // The existing release hook selects native incremental rank intake. Session
+    // packets own the final result, so discarded originals need no host callback.
+    let release: Option<&dyn Fn(usize)> = options.incremental_ranking.then_some(&|_| {});
+    let outcome = crate::public::options::guarded(|| {
+        engine.execute_request_sink(&request, environment, Some(&sink), release, None)
+    });
+    queue.close_intake();
+    let mut terminal = match outcome {
+        Ok(RequestOutcome::Complete(call)) => {
+            let facts = call.facts().clone();
+            sink(call.into_value());
+            RequestSessionTerminal {
+                facts: Some(facts),
+                answer: None,
+                resolution: crate::AnswerResolution::Resolved,
+                error: None,
+            }
+        }
+        Ok(RequestOutcome::Failed { completed, error }) => {
+            sink(completed);
+            RequestSessionTerminal::failed(error)
+        }
+        Err(error) => RequestSessionTerminal::failed(error),
     };
-    let mut terminal =
-        match engine.execute_request_sink(&request, environment, Some(&sink), None, None) {
-            Ok(RequestOutcome::Complete(call)) => {
-                let facts = call.facts().clone();
-                queue.close_intake();
-                sink(call.into_value());
-                RequestSessionTerminal {
-                    facts: Some(facts),
-                    answer: None,
-                    resolution: crate::AnswerResolution::Resolved,
-                    error: None,
-                }
-            }
-            Ok(RequestOutcome::Failed { completed, error }) => {
-                queue.close_intake();
-                sink(completed);
-                RequestSessionTerminal::failed(error)
-            }
-            Err(error) => {
-                queue.close_intake();
-                RequestSessionTerminal::failed(error)
-            }
-        };
-    if function == super::RequestFunction::Recognize {
+    if function == super::RequestFunction::Recognize && !options.incremental_recognition {
         queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
             recognized.into_inner(),
         )));
     }
     terminal.answer = answers.into_inner().finish();
+    drop(registration);
     queue.settle(terminal);
 }
 
@@ -643,11 +758,20 @@ fn run_recovering(
         answers.borrow_mut().recovered(function, &row);
         queue.publish(RequestRecoveringResult::Row(row));
     };
+    let input_ready = || queue.logical_ready(CallOptions::new().cancel(&queue.cancel));
+    let readiness = crate::public::readiness::Readiness::new(&input_ready, options.input_pause);
+    let feed_request = matches!(
+        request.request.call.arguments().input,
+        RequestInput::Feed { .. }
+    );
+    let registration =
+        feed_request.then(|| super::session_input::Registration::new(queue, readiness.wake()));
+    let mut controls = options.controls(queue, surface).observe(&observe);
+    if feed_request {
+        controls = controls.readiness(&readiness);
+    }
     let environment = RequestEnvironment {
-        controls: CallOptions::new()
-            .surface(surface)
-            .cancel(&queue.cancel)
-            .observe(&observe),
+        controls,
         feed: match &request.request.call.arguments().input {
             RequestInput::Feed { name, .. } => {
                 Some(configured_feed(name.clone(), Arc::clone(queue), &options))
@@ -655,7 +779,10 @@ fn run_recovering(
             _ => None,
         },
     };
-    let mut terminal = match engine.execute_request_recovering_sink(&request, environment, &sink) {
+    let outcome = crate::public::options::guarded(|| {
+        engine.execute_request_recovering_sink(&request, environment, &sink)
+    });
+    let mut terminal = match outcome {
         Ok(call) => RequestSessionTerminal {
             facts: Some(call.facts().clone()),
             answer: None,
@@ -665,5 +792,6 @@ fn run_recovering(
         Err(error) => RequestSessionTerminal::failed(error),
     };
     terminal.answer = answers.into_inner().finish();
+    drop(registration);
     queue.settle(terminal);
 }

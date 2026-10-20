@@ -40,6 +40,7 @@ pub(crate) struct Cancel<'a> {
     token: [Option<Arc<AtomicBool>>; 2],
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
+    owned_check: Option<OwnedCheck>,
     sent_any: Arc<AtomicBool>,
     send_budget: Option<(crate::engine::budget::SendBudget, Option<u64>)>,
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
@@ -78,6 +79,15 @@ impl AttemptSink {
     }
 }
 
+/// An explicitly owned session interrupt check may run on native workers.
+#[derive(Clone)]
+struct OwnedCheck(Arc<dyn Fn() -> bool + Send + Sync>);
+impl fmt::Debug for OwnedCheck {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("OwnedCheck(<withheld>)")
+    }
+}
+
 /// A host's interrupt check and the one thread that may run it.
 #[derive(Clone, Copy)]
 struct Check<'a> {
@@ -112,21 +122,9 @@ impl<'a> Cancel<'a> {
             ..self.clone()
         }
     }
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn with_surface(&self, surface: crate::core::Surface) -> Self {
-        Self {
-            invocation: invocation::Context::new(surface),
-            ..self.clone()
-        }
-    }
 
     pub(crate) fn invocation(&self) -> Result<&invocation::Invocation, error::Error> {
         self.invocation.get()
-    }
-
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn call_id(&self) -> Option<crate::core::CallId> {
-        self.invocation.call_id()
     }
 
     pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
@@ -183,23 +181,12 @@ impl<'a> Cancel<'a> {
         self.fired.store(true, Ordering::Release);
     }
 
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn reset(&self) {
-        self.fired.store(false, Ordering::Release);
-    }
-
     pub(crate) fn flag(&self) -> Arc<AtomicBool> {
         Arc::clone(&self.fired)
     }
 
     pub(crate) fn fired(&self) -> bool {
         self.fired.load(Ordering::Acquire)
-    }
-
-    /// Share this stop flag with one call that ends at `deadline`.
-    #[cfg(feature = "cli")]
-    pub(crate) const fn deadline(&self) -> Option<Deadline> {
-        self.deadline
     }
 
     pub(crate) fn with_deadline(&self, deadline: Option<Deadline>) -> Self {
@@ -213,6 +200,16 @@ impl<'a> Cancel<'a> {
     pub(crate) fn with_token(&self, token: [Option<Arc<AtomicBool>>; 2]) -> Self {
         Self {
             token,
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn with_owned_check(
+        &self,
+        check: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
+    ) -> Self {
+        Self {
+            owned_check: check.map(OwnedCheck),
             ..self.clone()
         }
     }
@@ -258,18 +255,22 @@ impl<'a> Cancel<'a> {
         self.remaining()
     }
 
-    /// Run the host check on its calling thread. A `true` return fires this
-    /// call's stop. A panic fires it too, then resumes unchanged, so every
-    /// worker stops before the unwinding scope joins it.
+    /// Borrowed host checks run only on their caller; explicitly owned session
+    /// checks may run on native workers. True fires the call's stop. A panic
+    /// fires it too, then resumes so the unwinding scope joins stopped workers.
     fn checked(&self) -> bool {
-        let Some(check) = self
+        let check: &(dyn Fn() -> bool + Sync) = if let Some(check) = &self.owned_check {
+            check.0.as_ref()
+        } else if let Some(check) = self
             .check
             .filter(|check| check.caller == thread::current().id())
-        else {
+        {
+            check.run
+        } else {
             return false;
         };
         let interrupted = workers::with_host_diagnostics(|| {
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check))
         })
         .unwrap_or_else(|panic| {
             self.fired.store(true, Ordering::Release);

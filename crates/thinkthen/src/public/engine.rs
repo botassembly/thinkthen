@@ -124,11 +124,41 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
     core::Evidence::new(text).map_err(evidence_error)
 }
 
-pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
-    Error::usage("evidence is text, not white space")
+pub(crate) fn evidence_error(cause: core::BlankTextError) -> Error {
+    Error::usage("evidence is text, not white space").with_diagnostic(
+        crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(cause)),
+    )
 }
 
 impl Engine {
+    /// The actual selected adapter's canonical provider label, without inference from its URL.
+    #[must_use]
+    pub fn provider_name(&self) -> &'static str {
+        self.inner.backend().api_type().provider_name()
+    }
+    /// Whether the resolved posting endpoint names the default built-in service.
+    ///
+    /// This uses the native backend's exact endpoint comparison after URL resolution.
+    /// It reads nothing and sends nothing; alternate paths and custom services return false.
+    #[must_use]
+    pub fn is_built_in(&self) -> bool {
+        self.inner.backend().is_built_in()
+    }
+    /// Whether the actual adapter treats this engine's selected model as a mutable alias.
+    #[must_use]
+    pub fn model_is_mutable_alias(&self) -> bool {
+        self.inner
+            .backend()
+            .api_type()
+            .is_mutable_alias(self.inner.backend().model())
+    }
+    /// The actual built engine's selected local profile name, including configured defaults.
+    /// This reads no file or environment variable and exposes no profile content.
+    #[must_use]
+    pub fn profile_name(&self) -> Option<&str> {
+        self.inner.profile().map(|profile| profile.name().as_str())
+    }
+
     /// Check a zero-based record ordinal against this engine's call admission cap.
     /// Composed source calls use the same `max_requests` limit as native batches.
     ///
@@ -141,29 +171,6 @@ impl Engine {
             )));
         }
         Ok(())
-    }
-
-    #[cfg(feature = "cli")]
-    pub(crate) fn from_cli(inner: facade::Engine, prices: Option<Prices>) -> Self {
-        Self {
-            profile: inner.profile().cloned(),
-            inner: Arc::new(inner),
-            most: None,
-            batch: None,
-            prices,
-        }
-    }
-
-    /// Reuse resolved settings for backend checks with no storage.
-    #[cfg(feature = "cli")]
-    pub(crate) fn for_check(inner: &facade::Engine) -> Self {
-        Self {
-            inner: Arc::new(inner.clone()),
-            most: None,
-            profile: inner.profile().cloned(),
-            batch: None,
-            prices: None,
-        }
     }
 
     /// Build from what the command reads: see [`EngineBuilder::from_env`].
@@ -223,6 +230,27 @@ impl Engine {
     #[must_use]
     pub fn finish_usage_status(&self) -> crate::public::UsagePersistence {
         self.inner.finish_usage_status()
+    }
+
+    /// Monotonic union of this engine's HTTP and response-body read intervals.
+    /// Overlapping attempts count once. Missing timing or invalid clock arithmetic
+    /// returns None; an engine without sends has zero elapsed HTTP time.
+    #[must_use]
+    pub fn http_time(&self) -> Option<std::time::Duration> {
+        guarded(|| self.inner.http_time().map_err(Error::from))
+            .ok()
+            .flatten()
+    }
+
+    /// The first retained local usage failure, with no path or OS error text.
+    /// None also covers failures without a retained file classification. Observe
+    /// `usage_persistence` to distinguish those failures from working persistence.
+    #[must_use]
+    pub fn usage_failure(&self) -> Option<crate::UsageFailure> {
+        guarded(|| self.inner.usage_failure().map_err(Error::from))
+            .ok()
+            .flatten()
+            .map(crate::UsageFailure::of)
     }
 
     /// This engine's totals: the sends, cache answers and tokens of calls

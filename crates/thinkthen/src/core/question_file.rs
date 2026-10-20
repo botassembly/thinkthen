@@ -95,9 +95,6 @@ pub(crate) enum Source {
     CommandLine,
     /// The value the question file holds.
     File,
-    /// The value the read-only process configuration holds.
-    #[cfg(any(feature = "cli", test))]
-    Configuration,
     /// The value nobody named, which the tool supplies.
     Default,
 }
@@ -109,8 +106,6 @@ impl Source {
         match self {
             Self::CommandLine => "command line",
             Self::File => "file",
-            #[cfg(any(feature = "cli", test))]
-            Self::Configuration => "configuration",
             Self::Default => "default",
         }
     }
@@ -202,7 +197,6 @@ pub(crate) enum QuestionFileError {
         "{}`filter` takes a single cut, so ask `decide --details` and split the three piles with `jq`",
         named(*.0, "threshold")
     )]
-    #[cfg(any(feature = "cli", test))]
     BandOnFilter(Source),
     /// A rule reached the caller that orders records and selects none.
     #[error("{}`rank` with a score question or question set takes no threshold", named(*.0, "threshold"))]
@@ -276,8 +270,6 @@ fn named(source: Source, key: &str) -> String {
         },
         Source::File => format!("the question file's `{key}`: "),
         Source::Default => String::new(),
-        #[cfg(any(feature = "cli", test))]
-        Source::Configuration => String::new(),
     }
 }
 
@@ -290,15 +282,12 @@ fn pointed(source: Source, key: &str) -> String {
         Source::CommandLine => format!("--{key} "),
         Source::File => format!("the question file's `{key}` "),
         Source::Default => String::new(),
-        #[cfg(any(feature = "cli", test))]
-        Source::Configuration => String::new(),
     }
 }
 
 impl QuestionFileError {
     /// Where the value at fault came from, which fixes the exit code.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
     pub(crate) const fn origin(&self) -> Source {
         match self {
             Self::Blank { origin, .. }
@@ -308,9 +297,9 @@ impl QuestionFileError {
             | Self::BandOnChoose(origin)
             | Self::BandOnTag(origin)
             | Self::RuleOnScore(origin)
-            | Self::BandOnFilter(origin)
             | Self::RuleOnRank(origin)
             | Self::BandOnRank(origin) => *origin,
+            Self::BandOnFilter(origin) => *origin,
             // The file is a good question file and the command asked for
             // another verb, so the line to fix is the one the user typed.
             Self::VerbMismatch { .. } => Source::CommandLine,
@@ -335,6 +324,35 @@ pub(crate) struct QuestionFile {
 }
 
 impl QuestionFile {
+    pub(crate) fn from_question(question: &crate::core::Question) -> Self {
+        use crate::core::Question;
+        let (verb, text, yes, no, labels) = match question {
+            Question::Decide { text, yes, no } => {
+                (Verb::Decide, text, yes.clone(), no.clone(), None)
+            }
+            Question::Choose { text, options } => (Verb::Choose, text, None, None, Some(options)),
+            Question::Tag { text, labels } => (Verb::Tag, text, None, None, Some(labels)),
+            Question::Score { text, levels } => (Verb::Score, text, None, None, Some(levels)),
+        };
+        Self {
+            metadata: crate::core::declaration::QuestionMetadata::default(),
+            verb,
+            text: text.clone(),
+            yes,
+            no,
+            labels: labels.map(|labels| {
+                labels
+                    .descriptions()
+                    .map(|(name, value)| (name.clone(), value.cloned()))
+                    .collect()
+            }),
+            threshold: None,
+            on: None,
+            model: None,
+            profile: None,
+        }
+    }
+
     /// Which question type this file holds.
     #[must_use]
     pub(crate) const fn verb(&self) -> Verb {
@@ -436,8 +454,6 @@ mod resolve;
 
 pub(crate) use crate::core::question_file::fields::pointers;
 pub(crate) use crate::core::question_file::resolve::{Cutting, Typed, resolve};
-#[cfg(any(feature = "cli", test))]
-pub(crate) use crate::core::question_file::resolve::{Resolved, Sources};
 use fields::{labels_in, meaning, model_in, pointers_in, question_text, threshold_in};
 use profile::profile_in;
 

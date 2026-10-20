@@ -147,7 +147,7 @@ impl NamedQuestion {
     }
     /// Read the normalized evidence pointers.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn on(&self) -> &[Pointer] {
         &self.on
     }
@@ -242,16 +242,6 @@ impl QuestionSet {
             }
         }
         groups.into_iter().map(|(_, places)| places).collect()
-    }
-
-    /// The name of the first question, in file order, that reads a part.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn first_part(&self) -> Option<&str> {
-        self.questions
-            .iter()
-            .find(|question| !reads_root(&question.on))
-            .map(NamedQuestion::name)
     }
 
     /// The evidence one group sees: the record's own evidence when the group

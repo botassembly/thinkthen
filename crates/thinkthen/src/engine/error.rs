@@ -10,12 +10,18 @@ pub(crate) use provider::ProviderDiagnostic;
 
 /// A safe, stable description of why a backend connection failed.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum TransportKind {
+pub enum TransportKind {
+    /// The connection or response deadline passed.
     Timeout,
+    /// The selected host could not be resolved.
     NameLookup,
+    /// The selected server refused the connection.
     Refused,
+    /// The server closed before a complete response.
     PrematureClose,
+    /// TLS connection or certificate validation failed.
     Tls,
+    /// Another transport failure occurred.
     Other,
 }
 
@@ -54,33 +60,14 @@ pub(crate) enum Error {
     ReplyTooLarge(u64),
     Reply(DecodeError),
     /// Strict replay found no stored answer under this question key.
-    QuestionMiss(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert retains this detail in the command diagnostic"
-            )
-        )]
-        String,
-    ),
+    QuestionMiss(String),
     /// A replay folder holds both the fixture and the live store.
     StoreAmbiguous,
     /// A read-only replay met a write that did not finish.
     StoreHotJournal,
     /// A named store file predates the current format.
     StoreVersion(String),
-    Entry(
-        #[cfg_attr(
-            all(not(feature = "cli"), not(test)),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert retains this detail in the command diagnostic"
-            )
-        )]
-        String,
-        String,
-    ),
+    Entry(String, String),
     RecordingStorage,
     RecordingForbidden,
     RecordingPathIsFile,
@@ -89,7 +76,6 @@ pub(crate) enum Error {
     /// uncounted (ticket 0360). It carries the whole sentence, which names
     /// only a generated file name.
     UsageUnreadable(String),
-    #[cfg(any(feature = "cli", test))]
     CacheEntry,
     Defect(&'static str),
     Usage(&'static str),
@@ -101,16 +87,7 @@ pub(crate) enum Error {
     /// A later explicit width differs from the one this process selected.
     WidthActive(crate::engine::WidthActive),
     /// Replies for one logical result named different model versions.
-    ModelsDiffer(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert retains this detail in the command diagnostic"
-            )
-        )]
-        Option<(String, String)>,
-    ),
+    ModelsDiffer(Option<(String, String)>),
     /// Reply token counts cannot be represented as one total.
     UsageOverflow,
     /// Recognition asked for more kinds than one kind question can carry.
@@ -210,7 +187,6 @@ impl Error {
             | Self::RecordingPathIsFile
             | Self::DefaultCachePrivate
             | Self::UsageUnreadable(_) => Kind::Local,
-            #[cfg(any(feature = "cli", test))]
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)

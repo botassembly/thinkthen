@@ -2,7 +2,7 @@
 
 mod annotate_observation;
 mod complete;
-pub(in crate::public) use complete::count_message;
+pub(in crate::public) use complete::count_error;
 #[cfg(test)]
 mod details;
 pub(crate) mod observation;

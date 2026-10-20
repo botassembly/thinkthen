@@ -174,13 +174,6 @@ pub(crate) struct Choice<'a> {
     pub(crate) named: Option<Named>,
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
-    #[cfg_attr(
-        all(not(feature = "cli"), not(test)),
-        expect(
-            dead_code,
-            reason = "cli::status and cli::check read the selected backend tier"
-        )
-    )]
     pub(crate) tier: Option<usize>,
     /// Configured built-ins whose settings may enrich an exact unnamed posting URL.
     setups: Vec<Named>,

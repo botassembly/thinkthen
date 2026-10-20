@@ -5,14 +5,14 @@
 )]
 
 use crate::child::ChildEnvironment as _;
-#[cfg(feature = "cli")]
-use std::fs;
 use std::process::Command;
 
 use conformance_backend::{Canned, Listener};
 use thinkthen::{EngineBuilder, ErrorKind, Question};
 
-const REFUSAL: &str = "the backend address contains the API key; keep the key out of the address";
+#[path = "../support/key_address.rs"]
+mod fixture;
+use fixture::REFUSAL;
 
 #[test]
 fn public_builder_checks_the_final_effective_key_before_local_effects() {
@@ -116,78 +116,4 @@ fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
     let debug = format!("{details:?}");
     assert!(!debug.contains("gateway-marker-0210"), "{debug}");
     assert_eq!(listener.count(), 1);
-}
-
-#[cfg(feature = "cli")]
-#[test]
-fn command_refuses_before_plan_status_or_recording_output() {
-    let home = std::env::temp_dir().join(format!(
-        "thinkthen-key-address-{}-{:?}",
-        std::process::id(),
-        std::thread::current().id()
-    ));
-    let _old = fs::remove_dir_all(&home);
-    fs::create_dir(&home).expect("private home");
-    let key = "key-path-0210";
-    let listener = Listener::serving(vec![]).expect("loopback listener");
-    let base = format!("{}/{key}", listener.base());
-    let folder = home.join("recording");
-    let record = folder.to_string_lossy().into_owned();
-    for args in [
-        vec!["decide", "a question", "--url", &base, "--plan"],
-        vec!["decide", "a question", "--url", &base, "--record", &record],
-        vec!["decide", "a question", "--url", &base, "--cache", &record],
-        vec!["decide", "a question", "--url", &base, "--replay", &record],
-        vec!["find", "a question", "--url", &base, "--plan"],
-        vec![
-            "recognize",
-            "--kind",
-            "person=Person",
-            "--url",
-            &base,
-            "--plan",
-        ],
-        vec!["relate", "linked=person:person", "--url", &base, "--plan"],
-        vec!["backends", "check", "--url", &base, "--plan"],
-        vec!["status", "--json"],
-        vec!["status"],
-    ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .args(&args)
-            .clear_environment()
-            .home(&home)
-            .env("THINKTHEN_BASE_URL", &base)
-            .env("THINKTHEN_API_KEY", key)
-            .output()
-            .expect("compiled command runs");
-        assert!(!output.status.success(), "{args:?}");
-        assert!(output.stdout.is_empty(), "{args:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains(REFUSAL), "{args:?}: {message}");
-        assert!(!message.contains(key), "{args:?}: {message}");
-        assert!(!message.contains(&base), "{args:?}: {message}");
-        assert!(!folder.exists(), "{args:?}");
-    }
-    assert_eq!(listener.count(), 0);
-    for (keyed, expected) in [(true, true), (false, false)] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-        command
-            .args(["status", "--json"])
-            .clear_environment()
-            .home(&home)
-            .env("THINKTHEN_BASE_URL", listener.base());
-        if keyed {
-            command.env("THINKTHEN_API_KEY", key);
-        }
-        let output = command.output().expect("safe status");
-        assert!(output.status.success());
-        let status: serde_json::Value = serde_json::from_slice(&output.stdout).expect("status");
-        assert_eq!(status["backend"]["api_key_set"], expected);
-        assert_eq!(
-            status["backend"]["url"],
-            format!("{}/systemone", listener.base())
-        );
-    }
-    assert_eq!(fs::read_dir(&home).expect("home").count(), 0);
-    fs::remove_dir_all(home).expect("fixture cleanup");
 }

@@ -10,11 +10,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[cfg(any(feature = "cli", test))]
-use crate::core::Plan;
 use crate::core::recording::Digest;
-#[cfg(any(feature = "cli", test))]
-use crate::core::recording::Exchange as Recorded;
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Reply, Value,
 };
@@ -22,8 +18,6 @@ use crate::core::{
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
 use crate::engine::http::Client;
-#[cfg(any(feature = "cli", test))]
-use crate::engine::http::Exchange;
 use crate::engine::process::Guarded;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
@@ -36,10 +30,8 @@ pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 #[cfg(test)]
 pub(crate) use recognize::Recognized;
-#[cfg(any(feature = "cli", test))]
 pub(crate) use recognize::step_one_context;
 pub(crate) use recognize::{MAX_TEXT_BYTES, Recognition};
-#[cfg(any(feature = "cli", test))]
 pub(crate) use relate::PreparedRelations;
 pub(crate) use relate::{Execution, Logical, relations};
 
@@ -48,7 +40,6 @@ mod context;
 mod each;
 mod finish;
 #[cfg(test)]
-#[cfg(feature = "cli")]
 mod fork_tests;
 mod recognize;
 mod relate;
@@ -324,7 +315,7 @@ impl Engine {
     }
 
     /// Whether a folder the caller named, rather than the private default, is in use.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) const fn recording(&self) -> bool {
         (self.storage.record.is_some() || self.storage.replay.is_some())
             && !self.storage.private_default
@@ -334,6 +325,14 @@ impl Engine {
     /// this process was forked.
     pub(crate) fn usage(&self) -> Result<Counts, Error> {
         Ok(self.state(&Cancel::default())?.usage.snapshot())
+    }
+
+    pub(crate) fn http_time(&self) -> Result<Option<Duration>, Error> {
+        Ok(self.state(&Cancel::default())?.usage.http_time())
+    }
+
+    pub(crate) fn usage_failure(&self) -> Result<Option<(String, &'static str)>, Error> {
+        Ok(self.state(&Cancel::default())?.usage.failed_file())
     }
 
     /// Ask one question of one evidence and read the answer under the rule.
@@ -391,57 +390,6 @@ impl Engine {
             selection,
             answered,
         })
-    }
-
-    /// Send one plan as one request with no store, as `check` does, which
-    /// reads and writes no cache (`specification/check.md`). The send runs
-    /// on an engine worker, so a host signal never lands in its socket read.
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
-        self.check_plan(plan)?;
-        let body = self
-            .backend
-            .api_type()
-            .encode(plan)
-            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
-        let state = self.state(cancel)?;
-        let transport = self.transport(&state);
-        let digest = Recorded::new(self.backend.url(), &body).digest();
-        let cancel = cancel
-            .with_process_budget(transport.send_budget.clone())
-            .with_attempt_digest(digest.as_str());
-        if let Some(stop) = cancel.stop() {
-            return Err(stop);
-        }
-        cancel.key_lookup();
-        let key = self.key()?;
-        let exchange = Exchange {
-            headers: &[],
-            url: self.backend.url().as_str(),
-            body: &body,
-            key: &key,
-            max_retries: transport.max_retries,
-            retry_wait: transport.retry_wait,
-        };
-        let answered = crate::engine::workers::on_worker(&cancel, || {
-            transport.client.post_marked_with_retry(
-                &exchange,
-                &cancel,
-                transport.usage,
-                |_| (),
-                || (),
-            )
-        })?;
-        let decoded = self
-            .backend
-            .api_type()
-            .decode_observed(plan, &answered.body);
-        transport.usage.live_reply(decoded.usage);
-        cancel.live_reply(decoded.usage);
-        let reply = decoded.reply.map_err(Error::from)?;
-        transport.usage.answered_by(reply.model());
-        cancel.answered_by(reply.model().as_str());
-        Ok(reply)
     }
 
     pub(super) fn transport<'a>(&self, state: &'a State) -> Transport<'a> {

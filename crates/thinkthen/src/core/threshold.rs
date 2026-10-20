@@ -10,7 +10,7 @@ use crate::core::probability::Probability;
 
 /// Why a value is not a threshold.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-pub(crate) enum ThresholdError {
+pub enum ThresholdError {
     /// The text is not a decimal fraction, and not two of them around a colon.
     #[error("a threshold is a decimal fraction, or two of them as LOW:HIGH")]
     NotANumber,
@@ -57,7 +57,7 @@ impl Outcome {
 /// answers yes at or above the high side, no below the low side, and leaves
 /// the middle unresolved. The low edge is unresolved and the high edge is yes.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(crate) struct Threshold(Rule);
+pub struct Threshold(Rule);
 
 /// The two shapes a rule takes, which only a checked constructor builds.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -85,7 +85,7 @@ impl Threshold {
     ///
     /// Returns [`ThresholdError`] when the number is not finite or falls
     /// outside the range the cut allows.
-    pub(crate) fn cut(value: f64) -> Result<Self, ThresholdError> {
+    pub fn cut(value: f64) -> Result<Self, ThresholdError> {
         if !value.is_finite() {
             return Err(ThresholdError::NotFinite);
         }
@@ -101,7 +101,7 @@ impl Threshold {
     ///
     /// Returns [`ThresholdError`] when a side is not finite, when a side falls
     /// outside zero to one, or when the low side reaches the high side.
-    pub(crate) fn band(low: f64, high: f64) -> Result<Self, ThresholdError> {
+    pub fn band(low: f64, high: f64) -> Result<Self, ThresholdError> {
         if !low.is_finite() || !high.is_finite() {
             return Err(ThresholdError::NotFinite);
         }
@@ -124,7 +124,7 @@ impl Threshold {
 
     /// Read the value of a single cut.
     #[must_use]
-    pub(crate) const fn cut_value(self) -> Option<f64> {
+    pub const fn cut_value(self) -> Option<f64> {
         match self.0 {
             Rule::Cut(value) => Some(value),
             Rule::Band { .. } => None,
@@ -136,6 +136,12 @@ impl Threshold {
             Rule::Band { low, high } => (low, Some(high)),
             Rule::Cut(value) => (value, None),
         }
+    }
+
+    /// Classify an admitted probability as yes, no, or an unresolved band value.
+    #[must_use]
+    pub fn apply(self, probability: Probability) -> Option<bool> {
+        self.judge(probability).value()
     }
 
     /// Read one probability under this rule.

@@ -18,10 +18,10 @@ use crate::public::set::QuestionSet;
 /// What one question set needs of each text beside the text.
 pub(crate) struct Annotating {
     require_usable_groups: bool,
+    shared_state_groups: bool,
     set: core::QuestionSet,
     groups: Vec<Vec<usize>>,
-    backend: core::Backend,
-    profile: Option<core::BackendProfile>,
+    engine: facade::Engine,
     context: Option<core::Json>,
     shared_context: Option<core::Evidence>,
 }
@@ -55,13 +55,18 @@ impl Annotating {
     pub(crate) fn new(engine: &facade::Engine, set: core::QuestionSet) -> Self {
         Self {
             require_usable_groups: false,
+            shared_state_groups: false,
             groups: set.groups(),
             set,
-            backend: engine.backend().clone(),
-            profile: engine.profile().cloned(),
+            engine: engine.clone(),
             context: None,
             shared_context: None,
         }
+    }
+
+    pub(crate) const fn shared_state_groups(mut self, enabled: bool) -> Self {
+        self.shared_state_groups = enabled;
+        self
     }
 
     pub(crate) const fn require_usable_groups(mut self, required: bool) -> Self {
@@ -91,13 +96,23 @@ impl Annotating {
                 .iter()
                 .map(|&place| self.question(place))
                 .collect::<Result<Vec<_>, _>>()?;
-            let plan = quoted_plan(
-                self.backend.asked(),
-                evidence,
-                self.shared_context.as_ref(),
-                questions,
-                self.profile.as_ref(),
-            )
+            let plan = if self.shared_state_groups {
+                core::Plan::new(
+                    evidence,
+                    self.engine.backend().model().clone(),
+                    self.engine.backend().descriptions(),
+                    questions,
+                )
+                .map_err(|_| core::BatchError::Defect("an annotate group asks nothing"))
+            } else {
+                quoted_plan(
+                    self.engine.backend().asked(),
+                    evidence,
+                    self.shared_context.as_ref(),
+                    questions,
+                    self.engine.profile(),
+                )
+            }
             .map_err(|error| match error {
                 core::BatchError::Profile(limit) => {
                     Error::from(crate::engine::error::Error::ProfileLimit(limit))
@@ -105,20 +120,33 @@ impl Annotating {
                 core::BatchError::StructuredQuestionWithContext => Error::refused(error),
                 _ => Error::defect("an annotate group asks nothing"),
             })?;
-            let grouped = pack::asks_for(self.backend.api_type(), self.backend.url(), &plan)
-                .map_err(|_| Error::defect("a request could not be written as JSON"))?;
+            if self.shared_state_groups {
+                self.engine.check_plan(&plan).map_err(Error::from)?;
+            }
+            let grouped = pack::asks_for(
+                self.engine.backend().api_type(),
+                self.engine.backend().url(),
+                &plan,
+            )
+            .map_err(|_| Error::defect("a request could not be written as JSON"))?;
             group_done(group, grouped.len());
             asks.extend(grouped);
         }
-        if let Some(context) = &self.context {
-            let model = pack::model_json(self.backend.model().as_str())
+        let shared_context = self
+            .shared_state_groups
+            .then(|| self.shared_context.as_ref().map(core::Evidence::as_json))
+            .flatten();
+        if let Some(context) = self.context.as_ref().or(shared_context.as_ref()) {
+            let model = pack::model_json(self.engine.backend().model().as_str())
                 .map_err(|_| Error::defect("an aggregate model could not be written"))?;
             for ask in &mut asks {
                 ask.state = ask
                     .state
                     .with_context_value(context)
                     .map_err(|_| Error::defect("an aggregate context could not be written"))?;
-                ask.key = ask.state.key(self.backend.url(), &model, &ask.question);
+                ask.key = ask
+                    .state
+                    .key(self.engine.backend().url(), &model, &ask.question);
             }
         }
         Ok(asks)
@@ -201,7 +229,7 @@ impl Asker for Annotating {
             }
             groups.push(GroupAnswer::of_questions(questions));
         }
-        facade::assemble(&self.set, groups, self.backend.model()).map_err(Error::from)
+        facade::assemble(&self.set, groups, self.engine.backend().model()).map_err(Error::from)
     }
 }
 

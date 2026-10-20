@@ -45,7 +45,13 @@ def write_tar(path, files, commit=None, links=None, directories=()):
             archive.addfile(info)
 
 
-SOURCE_LINKS = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
+SOURCE_LINKS = {
+    "CLAUDE.md": "AGENTS.md",
+    "crates/thinkthen/LICENSE": "../../LICENSE",
+    "crates/thinkthen-cli/LICENSE": "../../LICENSE",
+    "crates/thinkthen-cli/README.md": "../../README.md",
+    "crates/thinkthen-cli/clippy.toml": "../thinkthen/clippy.toml",
+}
 C_HEADER = "".join(f"#define THINKTHEN_VERSION_{name} {part}\n"
                    for name, part in zip(("MAJOR", "MINOR", "PATCH"), VERSION.split("."))).encode()
 
@@ -295,6 +301,20 @@ def tracked_links():
     helper = importlib.machinery.SourceFileLoader("managed_pair", str(HELPER)).load_module()
     data = subprocess.check_output(["git", "archive", "--format=tar", "HEAD"], cwd=HELPER.parents[2])
     helper.tar_files(data, "source")
+    # Adding a tracked link admits only that exact name and target.
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "source.tar"
+        attacks = [(name, target + ".other") for name, target in SOURCE_LINKS.items()]
+        attacks.append(("crates/other/LICENSE", "../../LICENSE"))
+        for name, target in attacks:
+            write_tar(path, {}, COMMIT, {name: target})
+            try:
+                helper.tar_files(path.read_bytes(), "source")
+            except ValueError as error:
+                assert str(error) == f"unsafe source symlink: {name}", str(error)
+            else:
+                raise AssertionError(f"unsafe source link accepted: {name}")
+    print("tracked source links: exact targets accepted; changed targets and unknown names refused")
 
 
 def main():

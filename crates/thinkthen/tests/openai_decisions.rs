@@ -305,24 +305,8 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
     assert!(String::from_utf8(request).unwrap().contains("\"q2\""));
     assert!(String::from_utf8(response).unwrap().contains("\"q2\""));
     drop(db);
-    #[cfg(feature = "cli")]
-    {
-        let converted = std::process::Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .args(["cache", "convert"])
-            .arg(&place)
-            .env_clear()
-            .env("PATH", "/usr/bin:/bin")
-            .env("HOME", &place)
-            .env("LANG", "C.UTF-8")
-            .output()
-            .unwrap();
-        assert!(
-            converted.status.success(),
-            "{}",
-            String::from_utf8_lossy(&converted.stderr)
-        );
-        assert!(place.join("thinkthen.jsonl").exists());
-    }
+    thinkthen::convert_cache(&place).unwrap();
+    assert!(place.join("thinkthen.jsonl").exists());
     let replay = builder(&listener).replay(&place).unwrap().build().unwrap();
     annotate(&replay, &only).unwrap();
     assert_eq!(listener.count(), 2);

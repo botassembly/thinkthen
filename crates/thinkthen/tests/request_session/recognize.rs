@@ -113,7 +113,7 @@ fn session_rows(
 }
 
 #[cfg(test)]
-fn recognition_request(input: RequestInput) -> Request {
+pub(super) fn recognition_request(input: RequestInput) -> Request {
     let question = Recognize::builder()
         .kind(Kind::new("person", None).unwrap())
         .unwrap()

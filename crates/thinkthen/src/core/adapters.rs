@@ -56,7 +56,6 @@ impl ApiType {
             Self::Decisions => openai::validate_exchange(request, response),
         }
     }
-    #[cfg(feature = "cli")]
     pub(crate) const fn plan_estimate_note(self) -> &'static str {
         match self {
             Self::Primary => systemone::PLAN_ESTIMATE_NOTE,
@@ -102,7 +101,6 @@ impl ApiType {
             Self::Decisions => openai::join(state, model, questions),
         }
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn encode(self, plan: &crate::core::Plan) -> Result<Vec<u8>, EncodeError> {
         match self {
             Self::Primary => systemone::encode(plan),
@@ -114,17 +112,6 @@ impl ApiType {
                     parts.questions.iter().map(String::as_str),
                 ))
             }
-        }
-    }
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn decode_observed(
-        self,
-        plan: &crate::core::Plan,
-        body: &[u8],
-    ) -> systemone::response::Decoded {
-        match self {
-            Self::Primary => systemone::decode_observed(plan, body),
-            Self::Decisions => openai::decode_observed(plan, body),
         }
     }
     pub(crate) fn canonical_question(self, text: &str) -> Option<(String, crate::core::Question)> {

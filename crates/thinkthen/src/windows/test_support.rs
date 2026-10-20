@@ -2,9 +2,9 @@
 
 pub(crate) use crate::test_deadline::child;
 
-#[path = "../../tests/windows/ffi.rs"]
+#[path = "test_support/ffi.rs"]
 pub(crate) mod ffi;
-#[path = "../../tests/windows/process.rs"]
+#[path = "test_support/process.rs"]
 #[allow(
     clippy::expect_used,
     clippy::panic,

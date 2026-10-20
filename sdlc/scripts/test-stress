@@ -62,7 +62,7 @@ else
     echo 'test-stress: not run listener resource retirement (Linux /proc counters required)'
 fi
 ignored_case conformance-backend loopback listener::a_silent_connection_held_past_the_read_timeout_takes_no_reply
-ignored_case thinkthen backend exchange::a_server_retry_floor_is_waited_once
+ignored_case thinkthen-cli backend exchange::a_server_retry_floor_is_waited_once
 ignored_case thinkthen public_controls overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight
 if [ "$(uname -s)" = Linux ]; then
     ignored_case thinkthen public_batches a_long_batch_keeps_memory_flat_as_its_input_grows
@@ -70,7 +70,7 @@ else
     echo 'test-stress: not run batch resident memory (Linux /proc counters required)'
 fi
 ignored_case thinkthen public_batches engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port
-ignored_case thinkthen mcp_timing paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_overhead
+ignored_case thinkthen-cli mcp_timing paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_overhead
 ignored_lib engine::width_tests::fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it
 # The Polars cases build engines from the environment, so their sends go to a scratch usage
 # folder of their own, as in libraries/polars/check.sh. The decoy above still guards the rest.

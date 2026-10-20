@@ -73,12 +73,12 @@ fn an_ollama_shaped_address_suggests_the_named_backend_without_changing_the_requ
         .post_observed(&exchange, &crate::engine::Cancel::default(), || ())
         .err()
         .unwrap();
-    let (code, sentence) = crate::cli::failure::sentence(&error.into());
-    assert_eq!(code, 4);
-    assert_eq!(
-        sentence,
-        "the backend answered with status 400: the backend refused the request; this address looks like Ollama; try --backend ollama"
-    );
+    let error = crate::Error::from(error);
+    let Some(crate::ErrorDiagnostic::Provider { cause, provider }) = error.diagnostic() else {
+        panic!("admitted alternate-backend hint")
+    };
+    assert!(provider.alternate_backend_hint);
+    assert!(matches!(*cause, crate::ErrorDiagnostic::Status(400)));
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();

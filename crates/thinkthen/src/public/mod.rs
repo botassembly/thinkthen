@@ -2,6 +2,12 @@
 //!
 //! Callers own an explicit [`Engine`] and its typed native results.
 
+mod usage;
+pub use usage::{UsageFailure, UsageFailureCategory, UsageTotals, current_usage_month, read_usage};
+
+mod maintenance;
+pub use maintenance::*;
+
 mod images;
 mod request;
 pub use images::{
@@ -21,7 +27,7 @@ mod find_question;
 pub use files::{
     FileReader, ReaderOptions, SourceRecord, SourceRecords, SourceUnit, enumerate_files, read_files,
 };
-pub use find_question::FindQuestionFile;
+pub use find_question::{FindQuestionFile, find_candidate_count_range};
 
 mod annotated;
 mod asking;
@@ -47,10 +53,13 @@ mod proxy;
 mod pull;
 mod question;
 pub(crate) use question::Kind as NativeQuestionKind;
+mod parsed_json;
 mod question_file;
 mod record_choose;
+pub use parsed_json::ParsedJson;
 mod record_composition;
 pub use record_choose::RecordChooseQuestion;
+pub use record_composition::validate_pointer;
 mod record_context;
 mod record_input;
 pub use crate::core::{Surface, SurfaceError};
@@ -86,7 +95,10 @@ pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{Error, ErrorDetail, ErrorKind, StopCause, Stopped};
+pub use error::{
+    ConfigurationFailure, Error, ErrorDetail, ErrorDiagnostic, ErrorKind, JsonFailure,
+    ProfileFailure, ProviderFailure, StopCause, Stopped, TransportFailure,
+};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use options::{
@@ -94,7 +106,10 @@ pub use options::{
     process_requests_sent,
 };
 pub use panic::{contained, uncontained};
-pub use plan::{PlanEstimate, SourceBudgetExceeded};
+pub use plan::{
+    PlanEstimate, PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan,
+    SourceBudgetExceeded,
+};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,
@@ -127,7 +142,7 @@ pub use results::{
 };
 pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
 pub use set::{QuestionSet, QuestionSetBuilder};
-pub use settings::EngineBuilder;
+pub use settings::{CacheSettings, EngineBuilder, ResolvedSettings};
 
 /// The Polars crate the interface takes, so a caller names the exact version.
 #[cfg(feature = "polars")]
@@ -158,10 +173,10 @@ pub use results::{
     SourceBoundaryProposal, SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation,
 };
 
-#[cfg(feature = "cli")]
-pub(crate) use options::AnnotationRecovery;
-
 pub use results::{
     AnnotationCall, ChoiceCall, DecisionCall, FilterCall, FindCall, RankCall, RecognitionCall,
     RelationCall, ScoreCall, SetRankCall, TagCall,
 };
+
+pub use crate::core::probability::{Probability, ProbabilityError};
+pub use crate::core::threshold::{Threshold, ThresholdError};
