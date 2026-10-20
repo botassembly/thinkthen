@@ -8,6 +8,8 @@ Phase: 1
 
 Depends on: 0619
 
+Reviews: revision f37577e, accept
+
 ## Outcome
 
 - Changes: `conformance/parity.py`, `conformance/test_parity.py`.
