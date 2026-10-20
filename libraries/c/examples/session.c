@@ -47,8 +47,9 @@ int main(void) {
     int failed = thinkthen_value_parse(json.data, json.len, &owner) ||
         thinkthen_value_view(owner, &call);
     thinkthen_call_result_free(result);
-    const thinkthen_complete_json_v1 *answer = member(call, "value");
-    const thinkthen_complete_json_v1 *probability = member(call, "probability");
+    const thinkthen_complete_json_v1 *settled = member(call, "answer");
+    const thinkthen_complete_json_v1 *answer = member(settled, "value");
+    const thinkthen_complete_json_v1 *probability = member(settled, "probability");
     if (failed || !answer || !probability ||
         (answer->kind != THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 &&
          answer->kind != THINKTHEN_COMPLETE_JSON_NULL_V1) ||

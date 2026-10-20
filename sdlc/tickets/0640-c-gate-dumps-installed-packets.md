@@ -1,4 +1,4 @@
-# 0640: Test the C library through its installed archive and the packet dump
+# 0640: Test the installed blocking C call and its owned results
 
 Status: OPEN.
 
@@ -12,19 +12,19 @@ Depends on: 0612, 0618, 0638, 0642
 
 - Changes: `libraries/c/check.sh`, `libraries/c/examples/session.c`, `libraries/c/README.md`, `libraries/c/tests/`.
 - `examples/session.c` keeps calling `thinkthen_run_call` and prints the call's answer and probability read from the result, not the whole result JSON.
-- A small C dumper, `libraries/c/tests/c/dump.c`, implements the 0642 packet-dump contract over the installed archive and replaces the C-specific fixture expectations. This ticket owns the C dumper; 0642 proves the oracle with the Rust consumer.
-- Door tests in `libraries/c/tests/door/` and C programs in `libraries/c/tests/c/` that only repeat what the dumper proves through the installed archive are deleted. Tests that prove memory ownership, threading and cancellation at the ABI stay.
+- The installed `thinkthen_run_call` consumer proves its owned Call JSON and owned error fields against the shared cases: answer, probability, complete results, facts, diagnostics, ownership and zero sends. Add no C packet dumper. Native packet envelopes, stopped positions and the deterministic cancellation checkpoint remain Rust proof.
+- Delete tests only after the installed blocking-call proof replaces their behavior. Keep independent ABI ownership, threading, secrecy, held-provider cancellation and settlement assertions while those APIs ship.
 - The C gate has no exit-77 path except platforms the `sdlc/tools.json` manifest marks unsupported.
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0640 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check unpacks the archive, compiles the example and the dumper from outside the repository, and matches the 0642 oracle for every shared case. Before the change no C program prints packets for the oracle, so a changed oracle value passes the C gate.
-- Done once by hand and not committed: changing one expected value in the oracle `conformance/fixtures/packets.json` makes the same run fail with a diff.
+- On the M5 natively: `pm job run --machine m5 0640 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check unpacks the archive, compiles the example and blocking consumer from outside the repository, and compares the observable owned result and error fields with the shared cases.
+- Done once by hand and not committed: changing one shared expected answer or probability makes the same installed check fail with a field difference. Restore the bytes afterward.
 - Linux runs at the 0619 container checkpoint.
 
 ## Amendment, 2026-10-20 (C boundary proof)
 
-The PM approved exact shared-oracle comparison for every other C-applicable case. Keep `23-cancelled-fault`, `boundary-cancelled`, `29-usage-json-text`, `31-usage-rank-blank-question`, `duplicate-metadata`, `duplicate-schema` and `single-format-version` as named installed-C boundary checks instead of exact native packet comparisons. Pin C's existing code, owner, message, retryability and zero sends; cancellation may have absent facts before invocation starts. The malformed-request checks retain `THINKTHEN_EUSAGE`, no result owner, `invalid session arguments or input`, false retryability and absent facts. Preserve independent ABI ownership, threading, secrecy, held-provider cancellation and settlement checks. The native and installed Rust consumers prove the exact facts-bearing cancellation checkpoint and native malformed envelope. This changes the proof obligation only: change no public C API, diagnostic, shared oracle, comparator or deadline. Delete only tests whose behavior the installed dumper actually replaces.
+The PM's second ruling in `repos/agents/inbox/thinkthen/2026-10-20-thinkthen-0640-needs-a-c-boundary-proof-ruling.md` supersedes the first seven-case packet amendment: add no C packet dumper. Prove the surviving installed blocking-call result and owned errors. The owned C error exposes code, message, retryability and optional native Facts JSON. Do not infer native stopped positions, completed prefixes or other unexposed error fields. Preserve the existing malformed-request mapping and permit absent facts before invocation starts. Keep all shared C cases; prove their observable fields and request counts. Rust owns exact native envelopes and stop positions. The coordinator files the required pre-freeze error-position ticket for 0688; this ticket adds no API repair. Change no public API, diagnostic, shared oracle, comparator or deadline.
 
 ## Evidence
 
