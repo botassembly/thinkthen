@@ -215,7 +215,7 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             except TypeError: pass
             else: raise AssertionError('pandas coerced an embedded failure')
             assert pickle.loads(pickle.dumps(embedded)) == embedded
-        assert done.results[0].schema == 'thinkthen.result/2'
+        assert done.results[0].schema == 'thinkthen.result'
         print('owned series rows')
     '''.replace('SHAPE', repr(shape)), child_env(backend, tmp_path))
     assert printed.strip() == 'owned series rows'

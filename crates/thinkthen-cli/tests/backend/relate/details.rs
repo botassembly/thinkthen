@@ -54,7 +54,7 @@ fn mixed_logical_failure_prints_details_and_exits_six() {
         );
         crate::harness::exits(&output, 6);
         let result: Value = serde_json::from_slice(&output.stdout).expect("details");
-        assert_eq!(result["schema"], "thinkthen.result/2");
+        assert_eq!(result["schema"], "thinkthen.result");
         assert_eq!(result["value"].as_array().expect("edges").len(), 1);
         assert_eq!(
             result["answer"]["questions"]

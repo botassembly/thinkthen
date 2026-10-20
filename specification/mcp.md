@@ -91,8 +91,7 @@ Successes return `structuredContent` holding the complete native call object
 and one text content block encoding the equivalent JSON. The compact discovery catalog omits output schemas; complete results still come from the native serializers. Full argument guidance is available with `thinkthen mcp --help`. False, null, empty
 answers and partial member failures retain native meanings. Incremental reader failures retain ordered native `completed` results beside their terminal safe error and final facts. Whole-call failures
 use `isError:true` with safe native error/facts, including actual started
-attempts; admission failures invent no started-call facts. No adapter changes
-result/1 labels into result/2 or invents origins, IDs, timing, models or cache
+attempts; admission failures invent no started-call facts. No adapter rebuilds result envelopes or invents origins, IDs, timing, models or cache
 hits. MCP supplies the closed `mcp` surface identity through native integration.
 
 Installed consumer checks run through the shared surface/conformance ladder.

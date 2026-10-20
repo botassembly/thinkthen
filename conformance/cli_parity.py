@@ -156,7 +156,7 @@ def command(binary, value, settings, home):
 
 def project_row(result, value, at):
     meta = result["meta"]
-    assert result["schema"] == "thinkthen.result/2", result
+    assert result["schema"] == "thinkthen.result", result
     row = {"value": result["value"], "answer_id": result["answer_id"],
            "origin": {"live": 1, "cache": 2, "replay": 3, None: None}[meta["origin"]],
            "answered_by": meta.get("answered_by"), "observations": len(meta["observations"]),
@@ -273,8 +273,8 @@ def execute(binary, value, settings, home, env, backend=None):
     completed = process.returncode in (0, 1, 3, 6) and (bool(details) or process.returncode == 0)
     if completed:
         assert facts is not None, "CLI omitted terminal facts"
-        out = {"code": 0, "schema": "thinkthen.result/2", "rows": rows, **facts}
-        out["schema"] = "thinkthen.result/2"
+        out = {"code": 0, "schema": "thinkthen.result", "rows": rows, **facts}
+        out["schema"] = "thinkthen.result"
     else:
         code = {2: 1, 4: 2, 5: 4, 70: 6, -2: 5, -15: 5, 130: 5, 143: 5}.get(process.returncode)
         assert code is not None, (process.returncode, diagnostic)

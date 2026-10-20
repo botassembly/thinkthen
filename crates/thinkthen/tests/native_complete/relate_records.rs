@@ -214,7 +214,7 @@ fn assert_relation_call(call: &RelatedRecords, listener: &Listener) {
     assert_eq!(call.facts().input_tokens(), Some(887));
     assert_eq!(call.facts().output_tokens(), None);
     let document = serde_json::to_value(call_value).unwrap();
-    assert_eq!(document["schema"], "thinkthen.result/2");
+    assert_eq!(document["schema"], "thinkthen.result");
     assert_eq!(
         document["input"],
         json!([{"private":false,"person":{"name":"Ada","kind":"person"}}, {"private":null,"person":{"name":"Grace","kind":"person"}}])

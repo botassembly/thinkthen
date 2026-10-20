@@ -9,13 +9,13 @@
 # changed trusted labels stay at record level. Nonempty primary input is
 # refused; jq does not run a filter at all for empty ordinary input. Scalar detailed rows retain the
 # original report. Annotate detailed rows compare each shared named answer.
-# Saved v2 decide verdicts compare under their run threshold; other values
+# Saved decide verdicts compare under their run threshold; other values
 # compare exactly, including tag array order. Yes-or-no probability
 # movement is reported independently per question. Malformed annotate rows
 # fail with a fixed message that echoes no row content.
 
 def saved_decision:
-  .schema? == "thinkthen.result/2" and .question.verb? == "decide"
+  .schema? == "thinkthen.result" and .question.verb? == "decide"
   and .answer.kind? == "yes_no" and .threshold? != null;
 
 def decision_verdict:

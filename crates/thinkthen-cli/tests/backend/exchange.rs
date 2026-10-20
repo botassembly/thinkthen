@@ -143,7 +143,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     assert_eq!(
         crate::native_results::comparison::judgment(row),
         serde_json::json!({
-            "schema":"thinkthen.result/2", "answer_id":"0".repeat(64), "value":true,
+            "schema":"thinkthen.result", "answer_id":"0".repeat(64), "value":true,
             "question":{"verb":"decide","text":"asks for a refund"},
             "answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,
             "meta":{

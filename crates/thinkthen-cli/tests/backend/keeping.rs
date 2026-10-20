@@ -325,7 +325,7 @@ fn details_keeps_filter_membership_and_rank_top_membership() -> io::Result<()> {
     assert_eq!(rank_ordinals, [Some(3), Some(4)]);
     for (at, line) in printed(&output).lines().enumerate() {
         let row: serde_json::Value = serde_json::from_str(line).expect("rank detail");
-        assert_eq!(row["schema"], "thinkthen.result/2");
+        assert_eq!(row["schema"], "thinkthen.result");
         assert_eq!(row["value"], at + 1);
         assert!(row["threshold"].is_null());
     }

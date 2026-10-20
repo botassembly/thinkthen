@@ -179,7 +179,7 @@ fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independen
         crate::harness::exits(&output, code);
         withheld(&output, "native-cli-private");
         let row: Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(row["schema"], "thinkthen.result/2");
+        assert_eq!(row["schema"], "thinkthen.result");
         assert_eq!(row["value"], value);
         assert_eq!(row["meta"]["origin"], "live");
         assert_eq!(row["meta"]["usage"], json!({"input_tokens":887}));

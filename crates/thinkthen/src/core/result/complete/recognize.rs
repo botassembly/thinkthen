@@ -37,7 +37,7 @@ impl Recognition {
     schemars(rename = "completeRecognition")
 )]
 pub(crate) struct Document<'a, T: Serialize, V: Serialize = RecognizedValue> {
-    schema: super::wire::Version,
+    schema: super::wire::ResultTag,
     answer_id: &'a crate::core::AnswerId,
     value: &'a V,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -80,7 +80,7 @@ impl Recognition {
         Document {
             index,
             source: self.source.as_ref(),
-            schema: super::wire::Version::V2,
+            schema: super::wire::ResultTag::Result,
             answer_id: self.identity.answer_id(),
             value,
             input,

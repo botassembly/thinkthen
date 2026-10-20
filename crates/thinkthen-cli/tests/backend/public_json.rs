@@ -255,8 +255,8 @@ fn details(
     let printed = command(case, path, base, text, true)?;
     let complete: serde_json::Value =
         serde_json::from_str(&printed).map_err(|error| error.to_string())?;
-    if library.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/2")
-        || complete.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result/2")
+    if library.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result")
+        || complete.get("schema").and_then(serde_json::Value::as_str) != Some("thinkthen.result")
     {
         return Err("the canonical complete result version was not retained".into());
     }

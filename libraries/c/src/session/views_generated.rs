@@ -91,7 +91,7 @@ pub struct thinkthen_complete_annotation_v1 {
     pub last_line: thinkthen_complete_u64_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub value: *const thinkthen_complete_annotated_row_v1,
     pub extensions: thinkthen_complete_extensions_v1,
@@ -166,7 +166,7 @@ pub(crate) fn read_thinkthen_complete_annotation_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -2576,7 +2576,7 @@ pub struct thinkthen_complete_atomic_array_of_string_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: thinkthen_complete_string_list_v1,
@@ -2661,7 +2661,7 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -2733,7 +2733,7 @@ pub struct thinkthen_complete_atomic_decide_value_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: thinkthen_complete_decide_value_presence_v1,
@@ -2818,7 +2818,7 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -2892,7 +2892,7 @@ pub struct thinkthen_complete_atomic_non_zero_usize_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: u64,
@@ -2977,7 +2977,7 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -3042,7 +3042,7 @@ pub struct thinkthen_complete_atomic_nullable_string_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: thinkthen_complete_utf8_presence_v1,
@@ -3127,7 +3127,7 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -3201,7 +3201,7 @@ pub struct thinkthen_complete_atomic_boolean_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: u32,
@@ -3286,7 +3286,7 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -3351,7 +3351,7 @@ pub struct thinkthen_complete_atomic_double_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
     pub value: f64,
@@ -3436,7 +3436,7 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -4306,7 +4306,7 @@ pub struct thinkthen_complete_find_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
     pub question: *const thinkthen_complete_find_question_document_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub threshold: thinkthen_complete_json_presence_v1,
     pub value: thinkthen_complete_json_presence_v1,
     pub extensions: thinkthen_complete_extensions_v1,
@@ -4389,7 +4389,7 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         threshold: {
             let (presence, value) = read_presence(
@@ -5648,7 +5648,7 @@ pub struct thinkthen_complete_rank_member_result_v1 {
     pub images: thinkthen_complete_image_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub question: *const thinkthen_complete_question_document_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_json_presence_v1,
     pub value: u64,
@@ -5692,7 +5692,7 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -5751,7 +5751,7 @@ pub struct thinkthen_complete_recognition_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
     pub question: *const thinkthen_complete_recognize_question_document_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub value: *const thinkthen_complete_recognize_v1,
     pub extensions: thinkthen_complete_extensions_v1,
@@ -5832,7 +5832,7 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         source: {
             let (presence, value) = read_presence(
@@ -6377,7 +6377,7 @@ pub struct thinkthen_complete_relation_v1 {
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
     pub question: *const thinkthen_complete_relate_question_document_v1,
-    pub schema: *const thinkthen_complete_version_v1,
+    pub schema: *const thinkthen_complete_result_tag_v1,
     pub value: thinkthen_complete_related_entity_edge_list_v1,
     pub extensions: thinkthen_complete_extensions_v1,
 }
@@ -6469,7 +6469,7 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         },
         schema: {
             let value = node.required("schema")?;
-            read_thinkthen_complete_version_v1(value, store).map(|value| store.hold(value))?
+            read_thinkthen_complete_result_tag_v1(value, store).map(|value| store.hold(value))?
         },
         value: {
             let value = node.required("value")?;
@@ -7058,6 +7058,25 @@ pub(crate) fn read_thinkthen_complete_request_function_v1(
         _ => return Err(ErrorKind::Defect),
     };
     Ok(thinkthen_complete_request_function_v1 { kind })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_result_tag_v1 {
+    pub kind: u32,
+}
+
+pub const THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1: u32 = 1;
+
+pub(crate) fn read_thinkthen_complete_result_tag_v1(
+    node: &Node,
+    _store: &mut Storage,
+) -> Result<thinkthen_complete_result_tag_v1, ErrorKind> {
+    let kind = match node.text()? {
+        "thinkthen.result" => THINKTHEN_COMPLETE_RESULT_TAG_THINKTHEN_RESULT_V1,
+        _ => return Err(ErrorKind::Defect),
+    };
+    Ok(thinkthen_complete_result_tag_v1 { kind })
 }
 
 #[repr(C)]
@@ -7663,25 +7682,6 @@ pub(crate) fn read_thinkthen_complete_verb_v1(
         _ => return Err(ErrorKind::Defect),
     };
     Ok(thinkthen_complete_verb_v1 { kind })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_version_v1 {
-    pub kind: u32,
-}
-
-pub const THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1: u32 = 1;
-
-pub(crate) fn read_thinkthen_complete_version_v1(
-    node: &Node,
-    _store: &mut Storage,
-) -> Result<thinkthen_complete_version_v1, ErrorKind> {
-    let kind = match node.text()? {
-        "thinkthen.result/2" => THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1,
-        _ => return Err(ErrorKind::Defect),
-    };
-    Ok(thinkthen_complete_version_v1 { kind })
 }
 
 #[repr(C)]

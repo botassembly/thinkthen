@@ -30,7 +30,7 @@ const graph = {
       },
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       value: { $ref: "#/$defs/completeannotatedRow" },
     },
@@ -561,7 +561,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -596,7 +596,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -631,7 +631,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -671,7 +671,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -706,7 +706,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -741,7 +741,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
       question_name: { type: "string" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: {
         anyOf: [{ $ref: "#/$defs/completethreshold" }, { type: "null" }],
@@ -1069,7 +1069,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
       question: { $ref: "#/$defs/completefindQuestionDocument" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       threshold: { type: "null" },
       value: true,
     },
@@ -1404,7 +1404,7 @@ const graph = {
       images: { items: { $ref: "#/$defs/completeImage" }, type: "array" },
       meta: { $ref: "#/$defs/completeMeta" },
       question: { $ref: "#/$defs/completequestionDocument" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       threshold: { type: "null" },
       value: {
@@ -1453,7 +1453,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
       question: { $ref: "#/$defs/completerecognizeQuestionDocument" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       source: { anyOf: [{ $ref: "#/$defs/completePhysicalSource" }] },
       value: { $ref: "#/$defs/completerecognize" },
     },
@@ -1590,7 +1590,7 @@ const graph = {
       meta: { $ref: "#/$defs/completeMeta" },
       position: { $ref: "#/$defs/completePosition" },
       question: { $ref: "#/$defs/completerelateQuestionDocument" },
-      schema: { $ref: "#/$defs/completeVersion" },
+      schema: { $ref: "#/$defs/completeResultTag" },
       value: {
         items: { $ref: "#/$defs/completerelatedEntityEdge" },
         type: "array",
@@ -1784,6 +1784,10 @@ const graph = {
       { const: "relate", type: "string" },
     ],
   },
+  completeResultTag: {
+    enum: ["thinkthen.result"],
+    type: "string",
+  },
   completeSdkRequestId: {
     pattern: "^[0-9a-f]{64}$",
     type: "string",
@@ -1966,10 +1970,6 @@ const graph = {
   },
   completeVerb: {
     enum: ["recognize"],
-    type: "string",
-  },
-  completeVersion: {
-    enum: ["thinkthen.result/2"],
     type: "string",
   },
   completeWordingVersion: {

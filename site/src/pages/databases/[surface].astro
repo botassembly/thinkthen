@@ -24,7 +24,7 @@ const asked = surface.slug === 'duckdb' ? { ...run(dir, '1-query'), see: SAVED_A
   {asked && (
     <Fragment>
       <h2 id="ask-your-saved-answers">Ask your saved answers in SQL</h2>
-      <p>Saved answers are plain JSON Lines. Stock DuckDB can count and sort them with no extension, no key and no request. This query reads seven saved choose answers. It counts the answered rows and the rows near the cut.</p>
+      <p>Saved answers are plain JSON Lines. Stock DuckDB can count and sort them with no extension, no key and no request. This query reads seven synthetic choose answers produced by a local test backend. It counts the answered rows and the rows near the cut.</p>
       <Code code={queries.text} file={queries.name} caption="queries.sql, two questions about the saved answers" />
       <Terminal run={asked} caption={asked.see} />
       <p>A saved row is not a fresh trial, and the share of the probability on the picked option is not accuracy. Grade accuracy against your own labels with <a href="/functions/audit/"><code>runs audit</code></a>.</p>

@@ -180,7 +180,7 @@ impl Relation {
     schemars(rename = "completeRelation")
 )]
 pub(crate) struct Document<'a, T: Serialize, V: Serialize = Vec<RelationEdge<RelationEntity>>> {
-    schema: super::wire::Version,
+    schema: super::wire::ResultTag,
     answer_id: &'a crate::core::AnswerId,
     value: &'a V,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,7 +233,7 @@ impl Relation {
         Document {
             input_sources,
             index,
-            schema: super::wire::Version::V2,
+            schema: super::wire::ResultTag::Result,
             answer_id: self.identity.answer_id(),
             value,
             input,
