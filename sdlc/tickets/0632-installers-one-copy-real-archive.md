@@ -27,3 +27,7 @@ Depends on: 0633
 - `sdlc/scripts/release-smoke` in its default mode, which `sdlc/scripts/surfaces` runs after `release-pack --reuse`, maps `thinkthen-VERSION-TARGET.tar.gz` to the `command` surface and runs only `command_check`, which unpacks the archive and runs the binary by path. No local routine or release-suite run installs the real archive with `install.sh`.
 - `sdlc/scripts/installer-test` serves archives whose one file is a fake `thinkthen` script that prints a version (`archive` and `release`), and its `cases` table includes plain install cases beside the edge cases.
 - 0633 changes how `release-pack` builds the musl archives that the Linux installs use.
+
+## Progress
+
+- 2026-10-20 started
