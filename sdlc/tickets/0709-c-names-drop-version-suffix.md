@@ -26,3 +26,7 @@ Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbe
 Starts from `libraries/c/cbindgen.toml` and the Rust carriers under `libraries/c/src/` that cbindgen reads, the layout and operation generators `build-tools/results/layouts.py`, `build-tools/results/operations.py`, `build-tools/results/native.py` and `build-tools/results/templates/`, the hand-written callers in each wrapper (for example `libraries/csharp/src/OwnedCall.cs`, `libraries/go/session.go`, `libraries/jvm/session/thinkthen/Engine.java`), and the C snippets in `sdlc/scripts/check-c-exports.py`, `sdlc/scripts/install_check_consumers.py` and `sdlc/scripts/registry-readmes.py`. The `_v2` and `_v27` Go file names are Go toolchain build tags and stay.
 
 This renames every C name, so it collides with the phase 2 C tickets 0640 (C example and dumper), 0641 (C README and packaging) and 0642 (dumpers), and with 0719 and 0707 on generated wrappers. Either order lands; whichever lands second rebases onto the new names. Every phase 3 language ticket waits on 0688 and so starts from the renamed names.
+
+## Progress
+
+- 2026-10-20 started
