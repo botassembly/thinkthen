@@ -1,4 +1,4 @@
-# What `cargo deny` checks on every push, from rung 1.
+# What `cargo deny` checks in the local pinned Linux container gate.
 #
 # The list of allowed licenses is exactly what the tree carries today. A crate
 # that arrives under anything else fails the rung, and widening this list is a
