@@ -7,15 +7,10 @@
     "call": {
       "description": "The requested judging function and its arguments.",
       "$ref": "#/$defs/RequestCall"
-    },
-    "schema": {
-      "description": "The explicit wire version.",
-      "$ref": "#/$defs/RequestVersion"
     }
   },
   "additionalProperties": false,
   "required": [
-    "schema",
     "call"
   ],
   "$defs": {
@@ -53,11 +48,6 @@
         },
         "threshold": {
           "$ref": "#/$defs/Authored_cut"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -132,11 +122,6 @@
         },
         "true": {
           "$ref": "#/$defs/Authored_criterion"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -178,11 +163,6 @@
         },
         "profile": {
           "$ref": "#/$defs/Authored_profile"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -483,11 +463,6 @@
         },
         "threshold": {
           "$ref": "#/$defs/Authored_cut"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -555,11 +530,6 @@
         },
         "score": {
           "$ref": "#/$defs/Authored_questionText"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -601,11 +571,6 @@
         },
         "threshold": {
           "$ref": "#/$defs/Authored_cut"
-        },
-        "wording_version": {
-          "type": "integer",
-          "maximum": 2147483647,
-          "minimum": 1
         }
       },
       "additionalProperties": false,
@@ -1075,11 +1040,6 @@
             },
             "threshold": {
               "$ref": "#/$defs/Authored_cut"
-            },
-            "wording_version": {
-              "type": "integer",
-              "maximum": 2147483647,
-              "minimum": 1
             }
           },
           "additionalProperties": false,
@@ -1128,11 +1088,6 @@
                       },
                       "true": {
                         "$ref": "#/$defs/Authored_criterion"
-                      },
-                      "wording_version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1
                       }
                     },
                     "additionalProperties": false,
@@ -1165,11 +1120,6 @@
                       },
                       "threshold": {
                         "$ref": "#/$defs/Authored_cut"
-                      },
-                      "wording_version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1
                       }
                     },
                     "additionalProperties": false,
@@ -1202,11 +1152,6 @@
                       },
                       "threshold": {
                         "$ref": "#/$defs/Authored_cut"
-                      },
-                      "wording_version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1
                       }
                     },
                     "additionalProperties": false,
@@ -1236,11 +1181,6 @@
                       },
                       "score": {
                         "$ref": "#/$defs/Authored_questionText"
-                      },
-                      "wording_version": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 1
                       }
                     },
                     "additionalProperties": false,
@@ -2054,16 +1994,6 @@
         {
           "description": "Existing named or band reading.",
           "type": "string"
-        }
-      ]
-    },
-    "RequestVersion": {
-      "description": "The admitted wire version; other versions are refused.",
-      "oneOf": [
-        {
-          "description": "The first canonical request grammar.",
-          "type": "string",
-          "const": "thinkthen.request/1"
         }
       ]
     },

@@ -1661,12 +1661,6 @@
       ],
       "type": "string"
     },
-    "WordingVersion": {
-      "format": "uint32",
-      "maximum": 2147483647,
-      "minimum": 1,
-      "type": "integer"
-    },
     "annotate": {
       "items": {
         "$ref": "#/$defs/annotatedRow"
@@ -7136,12 +7130,6 @@
       ],
       "type": "string"
     },
-    "completeWordingVersion": {
-      "format": "uint32",
-      "maximum": 4294967295,
-      "minimum": 1,
-      "type": "integer"
-    },
     "completeannotatedField": {
       "anyOf": [
         {
@@ -7578,13 +7566,6 @@
         "text": {},
         "verb": {
           "const": "find"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [
@@ -7928,13 +7909,6 @@
           "type": [
             "string"
           ]
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "type": "object",
@@ -8114,13 +8088,6 @@
         },
         "verb": {
           "$ref": "#/$defs/completeVerb"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [
@@ -8222,13 +8189,6 @@
         },
         "verb": {
           "const": "relate"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/completeWordingVersion"
-            }
-          ]
         }
       },
       "required": [
@@ -10151,17 +10111,7 @@
             "null"
           ]
         },
-        "text": {},
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WordingVersion"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
+        "text": {}
       },
       "required": [
         "text",
@@ -10522,16 +10472,6 @@
             "string",
             "null"
           ]
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WordingVersion"
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       },
       "type": "object"
@@ -10862,16 +10802,6 @@
         },
         "verb": {
           "$ref": "#/$defs/Verb"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WordingVersion"
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       },
       "required": [
@@ -11054,16 +10984,6 @@
         },
         "verb": {
           "type": "string"
-        },
-        "wording_version": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/WordingVersion"
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       },
       "required": [
