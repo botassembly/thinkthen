@@ -579,8 +579,8 @@ impl<'a> Stop<'a> {
         self
     }
 
-    /// This call's flag, deadline and the caller's token, without the check, for
-    /// engine threads.
+    /// Share flags, deadlines, tokens and an explicitly owned session check
+    /// with engine threads; borrowed caller checks stay on their caller.
     pub(crate) fn shared(&self) -> Cancel<'static> {
         self.base.clone()
     }

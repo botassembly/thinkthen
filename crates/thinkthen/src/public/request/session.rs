@@ -226,7 +226,7 @@ pub enum RequestSessionReady {
 pub struct RequestSessionFeedOptions {
     /// Check caller interruption on native workers before sends and
     /// while waiting. True stops further work; sent attempts still settle.
-    /// Panics become native defects. The callback must not wait on this session.
+    /// Calls may overlap. Panics become native defects. Never wait on this session.
     /// Defaults to no callback and never enters canonical request JSON.
     pub interrupt: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     /// Owned ordinary annotation pointer policy, defaulting to no continuation.
