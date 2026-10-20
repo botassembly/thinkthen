@@ -204,6 +204,9 @@ fn scan(path: &Path) -> Result<Vec<(String, Counts)>, ReadFailure> {
     for entry in fs::read_dir(path).map_err(|error| ReadFailure::at(DIRECTORY, error))? {
         let entry = entry.map_err(|error| ReadFailure::at(DIRECTORY, error))?;
         let name = entry.file_name().to_string_lossy().into_owned();
+        if name.strip_prefix("retries-").is_some_and(recognized_month) {
+            return Err(ReadFailure::at(&name, io::ErrorKind::InvalidData.into()));
+        }
         if recognized_month(&name) {
             names.push(name);
         }

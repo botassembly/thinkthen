@@ -37,3 +37,7 @@ Starts from:
 Keeps: `thinkthen.image-state/1` and `thinkthen.question-key/2` are hash inputs in `crates/thinkthen/src/core/pack.rs` and `crates/thinkthen/src/core/pack/key.rs`, like the cache-key constants 0708 keeps, so they stay. The probe run records under `probes/` carry `thinkthen.recording/1` about 1,950 times as saved measurement output that ThinkThen does not read; they stay.
 
 Shares `conformance/backend-profiles.json` with 0721 and `conformance/cases.json` with 0706, 0707 and 0719. Paths under `crates/thinkthen/src/cli/` move when 0639 lands; the claim follows the move.
+
+## Stored-file admission detail
+
+The retired filename is `retries-` followed by a recognized monthly filename, as the removed compatibility fixtures demonstrate. Refuse that filename with the existing invalid-contents move-it sentence without parsing or migrating it. Preserve the generic behavior for unrelated filenames. The existing command refusal table checks zero sends and unchanged bytes for this case. Ian can overturn this API detail.
