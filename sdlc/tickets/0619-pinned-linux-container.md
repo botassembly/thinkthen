@@ -24,6 +24,8 @@ Reviews: revision cfad2cd, accept
 
 Reviews: revision 21eb8a4, accept
 
+Reviews: revision 3e00269, accept
+
 ## Outcome
 
 - Each architecture builds its Linux check environment from the digest-pinned Ubuntu 24.04 base in `linux.images` in `sdlc/tools.json`, the tracked image recipe and the shared tool manifest. That environment holds every declared Linux tool and serves building and testing. Receipts record the actual constructed image ID on each machine; matching base digests and recipes do not claim a shared tools-image digest. The manifest owns `linux.distribution_images` for the separate `manylinux_2_28` distribution build at the old glibc floor; installed-artifact checks run in Ubuntu. No image publication or source-built compiler is authorized.
@@ -74,6 +76,8 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: M5 image preparation passed with declared tools at fingerprint144a79e08586978ccaff and the independent Linux fixture batch passed18 of20 checks, while the stale Python bootstrap boundary is fixed in11029bd29 and the remaining coverage linker failure awaits a bounded diagnostic after the active Yellow image preparation.
 - 2026-10-19 next: Fresh component review accepted44c23ea3a and its repairs are merged at153cf822f; Yellow job1792449735916-256181 passed the archive fixture and1792449579815-247892 passed all17 coverage cases, completing the two failures from the earlier18-of20 fixture batch while whole container gates and installed proofs remain open.
 - 2026-10-19 next: Fresh component review accepted21eb8a401 after M5 job1792452113122-60314 passed explicit Docker selection; merged at86d7eccda, with whole container gates, installed checks and image refresh pending the next data integration.
+- 2026-10-19 next: Fresh component review accepts3e0026983 after M5job1792453065626-23106 passed both fragment integration tests; fingerprint51d2ff24478158bce64f includes22 fragments, Yellow image preparation starts independently, and whole Linux/native gates and release/database suites remain open.
+- 2026-10-19 next: M5 image preparation job1792455383828-81694 passed with real exit0 on3e0026983, producing ARM image914a2427a11fe108b742a1b5d66c5786af246d8059c338175160d028a37feed2 at22-fragment fingerprint51d2ff24478158bce64f2d6debb7e270e61aacaa63c053636df88736aca400cf under4 CPUs and16GiB; x86 preparation and configured gate plus Linux full cases, package and stress remain.
 
 ## Amendment, 2026-10-18
 
