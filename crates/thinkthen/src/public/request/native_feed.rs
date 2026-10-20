@@ -122,6 +122,9 @@ pub(super) fn projection(
             "the request requires its named caller-supplied feed",
         ));
     }
+    if feed.is_some() && !matches!(args.input, RequestInput::Feed { .. }) {
+        return Err(Error::usage("this request has no caller-supplied feed"));
+    }
     let all = feed.is_some_and(|feed| feed.all_filter_results);
     // Feed location authority belongs to the attached owner, not the header.
     if args.options.files_only

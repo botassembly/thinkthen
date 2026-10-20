@@ -1,0 +1,29 @@
+wrapper_flutter() {
+	[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
+	dart_name=thinkthen-dart-$V-$TARGET.tar.gz
+	[ -f "$OUT/$dart_name" ] || { echo 'release-pack: Dart archive is missing' >&2; exit 1; }
+	dart_digest=$(sha256 "$OUT/$dart_name" | awk '{print $1}')
+	mkdir -p "$folder/flutter/lib" "$folder/flutter/example/lib" \
+		"$folder/flutter/example/linux/flutter" "$folder/flutter/example/linux/runner"
+	cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml "$folder/flutter/"
+	cp -R libraries/dart/flutter/lib/. "$folder/flutter/lib/"
+	cp -R libraries/dart/flutter/linux "$folder/flutter/"
+	cp libraries/dart/flutter/example/.metadata libraries/dart/flutter/example/README.md \
+		libraries/dart/flutter/example/pubspec.yaml libraries/dart/flutter/example/pubspec.lock \
+		libraries/dart/flutter/example/analysis_options.yaml "$folder/flutter/example/"
+	cp libraries/dart/flutter/example/lib/main.dart "$folder/flutter/example/lib/"
+	cp libraries/dart/flutter/example/linux/CMakeLists.txt "$folder/flutter/example/linux/"
+	cp libraries/dart/flutter/example/linux/flutter/CMakeLists.txt \
+		libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h \
+		libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc \
+		libraries/dart/flutter/example/linux/flutter/generated_plugins.cmake \
+		"$folder/flutter/example/linux/flutter/"
+	cp libraries/dart/flutter/example/linux/runner/CMakeLists.txt \
+		libraries/dart/flutter/example/linux/runner/main.cc \
+		libraries/dart/flutter/example/linux/runner/my_application.cc \
+		libraries/dart/flutter/example/linux/runner/my_application.h \
+		"$folder/flutter/example/linux/runner/"
+	cp libraries/dart/flutter/README-PUBLIC.md "$folder/flutter/README.md"
+}
+
+part_flutter() { part_source_wrapper flutter; }

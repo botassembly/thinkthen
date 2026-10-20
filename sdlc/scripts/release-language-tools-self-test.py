@@ -4,6 +4,7 @@
 import importlib.util
 import json
 import os
+from tools import fixture_path
 from pathlib import Path
 import subprocess
 import sys
@@ -16,6 +17,71 @@ spec = importlib.util.spec_from_file_location("release_language_tools", HERE / "
 tools = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tools)
 SHA = "a" * 40
+
+
+def hosted_manifest_pins():
+    """The hosted setup installs the manifest's packages at the command boundary."""
+    from tools import load_manifest
+    manifest = load_manifest()
+    with tempfile.TemporaryDirectory(prefix="thinkthen-hosted-pins-") as temporary:
+        root = Path(temporary).resolve()
+        log = root / "commands"
+        binary = root / "bin"
+        binary.mkdir()
+        uv_home = root / "installed"
+        uv_home.mkdir()
+        (uv_home / "uv").write_text('#!/bin/sh\necho "uv $PIN_UV"\n')
+        (uv_home / "uv").chmod(0o755)
+        handoff = root / "github-path"
+        handoff.touch()
+        sysroot = root / "rustup/toolchains/fixture"
+        sysroot.mkdir(parents=True)
+        programs = {
+            "rustc": 'case $1 in -vV) echo "host: x86_64-pc-windows-msvc" ;; '
+                     '--version) echo "rustc $PIN_RUST (fixture)" ;; '
+                     '--print) echo "$PIN_SYSROOT" ;; *) exit 91 ;; esac',
+            "rustup": 'printf "rustup %s\\n" "$*" >> "$PIN_LOG"',
+            "cargo": 'printf "cargo %s\\n" "$*" >> "$PIN_LOG"',
+            "uv": 'echo "uv 0.0.0"',
+            "python3": 'if [ "$1" = -m ] && [ "$2" = pip ]; then '
+                       'printf "pip %s\\n" "$*" >> "$PIN_LOG"; '
+                       'elif [ "$1" = -c ]; then echo "$PIN_INSTALLED/uv"; '
+                       'else exec "$PIN_PYTHON" "$@"; fi',
+        }
+        for name, body in programs.items():
+            path = binary / name
+            path.write_text("#!/bin/sh\n" + body + "\n")
+            path.chmod(0o755)
+        env = dict(os.environ, PATH=fixture_path(binary), PIN_LOG=str(log),
+                   PIN_PYTHON=sys.executable, PIN_RUST=manifest['tools']['rust']['version'],
+                   PIN_SYSROOT=str(sysroot), RUSTUP_HOME=str(root / "rustup"),
+                   PIN_INSTALLED=str(uv_home), PIN_UV=manifest['tools']['uv']['version'],
+                   GITHUB_PATH=str(handoff))
+        for resolved, version, wanted in (("", manifest['tools']['rust']['version'], 0),
+                                           ("common", manifest['tools']['rust']['version'], 0),
+                                           ("common", "0.0.0", 1)):
+            log.write_text("")
+            handoff.write_text("")
+            selected = dict(env, THINKTHEN_RESOLVED_TOOLS=resolved, PIN_RUST=version)
+            result = subprocess.run(["/bin/sh", str(HERE / "release-workflow"), "setup-stage", "host",
+                                     "x86_64-pc-windows-msvc"], env=selected, text=True, capture_output=True)
+            assert result.returncode == wanted, result.stderr
+            calls = log.read_text().splitlines()
+            if wanted:
+                assert "Rust version differs from tools.json" in result.stderr and not calls, (result, calls)
+                continue
+            assert handoff.read_text().splitlines() == [str(uv_home)], handoff.read_text()
+            packages = [line for line in calls if line.startswith("pip ")]
+            assert len(packages) == 1, calls
+            for name in ("maturin", "uv"):
+                assert name + "==" + manifest['tools'][name]['version'] in packages[0].split(), packages
+            assert "jsonschema==" + manifest['python_packages']['jsonschema'] in packages[0].split(), packages
+            installed = [line for line in calls if line.startswith("rustup toolchain install ")]
+            if resolved:
+                assert not installed, calls
+            else:
+                assert len(installed) == 1 and manifest['tools']['rust']['version'] in installed[0].split(), calls
+
 
 
 def executable(path):
@@ -112,7 +178,7 @@ def main():
                           THINKTHEN_KOTLIN_HOME=str(root / "kotlin"),
                           THINKTHEN_SCALA_HOME=str(root / "scala"),
                           JAVA_HOME=str(root / "wrong-java"), JAVACMD=str(root / "wrong-java/bin/java"),
-                          PATH=str(root / "bin") + os.pathsep + old.get("PATH", ""))
+                          PATH=fixture_path(root / "bin", path=old["PATH"]))
         try:
             with patch.object(tools.platform, "system", return_value="Linux"), \
                  patch.object(tools.platform, "machine", return_value="x86_64"):
@@ -329,7 +395,7 @@ def acquisition_cli(root):
                "try: tools.main(sys.argv[2:])\n"
                "except RuntimeError as error: print(error, file=sys.stderr); sys.exit(1)\n")
     env = os.environ.copy()
-    env.update(PATH=str(process_dir) + os.pathsep + env["PATH"], OBSERVE_LOG=str(log),
+    env.update(PATH=fixture_path(process_dir, path=env["PATH"]), OBSERVE_LOG=str(log),
                OBSERVE_INSTALLED=str(root / "installed"),
                OBSERVE_PROVIDER=f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev",
                OBSERVE_METADATA="\n\n".join(
@@ -498,4 +564,5 @@ def fetch_retries():
 
 
 if __name__ == "__main__":
+    hosted_manifest_pins()
     main()

@@ -1,5 +1,12 @@
-# Routine tests must finish within the accepted boundary on a quiet machine.
+# Keep the 5s routine boundary: capped arm64 gate 1792456808870-32467 on M5
+# used 4 CPUs and 16 GiB; Linux workspace tests peaked at 3.277s and consumer
+# tests at 1.297s, leaving headroom within the existing limit.
 [profile.default]
 fail-fast = false
 test-threads = 2
 slow-timeout = { period = "5s", terminate-after = 1 }
+
+# This cache refusal test runs the CLI repeatedly, including an upgrade.
+[[profile.default.overrides]]
+filter = 'test(prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade)'
+slow-timeout = { period = "30s", terminate-after = 2 }

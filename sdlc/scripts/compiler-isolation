@@ -1,0 +1,2 @@
+# Own compiler processes so shared wrappers cannot retain a deleted scratch root.
+export RUSTC_WRAPPER= CARGO_BUILD_RUSTC_WRAPPER=

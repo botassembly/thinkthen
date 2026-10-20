@@ -334,10 +334,10 @@ fn eager_nonrecognize_records_refuse_later_seed_controls_before_sending() {
     };
     let rank = Question::rank("Best?").unwrap();
     let find = Question::find("Where?").unwrap();
-    let definition = r#"{"version":1,"questions":{"a":{"decide":"Fits?"}}}"#;
+    let definition = r#"{"questions":{"a":{"decide":"Fits?"}}}"#;
     let annotate = thinkthen::QuestionSet::from_json(definition).unwrap();
     let rank_set = thinkthen::RankSet::from_json(definition).unwrap();
-    let relate = thinkthen::Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap();
+    let relate = thinkthen::Relate::from_records_json(r#"{"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap();
     for seeds in [
         vec![],
         vec![thinkthen::RecognitionSeedSpan {
@@ -417,7 +417,7 @@ fn eager_atomic_annotation_and_set_rank_plan_later_contexts_before_any_send() {
         .unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
     let definition =
-        r#"{"version":1,"questions":{"first":{"decide":"Refund?"},"second":{"decide":"Urgent?"}}}"#;
+        r#"{"questions":{"first":{"decide":"Refund?"},"second":{"decide":"Urgent?"}}}"#;
     let annotation = thinkthen::QuestionSet::from_json(definition).unwrap();
     let ranking = thinkthen::RankSet::from_json(definition).unwrap();
     let records = || {

@@ -210,6 +210,65 @@ function Read_thinkthen_complete_session_relation_edge_list_v1 (P : thinkthen_co
 function Read_thinkthen_complete_session_relation_edge_v1 (P : access constant thinkthen_complete_session_relation_edge_v1) return Value;
 function Read_thinkthen_complete_entity_document_v1 (P : access constant thinkthen_complete_entity_document_v1) return Value;
 function Read_thinkthen_complete_session_packet_terminal_v1 (P : access constant thinkthen_complete_session_packet_terminal_v1) return Value;
+function Read_thinkthen_complete_settled_answer_v1 (P : access constant thinkthen_complete_settled_answer_v1) return Value;
+function Read_thinkthen_complete_settled_answer_decide_v1 (P : access constant thinkthen_complete_settled_answer_decide_v1) return Value;
+function Read_thinkthen_complete_answer_shape_4_v1 (P : access constant thinkthen_complete_answer_shape_4_v1) return Value;
+function Read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_4_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_4_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_4_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_answer_shape_3_v1 (P : access constant thinkthen_complete_answer_shape_3_v1) return Value;
+function Read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_6_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_6_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_6_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_answer_shape_2_v1 (P : access constant thinkthen_complete_answer_shape_2_v1) return Value;
+function Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_8_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_8_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_8_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_answer_shape_5_v1 (P : access constant thinkthen_complete_answer_shape_5_v1) return Value;
+function Read_thinkthen_complete_answer_resolution_v1 (P : access constant thinkthen_complete_answer_resolution_v1) return Value;
+function Read_thinkthen_complete_answer_resolution_map_v1 (P : thinkthen_complete_answer_resolution_map_v1) return Value;
+function Read_thinkthen_complete_answer_resolutions_list_v1 (P : thinkthen_complete_answer_resolutions_list_v1) return Value;
+function Read_thinkthen_complete_answer_resolutions_v1 (P : access constant thinkthen_complete_answer_resolutions_v1) return Value;
+function Read_thinkthen_complete_answer_shape_v1 (P : access constant thinkthen_complete_answer_shape_v1) return Value;
+function Read_thinkthen_complete_settled_answer_choose_v1 (P : access constant thinkthen_complete_settled_answer_choose_v1) return Value;
+function Read_thinkthen_complete_answer_shape_6_v1 (P : access constant thinkthen_complete_answer_shape_6_v1) return Value;
+function Read_thinkthen_complete_settled_answer_tag_v1 (P : access constant thinkthen_complete_settled_answer_tag_v1) return Value;
+function Read_thinkthen_complete_answer_shape_7_v1 (P : access constant thinkthen_complete_answer_shape_7_v1) return Value;
+function Read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_7_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_7_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_7_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_settled_answer_score_v1 (P : access constant thinkthen_complete_settled_answer_score_v1) return Value;
+function Read_thinkthen_complete_answer_shape_8_v1 (P : access constant thinkthen_complete_answer_shape_8_v1) return Value;
+function Read_thinkthen_complete_settled_answer_filter_v1 (P : access constant thinkthen_complete_settled_answer_filter_v1) return Value;
+function Read_thinkthen_complete_answer_shape_10_v1 (P : access constant thinkthen_complete_answer_shape_10_v1) return Value;
+function Read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_10_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_10_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_10_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_answer_shape_9_v1 (P : access constant thinkthen_complete_answer_shape_9_v1) return Value;
+function Read_thinkthen_complete_settled_original_list_v1 (P : thinkthen_complete_settled_original_list_v1) return Value;
+function Read_thinkthen_complete_settled_original_v1 (P : access constant thinkthen_complete_settled_original_v1) return Value;
+function Read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_9_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_9_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_9_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_settled_answer_rank_v1 (P : access constant thinkthen_complete_settled_answer_rank_v1) return Value;
+function Read_thinkthen_complete_answer_shape_11_v1 (P : access constant thinkthen_complete_answer_shape_11_v1) return Value;
+function Read_thinkthen_complete_integer_list_v1 (P : thinkthen_complete_integer_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_11_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_11_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_11_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_settled_answer_find_v1 (P : access constant thinkthen_complete_settled_answer_find_v1) return Value;
+function Read_thinkthen_complete_answer_shape_12_v1 (P : access constant thinkthen_complete_answer_shape_12_v1) return Value;
+function Read_thinkthen_complete_settled_answer_recognize_v1 (P : access constant thinkthen_complete_settled_answer_recognize_v1) return Value;
+function Read_thinkthen_complete_answer_shape_13_v1 (P : access constant thinkthen_complete_answer_shape_13_v1) return Value;
+function Read_thinkthen_complete_settled_recognition_v1 (P : access constant thinkthen_complete_settled_recognition_v1) return Value;
+function Read_thinkthen_complete_settled_recognition_entities_v1 (P : access constant thinkthen_complete_settled_recognition_entities_v1) return Value;
+function Read_thinkthen_complete_settled_recognition_mode_proposals_v1 (P : access constant thinkthen_complete_settled_recognition_mode_proposals_v1) return Value;
+function Read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_13_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_13_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_13_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_settled_answer_relate_v1 (P : access constant thinkthen_complete_settled_answer_relate_v1) return Value;
+function Read_thinkthen_complete_answer_shape_14_v1 (P : access constant thinkthen_complete_answer_shape_14_v1) return Value;
+function Read_thinkthen_complete_settled_relations_v1 (P : access constant thinkthen_complete_settled_relations_v1) return Value;
+function Read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_14_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_14_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_14_any_of_1_items_v1) return Value;
+function Read_thinkthen_complete_settled_answer_annotate_v1 (P : access constant thinkthen_complete_settled_answer_annotate_v1) return Value;
+function Read_thinkthen_complete_answer_shape_15_v1 (P : access constant thinkthen_complete_answer_shape_15_v1) return Value;
+function Read_thinkthen_complete_settled_judgment_map_v1 (P : thinkthen_complete_settled_judgment_map_v1) return Value;
+function Read_thinkthen_complete_settled_judgment_v1 (P : access constant thinkthen_complete_settled_judgment_v1) return Value;
+function Read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_15_any_of_1_items_list_v1) return Value;
+function Read_thinkthen_complete_answer_shape_15_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_15_any_of_1_items_v1) return Value;
 function Read_thinkthen_complete_facts_v1 (P : access constant thinkthen_complete_facts_v1) return Value;
 function Read_thinkthen_complete_call_id_v1 (P : access constant thinkthen_complete_call_id_v1) return Value;
 function Read_thinkthen_complete_persistence_observation_v1 (P : access constant thinkthen_complete_persistence_observation_v1) return Value;
@@ -3143,11 +3202,29 @@ end;
 return Object_Item (Fields (1 .. Count));
 end Read_thinkthen_complete_recognition_odds_recognize_answer_v1;
 function Read_thinkthen_complete_boundary_proposal_v1 (P : access constant thinkthen_complete_boundary_proposal_v1) return Value is
-Fields : Field_List (1 .. 5 + (if P = null then 0 else Index (P.extensions.len)));
+Fields : Field_List (1 .. 8 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
 Count := Count + 1; Fields (Count) := Named ("end", Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.c_end), Ada.Strings.Both)));
+case P.file.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("file", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("file", String_Item (Text (P.file.value)));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.first_line.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("first_line", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("first_line", Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.first_line.value), Ada.Strings.Both)));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.last_line.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("last_line", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("last_line", Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.last_line.value), Ada.Strings.Both)));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
 Count := Count + 1; Fields (Count) := Named ("length", Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.length), Ada.Strings.Both)));
 Count := Count + 1; Fields (Count) := Named ("probability", Number_Item (Ada.Strings.Fixed.Trim (double'Image (P.probability), Ada.Strings.Both)));
 Count := Count + 1; Fields (Count) := Named ("start", Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.start), Ada.Strings.Both)));
@@ -5086,6 +5163,1042 @@ end loop;
 end;
 return Object_Item (Fields (1 .. Count));
 end Read_thinkthen_complete_session_packet_observation_v1;
+function Read_thinkthen_complete_answer_shape_4_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_4_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.data.integer), Ada.Strings.Both));
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_4_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_4_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_4_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_4_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_4_v1 (P : access constant thinkthen_complete_answer_shape_4_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (P.data.integer), Ada.Strings.Both));
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_4_v1;
+function Read_thinkthen_complete_answer_shape_6_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_6_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return String_Item (Text (P.data.string));
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_6_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_6_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_6_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_6_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_3_v1 (P : access constant thinkthen_complete_answer_shape_3_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return String_Item (Text (P.data.string));
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_3_v1;
+function Read_thinkthen_complete_answer_shape_8_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_8_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Number_Item (Ada.Strings.Fixed.Trim (double'Image (P.data.number), Ada.Strings.Both));
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_8_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_8_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_8_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_8_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_2_v1 (P : access constant thinkthen_complete_answer_shape_2_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Number_Item (Ada.Strings.Fixed.Trim (double'Image (P.data.number), Ada.Strings.Both));
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_2_v1;
+function Read_thinkthen_complete_answer_resolution_v1 (P : access constant thinkthen_complete_answer_resolution_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return String_Item ("resolved");
+when 2 => return String_Item ("unresolved");
+when 3 => return String_Item ("failed");
+when others => raise Constraint_Error with "invalid native enum";
+end case;
+end Read_thinkthen_complete_answer_resolution_v1;
+function Read_thinkthen_complete_answer_resolution_map_v1 (P : thinkthen_complete_answer_resolution_map_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of thinkthen_complete_answer_resolution_map_entry_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Fields : Field_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data.all'Address); end if;
+for I in 1 .. Count loop
+Fields (I) := Named (Text (Items (I).name), Read_thinkthen_complete_answer_resolution_v1(Items (I).value));
+end loop;
+return Object_Item (Fields);
+end Read_thinkthen_complete_answer_resolution_map_v1;
+function Read_thinkthen_complete_answer_resolutions_v1 (P : access constant thinkthen_complete_answer_resolutions_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_answer_resolution_v1(P.data.string);
+when 2 => return Read_thinkthen_complete_answer_resolution_map_v1(P.data.object);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_resolutions_v1;
+function Read_thinkthen_complete_answer_resolutions_list_v1 (P : thinkthen_complete_answer_resolutions_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_resolutions_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_resolutions_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_resolutions_list_v1;
+function Read_thinkthen_complete_answer_shape_5_v1 (P : access constant thinkthen_complete_answer_shape_5_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_answer_resolution_v1(P.data.string);
+when 2 => return Read_thinkthen_complete_answer_resolution_map_v1(P.data.object);
+when 3 => return Read_thinkthen_complete_answer_resolutions_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_5_v1;
+function Read_thinkthen_complete_answer_shape_v1 (P : access constant thinkthen_complete_answer_shape_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+return Read_Json (P.value);
+end Read_thinkthen_complete_answer_shape_v1;
+function Read_thinkthen_complete_settled_answer_decide_v1 (P : access constant thinkthen_complete_settled_answer_decide_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_decide_v1;
+function Read_thinkthen_complete_answer_shape_6_v1 (P : access constant thinkthen_complete_answer_shape_6_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return String_Item (Text (P.data.string));
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_6_v1;
+function Read_thinkthen_complete_settled_answer_choose_v1 (P : access constant thinkthen_complete_settled_answer_choose_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_6_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_choose_v1;
+function Read_thinkthen_complete_answer_shape_7_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_7_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_string_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_7_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_7_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_7_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_7_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_7_v1 (P : access constant thinkthen_complete_answer_shape_7_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_string_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(P.data.array2);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_7_v1;
+function Read_thinkthen_complete_settled_answer_tag_v1 (P : access constant thinkthen_complete_settled_answer_tag_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_7_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_tag_v1;
+function Read_thinkthen_complete_answer_shape_8_v1 (P : access constant thinkthen_complete_answer_shape_8_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Number_Item (Ada.Strings.Fixed.Trim (double'Image (P.data.number), Ada.Strings.Both));
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_8_v1;
+function Read_thinkthen_complete_settled_answer_score_v1 (P : access constant thinkthen_complete_settled_answer_score_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_8_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_score_v1;
+function Read_thinkthen_complete_answer_shape_10_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_10_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_10_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_10_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_10_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_10_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_10_v1 (P : access constant thinkthen_complete_answer_shape_10_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(P.data.array2);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_10_v1;
+function Read_thinkthen_complete_settled_original_v1 (P : access constant thinkthen_complete_settled_original_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+return Read_Json (P.value);
+end Read_thinkthen_complete_settled_original_v1;
+function Read_thinkthen_complete_settled_original_list_v1 (P : thinkthen_complete_settled_original_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_settled_original_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_settled_original_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_settled_original_list_v1;
+function Read_thinkthen_complete_answer_shape_9_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_9_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_original_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_9_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_9_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_9_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_9_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_9_v1 (P : access constant thinkthen_complete_answer_shape_9_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_original_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(P.data.array2);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_9_v1;
+function Read_thinkthen_complete_settled_answer_filter_v1 (P : access constant thinkthen_complete_settled_answer_filter_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_10_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_9_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_filter_v1;
+function Read_thinkthen_complete_integer_list_v1 (P : thinkthen_complete_integer_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of Interfaces.Unsigned_64 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data.all'Address); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Number_Item (Ada.Strings.Fixed.Trim (Interfaces.Unsigned_64'Image (Items (I)), Ada.Strings.Both));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_integer_list_v1;
+function Read_thinkthen_complete_answer_shape_11_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_11_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_integer_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_11_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_11_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_11_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_11_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_11_v1 (P : access constant thinkthen_complete_answer_shape_11_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_integer_list_v1(P.data.c_array);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(P.data.array2);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_11_v1;
+function Read_thinkthen_complete_settled_answer_rank_v1 (P : access constant thinkthen_complete_settled_answer_rank_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_10_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_11_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_rank_v1;
+function Read_thinkthen_complete_answer_shape_12_v1 (P : access constant thinkthen_complete_answer_shape_12_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+return Read_Json (P.value);
+end Read_thinkthen_complete_answer_shape_12_v1;
+function Read_thinkthen_complete_settled_answer_find_v1 (P : access constant thinkthen_complete_settled_answer_find_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_12_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_find_v1;
+function Read_thinkthen_complete_settled_recognition_entities_v1 (P : access constant thinkthen_complete_settled_recognition_entities_v1) return Value is
+Fields : Field_List (1 .. 2 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("entities", Read_thinkthen_complete_entity_list_v1(P.entities));
+case P.relations.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("relations", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("relations", Read_thinkthen_complete_entity_edge_list_v1(P.relations.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_recognition_entities_v1;
+function Read_thinkthen_complete_settled_recognition_mode_proposals_v1 (P : access constant thinkthen_complete_settled_recognition_mode_proposals_v1) return Value is
+Fields : Field_List (1 .. 2 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("mode", Read_thinkthen_complete_boundary_mode_v1(P.mode));
+Count := Count + 1; Fields (Count) := Named ("proposals", Read_thinkthen_complete_boundary_proposal_list_v1(P.proposals));
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_recognition_mode_proposals_v1;
+function Read_thinkthen_complete_settled_recognition_v1 (P : access constant thinkthen_complete_settled_recognition_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_recognition_entities_v1 (P.data.entities);
+when 2 => return Read_thinkthen_complete_settled_recognition_mode_proposals_v1 (P.data.mode_proposals);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_settled_recognition_v1;
+function Read_thinkthen_complete_answer_shape_13_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_13_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_recognition_v1(P.data.object);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_13_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_13_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_13_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_13_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_13_v1 (P : access constant thinkthen_complete_answer_shape_13_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_recognition_v1(P.data.object);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_13_v1;
+function Read_thinkthen_complete_settled_answer_recognize_v1 (P : access constant thinkthen_complete_settled_answer_recognize_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_10_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_13_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_recognize_v1;
+function Read_thinkthen_complete_settled_relations_v1 (P : access constant thinkthen_complete_settled_relations_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+return Read_thinkthen_complete_related_entity_edge_list_v1(P.value);
+end Read_thinkthen_complete_settled_relations_v1;
+function Read_thinkthen_complete_answer_shape_14_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_14_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_relations_v1(P.data.c_array);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_14_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_14_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_14_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_14_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_14_v1 (P : access constant thinkthen_complete_answer_shape_14_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_relations_v1(P.data.c_array);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(P.data.array2);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_14_v1;
+function Read_thinkthen_complete_settled_answer_relate_v1 (P : access constant thinkthen_complete_settled_answer_relate_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_10_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_14_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_relate_v1;
+function Read_thinkthen_complete_settled_judgment_v1 (P : access constant thinkthen_complete_settled_judgment_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Boolean_Item (P.data.boolean /= 0);
+when 2 => return Null_Item;
+when 3 => return String_Item (Text (P.data.string));
+when 4 => return Number_Item (Ada.Strings.Fixed.Trim (double'Image (P.data.number), Ada.Strings.Both));
+when 5 => return Read_thinkthen_complete_string_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_settled_judgment_v1;
+function Read_thinkthen_complete_settled_judgment_map_v1 (P : thinkthen_complete_settled_judgment_map_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of thinkthen_complete_settled_judgment_map_entry_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Fields : Field_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data.all'Address); end if;
+for I in 1 .. Count loop
+Fields (I) := Named (Text (Items (I).name), Read_thinkthen_complete_settled_judgment_v1(Items (I).value));
+end loop;
+return Object_Item (Fields);
+end Read_thinkthen_complete_settled_judgment_map_v1;
+function Read_thinkthen_complete_answer_shape_15_any_of_1_items_v1 (P : access constant thinkthen_complete_answer_shape_15_any_of_1_items_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_judgment_map_v1(P.data.object);
+when 2 => return Null_Item;
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_15_any_of_1_items_v1;
+function Read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 (P : thinkthen_complete_answer_shape_15_any_of_1_items_list_v1) return Value is
+Count : constant Natural := Index (P.len);
+type Items_Type is array (1 .. Count) of access constant thinkthen_complete_answer_shape_15_any_of_1_items_v1 with Convention => C;
+type Items_Access is access constant Items_Type;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Items_Access);
+Items : Items_Access;
+Items_Copy : Value_List (1 .. Count);
+begin
+if Count > 0 then Items := Pointer (P.data); end if;
+for I in 1 .. Count loop
+Items_Copy (I) := Read_thinkthen_complete_answer_shape_15_any_of_1_items_v1(Items (I));
+end loop;
+return Array_Item (Items_Copy);
+end Read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1;
+function Read_thinkthen_complete_answer_shape_15_v1 (P : access constant thinkthen_complete_answer_shape_15_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_judgment_map_v1(P.data.object);
+when 2 => return Null_Item;
+when 3 => return Read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(P.data.c_array);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_answer_shape_15_v1;
+function Read_thinkthen_complete_settled_answer_annotate_v1 (P : access constant thinkthen_complete_settled_answer_annotate_v1) return Value is
+Fields : Field_List (1 .. 6 + (if P = null then 0 else Index (P.extensions.len)));
+Count : Natural := 0;
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+Count := Count + 1; Fields (Count) := Named ("function", String_Item (Text (P.c_function)));
+case P.index.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("index", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("index", Read_thinkthen_complete_answer_shape_4_v1(P.index.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.pick.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("pick", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("pick", Read_thinkthen_complete_answer_shape_3_v1(P.pick.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+case P.probability.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("probability", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("probability", Read_thinkthen_complete_answer_shape_2_v1(P.probability.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_shape_5_v1(P.resolution));
+case P.value.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("value", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("value", Read_thinkthen_complete_answer_shape_15_v1(P.value.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
+declare
+Extension_Count : constant Natural := Index (P.extensions.len);
+type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
+type Extension_Access is access constant Extension_Array;
+function Pointer is new Ada.Unchecked_Conversion (System.Address, Extension_Access);
+Extensions : Extension_Access;
+begin
+if Extension_Count > 0 then Extensions := Pointer (P.extensions.data.all'Address); end if;
+for I in 1 .. Extension_Count loop
+Count := Count + 1; Fields (Count) := Named (Text (Extensions (I).name), Read_Json (Extensions (I).value));
+end loop;
+end;
+return Object_Item (Fields (1 .. Count));
+end Read_thinkthen_complete_settled_answer_annotate_v1;
+function Read_thinkthen_complete_settled_answer_v1 (P : access constant thinkthen_complete_settled_answer_v1) return Value is
+
+begin
+if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.kind is
+when 1 => return Read_thinkthen_complete_settled_answer_decide_v1 (P.data.decide);
+when 2 => return Read_thinkthen_complete_settled_answer_choose_v1 (P.data.choose);
+when 3 => return Read_thinkthen_complete_settled_answer_tag_v1 (P.data.tag);
+when 4 => return Read_thinkthen_complete_settled_answer_score_v1 (P.data.score);
+when 5 => return Read_thinkthen_complete_settled_answer_filter_v1 (P.data.filter);
+when 6 => return Read_thinkthen_complete_settled_answer_rank_v1 (P.data.rank);
+when 7 => return Read_thinkthen_complete_settled_answer_find_v1 (P.data.find);
+when 8 => return Read_thinkthen_complete_settled_answer_recognize_v1 (P.data.recognize);
+when 9 => return Read_thinkthen_complete_settled_answer_relate_v1 (P.data.relate);
+when 10 => return Read_thinkthen_complete_settled_answer_annotate_v1 (P.data.annotate);
+when others => raise Constraint_Error with "invalid native alternative";
+end case;
+end Read_thinkthen_complete_settled_answer_v1;
 function Read_thinkthen_complete_call_id_v1 (P : access constant thinkthen_complete_call_id_v1) return Value is
 
 begin
@@ -5454,7 +6567,7 @@ end;
 return Object_Item (Fields (1 .. Count));
 end Read_thinkthen_complete_error_v1;
 function Read_thinkthen_complete_call_error_v1 (P : access constant thinkthen_complete_call_error_v1) return Value is
-Fields : Field_List (1 .. 2 + (if P = null then 0 else Index (P.extensions.len)));
+Fields : Field_List (1 .. 3 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
@@ -5465,6 +6578,7 @@ when 1 => Count := Count + 1; Fields (Count) := Named ("facts", Null_Item);
 when 2 => Count := Count + 1; Fields (Count) := Named ("facts", Read_thinkthen_complete_facts_v1(P.facts.value));
 when others => raise Constraint_Error with "invalid native presence";
 end case;
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_resolution_v1(P.resolution));
 declare
 Extension_Count : constant Natural := Index (P.extensions.len);
 type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;
@@ -5480,10 +6594,16 @@ end;
 return Object_Item (Fields (1 .. Count));
 end Read_thinkthen_complete_call_error_v1;
 function Read_thinkthen_complete_session_packet_terminal_v1 (P : access constant thinkthen_complete_session_packet_terminal_v1) return Value is
-Fields : Field_List (1 .. 3 + (if P = null then 0 else Index (P.extensions.len)));
+Fields : Field_List (1 .. 5 + (if P = null then 0 else Index (P.extensions.len)));
 Count : Natural := 0;
 begin
 if P = null then raise Constraint_Error with "missing native value"; end if;
+case P.answer.presence is
+when 0 => null;
+when 1 => Count := Count + 1; Fields (Count) := Named ("answer", Null_Item);
+when 2 => Count := Count + 1; Fields (Count) := Named ("answer", Read_thinkthen_complete_settled_answer_v1(P.answer.value));
+when others => raise Constraint_Error with "invalid native presence";
+end case;
 case P.facts.presence is
 when 0 => null;
 when 1 => Count := Count + 1; Fields (Count) := Named ("facts", Null_Item);
@@ -5497,6 +6617,7 @@ when 2 => Count := Count + 1; Fields (Count) := Named ("failure", Read_thinkthen
 when others => raise Constraint_Error with "invalid native presence";
 end case;
 Count := Count + 1; Fields (Count) := Named ("kind", String_Item (Text (P.kind)));
+Count := Count + 1; Fields (Count) := Named ("resolution", Read_thinkthen_complete_answer_resolution_v1(P.resolution));
 declare
 Extension_Count : constant Natural := Index (P.extensions.len);
 type Extension_Array is array (1 .. Extension_Count) of thinkthen_complete_extension_v1 with Convention => C;

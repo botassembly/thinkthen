@@ -110,34 +110,48 @@ pub(super) fn compile(source: &Path) -> PathBuf {
 /// version macros match the header.
 #[test]
 fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
-    let library = archive().join("libthinkthen.so");
-    let dynamic = child::command("readelf", &[])
-        .arg("-d")
+    let library = archive().join(format!("libthinkthen.{DL}"));
+    let dynamic = child::command(if MAC { "otool" } else { "readelf" }, &[])
+        .arg(if MAC { "-D" } else { "-d" })
         .arg(&library)
         .output()
-        .expect("readelf");
+        .expect("shared library identity tool ran");
+    assert!(dynamic.status.success(), "{}", text(&dynamic.stderr));
     assert!(
-        text(&dynamic.stdout).contains("Library soname: [libthinkthen.so.0]"),
+        if MAC {
+            text(&dynamic.stdout)
+                .lines()
+                .any(|line| line.trim() == format!("@rpath/{SONAME}"))
+        } else {
+            text(&dynamic.stdout).contains(&format!("Library soname: [{SONAME}]"))
+        },
         "{}",
         text(&dynamic.stdout)
     );
     let header =
         std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("the header");
     let exported = child::command("nm", &[])
-        .args(["-D", "--defined-only"])
+        .args(if MAC {
+            &["-gU"][..]
+        } else {
+            &["-D", "--defined-only"][..]
+        })
         .arg(&library)
         .output()
         .expect("nm");
+    assert!(exported.status.success(), "{}", text(&exported.stderr));
     // ADR 0111: a bundled SQLite stays private, so no `sqlite3_` name leaks.
     let leaked = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
+        .map(|name| name.strip_prefix(PREFIX).unwrap_or(name))
         .filter(|name| name.starts_with("sqlite3_"))
         .count();
     assert_eq!(leaked, 0, "the door exports sqlite3_ symbols");
     let mut symbols: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
+        .map(|name| name.strip_prefix(PREFIX).unwrap_or(name))
         .filter(|name| name.starts_with("thinkthen_"))
         .map(str::to_owned)
         .collect();

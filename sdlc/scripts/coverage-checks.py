@@ -1,6 +1,7 @@
 """Focused regressions for coverage process ownership and missing profiles."""
 import json
 import os
+from tools import fixture_path
 import platform
 import plistlib
 from pathlib import Path
@@ -18,12 +19,17 @@ from unittest.mock import patch
 import coverage_installed_managed
 import coverage_installed_c_hosts
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT, fixture_run, fixture_wait
+
+CONTROLLED_TIMEOUT = 0.3
+
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
 class PlatformCommandEvidence(unittest.TestCase):
     def test_platform_commands_refuse_a_foreign_host_and_native_slice(self):
-        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--platform']
+        command = [sys.executable, str(Path(__file__).with_name('coverage')), '--platform']
         foreign = 'apple' if sys.platform == 'linux' else 'linux'
         result = subprocess.run([*command, foreign], capture_output=True)
         self.assertEqual(result.returncode, 1)
@@ -41,7 +47,7 @@ class PlatformCommandEvidence(unittest.TestCase):
                              totals=dict(mapped_nonblank=100, **{name: 50 for name in names}))
                         for platform_name, names in (('linux', expected - {'installed-objective-c'}),
                                                     ('apple', {'installed-swift', 'installed-objective-c'}))]
-            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--release', '--join', *map(str, paths)]
+            command = [sys.executable, str(Path(__file__).with_name('coverage')), '--join', *map(str, paths)]
             for payload, path in zip(payloads, paths):
                 path.write_text(json.dumps(payload))
             self.assertEqual(subprocess.run(command, capture_output=True).returncode, 0)
@@ -118,19 +124,21 @@ class InstalledScriptInvocation(unittest.TestCase):
             tools.mkdir()
             for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
                 (tools / name).symlink_to('/bin/true')
-            for name in ('uname', 'dirname', 'env', 'sh'):
-                (tools / name).symlink_to(shutil.which(name))
             library = run / 'libthinkthen.so'
             library.touch()
-            script_dir = run / 'ada'
-            script_dir.mkdir()
+            script_dir = run / 'libraries/ada'
+            script_dir.mkdir(parents=True)
+            helpers = run / 'sdlc/scripts'
+            helpers.mkdir(parents=True)
+            shutil.copy2(checkout / 'sdlc/scripts/resolved-tools', helpers / 'resolved-tools')
             # Keep the real gate through its host and tool checks.
             source = (checkout / 'libraries/ada/check.sh').read_text()
             prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
             script = script_dir / 'check.sh'
             script.write_text(prefix + 'exit 23\n')
             script.chmod(0o700)
-            env = {'PATH': str(tools)}
+            # The fixture supplies resolved commands; do not invoke a tool installer.
+            env = {'PATH': fixture_path(tools), 'THINKTHEN_RESOLVED_TOOLS': 'ada'}
             invoked = []
             def command(args, cwd, settings, log, **kwargs):
                 if 'package_owned.py' in ' '.join(args):
@@ -169,7 +177,7 @@ class ManagedToolAvailability(unittest.TestCase):
                 binary = tools / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)
-            env = {'HOME': str(root), 'PATH': str(tools),
+            env = {'HOME': str(root), 'PATH': fixture_path(tools),
                    'THINKTHEN_DOTNET': str(tools / 'configured-dotnet'),
                    'TT_DART': str(tools / 'configured-dart'), 'TT_FLUTTER': str(tools / 'configured-flutter'),
                    'THINKTHEN_SWIFT': str(tools / 'configured-swift')}
@@ -210,8 +218,18 @@ class ManagedToolAvailability(unittest.TestCase):
             def command(args, cwd, env, log, **kwargs):
                 # XCFramework assembly requires macOS; package validation below is real.
                 framework = Path(args[args.index('-output') + 1])
-                framework.mkdir()
-                (framework / 'Info.plist').write_bytes(plistlib.dumps({}))
+                arch = platform.machine()
+                identifier = 'macos-' + arch
+                slice = framework / identifier
+                slice.mkdir(parents=True)
+                library = Path(args[args.index('-library') + 1])
+                shutil.copy2(library, slice / library.name)
+                shutil.copytree(args[args.index('-headers') + 1], slice / 'Headers')
+                metadata = dict(CFBundlePackageType='XFWK', XCFrameworkFormatVersion='1.0',
+                                AvailableLibraries=[dict(LibraryIdentifier=identifier,
+                                    LibraryPath=library.name, HeadersPath='Headers',
+                                    SupportedArchitectures=[arch], SupportedPlatform='macos')])
+                (framework / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             context = dict(root=checkout, run=run, env={}, command=command,
                            missing_tool=DRIVER['MissingTool'], c_target=native.parents[1])
             collections = coverage_installed_managed.prepare_apple(context)
@@ -225,9 +243,9 @@ class ManagedToolAvailability(unittest.TestCase):
                     self.assertEqual((package / 'README.md').read_bytes(),
                                      (checkout / 'libraries' / language / 'README-PUBLIC.md').read_bytes())
                     if language == 'swift':
-                        result = subprocess.run(['swift', 'package', '--package-path', str(package), 'describe'],
+                        result = fixture_run(['swift', 'package', '--package-path', str(package), 'describe'],
                                                 env={'PATH': os.environ['PATH'], 'HOME': str(run)},
-                                                capture_output=True, timeout=60)
+                                                capture_output=True)
                         self.assertEqual(result.returncode, 0, result.stderr.decode())
                     else:
                         # Run the actual consumer through extraction, README replay setup,
@@ -261,7 +279,7 @@ class ManagedToolAvailability(unittest.TestCase):
             metadata = {'AvailableLibraries': [dict(SupportedPlatform='macos', SupportedArchitectures=['arm64'],
                          LibraryIdentifier='macos-arm64', LibraryPath='libthinkthen.a', HeadersPath='Headers')]}
             (slice.parent / 'Info.plist').write_bytes(plistlib.dumps(metadata))
-            env = {'PATH': '/usr/bin:/bin'}
+            env = {'PATH': os.environ['PATH']}
             def command(args, cwd, settings, log, **kwargs):
                 self.assertEqual(args, ['sh', './check.sh'])
                 self.assertEqual(settings['THINKTHEN_COVERAGE_INITIALIZER'], str(root / 'profile.o'))
@@ -314,7 +332,7 @@ class ManagedToolAvailability(unittest.TestCase):
                 binary = root / tool
                 binary.write_text('#!/bin/sh\nexit 0\n')
                 binary.chmod(0o700)
-            env = {'HOME': str(root), 'PATH': str(root)}
+            env = {'HOME': str(root), 'PATH': fixture_path(root)}
             fixed = root / 'fixed-bwrap'
             real_which = coverage_installed_managed.shutil.which
             self.assertIsNotNone(real_which('bwrap', path=env['PATH']))
@@ -360,8 +378,8 @@ while True:
             for capture in (False, True):
                 with self.subTest(capture=capture):
                     result = DRIVER['command']([sys.executable, '-c', script], root,
-                                               {'PATH': os.defpath}, root / 'active.log',
-                                               capture=capture, timeout=5)
+                                               {'PATH': os.environ['PATH']}, root / 'active.log',
+                                               capture=capture, timeout=FIXTURE_HANG_TIMEOUT)
                     self.assertIn('orphan reaped while harness alive', (root / 'active.log').read_text())
                     if capture:
                         self.assertEqual(result, b'before orphan\norphan reaped while harness alive\n')
@@ -371,21 +389,21 @@ while True:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             foreign = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(23)'],
-                                       env={'PATH': os.defpath})
+                                       env={'PATH': os.environ['PATH']})
             previous_handler = signal.getsignal(signal.SIGCHLD)
             previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, [])
             try:
                 for attempt in range(10):
                     with self.assertRaisesRegex(RuntimeError, 'exit 47'):
                         DRIVER['command']([sys.executable, '-c', 'import sys; sys.exit(47)'],
-                                          root, {'PATH': os.defpath}, root / 'immediate.log', capture=True)
+                                          root, {'PATH': os.environ['PATH']}, root / 'immediate.log', capture=True)
                 script = "import json, signal; print(json.dumps(sorted(map(int, signal.pthread_sigmask(signal.SIG_BLOCK, [])))))"
                 result = DRIVER['command']([sys.executable, '-c', script], root,
-                                           {'PATH': os.defpath}, root / 'mask.log', capture=True)
+                                           {'PATH': os.environ['PATH']}, root / 'mask.log', capture=True)
                 self.assertEqual(json.loads(result), sorted(map(int, previous_mask)))
                 self.assertEqual(signal.getsignal(signal.SIGCHLD), previous_handler)
                 self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), previous_mask)
-                self.assertEqual(foreign.wait(timeout=3), 23)
+                self.assertEqual(fixture_wait(foreign), 23)
             finally:
                 if foreign.poll() is None:
                     foreign.kill()
@@ -406,7 +424,7 @@ else:
             for capture in (False, True):
                 with self.assertRaisesRegex(RuntimeError, r'timed out \(exit -9\)'):
                     DRIVER['command']([sys.executable, '-c', script], root, os.environ,
-                                      root / 'timeout.log', capture=capture, timeout=0.3)
+                                      root / 'timeout.log', capture=capture, timeout=CONTROLLED_TIMEOUT)
                 child = int((root / 'child.pid').read_text())
                 with self.assertRaises(ProcessLookupError):
                     os.kill(child, 0)
@@ -415,7 +433,7 @@ else:
     def test_real_exit_and_diagnostics_survive(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for code, exception, message in ((77, DRIVER['MissingTool'], 'see'),
+            for code, exception, message in ((77, RuntimeError, 'see'),
                                              (4, RuntimeError, 'exit 4'),
                                              (-signal.SIGTERM, RuntimeError, 'exit -15')):
                 script = f"import os, sys; print('diagnostic', flush=True); "
@@ -436,8 +454,8 @@ class ProfileCauses(unittest.TestCase):
                             '-DPROFILE_PATH=' + json.dumps(str(collection / '%m.profraw')),
                             '-DPROFILE_DIR=' + json.dumps(str(collection)), '-o', str(root / 'profile.o')], check=True)
             program = 'fn main() { let a: Vec<_> = std::env::args().collect(); if a.len() > 1 { unsafe { unsafe extern "C" { fn raise(s: i32) -> i32; } raise(a[1].parse().unwrap()); } } }'
-            subprocess.run(['rustc', '--edition', '2024', '-C', 'instrument-coverage', '-C',
-                            'link-arg=' + str(root / 'profile.o'), '-o', str(root / 'probe'), '-'],
+            subprocess.run(['rustc', '--edition', '2024', '-C', 'instrument-coverage',
+                            *DRIVER['profile_link_flags'](root / 'profile.o'), '-o', str(root / 'probe'), '-'],
                            input=program.encode(), check=True)
             env = {'PATH': os.environ['PATH']}
             for signum in (signal.SIGINT, signal.SIGTERM):
@@ -469,6 +487,32 @@ class ProfileCauses(unittest.TestCase):
 
 
 class CollectionClassification(unittest.TestCase):
+    def test_command_and_library_harnesses_run_in_their_own_collections(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifacts = []
+            for package, kinds in (('thinkthen', ['lib']), ('thinkthen-cli', ['bin'])):
+                package_dir = root / package
+                package_dir.mkdir()
+                harness = package_dir / 'harness'
+                harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
+                                   "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                                   "assert sys.argv[1:] == ['--test-threads=2']\n"
+                                   "print(os.environ['CARGO_PKG_NAME'])\n")
+                harness.chmod(0o700)
+                launch = {'name': package, 'manifest_path': str(package_dir / 'Cargo.toml')}
+                for kind in (kinds, ['test']):
+                    artifact = {'reason': 'compiler-artifact',
+                                'target': {'kind': kind, 'name': 'thinkthen'},
+                                'executable': str(harness), 'profile': {'test': True}}
+                    artifacts += DRIVER['test_artifacts'](json.dumps(artifact), launch)
+            for collection, expected in (('source-unit', ['thinkthen']),
+                                         ('cli-source', ['thinkthen-cli']),
+                                         ('rust-integration', ['thinkthen', 'thinkthen-cli'])):
+                DRIVER['collect_tests'](root, {}, artifacts, collection)
+                self.assertEqual(sorted(path.read_text().strip() for path in (root / collection).glob('*.log')),
+                                 expected)
+
     def test_c_library_target_launches_with_its_metadata_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -541,7 +585,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                 return f'SF:{source}\nDA:1,1\n' + ('DA:2,0\n' if unavailable in objects else '')
             context = DRIVER['measure'].__globals__
             with patch.dict(context, ROOT=root, export=export):
-                for release, code in ((False, 77), (True, 1)):
+                for release, code in ((False, 1), (True, 1)):
                     if release:
                         for collection in installed:
                             shutil.rmtree(root / collection['name'])
@@ -549,7 +593,7 @@ class InstalledEvidenceRetention(unittest.TestCase):
                         DRIVER['measure'](root, {}, root, executable, [], [], installed, 'fixture',
                                           time.monotonic(), False)
                     with patch.dict(DRIVER['entry'].__globals__, main=main), patch.object(
-                            sys, 'argv', ['coverage'] + (['--release'] if release else [])):
+                            sys, 'argv', ['coverage'] + ([])):
                         self.assertEqual(DRIVER['entry'](), code)
                     result = json.loads((root / 'totals.json').read_text())
                     records = root / 'sdlc/records/coverage'

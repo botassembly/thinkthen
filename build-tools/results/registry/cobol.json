@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/cobol/src/tt_requests_generated.h",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/cobol/src/tt_requests_generated.c",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/cobol/copybooks/tt-native-generated.cpy",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/cobol/native-helpers.json",
+    "producer": "results"
+  }
+]

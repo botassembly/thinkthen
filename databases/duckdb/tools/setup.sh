@@ -14,8 +14,10 @@ case ${1:-} in
 --target) echo "$target"; exit 0 ;;
 --inputs) printf '%s %s %s %s %s\n' "$target" "$platform" "$duckdb_source_commit" "$duckdb_tools_commit" "$duckdb_python_commit"; exit 0 ;;
 --fetch|'') ;;
-*) echo 'usage: setup.sh [--fetch|--target|--inputs]' >&2; exit 2 ;;
+*) echo 'usage: setup.sh [--fetch [WHEEL_ROOT]|--target|--inputs]' >&2; exit 2 ;;
 esac
+# A supplied wheel root comes from this release run's build output. Never build in this path.
+wheel_root=${2:-}
 cache_root=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}
 lock=$cache_root/.duckdb-cache-mutation.lock
 if [ "${THINKTHEN_DUCKDB_CACHE_LOCK_HELD:-}" != "$lock" ]; then
@@ -32,10 +34,15 @@ for version in $DUCKDB_VERSIONS; do
 	}
 	python3 "$HERE/validate_inputs.py" --source "$TOOLS/source" --commit "$duckdb_source_commit"
 	if [ "${1:-}" = --fetch ]; then
-		[ -x "$TOOLS/venv/bin/python" ] || python3 -m venv "$TOOLS/venv"
+		[ -x "$TOOLS/venv/bin/python" ] || python3.13 -m venv "$TOOLS/venv"
 		"$TOOLS/venv/bin/python" -m pip install -r "$HERE/requirements.txt"
+		if [ -n "$wheel_root" ]; then
+			[ -d "$wheel_root/$version" ] || { echo "setup: missing built DuckDB wheel for $version" >&2; exit 1; }
+			"$TOOLS/venv/bin/python" -m pip install --no-index --no-deps "$wheel_root/$version/"*.whl
+		else
+		mkdir -p "$TOOLS/wheels"
 		case $version in
-		v1.5.6) "$TOOLS/venv/bin/python" -m pip install duckdb==1.5.6 ;;
+		v1.5.6) "$TOOLS/venv/bin/python" -m pip download --only-binary=:all: --no-deps --dest "$TOOLS/wheels" duckdb==1.5.6 ;;
 		*)
 			python3 - "$TOOLS/python" "$duckdb_python_commit" "$HERE" <<'PY'
 import sys
@@ -78,8 +85,10 @@ PY
 			CMAKE_BUILD_PARALLEL_LEVEL=2 RUSTC_WRAPPER= PYTHONDONTWRITEBYTECODE=1 \
 			SKBUILD_BUILD_DIR="$TOOLS/python-build/cmake" \
 			CXXFLAGS="${CXXFLAGS:-} -ffile-prefix-map=$HOME=/build" \
-			"$TOOLS/venv/bin/python" -m pip install --no-build-isolation --no-deps "$TOOLS/python-build/source"
+			"$TOOLS/venv/bin/python" -m pip wheel --no-build-isolation --no-deps --wheel-dir "$TOOLS/wheels" "$TOOLS/python-build/source"
 		;; esac
+		"$TOOLS/venv/bin/python" -m pip install --no-index --no-deps "$TOOLS/wheels/"*.whl
+		fi
 	fi
 	[ -x "$TOOLS/venv/bin/python" ] || { echo "not run: DuckDB $version Python host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
 	observed=$(python3 - "$TOOLS/venv/bin/python" "$HERE" <<'PY'

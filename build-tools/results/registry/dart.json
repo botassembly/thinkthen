@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/dart/lib/src/session/results_generated.dart",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/dart/lib/src/session/inputs_generated.dart",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/dart/lib/src/session/calls_generated.dart",
+    "producer": "results"
+  },
+  {
+    "mode": "bridge",
+    "path": "libraries/dart/lib/src/session/abi_generated.dart",
+    "producer": "results"
+  }
+]

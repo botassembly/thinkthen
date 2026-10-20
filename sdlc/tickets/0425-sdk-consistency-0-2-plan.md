@@ -1,6 +1,8 @@
 # 0425: Pass 0.2 release QA and publish on Ian's go
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-19, superseded by 0687.
 
 Milestone: 0.2.1
 
@@ -17,6 +19,8 @@ Reviews: revision 045dfb5b1f0f99b6477aa5446345e9ffb81ef6ef, reject
 Reviews: revision 5d9860455, accept
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
+Superseded by: 0687
 
 ## Outcome
 

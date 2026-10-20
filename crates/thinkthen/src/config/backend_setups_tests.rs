@@ -5,12 +5,7 @@ use crate::core::named;
 use serde_json::{Value, json};
 
 fn parse(entries: Value) -> Config {
-    Config::parse(
-        json!({"schema":"thinkthen.config/1","backends":entries})
-            .to_string()
-            .as_bytes(),
-    )
-    .expect("valid setups")
+    Config::parse(json!({"backends":entries}).to_string().as_bytes()).expect("valid setups")
 }
 
 #[test]

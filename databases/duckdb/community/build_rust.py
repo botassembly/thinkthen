@@ -30,7 +30,7 @@ def environment(args):
         rustflags = env["CARGO_ENCODED_RUSTFLAGS"].split("\x1f")
     rustflags += ["-C", "relocation-model=pic"]
     # Scratch HOME can differ from the checkout and Cargo's shared cache.
-    cargo_home = Path(env.get("CARGO_HOME", Path.home() / ".cargo")).absolute()
+    cargo_home = Path((env["CARGO_HOME"] if "CARGO_HOME" in env else Path.home() / ".cargo")).absolute()
     roots = {Path.home(): "/build", ROOT: "/build/thinkthen", cargo_home: "/build/cargo"}
     for child in ("registry", "git"):
         path = cargo_home / child

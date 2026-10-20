@@ -108,7 +108,11 @@ pub(crate) fn filter(canonical: core::CompleteAtomic) -> Result<CompleteFilter, 
     let Value::YesNo(Some(value)) = *canonical.value() else {
         return Err(super::wrong());
     };
-    Ok(CompleteFilter { canonical, value })
+    Ok(CompleteFilter {
+        canonical,
+        value,
+        input: None,
+    })
 }
 
 pub(super) fn prepare_record<T: InputEvidence>(

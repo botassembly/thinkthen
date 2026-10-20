@@ -27,9 +27,9 @@ DIVERGES = {
     "relate__duckdb.json": f"draws the tag's rules shape, a list holding the JSON {{\"either\": [...]}}; relate reads a list of NAME=SOURCE:TARGET rules or a rules file; see {ISSUE}",
 }
 FILES = {
-    "form.json": {"version": 1, "questions": {"area": {"choose": "Which area is this about?", "options": ["export", "login", "billing"]}}},
+    "form.json": {"questions": {"area": {"choose": "Which area is this about?", "options": ["export", "login", "billing"]}}},
     "refund.json": {"decide": "Does the writer ask for a refund?", "threshold": "0.2:0.8"},
-    "names.json": {"version": 1, "recognize": {"kinds": {"person": "A person's name.", "organization": "An organization name."}}},
+    "names.json": {"recognize": {"kinds": {"person": "A person's name.", "organization": "An organization name."}}},
 }
 
 

@@ -6,6 +6,8 @@ import selectors
 import subprocess
 import time
 
+from children import FIXTURE_HANG_TIMEOUT, fixture_run, fixture_communicate
+
 
 @contextmanager
 def usage_lock(state, *, held):
@@ -19,7 +21,7 @@ def usage_lock(state, *, held):
         yield lock
 
 
-def run_usage(command, *, state, mode, env, cwd=None, timeout=15,
+def run_usage(command, *, state, mode, env, cwd=None,
               pending=None, execute=None, text=True):
     """Keep lock ownership through exit; release Written only after Pending.
 
@@ -32,8 +34,7 @@ def run_usage(command, *, state, mode, env, cwd=None, timeout=15,
             assert pending is None
             return execute(command, env=env)
         if pending is None:
-            return subprocess.run(command, cwd=cwd, env=env, capture_output=True,
-                                  text=text, timeout=timeout)
+            return fixture_run(command, cwd=cwd, env=env, capture_output=True, text=text)
         child = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.PIPE,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=text)
         prefix = '' if text else b''
@@ -42,12 +43,12 @@ def run_usage(command, *, state, mode, env, cwd=None, timeout=15,
                 if pending == 'stdout':
                     with selectors.DefaultSelector() as ready:
                         ready.register(child.stdout, selectors.EVENT_READ)
-                        assert ready.select(timeout), 'consumer did not observe Pending'
+                        assert ready.select(FIXTURE_HANG_TIMEOUT), 'consumer did not observe Pending'
                     prefix = child.stdout.readline()
                     assert prefix.strip() == ('PENDING' if text else b'PENDING'), (prefix, child.poll())
                 else:
                     marker = Path(pending) / 'pending'
-                    end = time.monotonic() + timeout
+                    end = time.monotonic() + FIXTURE_HANG_TIMEOUT
                     while not marker.exists() and child.poll() is None and time.monotonic() < end:
                         time.sleep(.01)
                     assert marker.exists(), 'consumer did not observe Pending'
@@ -57,7 +58,7 @@ def run_usage(command, *, state, mode, env, cwd=None, timeout=15,
                     child.stdin.write('continue\n' if text else b'continue\n'); child.stdin.flush()
                 elif mode == 'written':
                     (Path(pending) / 'released').touch()
-            stdout, stderr = child.communicate(timeout=timeout)
+            stdout, stderr = fixture_communicate(child)
             return subprocess.CompletedProcess(command, child.returncode, prefix + stdout, stderr)
         finally:
             if child.poll() is None:

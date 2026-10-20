@@ -303,13 +303,19 @@ static void *convert_RequestOptions_member_attempts_Boolean(arena *,const void *
 static void *convert_RequestOptions_member_context_Text(arena *,const void *);
 static void *convert_RequestOptions_member_context_field_Text(arena *,const void *);
 static void *convert_RequestOptions_member_deadline_ms_Integer(arena *,const void *);
+static void *convert_RequestOptions_member_entity_definition_Text(arena *,const void *);
 static void *convert_RequestOptions_member_examples_RecognitionExample_list(arena *,const void *);
 static void *convert_RequestOptions_member_examples_field_Text(arena *,const void *);
 static void *convert_RequestOptions_member_field_Text_list(arena *,const void *);
 static void *convert_RequestOptions_member_files_only_Boolean(arena *,const void *);
+static void *convert_RequestOptions_member_instructions_Text(arena *,const void *);
+static void *convert_RequestOptions_member_labels_OptionSchema2_list(arena *,const void *);
+static void *convert_RequestOptions_member_levels_OptionSchema2_list(arena *,const void *);
 static void *convert_RequestOptions_member_max_requests_total_Unsigned(arena *,const void *);
+static void *convert_RequestOptions_member_max_text_bytes_Unsigned(arena *,const void *);
 static void *convert_RecognitionMode_RecognitionMode(arena *,const void *);
 static void *convert_RequestOptions_member_model_Text(arena *,const void *);
+static void *convert_RequestOptions_member_no_RequestOptions_no(arena *,const void *);
 static void *convert_RequestOptions_member_none_Boolean(arena *,const void *);
 static void *convert_RequestOptions_member_options_field_Text(arena *,const void *);
 static void *convert_RequestThreshold_RequestThreshold(arena *,const void *);
@@ -318,6 +324,7 @@ static void *convert_RequestOptions_member_seed_spans_field_Text(arena *,const v
 static void *convert_RequestOptions_member_snippet_pieces_Unsigned(arena *,const void *);
 static void *convert_RecognitionStageContext_RecognitionStageContext(arena *,const void *);
 static void *convert_RequestOptions_member_top_Unsigned(arena *,const void *);
+static void *convert_RequestOptions_member_yes_RequestOptions_yes(arena *,const void *);
 static void *convert_RequestQuestion_text_RequestQuestion_text(arena *,const void *);
 static void *convert_RequestQuestion_definition_RequestQuestion_definition(arena *,const void *);
 static void *convert_RequestQuestion_file_RequestQuestion_file(arena *,const void *);
@@ -359,6 +366,7 @@ static void *convert_RequestInput_feed_member_name_Text(arena *,const void *);
 static void *convert_RequestReader_RequestReader(arena *,const void *);
 static void *convert_RecognitionExample_RecognitionExample(arena *,const void *);
 static void *convert_RequestOptions_member_field_item_Text(arena *,const void *);
+static void *convert_OptionSchema2_OptionSchema2(arena *,const void *);
 static void *convert_RecognitionMode_whole_Value_Literal_whole(arena *,const void *);
 static void *convert_RecognitionMode_boundary_only_Value_Literal_boundary_only(arena *,const void *);
 static void *convert_RequestThreshold_Number_Value_Number(arena *,const void *);
@@ -389,6 +397,8 @@ static void *convert_SourceUnit_SourceUnit(arena *,const void *);
 static void *convert_RequestReader_member_window_Unsigned(arena *,const void *);
 static void *convert_RecognitionExample_Text_Value_Text(arena *,const void *);
 static void *convert_RecognitionExampleText_RecognitionExampleText(arena *,const void *);
+static void *convert_OptionSchema2_member_description_OptionSchema2_description(arena *,const void *);
+static void *convert_OptionSchema2_member_name_Text(arena *,const void *);
 static void *convert_RecognitionSeedSpan_member_end_Unsigned(arena *,const void *);
 static void *convert_RecognitionSeedSpan_member_kind_Text(arena *,const void *);
 static void *convert_RecognitionSeedSpan_member_start_Unsigned(arena *,const void *);
@@ -651,16 +661,25 @@ static void *convert_RequestOptions_RequestOptions(arena *a,const void *input) {
     p->m_context_field);
     if(p->m_deadline_ms) out->m_deadline_ms=convert_RequestOptions_member_deadline_ms_Integer(a,
     p->m_deadline_ms);
+    if(p->m_entity_definition) out->m_entity_definition=convert_RequestOptions_member_entity_definition_Text(a,
+    p->m_entity_definition);
     if(p->m_examples) out->m_examples=convert_RequestOptions_member_examples_RecognitionExample_list(a,
     p->m_examples);
     if(p->m_examples_field) out->m_examples_field=convert_RequestOptions_member_examples_field_Text(a,
     p->m_examples_field);
     if(p->m_field) out->m_field=convert_RequestOptions_member_field_Text_list(a,p->m_field);
     if(p->m_files_only) out->m_files_only=convert_RequestOptions_member_files_only_Boolean(a,p->m_files_only);
+    if(p->m_instructions) out->m_instructions=convert_RequestOptions_member_instructions_Text(a,
+    p->m_instructions);
+    if(p->m_labels) out->m_labels=convert_RequestOptions_member_labels_OptionSchema2_list(a,p->m_labels);
+    if(p->m_levels) out->m_levels=convert_RequestOptions_member_levels_OptionSchema2_list(a,p->m_levels);
     if(p->m_max_requests_total) out->m_max_requests_total=convert_RequestOptions_member_max_requests_total_Unsigned(a,
     p->m_max_requests_total);
+    if(p->m_max_text_bytes) out->m_max_text_bytes=convert_RequestOptions_member_max_text_bytes_Unsigned(a,
+    p->m_max_text_bytes);
     if(p->m_mode) out->m_mode=convert_RecognitionMode_RecognitionMode(a,p->m_mode);
     if(p->m_model) out->m_model=convert_RequestOptions_member_model_Text(a,p->m_model);
+    if(p->m_no) out->m_no=convert_RequestOptions_member_no_RequestOptions_no(a,p->m_no);
     if(p->m_none) out->m_none=convert_RequestOptions_member_none_Boolean(a,p->m_none);
     if(p->m_options_field) out->m_options_field=convert_RequestOptions_member_options_field_Text(a,
     p->m_options_field);
@@ -676,6 +695,7 @@ static void *convert_RequestOptions_RequestOptions(arena *a,const void *input) {
     p->m_stage_context);
     if(p->m_threshold) out->m_threshold=convert_RequestThreshold_RequestThreshold(a,p->m_threshold);
     if(p->m_top) out->m_top=convert_RequestOptions_member_top_Unsigned(a,p->m_top);
+    if(p->m_yes) out->m_yes=convert_RequestOptions_member_yes_RequestOptions_yes(a,p->m_yes);
     return out;
 }
 static void *convert_RequestQuestion_RequestQuestion(arena *a,const void *input) {
@@ -1142,6 +1162,19 @@ static void *convert_RequestOptions_member_deadline_ms_Integer(arena *a,const vo
     out->value=p->value;
     return out;
 }
+static void *convert_RequestOptions_member_entity_definition_Text(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsEntityDefinition *p=input;
+    thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->text=(thinkthen_complete_utf8_v1){
+        p->data,p->len
+    };
+    return out;
+}
 static void *convert_RequestOptions_member_examples_RecognitionExample_list(arena *a,const void *input) {
     const thinkthen_cobol_RequestOptionsExamples *p=input;
     thinkthen_request_recognition_example_list_v1 *out=allocate(a,1,sizeof(*out));
@@ -1207,8 +1240,72 @@ static void *convert_RequestOptions_member_files_only_Boolean(arena *a,const voi
     out->value=(uint32_t)p->value;
     return out;
 }
+static void *convert_RequestOptions_member_instructions_Text(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsInstructions *p=input;
+    thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->text=(thinkthen_complete_utf8_v1){
+        p->data,p->len
+    };
+    return out;
+}
+static void *convert_RequestOptions_member_labels_OptionSchema2_list(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsLabels *p=input;
+    thinkthen_request_option_schema_2_list_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    if(p->len && !p->data) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    void **items=allocate(a,p->len,sizeof(*items));
+    out->data=(const void *)items;
+    out->len=p->len;
+    if(items) for(uint64_t i=0;
+    i<p->len && !a->code;
+    i++) items[i]=convert_OptionSchema2_OptionSchema2(a,p->data[i]);
+    return out;
+}
+static void *convert_RequestOptions_member_levels_OptionSchema2_list(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsLevels *p=input;
+    thinkthen_request_option_schema_2_list_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    if(p->len && !p->data) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    void **items=allocate(a,p->len,sizeof(*items));
+    out->data=(const void *)items;
+    out->len=p->len;
+    if(items) for(uint64_t i=0;
+    i<p->len && !a->code;
+    i++) items[i]=convert_OptionSchema2_OptionSchema2(a,p->data[i]);
+    return out;
+}
 static void *convert_RequestOptions_member_max_requests_total_Unsigned(arena *a,const void *input) {
     const thinkthen_cobol_RequestOptionsMaxRequestsTotal *p=input;
+    thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->value=p->value;
+    return out;
+}
+static void *convert_RequestOptions_member_max_text_bytes_Unsigned(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsMaxTextBytes *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
@@ -1249,6 +1346,17 @@ static void *convert_RequestOptions_member_model_Text(arena *a,const void *input
     out->text=(thinkthen_complete_utf8_v1){
         p->data,p->len
     };
+    return out;
+}
+static void *convert_RequestOptions_member_no_RequestOptions_no(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsNo *p=input;
+    thinkthen_request_call_options_no_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestOptions_member_none_Boolean(arena *a,const void *input) {
@@ -1356,6 +1464,17 @@ static void *convert_RecognitionStageContext_RecognitionStageContext(arena *a,co
 static void *convert_RequestOptions_member_top_Unsigned(arena *a,const void *input) {
     const thinkthen_cobol_RequestOptionsTop *p=input;
     thinkthen_request_unsigned_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->value=p->value;
+    return out;
+}
+static void *convert_RequestOptions_member_yes_RequestOptions_yes(arena *a,const void *input) {
+    const thinkthen_cobol_RequestOptionsYes *p=input;
+    thinkthen_request_call_options_yes_v1 *out=allocate(a,1,sizeof(*out));
     if(!out) return NULL;
     if(!p) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
@@ -1915,6 +2034,19 @@ static void *convert_RequestOptions_member_field_item_Text(arena *a,const void *
     };
     return out;
 }
+static void *convert_OptionSchema2_OptionSchema2(arena *a,const void *input) {
+    const thinkthen_cobol_OptionSchema2 *p=input;
+    thinkthen_request_option_schema_2_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    if(p->m_description) out->m_description=convert_OptionSchema2_member_description_OptionSchema2_description(a,
+    p->m_description);
+    if(p->m_name) out->m_name=convert_OptionSchema2_member_name_Text(a,p->m_name);
+    return out;
+}
 static void *convert_RecognitionMode_whole_Value_Literal_whole(arena *a,const void *input) {
     const thinkthen_cobol_RecognitionModeWholeValue *p=input;
     thinkthen_request_literal_whole_v1 *out=allocate(a,1,sizeof(*out));
@@ -2320,6 +2452,30 @@ static void *convert_RecognitionExampleText_RecognitionExampleText(arena *a,cons
     p->m_entities);
     if(p->m_kinds) out->m_kinds=convert_RecognitionExampleText_member_kinds_Text_list(a,p->m_kinds);
     if(p->m_text) out->m_text=convert_RecognitionExampleText_member_text_Text(a,p->m_text);
+    return out;
+}
+static void *convert_OptionSchema2_member_description_OptionSchema2_description(arena *a,const void *input) {
+    const thinkthen_cobol_OptionSchema2Description *p=input;
+    thinkthen_request_option_schema_2_description_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->value=p->value;
+    return out;
+}
+static void *convert_OptionSchema2_member_name_Text(arena *a,const void *input) {
+    const thinkthen_cobol_OptionSchema2Name *p=input;
+    thinkthen_request_text_v1 *out=allocate(a,1,sizeof(*out));
+    if(!out) return NULL;
+    if(!p) {
+        a->code=THINKTHEN_COBOL_REPRESENTATION;
+        return out;
+    }
+    out->text=(thinkthen_complete_utf8_v1){
+        p->data,p->len
+    };
     return out;
 }
 static void *convert_RecognitionSeedSpan_member_end_Unsigned(arena *a,const void *input) {
@@ -6789,6 +6945,9 @@ thinkthen_cobol_ReceiptBoundaryProposal *out) {
     int code=0;
     (void)a;
     out->end=input->end;
+    if(!code) code=copy_thinkthen_cobol_ReceiptUtf8Presence(a,&input->file,&out->file);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->first_line,&out->first_line);
+    if(!code) code=copy_thinkthen_cobol_ReceiptU64Presence(a,&input->last_line,&out->last_line);
     out->length=input->length;
     out->probability=input->probability;
     out->start=input->start;

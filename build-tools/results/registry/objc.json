@@ -1,0 +1,12 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/objective-c/Sources/Foundation/TTResults.g.h",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/objective-c/Sources/Foundation/TTResults.g.m",
+    "producer": "results"
+  }
+]

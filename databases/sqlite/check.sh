@@ -4,14 +4,17 @@
 # one counts sends, so the check leaves the shared port unused. Exit 77 means
 # "not run": a missing toolchain never reports a pass.
 set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/sqlite
+tools_group=sqlite
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 if [ "$profile" = routine ]; then
     THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS-"$here/../../conformance/routine-ids.txt"}
     export THINKTHEN_CONFORMANCE_IDS
@@ -27,7 +30,7 @@ case $(uname -s) in Darwin) suffix=dylib ;; *) suffix=so ;; esac
 
 not_run() {
 	echo "not run  databases/sqlite: $1; run databases/sqlite/setup.sh once"
-	exit 77
+	exit 1
 }
 command -v cc >/dev/null || not_run "no cc to build the SQLite 3.50.0 host"
 if [ "$suffix" = dylib ]; then
@@ -45,6 +48,7 @@ if [ "$suffix" = dylib ]; then
 		not_run "no SQLite 3.49.0 amalgamation with the pinned hashes in $old"
 fi
 cargo fetch --locked --offline --quiet 2>/dev/null || not_run "the cargo cache lacks a locked crate"
+"$python" ../../conformance/children/privacy.py --sources . --public --artifact-env
 host=$(SQLITE_AMALGAMATION=$source SQLITE_OLD_AMALGAMATION=$old sh tests/host_sqlite.sh)
 export THINKTHEN_SQLITE_CLI="$host/sqlite3"
 if [ "$suffix" = dylib ]; then
@@ -130,9 +134,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ]; then
 	export THINKTHEN_SQLITE_EXTENSION
 	# Ticket 0374: the shipped library keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
-	installed_tests="tests/test_source_filter.py tests/test_named_parameters.py tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py"
+	installed_tests="tests/test_source_filter.py tests/test_named_parameters.py tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_schema_labels.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py"
 	if [ "$profile" = full ]; then
-	    installed_tests="tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py tests/test_usage.py"
+	    installed_tests="tests/test_trusted_schema.py tests/test_schema_labels.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_typed_family.py tests/test_images.py tests/test_rank_sets.py tests/test_usage.py"
 	fi
 	for test in $installed_tests; do
 		step "$test, installed"

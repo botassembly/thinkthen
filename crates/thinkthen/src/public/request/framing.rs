@@ -176,7 +176,7 @@ impl Decoder {
         Ok(Some(value))
     }
 
-    fn descriptor(
+    pub(super) fn descriptor(
         &mut self,
         descriptor: super::RequestSessionDescriptor,
     ) -> Result<Option<super::RequestSessionDescriptor>, Error> {
@@ -211,7 +211,6 @@ impl Decoder {
                 Ok(Some(descriptor)) => return Some(Ok(descriptor)),
                 Err(error) => {
                     self.stopped = true;
-                    queue.close_intake();
                     return Some(Err(error));
                 }
             }

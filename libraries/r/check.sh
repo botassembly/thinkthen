@@ -3,10 +3,13 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
-cd -- "$(dirname -- "$0")"
-root=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "r: unknown profile: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/r
+tools_group=r
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+root=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
   export THINKTHEN_CONFORMANCE_IDS="$root/conformance/routine-ids.txt"
 else
@@ -20,7 +23,7 @@ if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
 else
   scratch_dir scratch
 fi
-not_run() { echo "not run: $1" >&2; exit 77; }
+not_run() { echo "not run: $1" >&2; exit 1; }
 command -v Rscript >/dev/null || not_run "R 4.2 or later is required"
 command -v cargo >/dev/null || not_run "cargo is required for the R source package"
 libs=${R_LIBS:-$PWD/rlib}
@@ -30,8 +33,9 @@ done
 export R_LIBS=$libs
 Rscript --vanilla -e 'stopifnot(getRversion() >= "4.2", packageVersion("jsonlite") >= "2.0.0")' ||
   not_run "R or jsonlite prerequisites are missing"
-python3 "$root/sdlc/generators/results/generate.py" --target r --check
-python3 "$root/sdlc/generators/results/generate.py" --target r --inputs --check
+python3 "$root/conformance/children/privacy.py" --sources . --public --artifact-env
+python3 "$root/build-tools/results/generate.py" --target r --check
+python3 "$root/build-tools/results/generate.py" --target r --inputs --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   artifact=$THINKTHEN_ARTIFACT
   [ -f "$artifact" ] && [ ! -L "$artifact" ] || { echo 'r: artifact is missing or linked' >&2; exit 1; }

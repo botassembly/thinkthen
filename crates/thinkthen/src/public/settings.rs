@@ -2,7 +2,10 @@
 
 mod backend;
 mod budgets;
+mod configuration;
 mod environment;
+mod snapshot;
+pub use snapshot::{CacheSettings, ResolvedSettings};
 pub(super) mod json;
 mod prices;
 mod server;
@@ -63,7 +66,8 @@ impl fmt::Debug for Secret {
 /// Engine settings, checked at each step and applied at [`EngineBuilder::build`].
 ///
 /// A builder holds settings alone. It opens no file, counts nothing, and
-/// registers no throttle until `build`.
+/// registers no throttle until `build`, except explicit [`Self::select_throttle`].
+/// [`Self::preload_ca_bundle`] explicitly reads the selected certificate file.
 pub struct EngineBuilder {
     base_url: Option<String>,
     backend: Option<String>,
@@ -75,6 +79,7 @@ pub struct EngineBuilder {
     max_requests_total: Option<u64>,
     max_estimated_input_tokens_total: Option<u64>,
     prices: Option<Prices>,
+    setting_prices: (Option<String>, Option<String>),
     max_request_bytes: usize,
     explicit_request_bytes: bool,
     batch: Option<crate::core::Setting>,
@@ -86,10 +91,12 @@ pub struct EngineBuilder {
     refresh_cache: bool,
     timeout: Duration,
     max_retries: u32,
+    retry_wait: Duration,
     profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
+    admitted_roots: Option<Roots>,
     per_minute: Option<std::num::NonZeroU32>,
 }
 
@@ -118,6 +125,7 @@ impl fmt::Debug for EngineBuilder {
             .field("refresh_cache", &self.refresh_cache)
             .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
+            .field("retry_wait", &self.retry_wait)
             .field("profile", &self.profile)
             .field("record", &self.record)
             .field("replay", &self.replay)
@@ -128,6 +136,29 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Apply one engine setting from its name and raw JSON value.
+    /// Text values use JSON string quoting; numbers and booleans use their literal text.
+    /// SQL profiles contain inline JSON; settings documents name profile files.
+    /// This validates without opening files or sending requests.
+    /// # Errors
+    /// Refuses unknown names and invalid values with the settings document's messages.
+    pub fn setting(self, name: &str, raw: &str) -> Result<Self, Error> {
+        if name == "batch"
+            && let Ok(text) = serde_json::from_str::<String>(raw)
+        {
+            match crate::core::Setting::parse(&text) {
+                Some(crate::core::Setting::Records(count)) => {
+                    return self.apply_setting(name, &count.to_string(), true, true);
+                }
+                Some(crate::core::Setting::Max) => {}
+                None => {
+                    crate::public::RequestBatch::Named(text).native()?;
+                }
+            }
+        }
+        self.apply_setting(name, raw, true, true)
+    }
+
     /// Validate the closed C/host engine-settings object without reading the
     /// environment. The total-request cap is active before any send.
     ///
@@ -152,6 +183,7 @@ impl EngineBuilder {
             max_requests_total: None,
             max_estimated_input_tokens_total: None,
             prices: None,
+            setting_prices: (None, None),
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             explicit_request_bytes: false,
             batch: None,
@@ -163,10 +195,12 @@ impl EngineBuilder {
             refresh_cache: false,
             timeout: Duration::from_secs(30),
             max_retries: 3,
+            retry_wait: Duration::from_secs(1),
             profile: None,
             record: None,
             replay: None,
             ca_bundle: None,
+            admitted_roots: None,
             per_minute: None,
         }
     }
@@ -209,7 +243,37 @@ impl EngineBuilder {
             ));
         }
         self.ca_bundle = Some(path.to_owned());
+        self.admitted_roots = None;
         Ok(self)
+    }
+
+    /// Load and admit the selected certificate bundle before building storage or transport.
+    ///
+    /// This explicit operation uses the same native loader as [`Self::build`]. The builder
+    /// privately retains the admitted roots, so build never reopens that bundle. Selecting
+    /// another bundle with [`Self::ca_bundle`] invalidates them. Without this operation,
+    /// bundle contents remain lazy until build. No certificate bytes or roots are exposed.
+    /// The command uses this to preserve certificate refusal order before cache warnings.
+    ///
+    /// # Errors
+    /// Returns the same safe local or usage refusal as build for the selected bundle.
+    pub fn preload_ca_bundle(mut self) -> Result<Self, Error> {
+        self.admitted_roots = self.load_roots()?;
+        Ok(self)
+    }
+
+    fn load_roots(&self) -> Result<Option<Roots>, Error> {
+        if let Some(roots) = &self.admitted_roots {
+            return Ok(Some(roots.clone()));
+        }
+        self.ca_bundle
+            .as_deref()
+            .map(Roots::load)
+            .transpose()
+            .map_err(|error| match error {
+                RootsError::Usage(message) => Error::usage(message),
+                RootsError::Local(message) => Error::local(message),
+            })
     }
 
     /// Name this model when a question names none.
@@ -233,6 +297,30 @@ impl EngineBuilder {
             .map_err(|_| Error::usage("a throttle is a whole number from 1 through 32"))?;
         self.width = Some(width);
         Ok(self)
+    }
+
+    /// Select this process's live-attempt throttle immediately and retain it for build.
+    ///
+    /// This is an explicit process-state operation for callers that must refuse a
+    /// conflicting width before reading input or opening storage. The first explicit
+    /// width persists after this builder is dropped or a later setting/build fails.
+    /// Selecting the same width succeeds; a different one is refused. Ordinary
+    /// [`Self::throttle`] stays lazy until build. Omit this operation when no width
+    /// was requested: following the process default does not select a width.
+    /// This uses the existing fork-aware process limit owner and sends nothing.
+    ///
+    /// # Errors
+    /// Returns Usage for an invalid width or the existing typed active-width conflict.
+    pub fn select_throttle(self, value: u8) -> Result<Self, Error> {
+        let builder = self.throttle(value)?;
+        let limits =
+            crate::engine::limits::of(std::process::id(), &crate::engine::Cancel::default())
+                .map_err(Error::from)?;
+        limits
+            .widths
+            .select(builder.width)
+            .map_err(|active| Error::from(crate::engine::error::Error::WidthActive(active)))?;
+        Ok(builder)
     }
 
     /// Refuse a call over more than this many records. `rank` and `find`
@@ -329,6 +417,24 @@ impl EngineBuilder {
         self
     }
 
+    /// Set the initial retry wait; zero retries immediately unless the server
+    /// requires a longer wait. Omission retains the one-second default.
+    #[must_use]
+    pub fn retry_wait(mut self, value: Duration) -> Self {
+        self.retry_wait = value;
+        self
+    }
+
+    /// Pace starts on the selected posting address using the native rate grammar.
+    /// Other engines on that address share the existing process pacer.
+    /// # Errors
+    /// Refuses zero or a rate beyond the native maximum.
+    pub fn requests_per_minute(mut self, value: u32) -> Result<Self, Error> {
+        self.per_minute =
+            crate::engine::backoff::per_minute(Some(&value.to_string())).map_err(Error::usage)?;
+        Ok(self)
+    }
+
     /// Read this backend profile at build time.
     /// # Errors
     /// Returns [`Error::Usage`] for an empty path.
@@ -344,10 +450,13 @@ impl EngineBuilder {
     /// # Errors
     /// Returns [`Error::Usage`] for an invalid profile object.
     pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {
-        self.profile = Some(Profile::Inline(
-            BackendProfile::parse(value)
-                .map_err(|error| Error::usage(format!("the profile JSON {error}")))?,
-        ));
+        self.profile = Some(Profile::Inline(BackendProfile::parse(value).map_err(
+            |error| {
+                Error::usage(format!("the profile JSON {error}")).with_diagnostic(
+                    crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error)),
+                )
+            },
+        )?));
         Ok(self)
     }
 
@@ -383,6 +492,7 @@ impl EngineBuilder {
     /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
         self.check_proxy()?;
+        self.check_setting_prices()?;
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
             (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
@@ -396,6 +506,7 @@ impl EngineBuilder {
             variable,
             prices,
             profile: setup_profile,
+            ..
         } = self.selected()?;
         let backend = if self.explicit_request_bytes {
             backend.with_request_size(self.max_request_bytes)
@@ -405,15 +516,7 @@ impl EngineBuilder {
         if backend.address_contains_key(key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }
-        let roots = self
-            .ca_bundle
-            .as_deref()
-            .map(Roots::load)
-            .transpose()
-            .map_err(|error| match error {
-                RootsError::Usage(message) => Error::usage(message),
-                RootsError::Local(message) => Error::local(message),
-            })?;
+        let roots = self.load_roots()?;
         let profile = self
             .profile
             .as_ref()
@@ -421,8 +524,11 @@ impl EngineBuilder {
                 Profile::File(path) => {
                     let text = std::fs::read_to_string(path)
                         .map_err(|_| Error::local("the profile file could not be read"))?;
-                    BackendProfile::parse(&text)
-                        .map_err(|error| Error::local(format!("the profile file {error}")))
+                    BackendProfile::parse(&text).map_err(|error| {
+                        Error::local(format!("the profile file {error}")).with_diagnostic(
+                            crate::public::error::diagnostic::Diagnostic::Refusal(Box::new(error)),
+                        )
+                    })
                 }
                 Profile::Inline(profile) => Ok(profile.clone()),
             })
@@ -433,7 +539,7 @@ impl EngineBuilder {
             profile: profile.clone(),
             timeout: self.timeout,
             max_retries: self.max_retries,
-            retry_wait: Duration::from_secs(1),
+            retry_wait: self.retry_wait,
             width: self.width,
             per_minute: self.per_minute,
             storage: self.served(self.storage()?)?,

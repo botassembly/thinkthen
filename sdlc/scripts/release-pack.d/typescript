@@ -1,0 +1,8 @@
+part_typescript() {
+	if [ -z "$reuse" ]; then
+		sh libraries/typescript/build-addon.sh
+		mkdir -p libraries/typescript/target/pack
+		(cd libraries/typescript && npm pack --silent --offline --pack-destination target/pack >/dev/null)
+	fi
+	keep "libraries/typescript/target/pack/thinkthen-$V.tgz"
+}

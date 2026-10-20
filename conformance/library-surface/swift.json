@@ -1,0 +1,131 @@
+{
+  "libraries": {
+    "swift": {
+      "root": "libraries/swift",
+      "language": "swift",
+      "naming": "camel",
+      "declarations": [
+        "libraries/swift/Sources/ThinkThen/*.swift"
+      ],
+      "option_containers": [
+        "Options"
+      ],
+      "setting_containers": [
+        "EngineSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "Tests",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "Question.file",
+        "question_name": "Question.name",
+        "question_reference": "Question.reference",
+        "item": "Item.text",
+        "files": "Input.files"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Session"
+      ],
+      "representation_owners": [
+        "Presence",
+        "UsagePersistenceStatus",
+        "Array",
+        "Bool",
+        "Dictionary",
+        "Double",
+        "Int64",
+        "DataValue",
+        "Optional",
+        "String",
+        "UInt64",
+        "Image",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "UsagePersistenceState"
+      ],
+      "representation_types": [
+        "Call",
+        "FeedReadFailure",
+        "ValueKind",
+        "ValueMember",
+        "NumberLiteral",
+        "DataValue",
+        "SessionBoundaryFailure",
+        "UsagePersistenceState",
+        "UsagePersistenceStatus",
+        "CallResult"
+      ],
+      "lifecycle_members": {
+        "Client": [
+          "execute"
+        ]
+      },
+      "representation_members": {
+        "Image": [
+          "bytes"
+        ],
+        "DataValue": [
+          "array",
+          "bool",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ]
+      },
+      "wrapper_members": {
+        "FeedReadFailure": [
+          "failure"
+        ],
+        "ValueKind": [
+          "array",
+          "bool",
+          "null",
+          "number",
+          "object",
+          "orderedObject",
+          "string"
+        ],
+        "ValueMember": [
+          "key"
+        ],
+        "NumberLiteral": [
+          "rawValue"
+        ],
+        "DataValue": [
+          "null"
+        ],
+        "Presence": [
+          "absent",
+          "null"
+        ],
+        "SessionBoundaryFailure": [
+          "description"
+        ],
+        "SessionFailure": [
+          "description",
+          "failure"
+        ],
+        "UsagePersistenceState": [
+          "disabled",
+          "failed",
+          "pending",
+          "written"
+        ],
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts"
+        ]
+      }
+    }
+  }
+}

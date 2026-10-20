@@ -1,6 +1,6 @@
 # 0634: Rewrite the binding author guide as the current contract
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -8,17 +8,31 @@ Phase: 2
 
 Depends on: 0635, 0637, 0638, 0642, 0692
 
+Reviews: revision 37ea94c, accept
+
 ## Outcome
 
-- The guide states the current contract in plain words, without ticket numbers. It covers which entry point a binding calls (the run-call C function from 0638, or the Rust run function from 0629 for direct Rust bridges), how async hosts run it on one worker and cancel through the handle, how errors and their facts arrive, the version check at load (0692), the packet dumper contract from 0642, which generated declarations the binding uses, and what the host may own: naming, value conversion, async scheduling, cancellation idiom, cleanup and packaging.
+- Changes: `libraries/BINDING-AUTHOR.md`, `libraries/files.md`.
+- The guide states the current contract in plain words, without ticket numbers. It covers which entry point a binding calls (the C function `thinkthen_run_call`, or `Engine::call` for direct Rust bridges), how async hosts run it on one worker and cancel through the `thinkthen_call_cancel` handle, how errors and their facts arrive through `thinkthen_call_error`, the build identity check at load, the packet dumper contract from 0642, which generated declarations the binding uses, and what the host may own: naming, value conversion, async scheduling, cancellation idiom, cleanup and packaging.
 - Rules now owned by Rust (the session wait protocol, settlement, answer projection, input validation) and the old session, error-slot and projection paths that 0690 deletes are removed from the guide.
+- The guide describes the load-time check as a build identity check that the wrapper and native library come from the same build, not as a format version, per the 2026-10-19 no-version-numbers ruling.
 - `libraries/files.md` keeps only what is common to every language, and drops the COBOL-specific text.
 
 ### Proof
 
-- The C library's README example and the guide's examples replay unchanged against the installed C library on the M5 through pm job.
-- Every link in both pages resolves.
+- On the M5, `grep -nE '\b0[0-9]{3}\b' libraries/BINDING-AUTHOR.md` finds no ticket number; it finds 19 lines before the change. `grep -n -i 'cobol' libraries/files.md` finds nothing.
+- Every relative link in both pages resolves, checked once with a one-line script over their Markdown links; the script is not committed.
+- Any code the guide shows is copied from `libraries/c/examples/session.c` or `libraries/rust/examples/`, which the C and Rust surface checks already compile and run, so the guide needs no replay of its own.
 
 ## Evidence
 
-`libraries/BINDING-AUTHOR.md` (466 lines) is a target, not a contract. It says it "does not certify that each package already meets it". It defines behavior by pointing at tickets (0503, 0505, 0511, 0513, 0515, 0516, 0517, 0528, 0529) and at rulings that changed four times in two weeks: ADR 0112 (2026-09-30), ADR 0125 (2026-10-08), ADR 0129 (2026-10-09), and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md` with its 2026-10-13 amendment. It describes three ways into the core: the JSON session, fixed layouts for C, Zig, Ada and COBOL, and direct Rust bridges. It spends long paragraphs on wait, arm and settlement rules that each host must re-implement. `libraries/files.md` repeats the per-language file rules, including the COBOL limit.
+- `libraries/BINDING-AUTHOR.md` (466 lines) is a target, not a contract. It "defines the 0.2 target". It defines behavior by pointing at tickets (0503, 0505, 0511, 0513, 0515, 0516, 0517, 0528, 0529) and at rulings that changed four times in two weeks: ADR 0112, ADR 0125, ADR 0129, and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md` with its 2026-10-13 amendment. It describes three ways into the core: the JSON session, fixed layouts for C, Zig, Ada and COBOL, and direct Rust bridges. It spends long paragraphs on wait, arm and settlement rules that each host must re-implement.
+- Current main already has the new path: `thinkthen_run_call`, `thinkthen_call_result_json`, `thinkthen_call_error_*` and `thinkthen_call_cancel_*` in `libraries/c/include/thinkthen.h` (0638), the canonical C input path (0635), declarations-only generation (0637), `thinkthen_version` with its interface number (0692), and `Engine::call` (0629) declared in `specification/rust-api-0.2.md`.
+- `libraries/files.md` repeats per-language file rules for Python and C and ends with the COBOL scalar limit.
+- Readers of the guide: `specification/README.md`, `specification/settings.md`, `libraries/r/NOTES.md` and several decisions link to it; the file keeps its name.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: M5 job 1792478403348-80741 at source 52516c1b1bb7477158e9557dfb645491b7eea329 passed with exit 0 using disk 1 GiB and memory 1 GiB: no ticket numbers in either page, no COBOL in the shared file guide, all 28 relative links resolve, no embedded code, and permitted C/Rust example origins verified. Receipt: /Users/ian/workspace/job-runs/thinkthen/0634/1792478403348-80741/log. Git whitespace and history checks passed. Fresh review is next, followed by the coordinator's integrated batch gate; no standalone full gate ran.
+- 2026-10-20 next: Fresh fixing review corrected libraries/files.md:9 at a497df6513251dbaaad644f9c7fb30663d701a0f: qualify complete-record entity naming to plain-text source records, preserving JSONL entity parsing under specification/files.md. M5 documentation job 1792478672942-81818 at a497df651 passed with exit 0 (disk 1 GiB, memory 1 GiB): no ticket numbers, no COBOL in common file guide, all 28 relative links resolve, no embedded code, approved C/Rust example origins, and plain-text relation scope matches native file contract. Git whitespace, history and connectivity checks passed. Coordinator acceptance and integrated 0704+0634 batch gate are next; no standalone full gate ran.

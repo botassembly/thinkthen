@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from usage import run_usage
 
+from children import fixture_run
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--family', choices=('ada', 'cobol'))
 parser.add_argument('--ada-package', type=Path)
@@ -162,18 +164,18 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
         package = args.ada_package.resolve(strict=True) if args.ada_package else work / 'ada'
         reuse = ['-aO' + str(args.ada_objects.resolve(strict=True))] if args.ada_objects else []
         linking = [str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'] if args.ada_package else ['-L' + str(work), '-lthinkthen', '-Wl,-rpath,$ORIGIN']
-        build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), *reuse,
+        build = fixture_run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), *reuse,
                                 str(work / 'usage_status.adb'), '-D', str(work / 'ada-objects'),
                                 '-o', str(work / 'ada-consumer'), '-largs', *linking],
-                               cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
+                               cwd=work, env=child_env(), capture_output=True, text=True)
         assert build.returncode == 0, build.stdout + build.stderr
     if 'cobol' in families:
         (work / 'usage_status.cob').write_text(cobol_source(work / 'cobol'))
-        subprocess.run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call',
+        fixture_run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call',
                         '-I', str(work / 'cobol/copybooks'), '-A', '-include ' + str(work / 'cobol/src/tt_session.h') + ' -Wno-incompatible-pointer-types',
                         '-o', str(work / 'cobol-consumer'), str(work / 'usage_status.cob'),
                         str(work / 'cobol/src/tt_session.c'), str(work / 'cobol/src/tt_requests_generated.c'),
-                        '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True, timeout=30)
+                        '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         for family in families:
@@ -183,9 +185,9 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
     expected = []
     try:
         if 'cobol' in families:
-            bounds = subprocess.run([str(work / 'cobol-consumer')],
+            bounds = fixture_run([str(work / 'cobol-consumer')],
                                     env=child_env(home=work / 'bounds-home', TT_USAGE_MODE='bounds'),
-                                    capture_output=True, text=True, timeout=5)
+                                    capture_output=True, text=True)
             assert bounds.returncode == 0 and 'BOUNDS_PASS' in bounds.stdout, (bounds.stdout, bounds.stderr)
         question = work / 'question.json'
         question.write_text(json.dumps({'decide': 'Is it?'}))

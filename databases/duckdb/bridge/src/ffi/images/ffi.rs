@@ -136,7 +136,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_images(
             .ok()
             .and_then(|value| value.get("model")?.as_str().map(str::to_owned))
         {
-            held.model = Some(model);
+            held.with_model(model);
         }
         let engine = engines::engine_for(&held, |path| super::probe(&session, path))?;
         let total = held.max_requests_total;

@@ -20,34 +20,19 @@ struct ThinkThenText {
 	size_t len;
 };
 ThinkThenReply thinkthen_cpp_portable_settings(ThinkThenText);
+struct ThinkThenSetting {
+    const uint8_t *name_bytes; size_t name_len;
+    const uint8_t *value_bytes; size_t value_len;
+    int32_t literal;
+};
 struct ThinkThenSettings {
-	const uint8_t *batch_bytes;
-	size_t batch_len;
-	int64_t throttle;
-	int64_t max_requests;
-	int64_t max_request_bytes;
-	int64_t max_requests_total;
-	const uint8_t *backend_bytes;
-	size_t backend_len;
-	const uint8_t *cache_bytes;
-	size_t cache_len;
-	int32_t cache_allowed;
-	const uint8_t *model_bytes;
-	size_t model_len;
-	int64_t timeout;
-	int64_t max_retries;
-	const uint8_t *profile_bytes;
-	size_t profile_len;
-	const uint8_t *record_bytes;
-	size_t record_len;
-	const uint8_t *replay_bytes;
-	size_t replay_len;
-	int32_t record_allowed;
-	int32_t replay_allowed;
-    const uint8_t *base_url_bytes; size_t base_url_len;
-    const uint8_t *input_price_bytes; size_t input_price_len;
-    const uint8_t *output_price_bytes; size_t output_price_len;
-    int32_t refresh_cache;
+    const ThinkThenSetting *settings; size_t count;
+    const uint8_t *batch_bytes; size_t batch_len;
+    int64_t max_requests_total;
+    const uint8_t *model_bytes; size_t model_len;
+    int32_t cache_allowed;
+    int32_t record_allowed;
+    int32_t replay_allowed;
 };
 struct ThinkThenStop {
 	void *context;

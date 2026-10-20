@@ -94,3 +94,7 @@ The routine suite passes unchanged under the built-in catalog. Replayed cases ag
 - Addresses built from environment variables, such as Cloudflare's account ID in its URL, wait for a user who needs a direct Cloudflare backend.
 - Storing the catalog's model name with each answer, so 0.4 can compare one model across backends, goes to the 0.4 grading work.
 - The proxy's use of the catalog belongs to 0.5.
+
+## Amendment, 2026-10-19
+
+Research hit hosted TypeSafe refusing a `find` request as too large (`max_tokens_exceeded`) after ThinkThen's own plan estimated 43,297 to 76,190 input tokens, so a paid call found what the estimate could have shown. Once the catalog holds each model's input-token limit, every command compares its planned input estimate with that limit before sending: it splits the input where the command can, and otherwise refuses locally with the estimate and the limit, before any network call. `--plan` reports the same comparison. The proof is a loopback test where the estimate exceeds the configured limit and no request is sent.

@@ -79,6 +79,7 @@ pub(crate) struct Call<'a> {
     pub(crate) packing: Packing,
     pub(crate) most: Option<usize>,
     pub(crate) pending_inputs: bool,
+    pub(crate) input_barrier: Option<Arc<std::sync::atomic::AtomicBool>>,
 }
 
 /// Pull fallible originals with typed per-record preparation on their owning thread.
@@ -141,7 +142,10 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && readiness.is_none() && !call.pending_inputs,
+        interactive: packing.inputs == Some(1)
+            && !readiness.is_some_and(|reader| reader.parallel_batch_one)
+            && !call.pending_inputs,
+        input_barrier: call.input_barrier,
         pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
@@ -164,6 +168,7 @@ struct Pull<'a, A: Asker, I: Iterator, R, T> {
     /// Batch 1 returns each row before it pulls the next record.
     interactive: bool,
     deferred: bool,
+    input_barrier: Option<Arc<std::sync::atomic::AtomicBool>>,
     pending_ask: bool,
     coordinator: Option<JoinHandle<()>>,
 }
@@ -256,6 +261,16 @@ where
         if self.stop.interrupted() {
             self.stop.fire();
             self.pending_ask = false;
+            return;
+        }
+        // A missing annotation pointer must settle its ordered row and caller
+        // decision before another original enters the native coordinator.
+        if self
+            .input_barrier
+            .as_ref()
+            .is_some_and(|barrier| barrier.load(std::sync::atomic::Ordering::Acquire))
+        {
+            self.pending_ask = true;
             return;
         }
         if self.stop.readiness.is_some_and(|reader| !reader.ready()) {

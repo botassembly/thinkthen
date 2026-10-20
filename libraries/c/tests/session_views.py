@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 import sys
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
 import generate
-spec = importlib.util.spec_from_file_location('c_views', ROOT / 'sdlc/generators/results/templates/c.py')
+spec = importlib.util.spec_from_file_location('c_views', ROOT / 'build-tools/results/templates/c.py')
 c = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(c)
 

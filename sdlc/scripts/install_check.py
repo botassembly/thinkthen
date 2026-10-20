@@ -67,7 +67,7 @@ def clean_environment(home):
                     LANG="en_US.UTF-8",
                     LC_ALL="en_US.UTF-8",
                     CARGO_HOME=str(home / "cargo"),
-                    RUSTUP_HOME=os.environ.get("RUSTUP_HOME", str(Path.home() / ".rustup")),
+                    RUSTUP_HOME=(os.environ["RUSTUP_HOME"] if "RUSTUP_HOME" in os.environ else str(Path.home() / ".rustup")),
                     UV_CACHE_DIR=str(home / "uv"),
                     PUB_CACHE=str(home / "pub-cache"),
                     GEM_HOME=str(home / "gems"),

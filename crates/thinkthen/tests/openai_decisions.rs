@@ -174,7 +174,7 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
         CallOptions::new(),
     )
     .unwrap();
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Good?"},"second":{"choose":"Team?","options":["billing","shipping"]}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"first":{"decide":"Good?"},"second":{"choose":"Team?","options":["billing","shipping"]}}}"#).unwrap();
     crate::api::annotate(
         &engine,
         &set,
@@ -250,11 +250,10 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
         )
     };
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
+        r#"{"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
-    let only =
-        QuestionSet::from_json(r#"{"version":1,"questions":{"second":{"decide":"B?"}}}"#).unwrap();
+    let only = QuestionSet::from_json(r#"{"questions":{"second":{"decide":"B?"}}}"#).unwrap();
     let engine = builder(&listener).record(&place).unwrap().build().unwrap();
     let first = annotate(&engine, &set).unwrap();
     let cached = builder(&listener)
@@ -269,7 +268,7 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
     assert_eq!(a.observations(), b.observations());
     assert_eq!(listener.count(), 1);
     let changed = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"first":{"decide":"Different A?"},"second":{"decide":"B?"}}}"#,
+        r#"{"questions":{"first":{"decide":"Different A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
     let repacked = annotate(&cached, &changed).unwrap();
@@ -305,24 +304,8 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
     assert!(String::from_utf8(request).unwrap().contains("\"q2\""));
     assert!(String::from_utf8(response).unwrap().contains("\"q2\""));
     drop(db);
-    #[cfg(feature = "cli")]
-    {
-        let converted = std::process::Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .args(["cache", "convert"])
-            .arg(&place)
-            .env_clear()
-            .env("PATH", "/usr/bin:/bin")
-            .env("HOME", &place)
-            .env("LANG", "C.UTF-8")
-            .output()
-            .unwrap();
-        assert!(
-            converted.status.success(),
-            "{}",
-            String::from_utf8_lossy(&converted.stderr)
-        );
-        assert!(place.join("thinkthen.jsonl").exists());
-    }
+    thinkthen::convert_cache(&place).unwrap();
+    assert!(place.join("thinkthen.jsonl").exists());
     let replay = builder(&listener).replay(&place).unwrap().build().unwrap();
     annotate(&replay, &only).unwrap();
     assert_eq!(listener.count(), 2);

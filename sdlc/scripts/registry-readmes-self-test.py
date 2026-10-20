@@ -22,6 +22,11 @@ spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__)
 readmes = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(readmes)
 
+sys.path.insert(0, str(readmes.REPO))
+from conformance.source_fixtures import stage_checkout
+from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+
 
 REAL_RUN_BUILD = readmes.run_build
 
@@ -54,6 +59,18 @@ def cli_examples(runner, packages, family):
 
 
 class PackageText(unittest.TestCase):
+    def test_c_owned_calls_keep_exact_answers_and_do_not_read_nested_values(self):
+        calls = [{'answer': {'function': function, 'value': values}, 'facts': {'records': 3}}
+                 for function, values in [('decide', [True, False, True]),
+                                          ('choose', ['billing', 'shipping', 'account'])]]
+        readmes.check_c_calls('\n'.join(map(json.dumps, calls)))
+        for replacement in (False, [1, 0, 1], [True, False, None], {'value': [True, False, True]}, '\"value\":[true,false,true]'):
+            changed = json.loads(json.dumps(calls))
+            changed[0]['answer']['value'] = replacement
+            changed[0]['value'] = {'nested': [True, False, True]}
+            with self.assertRaises(readmes.Refusal):
+                readmes.check_c_calls('\n'.join(map(json.dumps, changed)))
+
     def test_public_package_uses_reviewed_text(self):
         with tempfile.TemporaryDirectory() as scratch:
             package = Path(scratch) / 'thinkthen.tgz'
@@ -321,6 +338,12 @@ class PackageText(unittest.TestCase):
                               '"' + decoy.replace('"', '\\"') + '"') if family == 'c' else (
                                   '*> ' + decoy, 'DISPLAY \'CALL "TT_CHOOSE" USING q input.\'.'):
                     cases.append((family, current + '\n' + prose, False))
+            named = 'thinkthen_named_request_v1 chosen = {.function = {"choose",6}};'
+            called = 'thinkthen_run_call(engine,&chosen,0,0,0,&result,&error);'
+            cases.append(('c', 'thinkthen_decide(q,input);' + named + called, True))
+            for decoy in (named, named + '/* ' + called + ' */', named + '// ' + called,
+                          named + '"' + called + '"', named + called.replace('&chosen', '&other')):
+                cases.append(('c', 'thinkthen_decide(q,input);' + decoy, False))
             for family, code, admitted in cases:
                 with self.subTest(family=family, code=code):
                     page = readmes.source(family, root); page.parent.mkdir(parents=True, exist_ok=True)
@@ -351,6 +374,15 @@ class PackageText(unittest.TestCase):
                       ' def choose(self, question, text, options):\n'
                       '  return SimpleNamespace(value="billing" if "invoice" in text else "shipping" if "parcel" in text else "account")\n'
                       ' def score(self, question, text): return SimpleNamespace(value=3)\n')
+            tools = tree / 'tools'; tools.mkdir()
+            uv = shutil.which('uv')
+            launcher = tools / 'uv'
+            launcher.write_text(f'#!{sys.executable}\nimport os, sys\n'
+                'assert "--offline" in sys.argv, sys.argv\n'
+                'if sys.argv[1] == "venv":\n'
+                f'    assert sys.argv[sys.argv.index("--python") + 1] == {sys.executable!r}, sys.argv\n'
+                f'os.execv({uv!r}, [{uv!r}, *sys.argv[1:]])\n')
+            launcher.chmod(0o755)
             cases = [('', True), ('        assert is_refund is not expected\n', False),
                      ('        assert engine.score(refund, text).value == 3\n', True),
                      ('        assert engine.score(refund, text).value == 4\n', False),
@@ -371,11 +403,26 @@ class PackageText(unittest.TestCase):
                                         + release + '\nSummary: ' + summary + '\n\n' + text)
                         bundle.writestr(dist + 'WHEEL', 'Wheel-Version: 1.0\nGenerator: fixture\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
                         bundle.writestr(dist + 'RECORD', '')
-                    done = cli_examples(runner, packages, 'python')
+                    with patch.dict(os.environ, PATH=fixture_path(tools)):
+                        done = cli_examples(runner, packages, 'python')
                     self.assertEqual(done.returncode == 0, passes, done.stderr)
                     if not passes:
                         self.assertIn('example-did-not-run: python', done.stderr)
                         self.assertIn('AssertionError', done.stderr)
+            # The declared interpreter still honors the wheel's Python contract.
+            with zipfile.ZipFile(wheel) as bundle:
+                files = {name: bundle.read(name) for name in bundle.namelist()}
+            files[dist + 'METADATA'] = files[dist + 'METADATA'].replace(
+                b'Metadata-Version: 2.1\n', b'Metadata-Version: 2.1\nRequires-Python: >=4\n')
+            with zipfile.ZipFile(wheel, 'w') as bundle:
+                for name, data in files.items():
+                    bundle.writestr(name, data)
+            with patch.dict(os.environ, PATH=fixture_path(tools)):
+                unsupported = cli_examples(runner, packages, 'python')
+            self.assertNotEqual(unsupported.returncode, 0)
+            self.assertIn('example-did-not-run: python', unsupported.stderr)
+            self.assertIn('Python', unsupported.stderr)
+            self.assertIn('>=4', unsupported.stderr)
 
     def test_archive_replay_preserves_package_roots_with_vendored_readmes(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -394,6 +441,12 @@ class PackageText(unittest.TestCase):
                 prefix + '/README.md': readmes.source('crate').read_bytes(),
                 prefix + '/src/transforms/README.md': b'Bundled transform documentation',
                 prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen/Cargo.toml').read_bytes()})
+            command_prefix = 'thinkthen-cli-' + readmes.version()
+            command_source = packages / (command_prefix + '.crate')
+            archive(command_source, {
+                command_prefix + '/README.md': readmes.source('command').read_bytes(),
+                command_prefix + '/Cargo.toml': (readmes.REPO / 'crates/thinkthen-cli/Cargo.toml').read_bytes()})
+            readmes.check_package('crate', command_source)
             crate = readmes.unpack_example_package('crate', packages, tree / 'installed-crate')
             self.assertEqual(crate, tree / 'installed-crate' / prefix)
             self.assertTrue((crate / 'Cargo.toml').is_file())
@@ -520,9 +573,9 @@ class PackageText(unittest.TestCase):
     def test_release_replays_every_public_package_on_a_prepared_host(self):
         jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
         steps = jobs['smoke']['steps']
-        replay = next(step for step in steps if 'public-examples' in step.get('run', ''))
-        self.assertEqual(replay['if'], "matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'")
-        self.assertLess(next(i for i, step in enumerate(steps) if 'host-setup' in step.get('run', '')), steps.index(replay))
+        replay = next(step for step in steps if 'release-workflow smoke-stage' in step.get('run', ''))
+        self.assertNotIn("if", replay)
+        self.assertLess(next(i for i, step in enumerate(steps) if 'setup-stage host' in step.get('run', '')), steps.index(replay))
         script = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text()
         routing = script.split('\npublic-examples)\n')[1].split('\ncrate-smoke)')[0]
         families = set(readmes.re.findall(r'--family ([a-z-]+)', routing))
@@ -535,29 +588,26 @@ class PackageText(unittest.TestCase):
         for name, path in [('r-package', 'r-dist'), ('crate-package', 'crate-dist')]:
             self.assertTrue(any(step.get('with', {}).get('name') == name
                                 and step['with']['path'] == path for step in steps))
-        # Execute the actual workflow staging step with the runner replaced at its CLI boundary.
+        # Execute the real stage and observe package staging at its helper boundaries.
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
-            for name in ('r-dist', 'crate-dist', 'smoke-files', 'sdlc/scripts'):
-                (root / name).mkdir(parents=True)
+            stage_checkout(readmes.REPO, root)
+            entrypoint = root / 'sdlc/scripts/release-stage'
+            entrypoint.write_text(script)
+            (root / 'sdlc/scripts/hosted-preflight.py').write_text('pass\n')
+            for name in ('r-dist', 'crate-dist', 'smoke-files'):
+                (root / name).mkdir(parents=True, exist_ok=True)
             (root / 'r-dist/thinkthen.tar.gz').write_text('R package')
             (root / 'crate-dist/thinkthen.crate').write_text('Rust package')
             runner = root / 'sdlc/scripts/release-workflow'
-            runner.write_text('#!/bin/sh\nset -eu\n[ "$1" = public-examples ]\n[ -f "$3/thinkthen.crate" ]\nif [ "$2" = x86_64-unknown-linux-gnu ]; then [ -f "$3/thinkthen.tar.gz" ]; fi\n')
+            runner.write_text('#!/bin/sh\nset -eu\ncase $1 in *-gate | smoke-bundle) exit 0 ;; esac\n[ "$1" = public-examples ]\n[ -f "$3/thinkthen.crate" ]\nif [ "$2" = x86_64-unknown-linux-gnu ]; then [ -f "$3/thinkthen.tar.gz" ]; fi\n')
             runner.chmod(0o755)
             for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
-                subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
-                               env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
-            for name in ('sdlc/scripts/release-workflow', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/fetch.sh',
-                         'crates/thinkthen/Cargo.toml', 'libraries/ruby/toolchain.env',
-                         'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
-                         'databases/duckdb/tools/version.env'):
-                path = root / name; path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(readmes.REPO / name, path)
+                subprocess.run(['/bin/sh', str(entrypoint), 'smoke-stage', target, 'a' * 40, 'examples'],
+                               cwd=root, env=child_env(home=root / 'home', PATH=os.environ['PATH']), check=True)
+            stage_checkout(readmes.REPO, root)
             home = root / 'home'
-            ruby_pins = (root / 'libraries/ruby/toolchain.env').read_text()
-            prepared = [home / '.cache/thinkthen-toolchains/ruby' / pin / 'bin'
-                        for pin in readmes.re.findall(r'(?m)^RUBY_\d+_VERSION=(.*)$', ruby_pins)]
+            prepared = [root / 'resolved/ruby/bin']
             sqlite = root / 'sqlite'
             duckdb_pin = readmes.re.search(r'(?m)^DUCKDB_ROUTINE_RELEASE=(.*)$',
                                           (root / 'databases/duckdb/tools/version.env').read_text())[1]
@@ -574,14 +624,15 @@ class PackageText(unittest.TestCase):
                     executable.chmod(0o755)
                     if binary == 'ruby' and folder != wrong:
                         (folder.parent / 'thinkthen-toolchain.stamp').touch()
-            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True)
+            host = root / 'databases/sqlite/tests/host_sqlite.sh'; host.parent.mkdir(parents=True, exist_ok=True)
             host.write_text('#!/bin/sh\nprintf "%s\\n" ' + readmes.json.dumps(str(sqlite)) + '\n')
             checker = root / 'sdlc/scripts/registry-readmes.py'
             checker.write_text('import subprocess\nfor name in ("ruby", "sqlite3", "duckdb"):\n'
                                '    assert subprocess.check_output([name], text=True) == "prepared\\n", name\n')
             done = subprocess.run(['/bin/sh', str(root / 'sdlc/scripts/release-workflow'),
                                    'public-examples', 'x86_64-unknown-linux-gnu', 'smoke-files'],
-                                  env={'PATH': str(wrong) + os.pathsep + os.environ['PATH'], 'HOME': str(home)},
+                                  env={'PATH': fixture_path(prepared[0], path=fixture_path(wrong)),
+                                       'HOME': str(home)},
                                   capture_output=True, text=True)
             self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
@@ -630,7 +681,7 @@ class PackageText(unittest.TestCase):
                 tool.chmod(0o755)
                 work = tree / family; work.mkdir()
                 with self.subTest(family=family), patch.object(readmes, 'run_build', side_effect=fixture_build), \
-                        patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache),
+                        patch.dict(os.environ, child_env(home=tree / 'home') | {'PATH': fixture_path(tools, exclude=('flock',)), 'PUB_CACHE': str(cache),
                                                'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
                     readmes.run_example(family, packages, work, root)
 
@@ -747,12 +798,12 @@ class PackageText(unittest.TestCase):
                 return popen(command, *args, **kwargs)
             def bounded_communicate(process, input=None, timeout=None):
                 return communicate(process, input, .4 if timeout == 300 else timeout)
-            cases = [(str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')]
+            cases = [(fixture_path(tools, exclude=('flock',)), 'first'), (fixture_path(tools), 'first-hard')]
             if sys.platform == 'linux':
-                cases.append((str(tools), 'first-detached'))
+                cases.append((fixture_path(tools, exclude=('flock',)), 'first-detached'))
             for search_path, first_name in cases:
                 with self.subTest(path=search_path), patch.object(readmes, 'run_build', side_effect=fixture_build), \
-                        patch.dict(os.environ, {
+                        patch.dict(os.environ, child_env(home=tree / 'home') | {
                     'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):
@@ -805,12 +856,12 @@ class PackageText(unittest.TestCase):
                     return popen(command, *args, **kwargs)
                 def bounded_communicate(process, input=None, timeout=None):
                     return communicate(process, input, 2 if timeout == 300 else timeout)
-                with patch.dict(os.environ, {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
+                with patch.dict(os.environ, child_env(home=tree / 'home', PATH=os.environ['PATH']) | {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
                         patch.object(subprocess, 'Popen', bounded_popen), \
                         patch.object(popen, 'communicate', bounded_communicate):
                     try:
                         done = readmes.run_build([sys.executable, str(compiler), '35', str(marker)],
-                                                tree, {'PATH': '/usr/bin:/bin', 'GITHUB_ACTIONS': 'true',
+                                                tree, {'PATH': os.environ['PATH'], 'GITHUB_ACTIONS': 'true',
                                                        'RUNNER_ENVIRONMENT': 'github-hosted'}, None)
                     except subprocess.TimeoutExpired:
                         done = None

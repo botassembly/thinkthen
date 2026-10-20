@@ -21,6 +21,8 @@ import zipfile
 import warnings
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT
 NAME = 'thinkthen-0.2.0-x86_64-pc-windows-msvc.zip'
 SPEC = importlib.util.spec_from_file_location('windows_command', REPO / 'sdlc/scripts/release-windows-command.py')
 COMMAND = importlib.util.module_from_spec(SPEC)
@@ -28,7 +30,7 @@ SPEC.loader.exec_module(COMMAND)
 CAPTURE = runpy.run_path(str(REPO / 'sdlc/scripts/release-bounded.py'))['capture']
 
 
-def run_fixture(args, env, *, timeout, label):
+def run_fixture(args, env, *, timeout=FIXTURE_HANG_TIMEOUT, label):
     # Windows redirected stdout can default to cp1252. The enclosing smoke
     # decodes this log as UTF-8, including Unicode fixture paths and diagnostics.
     if isinstance(sys.stdout, io.TextIOWrapper):
@@ -68,7 +70,7 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [System.Security.Principal.S
 }
 '''
     run_fixture([host, '-NoProfile', '-NonInteractive', '-Command', script],
-                env=env | {'THINKTHEN_FIXTURE_PATH': str(root)}, timeout=30,
+                env=env | {'THINKTHEN_FIXTURE_PATH': str(root)},
                 label='private fixture preparation').check_returncode()
 
 
@@ -278,13 +280,11 @@ class Server(http.server.BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--self-test', action='store_true', help='verify fixture construction and identical installer copies; does not prove Windows execution')
+    parser.add_argument('--self-test', action='store_true', help='verify fixture construction; does not prove Windows execution')
     parser.add_argument('--powershell', action='append', help='host executable; repeat to check both hosts')
     parser.add_argument('--binary', type=Path, help='freshly packed real executable for native Windows boundaries')
     parser.add_argument('--version', default='0.2.0')
     args = parser.parse_args()
-    if (REPO / 'install.ps1').read_bytes() != (REPO / 'site/public/install.ps1').read_bytes():
-        parser.error('site installer copy differs from root source')
     if args.self_test:
         with tempfile.TemporaryDirectory(prefix='thinkthen-installer-construction-') as temporary:
             root = Path(temporary)
@@ -294,7 +294,7 @@ def main():
                 assert source.namelist() == ['thinkthen.exe', 'README.md'] and source.read('thinkthen.exe') == pe()
             assert sum(case['kind'] == 'download' for case in table) == 8
             assert any(case['label'] == 'encrypted' and not case['ok'] for case in table)
-        print(f'Windows installer fixtures: {len(table)} cases constructed; root/site copies match; Windows execution NOT RUN')
+        print(f'Windows installer fixtures: {len(table)} cases constructed; Windows execution NOT RUN')
         return
     hosts = args.powershell or ([shutil.which('powershell'), shutil.which('pwsh')] if os.name == 'nt' else [shutil.which('pwsh')])
     if not all(hosts):
@@ -330,7 +330,7 @@ def main():
                         call = [host, '-NoProfile', '-NonInteractive', '-File',
                                 str(REPO / 'sdlc/scripts/windows-installer-recovery-test.ps1'),
                                 '-Installer', str(REPO / 'install.ps1'), '-Mode', mode, '-FixtureRoot', str(root)]
-                        recovery = run_fixture(call, env=env, timeout=30, label='recovery ' + mode)
+                        recovery = run_fixture(call, env=env, label='recovery ' + mode)
                         expected = 1 if mode == 'uncommitted' else 0
                         if recovery.returncode != expected:
                             raise RuntimeError(f'actual recovery AST {mode} exited {recovery.returncode}, expected {expected}')

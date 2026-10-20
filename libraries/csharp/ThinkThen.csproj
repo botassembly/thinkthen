@@ -14,7 +14,7 @@
     <DebugType>none</DebugType>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../sdlc/generators/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README-PUBLIC.md" Pack="true" PackagePath="README.md"/></ItemGroup>
+  <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../build-tools/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README-PUBLIC.md" Pack="true" PackagePath="README.md"/></ItemGroup>
   <ItemGroup Condition="'$(ThinkThenNativeAsset)' != ''">
     <None Include="$(ThinkThenNativeAsset)" Pack="true" PackagePath="runtimes/$(ThinkThenNativeRid)/native/$(ThinkThenNativeName)" Link="$(ThinkThenNativeName)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -1,0 +1,32 @@
+{
+  "tools": {
+    "dotnet": {
+      "commands": [
+        "dotnet"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "csharp"
+      ],
+      "provider": "dotnet",
+      "version": "8.0.131"
+    }
+  },
+  "libraries": {
+    "csharp": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64",
+        "windows-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    }
+  }
+}

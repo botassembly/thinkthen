@@ -207,15 +207,14 @@ def native_inputs(check, target, cache, built_hosts=True, source_only=False, ins
 
 def installed(check, target, cache, installed_files=False):
     check.tools(('cc', 'c++', 'cmake', 'make', 'ninja', 'pkg-config', 'uv', 'sha256sum'))
-    check.command(['uv', '--version'], r'^uv 0\.9\.17\b')
+    pins = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']
+    check.command(['uv', '--version'], '^uv ' + re.escape(pins['uv']['version']) + r'\b')
     check.check('native prepared inputs', lambda: native_inputs(check, target, cache, installed_files=installed_files))
     generators = Path(os.environ.get('RUNNER_TEMP', '/nonexistent')) / 'thinkthen-generators'
-    # Read formatter pins from their existing bootstrap rather than keep a second authority.
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    for binary, expression, path in (
-            ('ruff', r"'ruff==([^']+)'", generators / 'bin/ruff'),
-            ('prettier', r"'prettier@([^']+)'", generators / 'node_modules/.bin/prettier')):
-        version = re.search(expression, bootstrap)[1]
+    for binary, path in (
+            ('ruff', generators / 'bin/ruff'),
+            ('prettier', generators / 'node_modules/.bin/prettier')):
+        version = pins[binary]['version']
         check.command([path, '--version'], re.escape(version))
         check.check(binary + ' PATH handoff', lambda binary=binary, path=path:
                     require(shutil.which(binary) == str(path), 'prepared formatter missing from PATH'))
@@ -258,7 +257,7 @@ def consumer_tools(check):
         found = shutil.which(binary) or '/nonexistent'
         check.command(['dpkg-query', '-S', found], '^' + re.escape(package) + ':')
     for operation in ('go-cpp-tools', 'swift-zig-tools', 'php-dart-tools', 'ada-objc-cobol-tools', 'managed-tools'):
-        block = re.split(r'\n[a-z][a-z-]*\)\n', bootstrap.split('\n' + operation + ')\n', 1)[1])[0]
+        block = bootstrap.split('\n' + operation.replace('-', '_') + '() (\n', 1)[1].split('\n)\n', 1)[0]
         for words in re.findall(r'for tool in ([^;]+); do', block):
             check.tools(shlex.split(words))
     for tool, args, expression in (
@@ -367,7 +366,7 @@ def dart_locks(check):
 def qualify(check, stage, target):
     coverage = stage in ('coverage', 'apple-coverage')
     rust(check, coverage)
-    cache = Path(os.environ.get('THINKTHEN_TOOLCHAINS', Path.home() / '.cache/thinkthen-toolchains'))
+    cache = Path((os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ else Path.home() / '.cache/thinkthen-toolchains'))
     if stage == 'apple-coverage':
         check.tools(('cc', 'swift', 'xcrun', 'lipo'))
         check.command([sys.executable, '-c', 'from jsonschema import Draft202012Validator'])
@@ -396,8 +395,7 @@ def qualify(check, stage, target):
         check.command([os.environ.get('PYO3_PYTHON', '/nonexistent'), '-c', 'import sys; assert sys.version_info[:2] == (3, 10)'])
         return
     check.command(['python3', '-c', 'from jsonschema import Draft202012Validator; import maturin'])
-    bootstrap = (ROOT / 'sdlc/scripts/release-workflow').read_text()
-    maturin = re.search(r"'maturin==([^']+)'", bootstrap)[1]
+    maturin = json.loads((ROOT / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
     check.command(['maturin', '--version'], '^maturin ' + re.escape(maturin) + r'\s*$')
     if windows:
         check.tools(('cl.exe', 'lib.exe', 'link.exe'))
@@ -415,22 +413,23 @@ def qualify(check, stage, target):
         return
     installed(check, target, cache, stage == 'smoke')
     if stage in ('core', 'functional', 'coverage'):
-        install = (ROOT / 'sdlc/scripts/install').read_text()
-        check.tools(shlex.split(re.search(r'for tool in ([^;]+); do', install)[1]))
+        tools = runpy.run_path(str(ROOT / 'sdlc/scripts/tools.py'))
+        manifest = tools['load_manifest']()
+        check.tools(tools['commands'](('install',), host='linux'))
         check.tools(('ld', 'objcopy', 'ar', 'mustmatch', 'script', 'cargo-nextest', 'cargo-pgrx', 'cbindgen', 'musl-gcc', 'xvfb-run', 'xauth', 'clang'))
-        pins = dict(re.findall(r'^([A-Z_]+)=([^\n]+)$', install, re.M))
+        pins = manifest['tools']
         check.command(['python3', '-c', 'import sys; assert sys.version_info >= (3, 12)'])
-        check.command(['jq', '--version'], '^' + re.escape(pins['JQ_VERSION']) + r'\s*$')
+        check.command(['jq', '--version'], '^jq-' + re.escape(pins['jq']['version']) + r'\s*$')
         check.command(['gcc', '--version'], r'\b(?:gcc|GCC)\b')
         check.command(['swift', 'format', '--help'])
         check.command(['sh', '-ec', '. libraries/ruby/toolchain.env; ruby_source_host'])
         check.tools(('prlimit',))
         check.check('nonroot Linux routine host', lambda: require(os.getuid() != 0, 'RLIMIT_NPROC needs a nonroot user'))
-        check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['DENY_VERSION']) + r'\s*$')
-        check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['PUBLIC_API_VERSION']) + r'\s*$')
-        check.command(['rustc', '+' + pins['PUBLIC_API_TOOLCHAIN'], '--version'], re.escape(pins['PUBLIC_API_RUSTC_DATE']))
-        check.command(['python3', '-c', 'import yaml; print(yaml.__version__)'], '^' + re.escape(pins['PYYAML_VERSION']) + r'\s*$')
-        advisory = Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))) / 'advisory-dbs'
+        check.command(['cargo', 'deny', '--version'], '^cargo-deny ' + re.escape(pins['deny']['version']) + r'\s*$')
+        check.command(['cargo', 'public-api', '--version'], '^cargo-public-api ' + re.escape(pins['public-api']['version']) + r'\s*$')
+        check.command(['rustc', '+' + pins['rust-nightly']['version'], '--version'], re.escape(pins['rust-nightly']['rustc_date']))
+        check.command(['python3', '-c', 'import yaml; print(yaml.__version__)'], '^' + re.escape(manifest['python_packages']['PyYAML']) + r'\s*$')
+        advisory = Path((os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))) / 'advisory-dbs'
         databases = list(advisory.glob('*/.git'))
         check.check('cargo-deny advisory cache', lambda: require(databases, 'fetched advisory database missing'))
         for database in databases:

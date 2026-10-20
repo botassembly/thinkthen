@@ -7,19 +7,30 @@ use thinkthen::{
     RecognizeQuestionFile, RecordChooseQuestion, RecordReading, Relate,
 };
 
+/// Native question roles prepared from SQL content and portable settings.
 #[derive(Debug)]
 pub enum Prepared {
+    /// A scalar question or decision band.
     Atomic(LoadedQuestion),
+    /// A choose question with per-record shortlists.
     Dynamic(RecordChooseQuestion),
+    /// A filter decision.
     Filter(Question),
+    /// A rank question.
     Rank(Question),
+    /// An ordered set of rank questions.
     RankSet(RankSet),
+    /// A find question and saved record projection.
     Find(Question, RecordReading),
+    /// A named set of annotation questions.
     Annotate(QuestionSet),
+    /// A recognizer and saved record projection.
     Recognize(Recognize, RecordReading),
+    /// A relation definition.
     Relate(Relate),
 }
 impl Prepared {
+    /// Parse supplied content and refuse unresolved question references.
     pub fn parse(verb: &str, source: &str) -> Result<Self, Error> {
         if source.starts_with('@') {
             return Err(usage(
@@ -67,6 +78,7 @@ impl Prepared {
             _ => Err(usage("unknown SQL complete function")),
         }
     }
+    /// Validate the function role and apply the portable caller settings.
     pub fn configured(mut self, verb: &str, settings: &thinkthen::Settings) -> Result<Self, Error> {
         let expected = match verb {
             "decide" | "filter" => Some(thinkthen::QuestionKind::Decide),
@@ -118,6 +130,7 @@ impl Prepared {
         }
         Ok(self)
     }
+    /// Return the saved projection owned by find or recognize.
     pub fn reading(&self) -> Option<&RecordReading> {
         match self {
             Self::Find(_, r) | Self::Recognize(_, r) => Some(r),

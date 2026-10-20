@@ -1,14 +1,22 @@
 # 0614: Delete workflow-text assertions and planted lint self-tests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision eee512a, accept
+
+Reviews: revision a0ba9b4, accept
+
+Reviews: revision 179a777, accept
+
+Reviews: revision 2df9248, accept
+
 ## Outcome
 
-- Changes: `libraries/ruby/check.sh`, `libraries/typescript/check.sh`, `sdlc/scripts/README.md`, `sdlc/scripts/catalog.py`, `sdlc/scripts/feature-inventory.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/hosted-workflow.py`, `sdlc/scripts/install-check-workflow-self-test.py`, `sdlc/scripts/install_check_workflow.py`, `sdlc/scripts/lint`, `sdlc/scripts/policy.py`, `sdlc/scripts/release-managed-pair-self-test.py`, `sdlc/scripts/release-windows-c-self-test.py`, `sdlc/scripts/release-windows-c-workflow.py`, `sdlc/scripts/test`, `sdlc/scripts/workflows`.
+- Changes: `conformance/test_stress_selection.py`, `libraries/ruby/check.sh`, `libraries/typescript/check.sh`, `sdlc/scripts/README.md`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/hosted-workflow.py`, `sdlc/scripts/install-check-self-test.py`, `sdlc/scripts/install-check-workflow-self-test.py`, `sdlc/scripts/install_check_workflow.py`, `sdlc/scripts/lint`, `sdlc/scripts/release-archive-self-test.py`, `sdlc/scripts/release-managed-pair-self-test.py`, `sdlc/scripts/release-windows-c-self-test.py`, `sdlc/scripts/release-windows-c-workflow.py`, `sdlc/scripts/test`, `sdlc/scripts/workflows`.
 - The workflow checker keeps only rules that protect a public release: pinned action SHAs, no unpinned installs, no expanded untrusted inputs, and publishing only through the approved dispatch. The step-by-step text assertions on `release.yml` and their self-tests are deleted.
 - The planted self-checks in `lint` are deleted: the planted `rm`, the planted test run, the fake git dependency for `cargo deny`, and the planted environment names. The real checks they guarded stay.
 - Library gates that grep their own scripts for banned commands, such as `libraries/ruby/check.sh:40-58`, drop that step. Shared lint keeps any rule that still guards something real.
@@ -28,3 +36,4 @@ A large share of the harness tests the harness itself, not the product. `sdlc/sc
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-19 next: Closing gate on 1ff7af044 retained the passed inventory repair but stopped in the Apple workflow fixture at its unchanged five-second limit; a fresh developer is measuring fixture interpreter selection before a minimal repair and fresh review.

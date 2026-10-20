@@ -5,10 +5,6 @@
 //! decides what one record is and what part of it leaves the machine.
 
 use serde::Serialize;
-#[cfg(any(feature = "cli", test))]
-use serde::Serializer;
-#[cfg(any(feature = "cli", test))]
-use serde::ser::SerializeMap;
 use thiserror::Error;
 
 use crate::core::batch::BatchRecord;
@@ -37,12 +33,6 @@ pub(crate) enum Framing {
     Lines,
     /// Each line is one JSON value and one record.
     Jsonl,
-    /// A comma-separated table with a header row.
-    #[cfg(any(feature = "cli", test))]
-    Csv,
-    /// A tab-separated table with a header row.
-    #[cfg(any(feature = "cli", test))]
-    Tsv,
 }
 
 /// Why the framing and the pointers cannot act together.
@@ -54,10 +44,6 @@ pub(crate) enum ReadingError {
     /// Two pointers end in one name, so one would hide the other.
     #[error("--field: two pointers end in `{0}`, and one evidence object holds each name once")]
     KeyClash(String),
-    /// A question reads `on` under `--lines`, whose records have no members.
-    #[error("question `{0}` reads `on`, and a --lines record is text with no members")]
-    #[cfg(any(feature = "cli", test))]
-    LinesPart(String),
 }
 
 /// Why one record could not become the evidence of one request.
@@ -95,10 +81,6 @@ pub(crate) enum RecordError {
     /// The selected context is not an authored string.
     #[error("the context value at `{0}` is not a string")]
     ContextText(String),
-    /// A complete structured entity document is not one list.
-    #[error("the entity document is one JSON array")]
-    #[cfg(any(feature = "cli", test))]
-    EntityDocument,
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
     TextHasNoMembers,
@@ -168,33 +150,6 @@ impl Record {
         )))
     }
 
-    /// True when this record is an object holding the given member.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn has_member(&self, name: &str) -> bool {
-        matches!(&self.0, Held::Json(Json::Object(members)) if members.iter().any(|(held, _)| held == name))
-    }
-
-    /// True when this record is a JSON object that annotations can enrich.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn is_object(&self) -> bool {
-        matches!(&self.0, Held::Json(Json::Object(_)))
-    }
-
-    /// Add named answers to an object record, or return the answers alone.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn annotated(
-        self,
-        answers: Vec<(String, crate::core::AnnotatedValue)>,
-    ) -> AnnotatedRecord {
-        AnnotatedRecord {
-            record: self,
-            answers,
-        }
-    }
-
     /// Read the candidate list this record carries where the pointer names one.
     ///
     /// A list of labels gives each option no description. A map from label to
@@ -245,35 +200,6 @@ impl Record {
     }
 }
 
-/// One record with its named bare answers appended.
-#[derive(Clone, Debug, PartialEq)]
-#[cfg(any(feature = "cli", test))]
-pub(crate) struct AnnotatedRecord {
-    record: Record,
-    answers: Vec<(String, crate::core::AnnotatedValue)>,
-}
-
-#[cfg(any(feature = "cli", test))]
-impl Serialize for AnnotatedRecord {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let original = match &self.record.0 {
-            Held::Json(Json::Object(members)) => Some(members.as_slice()),
-            Held::Text(_) | Held::Json(_) => None,
-        };
-        let mut map =
-            serializer.serialize_map(Some(original.map_or(0, <[_]>::len) + self.answers.len()))?;
-        if let Some(members) = original {
-            for (name, value) in members {
-                map.serialize_entry(name, value)?;
-            }
-        }
-        for (name, value) in &self.answers {
-            map.serialize_entry(name, value)?;
-        }
-        map.end()
-    }
-}
-
 /// The framing and the pointers one run reads its records by.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Reading {
@@ -285,7 +211,7 @@ pub(crate) struct Reading {
 
 /// The `input` field a plan carries in record mode.
 #[derive(Debug, Serialize)]
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) struct ReadingPlan<'a> {
     framing: Framing,
     field: &'a [Pointer],
@@ -325,29 +251,14 @@ impl Reading {
         })
     }
 
-    /// Mark the framing as the default's choice, which the plan names.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn by_default(mut self) -> Self {
-        self.by_default = true;
-        self
-    }
-
     /// True when the input is a stream of records rather than one document.
     #[must_use]
     pub(crate) fn streams(&self) -> bool {
         self.framing != Framing::Document
     }
 
-    /// A blank text line has a place in the input, but no record to judge.
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn skips(&self, bytes: &[u8]) -> bool {
-        self.framing == Framing::Lines
-            && str::from_utf8(self.ended(bytes)).is_ok_and(|text| text.trim().is_empty())
-    }
-
     /// Name the framing and the pointers, as the record-mode plan prints them.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {
             framing: self.framing,
@@ -405,18 +316,6 @@ impl Reading {
         Ok(Record(Held::Text(text.to_owned())))
     }
 
-    /// Read one structured document as a complete ordered entity set.
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn entity_document(&self, bytes: &[u8]) -> Result<Vec<Record>, RecordError> {
-        let Record(Held::Json(Json::Array(items))) = self.record(bytes)? else {
-            return Err(RecordError::EntityDocument);
-        };
-        Ok(items
-            .into_iter()
-            .map(|item| Record(Held::Json(item)))
-            .collect())
-    }
-
     /// Read an annotation record, preserving a whole JSON object when present.
     ///
     /// A document is normally free text. `annotate` also accepts one JSON
@@ -449,7 +348,7 @@ impl Reading {
     ///
     /// Returns [`RecordError`] when a pointer finds nothing, when the evidence
     /// is blank, and when it cannot be written as JSON.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn evidence(&self, record: &Record) -> Result<Evidence, RecordError> {
         self.selected(record)?.evidence()
     }

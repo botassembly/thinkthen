@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/swift/Sources/ThinkThen/ResultsGenerated.swift",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/swift/Sources/ThinkThen/InputsGenerated.swift",
+    "producer": "results"
+  },
+  {
+    "mode": "bridge",
+    "path": "libraries/swift/Sources/ThinkThen/ABIGenerated.swift",
+    "producer": "results"
+  },
+  {
+    "mode": "bridge",
+    "path": "libraries/swift/Sources/CThinkThen/bridge.c",
+    "producer": "results"
+  }
+]

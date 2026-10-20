@@ -22,7 +22,7 @@ else:
 # The focused behavior mode reuses a warm native build; distribution privacy
 # stays on the ordinary installed-package route with qualified artifacts.
 if len(sys.argv) <= 4 or sys.argv[4] != 'usage':
-    subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix,sys.argv[5]],env=child_env(),check=True)
+    subprocess.run([sys.executable,str(ROOT / "conformance/children/privacy.py"),"--prefix",prefix,"--manifest",sys.argv[5]],env=child_env(),check=True)
 server = Backend(scratch, key='tt-canary-301', arrivals='named')
 cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
 try:
@@ -37,7 +37,7 @@ try:
             before = len(server.requests)
             usage_env = child_env(home=scratch / mode, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'],
                                   THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
-            result = run_usage([binary, mode, scratch, scratch], env=usage_env, state=state, mode=mode.removeprefix('usage-'), timeout=5)
+            result = run_usage([binary, mode, scratch, scratch], env=usage_env, state=state, mode=mode.removeprefix('usage-'))
             assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.returncode, result.stdout, result.stderr)
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
@@ -132,7 +132,7 @@ try:
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)
 
     assert len(server.requests) == 11, len(server.requests)
-    question = {"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
+    question = {"questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
     qpath = scratch / 'annotate-null-question.json'
     ipath = scratch / 'annotate-null-input.json'
     qpath.write_text(json.dumps(question))
@@ -193,7 +193,7 @@ try:
         assert len(value['results'])==(len(original) if isinstance(original,list) else 1), value
         assert value['facts']['requests_sent']>=0, value
     print('CPP_INSTALLED_AUTHORED_RESULT_PASS null false object list wide_integer input_order ownership')
-    for definition in ({'version':1,'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
+    for definition in ({'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
                        {'score':'How is it?', 'levels':['low','high']}):
         qpath=scratch / 'whole-set-question.json'; ipath=scratch / 'whole-set-input.json'
         qpath.write_text(json.dumps(definition)); ipath.write_text(json.dumps(['yes','no','unsure']))
@@ -210,13 +210,13 @@ try:
     found=json.loads(result.stdout)
     assert found['value'] is None and found['results'][0]['index']==0 and found['probability']==0.9, found
     print('CPP_INSTALLED_NULL_FIND_PASS selected_null_retains_probability')
-    qpath.write_text(json.dumps({'version':1,'recognize': {'mode':'boundary_only'}, 'threshold':0.0001})); ipath.write_text(json.dumps('Ada arrived.'))
+    qpath.write_text(json.dumps({'recognize': {'mode':'boundary_only'}, 'threshold':0.0001})); ipath.write_text(json.dumps('Ada arrived.'))
     result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
     assert result.returncode==0, (result.stdout,result.stderr)
     boundaries=json.loads(result.stdout)
     assert boundaries['value'] and boundaries['probability']==[item['probability'] for item in boundaries['value']], boundaries
     print('CPP_INSTALLED_BOUNDARY_RESULT_PASS proposal_probability')
-    qpath.write_text(json.dumps({'version':1,'recognize': {'kinds':{'person':"A person's name."}}, 'threshold':0.0001}))
+    qpath.write_text(json.dumps({'recognize': {'kinds':{'person':"A person's name."}}, 'threshold':0.0001}))
     result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
     assert result.returncode==0, (result.stdout,result.stderr)
     recognized=json.loads(result.stdout)

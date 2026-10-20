@@ -222,9 +222,7 @@ mod tests {
     #[test]
     fn each_backend_refusal_names_its_field_and_never_its_value() {
         let marker = "Sk_config_marker_0334";
-        let entry = |body: &str| {
-            format!(r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{body}}}}}"#)
-        };
+        let entry = |body: &str| format!(r#"{{"backends":{{"local-d1":{body}}}}}"#);
         let good =
             r#"{"url":"http://127.0.0.1:8080/v1","key_env":"LOCAL_D1_KEY","model":"d1:free"}"#;
         let built_in = "a configuration entry for a built-in backend holds only `requests_per_minute`, `usd_per_million_input`, `usd_per_million_output`, and `profile`";
@@ -236,27 +234,27 @@ mod tests {
         );
         for (text, sentence) in [
             (
-                r#"{"schema":"thinkthen.config/1","backends":{"liquid":{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}}"#.to_owned(),
+                r#"{"backends":{"liquid":{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}}"#.to_owned(),
                 "configuration entry for built-in backend `liquid` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`",
             ),
             (
-                format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#),
+                format!(r#"{{"backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#),
                 "configuration entry for built-in backend `ollama` cannot set `model`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`",
             ),
             (
-                r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(),
+                r#"{"backends":{"typesafe":{}}}"#.to_owned(),
                 built_in,
             ),
             (
-                format!(r#"{{"schema":"thinkthen.config/1","backends":{{"typesafe":{{"url":"{marker}"}}}}}}"#),
+                format!(r#"{{"backends":{{"typesafe":{{"url":"{marker}"}}}}}}"#),
                 "configuration entry for built-in backend `typesafe` cannot set `url`; to use the built-in backend, remove `url`, `path`, `key_env`, `model`, and `both_sides` and delete the entry if it becomes empty; to keep custom routing, rename both the custom entry in `backends` and the selected `backend`",
             ),
             (
-                r#"{"schema":"thinkthen.config/1","backends":{"liquid":600}}"#.to_owned(),
+                r#"{"backends":{"liquid":600}}"#.to_owned(),
                 built_in,
             ),
             (
-                format!(r#"{{"schema":"thinkthen.config/1","backends":{{"{marker}":{good}}}}}"#),
+                format!(r#"{{"backends":{{"{marker}":{good}}}}}"#),
                 "configuration field `backends` holds a name that is not 1 to 32 lowercase letters, digits, and hyphens",
             ),
             (
@@ -284,19 +282,19 @@ mod tests {
                 "configuration backend field `model` must be a model name, not blank",
             ),
             (
-                format!(r#"{{"schema":"thinkthen.config/1","backend":"{marker}"}}"#),
+                format!(r#"{{"backend":"{marker}"}}"#),
                 "configuration field `backend` must name a built-in backend or an entry of `backends`",
             ),
             (
-                r#"{"schema":"thinkthen.config/1","backend":"nowhere"}"#.to_owned(),
+                r#"{"backend":"nowhere"}"#.to_owned(),
                 "configuration field `backend` must name a built-in backend or an entry of `backends`",
             ),
             (
-                r#"{"schema":"thinkthen.config/1","backend":7}"#.to_owned(),
+                r#"{"backend":7}"#.to_owned(),
                 "configuration field `backend` must be a string",
             ),
             (
-                r#"{"schema":"thinkthen.config/1","backends":[]}"#.to_owned(),
+                r#"{"backends":[]}"#.to_owned(),
                 "configuration field `backends` must be an object",
             ),
         ] {
@@ -305,9 +303,7 @@ mod tests {
             assert!(!refused.message.contains(marker));
         }
         for backend in ["liquid", "typesafe", "local-d1"] {
-            let text = format!(
-                r#"{{"schema":"thinkthen.config/1","backend":"{backend}","backends":{{"local-d1":{good}}}}}"#
-            );
+            let text = format!(r#"{{"backend":"{backend}","backends":{{"local-d1":{good}}}}}"#);
             assert!(Config::parse(text.as_bytes()).is_ok(), "{backend}");
         }
     }
@@ -317,13 +313,11 @@ mod tests {
         let rate = "configuration backend field `requests_per_minute` must be a whole number from 1 to 60000";
         let added = |value: &str| {
             format!(
-                r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":{value}}}}}}}"#
+                r#"{{"backends":{{"local-d1":{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":{value}}}}}}}"#
             )
         };
         let built_in = |value: &str| {
-            format!(
-                r#"{{"schema":"thinkthen.config/1","backends":{{"liquid":{{"requests_per_minute":{value}}}}}}}"#
-            )
+            format!(r#"{{"backends":{{"liquid":{{"requests_per_minute":{value}}}}}}}"#)
         };
         for value in [
             "0",
@@ -384,13 +378,10 @@ mod tests {
             std::env::temp_dir().join(format!("thinkthen-shared-backends-{}", std::process::id()));
         for (text, refused) in [
             (
-                r#"{"schema":"thinkthen.config/1","backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
+                r#"{"backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
                 true,
             ),
-            (
-                r#"{"schema":"thinkthen.config/1","backend":"liquid"}"#,
-                false,
-            ),
+            (r#"{"backend":"liquid"}"#, false),
         ] {
             std::fs::write(&path, text).expect("a configuration file");
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o646))

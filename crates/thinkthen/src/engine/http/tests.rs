@@ -1,7 +1,7 @@
 //! Stays: transport retry timing, cancellation and address diagnostics need direct fault and secrecy checks.
 //! Focused HTTP parsing and transport checks.
 
-#[cfg(feature = "cli")]
+#[cfg(test)]
 mod ollama;
 
 use super::{

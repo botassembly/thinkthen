@@ -2,33 +2,35 @@
 import json
 import os
 from pathlib import Path
-import shutil
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
 from conformance import parity
 from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+
+from conformance.children.children import fixture_communicate, fixture_run
 
 
 class CampaignEnvironment(unittest.TestCase):
     def test_nested_full_rungs_restore_owned_compiler_settings(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-campaign-env-') as folder:
             root = Path(folder).resolve()
+            stage_checkout(parity.ROOT, root)
             python = shlex.quote(sys.executable)
             scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            for name in ('test-full-cases', 'surfaces', 'smoke', 'heavy-lock',
-                         'build-admission.py', 'allow-list', 'full-compiler', 'scratch.sh', 'verdict.sh'):
-                shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
+            scripts.mkdir(parents=True, exist_ok=True)
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
             for name in ('release-pack', 'release-smoke'):
                 (scripts / name).write_text('exit 0\n')
-            (root / 'sdlc/surfaces.txt').write_text('libraries/c landed\n')
+            stub_other_surfaces(root, {'libraries/c'})
             consumer = root / 'libraries/c'
-            consumer.mkdir(parents=True)
+            consumer.mkdir(parents=True, exist_ok=True)
             (consumer / 'Cargo.toml').write_text('[package]\nname="fixture"\n')
             probe = root / 'probe.py'
             probe.write_text(f'''import json,os,sys,tempfile
@@ -52,7 +54,7 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
             consumer.joinpath('check.sh').write_text(
                 f'{python} "{probe}" "$THINKTHEN_TEST_PROFILE"\necho "smoke: true"\n')
             binaries = root / 'target/smoke/debug'
-            binaries.mkdir(parents=True)
+            binaries.mkdir(parents=True, exist_ok=True)
             executable = binaries / 'thinkthen'
             executable.write_text('#!/bin/sh\necho true\n')
             executable.chmod(0o755)
@@ -67,7 +69,8 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'uname': 'case "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
+                'python3': f'''case "$1" in */feature-inventory.py|sdlc/scripts/feature-inventory.py|*/check_verdict.py|sdlc/scripts/check_verdict.py) exec {python} "$@" ;; esac
+if [ "$1" = "{scripts / 'build-admission.py'}" ] || [ "$1" = sdlc/scripts/build-admission.py ]; then
     exec {python} -c 'import os,runpy,sys; os.getloadavg=lambda:(0,0,0); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
 fi
 if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then
@@ -85,12 +88,13 @@ exit 2
                 executable = tools / name
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
-            env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
+            env = child_env(home=root / 'home') | {'PATH': fixture_path(tools),
                    'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted',
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
                    'CARGO_PROFILE_DEV_OPT_LEVEL': '0',
                    'CARGO_PROFILE_TEST_OPT_LEVEL': '0', 'CARGO_BUILD_RUSTC_WRAPPER': '/ambient/wrapper'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', str(scripts / 'test-full-cases'), '--run'], cwd=root,
                                     env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             self.assertEqual(result.returncode, 0, result.stdout.decode())
@@ -115,7 +119,7 @@ exit 2
                            check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertEqual(rows, [{'stage': 'routine',
-                                     'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
+                                     'settings': {'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
                                                   'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted'}}])
             with (scripts / 'test-full-cases').open('a') as stream:
                 stream.write('\npython3 conformance/not-a-real-helper.py\n')
@@ -130,6 +134,36 @@ exit 2
             for row in rows:
                 self.assertEqual(row['settings'], expected, row['stage'])
 
+            # Reuse the command probes at each routine rung's first build-tool
+            # boundary. Stop there so this regression never builds the product.
+            (tools / 'uname').write_text('#!/bin/sh\necho Darwin\n')
+            (tools / 'mustmatch').write_text('#!/bin/sh\nexit 0\n')
+            (tools / 'mustmatch').chmod(0o755)
+            (tools / 'cargo').write_text(
+                '#!/bin/sh\n[ "$*" != "nextest --version" ] || exit 0\n'
+                f'{python} "{probe}" compiler\nexit 91\n')
+            (tools / 'python3').write_text(
+                f'#!/bin/sh\n{python} "{probe}" compiler\nexit 91\n')
+            routine_env = env | {'THINKTHEN_RESOLVED_TOOLS': env['THINKTHEN_RESOLVED_TOOLS'] + ',spec'}
+            for rung, arguments in (('test', []), ('test-stress', ['--check']),
+                                    ('package', []), ('lint', []), ('spec', [])):
+                with self.subTest(rung=rung):
+                    (root / 'probes.jsonl').write_text('')
+                    result = subprocess.run(['sh', str(scripts / rung), *arguments],
+                                            cwd=root, env=routine_env, stdout=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT)
+                    self.assertEqual(result.returncode, 91, result.stdout.decode())
+                    rows = [json.loads(line) for line in
+                            (root / 'probes.jsonl').read_text().splitlines()]
+                    routine = {'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
+                               'GITHUB_ACTIONS': 'true', 'RUNNER_ENVIRONMENT': 'github-hosted'}
+                    # Package retains the caller's flags; the other rungs sanitize
+                    # them through allow-list. Isolation must change neither policy.
+                    if rung == 'package':
+                        routine |= {key: value for key, value in env.items()
+                                    if key in expected and key not in routine}
+                    self.assertEqual(rows, [{'stage': 'compiler', 'settings': routine}])
+
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
         from importlib.util import module_from_spec, spec_from_file_location
         spec = spec_from_file_location('campaign_duckdb_inputs', parity.ROOT / 'databases/duckdb/tools/inputs.py')
@@ -137,17 +171,12 @@ exit 2
         spec.loader.exec_module(authority)
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-env-') as folder:
             root = Path(folder).resolve()
+            stage_checkout(parity.ROOT, root)
             scripts, duckdb = root / 'sdlc/scripts', root / 'databases/duckdb'
             tools = root / 'tools'
             for path in (scripts, duckdb / 'tools', duckdb / 'cpp', tools,
                          root / 'crates/thinkthen', root / 'conformance/children'):
-                path.mkdir(parents=True)
-            for source in ('databases/duckdb/check.sh', 'databases/duckdb/cpp/build.sh',
-                           'databases/duckdb/tools/inputs.sh', 'databases/duckdb/tools/inputs.py',
-                           'databases/duckdb/tools/version.env', 'databases/duckdb/tools/source_hosts.py',
-                           'databases/duckdb/tools/harness.py', 'conformance/children/children.py',
-                           'sdlc/scripts/scratch.sh', 'sdlc/scripts/full-compiler', 'sdlc/scripts/heavy-compile'):
-                shutil.copyfile(parity.ROOT / source, root / source)
+                path.mkdir(parents=True, exist_ok=True)
             (scripts / 'installed.sh').write_text('smoke_guard() { :; }\n')
             (duckdb / 'tools/validate_inputs.py').write_text(
                 'from types import SimpleNamespace\narchive_tree = SimpleNamespace(raw_git=lambda *args: None)\n')
@@ -159,7 +188,7 @@ exit 2
                 identity = authority.selected(version, target)
                 host = cache / 'duckdb/community' / version
                 for name in ('source/.git', 'tools', 'venv/bin'):
-                    (host / name).mkdir(parents=True)
+                    (host / name).mkdir(parents=True, exist_ok=True)
                 (host / 'source/PIN').write_text(identity['source_commit'])
                 program = ('#!/bin/sh\ncase "$*" in\n'
                            f"*source_id*|*'PRAGMA version'*) echo {identity['source_commit'][:10]} ;;\n"
@@ -168,7 +197,7 @@ exit 2
                 python.write_text(program)
                 python.chmod(0o755)
                 cli = duckdb / 'build/community' / version / 'build/release/duckdb'
-                cli.parent.mkdir(parents=True)
+                cli.parent.mkdir(parents=True, exist_ok=True)
                 cli.write_text(program)
                 cli.chmod(0o755)
             (root / 'crates/thinkthen/Cargo.toml').write_text('version = "1.0.0"\n')
@@ -187,14 +216,22 @@ if '--message-format=json' in sys.argv:
                       'target':{'name':'conformance-backend'},
                       'executable':str(Path.cwd() / 'target/debug/conformance-backend')}))
 ''')
-            (tools / 'git').write_text(f'#!{sys.executable}\nimport pathlib,sys\n'
-                                      'print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n')
+            real_git = shutil.which('git')
+            (tools / 'git').write_text(f'#!{sys.executable}\nimport os,pathlib,sys\n'
+                                      f'sys.path.insert(0, {str(root)!r})\n'
+                                      'from conformance.children.children import child_env\n'
+                                      'if len(sys.argv) == 5 and sys.argv[1] == "-C" and '
+                                      'sys.argv[3] == "rev-parse" and sys.argv[4].endswith("^{commit}"):\n'
+                                      '    print((pathlib.Path(sys.argv[2]) / "PIN").read_text())\n'
+                                      f'else:\n    os.execve({real_git!r}, [{real_git!r}, *sys.argv[1:]], '
+                                      f'child_env(home={str(root / "fixture-git-home")!r}))\n')
+            (tools / 'python3').symlink_to(sys.executable)
             (root / 'probe.py').write_text(capture)
             (tools / 'uname').write_text('#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n')
             for path in (tools / 'cargo', tools / 'make', tools / 'git', tools / 'uname'):
                 path.chmod(0o755)
             binary = root / 'target/debug/conformance-backend'
-            binary.parent.mkdir(parents=True)
+            binary.parent.mkdir(parents=True, exist_ok=True)
             binary.write_text('#!/bin/sh\nexit 0\n')
             binary.chmod(0o755)
             snapshots = []
@@ -204,12 +241,13 @@ if '--message-format=json' in sys.argv:
                     private.mkdir(exist_ok=True)
                     receipt = root / 'capture.jsonl'
                     receipt.write_text('')
-                    env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
+                    env = child_env(home=private) | {'PATH': fixture_path(tools),
                            'HOME': str(private), 'THINKTHEN_TOOLCHAINS': str(cache),
                            'THINKTHEN_HEAVY_LOCK_HELD': '/tmp/thinkthen-heavy.lock',
                            'THINKTHEN_DUCKDB_CHECK_ARCHIVES': '1',
                            'THINKTHEN_TEST_PROFILE': profile, 'RUSTFLAGS': '--ambient',
                            'CFLAGS': '-O1', 'CXXFLAGS': '-O1'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     env.pop('THINKTHEN_FULL_COMPILER', None)
                     command = 'REPO=$PWD; '
                     if full:
@@ -271,7 +309,7 @@ while True:time.sleep(60)
                     try:
                         if cancellation is not None:
                             process.send_signal(cancellation)
-                        _, error = process.communicate(timeout=8)
+                        _, error = fixture_communicate(process)
                         self.assertEqual(process.returncode, expected, error)
                         if linux:
                             reaped, status = os.waitpid(descendant, os.WNOHANG)
@@ -298,7 +336,7 @@ while True:time.sleep(60)
                 ctypes.CDLL(None).prctl(36, 0, 0, 0, 0)
 
     def test_normal_exit_retains_stdin_and_exit_code(self):
-        result = subprocess.run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
+        result = fixture_run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
                                  'sh', '-c', 'read value; printf "%s" "$value"; exit 7'],
-                                env=child_env(), input='owned input\n', text=True, capture_output=True, timeout=3)
+                                env=child_env(), input='owned input\n', text=True, capture_output=True)
         self.assertEqual((result.returncode, result.stdout), (7, 'owned input'))

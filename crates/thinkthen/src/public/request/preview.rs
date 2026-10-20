@@ -6,7 +6,7 @@ use crate::{Engine, Error, InputFunction, LoadedQuestion, PlanEstimate};
 type Preview = (crate::core::PlanSummary, bool, usize, Vec<usize>);
 
 impl Engine {
-    /// Preview an admitted atomic or single-question rank request without sending.
+    /// Preview an admitted request through the native preparation without sending.
     /// Explicit sources and feeds use the same composition and admission as execution.
     /// No key, cache or answer is read. Unsupported functions refuse before input advances.
     /// # Errors
@@ -16,26 +16,80 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<PlanEstimate, Error> {
-        crate::public::plan::from_summary(self.plan_request_summary(request, environment)?.0)
+        environment
+            .controls
+            .admit_preparation(request.request.call.function())?;
+        if environment.controls.annotation_missing.is_some() {
+            return Err(Error::usage(
+                "annotation pointer continuation applies only to execution",
+            ));
+        }
+        if matches!(
+            request.request.call.function(),
+            RequestFunction::Recognize | RequestFunction::Relate
+        ) {
+            return self.plan_whole_request(request, environment);
+        }
+        if request.request.call.function() == RequestFunction::Find {
+            let (_, summary) = request.plan_find(self, environment)?;
+            return crate::public::plan::from_summary(summary, self.inner.backend().api_type());
+        }
+        let annotation = request.request.call.function() == RequestFunction::Annotate;
+        let (summary, dropped, count, groups) =
+            self.preview_request(request, environment, annotation)?;
+        crate::public::plan::from_summary(summary, self.inner.backend().api_type())
+            .map(|plan| plan.with_request_details(dropped, annotation.then_some((count, groups))))
     }
 
-    pub(crate) fn plan_request_summary<'a>(
+    fn plan_whole_request<'a>(
         &self,
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
-    ) -> Result<(crate::core::PlanSummary, bool), Error> {
-        let (summary, dropped, _, _) = self.preview_request(request, environment, false)?;
-        Ok((summary, dropped))
-    }
-
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn plan_annotation_request<'a>(
-        &self,
-        request: &'a AdmittedRequest,
-        environment: RequestEnvironment<'a>,
-    ) -> Result<(crate::core::PlanSummary, usize, Vec<usize>), Error> {
-        let (summary, _, count, groups) = self.preview_request(request, environment, true)?;
-        Ok((summary, count, groups))
+    ) -> Result<PlanEstimate, Error> {
+        let (definition, rows, controls) = route_preview(request, environment)?;
+        let rows = rows.enumerate().map(|(at, row)| {
+            self.check_record_limit(at)?;
+            row
+        });
+        let recognition = match &definition {
+            RequestDefinition::Recognition(ask) => Some(ask),
+            RequestDefinition::Recognize(file) => Some(file.question()),
+            _ => None,
+        };
+        if let Some(ask) = recognition {
+            let engine = self.for_model(ask.0.model.as_ref())?;
+            let dropped = crate::core::adapters::built_in::drops_any(
+                engine.backend().descriptions(),
+                ask.0.kinds.iter().filter_map(|(_, description)| {
+                    description.as_ref().map(crate::core::Description::as_json)
+                }),
+            );
+            let preview = crate::public::complete::recognize::preview_recognition(
+                engine.backend(),
+                engine.profile(),
+                ask,
+                rows,
+                controls.context_text(),
+                controls
+                    .recognition_text_limit
+                    .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES),
+            )?;
+            return PlanEstimate::from_recognition(preview, dropped, engine.backend().api_type());
+        }
+        if let RequestDefinition::Relate(ask) = definition {
+            let engine = self.for_model(ask.0.model.as_ref())?;
+            let preview = crate::public::complete::relate::preview_relations(
+                engine.backend(),
+                engine.profile(),
+                &ask,
+                rows,
+                &controls,
+            )?;
+            return PlanEstimate::from_relations(preview, engine.backend().api_type());
+        }
+        Err(Error::defect(
+            "whole-set preview lost its admitted definition",
+        ))
     }
 
     fn preview_request<'a>(
@@ -91,12 +145,9 @@ impl Engine {
             super::inline::validate_composed(&reading_definition, options, &row)
                 .map_err(|error| error.at_record(at))?;
             if annotation && let RequestDefinition::Annotate(set) = &definition {
+                dropped |= annotation_drops_detail(&engine, set);
                 return crate::public::complete::annotation_preview_asks(
-                    &engine,
-                    set,
-                    row,
-                    controls.context_text(),
-                    at,
+                    &engine, set, row, &controls, at,
                 )
                 .map_err(|error| error.at_record(at));
             }
@@ -194,7 +245,6 @@ fn annotation_groups(
 }
 
 impl AdmittedRequest {
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn plan_find<'a>(
         &'a self,
         engine: &Engine,
@@ -208,49 +258,8 @@ impl AdmittedRequest {
         };
         engine.preview_find_records(question, rows, controls)
     }
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn plan_recognition<'a>(
-        &'a self,
-        backend: &crate::core::Backend,
-        profile: Option<&crate::core::BackendProfile>,
-        environment: RequestEnvironment<'a>,
-        limit: usize,
-    ) -> Result<crate::public::complete::recognize::RecognitionPreview, Error> {
-        let (definition, rows, controls) = route_preview(self, environment)?;
-        let ask = match &definition {
-            RequestDefinition::Recognition(ask) => ask,
-            RequestDefinition::Recognize(file) => file.question(),
-            _ => {
-                return Err(Error::usage(
-                    "recognize plan requires a recognition question",
-                ));
-            }
-        };
-        crate::public::complete::recognize::preview_recognition(
-            backend,
-            profile,
-            ask,
-            rows,
-            controls.context_text(),
-            limit,
-        )
-    }
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn plan_relations<'a>(
-        &'a self,
-        backend: &crate::core::Backend,
-        profile: Option<&crate::core::BackendProfile>,
-        environment: RequestEnvironment<'a>,
-    ) -> Result<crate::public::complete::relate::RelationPreview, Error> {
-        let (definition, rows, controls) = route_preview(self, environment)?;
-        let RequestDefinition::Relate(ask) = definition else {
-            return Err(Error::usage("relate plan requires a relation question"));
-        };
-        crate::public::complete::relate::preview_relations(backend, profile, &ask, rows, &controls)
-    }
 }
 
-#[cfg(any(feature = "cli", test))]
 fn route_preview<'a>(
     request: &'a AdmittedRequest,
     environment: RequestEnvironment<'a>,
@@ -279,4 +288,16 @@ fn route_preview<'a>(
         Ok(row)
     });
     Ok((definition, Box::new(rows), controls))
+}
+
+fn annotation_drops_detail(
+    engine: &crate::engine::facade::Engine,
+    set: &crate::QuestionSet,
+) -> bool {
+    set.0.questions().iter().any(|question| {
+        crate::core::adapters::built_in::drops_detail_of(
+            engine.backend().descriptions(),
+            question.question(),
+        )
+    })
 }

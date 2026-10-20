@@ -291,6 +291,62 @@ impl RecordReading {
         self.seed_spans = Some(core::Pointer::new(pointer).map_err(Error::refused)?);
         Ok(self)
     }
+    /// Read one whole document through the native record reader, then compose it.
+    ///
+    /// Already admitted fields select JSON document reading; without fields the
+    /// original stays literal text, including text that looks like JSON. The same
+    /// native size, UTF-8 and JSON checks run in that order. Whole-document syntax
+    /// failures retain [`crate::ErrorDiagnostic::InputJson`]; JSONL reading remains
+    /// separate. Existing context, candidate and recognition projections apply once.
+    /// This operation opens nothing and sends nothing.
+    ///
+    /// # Errors
+    /// Returns native record admission or composition refusals with safe diagnostics.
+    pub fn read_document(&self, bytes: &[u8]) -> Result<RecordInput<RecordEvidence>, Error> {
+        self.compose(self.read_original(bytes, crate::RequestFraming::Document)?)
+    }
+
+    /// Decode one original through the native admitted fields and logical framing.
+    /// Retains blank originals for later preflight, without granting execution permission.
+    /// Native size, UTF-8, line endings and JSON diagnostics keep their existing order.
+    /// # Errors
+    /// Returns native record refusals; CSV/TSV require [`crate::TableReader`].
+    pub fn read_original(
+        &self,
+        bytes: &[u8],
+        framing: crate::RequestFraming,
+    ) -> Result<RawRecord, Error> {
+        let framing = match framing {
+            crate::RequestFraming::Document => core::Framing::Document,
+            crate::RequestFraming::Lines => core::Framing::Lines,
+            crate::RequestFraming::Jsonl => core::Framing::Jsonl,
+            crate::RequestFraming::Csv | crate::RequestFraming::Tsv => {
+                return Err(Error::usage("table originals require TableReader"));
+            }
+        };
+        let reading =
+            core::Reading::new(framing, self.reading.fields().to_vec()).map_err(Error::refused)?;
+        reading
+            .record(bytes)
+            .map(|record| RawRecord(Arc::new(record)))
+            .map_err(Error::refused)
+    }
+
+    /// Decode the native annotation-document original without composing evidence.
+    /// Valid JSON retains all shapes; syntax alone falls back to literal text.
+    /// Duplicate, nonfinite and excessive-depth JSON stay refused. Existing fields
+    /// select ordinary native document reading rather than annotation fallback.
+    /// # Errors
+    /// Returns native size, UTF-8 or annotation JSON admission failures.
+    pub fn read_annotation_document(&self, bytes: &[u8]) -> Result<RawRecord, Error> {
+        let reading = core::Reading::new(core::Framing::Document, self.reading.fields().to_vec())
+            .map_err(Error::refused)?;
+        reading
+            .annotation_record(bytes)
+            .map(|record| RawRecord(Arc::new(record)))
+            .map_err(Error::refused)
+    }
+
     /// Compose one original without inserting context, candidates or provenance into evidence.
     /// # Errors
     /// Refuses missing fields, blank evidence, invalid context or candidates.
@@ -370,7 +426,13 @@ impl RecordReading {
         }
         Ok(())
     }
-    pub(crate) fn compose_images(
+    /// Compose one complete already validated image set without copying or reordering it.
+    /// The native image-source boundary rejects field, context, shortlist, seed and
+    /// example pointers before composition. Normal route, declaration, image budget
+    /// and execution admission still apply when the resulting record is used.
+    /// # Errors
+    /// Returns Usage for incompatible record projections or controls.
+    pub fn compose_images(
         &self,
         images: ImageEvidence,
     ) -> Result<RecordInput<QuestionInput>, Error> {
@@ -418,4 +480,14 @@ impl fmt::Debug for RecordReading {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RecordReading").finish_non_exhaustive()
     }
+}
+
+/// Validate a selector through the shared RFC 6901 grammar without reading input.
+/// Hosts can report invalid selectors before opening their selected files.
+/// # Errors
+/// Returns the existing safe pointer grammar refusal.
+pub fn validate_pointer(selector: &str) -> Result<(), Error> {
+    core::Pointer::new(selector)
+        .map(|_| ())
+        .map_err(Error::refused)
 }

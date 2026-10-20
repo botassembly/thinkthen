@@ -1,0 +1,14 @@
+wrapper_jvm() {
+	scratch_dir jvm_out
+	mkdir -p "$jvm_out/native"
+	tar -xzf "$OUT/$c_name" -C "$jvm_out/native"
+	THINKTHEN_JVM_OUT=$jvm_out/product THINKTHEN_JVM_NATIVE="$jvm_out/native/lib/libthinkthen.$dl" THINKTHEN_JVM_TARGET="$TARGET" sh libraries/jvm/build.sh
+	THINKTHEN_JVM_OUT=$jvm_out/product python3 libraries/jvm/tests/package_check.py --session
+	cp -R "$jvm_out/product/examples" "$folder/examples"
+	for file in $(python3 sdlc/scripts/package-inventory.py jvm --target "$TARGET" --field files); do
+		case $file in *.jar|product-inventory.json) cp "$jvm_out/product/jars/$file" "$folder/" ;; *) cp "libraries/jvm/$file" "$folder/" ;; esac
+	done
+	cp libraries/jvm/README-PUBLIC.md "$folder/README.md"
+}
+
+part_jvm() { part_source_wrapper jvm; }

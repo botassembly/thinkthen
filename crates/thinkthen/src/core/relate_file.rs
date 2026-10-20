@@ -5,7 +5,6 @@ use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
-#[cfg(any(feature = "cli", test))]
 use crate::core::recognize_file::parse_typed_cut;
 use crate::core::recognize_file::{parse_json_cut, parse_relations, rule_side};
 use crate::core::{
@@ -73,7 +72,9 @@ impl RelateQuestion<'_> {
 pub(crate) enum RelateConfigError {
     #[error(transparent)]
     Declaration(#[from] crate::core::declaration::DeclarationError),
-    #[error("a relate question file is one closed version-one object")]
+    #[error("{}", super::question_file::VERSION_FIELD_ERROR)]
+    Version,
+    #[error("a relate question file is one closed object")]
     Shape,
     #[error("relate takes one or more distinct relation rules")]
     Relations,
@@ -107,7 +108,6 @@ pub(crate) enum EntitySetError {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct FileShape {
-    version: u8,
     #[serde(rename = "name")]
     _name: Option<IgnoredAny>,
     #[serde(rename = "wording_version")]
@@ -141,7 +141,7 @@ struct FieldsShape {
 }
 
 impl RelateSpec {
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn inline(relations: &[String], either: bool) -> Result<Self, RelateConfigError> {
         let relations = relations
             .iter()
@@ -164,15 +164,15 @@ impl RelateSpec {
         let Json::Object(members) = &value else {
             return Err(RelateConfigError::Shape);
         };
+        if value.member("version").is_some() {
+            return Err(RelateConfigError::Version);
+        }
         if !members.iter().any(|(name, _)| name == "relate")
             && (QuestionFile::parse_top(text).is_ok() || RecognizeSpec::parse(text).is_ok())
         {
             return Err(RelateConfigError::WrongVerb);
         }
         let parsed: FileShape = serde_json::from_str(text).map_err(|_| RelateConfigError::Shape)?;
-        if parsed.version != 1 {
-            return Err(RelateConfigError::Shape);
-        }
         let fields = parsed
             .relate
             .fields
@@ -221,7 +221,6 @@ impl RelateSpec {
         })
     }
 
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn override_threshold(&mut self, value: &str) -> Result<(), RelateConfigError> {
         self.threshold = parse_typed_cut(Some(value)).map_err(|_| RelateConfigError::Threshold)?;
         Ok(())
@@ -291,11 +290,6 @@ impl RelateSpec {
         }
     }
 
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn fields(&self) -> &RelateFields {
-        &self.fields
-    }
-
     /// The resolved question; line input has no pointers, so `fields` is null.
     pub(crate) fn question(&self, lines: bool) -> RelateQuestion<'_> {
         RelateQuestion {
@@ -313,11 +307,6 @@ impl RelateSpec {
 
     pub(crate) const fn kind_field(&self) -> &Pointer {
         &self.fields.kind
-    }
-
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn presence(&self) -> RelatePresence {
-        self.presence
     }
 }
 

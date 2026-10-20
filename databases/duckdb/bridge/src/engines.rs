@@ -13,7 +13,6 @@
 //! Both reset in a forked child.
 
 use std::sync::{Arc, Mutex, PoisonError};
-use std::time::Duration;
 
 use std::num::NonZeroUsize;
 use thinkthen::{BatchSetting, CallOptions, CancelToken, Counters, Engine, EngineBuilder, Error};
@@ -26,21 +25,21 @@ const MOST: usize = 16;
 /// The engine settings as the caller's session holds them; `None` is unset.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Asked {
-    pub(crate) base_url: Option<String>,
-    pub(crate) prices: Option<(String, String)>,
-    pub(crate) refresh_cache: bool,
-    pub(crate) backend: Option<String>,
-    pub(crate) throttle: Option<i64>,
-    pub(crate) max_requests: Option<i64>,
-    pub(crate) max_request_bytes: Option<i64>,
-    pub(crate) cache: Option<String>,
+    pub(crate) settings: std::collections::BTreeMap<String, String>,
     pub(crate) max_requests_total: Option<i64>,
-    pub(crate) model: Option<String>,
-    pub(crate) timeout: Option<i64>,
-    pub(crate) max_retries: Option<i64>,
-    pub(crate) profile: Option<String>,
-    pub(crate) record: Option<String>,
-    pub(crate) replay: Option<String>,
+}
+impl Asked {
+    pub(crate) fn with_model(&mut self, model: String) {
+        self.settings.insert(
+            "model".to_owned(),
+            serde_json::Value::String(model).to_string(),
+        );
+    }
+    fn folder(&self, name: &str) -> Option<String> {
+        self.settings
+            .get(name)
+            .and_then(|raw| serde_json::from_str(raw).ok())
+    }
 }
 
 /// What the caller's own file system says about a folder.
@@ -51,20 +50,7 @@ pub(crate) enum Probe {
 }
 
 /// One engine's key: the settings that change what an engine is.
-type Key = (
-    Option<String>,
-    Option<u8>,
-    Option<usize>,
-    Option<usize>,
-    Option<String>,
-    Option<String>,
-    Option<u64>,
-    Option<u32>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    (Option<String>, Option<(String, String)>, bool),
-);
+type Key = std::collections::BTreeMap<String, String>;
 
 #[allow(dead_code, reason = "used by the C++ bridge across its verb families")]
 pub(crate) fn options<'a>(
@@ -225,9 +211,9 @@ pub(crate) fn engine_for_typed(
 ) -> Result<Arc<Engine>, RowError> {
     let (key, builder) = checked(asked)?;
     for (folder, kind) in [
-        (&asked.cache, "cache"),
-        (&asked.record, "recording"),
-        (&asked.replay, "recording"),
+        (asked.folder("cache"), "cache"),
+        (asked.folder("record"), "recording"),
+        (asked.folder("replay"), "recording"),
     ] {
         let Some(folder) = folder.as_ref() else {
             continue;
@@ -284,106 +270,15 @@ pub(crate) fn engine_for_typed(
     Ok(built)
 }
 
-/// Every value converted and run through its setter on a fresh builder.
-fn request_bytes(value: Option<i64>) -> Result<Option<usize>, RowError> {
-    value
-        .map(|value| {
-            usize::try_from(value)
-                .map_err(|_| RowError::usage("max_request_bytes is a whole number of at least 1"))
-        })
-        .transpose()
-}
-
+/// Validate every raw setting before reusing an engine from the registry.
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
-    let refused = RowError::from;
-    let mut builder = complete_builder(
-        asked,
-        EngineBuilder::from_env().map_err(refused)?.shared_host(),
-    )?;
-    if let Some(backend) = &asked.backend {
-        builder = builder.backend(backend).map_err(refused)?;
+    let mut builder = EngineBuilder::from_env()
+        .map_err(RowError::from)?
+        .shared_host();
+    for (name, raw) in &asked.settings {
+        builder = builder.setting(name, raw).map_err(RowError::from)?;
     }
-    let throttle = asked
-        .throttle
-        .map(|value| {
-            u8::try_from(value)
-                .map_err(|_| RowError::usage("a throttle is a whole number from 1 through 32"))
-        })
-        .transpose()?;
-    if let Some(value) = throttle {
-        builder = builder.throttle(value).map_err(refused)?;
-    }
-    let most = asked
-        .max_requests
-        .map(|value| {
-            usize::try_from(value)
-                .map_err(|_| RowError::usage("a request limit is a whole number of 1 or more"))
-        })
-        .transpose()?;
-    builder = builder.max_requests(most).map_err(refused)?;
-    let bytes = request_bytes(asked.max_request_bytes)?;
-    if let Some(bytes) = bytes {
-        builder = builder.max_request_bytes(bytes).map_err(refused)?;
-    }
-    if let Some(folder) = &asked.cache {
-        builder = if folder == "off" {
-            builder.no_cache()
-        } else {
-            builder.cache_at(folder).map_err(refused)?
-        };
-    }
-    if let Some(model) = &asked.model {
-        builder = builder.model(model).map_err(refused)?;
-    }
-    let timeout = asked
-        .timeout
-        .map(|value| {
-            u64::try_from(value)
-                .ok()
-                .filter(|value| *value > 0)
-                .ok_or_else(|| RowError::usage("a timeout is a whole number of seconds above zero"))
-        })
-        .transpose()?;
-    if let Some(seconds) = timeout {
-        builder = builder
-            .timeout(Duration::from_secs(seconds))
-            .map_err(refused)?;
-    }
-    let retries = asked
-        .max_retries
-        .map(|value| {
-            u32::try_from(value)
-                .map_err(|_| RowError::usage("a retry count is a whole number of 0 or more"))
-        })
-        .transpose()?;
-    if let Some(retries) = retries {
-        builder = builder.max_retries(retries);
-    }
-    if let Some(total) = asked.max_requests_total {
-        total_of(total)
-            .map_err(|_| RowError::usage("a request total is a whole number of 0 or more"))?;
-    }
-    Ok((
-        (
-            asked.backend.clone(),
-            throttle,
-            most,
-            bytes,
-            asked.cache.clone(),
-            asked.model.clone(),
-            timeout,
-            retries,
-            asked.profile.clone(),
-            asked.record.clone(),
-            asked.replay.clone(),
-            (
-                asked.base_url.clone(),
-                asked.prices.clone(),
-                asked.refresh_cache,
-            ),
-        ),
-        builder,
-    ))
+    Ok((asked.settings.clone(), builder))
 }
 
 fn total_of(total: i64) -> Result<u64, String> {
@@ -456,27 +351,4 @@ pub(crate) fn usage_status() -> thinkthen::UsagePersistence {
         Ok(_) => UsagePersistence::Disabled,
         Err(_) => UsagePersistence::Pending,
     }
-}
-
-fn complete_builder(asked: &Asked, mut builder: EngineBuilder) -> Result<EngineBuilder, RowError> {
-    let refused = RowError::from;
-    builder = builder.refresh_cache(asked.refresh_cache);
-    if let Some(url) = &asked.base_url {
-        builder = builder.base_url(url).map_err(refused)?;
-    }
-    if let Some((input, output)) = &asked.prices {
-        builder = builder
-            .prices_usd_per_million(input, output)
-            .map_err(refused)?;
-    }
-    if let Some(profile) = &asked.profile {
-        builder = builder.profile_json(profile).map_err(refused)?;
-    }
-    if let Some(folder) = &asked.record {
-        builder = builder.record(folder).map_err(refused)?;
-    }
-    if let Some(folder) = &asked.replay {
-        builder = builder.replay(folder).map_err(refused)?;
-    }
-    Ok(builder)
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/php/src/session/results_generated.php",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/php/src/session/ffi_generated.h",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/php/src/session/constants_generated.php",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/php/src/session/inputs_generated.php",
+    "producer": "results"
+  }
+]

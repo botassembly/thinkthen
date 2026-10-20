@@ -14,8 +14,7 @@ final class AnnotateDefinition extends _NativeValue {
           if (batch.isPresent) "batch": batch.value,
           if (profile.isPresent) "profile": profile.value,
           "questions": questions,
-          if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1
+          if (threshold.isPresent) "threshold": threshold.value
         });
   Presence<Object?> get batch => _fields.containsKey("batch")
       ? Presence.present(_fields["batch"])
@@ -29,10 +28,9 @@ final class AnnotateDefinition extends _NativeValue {
   Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
       ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
-          if (!["batch", "profile", "questions", "threshold", "version"]
+          if (!["batch", "profile", "questions", "threshold"]
               .contains(entry.key))
             entry.key: entry.value
       });
@@ -801,7 +799,6 @@ final class Relate extends _NativeValue {
           if (profile.isPresent) "profile": profile.value,
           "relate": relate,
           if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -826,7 +823,6 @@ final class Relate extends _NativeValue {
   Presence<Cut> get threshold => _fields.containsKey("threshold")
       ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
       ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
@@ -840,7 +836,6 @@ final class Relate extends _NativeValue {
             "profile",
             "relate",
             "threshold",
-            "version",
             "wording_version"
           ].contains(entry.key))
             entry.key: entry.value
@@ -1253,6 +1248,28 @@ final class OptionSchema extends _NativeValue {
       });
 }
 
+final class OptionSchema2 extends _NativeValue {
+  OptionSchema2._(super.fields);
+  factory OptionSchema2.read(Object? value) =>
+      OptionSchema2._(_readObject(value));
+  OptionSchema2(
+      {Presence<Object?> description = const Presence.absent(),
+      required String name})
+      : super({
+          if (description.isPresent) "description": description.value,
+          "name": name
+        });
+  Presence<Object?> get description => _fields.containsKey("description")
+      ? Presence.present(_fields["description"])
+      : const Presence.absent();
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["description", "name"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
 final class RecognitionExample implements _EncodedValue {
   final Object? value;
   const RecognitionExample._(this.value);
@@ -1392,7 +1409,6 @@ final class RecognizeDefinition extends _NativeValue {
           if (relationThreshold.isPresent)
             "relation_threshold": relationThreshold.value,
           if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -1424,7 +1440,6 @@ final class RecognizeDefinition extends _NativeValue {
   Presence<Cut> get threshold => _fields.containsKey("threshold")
       ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
       ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
@@ -1440,7 +1455,6 @@ final class RecognizeDefinition extends _NativeValue {
             "recognize",
             "relation_threshold",
             "threshold",
-            "version",
             "wording_version"
           ].contains(entry.key))
             entry.key: entry.value
@@ -1572,8 +1586,7 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("recognize") &&
         !map.containsKey("relate") &&
         !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version")) return DecideQuestion.read(map);
+        !map.containsKey("tag")) return DecideQuestion.read(map);
     if (map.containsKey("choose") &&
         !map.containsKey("decide") &&
         !map.containsKey("find") &&
@@ -1581,8 +1594,7 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("recognize") &&
         !map.containsKey("relate") &&
         !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version")) return ChooseQuestion.read(map);
+        !map.containsKey("tag")) return ChooseQuestion.read(map);
     if (map.containsKey("tag") &&
         !map.containsKey("choose") &&
         !map.containsKey("decide") &&
@@ -1590,8 +1602,7 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("questions") &&
         !map.containsKey("recognize") &&
         !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("version")) return TagQuestion.read(map);
+        !map.containsKey("score")) return TagQuestion.read(map);
     if (map.containsKey("score") &&
         !map.containsKey("choose") &&
         !map.containsKey("decide") &&
@@ -1599,10 +1610,8 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("questions") &&
         !map.containsKey("recognize") &&
         !map.containsKey("relate") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version")) return ScoreQuestion.read(map);
+        !map.containsKey("tag")) return ScoreQuestion.read(map);
     if (map.containsKey("relate") &&
-        map.containsKey("version") &&
         !map.containsKey("choose") &&
         !map.containsKey("decide") &&
         !map.containsKey("find") &&
@@ -1617,10 +1626,8 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("recognize") &&
         !map.containsKey("relate") &&
         !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version")) return FindQuestion.read(map);
+        !map.containsKey("tag")) return FindQuestion.read(map);
     if (map.containsKey("recognize") &&
-        map.containsKey("version") &&
         !map.containsKey("choose") &&
         !map.containsKey("decide") &&
         !map.containsKey("find") &&
@@ -1629,7 +1636,6 @@ sealed class Definition extends _NativeValue {
         !map.containsKey("score") &&
         !map.containsKey("tag")) return RecognizeQuestion.read(map);
     if (map.containsKey("questions") &&
-        map.containsKey("version") &&
         !map.containsKey("choose") &&
         !map.containsKey("decide") &&
         !map.containsKey("find") &&
@@ -1654,8 +1660,7 @@ final class AnnotateQuestion extends Definition {
           if (batch.isPresent) "batch": batch.value,
           if (profile.isPresent) "profile": profile.value,
           "questions": questions,
-          if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1
+          if (threshold.isPresent) "threshold": threshold.value
         });
   Presence<Object?> get batch => _fields.containsKey("batch")
       ? Presence.present(_fields["batch"])
@@ -1669,10 +1674,9 @@ final class AnnotateQuestion extends Definition {
   Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
       ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
-          if (!["batch", "profile", "questions", "threshold", "version"]
+          if (!["batch", "profile", "questions", "threshold"]
               .contains(entry.key))
             entry.key: entry.value
       });
@@ -1937,7 +1941,6 @@ final class RelateQuestion extends Definition {
           if (profile.isPresent) "profile": profile.value,
           "relate": relate,
           if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -1962,7 +1965,6 @@ final class RelateQuestion extends Definition {
   Presence<Cut> get threshold => _fields.containsKey("threshold")
       ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
       ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
@@ -1976,7 +1978,6 @@ final class RelateQuestion extends Definition {
             "profile",
             "relate",
             "threshold",
-            "version",
             "wording_version"
           ].contains(entry.key))
             entry.key: entry.value
@@ -2169,7 +2170,6 @@ final class RecognizeQuestion extends Definition {
           if (relationThreshold.isPresent)
             "relation_threshold": relationThreshold.value,
           if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
   Presence<QuestionInputDeclaration> get contextSchema =>
@@ -2201,7 +2201,6 @@ final class RecognizeQuestion extends Definition {
   Presence<Cut> get threshold => _fields.containsKey("threshold")
       ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
-  BigInt get version => _readInteger(_fields["version"]);
   Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
       ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
@@ -2217,7 +2216,6 @@ final class RecognizeQuestion extends Definition {
             "recognize",
             "relation_threshold",
             "threshold",
-            "version",
             "wording_version"
           ].contains(entry.key))
             entry.key: entry.value
@@ -2501,13 +2499,19 @@ final class Options extends _NativeValue {
       Presence<String> context = const Presence.absent(),
       Presence<String> contextField = const Presence.absent(),
       Presence<BigInt> deadlineMs = const Presence.absent(),
+      Presence<String> entityDefinition = const Presence.absent(),
       Presence<List<RecognitionExample>> examples = const Presence.absent(),
       Presence<String> examplesField = const Presence.absent(),
       Presence<List<String>> field = const Presence.absent(),
       Presence<bool> filesOnly = const Presence.absent(),
+      Presence<String> instructions = const Presence.absent(),
+      Presence<List<OptionSchema2>> labels = const Presence.absent(),
+      Presence<List<OptionSchema2>> levels = const Presence.absent(),
       Presence<BigInt> maxRequestsTotal = const Presence.absent(),
+      Presence<BigInt> maxTextBytes = const Presence.absent(),
       Presence<String> mode = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
+      Presence<Object?> no = const Presence.absent(),
       Presence<bool> none = const Presence.absent(),
       Presence<String> optionsField = const Presence.absent(),
       Presence<Threshold> relationThreshold = const Presence.absent(),
@@ -2516,21 +2520,29 @@ final class Options extends _NativeValue {
       Presence<BigInt> snippetPieces = const Presence.absent(),
       Presence<RecognitionContext> stageContext = const Presence.absent(),
       Presence<Threshold> threshold = const Presence.absent(),
-      Presence<BigInt> top = const Presence.absent()})
+      Presence<BigInt> top = const Presence.absent(),
+      Presence<Object?> yes = const Presence.absent()})
       : super({
           if (attempts.isPresent) "attempts": attempts.value,
           if (batch.isPresent) "batch": batch.value,
           if (context.isPresent) "context": context.value,
           if (contextField.isPresent) "context_field": contextField.value,
           if (deadlineMs.isPresent) "deadline_ms": deadlineMs.value,
+          if (entityDefinition.isPresent)
+            "entity_definition": entityDefinition.value,
           if (examples.isPresent) "examples": examples.value,
           if (examplesField.isPresent) "examples_field": examplesField.value,
           if (field.isPresent) "field": field.value,
           if (filesOnly.isPresent) "files_only": filesOnly.value,
+          if (instructions.isPresent) "instructions": instructions.value,
+          if (labels.isPresent) "labels": labels.value,
+          if (levels.isPresent) "levels": levels.value,
           if (maxRequestsTotal.isPresent)
             "max_requests_total": maxRequestsTotal.value,
+          if (maxTextBytes.isPresent) "max_text_bytes": maxTextBytes.value,
           if (mode.isPresent) "mode": mode.value,
           if (model.isPresent) "model": model.value,
+          if (no.isPresent) "no": no.value,
           if (none.isPresent) "none": none.value,
           if (optionsField.isPresent) "options_field": optionsField.value,
           if (relationThreshold.isPresent)
@@ -2541,7 +2553,8 @@ final class Options extends _NativeValue {
           if (snippetPieces.isPresent) "snippet_pieces": snippetPieces.value,
           if (stageContext.isPresent) "stage_context": stageContext.value,
           if (threshold.isPresent) "threshold": threshold.value,
-          if (top.isPresent) "top": top.value
+          if (top.isPresent) "top": top.value,
+          if (yes.isPresent) "yes": yes.value
         });
   Presence<bool> get attempts => _fields.containsKey("attempts")
       ? Presence.present(_fields["attempts"] as bool)
@@ -2558,6 +2571,10 @@ final class Options extends _NativeValue {
   Presence<BigInt> get deadlineMs => _fields.containsKey("deadline_ms")
       ? Presence.present(_readInteger(_fields["deadline_ms"]))
       : const Presence.absent();
+  Presence<String> get entityDefinition =>
+      _fields.containsKey("entity_definition")
+          ? Presence.present(_fields["entity_definition"] as String)
+          : const Presence.absent();
   Presence<List<RecognitionExample>> get examples => _fields
           .containsKey("examples")
       ? Presence.present((_fields["examples"] as List)
@@ -2575,15 +2592,34 @@ final class Options extends _NativeValue {
   Presence<bool> get filesOnly => _fields.containsKey("files_only")
       ? Presence.present(_fields["files_only"] as bool)
       : const Presence.absent();
+  Presence<String> get instructions => _fields.containsKey("instructions")
+      ? Presence.present(_fields["instructions"] as String)
+      : const Presence.absent();
+  Presence<List<OptionSchema2>> get labels => _fields.containsKey("labels")
+      ? Presence.present((_fields["labels"] as List)
+          .map((v) => OptionSchema2.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
+  Presence<List<OptionSchema2>> get levels => _fields.containsKey("levels")
+      ? Presence.present((_fields["levels"] as List)
+          .map((v) => OptionSchema2.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
   Presence<BigInt> get maxRequestsTotal =>
       _fields.containsKey("max_requests_total")
           ? Presence.present(_readInteger(_fields["max_requests_total"]))
           : const Presence.absent();
+  Presence<BigInt> get maxTextBytes => _fields.containsKey("max_text_bytes")
+      ? Presence.present(_readInteger(_fields["max_text_bytes"]))
+      : const Presence.absent();
   Presence<String> get mode => _fields.containsKey("mode")
       ? Presence.present(_fields["mode"] as String)
       : const Presence.absent();
   Presence<String> get model => _fields.containsKey("model")
       ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<Object?> get no => _fields.containsKey("no")
+      ? Presence.present(_fields["no"])
       : const Presence.absent();
   Presence<bool> get none => _fields.containsKey("none")
       ? Presence.present(_fields["none"] as bool)
@@ -2617,6 +2653,9 @@ final class Options extends _NativeValue {
   Presence<BigInt> get top => _fields.containsKey("top")
       ? Presence.present(_readInteger(_fields["top"]))
       : const Presence.absent();
+  Presence<Object?> get yes => _fields.containsKey("yes")
+      ? Presence.present(_fields["yes"])
+      : const Presence.absent();
   Map<String, Object?> get extensions => Map.unmodifiable({
         for (final entry in _fields.entries)
           if (![
@@ -2625,13 +2664,19 @@ final class Options extends _NativeValue {
             "context",
             "context_field",
             "deadline_ms",
+            "entity_definition",
             "examples",
             "examples_field",
             "field",
             "files_only",
+            "instructions",
+            "labels",
+            "levels",
             "max_requests_total",
+            "max_text_bytes",
             "mode",
             "model",
+            "no",
             "none",
             "options_field",
             "relation_threshold",
@@ -2640,7 +2685,8 @@ final class Options extends _NativeValue {
             "snippet_pieces",
             "stage_context",
             "threshold",
-            "top"
+            "top",
+            "yes"
           ].contains(entry.key))
             entry.key: entry.value
       });

@@ -54,7 +54,7 @@ pub(crate) fn remaining(
 /// it in a separate statement before the work it should bound.
 pub(crate) fn register(connection: &Catalog<'_>) -> rusqlite::Result<()> {
     let owner = Arc::new(Budget::default());
-    let flags = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
+    let flags = FunctionFlags::SQLITE_UTF8;
     connection.create_scalar_function("thinkthen_budget_ms", 1, flags, "Set the connection deadline budget in milliseconds.", move |context: &Context<'_>| {
         Ok(guard("thinkthen_budget_ms", || {
             let value = match context.get_raw(0) {

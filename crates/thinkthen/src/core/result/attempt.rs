@@ -79,6 +79,12 @@ impl AttemptObservation {
         self.outcome
     }
 
+    /// Whether connection or body transport failed, excluding an admitted reply-byte refusal.
+    #[must_use]
+    pub const fn transport_failed(&self) -> bool {
+        self.transport_failed
+    }
+
     /// HTTP status, when a response was received.
     #[must_use]
     pub const fn status(&self) -> Option<u16> {

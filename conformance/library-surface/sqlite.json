@@ -1,0 +1,12 @@
+{
+  "databases": {
+    "sqlite": {
+      "root": "databases/sqlite",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ]
+    }
+  }
+}

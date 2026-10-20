@@ -903,13 +903,19 @@ pub struct thinkthen_request_call_options_v1 {
     pub m_context: *const thinkthen_request_text_v1,
     pub m_context_field: *const thinkthen_request_text_v1,
     pub m_deadline_ms: *const thinkthen_request_integer_v1,
+    pub m_entity_definition: *const thinkthen_request_text_v1,
     pub m_examples: *const thinkthen_request_recognition_example_list_v1,
     pub m_examples_field: *const thinkthen_request_text_v1,
     pub m_field: *const thinkthen_request_text_list_v1,
     pub m_files_only: *const thinkthen_request_boolean_v1,
+    pub m_instructions: *const thinkthen_request_text_v1,
+    pub m_labels: *const thinkthen_request_option_schema_2_list_v1,
+    pub m_levels: *const thinkthen_request_option_schema_2_list_v1,
     pub m_max_requests_total: *const thinkthen_request_unsigned_v1,
+    pub m_max_text_bytes: *const thinkthen_request_unsigned_v1,
     pub m_mode: *const thinkthen_request_recognition_mode_v1,
     pub m_model: *const thinkthen_request_text_v1,
+    pub m_no: *const thinkthen_request_call_options_no_v1,
     pub m_none: *const thinkthen_request_boolean_v1,
     pub m_options_field: *const thinkthen_request_text_v1,
     pub m_relation_threshold: *const thinkthen_request_call_threshold_v1,
@@ -919,6 +925,7 @@ pub struct thinkthen_request_call_options_v1 {
     pub m_stage_context: *const thinkthen_request_recognition_stage_context_v1,
     pub m_threshold: *const thinkthen_request_call_threshold_v1,
     pub m_top: *const thinkthen_request_unsigned_v1,
+    pub m_yes: *const thinkthen_request_call_options_yes_v1,
 }
 pub const THINKTHEN_REQUEST_CALL_THRESHOLD_NUMBER_V1: u32 = 1;
 pub const THINKTHEN_REQUEST_CALL_THRESHOLD_TEXT_V1: u32 = 2;
@@ -938,6 +945,12 @@ impl std::fmt::Debug for thinkthen_request_call_threshold_data_v1 {
 pub struct thinkthen_request_call_threshold_v1 {
     pub kind: u32,
     pub data: thinkthen_request_call_threshold_data_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_option_schema_2_v1 {
+    pub m_description: *const thinkthen_request_option_schema_2_description_v1,
+    pub m_name: *const thinkthen_request_text_v1,
 }
 pub const THINKTHEN_REQUEST_INPUT_TEXT_V1: u32 = 1;
 pub const THINKTHEN_REQUEST_INPUT_JSON_V1: u32 = 2;
@@ -1308,6 +1321,27 @@ pub struct thinkthen_request_literal_boundary_only_v1 {
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_literal_max_v1 {
     pub reserved: u32,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_option_schema_2_list_v1 {
+    pub data: *const *const thinkthen_request_option_schema_2_v1,
+    pub len: usize,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_call_options_no_v1 {
+    pub value: *const thinkthen_complete_json_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_call_options_yes_v1 {
+    pub value: *const thinkthen_complete_json_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_option_schema_2_description_v1 {
+    pub value: *const thinkthen_complete_json_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -2415,16 +2449,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_annotate_definition_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "questions".into(),
-                        read_thinkthen_request_annotate_question_map_v1(
-                            input.m_questions,
-                            context,
-                        )?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "questions".into(),
+                    read_thinkthen_request_annotate_question_map_v1(input.m_questions, context)?,
+                )];
                 optional(
                     "batch",
                     input.m_batch,
@@ -3140,13 +3168,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_recognize_definition_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "recognize".into(),
-                        read_thinkthen_request_recognize_question_v1(input.m_recognize, context)?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "recognize".into(),
+                    read_thinkthen_request_recognize_question_v1(input.m_recognize, context)?,
+                )];
                 optional(
                     "context_schema",
                     input.m_context_schema,
@@ -3473,13 +3498,10 @@ pub(super) unsafe fn read_thinkthen_request_definition_authored_relate_v1(
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
         unsafe {
             Ok({
-                let mut fields = vec![
-                    (
-                        "relate".into(),
-                        read_thinkthen_request_relate_question_v1(input.m_relate, context)?,
-                    ),
-                    ("version".into(), Value::literal("1")?),
-                ];
+                let mut fields = vec![(
+                    "relate".into(),
+                    read_thinkthen_request_relate_question_v1(input.m_relate, context)?,
+                )];
                 optional(
                     "context_schema",
                     input.m_context_schema,
@@ -4031,6 +4053,13 @@ pub(super) unsafe fn read_thinkthen_request_call_options_v1(
                     read_thinkthen_request_integer_v1,
                 )?;
                 optional(
+                    "entity_definition",
+                    input.m_entity_definition,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
                     "examples",
                     input.m_examples,
                     context,
@@ -4059,8 +4088,36 @@ pub(super) unsafe fn read_thinkthen_request_call_options_v1(
                     read_thinkthen_request_boolean_v1,
                 )?;
                 optional(
+                    "instructions",
+                    input.m_instructions,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "labels",
+                    input.m_labels,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_option_schema_2_list_v1,
+                )?;
+                optional(
+                    "levels",
+                    input.m_levels,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_option_schema_2_list_v1,
+                )?;
+                optional(
                     "max_requests_total",
                     input.m_max_requests_total,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_unsigned_v1,
+                )?;
+                optional(
+                    "max_text_bytes",
+                    input.m_max_text_bytes,
                     context,
                     &mut fields,
                     read_thinkthen_request_unsigned_v1,
@@ -4078,6 +4135,13 @@ pub(super) unsafe fn read_thinkthen_request_call_options_v1(
                     context,
                     &mut fields,
                     read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "no",
+                    input.m_no,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_call_options_no_v1,
                 )?;
                 optional(
                     "none",
@@ -4142,6 +4206,13 @@ pub(super) unsafe fn read_thinkthen_request_call_options_v1(
                     &mut fields,
                     read_thinkthen_request_unsigned_v1,
                 )?;
+                optional(
+                    "yes",
+                    input.m_yes,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_call_options_yes_v1,
+                )?;
                 Value::Object(fields)
             })
         }
@@ -4164,6 +4235,32 @@ pub(super) unsafe fn read_thinkthen_request_call_threshold_v1(
                     read_thinkthen_request_text_v1(input.data.text, context)?
                 }
                 _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_option_schema_2_v1(
+    pointer: *const thinkthen_request_option_schema_2_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let mut fields = vec![(
+                    "name".into(),
+                    read_thinkthen_request_text_v1(input.m_name, context)?,
+                )];
+                optional(
+                    "description",
+                    input.m_description,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_option_schema_2_description_v1,
+                )?;
+                Value::Object(fields)
             })
         }
     })
@@ -5029,6 +5126,85 @@ pub(super) unsafe fn read_thinkthen_request_literal_max_v1(
     let _ = unsafe { borrow(pointer)? };
     let _ = context;
     Value::literal("\"max\"")
+}
+pub(super) unsafe fn read_thinkthen_request_option_schema_2_list_v1(
+    pointer: *const thinkthen_request_option_schema_2_list_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let mut values = Vec::new();
+                for item in extent(input.data, input.len)? {
+                    values.push(read_thinkthen_request_option_schema_2_v1(*item, context)?);
+                }
+                Value::Array(values)
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_call_options_no_v1(
+    pointer: *const thinkthen_request_call_options_no_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_call_options_yes_v1(
+    pointer: *const thinkthen_request_call_options_yes_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_option_schema_2_description_v1(
+    pointer: *const thinkthen_request_option_schema_2_description_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
+    })
 }
 pub(super) unsafe fn read_thinkthen_request_literal_line_v1(
     pointer: *const thinkthen_request_literal_line_v1,

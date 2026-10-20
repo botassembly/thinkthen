@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from inputs import HERE, PLATFORMS, authority, selected, versions
-from release_pack_cases import REPO, copy_packer, pack, reject_lane_cleanup
+from release_pack_cases import CARGO, REPO, child_env, copy_packer, pack, reject_lane_cleanup
 from validate_inputs import archive_tree
 
 TARGET = 'x86_64-unknown-linux-gnu'
@@ -42,10 +42,10 @@ class Cases(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.home = self.root / 'home'
         self.home.mkdir()
-        self.env = {'PATH': os.environ.get('PATH', '/usr/bin:/bin'), 'HOME': str(self.home), 'LC_ALL': 'C.UTF-8',
-                    'PYTHONDONTWRITEBYTECODE': '1', 'GIT_CONFIG_NOSYSTEM': '1', 'GIT_CONFIG_GLOBAL': '/dev/null',
-                    'CARGO_NET_OFFLINE': 'true', 'RUSTC_WRAPPER': '', 'THINKTHEN_API_KEY': 'sk-loopback-0403-fixture',
-                    'THINKTHEN_BASE_URL': BACKEND}
+        self.env = child_env(keep=CARGO, home=self.home, LC_ALL='C.UTF-8',
+                             PYTHONDONTWRITEBYTECODE='1', GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL='/dev/null',
+                             CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+                             THINKTHEN_API_KEY='sk-loopback-0403-fixture', THINKTHEN_BASE_URL=BACKEND)
 
 
     def tearDown(self):
@@ -58,14 +58,28 @@ class Cases(unittest.TestCase):
         env = {**self.env, 'PATH': f'{self.root}/shim:{self.env["PATH"]}',
                'THINKTHEN_TOOLCHAINS': str(self.root / 'missing-tools')}
         entry = ['/bin/sh', str(HERE.parent / 'check.sh'), '9000']
-        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid'})
+        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid',
+                             'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn('unknown THINKTHEN_TEST_PROFILE', result.stderr)
+        self.assertEqual(result.stdout, '', 'an invalid profile started tool setup')
+        self.assertEqual(result.stderr, 'duckdb: unknown THINKTHEN_TEST_PROFILE: invalid\n')
         for profile in ('routine', 'full', 'stress', 'smoke'):
+            with self.subTest(profile=profile, input='missing artifact'):
+                artifact = self.root / 'selected.tar.gz'
+                result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                     'THINKTHEN_ARTIFACT': str(artifact)})
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout,
+                                 f'databases/duckdb: missing input THINKTHEN_ARTIFACT: {artifact}\n')
+                self.assertEqual(result.stderr, '')
+            # The prepared PATH and compiler sentinel belong to this missing-host
+            # fixture. It exercises host refusal, without provisioning gate tools.
             result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
-                                 'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
-            self.assertEqual(result.returncode, 77, result.stderr)
-            self.assertIn('toolchain is missing', result.stdout)
+                                 'THINKTHEN_RESOLVED_TOOLS': 'duckdb'})
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertEqual(result.stdout, 'not run: the DuckDB v1.5.6 toolchain is missing; '
+                             'run databases/duckdb/tools/setup.sh --fetch\n')
+            self.assertEqual(result.stderr, '')
         self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
         result = run([sys.executable, str(HERE / 'source_hosts.py')],
                      {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
@@ -282,6 +296,14 @@ class Cases(unittest.TestCase):
         script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
         script(shim / 'cargo', "printf '%s\\n' '" + json.dumps(metadata) + "'")
         env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_TOOLCHAINS': str(cache)}
+        steps = tree / 'sdlc/scripts/release-pack.d'
+        saved_steps = self.root / 'saved-steps'
+        steps.rename(saved_steps)
+        result = pack(tree, TARGET, self.root / 'missing-steps', env)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn(f'release-pack: missing step {steps}/*', result.stderr)
+        self.assertEqual(list((self.root / 'missing-steps').glob('*.tar.gz*')), [])
+        saved_steps.rename(steps)
         result = pack(tree, TARGET, self.root / 'positive', env)
         self.assertEqual(result.returncode, 0, result.stderr)
         archive = self.root / 'positive' / f'thinkthen-duckdb-0.2.0-{TARGET}.tar.gz'

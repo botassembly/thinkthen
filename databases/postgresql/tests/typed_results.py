@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / 'databases/duckdb/tools'))
 from receipt_adapter import row_observations
 SCHEMA = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
 DEFINITIONS = SCHEMA['$defs']
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
+sys.path.insert(0, str(ROOT / 'build-tools/results/templates'))
 from postgresql import sql_schema
 SQL_DEFINITIONS = sql_schema(SCHEMA)['$defs']
 

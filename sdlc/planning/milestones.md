@@ -169,6 +169,34 @@ Exit criteria:
 2. The release qualification ticket passes on one frozen main revision: every language library builds natively and passes its installed tests on every platform it supports, with the rehearsal and the hosted Linux jobs on the same revision. Coverage does not gate it.
 3. The artifact QA control job passes on the tag, and Ian gives the go to publish.
 
+### Batches
+
+Each wave holds tickets whose claims do not collide and whose dependencies sit in earlier waves. Develop a wave's tickets in parallel and land them four to six per gate. ThinkThen gets about two M5 jobs at a time, so keep at most two lanes in a heavy proof at once. Tickets that share a smaller file (`sdlc/scripts/children`, `sdlc/scripts/release-workflow`, `site/src/data/build-lines.mjs`, the coverage scripts, `build-tools/results/generate.py`) sit in different waves; within a wave, land any pair that shares a file in sequence.
+
+1. 0705, 0726, 0727, 0702, 0603, 0564: fixture limits, the job entrypoint, per-language migration files, SQLite schema calls, gate step timing, outside-in tests. 0728 opens wave 2 because it needs 0727 and shares `sdlc/scripts/tools.py` with 0726.
+2. 0728, 0622, 0636, 0708, 0710: per-language build data, the Intel smoke, settled answers in conformance, stored key versions, one installer copy.
+3. 0619, 0720: the pinned Linux container and the configuration schema member.
+4. 0639, 0691, 0621, 0642, 0723: the command-line crate split, checkpoint runs, Linux parity timeouts, the packet oracle, command tags.
+5. 0701, 0704, 0634, 0641: C linker tools, file versions, the binding guide, C archive linking.
+6. 0620, 0633, 0640, 0689: the release workflow, the musl toolchain, the installed C gate, the value tree.
+7. 0632, 0707: installer archives and the result tag.
+8. 0709, 0721: C names and backend profiles.
+9. 0719: the request contract and `wording_version`.
+10. 0724, 0725: small stored tags and the header digest.
+11. 0688: the core freeze.
+12. 0577, 0591, 0644, 0645, 0649, 0650: DuckDB and PostgreSQL cleanup, Ada and COBOL packaging.
+13. 0647, 0648, 0651, 0653, 0657, 0660: PostgreSQL replay, Ada and COBOL calls, C++ and Go packaging, Python wheels.
+14. 0652, 0658, 0662, 0664, 0666, 0669: COBOL warnings, Go and Python calls, TypeScript and Zig and C# packaging.
+15. 0655, 0656, 0661, 0665, 0667, 0670: C++ and Zig and TypeScript calls, the Go gate, Python types, Dart packaging.
+16. 0663, 0668, 0671, 0672, 0674, 0676: TypeScript errors, C# and Dart and Objective-C calls, the JVM build, the MCP client.
+17. 0673, 0675, 0677, 0679, 0680, 0681: JVM calls, Objective-C and PHP and R packaging, Polars.
+18. 0678, 0682, 0683, 0686, 0693, 0695: PHP and R and Ruby and Swift calls, DuckDB answers, SQLite replay.
+19. 0684, 0685, 0690, 0694, 0711, 0713: Ruby and Swift packaging, old C paths, DuckDB replay, answer exceptions, the R dumper.
+20. 0712, 0714, 0715, 0716, 0717, 0722: Ruby, Zig, Objective-C and JVM dumpers, SQLite and PostgreSQL stubs.
+21. 0718, 0578: the Swift dumper and the registry pages.
+22. 0687: qualification.
+23. 0575: the site and public text.
+
 ## 0.2.2
 
 Outcome: the docs and site sell one idea after 0.2.1 ships: put Jev-class decision models in your code, whatever model, language or database you use. This is the first thing committed after 0.2.1 goes out, ideally a docs-only change with no new release. Jarvis owns it as the docs team; the release team does not work on it (Ian, 2026-10-12).

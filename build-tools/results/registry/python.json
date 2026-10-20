@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "inputs",
+    "path": "libraries/python/thinkthen/_named_generated.py",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/python/src/results_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/python/thinkthen/_native_results.py",
+    "producer": "results"
+  },
+  {
+    "mode": "results",
+    "path": "libraries/python/thinkthen/_native_results.pyi",
+    "producer": "results"
+  }
+]

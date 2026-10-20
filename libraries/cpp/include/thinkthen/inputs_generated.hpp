@@ -42,6 +42,7 @@ namespace tt::inputs {
     class EngineSettings;
     class ImageMedia;
     class OptionSchema;
+    class OptionSchema2;
     class ReaderMedia;
     class RecognitionExample;
     class RecognitionExampleEntity;
@@ -102,9 +103,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         AnnotateDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         AnnotateDefinition& set_batch(const Data& value);
@@ -428,9 +426,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         AuthoredRelate():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         AuthoredRelate& set_context_schema(const AuthoredInputDeclaration& value);
@@ -570,6 +565,17 @@ namespace tt::inputs {
         OptionSchema& set_description(const Data& value);
         OptionSchema& set_name(const std::string& value);
     };
+    class OptionSchema2 : public Node {
+        OptionSchema2(const Data& value, int):Node(value) {
+        }
+        friend struct ::tt::results::detail::Loader;
+        public:
+        OptionSchema2():Node(Data(Data::Object{
+        })) {
+        }
+        OptionSchema2& set_description(const Data& value);
+        OptionSchema2& set_name(const std::string& value);
+    };
     class ReaderMedia : public Node {
         ReaderMedia(const Data& value, int):Node(value) {
         }
@@ -645,9 +651,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RecognizeDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RecognizeDefinition& set_context_schema(const AuthoredInputDeclaration& value);
@@ -753,9 +756,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionAnnotateDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionAnnotateDefinition& set_batch(const Data& value);
@@ -828,9 +828,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionAuthoredRelate():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionAuthoredRelate& set_context_schema(const AuthoredInputDeclaration& value);
@@ -887,9 +884,6 @@ namespace tt::inputs {
         friend struct ::tt::results::detail::Loader;
         public:
         RequestDefinitionRecognizeDefinition():Node(Data(Data::Object{
-            {
-                "version",Data(1)
-            }
         })) {
         }
         RequestDefinitionRecognizeDefinition& set_context_schema(const AuthoredInputDeclaration& value);
@@ -1090,13 +1084,19 @@ namespace tt::inputs {
         RequestOptions& set_context(const std::string& value);
         RequestOptions& set_context_field(const std::string& value);
         RequestOptions& set_deadline_ms(const int64_t& value);
+        RequestOptions& set_entity_definition(const std::string& value);
         RequestOptions& set_examples(const std::vector<RecognitionExample>& value);
         RequestOptions& set_examples_field(const std::string& value);
         RequestOptions& set_field(const std::vector<std::string>& value);
         RequestOptions& set_files_only(const bool& value);
+        RequestOptions& set_instructions(const std::string& value);
+        RequestOptions& set_labels(const std::vector<OptionSchema2>& value);
+        RequestOptions& set_levels(const std::vector<OptionSchema2>& value);
         RequestOptions& set_max_requests_total(const uint64_t& value);
+        RequestOptions& set_max_text_bytes(const uint64_t& value);
         RequestOptions& set_mode(const RecognitionMode& value);
         RequestOptions& set_model(const std::string& value);
+        RequestOptions& set_no(const Data& value);
         RequestOptions& set_none(const bool& value);
         RequestOptions& set_options_field(const std::string& value);
         RequestOptions& set_relation_threshold(const RequestThreshold& value);
@@ -1106,6 +1106,7 @@ namespace tt::inputs {
         RequestOptions& set_stage_context(const RecognitionStageContext& value);
         RequestOptions& set_threshold(const RequestThreshold& value);
         RequestOptions& set_top(const uint64_t& value);
+        RequestOptions& set_yes(const Data& value);
     };
     class RequestOriginal : public Node {
         RequestOriginal(const Data& value, int):Node(value) {
@@ -1849,6 +1850,14 @@ namespace tt::inputs {
         set_member("name",results::detail::encode(value));
         return *this;
     }
+    inline OptionSchema2& OptionSchema2::set_description(const Data& value) {
+        set_member("description",results::detail::encode(value));
+        return *this;
+    }
+    inline OptionSchema2& OptionSchema2::set_name(const std::string& value) {
+        set_member("name",results::detail::encode(value));
+        return *this;
+    }
     inline ReaderMedia::ReaderMedia(const std::string& value):Node(results::detail::encode(value)) {
     }
     inline RecognitionExample::RecognitionExample(const std::variant<std::string, RecognitionExampleText>& value):Node(results::detail::encode(value)) {
@@ -2457,6 +2466,10 @@ namespace tt::inputs {
         set_member("deadline_ms",results::detail::encode(value));
         return *this;
     }
+    inline RequestOptions& RequestOptions::set_entity_definition(const std::string& value) {
+        set_member("entity_definition",results::detail::encode(value));
+        return *this;
+    }
     inline RequestOptions& RequestOptions::set_examples(const std::vector<RecognitionExample>& value) {
         set_member("examples",results::detail::encode(value));
         return *this;
@@ -2473,8 +2486,24 @@ namespace tt::inputs {
         set_member("files_only",results::detail::encode(value));
         return *this;
     }
+    inline RequestOptions& RequestOptions::set_instructions(const std::string& value) {
+        set_member("instructions",results::detail::encode(value));
+        return *this;
+    }
+    inline RequestOptions& RequestOptions::set_labels(const std::vector<OptionSchema2>& value) {
+        set_member("labels",results::detail::encode(value));
+        return *this;
+    }
+    inline RequestOptions& RequestOptions::set_levels(const std::vector<OptionSchema2>& value) {
+        set_member("levels",results::detail::encode(value));
+        return *this;
+    }
     inline RequestOptions& RequestOptions::set_max_requests_total(const uint64_t& value) {
         set_member("max_requests_total",results::detail::encode(value));
+        return *this;
+    }
+    inline RequestOptions& RequestOptions::set_max_text_bytes(const uint64_t& value) {
+        set_member("max_text_bytes",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_mode(const RecognitionMode& value) {
@@ -2483,6 +2512,10 @@ namespace tt::inputs {
     }
     inline RequestOptions& RequestOptions::set_model(const std::string& value) {
         set_member("model",results::detail::encode(value));
+        return *this;
+    }
+    inline RequestOptions& RequestOptions::set_no(const Data& value) {
+        set_member("no",results::detail::encode(value));
         return *this;
     }
     inline RequestOptions& RequestOptions::set_none(const bool& value) {
@@ -2519,6 +2552,10 @@ namespace tt::inputs {
     }
     inline RequestOptions& RequestOptions::set_top(const uint64_t& value) {
         set_member("top",results::detail::encode(value));
+        return *this;
+    }
+    inline RequestOptions& RequestOptions::set_yes(const Data& value) {
+        set_member("yes",results::detail::encode(value));
         return *this;
     }
     inline RequestOriginal::RequestOriginal(const RequestOriginalText& value):Node(::tt::results::detail::document(value)) {

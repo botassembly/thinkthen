@@ -4,15 +4,19 @@
 
 ## Recommended development 0.2 API
 
-Use the owned `thinkthen_session_*` interface for all ten judgments. Pass length-delimited canonical Request JSON to `thinkthen_session_new`; the shared [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The [session contract](../../sdlc/planning/adr/0129-owned-json-sessions.md) owns streaming, packet ordering and terminal results. These development interfaces do not describe a published 0.2 package.
+At library load, call `thinkthen_version` once with a writable `uint32_t`. Compare its output exactly with `THINKTHEN_INTERFACE_NUMBER` from the installed header before creating an engine or using any other operation. Refuse a mismatch and report the expected number, loaded number and returned library version. A dynamic loader also refuses a library missing this bootstrap symbol. Its signature remains stable across interface changes; the borrowed version string remains valid until unload and must never be freed. Package versions can differ while their interface numbers match. [The C consumer](tests/c/runtime_version.c) shows the check.
 
-`thinkthen_session_new` identifies the caller as C. Language bindings over this interface use `thinkthen_session_new_with_surface` with their length-delimited native `Surface` token, so the engine identifies the outer wrapper accurately. The token describes the caller; it grants no authority and changes no answer or cache identity. The generated header defines both constructors with the same ownership and diagnostic rules.
+C call input uses counted canonical JSON. The [input decision](../../sdlc/decisions/2026-10-19-c-input-json.md) records the choice and the migration boundary for existing typed and component-based entry points.
 
-The constructor copies request input and gives the worker its own engine. After it returns successfully, release the request buffer and the original engine if no other call needs them. For caller-fed input, `thinkthen_session_try_push` retains an owned descriptor only on ACCEPTED; FULL requires retrying that same descriptor, and CLOSED stops the producer. Finish intake with `thinkthen_session_finish`. Read with `thinkthen_session_try_read`: RESULT transfers an independent packet owner, PENDING means try again later, and END follows the terminal packet. Inspect terminal failure and final facts even when the read itself succeeds.
+Use `thinkthen_run_call` for all ten judgments. Supply a `thinkthen_named_request_v1` containing counted canonical function name, question, input and options JSON. The [Request contract](../../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns grammar and admission. The call blocks until Rust settles execution and transfers an independent result or error owner. The [result decision](../../sdlc/decisions/2026-10-19-c-call-owned-json.md) records the representation and its cost.
 
-`thinkthen_session_result_view` borrows the generated complete typed packet graph. Select its `kind` before reading its data union, and check a field’s `presence` before reading its value. Strings and arrays have counted extents; unknown members retain their raw JSON in ordered extension entries at each object depth. Repeated access returns the same immutable view. Every nested pointer remains valid until `thinkthen_session_result_free`.
+Read the complete canonical Call JSON through `thinkthen_call_result_json`, then release it with `thinkthen_call_result_free`. Its bytes survive engine destruction and the original calling thread. They remain valid until the result is freed.
 
-`thinkthen_session_result_json` borrows immutable bytes until `thinkthen_session_result_free`; never pass that borrowed pointer to `thinkthen_free_string`. A packet survives destruction of its session and engine. Cancellation signals work without waiting. Session free closes the receiver without joining native work. Free each session and packet once after concurrent operations and borrowers finish. Immediate API refusals use the borrowed calling-thread `thinkthen_session_error_message`; execution failures belong to terminal packets.
+For fed input, declare a named feed in the input JSON and supply a producer. It returns one counted canonical `RequestItem` JSON value, end, or failure. The producer runs only on the thread calling `thinkthen_run_call`; its bytes remain readable until its next invocation or call return. Keep private host exceptions in the host and return the failure status. Async hosts dedicate one worker to the blocking call. Another thread may fire `thinkthen_call_cancel_fire` on the shared cancellation owner. Keep the engine and token alive until the call and every concurrent operation return.
+
+On failure, read kind, safe message, retryability and optional native Facts JSON from the `thinkthen_call_error_*` accessors and free the error with `thinkthen_call_error_free`. The immutable owner may move to another thread. This call never changes legacy thread-local error slots. Both output slots must be distinct writable storage. Success publishes only result; failure publishes only error. Initialize both slots before calling.
+
+The older session and generated view exports remain for migrating language hosts. Their ABI ownership and pointer safety rules still apply until retirement.
 
 `thinkthen_request_plan_json` previews canonical Requests for fixed atomic decide, choose, tag and score questions only. Other judgments and dynamic question definitions refuse; this preview limit does not limit the ten-judgment session API. It reads no key or cache and sends nothing. Its successful plan string is owned: free it with `thinkthen_free_string`.
 
@@ -28,7 +32,7 @@ PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
 ./consumer
 ```
 
-[examples/session.c](examples/session.c) is a complete caller using the recommended typed packet views and terminal failure facts. Supply the backend environment before a live call. The focused local package check runs that caller and the existing typed owner case against an extracted archive with a synthetic loopback backend:
+[examples/session.c](examples/session.c) is a complete caller using the blocking call and owned canonical JSON. Supply the backend environment before a live call. The focused local package check runs that caller and the JSON session and plan cases against an extracted archive with a synthetic loopback backend:
 
 ```sh
 python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE

@@ -32,7 +32,7 @@ int main(void) {
     const thinkthen_error_view_v1 *session=thinkthen_session_error_view();
     assert(session && session->code==THINKTHEN_EUSAGE && !session->retryable && !session->facts);
     assert(thinkthen_error_view(NULL)==constructor);
-    thinkthen_engine *engine=thinkthen_engine_new_typed(NULL);
+    thinkthen_engine *engine=thinkthen_engine_new_with("{}");
     assert(engine && thinkthen_error_view(NULL)==NULL && thinkthen_error_view(engine)==NULL);
     assert(thinkthen_session_error_view()==session);
     thinkthen_question *question=(thinkthen_question *)(uintptr_t)7;

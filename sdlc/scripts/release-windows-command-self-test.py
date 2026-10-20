@@ -3,6 +3,7 @@
 
 import hashlib
 import os
+from tools import fixture_path
 from pathlib import Path
 import shutil
 import struct
@@ -54,6 +55,8 @@ def host_setup(base):
     """The native Windows setup fetches the core locks and pinned wheel builder."""
     tools = base / "host-tools"
     tools.mkdir()
+    (tools / "uv").write_text('#!/bin/sh\necho "uv 0.8.22"\n')
+    (tools / "uv").chmod(0o755)
     bodies = {
         "rustc": f'''case $1 in
 -vV) printf 'host: {TARGET}\\n' ;;
@@ -63,10 +66,11 @@ esac''',
         "rustup": 'echo "rustup $*" >> "$WINDOWS_HOST_LOG"',
         "cargo": 'echo "cargo $*" >> "$WINDOWS_HOST_LOG"',
         "python3": f'''if [ "$1" = -m ]; then
-    [ "$*" = "-m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1" ] || exit 92
+    [ "$*" = "-m pip install --disable-pip-version-check maturin==1.9.4 jsonschema==4.23.0 uv==0.8.22" ] || exit 92
     echo "python3 $*" >> "$WINDOWS_HOST_LOG"
     exit 0
 fi
+if [ "$1" = -c ]; then printf '%s/uv\\n' '{tools}'; exit 0; fi
 [ "$1" = - ] || exit 92
 exec '{sys.executable}' "$@"''',
     }
@@ -74,16 +78,17 @@ exec '{sys.executable}' "$@"''',
         (tools / tool).write_text("#!/bin/sh\n" + body + "\n")
         (tools / tool).chmod(0o755)
     log = base / "host-calls"
-    env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
-                        "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log)}
-    expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", TARGET, env=env))
+    env = os.environ | {"PATH": fixture_path(tools),
+                        "RUSTUP_HOME": str(base / "rustup"), "WINDOWS_HOST_LOG": str(log),
+                        "THINKTHEN_RESOLVED_TOOLS": ""}
+    expect(run("sh", str(REPO / "sdlc/scripts/release-workflow"), "setup-stage", "host", TARGET, env=env))
     assert log.read_text().splitlines() == [
         "rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt",
         "cargo fetch --locked --manifest-path Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/c/Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/python/Cargo.toml",
         "cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml",
-        "python3 -m pip install --disable-pip-version-check maturin==1.15.0 jsonschema==4.25.1"]
+        "python3 -m pip install --disable-pip-version-check maturin==1.9.4 jsonschema==4.23.0 uv==0.8.22"]
 
 
 def interruption_routing(smoke, base):
@@ -97,7 +102,7 @@ def interruption_routing(smoke, base):
         smoke.run = lambda args, env, **options: calls.append((args, env, options))
         with contextlib.redirect_stdout(io.StringIO()):
             smoke.interrupt(binary, {"CARGO_NET_OFFLINE": "true"})
-        assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+        assert calls == [(["cargo", "test", "--locked", "--offline", "-p", "thinkthen-cli", "--test", "windows",
                           "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
                           {"CARGO_NET_OFFLINE": "true", "THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary.absolute())},
                           {"timeout": 600})]
@@ -306,6 +311,7 @@ def main():
         for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py",
                      "release-bounded.py", "release-owned-job.py", "registry-readmes.py"):
             shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
+        shutil.copytree(REPO / 'sdlc/scripts/release-pack.d', scripts / 'release-pack.d')
         for relative in ('README.md', 'specification/request.schema.json', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md', 'libraries/typescript/package.json'):
             path = source / relative
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -339,7 +345,7 @@ def main():
         build = base / "build"
         (build / "debug").mkdir(parents=True)
         shutil.copy2(binary, build / "debug/thinkthen.exe")
-        env = os.environ | {"PATH": str(tools) + os.pathsep + os.environ["PATH"],
+        env = os.environ | {"PATH": fixture_path(tools),
                             "CARGO_TARGET_DIR": str(build), "WINDOWS_TEST_BINARY": str(binary)}
         remap_transport(base, source, scripts, tools, env)
         for args in (("--reuse",), ()):

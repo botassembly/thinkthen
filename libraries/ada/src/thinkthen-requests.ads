@@ -269,13 +269,11 @@ Value : T_AnnotateQuestion;
 end record;
 package T_AnnotateQuestion_Map_Vectors is new Ada.Containers.Vectors (Positive, T_AnnotateQuestion_Map_Entry);
 subtype T_AnnotateQuestion_Map is T_AnnotateQuestion_Map_Vectors.Vector;
-type T_Literal_1 is null record;
 type T_AnnotateDefinition is record
 T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
 T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
-T_version : T_Literal_1;
 end record;
 type T_Literal_max is null record;
 type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_max_Case,
@@ -358,7 +356,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_score is record
@@ -475,6 +472,10 @@ type T_OptionSchema is record
 T_description : T_JSON_Optional;
 T_name : T_Text;
 end record;
+type T_OptionSchema2 is record
+T_description : T_JSON_Optional;
+T_name : T_Text;
+end record;
 type T_ReaderMedia is (T_ReaderMedia_text,
 T_ReaderMedia_image);
 type T_RecognitionExampleEntity is record
@@ -538,7 +539,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestFunction is (T_RequestFunction_decide,
@@ -703,6 +703,10 @@ when T_RequestInput_source_Case => V_5 : T_RequestInput_source;
 when T_RequestInput_feed_Case => V_6 : T_RequestInput_feed;
 end case;
 end record;
+package T_OptionSchema2_List_Vectors is new Ada.Containers.Vectors (Positive, T_OptionSchema2);
+subtype T_OptionSchema2_List is T_OptionSchema2_List_Vectors.Vector;
+package T_OptionSchema2_List_Options is new Optional_Values (T_OptionSchema2_List);
+subtype T_OptionSchema2_List_Optional is T_OptionSchema2_List_Options.Optional;
 type T_RequestThreshold_Kind is (T_RequestThreshold_Number_Case,
 T_RequestThreshold_Text_Case);
 type T_RequestThreshold (Kind : T_RequestThreshold_Kind := T_RequestThreshold_Number_Case) is record
@@ -719,13 +723,19 @@ T_batch : T_RequestBatch_Optional;
 T_context : T_Text_Optional;
 T_context_field : T_Text_Optional;
 T_deadline_ms : T_Integer_Optional;
+T_entity_definition : T_Text_Optional;
 T_examples : T_RecognitionExample_List_Optional;
 T_examples_field : T_Text_Optional;
 T_field : T_Text_List_Optional;
 T_files_only : T_Boolean_Optional;
+T_instructions : T_Text_Optional;
+T_labels : T_OptionSchema2_List_Optional;
+T_levels : T_OptionSchema2_List_Optional;
 T_max_requests_total : T_Unsigned_Optional;
+T_max_text_bytes : T_Unsigned_Optional;
 T_mode : T_RecognitionMode_Optional;
 T_model : T_Text_Optional;
+T_no : T_JSON_Optional;
 T_none : T_Boolean_Optional;
 T_options_field : T_Text_Optional;
 T_relation_threshold : T_RequestThreshold_Optional;
@@ -735,6 +745,7 @@ T_snippet_pieces : T_Unsigned_Optional;
 T_stage_context : T_RecognitionStageContext_Optional;
 T_threshold : T_RequestThreshold_Optional;
 T_top : T_Unsigned_Optional;
+T_yes : T_JSON_Optional;
 end record;
 package T_RequestOptions_Options is new Optional_Values (T_RequestOptions);
 subtype T_RequestOptions_Optional is T_RequestOptions_Options.Optional;
@@ -803,7 +814,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_find is record
@@ -826,7 +836,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_AnnotateDefinition is record
@@ -834,7 +843,6 @@ T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
 T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
-T_version : T_Literal_1;
 end record;
 type T_RequestDefinition_Kind is (T_RequestDefinition_Authored_decide_Case,
 T_RequestDefinition_Authored_choose_Case,

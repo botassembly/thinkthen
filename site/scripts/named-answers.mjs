@@ -56,7 +56,7 @@ const CALL = {
   rust: new RegExp(`\\btt\\s*\\.(${FNS})\\(`),
   ruby: new RegExp(`\\bclient\\.(${FNS})\\(`),
   r: new RegExp(`\\btt_(${FNS})\\(`),
-  c: new RegExp(`\\bthinkthen_(call|${FNS})\\(`),
+  c: new RegExp(`\\bthinkthen_(run_call|call|${FNS})\\(`),
   cpp: new RegExp(`\\btt::(call|${FNS})\\(`),
   objc: new RegExp(`\\[\\s*\\w+\\s+(call|plan|${FNS})\\w*:`),
   cobol: new RegExp(`\\bcall\\s+"TT-(CALL|PLAN|${FNS})"`, 'i'),

@@ -9,10 +9,20 @@ use thinkthen::*;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 
+#[path = "request_session/annotation_missing.rs"]
+mod annotation_missing;
+#[path = "request_session/cancel_settlement.rs"]
+mod cancel_settlement;
 #[path = "request_session/framing.rs"]
 mod framing;
+#[path = "request_session/incremental_ranking.rs"]
+mod incremental_ranking;
+#[path = "request_session/incremental_recognition.rs"]
+mod incremental_recognition;
 #[path = "request_session/push.rs"]
 mod push;
+#[path = "request_session/readiness.rs"]
+mod readiness;
 #[path = "request_session/recognize.rs"]
 mod recognize;
 #[path = "request_session/wait.rs"]
@@ -817,7 +827,7 @@ fn question_packets_preserve_unresolved_null_authored_readings_and_partial_usage
 #[test]
 fn annotation_question_packets_preserve_actual_failed_members() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}},"q3":{"type":"noul","noul":0.5}},"usage":{"output_tokens":0}}"#)).unwrap();
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?","threshold":0.7},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
+    let set = QuestionSet::from_json(r#"{"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?","threshold":0.7},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
     let session = engine(&listener)
         .request_session(Request::new(RequestCall::new(
             RequestFunction::Annotate,

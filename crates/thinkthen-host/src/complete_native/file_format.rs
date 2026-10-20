@@ -1,5 +1,6 @@
 //! Explicit SQL file formats select the shared logical framing grammar.
 use thinkthen::{Error, ErrorKind, RequestFraming};
+/// Decode an explicit JSON-encoded SQL file format.
 pub fn framing(format: Option<&str>) -> Result<Option<RequestFraming>, Error> {
     let Some(source) = format else {
         return Ok(None);
@@ -16,10 +17,6 @@ pub fn framing(format: Option<&str>) -> Result<Option<RequestFraming>, Error> {
 }
 
 /// Transport a native original once, retaining ordered JSON and physical coordinates.
-#[allow(
-    dead_code,
-    reason = "only PostgreSQL and DuckDB transport native reader descriptors"
-)]
 pub fn descriptor(
     source: thinkthen::SourceRecord<thinkthen::RawRecord>,
 ) -> Result<serde_json::Value, Error> {

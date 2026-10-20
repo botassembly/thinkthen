@@ -317,8 +317,8 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
                 .starts_with("the backend openai account is out of credit")
         );
         assert_eq!(
-            error.to_string().contains("provider message:"),
-            message == "You have no credits remaining"
+            error.to_string(),
+            "the backend openai account is out of credit; provider type: request_error; provider code: insufficient_quota"
         );
         assert!(!format!("{error:?}").contains("fixture-native-attempts"));
         assert!(!format!("{error:?}").contains("private evidence marker"));
@@ -369,4 +369,77 @@ fn short_private_evidence_is_omitted_from_native_failure_text_and_debug() {
     assert_eq!(error.facts().unwrap().requests_sent(), 1);
     assert_eq!(error.to_string(), "the backend answered with status 400");
     assert!(!format!("{error:?}").contains("S7code!"));
+}
+
+thinkthen::choices! {
+    /// Two labels for fault-arm diagnostics.
+    enum DiagnosticChoice { A => "a", B => "b" }
+}
+
+#[test]
+fn fault_arm_error_debug_and_facts_exclude_provider_prose() {
+    let backend = conformance_backend::Backend::start().unwrap();
+    let question = Question::choose::<DiagnosticChoice>("Which?")
+        .unwrap()
+        .option(DiagnosticChoice::A, None)
+        .unwrap()
+        .option(DiagnosticChoice::B, None)
+        .unwrap()
+        .build()
+        .unwrap();
+    for arm in [
+        "status/401",
+        "status/402",
+        "status/403",
+        "status/404",
+        "refuse",
+        "malformed/missing_answer",
+        "malformed/wrong_kind",
+        "malformed/missing_probability",
+        "malformed/invalid_probability",
+        "malformed/invalid_distribution",
+        "malformed/unexpected_probability",
+    ] {
+        let engine = Engine::builder()
+            .base_url(&format!("{}/arm/{arm}/v1", backend.origin()))
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("sk-loopback-arms")
+            .unwrap()
+            .max_retries(0)
+            .no_cache()
+            .build()
+            .unwrap();
+        let error = engine
+            .choose_with(
+                &question,
+                "private evidence",
+                CallOptions::new().attempts(true),
+            )
+            .unwrap_err();
+        let displays = [
+            error.to_string(),
+            format!("{error:?}"),
+            format!("{:?}", error.facts()),
+            format!("{:?}", error.stopped()),
+        ];
+        for display in displays {
+            for marker in [
+                "sk-loopback-arms",
+                "c2stbG9vcGJhY2stYXJtcw",
+                "sk%2Dloopback%2Darms",
+                "736b2d6c6f6f706261636b2d61726d73",
+                "Authorization",
+                "fixture-header",
+                "fixturelongtoken",
+                "private evidence",
+                "provider message",
+            ] {
+                assert!(!display.contains(marker), "{arm}: {display}");
+            }
+        }
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Backend);
+        assert_eq!(error.facts().unwrap().requests_sent(), 1);
+    }
 }

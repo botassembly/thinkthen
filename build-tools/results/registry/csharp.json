@@ -1,0 +1,22 @@
+[
+  {
+    "mode": "results",
+    "path": "build-tools/results/csharp/CompleteFacts.g.cs",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/csharp/src/RequestInputs.g.cs",
+    "producer": "results"
+  },
+  {
+    "mode": "bridge",
+    "path": "libraries/csharp/src/NativeBridge.g.cs",
+    "producer": "results"
+  },
+  {
+    "mode": "bridge",
+    "path": "libraries/csharp/src/NamedCalls.g.cs",
+    "producer": "results"
+  }
+]

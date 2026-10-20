@@ -103,7 +103,7 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
         assert_eq!(row.result().meta().requests(), std::slice::from_ref(&v2));
         expected_keys.push(v2.clone());
         fixture.push(
-            json!({"key_version":2,"adapter":"systemone","observation_id":match &row.result().identity().observations()[0] { thinkthen::Observation::Answered { observation_id } => observation_id.to_string(), _ => unreachable!() },"key":v2,"url":url,"model":"jev-1.13.0",
+            json!({"adapter":"systemone","observation_id":match &row.result().identity().observations()[0] { thinkthen::Observation::Answered { observation_id } => observation_id.to_string(), _ => unreachable!() },"key":v2,"url":url,"model":"jev-1.13.0",
             "state":state_digest,"question":actual,"answer":ANSWER,
             "answered_by":"jev-1.13.0","input_tokens":null,"output_tokens":null,
             "taken_at":0,"origin":"converted"})

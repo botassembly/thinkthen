@@ -10,9 +10,8 @@ pub(super) fn found(row: &rusqlite::Row<'_>) -> rusqlite::Result<Stored> {
     let key: Vec<u8> = row.get(0)?;
     let identity: String = row.get(5)?;
     let batch: Option<u32> = row.get(6)?;
-    let version: u32 = row.get(7)?;
-    let adapter: String = row.get(8)?;
-    if version != 2 || crate::core::adapters::ApiType::from_name(&adapter).is_none() {
+    let adapter: String = row.get(7)?;
+    if crate::core::adapters::ApiType::from_name(&adapter).is_none() {
         return Ok((key, Err(versioned::invalid())));
     }
     let Some(key_id) = QuestionKey::parse(&crate::core::hex(&key)) else {
@@ -45,13 +44,13 @@ pub(super) fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Res
     let mut state = connection.prepare("SELECT id FROM states WHERE sha256 = ?1")?;
     let mut answer = connection
         .prepare(
-            "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin, key_version, adapter, observation_id, batch_size)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 2, ?12, ?13, ?14)
+            "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin, adapter, observation_id, batch_size)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)
              ON CONFLICT(key) DO UPDATE SET url = excluded.url, model = excluded.model, state = excluded.state,
                question = excluded.question, answer = excluded.answer, answered_by = excluded.answered_by,
                input_tokens = excluded.input_tokens, output_tokens = excluded.output_tokens,
                taken_at = excluded.taken_at, origin = excluded.origin,
-               key_version=2, adapter=excluded.adapter, observation_id=excluded.observation_id, batch_size=excluded.batch_size",
+               adapter=excluded.adapter, observation_id=excluded.observation_id, batch_size=excluded.batch_size",
         )?;
     for row in rows {
         add_state.execute((row.state.sha256().as_slice(), row.state.json()))?;

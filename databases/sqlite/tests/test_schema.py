@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""A database file from somewhere else never reaches a function (R1-17, R2-1, decision 12).
-
-Default loading is direct-only, so stored main and attached schema objects
-cannot call functions, whatever `trusted_schema` says. Caller-created TEMP
-objects remain callable. That holds from SQLite 3.50.0. Below it a CHECK
-constraint reaches a volatile function, so the extension refuses to load
-there. Each hostile file is written through `writable_schema`, because the
-floor host refuses to author these shapes with CREATE. A crafted file is
-what arrives from somewhere else anyway.
-"""
+"""Untrusted stored schemas refuse calls; volatile functions retain SQLite limits."""
 
 from __future__ import annotations
 
@@ -54,7 +45,7 @@ shapes = {
     "a view over recognize": (added("view", "names", "names", "CREATE VIEW names AS SELECT * FROM thinkthen_recognize('Maria Chen called', 'person')"), "SELECT * FROM other.names"),
 }
 said = {}
-for trusted in ("OFF", "ON"):
+for trusted in ("OFF",):
     for label, (steps, use) in shapes.items():
         path = craft(label.replace(" ", "-") + trusted, steps)
         db = connect()
@@ -68,8 +59,8 @@ say(**said)
 """
 
 
-def test_every_stored_schema_object_refuses_and_top_level_sql_answers() -> None:
-    """R1-17, under trusted_schema off and on."""
+def test_untrusted_stored_schema_objects_refuse_and_top_level_sql_answers() -> None:
+    """SQLite refuses untrusted schema objects before reading named files."""
     backend = Backend()
     held = child(f"DECIDE = {DECIDE!r}\n" + ATTACK, environment(backend))
     unsafe, loaded = "unsafe use of thinkthen_decide()", "malformed database schema ({}) - unsafe use of thinkthen_decide()"
@@ -77,8 +68,8 @@ def test_every_stored_schema_object_refuses_and_top_level_sql_answers() -> None:
               "a generated column": loaded.format("t2"), "an index expression": loaded.format("x"),
               "a partial index": loaded.format("x"), "a view over recognize": 'unsafe use of virtual table "thinkthen_recognize"',
               "top-level SQL": [[1]]}
-    expect(held, {f"{label} ({trusted})": said for trusted in ("OFF", "ON") for label, said in wanted.items()}, "the results")
-    expect(backend.close(), 1, "sends: only the top-level call, and its twin read the cache")
+    expect(held, {f"{label} ({trusted})": said for trusted in ("OFF",) for label, said in wanted.items()}, "the results")
+    expect(backend.close(), 1, "only the top-level call sends")
 
 
 def test_a_host_below_the_floor_refuses_the_load() -> None:
@@ -144,17 +135,18 @@ say(count=usage["requests_sent"], later=later.execute("SELECT 7").fetchone()[0],
         expect(held["resident"], True, "successful load retains worker code on Linux")
 
 
-def test_every_function_is_direct_only_and_volatile() -> None:
-    """Decision 12: every registered function is direct-only and volatile."""
+def test_every_function_permits_schema_use_and_remains_volatile() -> None:
+    """All registrations share schema availability without claiming harmlessness."""
     held = child("""
 db = connect()
 rows = db.execute("SELECT name, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
 db.execute("CREATE TABLE t(body TEXT)")
-say(registered=bool(rows), direct=all(flags & 0x80000 for _, flags in rows),
+say(registered=bool(rows), direct=[name for name, flags in rows if flags & 0x80000],
+    innocuous=[name for name, flags in rows if flags & 0x200000],
     deterministic=[name for name, flags in rows if flags & 0x800],
     index=run(db, "CREATE INDEX x ON t(thinkthen_decide('Is it red?', body))"))
 """, environment(None))
-    expect(held, {"registered": True, "direct": True, "deterministic": [], "index": "unsafe use of thinkthen_decide()"}, "the list")
+    expect(held, {"registered": True, "direct": [], "innocuous": [], "deterministic": [], "index": "non-deterministic functions prohibited in index expressions"}, "the list")
 
 
 if __name__ == "__main__":

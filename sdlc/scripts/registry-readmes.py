@@ -185,15 +185,30 @@ def check_package(family, path, root=REPO):
             raise Refusal('missing-or-repeated-nupkg')
         check_nupkg(files[nested[0]], root)
     else:
-        prefix = {'crate': 'thinkthen-' + version(root) + '/', 'r': 'thinkthen/', 'typescript': 'package/', 'flutter': 'flutter/'}.get(family, '')
+        command_source = False
+        if family == 'crate':
+            package = tomllib.loads(unique_suffix(files, 'Cargo.toml').decode())['package']
+            if package['name'] not in ('thinkthen', 'thinkthen-cli'):
+                raise Refusal('unknown-rust-package')
+            command_source = package['name'] == 'thinkthen-cli'
+            prefix = package['name'] + '-' + version(root) + '/'
+        else:
+            prefix = {'r': 'thinkthen/', 'typescript': 'package/', 'flutter': 'flutter/'}.get(family, '')
         name = prefix + 'README.md'
         if name not in files:
             raise Refusal('missing-or-repeated-member: ' + name)
-        check_readme(family, files[name], root)
+        check_readme('command' if command_source else family, files[name], root)
         if family == 'typescript':
             check_description(family, json.loads(unique_suffix(files, 'package.json'))['description'], root)
         elif family == 'crate':
-            check_description(family, tomllib.loads(files[prefix + 'Cargo.toml'].decode())['package']['description'], root)
+            actual = package['description']
+            if command_source:
+                check_text(actual.encode(), version(root))
+                wanted = tomllib.loads((root / 'crates/thinkthen-cli/Cargo.toml').read_text())['package']['description']
+                if actual != wanted:
+                    raise Refusal('description-source-mismatch: command crate')
+            else:
+                check_description(family, actual, root)
         elif family == 'php':
             check_description(family, json.loads(unique_suffix(files, 'composer.json'))['description'], root)
         elif family == 'jvm':
@@ -287,6 +302,7 @@ def host_functions(code, family):
         literals = (r'(?:br|r)(?P<hashes>\#*)"[\s\S]*?"(?P=hashes)|'
                     r'"(?:\\[\s\S]|[^"\\])*"|\'(?:\\(?:u\{[0-9a-fA-F_]+\}|x[0-9a-fA-F]{2}|.)|[^\'\\\n])\'')
     functions = set()
+    named_requests = {}
     if family == 'cobol':
         # Match CALL operands before masking other literals, including DISPLAY text.
         operands = r'\bCALL\s+["\'](?:thinkthen_|tt_)' + FUNCTION_NAMES + r'["\'](?=\s+USING\b)'
@@ -305,6 +321,14 @@ def host_functions(code, family):
                     functions.add(function)
             except (ValueError, TypeError, KeyError):
                 pass
+            # A blocking call's literal name belongs to its explicit request record.
+            # Count it only when that exact record is passed to the exported call.
+            declaration = re.search(r'\bthinkthen_named_request_v1\s+(\w+)\s*=\s*\{\s*\.function\s*=\s*\{\s*$',
+                                    code[:token.start()])
+            if declaration:
+                name = json.loads(token[0])
+                if isinstance(name, str) and re.fullmatch(FUNCTION_NAMES, name):
+                    named_requests[declaration[1]] = name
         return ' '
     if family == 'crate':
         # Rust block comments nest, and their contents are never string tokens.
@@ -328,6 +352,10 @@ def host_functions(code, family):
         code = ''.join(pieces)
     else:
         code = re.sub(literals + '|' + comments, mask, code)
+    if family == 'c':
+        for request in re.findall(r'\bthinkthen_run_call\s*\(\s*[^,;]+,\s*&\s*(\w+)\s*,', code):
+            if request in named_requests:
+                functions.add(named_requests[request])
     suffix = 'Async' if family == 'csharp' else ''
     # Rust turbofish and typed host arguments remain part of the same named call.
     generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?\']+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
@@ -407,6 +435,10 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
     for path in packages.iterdir():
         if not path.is_file() or path.name.endswith('.sha256') or path.name.startswith('thinkthen-first-run'):
             continue
+        # Rust examples consume the library archive. The command source archive
+        # is installed and replayed by the existing crate smoke entrypoint.
+        if family == 'crate' and path.name.startswith('thinkthen-cli-'):
+            continue
         try:
             if archive_family(path) == family:
                 candidates.append(path)
@@ -459,6 +491,9 @@ def unpack_example_package(family, packages, destination, selected=None, text_fa
     return pages[0].parent if len(pages) == 1 else destination
 
 
+TERMINATION_GRACE = 1
+
+
 def run_process(command, work, env, input, timeout):
     with subprocess.Popen(command, cwd=work, env=env, stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -473,7 +508,7 @@ def run_process(command, work, env, input, timeout):
             except ProcessLookupError:
                 pass
             try:
-                process.communicate(timeout=1)
+                process.communicate(timeout=TERMINATION_GRACE)
             except subprocess.TimeoutExpired:
                 pass
             finally:
@@ -538,8 +573,8 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
            'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8', 'XDG_CACHE_HOME': str(home / '.cache'),
            'XDG_CONFIG_HOME': str(home / '.config'), 'XDG_STATE_HOME': str(home / '.local/state'),
            'THINKTHEN_CACHE': str(cache), 'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
-           'CARGO_HOME': os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
-           'RUSTUP_HOME': os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
+           'CARGO_HOME': (os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo')),
+           'RUSTUP_HOME': (os.environ['RUSTUP_HOME'] if 'RUSTUP_HOME' in os.environ else str(Path.home() / '.rustup')),
            'CARGO_NET_OFFLINE': 'true', 'CARGO_BUILD_JOBS': '2',
            'CARGO_TARGET_DIR': str(root / 'target')}
     env['RUSTUP_TOOLCHAIN'] = tomllib.loads((root / 'rust-toolchain.toml').read_text())['toolchain']['channel']
@@ -569,7 +604,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         env['PATH'] = str(package) + os.pathsep + env['PATH']
         output = run(['bash', '-euo', 'pipefail', str(sample)])
     elif family == 'python':
-        run(['uv', 'venv', '--offline', '--python', '3.12', str(work / 'venv')])
+        run(['uv', 'venv', '--offline', '--python', sys.executable, str(work / 'venv')])
         wheel = next(path for path in packages.iterdir() if path.suffix == '.whl')
         run(['uv', 'pip', 'install', '--offline', '--no-deps', '--python', str(work / 'venv/bin/python'), str(wheel)])
         output = run([str(work / 'venv/bin/python'), str(sample)])
@@ -579,7 +614,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
     elif family in ('php', 'packagist'):
         (work / 'vendor').mkdir()
         (work / 'vendor/autoload.php').symlink_to(package / 'autoload.php')
-        output = run([os.environ.get('THINKTHEN_PHP_BIN', 'php'), '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
+        output = run(['php', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
     elif family == 'typescript':
         (work / 'node_modules').mkdir()
         (work / 'node_modules/thinkthen').symlink_to(package)
@@ -680,7 +715,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         dependency = 'thinkthen_flutter' if family == 'flutter' else 'thinkthen_dart'
         override = '\ndependency_overrides:\n  thinkthen_dart:\n    path: ' + json.dumps(str(core)) if family == 'flutter' else ''
         (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.10.0 <4.0.0"\ndependencies:\n  ' + dependency + ':\n    path: ' + json.dumps(str(package)) + override + '\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ' + json.dumps(str(assets_cache) + '/') + '\n')
-        env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
+        env['PUB_CACHE'] = (os.environ['PUB_CACHE'] if 'PUB_CACHE' in os.environ else str(Path.home() / '.pub-cache'))
         dart = os.environ.get('TT_DART', 'dart')
         env['FLUTTER_SUPPRESS_ANALYTICS'] = 'true'
         pub = os.environ.get('TT_FLUTTER', 'flutter') if family == 'flutter' else dart
@@ -689,7 +724,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         output = run([str(work / 'dart-build/bundle/bin/sample')])
     elif family == 'r':
         (work / 'rlib').mkdir()
-        env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + os.environ.get('R_LIBS', str(Path.home() / '.cache/thinkthen-toolchains/r-library'))
+        env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + (os.environ['R_LIBS'] if 'R_LIBS' in os.environ else str(Path.home() / '.cache/thinkthen-toolchains/r-library'))
         run(['R', 'CMD', 'INSTALL', '-l', str(work / 'rlib'), str(package)], True)
         output = run(['Rscript', '--vanilla', str(sample)])
     elif family == 'sqlite':
@@ -714,7 +749,7 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
         server = next(line.split()[1] for line in pins if line.split()[1].startswith(f'postgresql-{major}_') and line.endswith(f'_{machine}.deb'))
         pin = server.split('_')[1]
         tree = work / 'server'
-        shutil.copytree(Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
+        shutil.copytree(Path((os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ else str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
         for member, suffix in (('lib', f'usr/lib/postgresql/{major}/lib'),
                                ('extension', f'usr/share/postgresql/{major}/extension')):
             shutil.copytree(package / member, tree / suffix, dirs_exist_ok=True)
@@ -734,8 +769,30 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
                 run([str(binaries / 'pg_ctl'), '-D', str(data), '-m', 'immediate', '-w', '-t', '20', 'stop'])
     else:
         raise Refusal('example-preparation-unavailable: ' + family)
+    if family == 'c':
+        check_c_calls(output)
     if expected is not None and output != expected:
         raise Refusal('example-output-mismatch: ' + family)
+
+
+def check_c_calls(output):
+    """Read each complete owned Call; retain the README's six exact answers."""
+    calls = [json.loads(line) for line in output.splitlines()]
+    wanted = [('decide', [True, False, True]), ('choose', ['billing', 'shipping', 'account'])]
+    if len(calls) != len(wanted):
+        raise Refusal('c-example-call-count')
+    for call, (function, values) in zip(calls, wanted):
+        answer = call.get('answer', {})
+        actual = answer.get('value')
+        matches = (isinstance(actual, list) and len(actual) == len(values)
+                   and all(type(got) is type(want) and got == want
+                           for got, want in zip(actual, values)))
+        if (answer.get('function') != function or not matches
+                or call.get('facts', {}).get('records') != len(values)):
+            raise Refusal('c-example-answer-or-facts: ' + json.dumps({
+                'function': answer.get('function'), 'value': actual,
+                'records': call.get('facts', {}).get('records'),
+                'expected_function': function, 'expected_value': values}))
 
 
 def check_examples(packages, root=REPO, families=None):

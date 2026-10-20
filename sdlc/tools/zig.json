@@ -1,0 +1,37 @@
+{
+  "tools": {
+    "zig": {
+      "commands": [
+        "zig"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "lint",
+        "install",
+        "zig"
+      ],
+      "provider": "zig",
+      "version": "0.15.2",
+      "probe": {
+        "argv": [
+          "zig",
+          "version"
+        ],
+        "contains": "{version}"
+      }
+    }
+  },
+  "libraries": {
+    "zig": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    }
+  }
+}

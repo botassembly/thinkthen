@@ -1,7 +1,6 @@
 //! SQL output rows preserve canonical records and native aggregate membership.
-use crate::complete_native::defect;
 use serde_json::{Value, json};
-use thinkthen::{Error, RequestFunction as F, RequestOutcome};
+use thinkthen::{Error, RequestFunction as F};
 
 pub(super) fn complete(
     function: F,
@@ -176,7 +175,7 @@ pub fn typed_values(result: &thinkthen::RequestValue, rows: &mut [Value]) -> Res
 }
 
 /// Project a canonical SQL record into its ordinary value and probability.
-pub fn project_value(function: F, row: &Value) -> (Value, Value) {
+fn project_value(function: F, row: &Value) -> (Value, Value) {
     let answer = row.get("value").cloned().unwrap_or(Value::Null);
     let probability = match function {
         F::Decide | F::Filter | F::Rank => row
@@ -213,52 +212,6 @@ pub fn project_value(function: F, row: &Value) -> (Value, Value) {
         _ => answer,
     };
     (value, probability)
-}
-
-/// Project an ordinary SQL call without changing its aggregate input semantics.
-pub fn project_outcome(
-    function: F,
-    outcome: RequestOutcome,
-    observations: Vec<Value>,
-) -> Result<Vec<Value>, Error> {
-    let (result, facts, failure) = match outcome {
-        RequestOutcome::Complete(call) => {
-            let facts = serde_json::to_value(call.facts().complete()).map_err(|_| defect())?;
-            (call.into_value(), facts, None)
-        }
-        RequestOutcome::Failed { completed, error } => {
-            if matches!(
-                error.kind(),
-                thinkthen::ErrorKind::Cancelled
-                    | thinkthen::ErrorKind::Deadline
-                    | thinkthen::ErrorKind::Defect
-            ) {
-                return Err(error);
-            }
-            let failed = crate::complete_native::failure(&error);
-            (
-                completed,
-                failed.get("facts").cloned().unwrap_or(Value::Null),
-                failed.get("error").cloned(),
-            )
-        }
-    };
-    let mut rows = complete(
-        function,
-        0,
-        serde_json::to_value(&result).map_err(|_| defect())?,
-        &facts,
-        &observations,
-    );
-    typed_values(&result, &mut rows)?;
-    if let Some(failure) = failure {
-        if matches!(function, F::Rank | F::Find | F::Relate) {
-            rows.clear();
-        }
-        rows.push(failed_call(failure, &facts, &observations));
-    }
-    observe_rows(function, &mut rows, &observations);
-    Ok(rows)
 }
 
 fn recognition_probability(row: &Value) -> Value {

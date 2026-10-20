@@ -1,9 +1,41 @@
 """Stop only the Linux private postmaster created by one install check."""
+import ctypes
 import os
 from pathlib import Path
 import select
 import signal
 from install_check import Failure
+
+
+def libc_pidfd(name, *args):
+    # Some standalone Python builds omit these optional Linux wrappers even
+    # when libc and the kernel provide the same process-bound operations.
+    libc = ctypes.CDLL(None, use_errno=True)
+    try:
+        function = getattr(libc, name)
+    except AttributeError as error:
+        raise Failure('PostgreSQL cleanup requires Linux pidfd support') from error
+    function.argtypes = ([ctypes.c_int, ctypes.c_uint] if name == 'pidfd_open'
+                         else [ctypes.c_int, ctypes.c_int, ctypes.c_void_p, ctypes.c_uint])
+    function.restype = ctypes.c_int
+    result = function(*args)
+    if result == -1:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code))
+    return result
+
+
+def open_pidfd(pid):
+    native = getattr(os, 'pidfd_open', None)
+    return native(pid) if native else libc_pidfd('pidfd_open', pid, 0)
+
+
+def signal_pidfd(handle, number):
+    native = getattr(signal, 'pidfd_send_signal', None)
+    if native:
+        native(handle, number)
+    else:
+        libc_pidfd('pidfd_send_signal', handle, number, None, 0)
 
 
 def stop_postgres(check, data, socket, binary):
@@ -26,7 +58,7 @@ def stop_postgres(check, data, socket, binary):
             or fields[4] != str(socket) or fields[5] != ''):
         raise Failure('PostgreSQL cleanup cannot verify this run\'s postmaster PID identity')
     try:
-        handle = os.pidfd_open(int(fields[0]))
+        handle = open_pidfd(int(fields[0]))
     except ProcessLookupError:
         return  # This exact PID has already exited; no process gets a signal.
     try:
@@ -45,7 +77,7 @@ def stop_postgres(check, data, socket, binary):
             raise Failure('PostgreSQL cleanup refuses a process outside this run\'s private cluster')
         # A pidfd binds the signal to this process even if its numeric PID is reused.
         try:
-            signal.pidfd_send_signal(handle, signal.SIGINT)
+            signal_pidfd(handle, signal.SIGINT)
         except ProcessLookupError:
             return
         if not select.select([handle], [], [], 30)[0]:

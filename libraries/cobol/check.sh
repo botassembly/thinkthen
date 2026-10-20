@@ -1,18 +1,21 @@
 #!/bin/sh
 set -eu
+case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 1 ;; *) exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/cobol
+tools_group=cobol
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
-case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'COBOL gate unavailable on this host' >&2; exit 77 ;; esac
-case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
 for tool in cobc cc clang nm python3 tar node; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "COBOL gate missing $tool" >&2; exit 77; }
+  command -v "$tool" >/dev/null 2>&1 || { echo "COBOL gate missing $tool" >&2; exit 1; }
 done
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
 scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
-python3 "$REPO/sdlc/generators/results/generate.py" --target cobol --check
-python3 "$ROOT/checks/privacy.py"
+python3 "$REPO/build-tools/results/generate.py" --target cobol --check
+python3 "$ROOT/checks/generated_names.py"
+python3 "$REPO/conformance/children/privacy.py" --sources "$ROOT" --include README.md --include LICENSE --include source-package.json --include 'src/*' --include 'Src/*' --include 'Sources/*' --include 'examples/*' --include 'Examples/*' --include 'copybooks/*' --artifact-env
 scratch_dir evidence
 . "$REPO/sdlc/scripts/installed.sh"
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then

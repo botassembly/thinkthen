@@ -20,8 +20,9 @@ pub(super) struct Captured {
     pub(super) backend: Option<String>,
     pub(super) config_url: Option<String>,
     pub(super) config_backend: Option<String>,
-    pub(super) config_model: Option<ModelName>,
+    pub(super) config_model: Option<String>,
     pub(super) prices: Option<Prices>,
+    pub(super) metadata: super::snapshot::CapturedMetadata,
     pub(super) configured: Vec<Named>,
     /// Each named variable that was set and nonblank.
     pub(super) keys: BTreeMap<String, Secret>,
@@ -36,7 +37,7 @@ impl fmt::Debug for Captured {
             .field("backend", &withheld(&self.backend))
             .field("config_url", &withheld(&self.config_url))
             .field("config_backend", &self.config_backend)
-            .field("config_model", &self.config_model)
+            .field("config_model", &withheld(&self.config_model))
             .field("configured", &self.configured)
             .field("keys", &self.keys.len())
             .finish()
@@ -45,11 +46,15 @@ impl fmt::Debug for Captured {
 
 /// The resolved backend, the key it sends, and the variable a missing key names.
 pub(super) struct Selected {
+    pub(super) name: Option<String>,
+    pub(super) url_source: &'static str,
+    pub(super) model_source: &'static str,
     pub(super) backend: Backend,
     pub(super) prices: Option<Prices>,
     pub(super) profile: Option<BackendProfile>,
     pub(super) key: Option<Secret>,
     pub(super) variable: String,
+    pub(super) variables: Vec<String>,
 }
 
 impl EngineBuilder {
@@ -85,10 +90,7 @@ impl EngineBuilder {
             ),
         ];
         let choice = named::choose(&tiers, &captured.configured).map_err(Error::refused)?;
-        let unnamed_model = captured
-            .config_model
-            .as_ref()
-            .map_or(DEFAULT_MODEL, ModelName::as_str);
+        let unnamed_model = captured.config_model.as_deref().unwrap_or(DEFAULT_MODEL);
         let backend = choice
             .backend(self.model.as_ref().map(ModelName::as_str), unnamed_model)
             .map_err(Error::refused)?;
@@ -103,12 +105,32 @@ impl EngineBuilder {
             }
         };
         let (prices, profile) = choice.setup(&backend);
+        let url_source = match (choice.tier, choice.url.is_some()) {
+            (None, _) => "built_in",
+            (Some(0), true) => "command_line",
+            (Some(1), true) => "environment",
+            (Some(2), true) => "configuration",
+            (Some(_), _) => "backend",
+        };
+        let model_source = if self.model.is_some() {
+            "command_line"
+        } else if choice.named.is_some() {
+            "backend"
+        } else if captured.config_model.is_some() {
+            "configuration"
+        } else {
+            "built_in"
+        };
         Ok(Selected {
+            name: choice.named.as_ref().map(|entry| entry.name().to_owned()),
+            url_source,
+            model_source,
             prices: prices.or(captured.prices),
             profile,
             backend,
             key,
             variable: choice.key_variable().to_owned(),
+            variables: choice.keys().into_iter().map(str::to_owned).collect(),
         })
     }
 }

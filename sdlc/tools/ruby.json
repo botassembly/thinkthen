@@ -1,0 +1,126 @@
+{
+  "tools": {
+    "ruby": {
+      "commands": [
+        "ruby",
+        "gem"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "test",
+        "lint",
+        "install",
+        "ruby"
+      ],
+      "provider": "ruby",
+      "version": "4.0.7",
+      "probe": {
+        "argv": [
+          "ruby",
+          "--version"
+        ],
+        "contains": "ruby {version}"
+      },
+      "openssl_version": "3.0.22",
+      "probes": [
+        {
+          "argv": [
+            "ruby",
+            "--disable-gems",
+            "-rripper",
+            "-rjson",
+            "-e",
+            "Ripper.lex(\"class Probe; end\", raise_errors: true); [].filter_map(&:itself); JSON.generate(Hash.new); puts \"Ruby source lexer ready\""
+          ],
+          "contains": "Ruby source lexer ready"
+        }
+      ]
+    },
+    "ruby34": {
+      "commands": [
+        "ruby",
+        "gem"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby34"
+      ],
+      "provider": "ruby",
+      "version": "3.4.11",
+      "probe": {
+        "argv": [
+          "ruby",
+          "--version"
+        ],
+        "contains": "ruby {version}"
+      },
+      "linux_directory": "ruby34/bin",
+      "openssl_version": "3.0.22"
+    },
+    "rbs": {
+      "commands": [
+        "rbs"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby"
+      ],
+      "provider": "ruby-bundled",
+      "version": "3.10.0",
+      "probe": {
+        "argv": [
+          "rbs",
+          "--version"
+        ],
+        "contains": "rbs {version}"
+      }
+    },
+    "rbs34": {
+      "commands": [
+        "rbs"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "ruby34"
+      ],
+      "provider": "ruby-bundled",
+      "version": "3.8.0",
+      "probe": {
+        "argv": [
+          "rbs",
+          "--version"
+        ],
+        "contains": "rbs {version}"
+      },
+      "linux_directory": "ruby34/bin"
+    }
+  },
+  "libraries": {
+    "ruby": {
+      "platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "darwin-arm64",
+        "darwin-x86_64",
+        "linux-arm64",
+        "linux-x86_64"
+      ]
+    }
+  }
+}

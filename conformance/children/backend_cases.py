@@ -17,7 +17,7 @@ def paths(slot, count=1):
 def configuration(env, backends):
     folder = pathlib.Path(env["HOME"]) / "Library/Application Support/thinkthen" if sys.platform == "darwin" else pathlib.Path(env["XDG_CONFIG_HOME"]) / "thinkthen"
     folder.mkdir(parents=True, exist_ok=True)
-    (folder / "config.json").write_text(json.dumps({"schema":"thinkthen.config/1", "backends":backends}))
+    (folder / "config.json").write_text(json.dumps({"backends":backends}))
 
 
 def alias(row, base):
@@ -38,7 +38,7 @@ def canonical_replay(folder, row):
     key = canonical_question_key(row["url"], row["model"], row["model"],
                                  json.loads(state), json.loads(question))
     sha = hashlib.sha256(state.encode()).hexdigest()
-    answer = {"key_version":2, "adapter":"systemone", "observation_id":key, "batch_size":1,
+    answer = {"adapter":"systemone", "observation_id":key, "batch_size":1,
               "key":key, "url":row["url"], "model":row["model"], "state":sha,
               "question":question, "answer":'{"type":"noul","noul":0.9}',
               "answered_by":row["model"], "input_tokens":1, "output_tokens":1,

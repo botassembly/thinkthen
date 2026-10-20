@@ -15,8 +15,6 @@ pub const AnnotateDefinition = struct {
     questions: Map(AnnotateQuestion),
 
     threshold: ?AuthoredThreshold = null,
-
-    version: i64 = 1,
 };
 
 pub const AnnotateQuestion = union(enum) {
@@ -290,8 +288,6 @@ pub const AuthoredRelate = struct {
 
     threshold: ?AuthoredCut = null,
 
-    version: i64 = 1,
-
     wording_version: ?i64 = null,
 };
 
@@ -423,6 +419,12 @@ pub const OptionSchema = struct {
     name: []const u8,
 };
 
+pub const OptionSchema2 = struct {
+    description: ?std.json.Value = null,
+
+    name: []const u8,
+};
+
 pub const ReaderMedia = enum { text, image };
 
 pub const RecognitionExample = union(enum) {
@@ -483,8 +485,6 @@ pub const RecognizeDefinition = struct {
     relation_threshold: ?AuthoredCut = null,
 
     threshold: ?AuthoredCut = null,
-
-    version: i64 = 1,
 
     wording_version: ?i64 = null,
 };
@@ -565,8 +565,6 @@ pub const RequestDefinitionAnnotateDefinition = struct {
     questions: Map(AnnotateQuestion),
 
     threshold: ?AuthoredThreshold = null,
-
-    version: i64 = 1,
 };
 
 pub const RequestDefinitionAuthoredChoose = struct {
@@ -652,8 +650,6 @@ pub const RequestDefinitionAuthoredRelate = struct {
 
     threshold: ?AuthoredCut = null,
 
-    version: i64 = 1,
-
     wording_version: ?i64 = null,
 };
 
@@ -721,8 +717,6 @@ pub const RequestDefinitionRecognizeDefinition = struct {
     relation_threshold: ?AuthoredCut = null,
 
     threshold: ?AuthoredCut = null,
-
-    version: i64 = 1,
 
     wording_version: ?i64 = null,
 };
@@ -846,6 +840,8 @@ pub const RequestOptions = struct {
 
     deadline_ms: ?i64 = null,
 
+    entity_definition: ?[]const u8 = null,
+
     examples: ?[]const RecognitionExample = null,
 
     examples_field: ?[]const u8 = null,
@@ -854,11 +850,21 @@ pub const RequestOptions = struct {
 
     files_only: ?bool = null,
 
+    instructions: ?[]const u8 = null,
+
+    labels: ?[]const OptionSchema2 = null,
+
+    levels: ?[]const OptionSchema2 = null,
+
     max_requests_total: ?u64 = null,
+
+    max_text_bytes: ?u64 = null,
 
     mode: ?RecognitionMode = null,
 
     model: ?[]const u8 = null,
+
+    no: ?std.json.Value = null,
 
     none: ?bool = null,
 
@@ -877,6 +883,8 @@ pub const RequestOptions = struct {
     threshold: ?RequestThreshold = null,
 
     top: ?u64 = null,
+
+    yes: ?std.json.Value = null,
 };
 
 pub const RequestOriginal = union(enum) {

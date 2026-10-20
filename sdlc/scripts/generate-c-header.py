@@ -9,10 +9,12 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+from sdlc.scripts.tools import load_manifest
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import CARGO, child_env
 
-VERSION = 'cbindgen 0.29.4'
+VERSION = 'cbindgen ' + load_manifest()['tools']['cbindgen']['version']
 
 
 def tool_environment():
@@ -57,7 +59,7 @@ def main():
     parser.add_argument('--check', action='store_true', help='refuse committed header drift')
     args = parser.parse_args()
     header = ROOT / 'libraries/c/include/thinkthen.h'
-    subprocess.run([sys.executable, str(ROOT / "sdlc/generators/results/generate.py"),
+    subprocess.run([sys.executable, str(ROOT / "build-tools/results/generate.py"),
                     "--target", "c", "--check"], check=True, env=tool_environment())
     generated = generate()
     if args.check:

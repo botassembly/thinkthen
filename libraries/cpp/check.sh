@@ -1,20 +1,23 @@
 #!/bin/sh
 # Exercise the installed owned API; complete shared parity is release-only.
 set -eu
-cd -- "$(dirname -- "$0")"
-repo=$(cd ../.. && pwd)
 case "${THINKTHEN_TEST_PROFILE:-routine}" in
- routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 77 ;;
+ routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 1 ;;
  *) echo 'cpp: unknown profile' >&2; exit 2 ;;
 esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/cpp
+tools_group=cpp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+cd -- "$(dirname -- "$0")"
+repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-cmake_bin=${THINKTHEN_CMAKE_BIN:-$(command -v cmake || true)}
-python_bin=${THINKTHEN_PYTHON_BIN:-$(command -v python3 || true)}
+cmake_bin=$(command -v cmake || true)
+python_bin=$(command -v python3 || true)
 for tool in "$cmake_bin" "$python_bin"; do
- case "$tool" in /*) ;; *) echo 'cpp: tool path must be absolute' >&2; exit 77 ;; esac
- [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 77; }
+ case "$tool" in /*) ;; *) echo 'cpp: tool path must be absolute' >&2; exit 1 ;; esac
+ [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 1; }
 done
 scratch_dir output
 out=${THINKTHEN_COVERAGE_STAGE:-$output}
@@ -30,8 +33,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
  static=$native/lib/libthinkthen.a
 else
  wrapper=$repo/libraries/cpp
- "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
- "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
+ "$python_bin" "$repo/build-tools/results/generate.py" --target cpp --check
+ "$python_bin" "$repo/build-tools/results/generate.py" --target cpp --inputs --check
  . "$repo/sdlc/scripts/installed.sh"
  native_install "$repo" "$out/native"
  header=$out/native/include/thinkthen.h
@@ -45,7 +48,8 @@ THINKTHEN_NATIVE_HEADER="$header" THINKTHEN_NATIVE_SHARED="$shared" "$python_bin
 "$cmake_bin" --build "$out/package-build" --parallel 2
 "$cmake_bin" --install "$out/package-build"
 install_manifest=$out/package-build/install_manifest.txt
-"$python_bin" fixtures/guard.py "$out/install" "$install_manifest"
+"$python_bin" fixtures/installed_headers.py "$out/install" "$install_manifest"
+"$python_bin" "$repo/conformance/children/privacy.py" --prefix "$out/install" --manifest "$install_manifest"
 "$python_bin" fixtures/result_construction.py "$out/install"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
  smoke_guard

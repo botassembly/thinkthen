@@ -1,0 +1,21 @@
+wrapper_php() {
+	wrapper_pack=pack_php
+	cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json libraries/php/autoload.php "$folder/"
+	cp -R libraries/php/src libraries/php/examples "$folder/"
+        case $TARGET in
+        *-unknown-linux-gnu)
+            mkdir -p "$folder/native"
+            tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$folder/native/libthinkthen.so" ;;
+        *) echo 'release-pack: PHP native package target is unsupported' >&2; exit 1 ;;
+        esac
+	cp libraries/php/README-PUBLIC.md "$folder/README.md"
+}
+
+part_php() { part_source_wrapper php; }
+
+# Composer's Phar extractor refuses a root directory member named '.'.
+pack_php() {
+	(cd -- "$2" && COPYFILE_DISABLE=1 tar -czf "$OUT/$1" ./*)
+	python3 sdlc/scripts/registry-readmes.py php "$OUT/$1"
+	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
+}

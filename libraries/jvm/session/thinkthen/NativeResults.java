@@ -212,6 +212,317 @@ return Collections.unmodifiableMap(copy);
 static Object thinkthen_complete_answer_id_v1(MemorySegment p) {
 return text(p.asSlice(0));
 }
+static Object thinkthen_complete_answer_resolution_v1(MemorySegment p) {
+return switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: yield "resolved";
+case 2: yield "unresolved";
+case 3: yield "failed";
+default: throw new IllegalStateException("Unknown native enum kind"); };
+}
+static Object thinkthen_complete_answer_resolution_map_entry_v1(MemorySegment p) {
+throw new IllegalStateException("Unexpected native standalone entry");
+}
+static Object thinkthen_complete_answer_resolution_map_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new LinkedHashMap<String,Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 24);
+copy.put(text(item.asSlice(0)), thinkthen_complete_answer_resolution_v1(pointer(item.asSlice(16))));
+}
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_resolutions_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_answer_resolution_v1(pointer(data));
+case 2: return thinkthen_complete_answer_resolution_map_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_v1(MemorySegment p) {
+return json(pointer(p.asSlice(0)));
+}
+static Object thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_8_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_10_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_10_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_10_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_integer_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(new java.math.BigDecimal(Long.toUnsignedString(item.get(ValueLayout.JAVA_LONG, 0))));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_11_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_11_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_integer_list_v1(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_11_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_integer_list_v1(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_12_v1(MemorySegment p) {
+return json(pointer(p.asSlice(0)));
+}
+static Object thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_13_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_13_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_recognition_v1(pointer(data));
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_13_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_recognition_v1(pointer(data));
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_14_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_14_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_relations_v1(pointer(data));
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_14_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_relations_v1(pointer(data));
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_settled_judgment_map_entry_v1(MemorySegment p) {
+throw new IllegalStateException("Unexpected native standalone entry");
+}
+static Object thinkthen_complete_settled_judgment_map_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new LinkedHashMap<String,Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 24);
+copy.put(text(item.asSlice(0)), thinkthen_complete_settled_judgment_v1(pointer(item.asSlice(16))));
+}
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_15_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_15_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_judgment_map_v1(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_15_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_judgment_map_v1(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_2_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return java.math.BigDecimal.valueOf(data.get(ValueLayout.JAVA_DOUBLE, 0));
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_6_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_3_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return text(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_4_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_4_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return new java.math.BigDecimal(Long.toUnsignedString(data.get(ValueLayout.JAVA_LONG, 0)));
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_4_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return new java.math.BigDecimal(Long.toUnsignedString(data.get(ValueLayout.JAVA_LONG, 0)));
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_resolutions_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_resolutions_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_5_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_answer_resolution_v1(pointer(data));
+case 2: return thinkthen_complete_answer_resolution_map_v1(data);
+case 3: return thinkthen_complete_answer_resolutions_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_6_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return text(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_6_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return text(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_7_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_7_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_string_list_v1(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_7_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_string_list_v1(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_8_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return java.math.BigDecimal.valueOf(data.get(ValueLayout.JAVA_DOUBLE, 0));
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_8_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return java.math.BigDecimal.valueOf(data.get(ValueLayout.JAVA_DOUBLE, 0));
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_settled_original_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_settled_original_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_answer_shape_9_any_of_1_items_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_answer_shape_9_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_original_list_v1(data);
+case 2: return null;
+case 3: return thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_9_any_of_1_items_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_original_list_v1(data);
+case 2: return null;
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
 static Object thinkthen_complete_relation_member_list_v1(MemorySegment p) {
 long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
 var data = pointer(p);
@@ -488,11 +799,20 @@ default: throw new IllegalStateException("Unknown native enum kind"); };
 static Object thinkthen_complete_boundary_proposal_v1(MemorySegment p) {
 var copy = new LinkedHashMap<String,Object>();
 copy.put("end", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice(0).get(ValueLayout.JAVA_LONG, 0))));
-copy.put("length", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice(8).get(ValueLayout.JAVA_LONG, 0))));
-copy.put("probability", java.math.BigDecimal.valueOf(p.asSlice(16).get(ValueLayout.JAVA_DOUBLE, 0)));
-copy.put("start", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice(24).get(ValueLayout.JAVA_LONG, 0))));
-copy.put("text", text(p.asSlice(32)));
-copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(48))));
+var fileSlot = p.asSlice(8);
+int fileState = fileSlot.get(ValueLayout.JAVA_INT, 0);
+if (fileState == 1) copy.put("file", null); else if (fileState == 2) copy.put("file", text(fileSlot.asSlice(8)));
+var first_lineSlot = p.asSlice(32);
+int first_lineState = first_lineSlot.get(ValueLayout.JAVA_INT, 0);
+if (first_lineState == 1) copy.put("first_line", null); else if (first_lineState == 2) copy.put("first_line", new java.math.BigDecimal(Long.toUnsignedString(first_lineSlot.asSlice(8).get(ValueLayout.JAVA_LONG, 0))));
+var last_lineSlot = p.asSlice(48);
+int last_lineState = last_lineSlot.get(ValueLayout.JAVA_INT, 0);
+if (last_lineState == 1) copy.put("last_line", null); else if (last_lineState == 2) copy.put("last_line", new java.math.BigDecimal(Long.toUnsignedString(last_lineSlot.asSlice(8).get(ValueLayout.JAVA_LONG, 0))));
+copy.put("length", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice(64).get(ValueLayout.JAVA_LONG, 0))));
+copy.put("probability", java.math.BigDecimal.valueOf(p.asSlice(72).get(ValueLayout.JAVA_DOUBLE, 0)));
+copy.put("start", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice(80).get(ValueLayout.JAVA_LONG, 0))));
+copy.put("text", text(p.asSlice(88)));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(104))));
 return Collections.unmodifiableMap(copy);
 }
 static Object thinkthen_complete_facts_presence_v1(MemorySegment p) {
@@ -504,7 +824,8 @@ copy.put("error", thinkthen_complete_error_v1(pointer(p.asSlice(0))));
 var factsSlot = p.asSlice(8);
 int factsState = factsSlot.get(ValueLayout.JAVA_INT, 0);
 if (factsState == 1) copy.put("facts", null); else if (factsState == 2) copy.put("facts", thinkthen_complete_facts_v1(pointer(factsSlot.asSlice(8))));
-copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(24))));
+copy.put("resolution", thinkthen_complete_answer_resolution_v1(pointer(p.asSlice(24))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(32))));
 return Collections.unmodifiableMap(copy);
 }
 static Object thinkthen_complete_call_id_v1(MemorySegment p) {
@@ -1341,6 +1662,64 @@ copy.put("last_status", new java.math.BigDecimal(Long.toUnsignedString(p.asSlice
 copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(24))));
 return Collections.unmodifiableMap(copy);
 }
+static Object thinkthen_complete_settled_judgment_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return data.get(ValueLayout.JAVA_INT, 0) != 0;
+case 2: return null;
+case 3: return text(data);
+case 4: return java.math.BigDecimal.valueOf(data.get(ValueLayout.JAVA_DOUBLE, 0));
+case 5: return thinkthen_complete_string_list_v1(data);
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_settled_original_v1(MemorySegment p) {
+return json(pointer(p.asSlice(0)));
+}
+static Object thinkthen_complete_settled_recognition_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_recognition_entities_v1(pointer(data));
+case 2: return thinkthen_complete_settled_recognition_mode_proposals_v1(pointer(data));
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_entity_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_entity_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_entity_edge_list_v1(MemorySegment p) {
+long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
+var data = pointer(p);
+var copy = new ArrayList<Object>();
+for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
+copy.add(thinkthen_complete_entity_edge_v1(pointer(item)));
+}
+return Collections.unmodifiableList(copy);
+}
+static Object thinkthen_complete_entity_edge_list_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_recognition_entities_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("entities", thinkthen_complete_entity_list_v1(p.asSlice(0)));
+var relationsSlot = p.asSlice(16);
+int relationsState = relationsSlot.get(ValueLayout.JAVA_INT, 0);
+if (relationsState == 1) copy.put("relations", null); else if (relationsState == 2) copy.put("relations", thinkthen_complete_entity_edge_list_v1(relationsSlot.asSlice(8)));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(40))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_settled_recognition_mode_proposals_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("mode", thinkthen_complete_boundary_mode_v1(pointer(p.asSlice(0))));
+copy.put("proposals", thinkthen_complete_boundary_proposal_list_v1(p.asSlice(8)));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(24))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_settled_relations_v1(MemorySegment p) {
+return thinkthen_complete_related_entity_edge_list_v1(p.asSlice(0));
+}
 static Object thinkthen_complete_stop_cause_v1(MemorySegment p) {
 return switch (p.get(ValueLayout.JAVA_INT, 0)) {
 case 1: yield "usage";
@@ -1955,27 +2334,6 @@ if (wording_versionState == 1) copy.put("wording_version", null); else if (wordi
 copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(328))));
 return Collections.unmodifiableMap(copy);
 }
-static Object thinkthen_complete_entity_list_v1(MemorySegment p) {
-long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
-var data = pointer(p);
-var copy = new ArrayList<Object>();
-for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
-copy.add(thinkthen_complete_entity_v1(pointer(item)));
-}
-return Collections.unmodifiableList(copy);
-}
-static Object thinkthen_complete_entity_edge_list_v1(MemorySegment p) {
-long count = p.get(NativeSession.SIZE, 8); if (count < 0 || count > Integer.MAX_VALUE) throw new IllegalStateException("Invalid native collection length");
-var data = pointer(p);
-var copy = new ArrayList<Object>();
-for (long i = 0; i < count; i++) { var item = data.asSlice(i * 8);
-copy.add(thinkthen_complete_entity_edge_v1(pointer(item)));
-}
-return Collections.unmodifiableList(copy);
-}
-static Object thinkthen_complete_entity_edge_list_presence_v1(MemorySegment p) {
-throw new IllegalStateException("Presence must be decoded with its owning field");
-}
 static Object thinkthen_complete_recognize_entities_v1(MemorySegment p) {
 var copy = new LinkedHashMap<String,Object>();
 copy.put("entities", thinkthen_complete_entity_list_v1(p.asSlice(0)));
@@ -2456,19 +2814,26 @@ copy.put("value", thinkthen_complete_atomic_array_of_string_v1(pointer(p.asSlice
 copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(40))));
 return Collections.unmodifiableMap(copy);
 }
+static Object thinkthen_complete_settled_answer_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
 static Object thinkthen_complete_call_error_presence_v1(MemorySegment p) {
 throw new IllegalStateException("Presence must be decoded with its owning field");
 }
 static Object thinkthen_complete_session_packet_terminal_v1(MemorySegment p) {
 var copy = new LinkedHashMap<String,Object>();
-var factsSlot = p.asSlice(0);
+var answerSlot = p.asSlice(0);
+int answerState = answerSlot.get(ValueLayout.JAVA_INT, 0);
+if (answerState == 1) copy.put("answer", null); else if (answerState == 2) copy.put("answer", thinkthen_complete_settled_answer_v1(pointer(answerSlot.asSlice(8))));
+var factsSlot = p.asSlice(16);
 int factsState = factsSlot.get(ValueLayout.JAVA_INT, 0);
 if (factsState == 1) copy.put("facts", null); else if (factsState == 2) copy.put("facts", thinkthen_complete_facts_v1(pointer(factsSlot.asSlice(8))));
-var failureSlot = p.asSlice(16);
+var failureSlot = p.asSlice(32);
 int failureState = failureSlot.get(ValueLayout.JAVA_INT, 0);
 if (failureState == 1) copy.put("failure", null); else if (failureState == 2) copy.put("failure", thinkthen_complete_call_error_v1(pointer(failureSlot.asSlice(8))));
-copy.put("kind", text(p.asSlice(32)));
-copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(48))));
+copy.put("kind", text(p.asSlice(48)));
+copy.put("resolution", thinkthen_complete_answer_resolution_v1(pointer(p.asSlice(64))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(72))));
 return Collections.unmodifiableMap(copy);
 }
 static Object thinkthen_complete_session_probabilities_v1(MemorySegment p) {
@@ -2613,6 +2978,252 @@ copy.put("relation", text(p.asSlice(16)));
 copy.put("source", thinkthen_complete_entity_document_v1(pointer(p.asSlice(32))));
 copy.put("target", thinkthen_complete_entity_document_v1(pointer(p.asSlice(40))));
 copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(48))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_settled_answer_v1(MemorySegment p) {
+var data = p.asSlice(8); switch (p.get(ValueLayout.JAVA_INT, 0)) {
+case 1: return thinkthen_complete_settled_answer_decide_v1(pointer(data));
+case 2: return thinkthen_complete_settled_answer_choose_v1(pointer(data));
+case 3: return thinkthen_complete_settled_answer_tag_v1(pointer(data));
+case 4: return thinkthen_complete_settled_answer_score_v1(pointer(data));
+case 5: return thinkthen_complete_settled_answer_filter_v1(pointer(data));
+case 6: return thinkthen_complete_settled_answer_rank_v1(pointer(data));
+case 7: return thinkthen_complete_settled_answer_find_v1(pointer(data));
+case 8: return thinkthen_complete_settled_answer_recognize_v1(pointer(data));
+case 9: return thinkthen_complete_settled_answer_relate_v1(pointer(data));
+case 10: return thinkthen_complete_settled_answer_annotate_v1(pointer(data));
+default: throw new IllegalStateException("Unknown native result kind"); }
+}
+static Object thinkthen_complete_answer_shape_4_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_answer_shape_3_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_answer_shape_2_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_answer_shape_15_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_annotate_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_15_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_6_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_choose_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_6_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_decide_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_10_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_answer_shape_9_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_filter_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_10_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_9_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_12_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_find_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_12_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_11_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_rank_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_10_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_11_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_13_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_recognize_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_10_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_13_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_14_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_relate_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_10_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_14_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_8_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_score_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_8_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
+return Collections.unmodifiableMap(copy);
+}
+static Object thinkthen_complete_answer_shape_7_presence_v1(MemorySegment p) {
+throw new IllegalStateException("Presence must be decoded with its owning field");
+}
+static Object thinkthen_complete_settled_answer_tag_v1(MemorySegment p) {
+var copy = new LinkedHashMap<String,Object>();
+copy.put("function", text(p.asSlice(0)));
+var indexSlot = p.asSlice(16);
+int indexState = indexSlot.get(ValueLayout.JAVA_INT, 0);
+if (indexState == 1) copy.put("index", null); else if (indexState == 2) copy.put("index", thinkthen_complete_answer_shape_4_v1(pointer(indexSlot.asSlice(8))));
+var pickSlot = p.asSlice(32);
+int pickState = pickSlot.get(ValueLayout.JAVA_INT, 0);
+if (pickState == 1) copy.put("pick", null); else if (pickState == 2) copy.put("pick", thinkthen_complete_answer_shape_3_v1(pointer(pickSlot.asSlice(8))));
+var probabilitySlot = p.asSlice(48);
+int probabilityState = probabilitySlot.get(ValueLayout.JAVA_INT, 0);
+if (probabilityState == 1) copy.put("probability", null); else if (probabilityState == 2) copy.put("probability", thinkthen_complete_answer_shape_2_v1(pointer(probabilitySlot.asSlice(8))));
+copy.put("resolution", thinkthen_complete_answer_shape_5_v1(pointer(p.asSlice(64))));
+var valueSlot = p.asSlice(72);
+int valueState = valueSlot.get(ValueLayout.JAVA_INT, 0);
+if (valueState == 1) copy.put("value", null); else if (valueState == 2) copy.put("value", thinkthen_complete_answer_shape_7_v1(pointer(valueSlot.asSlice(8))));
+copy.putAll(Values.object(thinkthen_complete_extensions_v1(p.asSlice(88))));
 return Collections.unmodifiableMap(copy);
 }
 static Object thinkthen_complete_threshold_v1(MemorySegment p) {

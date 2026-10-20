@@ -11,19 +11,23 @@ pub use inputs::Inputs;
 pub use questions::Prepared;
 pub use settings::prepare;
 
+/// Create a host argument error with its supplied diagnostic.
 pub fn usage(message: &str) -> Error {
     Error::new(ErrorKind::Usage, message)
 }
+/// Create an internal SQL envelope encoding error.
 pub fn defect() -> Error {
     Error::new(
         ErrorKind::Defect,
         "a native SQL complete envelope could not be encoded",
     )
 }
+/// Serialize the native complete failure without changing its facts.
 pub fn failure(error: &Error) -> Value {
     serde_json::to_value(error.complete()).unwrap_or_else(|_| json!(defect().complete()))
 }
 
+/// Insert one SQL supplement into an object envelope.
 pub fn put(value: &mut Value, key: &str, field: Value) -> Result<(), Error> {
     value
         .as_object_mut()
@@ -44,6 +48,7 @@ pub fn carrier(mut native: Value, observations: Value) -> Value {
     output.insert("native".to_owned(), native);
     Value::Object(output)
 }
+/// Wrap a refused call with an empty observation stream.
 pub fn admission(error: &Error) -> Value {
     carrier(failure(error), json!([]))
 }

@@ -7,9 +7,9 @@ tt_annotate(question, input, options = tt_options(), deadline_ms = NULL,
 }
 \arguments{
 \item{question}{An authored question set: an ordinary named list with
-\code{version} and \code{questions}, each entry one named question for a
+\code{questions}, each entry one named question for a
 member of the set, such as
-\code{list(version = 1L, questions = list(approved = list(decide = "Approved?")))},
+\code{list(questions = list(approved = list(decide = "Approved?")))},
 or a \code{\link{tt_question}} selector for the file or saved name that holds
 the set.}
 \item{input}{The records to annotate: a record vector, list, or data frame;
@@ -50,7 +50,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 }
 \examples{
 \dontrun{
-form <- list(version = 1, questions = list(
+form <- list(questions = list(
   steps = list(
     decide = "Does the report give steps to reproduce?"
   ),

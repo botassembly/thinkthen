@@ -140,7 +140,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_validate(
         let (_, wildcard) = copied_rules(rule, rule_len, members, member_count, list, from_file)?;
         let mut asked = asked(&settings)?;
         if let Some(model) = model {
-            asked.model = Some(model);
+            asked.with_model(model);
         }
         let _engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         Ok(vec![u8::from(wildcard)])
@@ -250,7 +250,7 @@ unsafe fn relate_rows(
         }
         let mut asked = asked(&settings)?;
         if let Some(model) = model {
-            asked.model = Some(model);
+            asked.with_model(model);
         }
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         let total = asked.max_requests_total;

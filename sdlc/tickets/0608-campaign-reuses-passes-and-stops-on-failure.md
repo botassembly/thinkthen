@@ -1,6 +1,8 @@
 # 0608 — campaign-reuses-passes-and-stops-on-failure
 
-Status: OPEN.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-19, 0.2.1 retired the candidate campaign: candidates are main revisions checked by the 0691 checkpoint run, and hosted runs happen only for releases.
 
 Milestone: 0.3
 

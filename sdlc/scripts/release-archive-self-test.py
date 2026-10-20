@@ -19,6 +19,9 @@ import zipfile
 
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
 C_FIXTURE = __import__('runpy').run_path(str(REPO / 'sdlc/scripts/release-windows-c-fixture.py'))
 
 
@@ -65,7 +68,7 @@ if args[0] == 'api':
         files = root / "files"
         files.mkdir()
         (files / "fixture.sha256").write_text("checksum\n")
-        env = {"PATH": str(binary) + ":/usr/bin:/bin", "HOME": str(root),
+        env = {"PATH": fixture_path(binary), "HOME": str(root),
                "LC_ALL": "C.UTF-8", "GH_TEST_RECEIPT": str(receipt),
                "GITHUB_REPOSITORY": "botassembly/thinkthen", "GITHUB_REF": "refs/tags/v0.2.0"}
         expected = ((root / "release-notes/0.2.0.md").read_text() + "\n" +
@@ -140,7 +143,7 @@ sys.stderr.write('must not expose API diagnostics')
 sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
 """)
         gh.chmod(0o755)
-        env = {"PATH": f"{root}:{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C",
+        env = {"PATH": fixture_path(root), "HOME": str(root), "LC_ALL": "C",
                "GITHUB_SHA": commit, "GITHUB_REPOSITORY": repository,
                "GH_TEST_RECEIPT": str(receipt), "GH_TEST_RESPONSE": page([good])}
         endpoint = (f"repos/{repository}/actions/workflows/release.yml/runs?head_sha={commit}"
@@ -159,7 +162,13 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
                 raise AssertionError(("resolve query", mode, ref, calls))
             if error is None:
                 name = rehearsal if mode == "rehearse" else f"v{version}"
-                wanted = f"sha={commit}\nversion={version}\nname={name}\n"
+                from tools import load_manifest
+                import tomllib
+                pins = load_manifest()
+                floor = tomllib.loads((REPO / 'libraries/python/pyproject.toml').read_text())['project']['requires-python'][2:]
+                wanted = (f"sha={commit}\nversion={version}\nname={name}\n"
+                          f"python_version={pins['tools']['python']['version']}\n"
+                          f"node_version={pins['tools']['node']['version']}\npython_floor={floor}\n")
                 if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
                     raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
             elif error != "before-query":
@@ -176,8 +185,8 @@ sys.exit(int(os.environ.get('GH_TEST_EXIT', '0')))
         for number in (1, 2, 12):
             check("rehearse", f"refs/tags/rc/{version}-rc.{number}")
         check("rehearse", "refs/heads/main")
-        check("rehearse", "refs/heads/ticket/0543-final")
-        check("rehearse", f"refs/heads/{candidate_branch}")
+        check("rehearse", "refs/heads/ticket/0543-final", error="before-query")
+        check("rehearse", f"refs/heads/{candidate_branch}", error="before-query")
         check("release", f"refs/tags/v{version}")
         for branch in ("main", "ticket/0543-final", candidate_branch):
             branch_run = good | {"head_branch": branch,
@@ -323,7 +332,8 @@ end
             archives.append(archive)
         output = root / "thinkthen.rb"
         # No key variables, credential files or outbound commands participate.
-        env = {"PATH": f"{Path(sys.executable).parent}:/usr/bin:/bin", "HOME": str(root), "LC_ALL": "C"}
+        # Keep the routine gate's declared tools while dropping ambient credentials.
+        env = child_env(home=root, LC_ALL="C")
         command = ("sh", str(REPO / "sdlc/scripts/release-workflow"), "tap-formula", version, str(platform), str(output))
         result = run(*command, env=env)
         wanted = template.replace("$version", version)
@@ -386,6 +396,71 @@ def archived_flutter_admission(commit, host):
     print("release archive: Flutter source identity and part refusals pass", flush=True)
 
 
+def dirty_checkout_admission(host):
+    with tempfile.TemporaryDirectory(prefix="thinkthen-release-checkout-") as temporary:
+        root = Path(temporary).resolve()
+        for name in ("sdlc/scripts/release-pack", "crates/thinkthen/Cargo.toml", "README.md"):
+            target = root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / name, target)
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        subprocess.run(["git", "add", "."], cwd=root, check=True)
+        subprocess.run(["git", "-c", "commit.gpgsign=false", "-c", "user.name=Fixture",
+                        "-c", "user.email=fixture@example.invalid", "commit", "-qm", "Fixture"],
+                       cwd=root, check=True)
+        env = os.environ.copy()
+        env.pop("THINKTHEN_ARCHIVED_SOURCE_TAR", None)
+        env.pop("THINKTHEN_ARCHIVED_SOURCE_COMMIT", None)
+        original = (root / "README.md").read_bytes()
+        for name in ("README.md", "untracked-source"):
+            changed = root / name
+            changed.write_text("uncommitted source\n")
+            output = root / "out"
+            result = run("sh", str(root / "sdlc/scripts/release-pack"), host,
+                         str(output), "c", "go", cwd=root, env=env)
+            if (result.returncode != 1 or result.stdout or result.stderr !=
+                    "release-pack: source wrappers need a clean committed tree\n" or output.exists()):
+                raise AssertionError((name, result.returncode, result.stdout, result.stderr))
+            if name == "README.md":
+                changed.write_bytes(original)
+            else:
+                changed.unlink()
+    print("release archive: dirty tracked and untracked source refused before building")
+
+def c_pack_exit(host, version):
+    # Use the existing native archive fixture pattern through the real C pack path.
+    with tempfile.TemporaryDirectory(prefix="thinkthen-c-pack-exit-") as temporary:
+        base = Path(temporary).resolve()
+        native = base / "native/release"
+        native.mkdir(parents=True)
+        (base / "fixture.c").write_text('int thinkthen_fixture(void) { return 0; }\n')
+        subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
+        subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
+        suffix = "dylib" if host.endswith("-apple-darwin") else "so"
+        (native / f"libthinkthen_c.{suffix}").write_bytes(b"fixture shared")
+        binary = base / "bin"
+        binary.mkdir()
+        cargo = binary / "cargo"
+        cargo.write_text("#!/bin/sh\nexit 0\n")
+        cargo.chmod(0o755)
+        env = os.environ | {"PATH": fixture_path(binary),
+                            "CARGO_TARGET_DIR": str(native.parent), "THINKTHEN_FULL_COMPILER": "1"}
+        env.pop("CFLAGS", None)
+        archive = f"thinkthen-c-{version}-{host}.tar.gz"
+        output = base / "success"
+        result = run("sh", str(REPO / "sdlc/scripts/release-pack"), host, str(output), "c", env=env)
+        expect(result, "", success=True)
+        with tarfile.open(output / archive) as packed:
+            assert packed.extractfile("./lib/libthinkthen.a").read().startswith(b"!<arch>"), "C archive missing native library"
+        cargo.write_text("#!/bin/sh\nexit 42\n")
+        output = base / "failure"
+        result = run("sh", str(REPO / "sdlc/scripts/release-pack"), host, str(output), "c", env=env)
+        diagnostic = f"release-pack: missing archive {output / archive}"
+        if result.returncode != 42 or diagnostic not in result.stderr or (output / archive).exists():
+            raise AssertionError(("C pack must preserve build exit 42 and name missing archive", result))
+    print("release archive: unset CFLAGS C pack and build exit 42 pass", flush=True)
+
+
 def main():
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
@@ -393,7 +468,10 @@ def main():
     resolve_outputs(commit, version)
     tap_formula(version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
+    dirty_checkout_admission(host)
     archived_flutter_admission(commit, host)
+    if host.endswith("-apple-darwin") or host == "x86_64-unknown-linux-gnu":
+        c_pack_exit(host, version)
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
@@ -410,6 +488,7 @@ def main():
         # Exercise the working candidate before it is committed; archived product files still
         # come from HEAD and are compared by release-pack to the original tar below.
         shutil.copy2(REPO / "sdlc/scripts/release-pack", source / "sdlc/scripts/release-pack")
+        shutil.copytree(REPO / "sdlc/scripts/release-pack.d", source / "sdlc/scripts/release-pack.d", dirs_exist_ok=True)
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "legacy"), "first-run", cwd=source), "", success=True)
         if not (base / "legacy/thinkthen-first-run.tar.gz").is_file():
@@ -452,13 +531,13 @@ def main():
             'const char *thinkthen_fixture(void) { return "/build/host/.rustup/library/std/src/lib.rs"; }\n')
         subprocess.run(["cc", "-c", "-o", str(base / "fixture.o"), str(base / "fixture.c")], check=True)
         subprocess.run(["ar", "rcs", str(native / "libthinkthen_c.a"), str(base / "fixture.o")], check=True)
-        cpp_guard = str(REPO / "libraries/cpp/fixtures/guard.py")
+        cpp_guard = str(REPO / "conformance/children/privacy.py")
         native_members = base / "native-members.txt"
         native_members.write_text("\n".join(str(native / name) for name in
                                  ("libthinkthen_c.so", "libthinkthen_c.a")) + "\n")
         # Later build output is not part of the captured shipping install.
         (native / "later-output.md").write_bytes(b"/Users/synthetic-private-location")
-        expect(run(sys.executable, cpp_guard, str(native), str(native_members)), "PRIVATE_PACKAGE_PASS", success=True)
+        expect(run(sys.executable, cpp_guard, "--prefix", str(native), "--manifest", str(native_members)), "PRIVATE_SOURCE_PASS", success=True)
         private_cpp = base / "private-cpp"
         private_cpp.mkdir()
         for private_bytes in (b"/home/synthetic-private-location", b"/Users/synthetic-private-location",
@@ -469,9 +548,9 @@ def main():
             (private_cpp / "libthinkthen.a").write_bytes((native / "libthinkthen_c.a").read_bytes() + private_bytes)
             private_members = base / "private-members.txt"
             private_members.write_text(str(private_cpp / "libthinkthen.a") + "\n")
-            expect(run(sys.executable, cpp_guard, str(private_cpp), str(private_members)), "private pattern in libthinkthen.a")
+            expect(run(sys.executable, cpp_guard, "--prefix", str(private_cpp), "--manifest", str(private_members)), "private pattern in libthinkthen.a")
         env = os.environ.copy()
-        env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
+        env.update(PATH=fixture_path(fake_bin, path=env["PATH"]),
                    CARGO_TARGET_DIR=str(native.parent),
                    THINKTHEN_CARGO_CALLS=str(base / "cargo-calls"),
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
@@ -504,7 +583,7 @@ def main():
                                        f"cp '{native}'/* \"$CARGO_TARGET_DIR/release/\"\n")
         (own_bin / "cargo").chmod(0o755)
         own_env = {key: value for key, value in env.items() if key != "CARGO_TARGET_DIR"}
-        own_env.update(PATH=str(own_bin) + os.pathsep + os.environ["PATH"], TMPDIR=str(own_tmp),
+        own_env.update(PATH=fixture_path(own_bin), TMPDIR=str(own_tmp),
                        THINKTHEN_CARGO_CALLS=str(own_calls))
         result = run("sh", str(source / "sdlc/scripts/release-pack"), host, str(base / "own"), "c", "first-run",
                      cwd=source, env=own_env)
@@ -893,19 +972,19 @@ def main():
         github_path.touch()
         github_env = base / "github-env"
         github_env.touch()
-        tool_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+        tool_env = os.environ | {"PATH": fixture_path(fake_bin),
                                  "GITHUB_PATH": str(github_path), "GITHUB_ENV": str(github_env)}
-        expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", other_target, str(base / "other-tools"), env=tool_env),
                "Go/C++ installed tools require Linux x86-64")
-        expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "go-cpp", host, str(base / "bad-go"), env=tool_env),
                "Go 1.27.1 archive differs from official checksum")
-        expect(run("sh", gate, "swift-zig-tools", other_target, str(base / "other-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", other_target, str(base / "other-zig"), env=tool_env),
                "Swift/Zig installed tools require Linux x86-64")
-        expect(run("sh", gate, "swift-zig-tools", host, str(base / "bad-zig"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "swift-zig", host, str(base / "bad-zig"), env=tool_env),
                "Zig 0.15.2 archive differs from official checksum")
-        expect(run("sh", gate, "php-dart-tools", other_target, str(base / "other-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", other_target, str(base / "other-dart"), env=tool_env),
                "PHP/Dart installed tools require Linux x86-64")
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-dart"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-dart"), env=tool_env),
                "Dart 3.13.4 SDK differs from official checksum")
         if github_path.read_text():
             raise AssertionError("bad tool archive entered the runner path")
@@ -927,7 +1006,7 @@ def main():
                               "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
                               "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
         fake_unzip.chmod(0o755)
-        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-ffi"), env=tool_env),
+        expect(run("sh", gate, "setup-stage", "php-dart", host, str(base / "bad-ffi"), env=tool_env),
                "cached ffi 2.2.0 differs from official digest")
         if github_path.read_text() or github_env.read_text():
             raise AssertionError("bad ffi cache entered the runner environment")
@@ -998,17 +1077,33 @@ def main():
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; "
+                          "TARGET=*) target=${arg#*=} ;; "
                           "PYTHONDONTWRITEBYTECODE=*) export \"$arg\" ;; esac; done\n"
                           "python3 \"$root/src/databases/duckdb/tools/cache_lock.py\" \"$root/cache.lock\" "
                           "python3 \"$root/src/databases/duckdb/tools/source_hosts.py\" --help >/dev/null\n"
                           "python3 \"$root/src/sdlc/scripts/release-archive-tree.py\" \"$root/source.tar\" \"$root/src\"\n"
+                          "cd \"$root/src\"\n"
+                          "export THINKTHEN_TOOLCHAINS=\"$root/cache/toolchains\"\n"
+                          "python3 - <<'PYHOST'\n"
+                          "import os, sys\nfrom pathlib import Path\n"
+                          "sys.path.insert(0, 'databases/duckdb/tools')\n"
+                          "from inputs import versions\n"
+                          "for version in versions():\n"
+                          "    runtime = Path('databases/duckdb/build/community') / version / 'build/release'\n"
+                          "    runtime.mkdir(parents=True)\n"
+                          "    (runtime / 'duckdb').write_bytes(b'fixture DuckDB host')\n"
+                          "    wheels = Path(os.environ['THINKTHEN_TOOLCHAINS']) / 'duckdb/community' / version / 'wheels'\n"
+                          "    wheels.mkdir(parents=True)\n"
+                          "    (wheels / 'fixture.whl').write_bytes(b'fixture DuckDB wheel')\n"
+                          "PYHOST\n"
+                          "sh sdlc/scripts/release-workflow duckdb-host-pack \"$root/duckdb-hosts\" \"$target\" \"$selected\"\n"
                           "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
                           "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
                           "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
         docker.chmod(0o755)
         launcher_env = os.environ.copy()
         launcher_env.pop("PYTHONDONTWRITEBYTECODE", None)
-        launcher_env["PATH"] = str(fake_bin) + os.pathsep + launcher_env["PATH"]
+        launcher_env["PATH"] = fixture_path(fake_bin, path=launcher_env["PATH"])
         launcher_env["THINKTHEN_RELEASE_EXPECTED_SHA"] = "0" * 40
         expect(run("sh", str(REPO / "sdlc/scripts/release-container"), str(base / "container-work"),
                    str(base / "container-out"), env=launcher_env), "checkout differs from resolved release SHA")
@@ -1020,15 +1115,26 @@ def main():
             raise AssertionError("launcher passed another selected commit")
         if (output / "selected-tar").read_text().strip() != "/work/source.tar":
             raise AssertionError("launcher passed another tar path")
+        duckdb_versions = runpy.run_path(str(REPO / "databases/duckdb/tools/inputs.py"))["versions"]()
+        host_archives = output.parent / "duckdb-hosts"
+        expected_hosts = {f"duckdb-hosts-{version}-{host}-{commit}.tar.gz" for version in duckdb_versions}
+        if {path.name for path in host_archives.iterdir()} != expected_hosts:
+            raise AssertionError("launcher omitted or added a DuckDB host archive")
         with (output / "source.tar").open("rb") as packed:
             actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
         if actual != commit:
             raise AssertionError("launcher passed a tar from another source commit")
-        fake_go = fake_bin / "fake-go"
+        fake_go = fake_bin / "go"
         fake_go.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_GO_VERSION\"\n")
         fake_go.chmod(0o755)
-        no_python = fake_bin / "no-python"
-        no_python.write_text("#!/bin/sh\nexit 1\n")
+        no_python = fake_bin / "python3"
+        # Keep the real platform/input admission before the unavailable Python
+        # dependency and generator plants, so each refusal reaches its owner.
+        no_python.write_text(f"#!{sys.executable}\n"
+                             "import os, sys\nfrom pathlib import Path\n"
+                             f"if len(sys.argv) > 1 and Path(sys.argv[1]).resolve() == Path({str(REPO / 'sdlc/scripts/check_verdict.py')!r}):\n"
+                             "    os.execv(sys.executable, [sys.executable, *sys.argv[1:]])\n"
+                             "sys.exit(1)\n")
         no_python.chmod(0o755)
         for version, diagnostic in (
             ("go version go1.21.9 linux/amd64", "Go 1.22 or newer is required"),
@@ -1037,15 +1143,17 @@ def main():
             ("go version go1.22.12 linux/amd64", "Python jsonschema is unavailable"),
             ("go version go1.27.1 linux/amd64", "Python jsonschema is unavailable"),
         ):
-            version_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
-                                        "THINKTHEN_PYTHON_BIN": str(no_python),
+            version_env = os.environ | {"PATH": fixture_path(fake_bin),
+                                        "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
                                         "FAKE_GO_VERSION": version}
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
-        installed_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
-                                      "THINKTHEN_PYTHON_BIN": str(no_python),
-                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
-                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper")}
+        installed_env = os.environ | {"PATH": fixture_path(fake_bin),
+                                      "THINKTHEN_RESOLVED_TOOLS": "go,cpp",
+                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64"}
         for family in ("go", "cpp"):
+            # Supply a real wrapper so admission reaches the missing C archive.
+            wrapper = next((base / "paired").glob(f"thinkthen-{family}-*.tar.gz"))
+            installed_env["THINKTHEN_ARTIFACT"] = str(wrapper)
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
                    f"{family}: missing {'matching ' if family == 'cpp' else ''}C archive")
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}

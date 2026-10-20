@@ -4,6 +4,7 @@ from pathlib import Path
 import platform
 import plistlib
 import shutil
+from tools import commands
 import sys
 import subprocess
 import tarfile
@@ -41,7 +42,7 @@ def apple_collection(language, context, env, stage, retained, folder):
     """Run the existing Apple packages with the exact instrumented host archive."""
     command, missing = context['command'], context['missing_tool']
     root = context['root']
-    for tool in ('swift', 'xcrun', 'lipo'):
+    for tool in commands(['swift', 'objective-c']):
         if not shutil.which(tool, path=env.get('PATH')):
             raise missing(f'installed {language} needs {tool}')
     key = 'THINKTHEN_' + language.upper().replace('-', '_') + '_ARTIFACT'

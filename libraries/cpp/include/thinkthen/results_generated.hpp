@@ -48,6 +48,35 @@ namespace tt::results {
     class AnnotationValueScore;
     class AnnotationValueTags;
     class AnswerId;
+    class AnswerResolution;
+    class AnswerResolutions;
+    class AnswerShape;
+    class AnswerShape10;
+    class AnswerShape10AnyOf1Items;
+    class AnswerShape11;
+    class AnswerShape11AnyOf1Items;
+    class AnswerShape12;
+    class AnswerShape12AnyOf1Items;
+    class AnswerShape13;
+    class AnswerShape13AnyOf1Items;
+    class AnswerShape14;
+    class AnswerShape14AnyOf1Items;
+    class AnswerShape15;
+    class AnswerShape15AnyOf1Items;
+    class AnswerShape2;
+    class AnswerShape3;
+    class AnswerShape4;
+    class AnswerShape4AnyOf1Items;
+    class AnswerShape5;
+    class AnswerShape6;
+    class AnswerShape6AnyOf1Items;
+    class AnswerShape7;
+    class AnswerShape7AnyOf1Items;
+    class AnswerShape8;
+    class AnswerShape8AnyOf1Items;
+    class AnswerShape9;
+    class AnswerShape9AnyOf1Items;
+    class AnswerShapeAnyOf1Items;
     class Answers;
     class AtomicArrayOfString;
     class AtomicDecideValue;
@@ -123,6 +152,13 @@ namespace tt::results {
     class SendBudgetDenialBeforeAdditionalSend;
     class SendBudgetDenialBeforeFirstSend;
     class SendBudgetDenialBeforeRetry;
+    class SettledDecision;
+    class SettledJudgment;
+    class SettledOriginal;
+    class SettledRecognition;
+    class SettledRecognitionEntities;
+    class SettledRecognitionModeProposals;
+    class SettledRelations;
     class StopCause;
     class Stopped;
     class StringRoot;
@@ -213,6 +249,17 @@ namespace tt::results {
     class SessionQuestionDetail;
     class SessionRecognition;
     class SessionRelationEdge;
+    class SettledAnswer;
+    class SettledAnswerAnnotate;
+    class SettledAnswerChoose;
+    class SettledAnswerDecide;
+    class SettledAnswerFilter;
+    class SettledAnswerFind;
+    class SettledAnswerRank;
+    class SettledAnswerRecognize;
+    class SettledAnswerRelate;
+    class SettledAnswerScore;
+    class SettledAnswerTag;
     class SourceRelationEndpoint;
     class Threshold;
     class TokenBand;
@@ -371,6 +418,275 @@ namespace tt::results {
         public:
         private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
         public: const std::string& value() const;
+    };
+    class AnswerResolution final : public Node {
+        AnswerResolution(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::string>> cached_value_ = std::make_shared<std::shared_ptr<const std::string>>();
+        public: const std::string& value() const;
+    };
+    class AnswerResolutions final : public Node {
+        AnswerResolutions(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<AnswerResolution, std::vector<std::pair<std::string,
+        AnswerResolution>>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<AnswerResolution,
+        std::vector<std::pair<std::string, AnswerResolution>>>>>();
+        public: const std::variant<AnswerResolution, std::vector<std::pair<std::string, AnswerResolution>>>& value() const;
+    };
+    class AnswerShape final : public Node {
+        AnswerShape(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
+    };
+    class AnswerShape10 final : public Node {
+        AnswerShape10(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+        std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+        std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>>>();
+        public: const std::variant<std::vector<AnswerShape8AnyOf1Items>, std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>& value() const;
+    };
+    class AnswerShape10AnyOf1Items final : public Node {
+        AnswerShape10AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+        std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+        std::nullptr_t>>>();
+        public: const std::variant<std::vector<AnswerShape8AnyOf1Items>, std::nullptr_t>& value() const;
+    };
+    class AnswerShape11 final : public Node {
+        AnswerShape11(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<uint64_t>, std::nullptr_t,
+        std::vector<AnswerShape11AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<uint64_t>,
+        std::nullptr_t, std::vector<AnswerShape11AnyOf1Items>>>>();
+        public: const std::variant<std::vector<uint64_t>, std::nullptr_t, std::vector<AnswerShape11AnyOf1Items>>& value() const;
+    };
+    class AnswerShape11AnyOf1Items final : public Node {
+        AnswerShape11AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<uint64_t>, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<uint64_t>,
+        std::nullptr_t>>>();
+        public: const std::variant<std::vector<uint64_t>, std::nullptr_t>& value() const;
+    };
+    class AnswerShape12 final : public Node {
+        AnswerShape12(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
+    };
+    class AnswerShape12AnyOf1Items final : public Node {
+        AnswerShape12AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
+    };
+    class AnswerShape13 final : public Node {
+        AnswerShape13(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<SettledRecognition, std::nullptr_t,
+        std::vector<AnswerShape13AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<SettledRecognition,
+        std::nullptr_t, std::vector<AnswerShape13AnyOf1Items>>>>();
+        public: const std::variant<SettledRecognition, std::nullptr_t, std::vector<AnswerShape13AnyOf1Items>>& value() const;
+    };
+    class AnswerShape13AnyOf1Items final : public Node {
+        AnswerShape13AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<SettledRecognition, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<SettledRecognition,
+        std::nullptr_t>>>();
+        public: const std::variant<SettledRecognition, std::nullptr_t>& value() const;
+    };
+    class AnswerShape14 final : public Node {
+        AnswerShape14(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<SettledRelations, std::nullptr_t,
+        std::vector<AnswerShape14AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<SettledRelations,
+        std::nullptr_t, std::vector<AnswerShape14AnyOf1Items>>>>();
+        public: const std::variant<SettledRelations, std::nullptr_t, std::vector<AnswerShape14AnyOf1Items>>& value() const;
+    };
+    class AnswerShape14AnyOf1Items final : public Node {
+        AnswerShape14AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<SettledRelations, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<SettledRelations,
+        std::nullptr_t>>>();
+        public: const std::variant<SettledRelations, std::nullptr_t>& value() const;
+    };
+    class AnswerShape15 final : public Node {
+        AnswerShape15(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<std::pair<std::string,
+        SettledJudgment>>, std::nullptr_t, std::vector<AnswerShape15AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<std::pair<std::string,
+        SettledJudgment>>, std::nullptr_t, std::vector<AnswerShape15AnyOf1Items>>>>();
+        public: const std::variant<std::vector<std::pair<std::string, SettledJudgment>>, std::nullptr_t,
+        std::vector<AnswerShape15AnyOf1Items>>& value() const;
+    };
+    class AnswerShape15AnyOf1Items final : public Node {
+        AnswerShape15AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<std::pair<std::string,
+        SettledJudgment>>, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<std::pair<std::string,
+        SettledJudgment>>, std::nullptr_t>>>();
+        public: const std::variant<std::vector<std::pair<std::string, SettledJudgment>>, std::nullptr_t>& value() const;
+    };
+    class AnswerShape2 final : public Node {
+        AnswerShape2(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<double,
+        std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>>();
+        public: const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>& value() const;
+    };
+    class AnswerShape3 final : public Node {
+        AnswerShape3(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::string,
+        std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>>();
+        public: const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>& value() const;
+    };
+    class AnswerShape4 final : public Node {
+        AnswerShape4(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<uint64_t, std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<uint64_t,
+        std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>>>();
+        public: const std::variant<uint64_t, std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>& value() const;
+    };
+    class AnswerShape4AnyOf1Items final : public Node {
+        AnswerShape4AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<uint64_t, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<uint64_t,
+        std::nullptr_t>>>();
+        public: const std::variant<uint64_t, std::nullptr_t>& value() const;
+    };
+    class AnswerShape5 final : public Node {
+        AnswerShape5(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<AnswerResolution, std::vector<std::pair<std::string,
+        AnswerResolution>>, std::vector<AnswerResolutions>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<AnswerResolution,
+        std::vector<std::pair<std::string, AnswerResolution>>, std::vector<AnswerResolutions>>>>();
+        public: const std::variant<AnswerResolution, std::vector<std::pair<std::string, AnswerResolution>>,
+        std::vector<AnswerResolutions>>& value() const;
+    };
+    class AnswerShape6 final : public Node {
+        AnswerShape6(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::string,
+        std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>>();
+        public: const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>& value() const;
+    };
+    class AnswerShape6AnyOf1Items final : public Node {
+        AnswerShape6AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::string, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::string,
+        std::nullptr_t>>>();
+        public: const std::variant<std::string, std::nullptr_t>& value() const;
+    };
+    class AnswerShape7 final : public Node {
+        AnswerShape7(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<std::string>, std::nullptr_t,
+        std::vector<AnswerShape7AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<std::string>,
+        std::nullptr_t, std::vector<AnswerShape7AnyOf1Items>>>>();
+        public: const std::variant<std::vector<std::string>, std::nullptr_t, std::vector<AnswerShape7AnyOf1Items>>& value() const;
+    };
+    class AnswerShape7AnyOf1Items final : public Node {
+        AnswerShape7AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<std::string>, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<std::string>,
+        std::nullptr_t>>>();
+        public: const std::variant<std::vector<std::string>, std::nullptr_t>& value() const;
+    };
+    class AnswerShape8 final : public Node {
+        AnswerShape8(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<double,
+        std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>>();
+        public: const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>& value() const;
+    };
+    class AnswerShape8AnyOf1Items final : public Node {
+        AnswerShape8AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<double, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<double,
+        std::nullptr_t>>>();
+        public: const std::variant<double, std::nullptr_t>& value() const;
+    };
+    class AnswerShape9 final : public Node {
+        AnswerShape9(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<SettledOriginal>, std::nullptr_t,
+        std::vector<AnswerShape9AnyOf1Items>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<SettledOriginal>,
+        std::nullptr_t, std::vector<AnswerShape9AnyOf1Items>>>>();
+        public: const std::variant<std::vector<SettledOriginal>, std::nullptr_t, std::vector<AnswerShape9AnyOf1Items>>& value() const;
+    };
+    class AnswerShape9AnyOf1Items final : public Node {
+        AnswerShape9AnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<std::vector<SettledOriginal>, std::nullptr_t>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<std::vector<SettledOriginal>,
+        std::nullptr_t>>>();
+        public: const std::variant<std::vector<SettledOriginal>, std::nullptr_t>& value() const;
+    };
+    class AnswerShapeAnyOf1Items final : public Node {
+        AnswerShapeAnyOf1Items(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
     };
     class Answers final : public Node {
         Answers(const Data& value, int):Node(value) {
@@ -628,6 +944,12 @@ namespace tt::results {
         public:
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_end_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& end() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_file_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& file() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_first_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& first_line() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_line_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
+        public: const Presence<uint64_t>& last_line() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_length_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& length() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<double>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<double>>>();
@@ -646,6 +968,8 @@ namespace tt::results {
         public: const Presence<Error>& error() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Facts>>> cached_facts_ = std::make_shared<std::shared_ptr<const Presence<Facts>>>();
         public: const Presence<Facts>& facts() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerResolution>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerResolution>>>();
+        public: const Presence<AnswerResolution>& resolution() const;
     };
     class CallId final : public Node {
         CallId(const Data& value, int):Node(value) {
@@ -1498,6 +1822,68 @@ namespace tt::results {
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_last_status_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& last_status() const;
+    };
+    class SettledDecision final : public Node {
+        SettledDecision(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
+    };
+    class SettledJudgment final : public Node {
+        SettledJudgment(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::variant<bool, std::nullptr_t, std::string,
+        double, std::vector<std::string>>>> cached_value_ = std::make_shared<std::shared_ptr<const std::variant<bool,
+        std::nullptr_t, std::string, double, std::vector<std::string>>>>();
+        public: const std::variant<bool, std::nullptr_t, std::string, double, std::vector<std::string>>& value() const;
+    };
+    class SettledOriginal final : public Node {
+        SettledOriginal(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Data>> cached_value_ = std::make_shared<std::shared_ptr<const Data>>();
+        public: const Data& value() const;
+    };
+    class SettledRecognition final : public Node {
+        SettledRecognition(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        std::optional<SettledRecognitionEntities> as_SettledRecognitionEntities() const;
+        std::optional<SettledRecognitionModeProposals> as_SettledRecognitionModeProposals() const;
+    };
+    class SettledRecognitionEntities final : public Node {
+        SettledRecognitionEntities(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Entity>>>> cached_entities_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Entity>>>>();
+        public: const Presence<std::vector<Entity>>& entities() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<EntityEdge>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<EntityEdge>>>>();
+        public: const Presence<std::vector<EntityEdge>>& relations() const;
+    };
+    class SettledRecognitionModeProposals final : public Node {
+        SettledRecognitionModeProposals(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<BoundaryMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<BoundaryMode>>>();
+        public: const Presence<BoundaryMode>& mode() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<BoundaryProposal>>>>();
+        public: const Presence<std::vector<BoundaryProposal>>& proposals() const;
+    };
+    class SettledRelations final : public Node {
+        SettledRelations(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const std::vector<RelatedEntityEdge>>> cached_value_ = std::make_shared<std::shared_ptr<const std::vector<RelatedEntityEdge>>>();
+        public: const std::vector<RelatedEntityEdge>& value() const;
     };
     class StopCause final : public Node {
         StopCause(const Data& value, int):Node(value) {
@@ -2612,12 +2998,16 @@ namespace tt::results {
         }
         friend struct detail::Loader;
         public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<SettledAnswer>>> cached_answer_ = std::make_shared<std::shared_ptr<const Presence<SettledAnswer>>>();
+        public: const Presence<SettledAnswer>& answer() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Facts>>> cached_facts_ = std::make_shared<std::shared_ptr<const Presence<Facts>>>();
         public: const Presence<Facts>& facts() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<CallError>>> cached_failure_ = std::make_shared<std::shared_ptr<const Presence<CallError>>>();
         public: const Presence<CallError>& failure() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_kind_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& kind() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerResolution>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerResolution>>>();
+        public: const Presence<AnswerResolution>& resolution() const;
     };
     class SessionProbabilities final : public Node {
         SessionProbabilities(const Data& value, int):Node(value) {
@@ -2732,6 +3122,202 @@ namespace tt::results {
         public: const Presence<EntityDocument>& target() const;
         std::string source_name() const;
         std::string target_name() const;
+    };
+    class SettledAnswer final : public Node {
+        SettledAnswer(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        std::optional<SettledAnswerDecide> as_SettledAnswerDecide() const;
+        std::optional<SettledAnswerChoose> as_SettledAnswerChoose() const;
+        std::optional<SettledAnswerTag> as_SettledAnswerTag() const;
+        std::optional<SettledAnswerScore> as_SettledAnswerScore() const;
+        std::optional<SettledAnswerFilter> as_SettledAnswerFilter() const;
+        std::optional<SettledAnswerRank> as_SettledAnswerRank() const;
+        std::optional<SettledAnswerFind> as_SettledAnswerFind() const;
+        std::optional<SettledAnswerRecognize> as_SettledAnswerRecognize() const;
+        std::optional<SettledAnswerRelate> as_SettledAnswerRelate() const;
+        std::optional<SettledAnswerAnnotate> as_SettledAnswerAnnotate() const;
+    };
+    class SettledAnswerAnnotate final : public Node {
+        SettledAnswerAnnotate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape15>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape15>>>();
+        public: const Presence<AnswerShape15>& value() const;
+    };
+    class SettledAnswerChoose final : public Node {
+        SettledAnswerChoose(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape6>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape6>>>();
+        public: const Presence<AnswerShape6>& value() const;
+    };
+    class SettledAnswerDecide final : public Node {
+        SettledAnswerDecide(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape>>>();
+        public: const Presence<AnswerShape>& value() const;
+    };
+    class SettledAnswerFilter final : public Node {
+        SettledAnswerFilter(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape10>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape10>>>();
+        public: const Presence<AnswerShape10>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape9>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape9>>>();
+        public: const Presence<AnswerShape9>& value() const;
+    };
+    class SettledAnswerFind final : public Node {
+        SettledAnswerFind(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape12>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape12>>>();
+        public: const Presence<AnswerShape12>& value() const;
+    };
+    class SettledAnswerRank final : public Node {
+        SettledAnswerRank(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape10>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape10>>>();
+        public: const Presence<AnswerShape10>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape11>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape11>>>();
+        public: const Presence<AnswerShape11>& value() const;
+    };
+    class SettledAnswerRecognize final : public Node {
+        SettledAnswerRecognize(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape10>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape10>>>();
+        public: const Presence<AnswerShape10>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape13>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape13>>>();
+        public: const Presence<AnswerShape13>& value() const;
+    };
+    class SettledAnswerRelate final : public Node {
+        SettledAnswerRelate(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape10>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape10>>>();
+        public: const Presence<AnswerShape10>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape14>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape14>>>();
+        public: const Presence<AnswerShape14>& value() const;
+    };
+    class SettledAnswerScore final : public Node {
+        SettledAnswerScore(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape8>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape8>>>();
+        public: const Presence<AnswerShape8>& value() const;
+    };
+    class SettledAnswerTag final : public Node {
+        SettledAnswerTag(const Data& value, int):Node(value) {
+        }
+        friend struct detail::Loader;
+        public:
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_function_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& function() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape4>>> cached_index_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape4>>>();
+        public: const Presence<AnswerShape4>& index() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape3>>> cached_pick_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape3>>>();
+        public: const Presence<AnswerShape3>& pick() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape2>>> cached_probability_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape2>>>();
+        public: const Presence<AnswerShape2>& probability() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape5>>> cached_resolution_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape5>>>();
+        public: const Presence<AnswerShape5>& resolution() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<AnswerShape7>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<AnswerShape7>>>();
+        public: const Presence<AnswerShape7>& value() const;
     };
     class SourceRelationEndpoint final : public Node {
         SourceRelationEndpoint(const Data& value, int):Node(value) {
@@ -3136,6 +3722,243 @@ namespace tt::results {
         auto stored = std::atomic_load(cached_value_.get());
         if (!stored) {
             auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::string& AnswerResolution::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::string>(detail::decode<std::string>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<AnswerResolution, std::vector<std::pair<std::string, AnswerResolution>>>& AnswerResolutions::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<AnswerResolution, std::vector<std::pair<std::string,
+            AnswerResolution>>>>(detail::decode<std::variant<AnswerResolution, std::vector<std::pair<std::string,
+            AnswerResolution>>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& AnswerShape::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<AnswerShape8AnyOf1Items>, std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>& AnswerShape10::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+            std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>>(detail::decode<std::variant<std::vector<AnswerShape8AnyOf1Items>,
+            std::nullptr_t, std::vector<AnswerShape10AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<AnswerShape8AnyOf1Items>, std::nullptr_t>& AnswerShape10AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<AnswerShape8AnyOf1Items>,
+            std::nullptr_t>>(detail::decode<std::variant<std::vector<AnswerShape8AnyOf1Items>, std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<uint64_t>, std::nullptr_t, std::vector<AnswerShape11AnyOf1Items>>& AnswerShape11::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<uint64_t>, std::nullptr_t,
+            std::vector<AnswerShape11AnyOf1Items>>>(detail::decode<std::variant<std::vector<uint64_t>,
+            std::nullptr_t, std::vector<AnswerShape11AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<uint64_t>, std::nullptr_t>& AnswerShape11AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<uint64_t>, std::nullptr_t>>(detail::decode<std::variant<std::vector<uint64_t>,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& AnswerShape12::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& AnswerShape12AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<SettledRecognition, std::nullptr_t, std::vector<AnswerShape13AnyOf1Items>>& AnswerShape13::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<SettledRecognition, std::nullptr_t, std::vector<AnswerShape13AnyOf1Items>>>(detail::decode<std::variant<SettledRecognition,
+            std::nullptr_t, std::vector<AnswerShape13AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<SettledRecognition, std::nullptr_t>& AnswerShape13AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<SettledRecognition, std::nullptr_t>>(detail::decode<std::variant<SettledRecognition,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<SettledRelations, std::nullptr_t, std::vector<AnswerShape14AnyOf1Items>>& AnswerShape14::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<SettledRelations, std::nullptr_t, std::vector<AnswerShape14AnyOf1Items>>>(detail::decode<std::variant<SettledRelations,
+            std::nullptr_t, std::vector<AnswerShape14AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<SettledRelations, std::nullptr_t>& AnswerShape14AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<SettledRelations, std::nullptr_t>>(detail::decode<std::variant<SettledRelations,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<std::pair<std::string, SettledJudgment>>, std::nullptr_t,
+    std::vector<AnswerShape15AnyOf1Items>>& AnswerShape15::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<std::pair<std::string, SettledJudgment>>,
+            std::nullptr_t, std::vector<AnswerShape15AnyOf1Items>>>(detail::decode<std::variant<std::vector<std::pair<std::string,
+            SettledJudgment>>, std::nullptr_t, std::vector<AnswerShape15AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<std::pair<std::string, SettledJudgment>>, std::nullptr_t>& AnswerShape15AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<std::pair<std::string, SettledJudgment>>,
+            std::nullptr_t>>(detail::decode<std::variant<std::vector<std::pair<std::string, SettledJudgment>>,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>& AnswerShape2::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>(detail::decode<std::variant<double,
+            std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>& AnswerShape3::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>(detail::decode<std::variant<std::string,
+            std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<uint64_t, std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>& AnswerShape4::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<uint64_t, std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>>(detail::decode<std::variant<uint64_t,
+            std::nullptr_t, std::vector<AnswerShape4AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<uint64_t, std::nullptr_t>& AnswerShape4AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<uint64_t, std::nullptr_t>>(detail::decode<std::variant<uint64_t,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<AnswerResolution, std::vector<std::pair<std::string, AnswerResolution>>,
+    std::vector<AnswerResolutions>>& AnswerShape5::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<AnswerResolution, std::vector<std::pair<std::string,
+            AnswerResolution>>, std::vector<AnswerResolutions>>>(detail::decode<std::variant<AnswerResolution,
+            std::vector<std::pair<std::string, AnswerResolution>>, std::vector<AnswerResolutions>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>& AnswerShape6::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::string, std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>(detail::decode<std::variant<std::string,
+            std::nullptr_t, std::vector<AnswerShape6AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::string, std::nullptr_t>& AnswerShape6AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::string, std::nullptr_t>>(detail::decode<std::variant<std::string,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<std::string>, std::nullptr_t, std::vector<AnswerShape7AnyOf1Items>>& AnswerShape7::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<std::string>, std::nullptr_t,
+            std::vector<AnswerShape7AnyOf1Items>>>(detail::decode<std::variant<std::vector<std::string>,
+            std::nullptr_t, std::vector<AnswerShape7AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<std::string>, std::nullptr_t>& AnswerShape7AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<std::string>, std::nullptr_t>>(detail::decode<std::variant<std::vector<std::string>,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>& AnswerShape8::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<double, std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>(detail::decode<std::variant<double,
+            std::nullptr_t, std::vector<AnswerShape8AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<double, std::nullptr_t>& AnswerShape8AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<double, std::nullptr_t>>(detail::decode<std::variant<double,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<SettledOriginal>, std::nullptr_t, std::vector<AnswerShape9AnyOf1Items>>& AnswerShape9::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<SettledOriginal>, std::nullptr_t,
+            std::vector<AnswerShape9AnyOf1Items>>>(detail::decode<std::variant<std::vector<SettledOriginal>,
+            std::nullptr_t, std::vector<AnswerShape9AnyOf1Items>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<std::vector<SettledOriginal>, std::nullptr_t>& AnswerShape9AnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<std::vector<SettledOriginal>, std::nullptr_t>>(detail::decode<std::variant<std::vector<SettledOriginal>,
+            std::nullptr_t>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& AnswerShapeAnyOf1Items::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
@@ -3874,6 +4697,30 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_end_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
+    inline const Presence<std::string>& BoundaryProposal::file() const {
+        auto stored = std::atomic_load(cached_file_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "file"));
+            if (std::atomic_compare_exchange_strong(cached_file_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& BoundaryProposal::first_line() const {
+        auto stored = std::atomic_load(cached_first_line_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "first_line"));
+            if (std::atomic_compare_exchange_strong(cached_first_line_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint64_t>& BoundaryProposal::last_line() const {
+        auto stored = std::atomic_load(cached_last_line_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
+            "last_line"));
+            if (std::atomic_compare_exchange_strong(cached_last_line_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
     inline const Presence<uint64_t>& BoundaryProposal::length() const {
         auto stored = std::atomic_load(cached_length_.get());
         if (!stored) {
@@ -3920,6 +4767,14 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<Facts>>(detail::member_value<Facts>(value_,
             "facts"));
             if (std::atomic_compare_exchange_strong(cached_facts_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerResolution>& CallError::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerResolution>>(detail::member_value<AnswerResolution>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& CallId::value() const {
@@ -5819,6 +6674,76 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
             "last_status"));
             if (std::atomic_compare_exchange_strong(cached_last_status_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& SettledDecision::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::variant<bool, std::nullptr_t, std::string, double, std::vector<std::string>>& SettledJudgment::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::variant<bool, std::nullptr_t, std::string, double,
+            std::vector<std::string>>>(detail::decode<std::variant<bool, std::nullptr_t, std::string, double,
+            std::vector<std::string>>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Data& SettledOriginal::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Data>(detail::decode<Data>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline std::optional<SettledRecognitionEntities> SettledRecognition::as_SettledRecognitionEntities() const {
+        if (value_.contains("entities") && !value_.contains("mode") && !value_.contains("proposals")) return detail::Loader::input<SettledRecognitionEntities>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledRecognitionModeProposals> SettledRecognition::as_SettledRecognitionModeProposals() const {
+        if (value_.contains("mode") && value_.contains("proposals") && !value_.contains("entities")) return detail::Loader::input<SettledRecognitionModeProposals>(value_);
+        return std::nullopt;
+    }
+    inline const Presence<std::vector<Entity>>& SettledRecognitionEntities::entities() const {
+        auto stored = std::atomic_load(cached_entities_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Entity>>>(detail::member_value<std::vector<Entity>>(value_,
+            "entities"));
+            if (std::atomic_compare_exchange_strong(cached_entities_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<EntityEdge>>& SettledRecognitionEntities::relations() const {
+        auto stored = std::atomic_load(cached_relations_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<EntityEdge>>>(detail::member_value<std::vector<EntityEdge>>(value_,
+            "relations"));
+            if (std::atomic_compare_exchange_strong(cached_relations_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<BoundaryMode>& SettledRecognitionModeProposals::mode() const {
+        auto stored = std::atomic_load(cached_mode_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<BoundaryMode>>(detail::member_value<BoundaryMode>(value_,
+            "mode"));
+            if (std::atomic_compare_exchange_strong(cached_mode_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<BoundaryProposal>>& SettledRecognitionModeProposals::proposals() const {
+        auto stored = std::atomic_load(cached_proposals_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(detail::member_value<std::vector<BoundaryProposal>>(value_,
+            "proposals"));
+            if (std::atomic_compare_exchange_strong(cached_proposals_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const std::vector<RelatedEntityEdge>& SettledRelations::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const std::vector<RelatedEntityEdge>>(detail::decode<std::vector<RelatedEntityEdge>>(value_));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const std::string& StopCause::value() const {
@@ -8201,6 +9126,14 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
+    inline const Presence<SettledAnswer>& SessionPacketTerminal::answer() const {
+        auto stored = std::atomic_load(cached_answer_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<SettledAnswer>>(detail::member_value<SettledAnswer>(value_,
+            "answer"));
+            if (std::atomic_compare_exchange_strong(cached_answer_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
     inline const Presence<Facts>& SessionPacketTerminal::facts() const {
         auto stored = std::atomic_load(cached_facts_.get());
         if (!stored) {
@@ -8223,6 +9156,14 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
             "kind"));
             if (std::atomic_compare_exchange_strong(cached_kind_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerResolution>& SessionPacketTerminal::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerResolution>>(detail::member_value<AnswerResolution>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline std::optional<SessionProbabilitiesYesNo> SessionProbabilities::as_SessionProbabilitiesYesNo() const {
@@ -8534,6 +9475,526 @@ namespace tt::results {
     }
     inline std::string SessionRelationEdge::target_name() const {
         return value_.at("target").at("name").get<std::string>();
+    }
+    inline std::optional<SettledAnswerDecide> SettledAnswer::as_SettledAnswerDecide() const {
+        if (detail::literal(value_, "function", "decide")) return detail::Loader::input<SettledAnswerDecide>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerChoose> SettledAnswer::as_SettledAnswerChoose() const {
+        if (detail::literal(value_, "function", "choose")) return detail::Loader::input<SettledAnswerChoose>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerTag> SettledAnswer::as_SettledAnswerTag() const {
+        if (detail::literal(value_, "function", "tag")) return detail::Loader::input<SettledAnswerTag>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerScore> SettledAnswer::as_SettledAnswerScore() const {
+        if (detail::literal(value_, "function", "score")) return detail::Loader::input<SettledAnswerScore>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerFilter> SettledAnswer::as_SettledAnswerFilter() const {
+        if (detail::literal(value_, "function", "filter")) return detail::Loader::input<SettledAnswerFilter>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerRank> SettledAnswer::as_SettledAnswerRank() const {
+        if (detail::literal(value_, "function", "rank")) return detail::Loader::input<SettledAnswerRank>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerFind> SettledAnswer::as_SettledAnswerFind() const {
+        if (detail::literal(value_, "function", "find")) return detail::Loader::input<SettledAnswerFind>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerRecognize> SettledAnswer::as_SettledAnswerRecognize() const {
+        if (detail::literal(value_, "function", "recognize")) return detail::Loader::input<SettledAnswerRecognize>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerRelate> SettledAnswer::as_SettledAnswerRelate() const {
+        if (detail::literal(value_, "function", "relate")) return detail::Loader::input<SettledAnswerRelate>(value_);
+        return std::nullopt;
+    }
+    inline std::optional<SettledAnswerAnnotate> SettledAnswer::as_SettledAnswerAnnotate() const {
+        if (detail::literal(value_, "function", "annotate")) return detail::Loader::input<SettledAnswerAnnotate>(value_);
+        return std::nullopt;
+    }
+    inline const Presence<std::string>& SettledAnswerAnnotate::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerAnnotate::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerAnnotate::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerAnnotate::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerAnnotate::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape15>& SettledAnswerAnnotate::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape15>>(detail::member_value<AnswerShape15>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerChoose::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerChoose::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerChoose::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerChoose::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerChoose::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape6>& SettledAnswerChoose::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape6>>(detail::member_value<AnswerShape6>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerDecide::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerDecide::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerDecide::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerDecide::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerDecide::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape>& SettledAnswerDecide::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape>>(detail::member_value<AnswerShape>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerFilter::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerFilter::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerFilter::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape10>& SettledAnswerFilter::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape10>>(detail::member_value<AnswerShape10>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerFilter::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape9>& SettledAnswerFilter::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape9>>(detail::member_value<AnswerShape9>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerFind::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerFind::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerFind::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerFind::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerFind::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape12>& SettledAnswerFind::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape12>>(detail::member_value<AnswerShape12>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerRank::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerRank::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerRank::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape10>& SettledAnswerRank::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape10>>(detail::member_value<AnswerShape10>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerRank::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape11>& SettledAnswerRank::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape11>>(detail::member_value<AnswerShape11>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerRecognize::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerRecognize::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerRecognize::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape10>& SettledAnswerRecognize::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape10>>(detail::member_value<AnswerShape10>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerRecognize::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape13>& SettledAnswerRecognize::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape13>>(detail::member_value<AnswerShape13>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerRelate::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerRelate::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerRelate::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape10>& SettledAnswerRelate::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape10>>(detail::member_value<AnswerShape10>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerRelate::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape14>& SettledAnswerRelate::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape14>>(detail::member_value<AnswerShape14>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerScore::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerScore::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerScore::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerScore::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerScore::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape8>& SettledAnswerScore::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape8>>(detail::member_value<AnswerShape8>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& SettledAnswerTag::function() const {
+        auto stored = std::atomic_load(cached_function_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "function"));
+            if (std::atomic_compare_exchange_strong(cached_function_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape4>& SettledAnswerTag::index() const {
+        auto stored = std::atomic_load(cached_index_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape4>>(detail::member_value<AnswerShape4>(value_,
+            "index"));
+            if (std::atomic_compare_exchange_strong(cached_index_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape3>& SettledAnswerTag::pick() const {
+        auto stored = std::atomic_load(cached_pick_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape3>>(detail::member_value<AnswerShape3>(value_,
+            "pick"));
+            if (std::atomic_compare_exchange_strong(cached_pick_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape2>& SettledAnswerTag::probability() const {
+        auto stored = std::atomic_load(cached_probability_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape2>>(detail::member_value<AnswerShape2>(value_,
+            "probability"));
+            if (std::atomic_compare_exchange_strong(cached_probability_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape5>& SettledAnswerTag::resolution() const {
+        auto stored = std::atomic_load(cached_resolution_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape5>>(detail::member_value<AnswerShape5>(value_,
+            "resolution"));
+            if (std::atomic_compare_exchange_strong(cached_resolution_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<AnswerShape7>& SettledAnswerTag::value() const {
+        auto stored = std::atomic_load(cached_value_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<AnswerShape7>>(detail::member_value<AnswerShape7>(value_,
+            "value"));
+            if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
     }
     inline const Presence<std::string>& SourceRelationEndpoint::file() const {
         auto stored = std::atomic_load(cached_file_.get());
@@ -9103,9 +10564,11 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_sdk_request_id_v1& value);
     inline Data native_value(const thinkthen_complete_attempt_outcome_v1& value);
     inline Data native_value(const thinkthen_complete_session_packet_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_presence_v1& value);
     inline Data native_value(const thinkthen_complete_facts_presence_v1& value);
     inline Data native_value(const thinkthen_complete_call_error_presence_v1& value);
     inline Data native_value(const thinkthen_complete_session_packet_terminal_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_resolution_v1& value);
     inline Data native_value(const thinkthen_complete_call_error_v1& value);
     inline Data native_value(const thinkthen_complete_facts_v1& value);
     inline Data native_value(const thinkthen_complete_input_denial_presence_v1& value);
@@ -9122,6 +10585,95 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_input_denial_retry_v1& value);
     inline Data native_value(const thinkthen_complete_input_denial_additional_request_v1& value);
     inline Data native_value(const thinkthen_complete_input_denial_initial_request_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_4_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_3_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_2_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_15_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_annotate_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_judgment_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_judgment_map_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_15_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_15_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_15_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_string_list_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_judgment_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_resolution_map_entry_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_resolution_map_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_resolutions_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_5_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_resolutions_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_8_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_2_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_8_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_6_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_3_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_6_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_4_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_4_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_4_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_10_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_14_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_relate_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_14_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_14_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_14_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_relations_v1& value);
+    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value);
+    inline Data native_value(const thinkthen_complete_json_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value);
+    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_10_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_10_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_10_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_13_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_recognize_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_13_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_13_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_13_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_recognition_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_recognition_mode_proposals_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value);
+    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_list_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_recognition_entities_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_edge_v1& value);
+    inline Data native_value(const thinkthen_complete_entity_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_12_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_find_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_12_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_11_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_rank_v1& value);
+    inline Data native_value(const thinkthen_complete_integer_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_11_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_11_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_11_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_9_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_filter_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_original_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_9_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_9_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_9_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_original_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_8_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_score_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_8_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_7_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_tag_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_7_any_of_1_items_list_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_7_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_7_any_of_1_items_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_6_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_choose_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_6_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_presence_v1& value);
+    inline Data native_value(const thinkthen_complete_settled_answer_decide_v1& value);
+    inline Data native_value(const thinkthen_complete_answer_shape_v1& value);
     inline Data native_value(const thinkthen_complete_session_packet_observation_v1& value);
     inline Data native_value(const thinkthen_complete_session_observation_v1& value);
     inline Data native_value(const thinkthen_complete_session_observation_row_v1& value);
@@ -9132,15 +10684,11 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_entity_document_v1& value);
     inline Data native_value(const thinkthen_complete_session_observed_row_find_v1& value);
     inline Data native_value(const thinkthen_complete_session_observed_row_recognized_v1& value);
-    inline Data native_value(const thinkthen_complete_entity_list_v1& value);
-    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value);
     inline Data native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value);
     inline Data native_value(const thinkthen_complete_recognition_edge_list_v1& value);
     inline Data native_value(const thinkthen_complete_recognition_edge_list_presence_v1& value);
     inline Data native_value(const thinkthen_complete_session_recognition_v1& value);
     inline Data native_value(const thinkthen_complete_recognition_edge_v1& value);
-    inline Data native_value(const thinkthen_complete_entity_v1& value);
-    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value);
     inline Data native_value(const thinkthen_complete_recognition_mode_v1& value);
     inline Data native_value(const thinkthen_complete_session_annotation_list_v1& value);
     inline Data native_value(const thinkthen_complete_session_observed_row_annotated_v1& value);
@@ -9150,7 +10698,6 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_failure_field_kind_v1& value);
     inline Data native_value(const thinkthen_complete_failure_v1& value);
     inline Data native_value(const thinkthen_complete_failure_cause_v1& value);
-    inline Data native_value(const thinkthen_complete_string_list_v1& value);
     inline Data native_value(const thinkthen_complete_annotation_value_tags_v1& value);
     inline Data native_value(const thinkthen_complete_annotation_value_score_v1& value);
     inline Data native_value(const thinkthen_complete_annotation_value_choice_v1& value);
@@ -9166,7 +10713,6 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_f64_presence_v1& value);
     inline Data native_value(const thinkthen_complete_failure_presence_v1& value);
     inline Data native_value(const thinkthen_complete_failure_id_presence_v1& value);
-    inline Data native_value(const thinkthen_complete_json_presence_v1& value);
     inline Data native_value(const thinkthen_complete_physical_source_presence_v1& value);
     inline Data native_value(const thinkthen_complete_session_input_source_list_v1& value);
     inline Data native_value(const thinkthen_complete_json_list_v1& value);
@@ -9231,12 +10777,7 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_session_packet_relate_aggregate_v1& value);
     inline Data native_value(const thinkthen_complete_session_input_source_list_presence_v1& value);
     inline Data native_value(const thinkthen_complete_position_presence_v1& value);
-    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value);
     inline Data native_value(const thinkthen_complete_relation_v1& value);
-    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value);
-    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value);
-    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value);
-    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value);
     inline Data native_value(const thinkthen_complete_version_v1& value);
     inline Data native_value(const thinkthen_complete_relate_fields_presence_v1& value);
     inline Data native_value(const thinkthen_complete_relation_rule_list_v1& value);
@@ -9273,11 +10814,7 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_recognition_v1& value);
     inline Data native_value(const thinkthen_complete_recognize_v1& value);
     inline Data native_value(const thinkthen_complete_recognize_mode_proposals_v1& value);
-    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value);
-    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value);
-    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value);
     inline Data native_value(const thinkthen_complete_recognize_entities_v1& value);
-    inline Data native_value(const thinkthen_complete_entity_edge_v1& value);
     inline Data native_value(const thinkthen_complete_json_map_entry_v1& value);
     inline Data native_value(const thinkthen_complete_json_map_v1& value);
     inline Data native_value(const thinkthen_complete_recognition_mode_presence_v1& value);
@@ -9583,6 +11120,9 @@ namespace tt::results::detail {
             default: throw std::invalid_argument("invalid native alternative");
         }
     }
+    inline Data native_value(const thinkthen_complete_settled_answer_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
     inline Data native_value(const thinkthen_complete_facts_presence_v1& value) {
         return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
@@ -9591,6 +11131,10 @@ namespace tt::results::detail {
     }
     inline Data native_value(const thinkthen_complete_session_packet_terminal_v1& value) {
         Data::Object items;
+        if(value.answer.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("answer",
+        Data(nullptr));
+        else if(value.answer.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("answer",
+        native_value(value.answer.value));
         if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Data(nullptr));
         else if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("facts",
         native_value(value.facts.value));
@@ -9599,6 +11143,7 @@ namespace tt::results::detail {
         else if(value.failure.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("failure",
         native_value(value.failure.value));
         items.emplace_back("kind",native_value(value.kind));
+        items.emplace_back("resolution",native_value(value.resolution));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
@@ -9607,12 +11152,21 @@ namespace tt::results::detail {
         }
         return Data(std::move(items));
     }
+    inline Data native_value(const thinkthen_complete_answer_resolution_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED_V1: return Data("resolved");
+            case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED_V1: return Data("unresolved");
+            case THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1: return Data("failed");
+            default: throw std::invalid_argument("invalid native enum");
+        }
+    }
     inline Data native_value(const thinkthen_complete_call_error_v1& value) {
         Data::Object items;
         items.emplace_back("error",native_value(value.error));
         if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("facts",Data(nullptr));
         else if(value.facts.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("facts",
         native_value(value.facts.value));
+        items.emplace_back("resolution",native_value(value.resolution));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
@@ -9829,6 +11383,886 @@ namespace tt::results::detail {
         }
         return Data(std::move(items));
     }
+    inline Data native_value(const thinkthen_complete_settled_answer_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE_V1: return native_value(value.data.decide);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE_V1: return native_value(value.data.choose);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG_V1: return native_value(value.data.tag);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE_V1: return native_value(value.data.score);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER_V1: return native_value(value.data.filter);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK_V1: return native_value(value.data.rank);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND_V1: return native_value(value.data.find);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE_V1: return native_value(value.data.recognize);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE_V1: return native_value(value.data.relate);
+            case THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE_V1: return native_value(value.data.annotate);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_4_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_3_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_2_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_15_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_annotate_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_settled_judgment_map_entry_v1& value) {
+        return native_value(value.value);
+    }
+    inline Data native_value(const thinkthen_complete_settled_judgment_map_v1& value) {
+        Data::Object items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            auto& item=value.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_15_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_15_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT_V1: return native_value(value.data.object);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_15_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT_V1: return native_value(value.data.object);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_string_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_settled_judgment_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN_V1: return Data(bool(value.data.boolean));
+            case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER_V1: return native_value(value.data.number);
+            case THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_resolution_map_entry_v1& value) {
+        return native_value(value.value);
+    }
+    inline Data native_value(const thinkthen_complete_answer_resolution_map_v1& value) {
+        Data::Object items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            auto& item=value.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_resolutions_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_5_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT_V1: return native_value(value.data.object);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_resolutions_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT_V1: return native_value(value.data.object);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_8_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_2_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER_V1: return native_value(value.data.number);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_8_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER_V1: return native_value(value.data.number);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_6_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_3_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_6_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_4_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_4_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER_V1: return native_value(value.data.integer);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_4_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER_V1: return native_value(value.data.integer);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_10_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_14_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_relate_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_14_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_14_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2_V1: return native_value(value.data.array2);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_14_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_settled_relations_v1& value) {
+        return native_value(value.value);
+    }
+    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value) {
+        Data::Object items;
+        if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
+        Data(nullptr));
+        else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
+        Data(bool(value.either.value)));
+        items.emplace_back("probability",native_value(value.probability));
+        items.emplace_back("relation",native_value(value.relation));
+        items.emplace_back("source",native_value(value.source));
+        items.emplace_back("target",native_value(value.target));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1: return native_value(value.data.related_entity);
+            case THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1: return native_value(value.data.source);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_json_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value) {
+        Data::Object items;
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
+        else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
+        native_value(value.file.value));
+        if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
+        Data(nullptr));
+        else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
+        native_value(value.first_line.value));
+        items.emplace_back("kind",native_value(value.kind));
+        if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
+        Data(nullptr));
+        else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
+        native_value(value.last_line.value));
+        items.emplace_back("name",native_value(value.name));
+        items.emplace_back("ordinal",native_value(value.ordinal));
+        if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("record",
+        Data(nullptr));
+        else if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("record",
+        native_value(value.record.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value) {
+        Data::Object items;
+        items.emplace_back("kind",native_value(value.kind));
+        items.emplace_back("name",native_value(value.name));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_10_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_10_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2_V1: return native_value(value.data.array2);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_10_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_13_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_recognize_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_13_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_13_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT_V1: return native_value(value.data.object);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_13_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT_V1: return native_value(value.data.object);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_settled_recognition_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES_V1: return native_value(value.data.entities);
+            case THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS_V1: return native_value(value.data.mode_proposals);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_settled_recognition_mode_proposals_v1& value) {
+        Data::Object items;
+        items.emplace_back("mode",native_value(value.mode));
+        items.emplace_back("proposals",native_value(value.proposals));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value) {
+        Data::Object items;
+        items.emplace_back("end",native_value(value.end));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
+        else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
+        native_value(value.file.value));
+        if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
+        Data(nullptr));
+        else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
+        native_value(value.first_line.value));
+        if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
+        Data(nullptr));
+        else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
+        native_value(value.last_line.value));
+        items.emplace_back("length",native_value(value.length));
+        items.emplace_back("probability",native_value(value.probability));
+        items.emplace_back("start",native_value(value.start));
+        items.emplace_back("text",native_value(value.text));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1: return Data("boundary_only");
+            default: throw std::invalid_argument("invalid native enum");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_entity_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_recognition_entities_v1& value) {
+        Data::Object items;
+        items.emplace_back("entities",native_value(value.entities));
+        if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("relations",
+        Data(nullptr));
+        else if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relations",
+        native_value(value.relations.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_entity_edge_v1& value) {
+        Data::Object items;
+        if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
+        Data(nullptr));
+        else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
+        Data(bool(value.either.value)));
+        items.emplace_back("probability",native_value(value.probability));
+        items.emplace_back("relation",native_value(value.relation));
+        items.emplace_back("source",native_value(value.source));
+        items.emplace_back("target",native_value(value.target));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_entity_v1& value) {
+        Data::Object items;
+        items.emplace_back("end",native_value(value.end));
+        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
+        else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
+        native_value(value.file.value));
+        if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
+        Data(nullptr));
+        else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
+        native_value(value.first_line.value));
+        items.emplace_back("kind",native_value(value.kind));
+        if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
+        Data(nullptr));
+        else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
+        native_value(value.last_line.value));
+        items.emplace_back("length",native_value(value.length));
+        items.emplace_back("start",native_value(value.start));
+        items.emplace_back("strength",native_value(value.strength));
+        items.emplace_back("text",native_value(value.text));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_12_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_find_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_12_v1& value) {
+        return native_value(value.value);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_11_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_rank_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_integer_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_11_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_11_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2_V1: return native_value(value.data.array2);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_11_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_9_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_filter_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_settled_original_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_9_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_9_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2_V1: return native_value(value.data.array2);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_9_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_settled_original_v1& value) {
+        return native_value(value.value);
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_8_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_score_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_8_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER_V1: return native_value(value.data.number);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_7_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_tag_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_7_any_of_1_items_list_v1& value) {
+        Data::Array items;
+        for(size_t i=0;
+        i<value.len;
+        ++i) {
+            items.push_back(native_value(value.data[i]));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_7_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2_V1: return native_value(value.data.array2);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_7_any_of_1_items_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY_V1: return native_value(value.data.array);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL_V1: return Data(nullptr);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_6_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_choose_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_6_v1& value) {
+        switch(value.kind) {
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING_V1: return native_value(value.data.string);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL_V1: return Data(nullptr);
+            case THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY_V1: return native_value(value.data.array);
+            default: throw std::invalid_argument("invalid native alternative");
+        }
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_presence_v1& value) {
+        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
+    }
+    inline Data native_value(const thinkthen_complete_settled_answer_decide_v1& value) {
+        Data::Object items;
+        items.emplace_back("function",native_value(value.function));
+        if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("index",Data(nullptr));
+        else if(value.index.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("index",
+        native_value(value.index.value));
+        if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("pick",Data(nullptr));
+        else if(value.pick.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("pick",
+        native_value(value.pick.value));
+        if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("probability",
+        Data(nullptr));
+        else if(value.probability.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("probability",
+        native_value(value.probability.value));
+        items.emplace_back("resolution",native_value(value.resolution));
+        if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("value",Data(nullptr));
+        else if(value.value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("value",
+        native_value(value.value.value));
+        for(size_t i=0;
+        i<value.extensions.len;
+        ++i) {
+            auto& item=value.extensions.data[i];
+            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
+        }
+        return Data(std::move(items));
+    }
+    inline Data native_value(const thinkthen_complete_answer_shape_v1& value) {
+        return native_value(value.value);
+    }
     inline Data native_value(const thinkthen_complete_session_packet_observation_v1& value) {
         Data::Object items;
         items.emplace_back("function",native_value(value.function));
@@ -9946,24 +12380,6 @@ namespace tt::results::detail {
         }
         return Data(std::move(items));
     }
-    inline Data native_value(const thinkthen_complete_entity_list_v1& value) {
-        Data::Array items;
-        for(size_t i=0;
-        i<value.len;
-        ++i) {
-            items.push_back(native_value(value.data[i]));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_boundary_proposal_list_v1& value) {
-        Data::Array items;
-        for(size_t i=0;
-        i<value.len;
-        ++i) {
-            items.push_back(native_value(value.data[i]));
-        }
-        return Data(std::move(items));
-    }
     inline Data native_value(const thinkthen_complete_boundary_proposal_list_presence_v1& value) {
         return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
@@ -10006,48 +12422,6 @@ namespace tt::results::detail {
         items.emplace_back("relation",native_value(value.relation));
         items.emplace_back("source",native_value(value.source));
         items.emplace_back("target",native_value(value.target));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_entity_v1& value) {
-        Data::Object items;
-        items.emplace_back("end",native_value(value.end));
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
-        else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
-        native_value(value.file.value));
-        if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Data(nullptr));
-        else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
-        native_value(value.first_line.value));
-        items.emplace_back("kind",native_value(value.kind));
-        if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Data(nullptr));
-        else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
-        native_value(value.last_line.value));
-        items.emplace_back("length",native_value(value.length));
-        items.emplace_back("start",native_value(value.start));
-        items.emplace_back("strength",native_value(value.strength));
-        items.emplace_back("text",native_value(value.text));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_boundary_proposal_v1& value) {
-        Data::Object items;
-        items.emplace_back("end",native_value(value.end));
-        items.emplace_back("length",native_value(value.length));
-        items.emplace_back("probability",native_value(value.probability));
-        items.emplace_back("start",native_value(value.start));
-        items.emplace_back("text",native_value(value.text));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
@@ -10146,15 +12520,6 @@ namespace tt::results::detail {
             case THINKTHEN_COMPLETE_FAILURE_CAUSE_UNEXPECTED_PROBABILITY_V1: return Data("unexpected_probability");
             default: throw std::invalid_argument("invalid native enum");
         }
-    }
-    inline Data native_value(const thinkthen_complete_string_list_v1& value) {
-        Data::Array items;
-        for(size_t i=0;
-        i<value.len;
-        ++i) {
-            items.push_back(native_value(value.data[i]));
-        }
-        return Data(std::move(items));
     }
     inline Data native_value(const thinkthen_complete_annotation_value_tags_v1& value) {
         Data::Object items;
@@ -10312,9 +12677,6 @@ namespace tt::results::detail {
         return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
     inline Data native_value(const thinkthen_complete_failure_id_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
-    }
-    inline Data native_value(const thinkthen_complete_json_presence_v1& value) {
         return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
     inline Data native_value(const thinkthen_complete_physical_source_presence_v1& value) {
@@ -11049,15 +13411,6 @@ namespace tt::results::detail {
     inline Data native_value(const thinkthen_complete_position_presence_v1& value) {
         return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
     }
-    inline Data native_value(const thinkthen_complete_related_entity_edge_list_v1& value) {
-        Data::Array items;
-        for(size_t i=0;
-        i<value.len;
-        ++i) {
-            items.push_back(native_value(value.data[i]));
-        }
-        return Data(std::move(items));
-    }
     inline Data native_value(const thinkthen_complete_relation_v1& value) {
         Data::Object items;
         items.emplace_back("answer",native_value(value.answer));
@@ -11091,71 +13444,6 @@ namespace tt::results::detail {
         items.emplace_back("question",native_value(value.question));
         items.emplace_back("schema",native_value(value.schema));
         items.emplace_back("value",native_value(value.value));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_related_entity_edge_v1& value) {
-        Data::Object items;
-        if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
-        Data(nullptr));
-        else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
-        Data(bool(value.either.value)));
-        items.emplace_back("probability",native_value(value.probability));
-        items.emplace_back("relation",native_value(value.relation));
-        items.emplace_back("source",native_value(value.source));
-        items.emplace_back("target",native_value(value.target));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_relation_endpoint_v1& value) {
-        switch(value.kind) {
-            case THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1: return native_value(value.data.related_entity);
-            case THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1: return native_value(value.data.source);
-            default: throw std::invalid_argument("invalid native alternative");
-        }
-    }
-    inline Data native_value(const thinkthen_complete_relation_endpoint_source_v1& value) {
-        Data::Object items;
-        if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("file",Data(nullptr));
-        else if(value.file.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("file",
-        native_value(value.file.value));
-        if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("first_line",
-        Data(nullptr));
-        else if(value.first_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("first_line",
-        native_value(value.first_line.value));
-        items.emplace_back("kind",native_value(value.kind));
-        if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("last_line",
-        Data(nullptr));
-        else if(value.last_line.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("last_line",
-        native_value(value.last_line.value));
-        items.emplace_back("name",native_value(value.name));
-        items.emplace_back("ordinal",native_value(value.ordinal));
-        if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("record",
-        Data(nullptr));
-        else if(value.record.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("record",
-        native_value(value.record.value));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_relation_endpoint_related_entity_v1& value) {
-        Data::Object items;
-        items.emplace_back("kind",native_value(value.kind));
-        items.emplace_back("name",native_value(value.name));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {
@@ -11663,24 +13951,6 @@ namespace tt::results::detail {
         }
         return Data(std::move(items));
     }
-    inline Data native_value(const thinkthen_complete_boundary_mode_v1& value) {
-        switch(value.kind) {
-            case THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1: return Data("boundary_only");
-            default: throw std::invalid_argument("invalid native enum");
-        }
-    }
-    inline Data native_value(const thinkthen_complete_entity_edge_list_v1& value) {
-        Data::Array items;
-        for(size_t i=0;
-        i<value.len;
-        ++i) {
-            items.push_back(native_value(value.data[i]));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_entity_edge_list_presence_v1& value) {
-        return value.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? native_value(value.value) : Data(nullptr);
-    }
     inline Data native_value(const thinkthen_complete_recognize_entities_v1& value) {
         Data::Object items;
         items.emplace_back("entities",native_value(value.entities));
@@ -11688,24 +13958,6 @@ namespace tt::results::detail {
         Data(nullptr));
         else if(value.relations.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("relations",
         native_value(value.relations.value));
-        for(size_t i=0;
-        i<value.extensions.len;
-        ++i) {
-            auto& item=value.extensions.data[i];
-            items.emplace_back(native_value(item.name).get<std::string>(),native_value(item.value));
-        }
-        return Data(std::move(items));
-    }
-    inline Data native_value(const thinkthen_complete_entity_edge_v1& value) {
-        Data::Object items;
-        if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items.emplace_back("either",
-        Data(nullptr));
-        else if(value.either.presence==THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items.emplace_back("either",
-        Data(bool(value.either.value)));
-        items.emplace_back("probability",native_value(value.probability));
-        items.emplace_back("relation",native_value(value.relation));
-        items.emplace_back("source",native_value(value.source));
-        items.emplace_back("target",native_value(value.target));
         for(size_t i=0;
         i<value.extensions.len;
         ++i) {

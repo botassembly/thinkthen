@@ -143,7 +143,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         else:output=subprocess.run(args,env=child,cwd=home,capture_output=True,text=True,timeout=120)
                         assert output.returncode==0 and not output.stderr,(output.returncode,output.stderr)
                         assert 'sk-conformance-loopback' not in output.stdout+output.stderr, 'key leaked through public result or failure'
-                        emitted=[project_session(json.loads(output.stdout),step)]
+                        emitted=[project_session(json.loads(output.stdout),step,settled=CONSUMER=='c')]
                         got=emitted[-1]
                         if step.get('incremental'):
                             got.setdefault('completed', [answer for partial in emitted[:-1] for answer in partial['rows']])
@@ -178,7 +178,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             before=int(backend.read('count'));replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')
                             repeated=invoke(step,replay,child,home,backend) if invoke is not None else subprocess.run([str(binary),str(input_file),shared.compact(replay)],env=child,cwd=home,capture_output=True,text=True,timeout=60)
                             assert repeated.returncode==0 and not repeated.stderr,repeated.stderr
-                            saved=project_session(json.loads(repeated.stdout),step);shared.assertions(row,step,saved,int(backend.read('count')))
+                            saved=project_session(json.loads(repeated.stdout),step,settled=CONSUMER=='c');shared.assertions(row,step,saved,int(backend.read('count')))
                             assert saved['requests_sent']==0 and int(backend.read('count'))==before and saved['rows'][0]['answer_id']==got['rows'][0]['answer_id'],saved
                     if value.get('identity_steps'):
                         ids=[x['rows'][0]['observation_ids'] for x in identities];assert ids[0]==ids[1]==ids[2] and ids[3]!=ids[0] and ids[4]==ids[3] and ids[5]==ids[0],ids

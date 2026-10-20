@@ -61,10 +61,10 @@ thinkthen cache convert recording/
 set -euo pipefail
 
 jq -r 'select(has("key")) | keys_unsorted | join(",")' recording/thinkthen.jsonl \
-  | mustmatch "key,url,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin"
+  | mustmatch "adapter,observation_id,key,url,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin"
 ```
 
-This committed version-1 recording also checks backward compatibility. New cache entries use the versioned key and observation identity described in the cache specification; replay validates and normalizes the older entries without changing their saved bytes.
+This recording carries the adapter and observation identity described in the cache specification. Replay validates the saved entries without changing their bytes.
 
 `record.sh` in this folder is the script that made the recording. It runs through `sdlc/scripts/live`, the one door for a paid call.
 

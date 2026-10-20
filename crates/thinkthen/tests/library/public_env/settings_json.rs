@@ -121,3 +121,75 @@ pub(super) fn budget(text: &str) -> Vec<String> {
         .expect("configured engine");
     vec![ask(&engine)]
 }
+
+#[test]
+fn raw_setting_pairs_share_document_validation_and_never_send() {
+    let listener = listener();
+    for (name, raw) in [
+        ("throttle", "33"),
+        ("throttle", "-1"),
+        ("timeout", "0"),
+        ("timeout", "86401"),
+        ("max_requests", "0"),
+        ("max_request_bytes", "0"),
+        ("cache", "true"),
+        ("model", r#"" ""#),
+        ("unknown_control", r#""private-value""#),
+    ] {
+        let document = format!("{{\"{name}\":{raw}}}");
+        let expected = EngineBuilder::validate_settings_json(&document).unwrap_err();
+        let actual = Engine::builder().setting(name, raw).unwrap_err();
+        assert_eq!(actual.kind(), expected.kind());
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+    for raw in ["1,\"model\":\"private-marker\"", "1} {}"] {
+        let error = Engine::builder().setting("batch", raw).unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert!(!error.to_string().contains("private-marker"));
+    }
+    let error = Engine::builder().setting("throttle", "33").unwrap_err();
+    let expected: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../conformance/settings-errors.json"
+    ))
+    .expect("shared expected settings messages");
+    assert_eq!(
+        format!("thinkthen usage: {error} (retryable: no)"),
+        expected["throttle"]
+    );
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn profile_pairs_keep_sql_inline_and_documents_keep_native_files() {
+    let profile =
+        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":8}"#;
+    let raw = serde_json::to_string(profile).unwrap();
+    let listener = listener();
+    let path = folder("settings-profile.json");
+    fs::write(&path, profile).expect("profile file");
+    let file_raw = serde_json::to_string(&path).unwrap();
+    assert!(
+        Engine::builder()
+            .setting("profile", &raw)
+            .unwrap()
+            .no_cache()
+            .build()
+            .is_ok()
+    );
+    let error = Engine::builder().setting("profile", &file_raw).unwrap_err();
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert!(error.to_string().starts_with("the profile JSON "));
+    for (value, expected) in [
+        (&file_raw, "ok"),
+        (&raw, "Local: the profile file could not be read"),
+    ] {
+        let source = format!("{{\"profile\":{value},\"cache\":false}}");
+        let said = in_child(
+            "settings-profile",
+            &[(ARGUMENT, &source), ("THINKTHEN_BASE_URL", listener.base())],
+        );
+        assert_eq!(said, expected);
+    }
+    assert_eq!(listener.count(), 0);
+    fs::remove_file(path).expect("remove profile");
+}

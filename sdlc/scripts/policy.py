@@ -53,26 +53,31 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "base64", "image", "jpeg-decoder", "clap", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
-        "signal-hook", "thiserror", "ureq",
+        "arc-swap", "base64", "image", "jpeg-decoder", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
+        "thiserror", "ureq",
     },
+    "thinkthen-cli": {"thinkthen", "clap", "serde", "serde_json", "signal-hook"},
     "conformance-backend": {"serde", "serde_json"},
+    "thinkthen-host": {"thinkthen", "serde_json"},
 }
-ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "thinkthen-cli": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
     # ADR 0112: schemars derives the result schema in a unit test.
     # Ticket 0372: rustls serves the CA bundle test's own TLS.
     "thinkthen": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook"},
+    # Command integration tests own their cache fixtures, hashes and image encoding.
+    "thinkthen-cli": {"proptest", "conformance-backend", "rustls", "schemars", "signal-hook", "rusqlite", "sha2", "base64"},
     "conformance-backend": set(),
+    "thinkthen-host": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.
-ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "conformance-backend": set()}
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix", "windows-sys"}, "thinkthen-cli": {"nix", "windows-sys"}, "conformance-backend": set(), "thinkthen-host": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, and dependency tables as the crate.
-MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend"}
+MEMBERS = {"thinkthen": "crates/thinkthen", "thinkthen-cli": "crates/thinkthen-cli", "conformance-backend": "conformance/backend", "thinkthen-host": "crates/thinkthen-host"}
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
-sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+sys.path.insert(0, str(REPO / "build-tools/results"))
 from registry import generated_paths
 from sources import TOOL_GENERATED, tracked_files
 GENERATED_BINDING_SOURCES = generated_paths() | TOOL_GENERATED
@@ -90,9 +95,12 @@ VENDOR_WORDS = ("noul", "criteria", "systemone", "typesafe", "jev", "openai", "l
 # endpoint path.
 ADAPTERS = "crates/thinkthen/src/core/adapters.rs"
 # Ticket 0020 moved the last of them, so no file outside the adapters folder
-# holds a vendor word and the allowance is empty. A file added here would need
-# a ticket saying why a vendor word cannot live behind the adapter.
-SEAM_ALLOWED: dict[str, set[str]] = {}
+# holds a vendor word except these command-owned compatibility labels. Ticket
+# 0639 retains the published help default and check row names across the split;
+# neither selects an adapter nor describes a wire request.
+SEAM_ALLOWED: dict[str, set[str]] = {
+    "crates/thinkthen-cli/src/probes.rs": {"noul"},
+}
 
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",
@@ -149,7 +157,10 @@ ACCEPTED_CRATE_ROOT_ATTRIBUTES = {
         "#![cfg_attr(not(test), forbid(clippy::disallowed_macros))]",
         "#![forbid(clippy::allow_attributes_without_reason)]",
     ),
-    "crates/thinkthen/src/main.rs": ("#![forbid(unsafe_code)]",),
+    "crates/thinkthen-cli/src/main.rs": (
+        "#![cfg_attr(not(windows), forbid(unsafe_code))]",
+        "#![cfg_attr(windows, deny(unsafe_code))]",
+    ),
     "crates/thinkthen/src/lib.rs": (
         "#![cfg_attr(not(windows), forbid(unsafe_code))]",
         "#![cfg_attr(windows, deny(unsafe_code))]",
@@ -252,11 +263,11 @@ def check_workspace() -> None:
     manifest = read_toml("Cargo.toml")
     workspace = manifest.get("workspace", {})
     if workspace.get("members") != list(MEMBERS.values()):
-        fail("workspace", "thinkthen and the conformance backend are the workspace members")
+        fail("workspace", "the library, command, conformance backend and shared host crate are the workspace members")
     if workspace.get("exclude") != ["conformance/consumer", "libraries", "databases"]:
         fail("workspace", "the consumer and every binding folder are their own workspaces (ADR 0047)")
-    if workspace.get("default-members") != ["crates/thinkthen"]:
-        fail("workspace", "a plain root build compiles thinkthen alone (ADR 0047)")
+    if workspace.get("default-members") != ["crates/thinkthen", "crates/thinkthen-cli"]:
+        fail("workspace", "a plain root build compiles the library and command")
     if workspace.get("resolver") != "3":
         fail("workspace", "resolver is 3")
     package = workspace.get("package", {})
@@ -351,7 +362,7 @@ def check_member(name: str) -> dict:
     """Hold one member to the shared lints, license, and dependency tables."""
     manifest = read_toml(f"{MEMBERS[name]}/Cargo.toml")
     package = manifest.get("package", {})
-    if name == "thinkthen":
+    if name in ("thinkthen", "thinkthen-cli"):
         for failure in thinkthen_lint_failures(manifest):
             fail("lints", failure)
     elif manifest.get("lints") != INHERITED:
@@ -360,7 +371,7 @@ def check_member(name: str) -> dict:
         if package.get(field) != INHERITED:
             fail("workspace", f"{name} inherits the workspace {field}")
     # versions holds the command crate's publish flag to its release state (ticket 0376).
-    if name != "thinkthen" and package.get("publish") is not False:
+    if name not in ("thinkthen", "thinkthen-cli") and package.get("publish") is not False:
         fail("workspace", f"{name} is not publishable")
     if package.get("license") != "MIT":
         fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
@@ -381,6 +392,7 @@ def check_crates() -> None:
     backend = check_member("conformance-backend")
     if backend.get("features") or backend.get("target"):
         fail("dependencies", "the conformance backend declares no feature and no target table")
+    check_member("thinkthen-host")
     manifest = check_member("thinkthen")
     check_windows_manifest(manifest)
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
@@ -399,9 +411,16 @@ def check_crates() -> None:
         "features": ["pthread", "signal"],
     }:
         fail("dependencies", "tests add only the pthread feature to nix")
-    binary = manifest.get("bin", [])
-    if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
-        fail("workspace", "the binary requires the cli feature")
+    command = check_member("thinkthen-cli")
+    check_windows_manifest(command)
+    if (manifest.get("bin") or (REPO / "crates/thinkthen/src/main.rs").exists()
+            or (REPO / "crates/thinkthen/src/cli").exists()
+            or (REPO / "crates/thinkthen/src/mcp").exists()):
+        fail("workspace", "the library crate contains no binary target or command/server source")
+    if command.get("bin") != [{"name": "thinkthen", "path": "src/main.rs"}] or command.get("features"):
+        fail("workspace", "the separate command crate keeps the thinkthen binary without a cli feature")
+    if command.get("dependencies", {}).get("thinkthen") != {"version": f"={VERSION}", "path": "../thinkthen"}:
+        fail("dependencies", "the command depends on the released public library by version and local path")
     for failure in feature_failures(manifest):
         fail("dependencies", failure)
     for plant in (
@@ -411,6 +430,7 @@ def check_crates() -> None:
         {"host-sqlite": ["rusqlite/bundled"]},
         {"polars": ["dep:polars", "dep:polars-core", "polars/lazy"]},
         {"default": ["cli"]},
+        {"cli": ["dep:clap", "dep:signal-hook"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
             fail("dependencies", f"the planted features {plant} are refused")
@@ -445,14 +465,14 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "signal-hook", "polars", "polars-core"}:
-        held.append("exactly the command dependencies and pinned Polars features are optional")
+    if optional != {"polars", "polars-core"}:
+        held.append("only the pinned Polars dependencies are optional in the library")
     if manifest.get("features") != {
-        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:signal-hook"],
+        "default": ["bundled-sqlite"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"],
         "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
-        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy and the bundled SQLite, "
+        held.append("the library defaults to bundled SQLite, polars selects its two pinned crates with lazy and bundled SQLite, "
                     "bundled-sqlite bundles rusqlite's SQLite, and host-sqlite adds nothing")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
@@ -1544,23 +1564,27 @@ def check_core_policy() -> None:
     )
     if any(core_policy_failures(control) for control in policy_controls):
         fail("core", "comments, literals, lifetimes, and internal imports remain allowed")
+    # Clap belongs only to the command package after the split. Plant its
+    # dependency as well as its imports so these parser/alias probes still
+    # exercise the core ban without restoring a command dependency.
+    parser_dependencies = {**dependencies, "clap": {}}
     dependency_plants = (
         (dependencies, "use crate::core::image::ImageState;", []),
         (dependencies, "image::ImageReader::new();", ["image"]),
         (dependencies, "::image::ImageReader::new();", ["image"]),
         (dependencies, "use image as decoder;", ["image"]),
         (dependencies, "jpeg_decoder::Decoder::new();", ["jpeg-decoder"]),
-        (dependencies, "use clap::Parser;", ["clap"]),
+        (parser_dependencies, "use clap::Parser;", ["clap"]),
         (dependencies, "windows_sys::Win32::Foundation::HANDLE", ["windows-sys"]),
         (dependencies, "use windows_sys as native;", ["windows-sys"]),
         (dependencies, "use {windows_sys::{self as native, Win32}};", ["windows-sys"]),
         (dependencies, "nix::unistd::geteuid();", ["nix"]),
-        (dependencies, "use clap as parser;", ["clap"]),
-        (dependencies, "use {clap as parser};", ["clap"]),
-        (dependencies, "use {clap::{self as parser, Parser}};", ["clap"]),
-        (dependencies, "use {\n    r#clap::{Parser},\n};", ["clap"]),
-        (dependencies, "extern crate clap as parser;", ["clap"]),
-        (dependencies, "clap::Parser::parse();", ["clap"]),
+        (parser_dependencies, "use clap as parser;", ["clap"]),
+        (parser_dependencies, "use {clap as parser};", ["clap"]),
+        (parser_dependencies, "use {clap::{self as parser, Parser}};", ["clap"]),
+        (parser_dependencies, "use {\n    r#clap::{Parser},\n};", ["clap"]),
+        (parser_dependencies, "extern crate clap as parser;", ["clap"]),
+        (parser_dependencies, "clap::Parser::parse();", ["clap"]),
         (dependencies, "use {csv_core::{Reader as CsvReader}};", ["csv-core"]),
         (dependencies, "use csv_core as records;", ["csv-core"]),
         (dependencies, "use ureq as transport;", ["ureq"]),
@@ -1576,16 +1600,17 @@ def check_core_policy() -> None:
         (dependencies, 'const TEXT: &str = r#"clap::Parser"#;', []),
         (dependencies, "use crate::{core::Answer, engine_value as value};", []),
     )
-    if any(core_dependency_failures(text, held) != expected
-           for held, text, expected in dependency_plants):
-        fail("core", "the outer-dependency and alias plants are refused")
+    for held, text, expected in dependency_plants:
+        actual = core_dependency_failures(text, held)
+        if actual != expected:
+            fail("core", f"dependency plant {text!r}: expected {expected}, found {actual}")
 
 
 # Ticket 0083: the transform catalog prints embedded bytes and owns nothing
 # else. It names no file, environment, network, clock, process, thread, or
 # signal API, reaches no other command module, and uses only `clap` outside
 # the standard library.
-CATALOG = "crates/thinkthen/src/cli/transform.rs"
+CATALOG = "crates/thinkthen-cli/src/cli/transform.rs"
 CATALOG_BANNED_WORDS = {
     "fs", "env", "net", "time", "process", "thread", "os", "stdin", "Stdin",
     "Command", "File", "OpenOptions", "TcpStream", "UdpSocket", "Instant", "SystemTime",
@@ -1600,7 +1625,7 @@ CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
 def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
                             crate_paths: set[tuple[str, ...]] = CATALOG_CRATE_PATHS,
                             super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS,
-                            prefix: bool = False) -> list[str]:
+                            prefix: bool = False, public_paths: set[tuple[str, ...]] = frozenset()) -> list[str]:
     """Name every capability or owner a read-only command source reaches.
 
     A path is allowed when it is an allowed path, or with `prefix` when one is its prefix.
@@ -1620,7 +1645,7 @@ def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
             held.add("uses " + "::".join(path))
         elif path[:1] == ("super",) and not allowed(path, super_paths):
             held.add("uses " + "::".join(path))
-        elif path and path[0] not in CATALOG_ROOTS:
+        elif path and path[0] not in CATALOG_ROOTS and path not in public_paths:
             held.add("uses " + "::".join(path))
     for place, token in enumerate(tokens[:-1]):
         if token in {"crate", "super"} and tokens[place + 1] == "::" and not any(
@@ -1688,13 +1713,13 @@ def check_catalog_policy() -> None:
 # standard error. Each may open a file, and nothing else the catalog refuses. A token check
 # cannot prove which paths it opens; review checks that.
 MEASURE = (
-    "crates/thinkthen/src/cli/measure.rs",
-    "crates/thinkthen/src/cli/audit.rs",
-    "crates/thinkthen/src/cli/diff.rs",
-    "crates/thinkthen/src/cli/audit/write.rs",
+    "crates/thinkthen-cli/src/cli/measure.rs",
+    "crates/thinkthen-cli/src/cli/audit.rs",
+    "crates/thinkthen-cli/src/cli/diff.rs",
+    "crates/thinkthen-cli/src/cli/audit/write.rs",
 )
 # Tickets 0125 and 0256: this writer owns in-place writes and new-output publication.
-MEASURE_WRITER = "crates/thinkthen/src/cli/audit/write.rs"
+MEASURE_WRITER = "crates/thinkthen-cli/src/cli/audit/write.rs"
 MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
 MEASURE_WRITES = {
@@ -1702,8 +1727,17 @@ MEASURE_WRITES = {
     "remove_dir", "remove_dir_all", "rename", "copy", "set_permissions", "write", "hard_link",
     "soft_link", "symlink",
 }
-MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
-ROUTER = "crates/thinkthen/src/cli/mod.rs"
+MEASURE_CRATE_PATHS = {
+    ("crate", "statistics"), ("crate", "saved_json"),
+    ("crate", "cli", "measure"), ("crate", "failure", "Failure"),
+}
+MEASURE_PUBLIC_PATHS = {
+    ("thinkthen", name) for name in (
+        "Threshold", "ThresholdError", "Engine", "ErrorDiagnostic",
+        "RelationIdentityMode", "RequestDefinition",
+    )
+}
+ROUTER = "crates/thinkthen-cli/src/cli/mod.rs"
 
 
 def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
@@ -1712,7 +1746,7 @@ def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
     Only the writer may call its exact in-place write or new-output publication primitives.
     """
     held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
-                                       prefix=True))
+                                       prefix=True, public_paths=MEASURE_PUBLIC_PATHS))
     tokens = rust_tokens(text)
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
@@ -1767,6 +1801,8 @@ def check_measure_policy() -> None:
         "signal_hook::flag::register(2, flag)",
         'std::process::Command::new("jq")',
         "crate::engine::request()",
+        "use thinkthen::EngineBuilder;",
+        "use thinkthen::Request;",
         "crate::cli::edge::Environment::read()",
         "std::fs::write(path, bytes)",
         "use std::fs::remove_file;",
@@ -1788,7 +1824,9 @@ def check_measure_policy() -> None:
     controls = (
         "std::fs::read(path)",
         "std::io::stdin().lock()",
-        "use crate::core::measure::key::Key;",
+        "use crate::statistics::key::Key;",
+        "use crate::saved_json::Pointer;",
+        "use thinkthen::{Threshold, RequestDefinition};",
         "use crate::cli::measure::{Cause, Refusal, read};",
         "use crate::failure::Failure;",
         "use clap::{Args, ValueEnum};",
@@ -1872,10 +1910,10 @@ def check_doors() -> None:
     for failure in door_failures(sources):
         fail("doors", failure)
     plants = (
-        ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
         ("crates/thinkthen/src/engine/http/other.rs", "ureq::post(url).send(body)"),
-        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
+        ("crates/thinkthen-cli/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
         ("crates/thinkthen/src/engine/width_tests.rs", "&super::limits::PROCESS_LIMITS"),
         (WIDTH_DOOR, "fn second() -> &'static Limits { &PROCESS_LIMITS }"),
         ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
@@ -1885,11 +1923,11 @@ def check_doors() -> None:
         if not door_failures({**sources, relative: changed}):
             fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
     controls = (
-        ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
-        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_LIMITS";'),
+        ("crates/thinkthen-cli/src/cli/find.rs", "// ureq stays in the HTTP module"),
+        ("crates/thinkthen-cli/src/cli/find.rs", 'const NOTE: &str = "PROCESS_LIMITS";'),
         ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
         ("crates/thinkthen/src/engine/host_signal_tests.rs", "signal_hook::flag::register"),
-        ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),
+        ("crates/thinkthen-cli/src/cli/file_size.rs", "signal_hook::flag::register"),
     )
     for relative, text in controls:
         changed = rust_tokens(text_sources.get(relative, "") + "\n" + text)
@@ -1901,8 +1939,8 @@ def check_doors() -> None:
 # judgments admit and execute public Requests; CLI host conversion retains
 # private construction, cancellation, error, accounting and maintenance types.
 FACADE = "crates/thinkthen/src/engine/facade.rs"
-CLI = "crates/thinkthen/src/cli/"
-MCP = "crates/thinkthen/src/mcp/"
+CLI = "crates/thinkthen-cli/src/cli/"
+MCP = "crates/thinkthen-cli/src/mcp/"
 MAINTENANCE = {CLI + "cache.rs", CLI + "status.rs"}
 HOST_ENGINE = frozenset({
     "Cancel", "Deadline", "Width", "Widths", "WidthActive", "backoff", "error",
@@ -2014,17 +2052,17 @@ def check_facade() -> None:
     for failure in facade_failures(sources):
         fail("facade", failure)
     plants = (
-        ("crates/thinkthen/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
         ("crates/thinkthen/src/engine/request.rs",
          "#[cfg(test)] mod t {}\nfn pool() -> Client { Client::new(Duration::ZERO, true) }"),
-        ("crates/thinkthen/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
-        ("crates/thinkthen/src/cli/annotate.rs",
+        ("crates/thinkthen-cli/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
+        ("crates/thinkthen-cli/src/cli/annotate.rs",
          "use crate::engine::{facade, annotate_schedule as grouped};"),
-        ("crates/thinkthen/src/cli/asking.rs",
+        ("crates/thinkthen-cli/src/cli/asking.rs",
          "fn f() { crate::engine::recorder::Recorder::of(None, None); }"),
-        ("crates/thinkthen/src/cli/asking.rs", "use crate::engine::{self as low};"),
-        ("crates/thinkthen/src/cli/relate.rs", "use crate::engine::*;"),
-        ("crates/thinkthen/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
+        ("crates/thinkthen-cli/src/cli/asking.rs", "use crate::engine::{self as low};"),
+        ("crates/thinkthen-cli/src/cli/relate.rs", "use crate::engine::*;"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
         (LIBRARY_ROOT, "pub(crate) use engine::{http, recorder};"),
     )
     for relative, text in plants:
@@ -2044,11 +2082,11 @@ def check_facade() -> None:
         if not facade_failures({relative: rust_tokens(text)}):
             fail("facade", f"the planted private judgment import {text!r} is refused")
     controls = (
-        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::Engine;"),
-        ("crates/thinkthen/src/cli/judge.rs", "use crate::schedule::Output;"),
-        ("crates/thinkthen/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "use crate::engine::facade::Engine;"),
+        ("crates/thinkthen-cli/src/cli/judge.rs", "use crate::schedule::Output;"),
+        ("crates/thinkthen-cli/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
         ("crates/thinkthen/src/engine/http/tests.rs", "Client::new(Duration::ZERO, false)"),
-        ("crates/thinkthen/src/cli/failure/tests.rs",
+        ("crates/thinkthen-cli/src/cli/failure/tests.rs",
          "crate::engine::http::Client::new(Duration::ZERO, false)"),
         ("crates/thinkthen/src/engine/http.rs",
          "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
@@ -2070,9 +2108,9 @@ def check_facade() -> None:
 WINDOWS_UNSAFE_LEAVES = {
     "crates/thinkthen/src/windows/security/ffi.rs": "windows",
     "crates/thinkthen/src/windows/files/ffi.rs": "windows",
-    "crates/thinkthen/src/windows/console/ffi.rs": "windows",
-    "crates/thinkthen/src/mcp/input/windows/ffi.rs": "windows",
-    "crates/thinkthen/tests/windows/ffi.rs": "all(windows, test)",
+    "crates/thinkthen-cli/src/windows/console/ffi.rs": "windows",
+    "crates/thinkthen-cli/src/mcp/input/windows/ffi.rs": "windows",
+    "crates/thinkthen/src/windows/test_support/ffi.rs": "all(windows, test)",
 }
 
 
@@ -2152,7 +2190,7 @@ def check_windows_unsafe() -> None:
             fail("unsafe", f"{relative}: the reviewed FFI leaf exists")
     for failure in windows_unsafe_failures(sources):
         fail("unsafe", failure)
-    for relative in ("crates/thinkthen/src/cli/planted.rs", "crates/thinkthen/src/engine/planted.rs",
+    for relative in ("crates/thinkthen-cli/src/cli/planted.rs", "crates/thinkthen/src/engine/planted.rs",
                      "crates/thinkthen/src/unrelated/ffi.rs", "crates/thinkthen/tests/planted.rs"):
         for text, cause in (("unsafe fn planted() {}", "unsafe outside the reviewed Windows FFI leaves"),
                             ('#![allow(unsafe_code, reason = "planted")]\n', "unsafe lint allowance"),
@@ -2232,7 +2270,7 @@ def check_seam() -> None:
         # A file named tests.rs is one module's `#[cfg(test)] mod tests`, and
         # a file under tests/ is an integration test. Both are tests.
         if (relative.startswith(adapter) or "/tests/" in relative
-                or "/conformance_tests/" in relative
+                or "/conformance_tests/" in relative or "/command_conformance_tests/" in relative
                 or relative.endswith(("/tests.rs", "_tests.rs"))):
             continue
         allowed = SEAM_ALLOWED.get(relative, frozenset())
@@ -2425,11 +2463,13 @@ GRAPH_PLANTS = (
     ('[build-dependencies]', 'clap = "4.6.7"'),
 )
 GRAPH_FILES = (
-    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "crates/thinkthen-cli/Cargo.toml", "conformance/backend/Cargo.toml",
+    "crates/thinkthen-host/Cargo.toml",
 )
 GRAPH_STUBS = (
-    "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
+    "crates/thinkthen/src/lib.rs", "crates/thinkthen-cli/src/main.rs",
     "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
+    "crates/thinkthen-host/src/lib.rs",
 )
 
 

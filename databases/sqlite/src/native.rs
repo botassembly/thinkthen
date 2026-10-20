@@ -14,7 +14,9 @@ use std::sync::{Arc, Mutex};
 
 mod answers;
 pub(crate) mod details;
+mod execution;
 mod input;
+mod inputs;
 mod run;
 
 const FIELDS: &[&str] = &[

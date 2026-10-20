@@ -7,17 +7,98 @@ import subprocess
 import contextlib
 import io
 import os
+import shlex
 import shutil
+import select
+import signal
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 from conformance import parity
 from conformance import c_images
-from conformance.source_fixtures import stage_files, stage_generated_source
+from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+from conformance.source_fixtures import stage_checkout, fixture_tool_groups, stub_other_surfaces
+
+from conformance.children.children import fixture_communicate, fixture_run
+
+
+@unittest.skipUnless(sys.platform == 'darwin', 'Darwin loader observation')
+class DarwinSignalObservation(unittest.TestCase):
+    def test_native_handler_completes_only_after_pending_signal_unblocks(self):
+        from conformance.children.signals import SignalObservation
+        from conformance.children.children import read_process_line
+        with tempfile.TemporaryDirectory(prefix='thinkthen-signal-observation-') as folder:
+            home = Path(folder)
+            env = child_env(home=home)
+            probe = home / 'signal-probe'
+            source = Path(__file__).parent / 'children/signal_observer_probe.c'
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source),
+                            '-o', str(probe)], env=env, check=True, text=True)
+            observation = SignalObservation(home, env)
+            self.addCleanup(observation.close)
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                for mode in ('stable', 'ignored', 'replacement', 'reset', 'reentrant', 'failure'):
+                    with self.subTest(signal=signum, mode=mode):
+                        process = subprocess.Popen([str(probe), str(signum), mode],
+                                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                   stderr=subprocess.PIPE, text=True,
+                                                   env=observation.env,
+                                                   pass_fds=observation.pass_fds)
+                        def expect_line(expected):
+                            self.assertTrue(select.select([process.stdout], [], [], 30)[0])
+                            actual = read_process_line(process.stdout)
+                            if not actual:
+                                _, stderr = fixture_communicate(process)
+                                self.fail(f'probe exited {process.returncode}: {stderr}')
+                            self.assertEqual(actual, expected + '\n')
+                        try:
+                            expect_line('ready')
+                            process.send_signal(signum)
+                            process.stdin.write('p')
+                            process.stdin.flush()
+                            expect_line('pending')
+                            self.assertFalse(select.select([observation.reader], [], [], 0)[0],
+                                             'a blocked signal was falsely acknowledged')
+                            process.stdin.write('u')
+                            process.stdin.flush()
+                            expect_line('completed')
+                            stdout, stderr = fixture_communicate(process)
+                            self.assertEqual((process.returncode, stdout, stderr), (0, '', ''))
+                            self.assertTrue(select.select([observation.reader], [], [], 0)[0])
+                            expected = b'H' + (bytes([signum]) if mode in ('stable', 'ignored', 'failure') else b'')
+                            self.assertEqual(os.read(observation.reader, 3), expected)
+                        finally:
+                            if process.poll() is None:
+                                process.kill()
+                                process.communicate()
 
 
 class NativeFixtureEnvironment(unittest.TestCase):
+    def test_c_compiler_preserves_the_campaign_profile_without_service_keys(self):
+        from conformance import c_parity
+        sys.path.insert(0, str(parity.ROOT / 'libraries/c/tests'))
+        import installed_cases
+        launch = subprocess.run
+        settings = {'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'CARGO_PROFILE_DEV_DEBUG': '0',
+                    'CARGO_PROFILE_TEST_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_DEBUG': '0',
+                    'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': '',
+                    'CARGO_BUILD_RUSTC_WRAPPER': ''}
+        def compiler(args, **kwargs):
+            self.assertEqual(args[0], 'cargo')
+            probe = ('import os; expected = ' + repr(settings)
+                     + '; assert all(os.environ.get(k) == v for k, v in expected.items()); '
+                     + 'assert "FAKE_SERVICE_API_KEY" not in os.environ; '
+                     + 'assert "THINKTHEN_API_KEY" not in os.environ')
+            return launch([sys.executable, '-c', probe], **kwargs)
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller)
+                | settings | {'FAKE_SERVICE_API_KEY': 'parent-only', 'THINKTHEN_API_KEY': 'parent-only'}), \
+                patch.object(c_parity.subprocess, 'run', side_effect=compiler) as compiled, \
+                patch.object(installed_cases, 'run'):
+            self.assertEqual(c_parity.main(), 0)
+            self.assertEqual(compiled.call_count, 2)
+
     def test_compiler_child_owns_folders_and_preserves_explicit_settings(self):
         sys.path.append(str(parity.ROOT / 'conformance/children'))
         sys.path.insert(0, str(parity.ROOT / 'conformance'))
@@ -27,10 +108,33 @@ class NativeFixtureEnvironment(unittest.TestCase):
         def compiler(args, **kwargs):
             probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'; assert os.environ['CARGO_PROFILE_DEV_OPT_LEVEL'] == '2'; assert os.environ['RUSTFLAGS'] == '--remap-path-prefix=/checkout=/build'; assert os.environ['RUSTC_WRAPPER'] == ''"
             return launch([sys.executable, '-c', probe], **kwargs)
-        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+        with tempfile.TemporaryDirectory() as caller, patch.object(os, 'environ', child_env(home=caller) | {'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+
+    def test_explicit_dependency_homes_do_not_require_a_host_account(self):
+        sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
+        import parity as native_parity
+        import native_fixture
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            tools = {name: str(root / name) for name in (
+                'CARGO_HOME', 'RUSTUP_HOME', 'THINKTHEN_TOOLCHAINS', 'PUB_CACHE',
+                'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')}
+            with patch.object(os, 'environ', tools), patch.object(Path, 'home', side_effect=RuntimeError('no host account')):
+                env = parity.consumer_environment(root, '12345')
+                for name, value in tools.items():
+                    self.assertEqual(env[name], value)
+                self.assertEqual(env['R_LIBS_USER'], str(Path(tools['THINKTHEN_TOOLCHAINS']) / 'r-library'))
+                with patch.object(os, 'environ', {}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run') as compiler:
+                    native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
+                                       extra_env={name: tools[name] for name in ('CARGO_HOME', 'RUSTUP_HOME')},
+                                       rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+                compiled = compiler.call_args.kwargs['env']
+                for name in ('CARGO_HOME', 'RUSTUP_HOME'):
+                    self.assertEqual(compiled[name], tools[name])
+                self.assertNotEqual(compiled['HOME'], env['HOME'])
 
     def test_shared_routine_selects_call_result_once_without_followup(self):
         sys.path[:0] = [str(parity.ROOT / 'conformance/children'), str(parity.ROOT / 'conformance')]
@@ -51,7 +155,8 @@ class NativeFixtureEnvironment(unittest.TestCase):
 
 class BindingCaseTiers(unittest.TestCase):
     def test_scalar_input_selectors_follow_canonical_payloads_and_ignore_feed_names(self):
-        from sdlc.generators.results.templates.host_answers import scalar_input_selectors
+        sys.path.insert(0, str(parity.ROOT / 'build-tools/results/templates'))
+        from host_answers import scalar_input_selectors
         definitions = {
             'RequestInput': {'variants': [('Text', None), ('Json', None), ('Feed', None)]},
             'Text': {'properties': {'kind': {'const': 'text'}, 'text': {'type': 'string'}}, 'required': ['kind', 'text']},
@@ -336,7 +441,8 @@ class PublicAssertions(unittest.TestCase):
                 'for row in cases:\n'
                 ' if selected != [""] and row["id"] not in selected: continue\n'
                 ' print("parity: " + json.dumps(dict(consumer="cpp", case=row["id"], checks=row.get("checks", ["named", "runtime"]), status="pass")))\n')
-            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+            env = {'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             result = subprocess.run(['sh', '-c', f'repo={shlex.quote(str(root))}\n'
                                      f'python_bin={shlex.quote(sys.executable)}\nout=/unused\n' + calls],
                                     env=env, capture_output=True, text=True)
@@ -357,7 +463,7 @@ class PublicAssertions(unittest.TestCase):
             for portable in ('', '1'):
                 with self.subTest(profile=profile, portable=portable):
                     result = subprocess.run(['sh', '-c', fixture + script], capture_output=True, text=True,
-                                            env={'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                                            env={'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': profile,
                                                  'THINKTHEN_PORTABLE_BATCH': portable})
                     self.assertEqual(result.returncode, 0, result.stderr)
                     rows = result.stdout.splitlines()
@@ -448,6 +554,7 @@ class PublicAssertions(unittest.TestCase):
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             self.assertEqual(env['THINKTHEN_BASE_URL'], 'http://127.0.0.1:12345/generic/v1')
             self.assertEqual(env['THINKTHEN_API_KEY'], 'sk-conformance-loopback')
             self.assertEqual(env['THINKTHEN_TEST_PROFILE'], 'full')
@@ -471,6 +578,7 @@ class PublicAssertions(unittest.TestCase):
     def test_default_tool_locations_survive_the_isolated_home(self):
         with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
                         'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
@@ -480,32 +588,41 @@ class PublicAssertions(unittest.TestCase):
                 self.assertEqual(env[name], value)
             self.assertNotEqual(env['HOME'], '/caller')
 
-    def test_full_consumers_run_alone_and_keep_every_public_cell(self):
+    def test_full_consumers_respect_measured_memory_and_keep_every_public_cell(self):
         import threading
         import time
-        ids = ['rust', 'rust-polars', 'one', 'two', 'three']
+        ids = ['rust', 'rust-polars', 'one', 'two', 'three', 'four', 'unmeasured']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', name]}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', name]}
             for name in ids], 'required_cases': list(self.cases.values())}
-        active, peak = 0, 0
+        gib = 1024 ** 3
+        limit = 10 * gib
+        peaks = {'rust': 5 * gib, 'rust-polars': 5 * gib, 'one': 6 * gib,
+                 'two': 5 * gib, 'three': 4 * gib, 'four': 2 * gib}
+        # Half-GiB samples must reserve the next whole GiB in peaks.
+        resources = {name: {'peak_memory_bytes': memory - gib // 2, 'duration_seconds': len(ids) - ids.index(name)}
+                     for name, memory in peaks.items()}
+        active, peak = set(), 0
         lock = threading.Lock()
         def command(args, **kwargs):
-            nonlocal active, peak
+            nonlocal peak
             name = args[-2]
             with lock:
-                active += 1
-                peak = max(peak, active)
+                active.add(name)
+                peak = max(peak, len(active))
+                self.assertLessEqual(sum(peaks.get(member, limit) for member in active), limit)
+                self.assertFalse({'rust', 'rust-polars'} <= active)
             time.sleep(.03)
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
             kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
             with lock:
-                active -= 1
+                active.remove(name)
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity, 'CONSUMER_RESOURCES', resources), patch.object(parity, 'container_memory_limit', return_value=limit), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
-            self.assertEqual(peak, 1)
+            self.assertGreater(peak, 1)
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))
             self.assertTrue(all(0 <= row['duration_seconds'] < 3 for row in matrix))
             self.assertTrue(all(row['duration_seconds'] != 0.25 for row in matrix))
@@ -515,7 +632,7 @@ class PublicAssertions(unittest.TestCase):
         import time
         names = ['python', 'pandas', 'python-polars', 'java', 'kotlin', 'scala']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
             for name in names], 'required_cases': list(self.cases.values())}
         prepared, homes = {}, {}
         def command(args, **kwargs):
@@ -537,7 +654,7 @@ class PublicAssertions(unittest.TestCase):
             for case in self.cases:
                 kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.environ['PATH'])):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -551,7 +668,7 @@ class PublicAssertions(unittest.TestCase):
     def test_failed_or_exhausted_family_setup_fails_every_member_without_runtime(self):
         names = ['python', 'pandas', 'python-polars']
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': name, 'owner': '0431', 'baseline': ['sh', 'family']}
+            {'id': name, 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'family']}
             for name in names], 'required_cases': list(self.cases.values())}
         for failure in (77, 0):
             clock = [0]
@@ -559,7 +676,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', child_env(home=scratch, PATH=os.environ['PATH'])):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -576,6 +693,7 @@ class PublicAssertions(unittest.TestCase):
             empty = root / 'empty'
             empty.write_text('# no selected cases\n')
             env = parity.consumer_environment(root, '12345')
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
             env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
             cases = (
                 ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
@@ -591,9 +709,9 @@ class PublicAssertions(unittest.TestCase):
                     selected = dict(env)
                     if selector is not None: selected['THINKTHEN_CONFORMANCE_IDS'] = selector
                     if name.startswith('full'): selected['THINKTHEN_TEST_PROFILE'] = 'full'
-                    result = subprocess.run([sys.executable,
+                    result = fixture_run([sys.executable,
                         str(parity.ROOT / 'databases/sqlite/tests/complete/parity.py'),
-                        'postgresql', *arguments], env=selected, capture_output=True, text=True, timeout=5)
+                        'postgresql', *arguments], env=selected, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
                     self.assertIn(cause, result.stderr)
                     self.assertFalse(marker.exists(), 'invalid selection started a backend')
@@ -617,8 +735,8 @@ class PublicAssertions(unittest.TestCase):
                               + 'runtime_remove() { :; }\npg_stop() { :; }\n'
                               + lifecycle + '\nkill -' + name + ' "$$"\n'
                               + 'touch later-case\n')
-                    result = subprocess.run(['bash', '-c', script], cwd=root,
-                                            env={'PATH': os.defpath}, capture_output=True, text=True, timeout=5)
+                    result = fixture_run(['bash', '-c', script], cwd=root,
+                                            env={'PATH': os.environ['PATH']}, capture_output=True, text=True)
                     self.assertEqual(result.returncode, code, result.stdout + result.stderr)
                     self.assertFalse((root / 'later-case').exists())
                     self.assertFalse(Path((root / 'owned-run').read_text()).exists())
@@ -660,13 +778,14 @@ class PublicAssertions(unittest.TestCase):
                             else: sentinel.write_text('preexisting extension')
                         script = root / 'run.sh'
                         script.write_text('set -eu\n. ' + shlex.quote(str(postgres / 'runtime.sh'))
-                            + '\nPG_HOST=Darwin\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
+                            + '\nPG_HOST=Darwin\nPG_CONFIG=$(command -v pg_config)\nEXTRACTED=$FIXTURE_ROOT\nscratch_clean() { :; }\n'
                             + cleanup_function + '\ntrap cleanup EXIT\nruntime_install source-lib source-extension\n')
-                        env = {'PATH': os.defpath, 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
-                               'PG_CONFIG': str(config), 'FIXTURE_ROOT': str(root), 'RUN': str(root),
+                        env = {'PATH': fixture_path(root), 'HOME': str(root / 'home'), 'PG_MAJOR': str(major),
+                               'FIXTURE_ROOT': str(root), 'RUN': str(root),
                                'RUNTIME_EXTENSION_DIR': str(root / 'extension'), 'DATA': str(root / 'data'),
                                'BIN': str(root / 'bin'), 'SOCK': str(root / 'socket'), 'EXT_VERSION': '0.2.0',
                                'LIMIT': str(parity.ROOT / 'sdlc/scripts/time-limit')}
+                        env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                         result = subprocess.run(['bash', str(script)], cwd=root, env=env, capture_output=True, text=True)
                         self.assertEqual(result.returncode, 0 if occupied == 'owned' else 1, result.stdout + result.stderr)
                         self.assertEqual(other.read_text(), 'other extension')
@@ -732,13 +851,14 @@ class PublicAssertions(unittest.TestCase):
                                 self.assertEqual(marker.read_text(), selected)
                                 if launcher != 'shared': raise ReachedReader()
                                 return {}
-                            env = {'PATH': os.defpath, 'THINKTHEN_TEST_PROFILE': profile,
+                            env = {'PATH': os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': profile,
                                    'THINKTHEN_POSTGRESQL_SOCKET': '/fixture',
                                    'FAKE_SERVICE_API_KEY': 'hostile-parent-only'}
+                            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                             if target_kind != 'unset':
                                 env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target)
                             if launcher == 'shared':
-                                build_env = {'PATH': os.defpath, 'HOME': str(root / 'home')}
+                                build_env = {'PATH': os.environ['PATH'], 'HOME': str(root / 'home')}
                                 if target_kind != 'unset':
                                     build_env['CARGO_TARGET_DIR'] = str(target) if target_kind == 'absolute' else os.path.relpath(target, postgres)
                                 built = subprocess.run(['sh', '-c', ". ./runtime.sh; runtime_target; exec python3 -c 'import os,sys; sys.stdout.write(os.environ[\"CARGO_TARGET_DIR\"])'"],
@@ -773,20 +893,18 @@ class PublicAssertions(unittest.TestCase):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
-            stage_generated_source(parity.ROOT, root, 'python')
+            stage_checkout(parity.ROOT, root)
             library = root / 'libraries/python'
             library.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
             (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
             scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
+            scripts.mkdir(parents=True, exist_ok=True)
             assets = root / 'assets'
-            venv.EnvBuilder(with_pip=False).create(assets / 'venv')
+            venv.EnvBuilder(with_pip=False, symlinks=True).create(assets / 'venv')
             site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
-            site.mkdir()
+            site.mkdir(exist_ok=True)
             (site / '__init__.py').write_text('')
-            (assets / 'tests').mkdir()
+            (assets / 'tests').mkdir(exist_ok=True)
             (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
             children = root / 'conformance/children'
             children.mkdir(parents=True, exist_ok=True)
@@ -800,61 +918,23 @@ class PublicAssertions(unittest.TestCase):
                 ' print("private fixture: " + consumer)\n'
                 ' return False\n')
             tools = root / 'tools'
-            tools.mkdir()
+            tools.mkdir(exist_ok=True)
             for tool in ('uv', 'maturin'):
                 (tools / tool).write_text('#!/bin/sh\nexit 99\n')
                 (tools / tool).chmod(0o755)
             for member in ('python', 'pandas', 'python-polars'):
                 with tempfile.TemporaryDirectory() as home:
                     env = parity.consumer_environment(home, '12345')
-                    env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
+                    env.update(PATH=fixture_path(tools), THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
                     result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                     self.assertIn('private fixture: ' + member, result.stdout)
             self.assertEqual((assets / 'tests/native_case.py').read_text(), '# compiled installed caller fixture\n')
 
-    def test_bare_rust_campaign_uses_the_complete_source_consumer(self):
-        import shlex
-        rust = next(row for row in parity.inventory()['consumers'] if row['id'] == 'rust')
-        contract = {'functions': ['decide'], 'consumers': [rust],
-                    'required_cases': list(self.cases.values())}
-        with tempfile.TemporaryDirectory() as scratch:
-            root = Path(scratch)
-            scripts = root / 'sdlc/scripts'
-            scripts.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'sdlc/scripts/time-limit', scripts / 'time-limit')
-            shutil.copyfile(parity.ROOT / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
-            (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
-            library = root / 'libraries/rust'
-            library.mkdir(parents=True)
-            shutil.copyfile(parity.ROOT / 'libraries/rust/check.sh', library / 'check.sh')
-            tools = root / 'bin'
-            tools.mkdir()
-            runner = tools / 'python3'
-            runner.write_text('#!/bin/sh\nset -eu\n'
-                              'test "$THINKTHEN_TEST_PROFILE" = full\n'
-                              'test -z "${THINKTHEN_CONFORMANCE_IDS+x}"\n'
-                              'test "$1" = -\ntest "$3" = "$2/libraries/rust/consumer/Cargo.toml"\n'
-                              'cat > "$2/invoked-driver"\n'
-                              'exec ' + shlex.quote(sys.executable) + ' "$2/invoked-driver" "$2" "$3"\n')
-            children = root / 'conformance/children'
-            children.mkdir(parents=True)
-            (children / 'native_fixture.py').write_text(
-                'from pathlib import Path\nimport tomllib\n'
-                'def run(consumer, command, root, rust_manifest, extra_env):\n'
-                ' assert consumer == "rust"\n'
-                ' assert Path(command[0]).parent.is_dir()\n'
-                ' assert rust_manifest == root / "libraries/rust/consumer/Cargo.toml"\n' +
-                ' assert extra_env == {"RUSTUP_TOOLCHAIN": tomllib.loads((root / "rust-toolchain.toml").read_text())["toolchain"]["channel"]}\n' +
-                ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
-                ' return False\n')
-            runner.chmod(0o755)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {'PATH': str(tools) + ':' + os.defpath}):
-                self.assertEqual(parity.run('12345'), 0)
-
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
-            {'id': 'rust', 'owner': '0431', 'baseline': ['sh', 'stub.sh']}],
+            {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': ['sh', 'stub.sh']}],
                     'required_cases': list(self.cases.values())}
         for output, code in [(self.cell(), 0), (self.cell(), 77), ('', 127),
                              (self.cell(case='unknown'), 0),
@@ -864,7 +944,7 @@ class PublicAssertions(unittest.TestCase):
                     kwargs['stdout'].write(output)
                     self.assertEqual(kwargs['env']['THINKTHEN_TEST_PROFILE'], 'full')
                     return subprocess.CompletedProcess(args, code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertNotEqual(matrix[0]['cells']['files-decide'], 'pass')
@@ -876,14 +956,13 @@ class PublicAssertions(unittest.TestCase):
         ]:
             with self.subTest(baseline=baseline), tempfile.TemporaryDirectory() as scratch:
                 root = Path(scratch)
+                stage_checkout(parity.ROOT, root)
                 scripts = root / 'sdlc/scripts'
-                scripts.mkdir(parents=True)
-                for filename in ['time-limit', 'scratch.sh']:
-                    shutil.copyfile(parity.ROOT / 'sdlc/scripts' / filename, scripts / filename)
+                scripts.mkdir(parents=True, exist_ok=True)
                 contract = {'functions': ['decide'], 'consumers': [
-                    {'id': 'rust', 'owner': '0431', 'baseline': baseline}],
+                    {'id': 'rust', 'owner': '0431', 'surface': '.', 'baseline': baseline}],
                     'required_cases': list(self.cases.values())}
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {}):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', child_env(home=root / 'caller')):
                     self.assertEqual(parity.run('12345'), 1)
                 row = json.loads((root / 'target/parity/matrix.json').read_text())[0]
                 if expected_exit is not None:
@@ -903,6 +982,14 @@ class PublicAssertions(unittest.TestCase):
 
 
 class CliApplicability(unittest.TestCase):
+    def test_cli_fixture_reports_usage_from_an_owned_directory(self):
+        with tempfile.TemporaryDirectory(prefix='thinkthen-cli-fixture-') as folder:
+            result = fixture_run([sys.executable, str(parity.ROOT / 'conformance/cli_parity.py')],
+                                 cwd=folder, env=child_env(home=folder),
+                                 capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn('usage: cli_parity.py LOOPBACK_PORT [INSTALLED_BINARY]', result.stderr)
+
     def setUp(self):
         self.contract = json.loads(parity.DOCUMENT.read_text())['parity']
         self.cli = next(row for row in self.contract['consumers'] if row['id'] == 'cli')
@@ -1024,7 +1111,7 @@ class CliApplicability(unittest.TestCase):
             cli_contract = self.contract | {'consumers': [self.cli], 'pending_consumers': []}
             def command(args, **kwargs):
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=cli_contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
             self.assertEqual(row['case_rulings'], self.cli['case_rulings'])
@@ -1055,37 +1142,32 @@ class InstalledInputs(unittest.TestCase):
         (folder / 'thinkthen-0.2.0.gem').touch()
 
     def select(self, folder):
-        with patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
+        with patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'check_output', return_value='host: x86_64-unknown-linux-gnu\n'):
             return parity.installed_artifacts(folder, self.consumers)
 
     def test_each_group_uses_its_actual_package_and_shared_native_inputs(self):
-        for apple_checks in ('', 'required'):
-            with self.subTest(apple_checks=apple_checks), patch.object(
-                    parity.sys, 'platform', 'linux'), patch.object(
-                    parity.os, 'environ', {'THINKTHEN_MACOS_APPLE_CHECKS': apple_checks}), tempfile.TemporaryDirectory() as scratch:
-                folder = Path(scratch)
-                self.packages(folder)
-                if apple_checks == 'required':
-                    (folder / 'thinkthen-swift-0.2.0-x86_64-unknown-linux-gnu.tar.gz').unlink()
-                inputs, command, native = self.select(folder)
-                self.assertEqual(set(inputs), {consumer for consumer in self.consumers
-                                               if not parity.apple_pending(consumer)})
-                self.assertEqual('swift' in inputs, apple_checks != 'required')
-                self.assertEqual(Path(command).name, self.command)
-                self.assertEqual(Path(native).name, self.native)
-                for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
-                              ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
-                              ('dart', 'flutter'), ('rust', 'rust-polars')]:
-                    self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
-                self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
-                                 'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-                for major in (16, 17, 18):
-                    self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
-                                     f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
-                for row in inputs.values():
-                    self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
-                    self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
-                    self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
+        with patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), tempfile.TemporaryDirectory() as scratch:
+            folder = Path(scratch)
+            self.packages(folder)
+            inputs, command, native = self.select(folder)
+            self.assertEqual(set(inputs), {consumer for consumer in self.consumers
+                                           if not parity.unsupported(self.consumers[consumer]['surface'])})
+            self.assertIn('swift', inputs)
+            self.assertEqual(Path(command).name, self.command)
+            self.assertEqual(Path(native).name, self.native)
+            for group in [('cli', 'mcp'), ('python', 'pandas', 'python-polars'),
+                          ('typescript', 'javascript'), ('java', 'kotlin', 'scala'),
+                          ('dart', 'flutter'), ('rust', 'rust-polars')]:
+                self.assertEqual(len({inputs[row]['THINKTHEN_ARTIFACT'] for row in group}), 1)
+            self.assertEqual(Path(inputs['postgresql']['THINKTHEN_ARTIFACT']).name,
+                             'thinkthen-postgresql16-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for major in (16, 17, 18):
+                self.assertEqual(Path(inputs['postgresql'][f'THINKTHEN_PG{major}_ARTIFACT']).name,
+                                 f'thinkthen-postgresql{major}-0.2.0-x86_64-unknown-linux-gnu.tar.gz')
+            for row in inputs.values():
+                self.assertEqual(row['THINKTHEN_C_ARTIFACT'], native)
+                self.assertEqual(Path(row['THINKTHEN_DART_ARTIFACT']).name, self.dart)
+                self.assertTrue(Path(row['THINKTHEN_ARTIFACT']).is_relative_to(folder))
 
     def test_apple_requires_its_objective_c_archive(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -1093,15 +1175,16 @@ class InstalledInputs(unittest.TestCase):
             for name in [self.command, self.native, self.dart]:
                 (folder / name.replace('x86_64-unknown-linux-musl', 'aarch64-apple-darwin')
                  .replace('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin')).touch()
-            with patch.object(parity.sys, 'platform', 'darwin'), patch.object(
+            with patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(
                     parity.subprocess, 'check_output', return_value='host: aarch64-apple-darwin\n'):
-                consumers = {'objective-c': self.consumers['objective-c']}
+                consumers = {key: self.consumers[key] for key in ('objective-c', 'go')}
                 with self.assertRaisesRegex(ValueError, 'thinkthen-objective-c'):
                     parity.installed_artifacts(folder, consumers)
                 archive = folder / 'thinkthen-objective-c-0.2.0-aarch64-apple-darwin.tar.gz'
                 archive.touch()
                 inputs, _, _ = parity.installed_artifacts(folder, consumers)
                 self.assertEqual(inputs['objective-c']['THINKTHEN_ARTIFACT'], str(archive))
+                self.assertNotIn('go', inputs)
 
     def test_apple_execution_requires_every_foundation_cell(self):
         contract = parity.inventory()
@@ -1110,10 +1193,10 @@ class InstalledInputs(unittest.TestCase):
             def command(args, **kwargs):
                 self.assertIn('libraries/objective-c/check.sh', args)
                 return subprocess.CompletedProcess(args, 0)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
+            with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Darwin'), patch('platform.machine', return_value='arm64'), patch.object(parity.sys, 'platform', 'darwin'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
                 self.assertEqual(parity.run('12345'), 1)
             row = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())[0]
-            self.assertNotIn('platform_pending', row)
+            self.assertNotIn('platform_unsupported', row)
             self.assertEqual(set(row['cells'].values()), {'missing'})
 
     def test_postgresql_requires_every_case_on_every_server_major(self):
@@ -1140,12 +1223,12 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': 'postgresql', 'case': key, 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=scratch)), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]):
                     self.assertEqual(parity.run('12345'), int(missing is not None))
                 self.assertEqual(majors, ['16', '17', '18'])
                 self.assertEqual(preparations, majors)
 
-    def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
+    def test_linux_excludes_unsupported_platforms_without_hiding_required_failures(self):
         contract = parity.inventory()
         contract = contract | {'consumers': [self.consumers[key] for key in ('objective-c', 'c', 'python')],
                                'pending_consumers': []}
@@ -1165,8 +1248,8 @@ class InstalledInputs(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                    self.assertEqual(parity.run('12345'), 1)
+                with contextlib.redirect_stdout(io.StringIO()), patch('platform.system', return_value='Linux'), patch('platform.machine', return_value='x86_64'), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', child_env(home=Path(scratch) / 'caller')):
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):
                     row = next(row for row in matrix if row['consumer'] == consumer)
@@ -1176,10 +1259,10 @@ class InstalledInputs(unittest.TestCase):
                                                    else 'pass' for key in required})
                 apple = next(row for row in matrix if row['consumer'] == 'objective-c')
                 self.assertEqual(set(apple['cells']), set(parity.required_cases(contract, 'objective-c')))
-                self.assertEqual(set(apple['cells'].values()), {'platform-pending'})
+                self.assertEqual(set(apple['cells'].values()), {'platform-unsupported'})
                 self.assertIsNone(apple['named_typed_functions'])
                 table = (Path(scratch) / 'target/parity/matrix.md').read_text()
-                self.assertIn('Apple qualification pending', table)
+                self.assertIn('unsupported on this host', table)
                 self.assertIn('no local pass', table)
 
     def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
@@ -1203,9 +1286,9 @@ class InstalledInputs(unittest.TestCase):
         for inputs in [dict(THINKTHEN_ARTIFACT='/missing/archive'),
                        dict(THINKTHEN_C_HEADER='/missing/header'),
                        dict(THINKTHEN_C_HEADER='/missing/header', THINKTHEN_C_LIBRARY='/missing/library')]:
-            with self.subTest(inputs=inputs):
+            with self.subTest(inputs=inputs), tempfile.TemporaryDirectory() as scratch:
                 result = subprocess.run([sys.executable, str(parity.ROOT / 'conformance/c_parity.py')],
-                                        env={'PATH': '/nonexistent', **inputs}, capture_output=True,
+                                        env={'PATH': fixture_path(scratch, exclude=('cargo',)), **inputs}, capture_output=True,
                                         text=True, check=False)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertNotIn("'cargo'", result.stderr)
@@ -1216,20 +1299,17 @@ class FullCheckpoint(unittest.TestCase):
     def test_binding_builds_run_only_in_release_and_fail_the_release_on_error(self):
         with tempfile.TemporaryDirectory(prefix="thinkthen-suite-routing-") as folder:
             root = Path(folder)
+            stage_checkout(parity.ROOT, root)
             scripts = root / "sdlc/scripts"
-            scripts.mkdir(parents=True)
-            stage_files(parity.ROOT, root, (
-                "libraries/ruby/toolchain.env",
-                *("sdlc/scripts/" + name
-                  for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"))))
+            scripts.mkdir(parents=True, exist_ok=True)
             # Routing probes retain their control variables across the shell boundary.
-            for name in ("heavy-lock", "allow-list"):
+            for name in ("allow-list",):
                 (scripts / name).write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
             with (scripts / "scratch.sh").open("a") as stream:
                 stream.write("\nusage_guard() { :; }\nconfig_home() { :; }\n")
             fake = root / "bin"
-            fake.mkdir()
+            fake.mkdir(exist_ok=True)
             log = root / "calls"
             command = '''#!/bin/sh
 printf '%s %s\\n' "${0##*/}" "$*" >> "$ROUTING_LOG"
@@ -1244,17 +1324,18 @@ esac
                 path.write_text(command)
                 path.chmod(0o755)
             demo = root / "demos/16-triage-pipeline/self-test"
-            demo.parent.mkdir(parents=True)
+            demo.parent.mkdir(parents=True, exist_ok=True)
             demo.write_text("#!/bin/sh\nexit 0\n")
             demo.chmod(0o755)
-            env = {"PATH": f"{fake}:/usr/bin:/bin", "HOME": folder,
+            env = {"PATH": fixture_path(fake), "HOME": folder,
                    "ROUTING_LOG": str(log), "ROUTING_SMOKE_CODE": "0"}
+            env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
 
             def run(entry, *args):
                 log.write_text("")
-                result = subprocess.run(["/bin/sh", str(scripts / entry), *args],
+                result = fixture_run(["/bin/sh", str(scripts / entry), *args],
                                         cwd=root, env=env, capture_output=True,
-                                        text=True, timeout=5)
+                                        text=True)
                 return result, log.read_text().splitlines()
 
             routine, calls = run("test")
@@ -1289,11 +1370,10 @@ esac
             for failed in failures:
                 with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
                     root = Path(folder)
+                    stage_checkout(parity.ROOT, root)
                     scripts = root / 'sdlc/scripts'
-                    scripts.mkdir(parents=True)
-                    stage_files(parity.ROOT, root, (
-                        'sdlc/scripts/' + name
-                        for name in ('test-full-cases', 'surfaces', 'verdict.sh', 'heavy-lock', 'full-compiler')))
+                    scripts.mkdir(parents=True, exist_ok=True)
+                    stub_other_surfaces(root, {'libraries/c'})
                     files = {
                         # Environment filtering is covered by the real nested campaign fixture.
                         'sdlc/scripts/allow-list': '',
@@ -1306,13 +1386,12 @@ esac
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
                         'sdlc/scripts/test': 'printf "workspace\\n" >> calls\n',
                         'sdlc/scripts/smoke': 'printf "binding-smoke\\n" >> calls\n',
-                        'sdlc/surfaces.txt': 'libraries/c landed\n',
                         'libraries/c/Cargo.toml': '',
                         'libraries/c/check.sh': 'printf "safety\\n" >> calls\nexit "$SAFETY_CODE"\n',
                         'sdlc/scripts/release-pack': 'if [ "${4:-}" = crate ]; then printf "extra-pack\\n" >> calls; else printf "pack\\n" >> calls; fi\n',
                         'sdlc/scripts/release-smoke': 'printf "smoke\\n" >> calls\nexit "$SMOKE_CODE"\n',
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
-                        'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
+                        'bin/git': '#!/bin/sh\ncase "$1" in rev-parse) printf "source-hash\\n" ;; status) : ;; *) exec ' + shlex.quote(shutil.which('git')) + ' "$@" ;; esac\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
                         'site/package.json': '{}\n',
                         'bin/npm': (
@@ -1345,11 +1424,12 @@ esac
                         target = root / path
                         target.parent.mkdir(parents=True, exist_ok=True)
                         target.write_text(text)
+                    (root / 'bin/python3').symlink_to(sys.executable)
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
                     (root / 'bin/npm').chmod(0o755)
-                    env = {'PATH': str(root / 'bin') + ':' + os.defpath,
+                    env = {'PATH': fixture_path(root / 'bin'),
                            'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
                            'PARITY_CODE': '1' if failed == 'parity' else '0',
                            'SMOKE_CODE': '77' if failed == 'smoke' else '0',
@@ -1357,6 +1437,7 @@ esac
                            'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
+                    env['THINKTHEN_RESOLVED_TOOLS'] = fixture_tool_groups(parity.ROOT)
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
                                             env=env, capture_output=True, text=True, check=False)
                     expected = ['safety'] if failed == 'safety' else ['safety', 'parity']

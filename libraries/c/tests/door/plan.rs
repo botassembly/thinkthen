@@ -22,7 +22,7 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
             format!("{}/generic/v1", backend.origin()),
         )
         .env("THINKTHEN_CACHE", scratch("canonical-preview-cache"))
-        .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
+        .env("ASAN_OPTIONS", super::ASAN_OPTIONS)
         .output()
         .expect("the canonical preview program ran");
     super::successful(&output);
@@ -31,25 +31,11 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
         .split(|byte| *byte == b'\n')
         .filter(|line| !line.is_empty())
         .collect::<Vec<_>>();
-    assert_eq!(
-        lines.len(),
-        4,
-        "typed, named, full-request graphs and existing Rust serializer"
-    );
+    assert_eq!(lines.len(), 2, "owned Plan graph and Rust serializer");
     assert_eq!(
         lines.first(),
         lines.last(),
-        "typed Plan preserves exact Rust serialization"
-    );
-    assert_eq!(
-        lines.get(1),
-        lines.last(),
-        "named Plan preserves exact Rust serialization"
-    );
-    assert_eq!(
-        lines.get(2),
-        lines.last(),
-        "full Request Plan preserves exact Rust serialization"
+        "Plan graph preserves exact Rust serialization"
     );
     let plan: serde_json::Value =
         serde_json::from_slice(lines.last().expect("Plan JSON")).expect("native plan JSON");
@@ -57,4 +43,39 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
     assert_eq!(plan["requests"], 1);
     assert_eq!(plan["first_body_utf8"], BODY);
     assert_eq!(backend.count(), 0, "canonical preview sends nothing");
+}
+
+#[test]
+fn retained_input_abi_refuses_invalid_carriers_and_owns_converted_values() {
+    let backend = Backend::start().expect("a loopback backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    for (source, variable) in [
+        ("request_preview.c", "LEGACY_INPUT_ABI"),
+        ("session.c", "SESSION_NAMED_REFUSALS"),
+    ] {
+        let output = super::run_with(
+            &compile(&crate_dir().join("tests/c").join(source)),
+            &base,
+            b"",
+            &[(variable, std::path::Path::new("1"))],
+        );
+        super::successful(&output);
+        if source == "request_preview.c" {
+            let lines: Vec<_> = output
+                .stdout
+                .split(|byte| *byte == b'\n')
+                .filter(|line| !line.is_empty())
+                .collect();
+            assert_eq!(lines.len(), 3, "retained Plan representations");
+            assert!(
+                lines.iter().all(|line| Some(line) == lines.first()),
+                "retained Plan owners preserve exact serialization after source destruction"
+            );
+        }
+    }
+    assert_eq!(
+        backend.count(),
+        0,
+        "retained ABI refusals and preview send nothing"
+    );
 }

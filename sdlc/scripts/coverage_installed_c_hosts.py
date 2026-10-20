@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import shutil
+from tools import commands
 import tarfile
 
 COLLECTIONS = tuple('installed-' + name for name in ('cpp', 'go', 'zig', 'ada', 'php', 'cobol'))
@@ -17,21 +18,9 @@ def prepare(context):
     root, run = context['root'], context['run']
     command, missing = context['command'], context['missing_tool']
     env = dict(context['env'])
-    overrides = ('THINKTHEN_CMAKE_BIN', 'THINKTHEN_GO_BIN', 'THINKTHEN_ZIG',
-                 'THINKTHEN_PHP_BIN', 'THINKTHEN_COMPOSER_BIN')
-    env.update({key: os.environ[key] for key in overrides if key in os.environ})
-    tools = {'cmake': 'THINKTHEN_CMAKE_BIN', 'go': 'THINKTHEN_GO_BIN',
-             'zig': 'THINKTHEN_ZIG', 'php8.3': 'THINKTHEN_PHP_BIN',
-             'composer': 'THINKTHEN_COMPOSER_BIN'}
-    for tool in ('c++', 'cc', 'ar', 'ld', 'nm', 'objcopy', 'gprbuild', 'gnatmake', 'cobc',
-                 'clang', 'node', 'python3', 'gofmt', *tools):
-        selected = env.get(tools.get(tool, ''), tool)
-        phar = tool == 'composer' and Path(selected).suffix == '.phar' and Path(selected).is_file()
-        if not phar and not shutil.which(selected, path=env.get('PATH')):
-            raise missing(f'installed C door hosts need {tool}: {selected}')
-    for tool in ('cmake', 'go', 'zig', 'php8.3'):
-        if tools[tool] in env:
-            env['PATH'] = str(Path(env[tools[tool]]).resolve().parent) + os.pathsep + env['PATH']
+    for tool in commands(['cpp', 'go', 'zig', 'ada', 'php', 'cobol']):
+        if not shutil.which(tool, path=env.get('PATH')):
+            raise missing(f'installed C door hosts need {tool}')
     # Host builds must use the profile runtime in the supplied native assets;
     # only the driver's Rust native build receives Rust instrumentation flags.
     env.pop('CARGO_ENCODED_RUSTFLAGS', None)

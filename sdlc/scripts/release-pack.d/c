@@ -1,0 +1,47 @@
+# The header, both libraries under the soname layout build.rs sets, and a relocatable .pc.
+part_c() {
+	extension=tar.gz
+	[ "$TARGET" != x86_64-pc-windows-msvc ] || extension=zip
+	expected_archive=$OUT/thinkthen-c-$V-$TARGET.$extension
+	profile=debug
+	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
+	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
+	# the copy there holds the builder's home. --reuse rebuilds it here with the remaps above.
+	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+		from=$(built libraries/c)/$profile
+		python3 sdlc/scripts/release-windows-c.py pack "$from/thinkthen_c.dll" libraries/c/include/thinkthen.h "$expected_archive"
+		c_built=1
+		return
+	fi
+	from=$(built libraries/c)/$profile
+	folder=$(fresh c)
+	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
+	cp libraries/c/include/thinkthen.h "$folder/include/"
+	sh libraries/c/localize.sh "$from/libthinkthen_c.a" "$folder/lib/libthinkthen.a"
+	if [ "$dl" = dylib ]; then
+		cp -- "$from/libthinkthen_c.dylib" "$folder/lib/libthinkthen.dylib"
+		ln -s libthinkthen.dylib "$folder/lib/libthinkthen.0.dylib"
+		# The rehearsal on macOS measures its static link line (Phase 3).
+		private=
+	else
+		cp -- "$from/libthinkthen_c.so" "$folder/lib/libthinkthen.so"
+		ln -s libthinkthen.so "$folder/lib/libthinkthen.so.0"
+		private='-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc'
+	fi
+	cat >"$folder/lib/pkgconfig/thinkthen.pc" <<-EOF
+		prefix=\${pcfiledir}/../..
+		libdir=\${prefix}/lib
+		includedir=\${prefix}/include
+
+		Name: thinkthen
+		Description: Semantic judgments over text, through the thinkthen engine
+		Version: $V
+		Libs: -L\${libdir} -lthinkthen
+		Libs.private: $private
+		Cflags: -I\${includedir}
+	EOF
+	cp libraries/c/README-PUBLIC.md "$folder/README.md"
+	pack "${expected_archive##*/}" "$folder"
+	c_built=1
+}

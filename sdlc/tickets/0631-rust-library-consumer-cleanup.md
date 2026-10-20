@@ -1,14 +1,20 @@
 # 0631: Run the Rust library's outside consumer without pins or shims
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
+Reviews: revision 3d338bb, accept
+
+Reviews: revision 442b831, accept
+
+Reviews: revision 50a2800, accept
+
 ## Outcome
 
-- Changes: `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
+- Changes: `conformance/consumer/consumer/tests/public/cases.rs`, `libraries/rust/check.py`, `libraries/rust/check.sh`, `sdlc/scripts/coverage_installed_extensions.py`, `sdlc/scripts/package`.
 - The installed-crate check unpacks the crate and points the consumer at it through a `[patch]` entry or a generated manifest, not a string replace.
 - The consumer builds with the toolchain the crate's `rust-version` declares, with no inline launcher script.
 - The coverage path remaps leave this gate. Coverage does not gate a release, so the coverage script sets them only if it still needs them.

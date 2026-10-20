@@ -1,23 +1,27 @@
 #!/bin/sh
 set -eu
+case "${THINKTHEN_TEST_PROFILE:-routine}" in
+    routine|full|smoke) ;;
+    *) echo 'C#: unknown test profile' >&2; exit 2 ;;
+esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/csharp
+tools_group=csharp
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(CDPATH= cd -- "$here/../.." && pwd)
 version=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$here/ThinkThen.csproj")
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
-dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
-[ -x "$dotnet" ] || exit 77
-command -v python3 >/dev/null 2>&1 || exit 77
-case "${THINKTHEN_TEST_PROFILE:-routine}" in
-    routine|full|smoke) ;;
-    *) echo 'C#: unknown test profile' >&2; exit 2 ;;
-esac
+dotnet=$(command -v dotnet || true)
+[ -x "$dotnet" ] || exit 1
+command -v python3 >/dev/null 2>&1 || exit 1
 python3 "$here/tests/toolchains.py"
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 python3 "$here/tests/generate_fixture_questions.py" --check
-python3 "$root/sdlc/generators/results/generate.py" --inputs --check
-python3 "$root/sdlc/generators/results/generate.py" --bridge --check
-python3 "$root/sdlc/generators/results/generate.py" --check
+python3 "$root/build-tools/results/generate.py" --inputs --check
+python3 "$root/build-tools/results/generate.py" --bridge --check
+python3 "$root/build-tools/results/generate.py" --check
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
     # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C interface.
@@ -85,7 +89,7 @@ tar -czf "$here/target/artifacts/thinkthen-c-$version-x86_64-linux-gnu.tar.gz" -
 test -f "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg"
 python3 "$root/sdlc/scripts/package-inventory.py" csharp --out "$here/obj/Release" --check "$here/target/scratch/managed/Botassembly.ThinkThen.$version.nupkg" > /dev/null
 # Decoder-only refusal checks stay in the generated assembly; installed callers receive typed values.
-"$dotnet" build "$root/sdlc/generators/results/csharp/Conformance.csproj" -c Release \
+"$dotnet" build "$root/build-tools/results/csharp/Conformance.csproj" -c Release \
     -p:BaseIntermediateOutputPath="$here/target/scratch/decoder-obj/" \
     --source "$here/target/scratch/nuget" -o "$here/target/scratch/decoder" -v quiet
 "$dotnet" "$here/target/scratch/decoder/Conformance.dll" "$root/conformance/fixtures/complete.json"

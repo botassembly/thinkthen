@@ -1,12 +1,20 @@
 # 0618: Count "not run" (exit 77) as failure everywhere
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
 
 Depends on: 0615
+
+Reviews: revision 278af77, accept
+
+Reviews: revision 02dc706, accept
+
+Reviews: revision d4d3ccb, accept
+
+Reviews: revision 4973fd1, accept
 
 ## Outcome
 

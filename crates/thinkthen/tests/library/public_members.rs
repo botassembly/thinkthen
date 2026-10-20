@@ -179,7 +179,7 @@ fn a_typed_choose_call_retains_value_probability_and_records_with_one_send() {
 #[test]
 fn kinds_read_in_set_order_and_a_band_reads_decide() {
     let set = QuestionSet::from_json(
-        r#"{"version":1,"questions":{"urgent":{"decide":"Urgent?","threshold":"0.2:0.8"},"team":{"choose":"Which team?","options":["billing","outage"]},"severity":{"score":"How severe?","levels":["low","high"]},"topics":{"tag":"Which apply?","labels":["urgent"]}}}"#,
+        r#"{"questions":{"urgent":{"decide":"Urgent?","threshold":"0.2:0.8"},"team":{"choose":"Which team?","options":["billing","outage"]},"severity":{"score":"How severe?","levels":["low","high"]},"topics":{"tag":"Which apply?","labels":["urgent"]}}}"#,
     )
     .expect("set");
     let members: Vec<(&str, QuestionKind)> = set.members().collect();
@@ -218,7 +218,7 @@ fn kinds_read_in_set_order_and_a_band_reads_decide() {
 
 #[test]
 fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
-    let either = r#"{"version":1,"relate":{"relations":[{"name":"works_with","source":"person","target":"organization","either":true}]}}"#;
+    let either = r#"{"relate":{"relations":[{"name":"works_with","source":"person","target":"organization","either":true}]}}"#;
     let built = Relate::builder()
         .relation(RelationRule::both_ways("works_with", "person", "organization").expect("rule"))
         .and_then(thinkthen::RelateBuilder::build)
@@ -227,8 +227,8 @@ fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
     assert_eq!(Relate::from_json(either).expect("relate file"), built);
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("public-members-specs");
     std::fs::create_dir_all(&folder).expect("folder");
-    let broken_relate = r#"{"version":1,"relate":{"relations":[]}}"#;
-    let broken_recognize = r#"{"version":1,"recognize":{"kinds":{"Entity":null}}}"#;
+    let broken_relate = r#"{"relate":{"relations":[]}}"#;
+    let broken_recognize = r#"{"recognize":{"kinds":{"Entity":null}}}"#;
     let relate_file = folder.join("relate.json");
     let recognize_file = folder.join("recognize.json");
     std::fs::write(&relate_file, broken_relate).expect("relate file");
@@ -250,7 +250,7 @@ fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
         message(Recognize::load(&recognize_file)),
         (ErrorKind::Local, recognize_sentence)
     );
-    let pointed = r#"{"version":1,"relate":{"fields":{"name":"/who","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]}}"#;
+    let pointed = r#"{"relate":{"fields":{"name":"/who","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]}}"#;
     assert_eq!(
         message(Relate::from_json(pointed)),
         (
@@ -259,7 +259,7 @@ fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
                 .to_owned()
         )
     );
-    let on = r#"{"version":1,"recognize":{"kinds":{"person":"A person."}},"on":"/body"}"#;
+    let on = r#"{"recognize":{"kinds":{"person":"A person."}},"on":"/body"}"#;
     assert_eq!(
         message(Recognize::from_json(on)),
         (

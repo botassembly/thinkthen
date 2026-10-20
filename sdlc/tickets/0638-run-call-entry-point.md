@@ -1,12 +1,14 @@
 # 0638: Add one blocking run-call C function with one result representation
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0612, 0629, 0635
+
+Reviews: revision 52177a8, accept
 
 ## Outcome
 
@@ -31,3 +33,7 @@ The C interface (`libraries/c/include/thinkthen.h`, 46 functions) offers only lo
 Errors are kept per thread. `libraries/c/src/failures.rs:198-207` holds them in a `thread_local!`, and callers read them back with `thinkthen_session_error_message()` and similar functions. Hosts with green threads or async runtimes must pin an OS thread to read the right error. Go calls `runtime.LockOSThread()` around native calls (`libraries/go/session.go:132`, `:198` and `:297`). The binding guide makes each worker "copy any immediate failure on the same operating-system thread" (`libraries/BINDING-AUTHOR.md`).
 
 The result side is also split. C emits both fixed layouts (`views_generated.rs` at 10,790 lines, most of the header's 422 structs, plus the generated Zig, Ada and COBOL layouts) and JSON packets, so every new result field changes the interface for several languages.
+
+## Progress
+
+- 2026-10-19 started

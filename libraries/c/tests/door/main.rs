@@ -7,8 +7,8 @@
 //!
 //! Every program here links the built door the way a host does: through
 //! `include/thinkthen.h`, `-lthinkthen`, and the soname, under
-//! AddressSanitizer with leak checking. Each runs in its own process with a
-//! cleared environment, a loopback address, a fake key, and a fresh cache.
+//! AddressSanitizer, with leak checking on supported hosts. Each runs in its own
+//! process with a cleared environment, a loopback address, a fake key, and a fresh cache.
 //!
 //! Unix consumers run under ASan; Windows consumers use MSVC and the public DLL.
 
@@ -31,6 +31,7 @@ mod authored;
 mod child;
 mod errors;
 mod plan;
+mod runtime_version;
 mod session;
 
 use crate::child::ChildEnvironment as _;
@@ -47,8 +48,18 @@ use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
 
+// Apple's AddressSanitizer has no LeakSanitizer. Keep address checks there
+// and retain leak checking on the Linux consumer.
+const ASAN_OPTIONS: &str = if cfg!(target_os = "macos") {
+    "detect_leaks=0:abort_on_error=0"
+} else {
+    "detect_leaks=1:abort_on_error=0"
+};
+
 fn consumer_name(source: &Path) -> String {
-    let relative = source.strip_prefix(crate_dir()).expect("a crate fixture");
+    let relative = source
+        .strip_prefix(crate_dir())
+        .unwrap_or_else(|_| source.file_name().map_or(source, Path::new));
     relative.to_string_lossy().replace(['/', '\\'], "-")
 }
 
@@ -146,7 +157,7 @@ fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     #[cfg(unix)]
-    command.env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0");
+    command.env("ASAN_OPTIONS", ASAN_OPTIONS);
     #[cfg(windows)]
     if let Some(path) = std::env::var_os("PATH") {
         command.env("PATH", path);
@@ -191,9 +202,9 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).replace("\r\n", "\n")
 }
 
-/// The documented session caller reads terminal facts through owned packet views.
+/// The documented caller reads its complete result through owned JSON.
 #[test]
-fn the_session_example_prints_its_terminal_facts() {
+fn the_example_prints_its_complete_call() {
     let backend = Backend::start().expect("loopback");
     let output = run(
         &compile(&crate_dir().join("examples/session.c")),
@@ -201,7 +212,11 @@ fn the_session_example_prints_its_terminal_facts() {
         b"",
     );
     successful(&output);
-    assert_eq!(text(&output.stdout), "records=1 requests=1\n");
+    let call: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("complete call JSON");
+    assert_eq!(call["facts"]["records"], 1);
+    assert_eq!(call["facts"]["requests_sent"], 1);
+    assert!(call.get("value").is_some());
     assert_eq!(backend.count(), 1);
 }
 

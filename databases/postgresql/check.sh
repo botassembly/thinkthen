@@ -8,16 +8,22 @@
 # The surfaces rung runs `sh check.sh`, and the steps need bash 5 outside POSIX mode:
 # EPOCHREALTIME, `exec {fd}>` and process substitution. macOS's sh is bash 3.2 in
 # POSIX mode, so a set BASH_VERSION is not enough (ticket 0375).
+set -eu
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform databases/postgresql
 if [ "${BASH_VERSINFO:-0}" -lt 5 ] || shopt -qo posix 2>/dev/null; then
 	if [ -n "${THINKTHEN_PG_CHECK_REEXEC:-}" ]; then
 		echo "not run: databases/postgresql/check.sh needs bash 5 on PATH outside POSIX mode, found ${BASH_VERSION:-no bash}"
-		exit 77
+		exit 1
 	fi
 	unset POSIXLY_CORRECT
 	THINKTHEN_PG_CHECK_REEXEC=1 exec bash "$0" "$@"
 fi
 unset THINKTHEN_PG_CHECK_REEXEC
 set -euo pipefail
+tools_group=postgresql
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 # Retained one-record listener fixtures keep their historical wire identity.
 # Packing cases explicitly select the new default with `SET thinkthen.batch`.
@@ -26,16 +32,15 @@ cd "$(dirname "$0")"
 PG_MAJOR=${1:-16}
 case $PG_MAJOR in 16|17|18) ;; *) echo 'usage: check.sh [16|17|18]' >&2; exit 2 ;; esac
 export PG_MAJOR
-profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
+case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 1 ;; esac
 . ../../sdlc/scripts/scratch.sh
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 . ./runtime.sh
 runtime_ready
 runtime_target
+python3 ../../conformance/children/privacy.py --sources . --public --artifact-env
 REPO=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
 	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}
@@ -556,7 +561,7 @@ rank_sets_plain_member_recordings_replay_without_sends() {
 check rank_sets_plain_member_recordings_replay_without_sends
 rank_set_ties_keep_key_order_and_public_types() {
 	fresh generic
-	local spec='{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
+	local spec='{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}'
 	local input='{"z":"one","b":"two","aa":"three"}'
 	same "$(q -c "SELECT string_agg(key || ':' || rank || ':' || probability || ':' || question_name, ' ' ORDER BY rank) FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json)")" 'aa:1:0.9:first b:2:0.9:first z:3:0.9:first'
 	same "$(q -c "SELECT pg_typeof(key)::text || ',' || pg_typeof(rank)::text || ',' || pg_typeof(probability)::text || ',' || pg_typeof(question_name)::text || ',' || pg_typeof(facts)::text FROM thinkthen_rank_set('$spec','$input'::jsonb,'{\"batch\":\"max\"}'::json) LIMIT 1")" 'text,bigint,double precision,text,jsonb'
@@ -601,7 +606,7 @@ check annotate_settings_do_not_accept_question_fields
 # neighbours' answers stay in the question store for a rerun.
 an_annotate_row_missing_its_part_fails_alone() {
 	fresh generic
-	parted='{"version":1,"questions":{"refund":{"decide":"Is it a refund?","on":"/body"}}}'
+	parted='{"questions":{"refund":{"decide":"Is it a refund?","on":"/body"}}}'
 	rows="(1, '{\"body\":\"one\"}'), (2, '{\"body\":\"two\"}')"
 	out=$(q -c "SELECT thinkthen_annotate('$parted', x)::text FROM (VALUES $rows, (3, '{\"note\":\"three\"}')) t(i, x) ORDER BY i")
 	has "$out" 'thinkthen usage: the record holds nothing at `/body` (retryable: no)'
@@ -705,9 +710,9 @@ explicit_question_loader_keeps_authored_json_and_privilege_gate() {
 	fresh generic
 	mkdir -p "$RUN/question-loader"
 	printf ' {"decide":"Is red visible?"}\n' >"$RUN/question-loader/question.json"
-	printf '{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
+	printf '{"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}\n' >"$RUN/question-loader/set.json"
 	printf '{"decide":"one","decide":"two"}\n' >"$RUN/question-loader/duplicate.json"
-	printf '{"version":1,"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
+	printf '{"questions":{"first":{"decide":"First?"},"first":{"decide":"Second?"}}}\n' >"$RUN/question-loader/duplicate-set.json"
 	printf '{"decide":"private-loader-evidence"' >"$RUN/question-loader/broken.json"
 	printf '{"decide":"literal at filename?"}' >"$RUN/question-loader/@literal"
 	q -c 'CREATE ROLE tt_loader LOGIN' -c 'GRANT EXECUTE ON FUNCTION thinkthen_question_file(text) TO tt_loader' >/dev/null
@@ -916,7 +921,7 @@ find_cancel() {
 check find_cancel
 rank_set_cancel() {
 	fresh arm/held
-	held "SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb, '{\"batch\":\"max\"}'::json)"
+	held "SELECT key FROM thinkthen_rank_set('{\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb, '{\"batch\":\"max\"}'::json)"
 	bwait 1
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
 	wait "$HELD" || true
@@ -1239,7 +1244,7 @@ a_role_limit_applies() {
 check a_role_limit_applies
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
-THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+THROTTLE_RANGE=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["throttle"])' "$REPO/conformance/settings-errors.json")
 throttle_setting_range() {
 	fresh generic "thinkthen.throttle = 0"
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
@@ -1329,7 +1334,7 @@ batch_setting_and_replay_context_validate_before_send() {
     fresh generic
     for setting in 0 +1 -1 1.5 MAX no; do
         has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb)")" \
-            'thinkthen.batch is max or a whole number of 1 or more'
+            "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["batch"])' "$REPO/conformance/settings-errors.json")"
     done
     same "$(bcount)" 0
     fresh generic

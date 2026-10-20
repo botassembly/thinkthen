@@ -17,22 +17,41 @@ use super::error::Error;
 use super::options::CallOptions;
 use super::question::Kind;
 
+mod combination;
+mod details;
+pub use details::{PlannedRelation, PreparedRequest, RecognitionPlan, RelationPlan};
+
 /// A request admission bound before cache answers, refusal splits or retries.
 /// Bytes and the token band describe the uncoalesced uninterrupted preview, not a bill.
 /// It serializes as the `plan` definition of the result schema.
-#[derive(Clone, Eq, PartialEq, Serialize)]
+#[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "plan"))]
 pub struct PlanEstimate {
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    summary: PlanSummary,
     records: usize,
     requests: usize,
     estimated_bytes: usize,
     largest_request_bytes: usize,
     largest_request_estimated_input_tokens: u64,
     token_estimate_method: &'static str,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    token_estimate_note: &'static str,
     estimated_input_tokens: TokenBand,
     upper_bound: bool,
     #[serde(rename = "first_body_utf8")]
     first_body: Option<String>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    dropped_detail: bool,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    question_requests: Option<(usize, Vec<usize>)>,
+    #[serde(skip)]
+    #[cfg_attr(test, schemars(skip))]
+    details: details::Details,
 }
 
 /// The low and high input-token estimates of a plan.
@@ -72,6 +91,50 @@ impl PlanEstimate {
     #[must_use]
     pub const fn estimated_bytes(&self) -> usize {
         self.estimated_bytes
+    }
+    /// Largest uninterrupted encoded request in this preview.
+    #[must_use]
+    pub const fn largest_request_bytes(&self) -> usize {
+        self.largest_request_bytes
+    }
+    /// Largest native estimated input token count in this preview.
+    #[must_use]
+    pub const fn largest_request_estimated_input_tokens(&self) -> u64 {
+        self.largest_request_estimated_input_tokens
+    }
+    /// Native method used for the token estimates.
+    #[must_use]
+    pub const fn token_estimate_method(&self) -> &'static str {
+        self.token_estimate_method
+    }
+    /// The selected adapter's exact accounting caveat, including empty previews.
+    /// This explicit observation adds no field to the existing serialized plan.
+    #[must_use]
+    pub const fn token_estimate_note(&self) -> &'static str {
+        self.token_estimate_note
+    }
+    /// Whether the selected adapter omits authored description detail.
+    #[must_use]
+    pub const fn drops_detail(&self) -> bool {
+        self.dropped_detail
+    }
+    /// Annotation wire requests and counts per authored question group.
+    /// The request bound remains available separately through `requests`.
+    #[must_use]
+    pub fn question_requests(&self) -> Option<(usize, &[usize])> {
+        self.question_requests
+            .as_ref()
+            .map(|(total, groups)| (*total, groups.as_slice()))
+    }
+
+    pub(in crate::public) fn with_request_details(
+        mut self,
+        dropped_detail: bool,
+        question_requests: Option<(usize, Vec<usize>)>,
+    ) -> Self {
+        self.dropped_detail = dropped_detail;
+        self.question_requests = question_requests;
+        self
     }
     /// Measured low and high estimates of input tokens.
     #[must_use]
@@ -271,7 +334,10 @@ pub(super) fn estimate(
     context: Option<crate::core::Evidence>,
     asks: impl Iterator<Item = Result<Vec<pack::Ask>, Error>>,
 ) -> Result<PlanEstimate, Error> {
-    from_summary(estimate_summary(engine, setting, context, asks)?)
+    from_summary(
+        estimate_summary(engine, setting, context, asks)?,
+        engine.backend().api_type(),
+    )
 }
 
 pub(in crate::public) fn estimate_summary(
@@ -341,7 +407,16 @@ pub(in crate::public) fn estimate_tagged_summary<T>(
     Ok(summary)
 }
 
-pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstimate, Error> {
+pub(in crate::public) fn from_summary(
+    summary: PlanSummary,
+    adapter: crate::core::adapters::ApiType,
+) -> Result<PlanEstimate, Error> {
+    from_summary_with_note(summary, adapter.plan_estimate_note())
+}
+fn from_summary_with_note(
+    summary: PlanSummary,
+    token_estimate_note: &'static str,
+) -> Result<PlanEstimate, Error> {
     let counts = summary
         .counts()
         .map_err(|_| Error::usage("the planned input is too large to count"))?;
@@ -351,17 +426,22 @@ pub(in crate::public) fn from_summary(summary: PlanSummary) -> Result<PlanEstima
         .transpose()
         .map_err(|_| Error::defect("a planned body was not UTF-8"))?;
     Ok(PlanEstimate {
+        summary: summary.without_body(),
         records: counts.records,
         requests: counts.requests,
         estimated_bytes: counts.estimated_bytes,
         largest_request_bytes: counts.largest_request_bytes,
         largest_request_estimated_input_tokens: counts.largest_request_estimated_input_tokens,
         token_estimate_method: counts.token_estimate_method,
+        token_estimate_note,
         estimated_input_tokens: TokenBand {
             lower: counts.estimated_input_tokens.lower,
             upper: counts.estimated_input_tokens.upper,
         },
         upper_bound: counts.upper_bound,
         first_body,
+        dropped_detail: false,
+        question_requests: None,
+        details: details::Details::default(),
     })
 }

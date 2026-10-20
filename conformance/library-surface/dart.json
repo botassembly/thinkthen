@@ -1,0 +1,77 @@
+{
+  "libraries": {
+    "dart": {
+      "root": "libraries/dart",
+      "language": "dart",
+      "naming": "camel",
+      "declarations": [
+        "libraries/dart/lib/**/*.dart"
+      ],
+      "option_containers": [
+        "Options"
+      ],
+      "setting_containers": [
+        "EngineSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "checks",
+        "example"
+      ],
+      "helper_names": {
+        "question_file": "QuestionFile",
+        "question_name": "QuestionName",
+        "question_reference": "QuestionReference",
+        "item": "Item",
+        "files": "InputSource"
+      },
+      "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
+      "function_containers": [
+        "Engine"
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession",
+        "Cancellation",
+        "NativeOwner"
+      ],
+      "representation_owners": [],
+      "representation_types": [
+        "CallCancelled",
+        "CallFailure",
+        "Cancellation",
+        "StreamCleanupFailure",
+        "UsagePersistenceStatus",
+        "CallResult",
+        "CallProbability",
+        "ScalarProbability",
+        "ListProbability",
+        "GroupProbability"
+      ],
+      "representation_calls": [
+        "imageBytes"
+      ],
+      "wrapper_members": {
+        "CallFailure": [
+          "failure",
+          "toString"
+        ],
+        "Cancellation": [
+          "cancelled"
+        ],
+        "StreamCleanupFailure": [
+          "cause",
+          "toString"
+        ],
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts",
+          "packets",
+          "terminal"
+        ]
+      }
+    }
+  }
+}

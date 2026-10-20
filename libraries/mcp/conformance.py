@@ -366,7 +366,9 @@ def invoke(binary, backend, env, home, step, settings):
 
 
 def run(port, binary):
-    for source in (ROOT / 'crates/thinkthen/src/mcp').glob('*.rs'):
+    sources = list((ROOT / 'crates/thinkthen-cli/src/mcp').rglob('*.rs'))
+    assert sources, 'the command crate owns the MCP implementation'
+    for source in sources:
         assert not re.search(r'\bcrate::(?:core|engine)\b|\buse\s+crate::\{[^;]*\b(?:core|engine)\b', source.read_text()), (
             'MCP admission and execution must use public Request owners', source.name)
     assert port.isdecimal() and 0 < int(port) <= 65535, 'loopback port required'

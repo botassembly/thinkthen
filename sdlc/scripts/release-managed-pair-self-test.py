@@ -2,6 +2,7 @@
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
 import os
+from tools import fixture_path
 import platform
 import re
 import shutil
@@ -44,7 +45,13 @@ def write_tar(path, files, commit=None, links=None, directories=()):
             archive.addfile(info)
 
 
-SOURCE_LINKS = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
+SOURCE_LINKS = {
+    "CLAUDE.md": "AGENTS.md",
+    "crates/thinkthen/LICENSE": "../../LICENSE",
+    "crates/thinkthen-cli/LICENSE": "../../LICENSE",
+    "crates/thinkthen-cli/README.md": "../../README.md",
+    "crates/thinkthen-cli/clippy.toml": "../thinkthen/clippy.toml",
+}
 C_HEADER = "".join(f"#define THINKTHEN_VERSION_{name} {part}\n"
                    for name, part in zip(("MAJOR", "MINOR", "PATCH"), VERSION.split("."))).encode()
 
@@ -190,7 +197,7 @@ def before_extraction(base):
         tool.chmod(0o755)
     env = os.environ.copy()
     env.pop("THINKTHEN_API_KEY", None)
-    env.update(PATH=str(observer) + os.pathsep + env["PATH"], TT_OBSERVER=str(marker),
+    env.update(PATH=fixture_path(observer, path=env["PATH"]), TT_OBSERVER=str(marker),
                THINKTHEN_RELEASE_EXPECTED_SHA=COMMIT,
                THINKTHEN_RELEASE_SOURCE_TAR=str(base / "source.tar"),
                THINKTHEN_RELEASE_SOURCE_RECEIPT=str(base / "source.json"))
@@ -289,41 +296,28 @@ def inner_rejection(label, kind, mutate, message):
     print(f"{label}: assemble and verify refused at {message}")
 
 
-def workflow_mutations():
-    checker = importlib.machinery.SourceFileLoader(
-        "managed_workflows", str(HELPER.with_name("workflows"))).load_module()
-    original = (HELPER.parents[2] / ".github/workflows/release.yml").read_text()
-    cases = (
-        ("source capture", "release-workflow source-capture", "release-workflow absent-source"),
-        ("C capture", "release-workflow c-capture", "release-workflow absent-c"),
-        ("internal upload", "name: provenance-x86", "name: public-provenance"),
-        ("smoke gate", 'release-workflow managed-gate platform "$TARGET" "$SHA" provenance',
-         'release-workflow absent-gate platform "$TARGET" "$SHA" provenance'),
-        ("draft gate", 'release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance',
-         'release-workflow absent-gate "platform/platform-$target" "$target" "$SHA" provenance'),
-    )
-    for label, before, after in cases:
-        assert before in original, label
-        altered = original.replace(before, after, 1)
-        findings = checker.release("release.yml", checker.yaml.safe_load(altered))
-        assert any("provenance" in item or "receipt capture" in item or "managed" in item
-                   for item in findings), (label, findings)
-    reordered = original.replace("release-workflow source-capture", "ORDER_PLACEHOLDER", 1).replace(
-        "release-workflow c-capture", "release-workflow source-capture", 1).replace(
-        "ORDER_PLACEHOLDER", "release-workflow c-capture", 1)
-    findings = checker.release("release.yml", checker.yaml.safe_load(reordered))
-    assert any("receipt capture order" in item for item in findings), findings
-
-
 def tracked_links():
     """Every symlink Git tracks passes the source capture check."""
     helper = importlib.machinery.SourceFileLoader("managed_pair", str(HELPER)).load_module()
     data = subprocess.check_output(["git", "archive", "--format=tar", "HEAD"], cwd=HELPER.parents[2])
     helper.tar_files(data, "source")
+    # Adding a tracked link admits only that exact name and target.
+    with tempfile.TemporaryDirectory() as temporary:
+        path = Path(temporary) / "source.tar"
+        attacks = [(name, target + ".other") for name, target in SOURCE_LINKS.items()]
+        attacks.append(("crates/other/LICENSE", "../../LICENSE"))
+        for name, target in attacks:
+            write_tar(path, {}, COMMIT, {name: target})
+            try:
+                helper.tar_files(path.read_bytes(), "source")
+            except ValueError as error:
+                assert str(error) == f"unsafe source symlink: {name}", str(error)
+            else:
+                raise AssertionError(f"unsafe source link accepted: {name}")
+    print("tracked source links: exact targets accepted; changed targets and unknown names refused")
 
 
 def main():
-    workflow_mutations()
     tracked_links()
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)

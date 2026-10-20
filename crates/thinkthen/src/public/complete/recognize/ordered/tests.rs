@@ -12,7 +12,9 @@ use super::{Input, Outcome, Row};
 use crate::engine::error::Error;
 use crate::engine::{Cancel, Deadline};
 
-type Port<T> = crate::cli::schedule::ordered::Port<T, T, &'static str>;
+mod bridge;
+
+type Port<T> = bridge::Port<T, T, &'static str>;
 
 fn within(budget: Duration) -> Cancel<'static> {
     Cancel::default().with_deadline(Deadline::after(budget))
@@ -38,7 +40,7 @@ fn run<T: Send + 'static>(
     answer: &(impl Fn(T) -> Result<Row<T>, &'static str> + Sync),
     emit: impl FnMut(T) -> Result<bool, &'static str>,
 ) -> Result<Outcome<&'static str>, &'static str> {
-    crate::cli::schedule::ordered::run(
+    bridge::run(
         jobs,
         cancel,
         start_reader,

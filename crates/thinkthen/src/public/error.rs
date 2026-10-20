@@ -2,7 +2,12 @@
 
 use serde::Serialize;
 pub(crate) mod diagnostic;
+mod presentation;
 mod stopped;
+pub use presentation::{
+    ConfigurationFailure, ErrorDiagnostic, JsonFailure, ProfileFailure, ProviderFailure,
+    TransportFailure,
+};
 pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
@@ -13,26 +18,31 @@ use crate::public::{EstimatedInputDenial, SendBudgetDenial};
 ///
 /// Match the variant or read [`Error::kind`]. Every message is safe to log:
 /// none carries a key, evidence, or a label a record supplied.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
     /// The call or a setting cannot act as given.
-    #[error("{}", .0.message)]
     Usage(ErrorDetail),
     /// The backend failed or refused the call.
-    #[error("{}", .0.message)]
     Backend(ErrorDetail),
     /// A local file, folder, or cache failed.
-    #[error("{}", .0.message)]
     Local(ErrorDetail),
     /// The call's cancel token fired, or its interrupt check answered `true`.
-    #[error("{}", .0.message)]
     Cancelled(ErrorDetail),
     /// The call's deadline passed.
-    #[error("{}", .0.message)]
     Deadline(ErrorDetail),
     /// A fault inside `thinkthen`. Report it.
-    #[error("{}", .0.message)]
     Defect(ErrorDetail),
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.detail().message())
+    }
+}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.detail().producer.as_deref().map(|error| error as _)
+    }
 }
 
 /// The six kinds an [`Error`] takes.
@@ -79,6 +89,8 @@ pub struct ErrorDetail {
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
     diagnostic: Option<Box<diagnostic::Diagnostic>>,
+    producer: Option<Box<dyn std::error::Error + Send + Sync>>,
+    completed: Option<Box<crate::RequestValue>>,
 }
 
 impl std::fmt::Debug for ErrorDetail {
@@ -101,6 +113,31 @@ impl ErrorDetail {
 }
 
 impl Error {
+    /// The actual completed prefix when a named call fails after yielding rows.
+    /// This explicit view can expose sensitive original evidence. Debug, Display
+    /// and complete error serialization omit it. No successful answer is supplied.
+    #[must_use]
+    pub fn completed(&self) -> Option<&crate::RequestValue> {
+        self.detail().completed.as_deref()
+    }
+
+    pub(crate) fn with_completed(mut self, completed: crate::RequestValue) -> Self {
+        self.detail_mut().completed = Some(Box::new(completed));
+        self
+    }
+    /// Retain a caller-owned typed cause for explicit standard source access.
+    /// The caller owns the cause's disclosure policy. Debug, Display and complete
+    /// error serialization omit it; only [`std::error::Error::source`] exposes it.
+    /// Reader adapters use this to retain their own errors without library coupling.
+    /// An existing source is preserved; the first attached cause owns the chain.
+    #[must_use]
+    pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
+        if self.detail().producer.is_none() {
+            self.detail_mut().producer = Some(Box::new(source));
+        }
+        self
+    }
+
     /// The typed admission reason when canonical request decoding failed.
     #[must_use]
     pub fn request_decode_cause(&self) -> Option<crate::public::request::RequestDecodeCause> {
@@ -227,6 +264,8 @@ impl Error {
             estimated_input_denial: None,
             facts: None,
             diagnostic: None,
+            producer: None,
+            completed: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -236,6 +275,12 @@ impl Error {
             ErrorKind::Deadline => Self::Deadline(detail),
             ErrorKind::Defect => Self::Defect(detail),
         }
+    }
+
+    pub(crate) fn producer(cause: Self) -> Self {
+        let mut error = Self::local("session producer raised an exception");
+        error.detail_mut().producer = Some(Box::new(cause));
+        error
     }
 
     pub(crate) fn usage(message: impl Into<String>) -> Self {
@@ -390,7 +435,6 @@ fn message(error: &EngineError) -> String {
             return format!("{file} uses an old store format; delete it");
         }
         EngineError::Entry(..) => "the cache or recording folder holds a malformed entry",
-        #[cfg(any(feature = "cli", test))]
         EngineError::CacheEntry => "the cache or recording folder holds a malformed entry",
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingForbidden => {

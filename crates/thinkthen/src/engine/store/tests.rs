@@ -429,7 +429,6 @@ fn a_merge_refuses_conflicting_history_and_keeps_identical_snapshots() {
         entries.answers.insert(
             key(A).hex(),
             super::Answer {
-                key_version: Some(2),
                 adapter: Some(crate::core::adapters::built_in::NAME.into()),
                 observation_id: Some(crate::core::ObservationId::new("a".repeat(64)).unwrap()),
                 batch_size: None,

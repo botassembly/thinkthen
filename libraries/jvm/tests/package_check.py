@@ -12,11 +12,13 @@ import re
 import zipfile
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
+from privacy import check_bytes
+
 ROOT = Path(__file__).resolve().parents[1]
 # Every package shares the command crate's version (ticket 0376).
 VERSION = re.search(r'(?m)^version = "([^"]+)"$', (ROOT.parents[1] / "crates/thinkthen/Cargo.toml").read_text())[1]
 TARGET = Path(os.environ.get("THINKTHEN_JVM_OUT", ROOT / "target"))
-BAD = (b"tt-canary-289", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def inspect(name, source):
@@ -46,7 +48,9 @@ def inspect(name, source):
     assert not any("Json$Reader" in key or "FixtureJson" in key for key in members), "JSON reader escaped into product JAR"
     assert members == expected, f"stale or extra {name} JAR member"
     assert not any("ProbeDoor" in member or "TypeCase" in member for member in members), "diagnostic class escaped product JAR"
-    assert not any(token in data for member, content in members.items() for data in (member.encode(), content) for token in BAD), "private byte in JAR"
+    for member, content in members.items():
+        check_bytes(name, member.encode())
+        check_bytes(member, content)
     return hashlib.sha256(source).hexdigest()
 
 

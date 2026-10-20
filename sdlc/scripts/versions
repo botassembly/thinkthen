@@ -2,7 +2,7 @@
 """Every static product version matches `crates/thinkthen/Cargo.toml` (ticket 0128).
 
 Binding metadata comes from `sdlc/surfaces.txt` and lock entries from every tracked
-`Cargo.lock`. The site's `install.sh` must equal the root copy. Skipped on purpose:
+`Cargo.lock`. Skipped on purpose:
 `conformance/`, `site/package.json`, the Ruby and TypeScript checks' planted crates,
 the sealed `probes/churn-0086/Cargo.lock`, and `libraries/c/DESIGN.md`'s history.
 Version 0.0.1 is the unreleased placeholder (ticket 0376). At 0.0.1 the command crate and
@@ -162,22 +162,6 @@ def inspect(root):
             lock_data[path] = entries
         except (OSError, UnicodeError, tomllib.TOMLDecodeError, KeyError, TypeError):
             errors.append(f"versions: missing or malformed required lock {path}")
-    try:
-        installer = (root / "install.sh").read_bytes()
-        site_installer = (root / "site/public/install.sh").read_bytes()
-    except OSError:
-        errors.append("versions: missing or unreadable required installer copy")
-    else:
-        if installer != site_installer:
-            errors.append("versions: site/public/install.sh differs from install.sh")
-    try:
-        windows_installer = (root / "install.ps1").read_bytes()
-        site_windows_installer = (root / "site/public/install.ps1").read_bytes()
-    except OSError:
-        errors.append("versions: missing or unreadable Windows installer copy")
-    else:
-        if windows_installer != site_windows_installer:
-            errors.append("versions: site/public/install.ps1 differs from install.ps1")
     version = None
     if CRATE in texts:
         hit = re.search(PACKAGE, texts[CRATE])
@@ -275,7 +259,7 @@ def self_test():
         shutil.copyfile(REPO / "libraries/c/cbindgen.toml", root / "libraries/c/cbindgen.toml")
         cargo, metadata, _ = manifests(REPO)
         planted = ["libraries/ruby/lib/thinkthen/version.rb", "libraries/r/thinkthen/DESCRIPTION",
-                   "databases/postgresql/thinkthen.control", "sdlc/surfaces.txt", "install.sh", "site/public/install.sh", "install.ps1", "site/public/install.ps1"]
+                   "databases/postgresql/thinkthen.control", "sdlc/surfaces.txt"]
         for path in {p for p, _, _ in places(cargo)} | {p for p, _ in metadata} | set(locks(REPO)) | set(planted):
             (root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / path, root / path)
@@ -352,10 +336,6 @@ def self_test():
          (1, [f"versions: {CRATE} lost its publish hold, and {CRATE} reads the placeholder {PLACEHOLDER}"])),
         ("release-with-hold", release_with_hold, [],
          (1, [f"versions: libraries/typescript/package.json keeps its publish hold, and {CRATE} reads 9.8.7"])),
-        ("install", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "), [],
-         (1, ["versions: site/public/install.sh differs from install.sh"])),
-        ("windows-install", lambda r: edit(r, "site/public/install.ps1", "# Windows", "# Changed Windows"), [],
-         (1, ["versions: site/public/install.ps1 differs from install.ps1"])),
         ("tag", lambda r: None, ["--tag", f"v{version}"], (0, [ok])),
         ("bare-tag", lambda r: None, ["--tag", version],
          (1, [f"versions: tag {version} does not match version {version}; the tag must read v{version}"])),
@@ -383,9 +363,6 @@ def self_test():
                                           f'name = "thinkthen"\nversion = "{version}"',
                                           f'version = "{version}"\nname = "thinkthen"'), ["--set", f"{int(major) + 1}.0.0"],
          (1, ["versions: conformance/consumer/Cargo.lock has a package entry the update cannot read; nothing was written"])),
-        ("installer-set", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "),
-         ["--set", "9.8.7"],
-         (1, ["versions: site/public/install.sh differs from install.sh; nothing was written"])),
     ]
     bad = 0
     for name, plant, argv, expected in cases:

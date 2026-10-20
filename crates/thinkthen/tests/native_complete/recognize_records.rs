@@ -36,6 +36,8 @@ fn an_external_cache_change_between_records_refuses_before_the_next_send() {
     assert_eq!(failure.kind(), ErrorKind::Local);
     assert_eq!(failure.facts().unwrap().records(), 1);
     assert_eq!(listener.count(), 2);
+    drop(engine);
+    std::fs::remove_dir_all(folder).unwrap();
 }
 
 #[cfg(test)]
@@ -255,7 +257,7 @@ fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and
     let path = folder.join("recognize.json");
     std::fs::write(
         &path,
-        r#"{"version":1,"recognize":{},"on":"/body","model":"saved-model","profile":"calibrated"}"#,
+        r#"{"recognize":{},"on":"/body","model":"saved-model","profile":"calibrated"}"#,
     )
     .unwrap();
     let saved = thinkthen::RecognizeQuestionFile::load(&path).unwrap();

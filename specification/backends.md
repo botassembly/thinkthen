@@ -77,7 +77,6 @@ Any entry may set `requests_per_minute`, a whole number from 1 to 60,000, and th
 
 ```json
 {
-  "schema": "thinkthen.config/1",
   "backend": "liquid",
   "backends": {
     "liquid": {"requests_per_minute": 1000},
@@ -133,21 +132,23 @@ A retry happens after a status of 429, 500, 502, 503, 504, 520, 521, 522, 523, 5
 
 On `decide`, `filter`, `rank`, `choose`, `tag` and `score`, `--context FILE` makes one text the shared evidence of each record batch. The tool checks its exact request bytes against the resolved `--max-request-bytes` setting and any lower profile limit at every address. It refuses an oversized context and question before a request, or an oversized later record when that record arrives, under ADR 0087.
 
-After the last allowed attempt, a refused status exits 4; with `--max-retries 0`, that is the first status attempt. For connection reuse, the client drains at most 1 MiB of each error body. It retains only a typed quota classification and a bounded provider message from `error.message`, `detail.message`, textual `detail`, or top-level `message`. A unique `text/plain` media type also permits the plain UTF-8 body through the same boundary; HTML and structured dumps remain withheld. Malformed declared JSON stays a plain status failure. It normalizes whitespace and truncates readable prose with an ellipsis. The diagnostic boundary also withholds a message that collides with the submitted request body, as literal bytes or a JSON string; this retains the existing evidence-reflection boundary and can withhold prose identical to a supplied question. The diagnostic boundary rejects effective-key echoes, recognizable base64, hexadecimal and percent-encoded echoes, credential or header dumps, controls, structured payloads and long opaque tokens. It never hashes a key. A line whose prefix before a colon is a valid single HTTP field name is withheld as ambiguous header-shaped prose; this can withhold a terse `Error: unavailable` sentence. Ordinary prose about an expired API key is retained when it contains no key value. Unsafe or absent prose keeps the fixed status sentence; safe prose adds `provider message: TEXT`. Quota failures name the static provider of the selected request shape and say its account is out of credit. Arbitrary bespoke encodings are not decoded; opaque payloads are withheld rather than represented as provider prose. On status 400 alone, the existing 4 KiB `detail.error_type == max_tokens_exceeded` classification and one-time refusal splitting remain. Provider diagnostics do not alter real rate-limit waits, pacing, cancellation or status retry budgets.
+After the last allowed attempt, a refused status exits 4; with `--max-retries 0`, that is the first status attempt. For connection reuse, the client drains at most 1 MiB of each error body. It retains only a typed quota classification and provider error identifiers from known fields: `type` (or `error_type`) and `code` under `error`, `detail`, or the top-level object when neither wrapper exists. Identifiers must be nonempty ASCII letters, digits, underscores, hyphens or dots, within the transport's field length bound. Effective-key echoes, recognizable base64, hexadecimal and percent-encoded key echoes, and collisions with submitted request text are withheld. The boundary never hashes a key. Free provider prose, plain text bodies, header dumps and unknown fields are discarded. The same diagnostic formatter adds `provider type: TYPE` and `provider code: CODE` to the CLI and native error messages, including the C interface and bindings. Error facts retain their existing stop cause, status and retryability fields and carry no provider prose. Quota failures name the static provider of the selected request shape and say its account is out of credit. On status 400 alone, the existing 4 KiB `detail.error_type == max_tokens_exceeded` classification and one-time refusal splitting remain. Provider diagnostics do not alter real rate-limit waits, pacing, cancellation or status retry budgets.
 
 | Status | Phrase |
 | --- | --- |
 | 400 | the backend refused the request; check `--model` and the request size |
-| 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes; shorten the text, or set a lower `--max-request-bytes` or `max_request_bytes` with `--profile`. The status reads `400 (max_tokens_exceeded)` |
+| 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes. The status reads `400 (max_tokens_exceeded)`; the remedy follows the request shape below |
 | 302 | the redirect was not followed; use the final `--url` directly |
 | 401 | the key was refused |
 | 402 | the account has no credit |
 | 403 | the key may not use this model or address |
 | 404 | nothing answers at this address |
-| 413 | the backend refused the request as too large; shorten the text, or set a lower `--max-request-bytes` or `max_request_bytes` with `--profile` |
+| 413 | the backend refused the request as too large; the remedy follows the request shape below |
 | 422 | the backend refused the request as malformed or too large |
 | 429 after the allowed attempts | the backend's rate limit was reached after the allowed attempts; try again later or change `--max-retries` |
 | 500, 502, 503, 504, 520, 521, 522, 523, 524, or 529 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
+
+A too-large refusal suggests shortening the text. Record batches, recognition stages and relation plans also suggest lowering `--max-request-bytes`, because their planners can split requests. `find` suggests fewer candidates instead, because its complete set must leave together. Whole-document judging and annotation requests suggest only shorter text. Image inputs and the fixed probes in backend checks suggest a backend with a larger input limit.
 
 A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. For a request holding two or more records, the stopped-run line names the records that request held. A missing host says to check `--url` and the network. An opening connection or name-lookup failure gets one immediate retry before any judging-request bytes are sent. Every transport failure after those bytes may have been sent fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. A TLS connection or certificate failure names certificate trust and advises checking `--url`. Every other transport failure says to check `--url` and the network.
 
@@ -252,7 +253,6 @@ Malformed fields exit 5 without repeating values. The price-pair sentence is `co
 
 ```json
 {
-  "schema": "thinkthen.config/1",
   "backends": {
     "perplexity": {
       "requests_per_minute": 600,
@@ -398,7 +398,7 @@ Before any persistent projection, each live answer position must match the exact
 
 Predicate requires finite probability in [0,1]. Choice distributions must contain exactly the sent string values, once each; reorder them to caller order. Score distributions must contain each sent zero-based index and its matching level label, once each. Reject extra/missing/duplicate entries, boolean substitutions and invalid probabilities. Require finite confidence in [0,1] for choice/score and preserve it as received. Start with the existing generic total tolerance `member count × f64::EPSILON`; widen only under admitted exchange evidence and a reviewed amendment in 0441. System One retains its own evidenced tolerance. Never renormalize reported members or fill missing probabilities. Compute winning/tie/threshold and weighted score using existing neutral reading rules; vendor choice/score cannot override them. Validate required vendor choice membership and finite score shape; record any discrepancy without substituting a vendor value for the local reading.
 
-Reuse six error kinds, value-free HTTP/transport errors, bounded body parsing, response limits, timeout/deadline, cancellation, pacing and retries. Forward only bounded provider prose that passed the shared diagnostic secrecy boundary; invent no OpenAI oversize codes and do not treat refusal as a rate retry. Malformed/refused answers cause no transport retry; existing one-time logical refusal splitting, if applicable, stays budgeted on the same route. Root's first probe uses no retries or split retries. Safe transport headers are not body recordings. OpenAI cache/record/replay fixtures are actual saved exchanges; no generated example becomes observed evidence.
+Reuse six error kinds, value-free HTTP/transport errors, bounded body parsing, response limits, timeout/deadline, cancellation, pacing and retries. Forward only provider error identifiers admitted by the shared diagnostic field boundary; invent no OpenAI oversize codes and do not treat refusal as a rate retry. Malformed/refused answers cause no transport retry; existing one-time logical refusal splitting, if applicable, stays budgeted on the same route. Root's first probe uses no retries or split retries. Safe transport headers are not body recordings. OpenAI cache/record/replay fixtures are actual saved exchanges; no generated example becomes observed evidence.
 
 ### Limits, prices and images
 

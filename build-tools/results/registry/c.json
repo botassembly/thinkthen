@@ -1,0 +1,47 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/c/src/session/views_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/ffi/operations_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/ffi/session/operations_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/ffi/native_request/operations_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/session/primitives_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/ffi/carriers/layouts_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "operations",
+    "path": "libraries/c/src/ffi/current/operations_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/c/src/ffi/native_request/carriers_generated.rs",
+    "producer": "results"
+  },
+  {
+    "mode": "header",
+    "path": "libraries/c/include/thinkthen.h",
+    "producer": "header"
+  }
+]

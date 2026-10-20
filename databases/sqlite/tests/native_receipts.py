@@ -4,7 +4,7 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
+sys.path.insert(0, str(ROOT / 'build-tools/results/templates'))
 from postgresql import Composite, ROOTS, sql_schema
 
 SCHEMA = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())

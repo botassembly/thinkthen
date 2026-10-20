@@ -2,7 +2,7 @@
 """Hold the built-in transform catalog to the repository transforms.
 
 Ticket 0083. `transforms/NAME/NAME.jq` is the development source,
-`crates/thinkthen/transforms/NAME.jq` is the shipped copy, and the table in
+`crates/thinkthen-cli/transforms/NAME.jq` is the shipped copy, and the table in
 `cli/transform.rs` names the members. Every name and every byte agrees in all
 three, and in the source package when `--crate PATH` names one.
 
@@ -20,10 +20,10 @@ import tempfile
 import tarfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+sys.path.insert(0, str(REPO / "build-tools/results"))
 from sources import tracked_files
-PACKAGED = "crates/thinkthen/transforms"
-TABLE = "crates/thinkthen/src/cli/transform.rs"
+PACKAGED = "crates/thinkthen-cli/transforms"
+TABLE = "crates/thinkthen-cli/src/cli/transform.rs"
 ROW = re.compile(r'\(\s*"([a-z]+)",\s*include_bytes!\("\.\./\.\./transforms/([a-z]+)\.jq"\),?\s*\)')
 
 

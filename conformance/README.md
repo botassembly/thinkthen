@@ -22,7 +22,7 @@ An `annotate` case may name a `record`, the one JSON record every surface sends 
 
 A fault with a `question_form` breaks a question rule instead of naming an injection. The form `text` gives the question as typed values and expects `usage`. The form `file` loads it from a named file and expects `local`.
 
-`recognize` and `relate` cases carry `text` or `entities` beside a version-one question file. Their one answer, named `result`, holds the command's value and its detailed request identity. The command runner replays their exchanges through the command, because their assembly lives there. The `relate` exchanges are synthetic and carry the production planner's request bytes. Cases 41 to 50, the `recognize` cases, are captured. Ticket 0147 recorded them live, and each exchange names its entry under `specification/fixtures/recognize/recordings/conformance/`.
+`recognize` and `relate` cases carry `text` or `entities` beside a question file. Their one answer, named `result`, holds the command's value and its detailed request identity. The command runner replays their exchanges through the command, because their assembly lives there. The `relate` exchanges are synthetic and carry the production planner's request bytes. Cases 41 to 50, the `recognize` cases, are captured. Ticket 0147 recorded them live, and each exchange names its entry under `specification/fixtures/recognize/recordings/conformance/`.
 
 `19-find-none` keeps `bare: "none"` and `details.answer.kind: "choice"`, because `answers[]` holds the wire-level choice decode. Its `operation.selected` is `null`, as `specification/find.md` says.
 
@@ -233,4 +233,4 @@ The public parity suite requires only inputs admitted by a real public call. The
 
 Ticket 0461 refreshes recognition cases 41–50 and 53 as `synthetic_contract` exchanges. Their controlled replies retain the prior captured probabilities and expected spans while the native request now carries label descriptions through every entity stage. Original captured recordings remain unchanged at their committed paths. These refreshed cases establish transport and decoding, not predictions under new wording. Case 56 independently freezes the literal amount `42.75` past a Unicode prefix and exercises both authored task fields.
 
-Full parity fails platform-pending rows and exit 77. The Linux campaign may explicitly delegate Objective-C and Swift with `THINKTHEN_MACOS_APPLE_CHECKS=required` after both pass on the same revision on macOS. Delegated rows remain pending in the table; they are never counted as local passes. A run with no executed consumer fails.
+Full parity reads platform support through the shared tool-manifest verdict helper. Unsupported consumers print their allowing manifest entry and remain excluded in the table without a local pass. Required consumers fail on exit 77 or missing assertions. A run with no executed consumer fails.

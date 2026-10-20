@@ -1,6 +1,7 @@
 """Prepare routine installed C and Python collections for the coverage driver."""
 from pathlib import Path
 import shutil
+from tools import commands
 import tarfile
 
 
@@ -11,7 +12,7 @@ COLLECTIONS = ('installed-c', 'installed-python-shared', 'installed-python',
 def prepare(context):
     root, run = context['root'], context['run']
     env, command = context['env'], context['command']
-    for tool in ('pkg-config', 'ld', 'nm', 'objcopy', 'ar', 'uv', 'maturin'):
+    for tool in commands(['python']):
         if not shutil.which(tool):
             raise context['missing_tool'](tool)
     runtime_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-tools')}

@@ -52,4 +52,4 @@ A `TTFeed` supplies one descriptor at a time, EOF, or a typed reader failure. `T
 
 ## Build and check
 
-`python3 sdlc/generators/results/generate.py --target objc --check` checks generated freshness. On macOS, `check.sh` installs an assembled package into an unrelated SwiftPM consumer and checks typed answers, ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.
+`python3 build-tools/results/generate.py --target objc --check` checks generated freshness. On macOS, `check.sh` installs an assembled package into an unrelated SwiftPM consumer and checks typed answers, ownership, cancellation and saved responses. `THINKTHEN_TEST_PROFILE=full` selects the full shared inventory.

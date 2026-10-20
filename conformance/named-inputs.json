@@ -2074,7 +2074,6 @@
       "verb": "annotate",
       "input": {
         "question_set": {
-          "version": 1,
           "questions": {
             "ok": {
               "decide": "Does this ask for a refund?",
@@ -2127,7 +2126,6 @@
       "verb": "annotate",
       "input": {
         "question_set": {
-          "version": 1,
           "questions": {
             "result": {
               "decide": "Does this ask for a refund?",
@@ -2172,7 +2170,6 @@
       "verb": "annotate",
       "input": {
         "question_set": {
-          "version": 1,
           "questions": {
             "result": {
               "decide": "Does this ask for a refund?",
@@ -2759,7 +2756,6 @@
       "input": {
         "mode": "finite",
         "question": {
-          "version": 1,
           "questions": {
             "first": {
               "decide": "First?",

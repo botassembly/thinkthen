@@ -24,8 +24,8 @@ def main():
     packages = args.packages.resolve()
     names = ('PATH', 'SystemRoot', 'SystemDrive', 'TEMP', 'TMP', 'INCLUDE', 'LIB', 'LIBPATH')
     env = {name: os.environ[name] for name in names if name in os.environ}
-    env.update(CARGO_HOME=os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
-               RUSTUP_HOME=os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
+    env.update(CARGO_HOME=(os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo')),
+               RUSTUP_HOME=(os.environ['RUSTUP_HOME'] if 'RUSTUP_HOME' in os.environ else str(Path.home() / '.rustup')),
                CARGO_TARGET_DIR=str(REPO / 'target'), CARGO_NET_OFFLINE='true', CARGO_BUILD_JOBS='2',
                RUSTC_WRAPPER='', RUSTC_WORKSPACE_WRAPPER='', PYTHONUTF8='1')
     with tempfile.TemporaryDirectory(prefix='thinkthen-python-windows-') as temporary:

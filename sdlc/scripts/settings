@@ -58,7 +58,7 @@ ENGINE_SOURCES = {
     "SQLite": "databases/sqlite/src/settings.rs",
 }
 SHARED_SETTINGS = "crates/thinkthen/src/public/settings/json.rs"
-SETTINGS_DELEGATION = re.compile(r"\bEngineBuilder\s*::\s*from_settings_json\s*\(")
+SETTINGS_DELEGATION = re.compile(r"\bEngineBuilder\s*::\s*from_settings_json\s*\(|\bbuilder\s*\.\s*setting\s*\(")
 
 
 def prose(text):
@@ -119,10 +119,11 @@ def help_flags():
 def product(path):
     folders = path.parts[:-1]
     tests = (path.name in {"tests.rs", "build.rs"} or path.stem.endswith("_tests")
-             or path.name.startswith(("test_", "build-")))
+             or path.name.startswith(("test_", "build-"))
+             or path == pathlib.Path("databases/duckdb/cpp/verify_decide.py"))
     return path.suffix in SOURCE and not tests and not any(
         part in {"checks", "fixtures", "Tests", "tests", "test", "tools"}
-        or part.endswith("_tests") for part in folders)
+        or part.startswith("test_") or part.endswith("_tests") for part in folders)
 
 
 def env_names():
@@ -298,9 +299,14 @@ def self_test(flags, names, keys):
     # A package gate's source-like helper must not become a product setting;
     # the matching library implementation remains in the scan.
     helpers = ("checks/settings.py", "fixtures/settings.py", "Tests/settings.py", "tests/settings.py",
-               "build.rs", "build-session.py")
-    if any(product(pathlib.Path("libraries/example") / helper) for helper in helpers) or not product(
-            pathlib.Path("libraries/example/src/settings.py")):
+               "test_support/settings.py", "test_data/settings.py", "build.rs", "build-session.py")
+    implementations = ("libraries/example/src/settings.py", "libraries/example/src/testing/settings.py",
+                       "libraries/example/src/verify_settings.py",
+                       "databases/duckdb/cpp/verify_settings.py",
+                       "databases/duckdb/cpp/src/verify_settings.py")
+    if (any(product(pathlib.Path("libraries/example") / helper) for helper in helpers)
+            or product(pathlib.Path("databases/duckdb/cpp/verify_decide.py"))
+            or not all(product(pathlib.Path(path)) for path in implementations)):
         bad += 1
         print("settings self-test: package helper/product boundary failed", file=sys.stderr)
     for name, body, expected in planted:
@@ -321,14 +327,15 @@ def self_test(flags, names, keys):
         ("shared timeout", SHARED_SETTINGS, "builder.timeout(", "builder.missing_timeout(", timeout_errors),
         ("shared admission", SHARED_SETTINGS, "pub fn from_settings_json(", "pub fn missing_settings(", shared_errors),
         ("shared application", SHARED_SETTINGS, "document.apply(", "document.missing_apply(", shared_errors),
-        ("R timeout", ENGINE_SOURCES["R"], "builder.timeout(", "builder.missing_timeout(",
-         ["settings.md: R Timeout source has no setter: timeout"]),
     ]
     for surface in delegated:
         expected = [f"settings.md: {surface} {name} source has no setter: {setter}"
                     for name, setters in ENGINE_CELLS.items() for setter in setters]
-        source_cases.append((surface + " delegation", ENGINE_SOURCES[surface],
-                             "::from_settings_json(", "::missing_settings(", expected))
+        path = ENGINE_SOURCES[surface]
+        paired = "builder.setting(" in (REPO / path).read_text(encoding="utf-8")
+        source_cases.append((surface + " delegation", path,
+                             "builder.setting(" if paired else "::from_settings_json(",
+                             "builder.missing_settings(" if paired else "::missing_settings(", expected))
     for name, path, old, new, expected in source_cases:
         source = (REPO / path).read_text(encoding="utf-8")
         if old not in source:

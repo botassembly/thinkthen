@@ -66,6 +66,21 @@ impl RequestDefinition {
     }
 }
 
+impl From<crate::BandedQuestion> for RequestDefinition {
+    fn from(question: crate::BandedQuestion) -> Self {
+        Self::Atomic(LoadedQuestion::Banded(question))
+    }
+}
+impl<C: crate::Choice> From<crate::ChooseQuestion<C>> for RequestDefinition {
+    fn from(question: crate::ChooseQuestion<C>) -> Self {
+        Self::Atomic(LoadedQuestion::Question(question.0))
+    }
+}
+impl<C: crate::Choice> From<crate::TagQuestion<C>> for RequestDefinition {
+    fn from(question: crate::TagQuestion<C>) -> Self {
+        Self::Atomic(LoadedQuestion::Question(question.0))
+    }
+}
 impl From<LoadedQuestion> for RequestDefinition {
     fn from(q: LoadedQuestion) -> Self {
         Self::Atomic(q)
@@ -158,7 +173,7 @@ impl RequestDefinition {
     }
     fn parse(value: &crate::core::Json, text: &str) -> Result<Self, Error> {
         let crate::core::Json::Object(members) = value else {
-            return Err(Error::usage("a definition is an authored question object"));
+            return Err(Error::refused(crate::core::QuestionFileError::NotAnObject));
         };
         let has = |key: &str| members.iter().any(|(name, _)| name == key);
         if has("questions") {
@@ -239,10 +254,7 @@ fn set_json(set: &crate::core::QuestionSet) -> Result<crate::core::Json, Error> 
             crate::core::Json::parse(&q.to_json()?).map_err(Error::refused)?,
         ));
     }
-    let mut fields = vec![
-        ("version".to_owned(), crate::core::Json::Number(1.into())),
-        ("questions".to_owned(), crate::core::Json::Object(questions)),
-    ];
+    let mut fields = vec![("questions".to_owned(), crate::core::Json::Object(questions))];
     if let Some(profile) = set.profile() {
         fields.push((
             "profile".to_owned(),
@@ -267,7 +279,7 @@ fn recognition_json(q: &Recognize) -> Result<crate::core::Json, Error> {
     let Json::Object(document) = encoded(&q.0)? else {
         return Err(Error::defect("recognition definition lost its object"));
     };
-    let mut fields = vec![("version".to_owned(), Json::Number(1.into()))];
+    let mut fields = Vec::new();
     let mut recognize = Vec::new();
     for (key, value) in document {
         match key.as_str() {
@@ -315,7 +327,6 @@ fn relate_json(q: &Relate) -> Result<crate::core::Json, Error> {
         ("relations".to_owned(), encoded(&q.0.relations)?),
     ];
     let mut result = vec![
-        ("version".to_owned(), Json::Number(1.into())),
         ("relate".to_owned(), Json::Object(relate)),
         ("threshold".to_owned(), encoded(&q.0.threshold)?),
     ];

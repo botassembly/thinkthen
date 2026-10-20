@@ -6,13 +6,17 @@ type Notify = Box<dyn Fn() + Send + Sync>;
 
 #[derive(Clone, Default)]
 pub(crate) struct Wake(Arc<Mutex<Option<Notify>>>);
+impl std::fmt::Debug for Wake {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Wake")
+    }
+}
 impl Wake {
     pub(crate) fn register(&self, notify: Notify) {
         if let Ok(mut held) = self.0.lock() {
             *held = Some(notify);
         }
     }
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn notify(&self) {
         if let Ok(held) = self.0.lock()
             && let Some(notify) = held.as_ref()
@@ -30,16 +34,22 @@ impl Wake {
 pub(crate) struct Readiness<'a> {
     ready: &'a (dyn Fn() -> bool + Sync),
     pub(crate) pause: Option<Duration>,
+    pub(crate) parallel_batch_one: bool,
     wake: Wake,
 }
 impl<'a> Readiness<'a> {
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn new(ready: &'a (dyn Fn() -> bool + Sync), pause: Option<Duration>) -> Self {
         Self {
             ready,
             pause,
+            parallel_batch_one: true,
             wake: Wake::default(),
         }
+    }
+    /// Native sessions retain row-at-a-time pacing independently of readiness.
+    pub(crate) fn sequential_batch_one(mut self) -> Self {
+        self.parallel_batch_one = false;
+        self
     }
     pub(crate) fn ready(&self) -> bool {
         (self.ready)()

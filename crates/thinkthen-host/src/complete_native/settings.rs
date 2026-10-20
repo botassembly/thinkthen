@@ -3,6 +3,7 @@ use super::{Prepared, usage};
 use serde_json::value::RawValue;
 use std::collections::BTreeMap;
 use thinkthen::{Error, For, Settings};
+/// Merge call settings and prepare the matching question role.
 pub fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared, Error> {
     let role = match verb {
         "decide" | "filter" => Some(For::Decide),
@@ -18,6 +19,7 @@ pub fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared
     };
     Prepared::parse(verb, &merged)?.configured(verb, settings)
 }
+/// Merge portable call settings without reordering authored fields.
 pub fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Error> {
     if !source.trim_start().starts_with('{') {
         return settings
@@ -49,10 +51,7 @@ pub fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Err
     ))
 }
 
-#[allow(
-    dead_code,
-    reason = "authorized file grammar used by PostgreSQL and DuckDB"
-)]
+/// Parse host-read content through the authorized question file grammar.
 pub fn parse_file(
     verb: &str,
     source: &str,
@@ -78,10 +77,8 @@ pub fn parse_file(
     };
     reference.parse(source, role, |text| Prepared::content(verb, text))
 }
-#[allow(
-    dead_code,
-    reason = "authorized file settings used by PostgreSQL and DuckDB"
-)]
+
+/// Apply call settings after saved-file grammar validation.
 pub fn prepare_file(
     verb: &str,
     source: &str,

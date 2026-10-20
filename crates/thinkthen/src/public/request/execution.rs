@@ -24,8 +24,7 @@ pub(super) enum FeedContents<'a> {
     Items(Box<dyn Iterator<Item = Result<RequestItem, Error>> + 'a>),
     Records(super::composition::Inputs<'a>),
     Session(std::sync::Arc<super::session_queue::Queue>),
-    #[cfg(feature = "cli")]
-    Descriptors(Vec<super::transport::TransportDescriptor>),
+    Descriptors(Vec<super::transport::RequestDescriptor>),
 }
 impl std::fmt::Debug for RequestFeed<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -46,14 +45,17 @@ impl<'a> RequestFeed<'a> {
             record_reading: None,
         }
     }
-    #[cfg(feature = "cli")]
-    pub(super) fn descriptors(
-        name: String,
-        descriptors: Vec<super::transport::TransportDescriptor>,
+    /// Supply deferred source descriptors with eager whole-feed admission.
+    /// Every descriptor and the aggregate inline attachment budget are checked
+    /// before question resolution, source reads or sends.
+    #[must_use]
+    pub fn from_descriptors(
+        name: impl Into<String>,
+        descriptors: Vec<super::transport::RequestDescriptor>,
     ) -> Self {
         let image_inputs = descriptors.iter().any(|d| !d.item.images.is_empty());
         Self {
-            name,
+            name: name.into(),
             contents: FeedContents::Descriptors(descriptors),
             eager: true,
             image_inputs,
@@ -136,7 +138,16 @@ impl Engine {
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
     ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, None, None, None)
+        match self.execute_request_sink(request, environment, None, None, None)? {
+            RequestOutcome::Complete(call) => {
+                let answer = super::settlement::answer(
+                    &request.request.call.arguments().input,
+                    call.value(),
+                )?;
+                Ok(RequestOutcome::Complete(call.with_answer(answer)))
+            }
+            failed => Ok(failed),
+        }
     }
     pub(crate) fn execute_request_sink<'a>(
         &self,
@@ -146,6 +157,13 @@ impl Engine {
         release: Option<&dyn Fn(usize)>,
         recover: crate::public::options::AnnotationRecovery<'a>,
     ) -> Result<RequestOutcome, Error> {
+        environment
+            .controls
+            .admit_preparation(request.request.call.function())?;
+        let recover = recover.or(environment
+            .controls
+            .annotation_missing
+            .map(|callback| callback as &dyn Fn(usize, &str) -> bool));
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
         let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
@@ -193,7 +211,7 @@ impl Engine {
                 } else {
                     Box::new(rows)
                 };
-                controls.eager_inputs = eager && sink.is_some();
+                controls.eager_inputs = eager && (sink.is_some() || recover.is_some());
                 dispatch(
                     &engine,
                     request.request.call.function(),
@@ -306,8 +324,9 @@ where
                     self.image_refusal.as_deref(),
                     self.native_originals && self.controls.eager_inputs,
                 )?;
-                // Native preparation preserves its reader-before-declaration and
-                // staged-plan refusal contracts. Find projects already admitted rows.
+                // Canonical feeds are already selected and need declaration admission.
+                // Legacy native atomic preparation selects authored on pointers itself
+                // before validating declarations. Find has no later record preparation.
                 if !self.controls.recovery_rows
                     && !self.controls.entity_rows
                     && (!self.native_originals || self.function == Function::Find)
@@ -328,9 +347,7 @@ impl<I> Validated<'_, I> {
             return Ok(());
         };
         if at == maximum {
-            return Err(Error::usage(crate::public::bulk::count_message(
-                maximum == 254,
-            )));
+            return Err(crate::public::bulk::count_error(maximum == 254));
         }
         let bytes = match input {
             crate::QuestionInput::Text(text) => text.len(),
@@ -363,7 +380,7 @@ fn declarations<T>(
 /// Snapshot custom input evidence exactly once while retaining caller ownership.
 pub(in crate::public) struct Original<T> {
     pub(in crate::public) original: T,
-    input: crate::QuestionInput,
+    pub(super) input: crate::QuestionInput,
 }
 impl<T> crate::InputEvidence for Original<T> {
     fn question_input(&self) -> crate::QuestionInput {
@@ -530,6 +547,7 @@ pub(super) fn prepare<'a>(
     controls: CallOptions<'a>,
     image_inputs: bool,
 ) -> Result<Prepared<'a>, Error> {
+    controls.admit_preparation(request.request.call.function())?;
     let options = &request.request.call.arguments().options;
     let context = options
         .context
@@ -593,6 +611,9 @@ fn scalar_controls<'a>(
     options: &RequestOptions,
     mut controls: CallOptions<'a>,
 ) -> Result<CallOptions<'a>, Error> {
+    if let Some(limit) = options.max_text_bytes {
+        controls = controls.recognition_text_limit(limit);
+    }
     if options.attempts {
         controls = controls.attempts(true);
     }
@@ -694,6 +715,13 @@ pub(super) fn apply(
     definition: &mut RequestDefinition,
     options: &RequestOptions,
 ) -> Result<(), Error> {
+    if let RequestDefinition::DynamicChoose(question) = definition
+        && let Some(labels) = &options.labels
+    {
+        let labels = crate::RecordOptions::new(labels.clone())?;
+        *definition =
+            RequestDefinition::Atomic(LoadedQuestion::Question(question.with_options(&labels)?));
+    }
     match definition {
         RequestDefinition::Atomic(q) => match q {
             LoadedQuestion::Question(q) => apply_question(q, options)?,
@@ -736,6 +764,10 @@ pub(super) fn apply(
             }
         }
         RequestDefinition::Relate(q) => {
+            if let Some(rule) = &options.threshold {
+                q.0.override_threshold(&rule.native()?.to_string())
+                    .map_err(Error::refused)?;
+            }
             if let Some(model) = &options.model {
                 q.0.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
             }
@@ -756,6 +788,7 @@ pub(super) fn apply(
     Ok(())
 }
 fn apply_question(q: &mut Question, options: &RequestOptions) -> Result<(), Error> {
+    super::wording::apply(q, options)?;
     if let Some(model) = &options.model {
         q.model = Some(crate::core::ModelName::new(model).map_err(Error::refused)?);
     }
@@ -817,7 +850,7 @@ fn dispatch<'a>(
     release: Option<&dyn Fn(usize)>,
     recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
-    if !eager && function.streams() {
+    if (!eager || recover.is_some()) && function.streams() {
         let rows = super::pull::dispatch(
             engine,
             function,

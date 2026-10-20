@@ -17,6 +17,10 @@ from unittest.mock import patch
 import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.children.children import FIXTURE_HANG_TIMEOUT
+
+CONTROLLED_TIMEOUT = 2
 SPEC = importlib.util.spec_from_file_location('installer_smoke', REPO / 'sdlc/scripts/release-windows-smoke.py')
 SMOKE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(SMOKE)
@@ -41,7 +45,7 @@ def route(root, *, missing=False, receipt=False, extra=False):
         assert base.startswith('http://127.0.0.1:')
         prefix = f'/botassembly/thinkthen/releases/download/v{VERSION}/'
         for file in (name, name + '.sha256'):
-            with urllib.request.urlopen(base + prefix + file, timeout=5) as response:
+            with urllib.request.urlopen(base + prefix + file, timeout=FIXTURE_HANG_TIMEOUT) as response:
                 assert response.read() == (platform / file).read_bytes()
         target = Path(env['THINKTHEN_INSTALL_DIR'])
         target.mkdir()
@@ -71,7 +75,7 @@ def unicode_diagnostics():
             "import sys; sys.stdout.buffer.write('fixture path: \\u03a9\\n'.encode('utf-8')); "
             "sys.stderr.buffer.write('fixture diagnostic: \\u03a9\\n'.encode('utf-8')); sys.exit(7)"],
             env={key: os.environ[key] for key in ('SystemRoot', 'SystemDrive', 'TEMP', 'TMP') if key in os.environ},
-            timeout=10, label='Unicode output')
+            timeout=FIXTURE_HANG_TIMEOUT, label='Unicode output')
         assert result.returncode == 7
         assert result.stdout == 'fixture path: \u03a9\n'.encode('utf-8')
         assert result.stderr == 'fixture diagnostic: \u03a9\n'.encode('utf-8')
@@ -90,7 +94,7 @@ def timeout_diagnostics():
                 "sys.stdout.buffer.flush(); sys.stderr.buffer.write('controlled fixture error: \\u03a9\\n'.encode('utf-8')); "
                 "sys.stderr.buffer.flush(); threading.Event().wait()"],
                 env={key: os.environ[key] for key in ('SystemRoot', 'SystemDrive', 'TEMP', 'TMP') if key in os.environ},
-                timeout=2, label='controlled timeout')
+                timeout=CONTROLLED_TIMEOUT, label='controlled timeout')
         except ValueError as error:
             assert isinstance(error.__cause__, subprocess.TimeoutExpired)
             assert error.__cause__.stdout.splitlines() == ['fixture phase: \u03a9 waiting'.encode('utf-8')]

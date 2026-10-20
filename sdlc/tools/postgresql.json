@@ -1,0 +1,50 @@
+{
+  "tools": {
+    "cargo-pgrx": {
+      "commands": [
+        "cargo-pgrx"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "postgresql"
+      ],
+      "provider": "cargo:cargo-pgrx",
+      "version": "0.17.0",
+      "probe": {
+        "argv": [
+          "cargo",
+          "pgrx",
+          "--version"
+        ],
+        "contains": "cargo-pgrx {version}"
+      }
+    },
+    "postgresql": {
+      "commands": [
+        "pg_config",
+        "initdb",
+        "postgres",
+        "pg_ctl",
+        "psql"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "postgresql"
+      ],
+      "linux_directory": "/usr/lib/postgresql/16/bin"
+    }
+  },
+  "databases": {
+    "postgresql": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ]
+  }
+}

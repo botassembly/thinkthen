@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "questions": {
     "kind": {
       "choose": "What kind of message is this?",

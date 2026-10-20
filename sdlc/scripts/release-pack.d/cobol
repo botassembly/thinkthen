@@ -1,0 +1,12 @@
+wrapper_cobol() {
+	mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples" "$folder/native"
+	cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
+	cp libraries/cobol/copybooks/tt-native-generated.cpy "$folder/copybooks/"
+	cp libraries/cobol/src/tt_session.h libraries/cobol/src/tt_session.c \
+		libraries/cobol/src/tt_requests_generated.h libraries/cobol/src/tt_requests_generated.c "$folder/src/"
+	cp libraries/cobol/examples/*.cob "$folder/examples/"
+	tar -xzf "$OUT/$c_name" -C "$folder/native" ./include ./lib
+	cp libraries/cobol/README-PUBLIC.md "$folder/README.md"
+}
+
+part_cobol() { part_source_wrapper cobol; }

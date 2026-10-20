@@ -2,7 +2,7 @@
 """Planted-archive proof of the registry operations (ticket 0355). No network.
 
 Each case copies the operations into a small Git tree, plants one fault, and
-checks the exit code and the refusal sentence. Signing cases need gpg.
+checks the exit code and the refusal sentence. Signing uses a local command fixture.
 """
 
 import base64
@@ -25,6 +25,11 @@ import yaml
 from unittest.mock import patch
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from conformance.source_fixtures import stage_checkout
+from conformance.children.children import child_env
+from sdlc.scripts.tools import fixture_path
+
 TARGET = "x86_64-unknown-linux-gnu"
 SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAVEN_CENTRAL_USERNAME",
            "MAVEN_CENTRAL_PASSWORD", "NUGET_API_KEY")
@@ -159,6 +164,80 @@ esac
 """
 
 
+GPG = r'''
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+
+args = sys.argv[1:]
+home = Path(args[args.index('--homedir') + 1])
+assert home.is_dir() and home.stat().st_mode & 0o777 == 0o700
+if Path(sys.argv[0]).name == 'gpgconf':
+    assert args == ['--homedir', str(home), '--kill', 'gpg-agent']
+    operation = '--kill'
+else:
+    assert args[:4] == ['--homedir', str(home), '--batch', '--no-tty']
+    operations = ('--quick-gen-key', '--list-secret-keys', '--detach-sign', '--verify')
+    operation, = [name for name in operations if name in args]
+with open(os.environ['FAKE_GPG_LOG'], 'a') as log:
+    log.write(json.dumps([operation, Path(args[-1]).name]) + '\n')
+if operation == '--quick-gen-key':
+    assert args[4:] == ['--pinentry-mode', 'loopback', '--passphrase', '', '--quick-gen-key',
+                        'ThinkThen rehearsal <rehearsal@invalid>', 'ed25519', 'sign', '1d']
+elif operation == '--list-secret-keys':
+    assert args[4:] == ['--with-colons', '--list-secret-keys']
+    print('sec::::fixture-key:')
+elif operation == '--detach-sign':
+    assert args[4:-1] == ['--pinentry-mode', 'loopback', '--passphrase-fd', '0',
+                          '--local-user', 'fixture-key', '--armor', '--detach-sign',
+                          '--output', args[-1] + '.asc']
+    assert sys.stdin.buffer.read() == b''
+    Path(args[-1] + '.asc').write_text(hashlib.sha256(Path(args[-1]).read_bytes()).hexdigest())
+elif operation == '--verify':
+    assert args[4:] == ['--verify', args[-1] + '.asc', args[-1]]
+    assert Path(args[-1] + '.asc').read_text() == hashlib.sha256(Path(args[-1]).read_bytes()).hexdigest()
+    if os.environ.get('FAKE_GPG_REFUSE_VERIFY'):
+        sys.stderr.write('fixture verification refused')
+        sys.exit(1)
+'''
+
+
+def signing_cases(root, base, layout, artifacts, stem):
+    """Exercise signing orchestration without a host key store or cryptographic tools."""
+    with tempfile.TemporaryDirectory(prefix='registry-sign-') as tmp:
+        tools = pathlib.Path(tmp)
+        for name in ('gpg', 'gpgconf'):
+            command = tools / name
+            command.write_text(f'#!{sys.executable}\n' + GPG)
+            command.chmod(0o755)
+        log = tools / 'calls'
+        env = {'PATH': fixture_path(tools), 'FAKE_GPG_LOG': str(log)}
+        before = {p.name: p.read_bytes() for p in base.iterdir()}
+        signed = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
+        calls = [json.loads(line) for line in log.read_text().splitlines()]
+        expected = [['--quick-gen-key', '1d'], ['--list-secret-keys', '--list-secret-keys']]
+        for name in artifacts:
+            expected += [['--detach-sign', name], ['--verify', name]]
+        expected += [['--kill', 'gpg-agent']]
+        checks = [('rehearse-sign', (signed.returncode, signed.stdout.strip(), signed.stderr.strip(),
+                                     sorted(p.name for p in base.iterdir()), calls,
+                                     {p.name: p.read_bytes() for p in base.iterdir()} == before),
+                   (0, 'release-registry: rehearsal signed and verified 11 Maven files with a throwaway key',
+                    '', layout, expected, True))]
+        refused = run(root, 'maven-sign', 'out/maven', 'rehearse',
+                      env=env | {'FAKE_GPG_REFUSE_VERIFY': '1'})
+        checks.append(('rehearse-verification-refused', (refused.returncode, refused.stderr.strip()),
+                       (1, 'release-registry: gpg --verify failed: fixture verification refused')))
+        (base / f'{stem}.jar.sha1').write_text('0' * 40)
+        calls_before = log.read_bytes()
+        stale = run(root, 'maven-sign', 'out/maven', 'rehearse', env=env)
+        checks.append(('rehearse-stale-checksum', (stale.returncode, stale.stderr.strip(), log.read_bytes()),
+                       (1, f'release-registry: {stem}.jar.sha1 differs', calls_before)))
+        return checks
+
+
 def go_tag_cases():
     """The publish step tags the Go module once, at the resolved commit, before the release goes public."""
     head = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True).strip()
@@ -179,7 +258,7 @@ def go_tag_cases():
             for tool in ("gh", "curl"):
                 (bin_dir / tool).chmod(0o755)
             env = {k: v for k, v in os.environ.items() if k not in SECRETS}
-            env.update(PATH=f"{bin_dir}:{env['PATH']}", FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
+            env.update(PATH=fixture_path(bin_dir, path=env['PATH']), FAKE_LOG=str(bin_dir / "log"), FAKE_GO_STATUS=status,
                        FAKE_GO_SHA=sha, GITHUB_REPOSITORY="o/r")
             result = subprocess.run(["sh", str(REPO / "sdlc/scripts/release-workflow"), "publish", "v0", head],
                                     env=env, capture_output=True, text=True)
@@ -286,10 +365,8 @@ def jvm_contract_cases():
     """Read scalar fields and propagate inventory failures through the workflow steps."""
     with tempfile.TemporaryDirectory(prefix="jvm-contract-") as tmp:
         root = pathlib.Path(tmp)
-        for name in ("sdlc/scripts/package-inventory.py", "libraries/jvm/pom.xml", ".github/workflows/release.yml"):
-            (root / name).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(REPO / name, root / name)
-        env = {"PATH": os.defpath, "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output")}
+        stage_checkout(REPO, root)
+        env = {"PATH": fixture_path(root / "bin"), "LC_ALL": "C.UTF-8", "GITHUB_OUTPUT": str(root / "output"), "RUNNER_TEMP": str(root)}
         command = [sys.executable, "sdlc/scripts/package-inventory.py", "jvm"]
         definition = json.loads(subprocess.check_output(command, cwd=root, env=env))
         for field, expected in (("jdk", str(definition["jdk"])), ("files", "\n".join(definition["files"])),
@@ -299,7 +376,13 @@ def jvm_contract_cases():
         workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
         steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])
                  if step.get("id") == "jvm-contract"]
-        assert len(steps) == 3
+        # Native Windows still reads the runtime floor through its setup action.
+        # Unix targets now select and validate the JDK inside the language stage.
+        assert len(steps) == 1
+        for name in ('build', 'smoke'):
+            language = next(step for step in workflow['jobs'][name]['steps']
+                            if 'setup-stage languages' in step.get('run', ''))
+            assert 'if' not in language and language['env']['TARGET'] == '${{ matrix.target }}'
         pom = root / "libraries/jvm/pom.xml"
         original = pom.read_text()
         for step in steps:
@@ -311,7 +394,7 @@ def jvm_contract_cases():
                 result = subprocess.run(["bash", "--noprofile", "--norc", "-e", "-o", "pipefail", "-c", step["run"]],
                                         cwd=root, env=env, capture_output=True, text=True)
                 if broken:
-                    assert result.returncode != 0 and "invalid literal for int()" in result.stderr, result
+                    assert result.returncode != 0 and "invalid literal for int()" in result.stdout + result.stderr, result
                     assert output.read_text() == "", output.read_text()
                 else:
                     assert result.returncode == 0 and output.read_text() == f'jdk={definition["jdk"]}\n', result
@@ -343,6 +426,7 @@ def apple_package_cases():
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, destination)
+        shutil.copytree(REPO / 'sdlc/scripts/release-pack.d', root / 'sdlc/scripts/release-pack.d')
         (root / '.gitignore').write_text('target/\nlibraries/swift/CThinkThen.xcframework/\n')
         subprocess.run(['git', 'init', '-q', str(root)], check=True)
         subprocess.run(['git', 'add', '.'], cwd=root, check=True)
@@ -353,7 +437,9 @@ def apple_package_cases():
         # Shell helpers need the same supported Python as this test, not the host's system Python.
         (tools / 'python3').symlink_to(sys.executable)
         for name, body in {'uname': 'echo Darwin', 'rustc': 'echo "host: aarch64-apple-darwin"',
-                           'cargo': 'echo unexpected-native-build >&2; exit 99'}.items():
+                           'cargo': 'echo unexpected-native-build >&2; exit 99',
+                           'swift': 'echo unexpected-Apple-compiler >&2; exit 99',
+                           'swiftc': 'echo unexpected-Apple-compiler >&2; exit 99'}.items():
             tool = tools / name
             tool.write_text('#!/bin/sh\n' + body + '\n'); tool.chmod(0o755)
         framework = root / 'libraries/swift/CThinkThen.xcframework'; framework.mkdir()
@@ -367,9 +453,12 @@ def apple_package_cases():
             package.add(native / 'include', arcname='./include')
         digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
         sidecar = output / (name + '.sha256'); sidecar.write_text(f'{digest}  {name}\n')
-        env = os.environ | {'PATH': str(tools) + os.pathsep + os.defpath,
-                            'THINKTHEN_RELEASE_EXPECTED_SHA': commit}
-        apple_env = env | {'THINKTHEN_SWIFT': '/usr/bin/true', 'THINKTHEN_ARTIFACT': ''}
+        env = child_env(home=root / 'target/home', PATH=fixture_path(tools),
+                        THINKTHEN_RELEASE_EXPECTED_SHA=commit)
+        # Own the platform and every compiler prerequisite, including Swift's
+        # availability check. Reaching a compiler must fail on every host.
+        # Resolving host tools again would replace this controlled environment.
+        apple_env = env | {'THINKTHEN_RESOLVED_TOOLS': 'swift', 'THINKTHEN_ARTIFACT': ''}
         refused = subprocess.run(['sh', str(REPO / 'libraries/swift/check.sh')], env=apple_env, text=True, capture_output=True)
         assert refused.returncode == 1 and 'no native build is started' in refused.stderr, refused
         apple_env['THINKTHEN_ARTIFACT'] = str(output / name)
@@ -419,8 +508,8 @@ def apple_package_cases():
             assert example.strip() == page.split('```objc\n', 1)[1].split('\n```', 1)[0].strip()
             raise CompilerReached
         artifact = output / f'thinkthen-objective-c-{version()}-{target}.tar.gz'
-        with patch.dict(os.environ, THINKTHEN_ARTIFACT=str(artifact),
-                        THINKTHEN_COVERAGE_STAGE=str(consumer)), patch.object(
+        with patch.dict(os.environ, env | {'THINKTHEN_ARTIFACT': str(artifact),
+                        'THINKTHEN_COVERAGE_STAGE': str(consumer)}, clear=True), patch.object(
                 sys, 'platform', 'darwin'), patch.object(subprocess, 'run', side_effect=compiler):
             try:
                 runpy.run_path(str(REPO / 'libraries/objective-c/checks/foundation_installed.py'))
@@ -477,7 +566,7 @@ def main():
         root = pathlib.Path(tmp) / "pack"
         base = root / "out/maven/io/github/botassembly/thinkthen-jvm" / v
         layout = sorted(p.name for p in base.iterdir())
-        artifacts = [f"{stem}{suffix}" for suffix in ("-javadoc.jar", "-kotlin.jar", "-scala.jar", "-sources.jar", ".jar", ".pom", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
+        artifacts = [f"{stem}{suffix}" for suffix in (".pom", ".jar", "-kotlin.jar", "-scala.jar", "-sources.jar", "-javadoc.jar", *("-" + name + ".jar" for name in json.loads(subprocess.check_output([sys.executable, str(REPO / "sdlc/scripts/package-inventory.py"), "jvm"]))["native"]))]
         pub = sorted(p.relative_to(root / "out/pub").as_posix() for p in (root / "out/pub").rglob("*") if p.is_file())
         expected_pub = ["thinkthen_dart/README.md", "thinkthen_dart/lib/thinkthen_dart.dart", "thinkthen_dart/pubspec.yaml"]
         with zipfile.ZipFile(base / f"{stem}-sources.jar") as sources:
@@ -519,20 +608,7 @@ def main():
         for name, args, env, refusal in refusals:
             result = run(root, *args, env=env)
             checks.append((name, (result.returncode, result.stderr.strip()), (1, f"release-registry: {refusal}")))
-        if shutil.which("gpg"):
-            # Nested macOS temporary paths exceed the gpg-agent socket path limit.
-            with tempfile.TemporaryDirectory(prefix="gpg-", dir="/tmp" if sys.platform == "darwin" else None) as signing_tmp:
-                signing_env = dict.fromkeys(("TMPDIR", "TMP", "TEMP"), signing_tmp)
-                signed = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
-                checks.append(("rehearse-sign", (signed.returncode, signed.stdout.strip(), signed.stderr.strip(),
-                                                sorted(p.name for p in base.iterdir())),
-                               (0, "release-registry: rehearsal signed and verified 11 Maven files with a throwaway key", "", layout)))
-                (base / f"{stem}.jar.sha1").write_text("0" * 40)
-                stale = run(root, "maven-sign", "out/maven", "rehearse", env=signing_env)
-                checks.append(("rehearse-stale-checksum", (stale.returncode, stale.stderr.strip()),
-                               (1, f"release-registry: {stem}.jar.sha1 differs")))
-        else:
-            checks.append(("rehearse-sign", "gpg missing", "gpg present"))
+        checks += signing_cases(root, base, layout, artifacts, stem)
         checks += go_tag_cases()
         (root / "bundle.zip").write_bytes(b"zip")
         checks += upload_cases(root / "bundle.zip")

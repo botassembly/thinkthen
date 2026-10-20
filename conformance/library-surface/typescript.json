@@ -1,0 +1,75 @@
+{
+  "libraries": {
+    "typescript": {
+      "root": "libraries/typescript",
+      "language": "typescript",
+      "naming": "camel",
+      "declarations": [
+        "libraries/typescript/native.d.ts",
+        "libraries/typescript/results_generated.d.ts",
+        "libraries/typescript/index.d.ts"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "representation_types": [
+        "Results",
+        "CompleteInput"
+      ],
+      "function_containers": [
+        "Client",
+        "NamedCalls"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [
+        "Client"
+      ],
+      "wrapper_members": {
+        "Result": [
+          "probability"
+        ],
+        "ClientError": [
+          "constructor"
+        ]
+      },
+      "helper_names": {
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionName",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files"
+      },
+      "representation_members": {
+        "Client": [
+          "recognizeQuestion",
+          "relateQuestion"
+        ]
+      },
+      "field_adapters": {
+        "ItemFields": {
+          "contract": "request",
+          "type": "RequestItem"
+        },
+        "ImageBytes": {
+          "contract": "request",
+          "type": "RequestImage"
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_answers() {
+fn current_store_without_lookup_index_replays_unchanged_and_writer_indexes_retained_answers() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
     let place = folder();
     let question = Question::decide("Refund?").unwrap().cut();
@@ -13,6 +13,7 @@ fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_a
     let db = Connection::open(&database).unwrap();
     db.execute_batch("DROP INDEX IF EXISTS answers_route_question_state")
         .unwrap();
+    assert_answer_columns(&db).unwrap();
     let retained = stored_metadata(&db);
     let saved_answer: String = db
         .query_row("SELECT answer FROM answers", [], |row| row.get(0))
@@ -77,7 +78,7 @@ fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_a
     assert_eq!(
         db.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
             .unwrap(),
-        2
+        3
     );
     drop(db);
     drop(writer);
@@ -158,7 +159,7 @@ fn conflicting_canonical_url_identities_refuse_without_mutation_or_sends() {
         .collect();
     let database = place.join("thinkthen.sqlite");
     let db = Connection::open(&database).unwrap();
-    db.execute("INSERT INTO answers SELECT 2,?1,?2,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin,key_version,adapter,observation_id,batch_size FROM answers WHERE id=1",(&bytes,uppercase)).unwrap();
+    db.execute("INSERT INTO answers SELECT 2,?1,?2,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin,adapter,observation_id,batch_size FROM answers WHERE id=1",(&bytes,uppercase)).unwrap();
     drop(db);
     let original = std::fs::read(&database).unwrap();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
@@ -172,7 +173,7 @@ fn conflicting_canonical_url_identities_refuse_without_mutation_or_sends() {
     assert_eq!(
         db.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
             .unwrap(),
-        2
+        3
     );
     assert_eq!(
         db.query_row("SELECT count(*) FROM answers", [], |row| row
@@ -270,4 +271,32 @@ fn an_unrepresentable_reported_count_refuses_storage_without_erasing_the_known_l
     drop(database);
     drop(engine);
     std::fs::remove_dir_all(place).unwrap();
+}
+
+fn assert_answer_columns(db: &Connection) -> rusqlite::Result<()> {
+    let answer_columns: Vec<String> = db
+        .prepare("PRAGMA table_info(answers)")?
+        .query_map([], |row| row.get(1))?
+        .collect::<Result<_, _>>()?;
+    assert_eq!(
+        answer_columns,
+        [
+            "id",
+            "key",
+            "url",
+            "model",
+            "state",
+            "question",
+            "answer",
+            "answered_by",
+            "input_tokens",
+            "output_tokens",
+            "taken_at",
+            "origin",
+            "adapter",
+            "observation_id",
+            "batch_size",
+        ]
+    );
+    Ok(())
 }

@@ -52,7 +52,7 @@ const PACKAGE = {
   dart: () => read('libraries/dart/pubspec.yaml').match(/^name: (\S+)/m)[1],
 };
 // Each release archive an install line names is one release-pack makes.
-const pack = read('sdlc/scripts/release-pack');
+const pack = [read('sdlc/scripts/release-pack'), ...fs.readdirSync(path.join(repo, 'sdlc/scripts/release-pack.d')).sort().map((name) => read(`sdlc/scripts/release-pack.d/${name}`))].join('\n');
 const postgresql = pack.match(/part_postgresql\(\) \{([\s\S]*?)\n\}/)?.[1] || '';
 const pgMajors = postgresql.match(/majors='([^']+)'/)?.[1].split(' ') || [];
 const pgTemplate = postgresql.includes('pack "thinkthen-postgresql$major-$V-$TARGET.tar.gz"');

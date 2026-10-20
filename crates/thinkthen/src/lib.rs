@@ -1,4 +1,4 @@
-//! The library and command implementation for `thinkthen`.
+//! The public `thinkthen` library.
 
 #![cfg_attr(not(windows), forbid(unsafe_code))]
 #![cfg_attr(windows, deny(unsafe_code))]
@@ -41,22 +41,7 @@ mod test_deadline;
 mod schema_forms;
 
 #[cfg(test)]
-#[cfg(feature = "cli")]
 mod schema_tests;
-
-#[cfg(feature = "cli")]
-mod mcp;
-
-#[cfg(feature = "cli")]
-mod cli;
-
-#[cfg(feature = "cli")]
-pub(crate) use cli::schedule;
-#[cfg(feature = "cli")]
-pub(crate) use cli::{args, asking, edge, failure, judge, profile};
-
-#[cfg(feature = "cli")]
-pub use cli::entry;
 
 #[cfg(test)]
 extern crate self as thinkthen;
@@ -65,3 +50,12 @@ extern crate self as thinkthen;
 mod api;
 #[cfg(test)]
 mod ownership_tests;
+
+#[cfg(test)]
+mod command_carrier_secrecy_tests;
+
+#[cfg(test)]
+mod command_conformance_tests;
+
+#[cfg(test)]
+mod command_width_tests;

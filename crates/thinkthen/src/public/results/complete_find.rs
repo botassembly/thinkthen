@@ -23,6 +23,7 @@ pub struct CompleteFound<T> {
     pub(crate) canonical: core::CompleteFind,
     pub(crate) found: Found<T>,
     pub(crate) sources: Vec<Option<core::CompletePhysicalSource>>,
+    pub(crate) inputs: Vec<std::sync::Arc<crate::QuestionInput>>,
 }
 
 impl<T> CompleteFound<T> {
@@ -33,6 +34,7 @@ impl<T> CompleteFound<T> {
             canonical: self.canonical,
             found: self.found.map(map),
             sources: self.sources,
+            inputs: self.inputs,
         }
     }
 

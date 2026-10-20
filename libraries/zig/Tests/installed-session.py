@@ -79,7 +79,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=root) as tempo
             mode_env = child_env(home=mode_home, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'], THINKTHEN_API_KEY='tt-canary-273')
             if mode == 'usage-disabled': mode_env.update(HOME='relative', XDG_STATE_HOME='')
             before = len(backend.arrivals)
-            result = run_usage([str(project / 'zig-out/bin/session'), mode], cwd=project, env=mode_env, state=mode_home / 'state/thinkthen', mode=mode.removeprefix('usage-'), timeout=15)
+            result = run_usage([str(project / 'zig-out/bin/session'), mode], cwd=project, env=mode_env, state=mode_home / 'state/thinkthen', mode=mode.removeprefix('usage-'))
             assert result.returncode == 0 and result.stdout == 'USAGE_PASS\n' and not result.stderr, (mode, result.stdout, result.stderr)
             assert len(backend.arrivals) - before == 1, backend.arrivals
             print('installed Zig', mode, 'PASS retained typed row/facts/status')

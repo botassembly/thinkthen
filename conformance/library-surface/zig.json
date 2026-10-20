@@ -1,0 +1,157 @@
+{
+  "libraries": {
+    "zig": {
+      "root": "libraries/zig",
+      "language": "zig",
+      "naming": "camel",
+      "declarations": [
+        "libraries/zig/src/thinkthen.zig",
+        "libraries/zig/src/authored.zig",
+        "libraries/zig/src/session.zig",
+        "libraries/zig/src/blocking.zig"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "Tests",
+        "examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource",
+        "plan": "Request.plan",
+        "usage_persistence": "Engine.usagePersistence",
+        "finish_usage_status": "Engine.finishUsageStatus"
+      },
+      "function_containers": [
+        ""
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session",
+        "Packet",
+        "Plan",
+        "Question",
+        "Request",
+        "UsageStatus",
+        "CallResult"
+      ],
+      "representation_owners": [
+        "Presence",
+        "InputDocument",
+        "Packet",
+        "Question",
+        "Session",
+        "Role"
+      ],
+      "representation_types": [
+        "Packet",
+        "Read",
+        "Role",
+        "CallResult"
+      ],
+      "representation_calls": [
+        "Result",
+        "authored",
+        "inputs",
+        "calls",
+        "session",
+        "results",
+        "capture",
+        "releaseFailure",
+        "startNamed",
+        "completeNamed",
+        "checked",
+        "message",
+        "bytes",
+        "Answer",
+        "CallResult"
+      ],
+      "representation_members": {
+        "Packet": [
+          "answers",
+          "facts",
+          "failure",
+          "terminal",
+          "value"
+        ],
+        "Question": [
+          "name"
+        ]
+      },
+      "wrapper_members": {
+        "Engine": [
+          "handle",
+          "closed",
+          "allocator"
+        ],
+        "Failure": [
+          "arena"
+        ],
+        "Plan": [
+          "arena"
+        ],
+        "Question": [
+          "handle"
+        ],
+        "Session": [
+          "handle",
+          "allocator",
+          "Read"
+        ],
+        "Read": [
+          "pending",
+          "end",
+          "packet"
+        ],
+        "Role": [
+          "atomic",
+          "set",
+          "dynamic_choose",
+          "recognize",
+          "relate",
+          "rank",
+          "rank_set",
+          "find"
+        ],
+        "CallResult": [
+          "arena",
+          "packets"
+        ],
+        "Result": [
+          "ok",
+          "failed"
+        ]
+      },
+      "exported_declarations": {
+        "libraries/zig/src/request_codec_generated.zig": [],
+        "libraries/zig/src/blocking.zig": [
+          "CallResult"
+        ]
+      },
+      "result_members": {
+        "CallResult": [
+          "value",
+          "probability",
+          "results",
+          "facts"
+        ]
+      },
+      "result_methods": {
+        "CallResult": [
+          "deinit"
+        ]
+      }
+    }
+  }
+}

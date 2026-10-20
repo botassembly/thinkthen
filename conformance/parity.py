@@ -146,8 +146,32 @@ def validate_consumer_contracts(parity):
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
+from check_verdict import unsupported
+
 DOCUMENT = ROOT / 'conformance/cases.json'
 PREFIX = 'parity: '
+
+# Serial x86_64 core-container samples, including child processes and file cache.
+# Go's time is the sum of two diagnostic segments: the failed owned-feed run
+# and its separate complete shared corpus, rather than a passing whole-Go run.
+CONSUMER_RESOURCES = {
+    'c': {'peak_memory_bytes': 4_325_498_880, 'duration_seconds': 406.721},
+    'go': {'peak_memory_bytes': 2_635_706_368, 'duration_seconds': 464.078},
+    'zig': {'peak_memory_bytes': 5_178_068_992, 'duration_seconds': 472.141},
+}
+
+
+def container_memory_limit():
+    for filename in ('/sys/fs/cgroup/memory.max',
+                     '/sys/fs/cgroup/memory/memory.limit_in_bytes'):
+        try:
+            limit = int(Path(filename).read_text().strip())
+        except (OSError, ValueError):
+            continue
+        if limit > 0:
+            return limit
+    return None
 
 
 def inventory():
@@ -180,6 +204,15 @@ def inventory():
         if {case['verb'] for case in cases if case['kind'] == kind} != set(parity['functions']):
             raise ValueError(f'{kind}: a required function is missing')
     canonical = {case['id']: case for case in document['cases']}
+    settled_fields = {'function', 'value', 'probability', 'pick', 'index', 'resolution'}
+    for case in canonical.values():
+        if 'success' in case['expect']:
+            settled = case['expect'].get('settled', {})
+            if 'collection' not in settled or set(settled) - {'single', 'collection'}:
+                raise ValueError(f"{case['id']}: missing fixed settled answer")
+            for answer in settled.values():
+                if set(answer) != settled_fields or answer['function'] != case['verb']:
+                    raise ValueError(f"{case['id']}: invalid fixed settled answer")
     types = {case['name'] for case in json.loads((ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']}
     named = json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']
     named_ids = [row['id'] for row in named]
@@ -300,13 +333,15 @@ def cells(output, consumers, cases, parity=None):
 
 def tool_environment():
     """Resolve dependency locations before any runner replaces the caller's home."""
-    home = Path.home()
-    tools = os.environ.get('THINKTHEN_TOOLCHAINS', str(home / '.cache/thinkthen-toolchains'))
-    defaults = dict(THINKTHEN_TOOLCHAINS=tools, R_LIBS_USER=str(Path(tools) / 'r-library'),
-                    PUB_CACHE=str(home / '.pub-cache'), UV_CACHE_DIR=str(home / '.cache/uv'),
-                    UV_PYTHON_INSTALL_DIR=str(home / '.local/share/uv/python'),
-                    npm_config_cache=str(home / '.npm'))
-    return {name: os.environ.get(name, value) for name, value in defaults.items()}
+    tools = (os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ
+             else str(Path.home() / '.cache/thinkthen-toolchains'))
+    env = dict(THINKTHEN_TOOLCHAINS=tools,
+               R_LIBS_USER=os.environ.get('R_LIBS_USER', str(Path(tools) / 'r-library')))
+    for name, folder in [('PUB_CACHE', '.pub-cache'), ('UV_CACHE_DIR', '.cache/uv'),
+                         ('UV_PYTHON_INSTALL_DIR', '.local/share/uv/python'),
+                         ('npm_config_cache', '.npm')]:
+        env[name] = os.environ[name] if name in os.environ else str(Path.home() / folder)
+    return env
 
 
 def consumer_environment(scratch, port):
@@ -320,7 +355,7 @@ def consumer_environment(scratch, port):
              'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
-        env[name] = os.environ.get(name, str(Path.home() / fallback))
+        env[name] = os.environ[name] if name in os.environ else str(Path.home() / fallback)
     env.update(tool_environment())
     for name, folder in [('HOME', 'home'), ('XDG_CONFIG_HOME', 'config'),
                          ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state'),
@@ -338,17 +373,6 @@ def consumer_environment(scratch, port):
                THINKTHEN_BASE_URL=f'http://127.0.0.1:{port}/generic/v1',
                THINKTHEN_API_KEY='sk-conformance-loopback')
     return env
-
-
-def apple_pending(consumer):
-    # 0518 ends GNU Objective-C support; every Foundation case still runs on Apple.
-    return (consumer == 'objective-c' and sys.platform != 'darwin'
-            or consumer == 'swift' and apple_delegated())
-
-
-def apple_delegated():
-    return (sys.platform == 'linux'
-            and os.environ.get('THINKTHEN_MACOS_APPLE_CHECKS') == 'required')
 
 
 def installed_artifacts(directory, consumers):
@@ -373,10 +397,12 @@ def installed_artifacts(directory, consumers):
         command_targets.append(target.removesuffix('-gnu') + '-musl')
     command = select([f'thinkthen-{version}-{host}.tar.gz' for host in command_targets])
     native = select([f'thinkthen-c-{version}-{target}.tar.gz'])
-    dart = select([f'thinkthen-dart-{version}-{target}.tar.gz'])
+    dart = (select([f'thinkthen-dart-{version}-{target}.tar.gz'])
+            if any(row['surface'] == 'libraries/dart' and not unsupported(row['surface'])
+                   for row in consumers.values()) else None)
     found = {}
     for consumer, row in consumers.items():
-        if apple_pending(consumer):
+        if unsupported(row['surface']):
             continue
         surface = row['surface']
         if consumer in ('cli', 'mcp'):
@@ -395,7 +421,9 @@ def installed_artifacts(directory, consumers):
             family = 'postgresql16' if consumer == 'postgresql' else 'flutter' if consumer in ('dart', 'flutter') else surface.split('/')[-1]
             artifact = select([f'thinkthen-{family}-{version}-{target}.tar.gz'])
         found[consumer] = dict(THINKTHEN_ARTIFACT=artifact,
-                               THINKTHEN_C_ARTIFACT=native, THINKTHEN_DART_ARTIFACT=dart)
+                               THINKTHEN_C_ARTIFACT=native)
+        if dart:
+            found[consumer]['THINKTHEN_DART_ARTIFACT'] = dart
         if consumer == 'postgresql':
             for major in (16, 17, 18):
                 found[consumer][f'THINKTHEN_PG{major}_ARTIFACT'] = select([f'thinkthen-postgresql{major}-{version}-{target}.tar.gz'])
@@ -442,9 +470,9 @@ def support_table(parity, matrix):
         images = capability({'images', 'image-location', 'image-admission', 'refusal'})
         # Written limits describe the public contract, never pass an assertion.
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
-        if row.get('platform_pending'):
-            count = files = images = 'Apple qualification pending'
-            remaining = f'{len(gaps)} required assertions pending on macOS; no local pass'
+        if row.get('platform_unsupported'):
+            count = files = images = 'unsupported on this host'
+            remaining = row['platform_unsupported'] + '; no local pass'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
@@ -499,7 +527,8 @@ def run(port, baseline=False, artifact_dir=None):
 
 def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
     def run_command(command, ids, preparation=None, pg_major=None):
-        if ids == ['postgresql'] and pg_major is None:
+        platform_entry = unsupported(consumers[ids[0]]['surface'])
+        if not platform_entry and ids == ['postgresql'] and pg_major is None:
             versions = []
             for major in (16, 17, 18):
                 source_preparation = prepare(command, major)[1] if not artifacts and not baseline else preparation
@@ -523,8 +552,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
         code, seen, error = None, {}, None
         setup_seconds = preparation[1] if preparation else 0
         remaining = 900 if pg_major else 900 - setup_seconds
-        platform_pending = len(ids) == 1 and apple_pending(ids[0])
-        execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
+        execute = not platform_entry and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
             args = list(command) + ([str(pg_major)] if pg_major else [] if command[0] == 'cargo' else [port])
@@ -563,9 +591,10 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             dependency = parity.get('unavailable_dependencies', {}).get(consumer)
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
-            if platform_pending:
-                row['platform_pending'] = 'Apple qualification requires matching macOS checks; no local pass'
-                row['cells'] = dict.fromkeys(row['cells'], 'platform-pending')
+            if platform_entry:
+                print(f'parity: unsupported {consumer} ({platform_entry})', flush=True)
+                row['platform_unsupported'] = platform_entry
+                row['cells'] = dict.fromkeys(row['cells'], 'platform-unsupported')
             row['case_rulings'] = consumers[consumer].get('case_rulings', {})
             row['setup_duration_seconds'] = round(setup_seconds, 2) if execute else 0
             row['runtime_duration_seconds'] = round(time.monotonic() - started, 2) if execute else 0
@@ -575,12 +604,13 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
 
     # Preparation owns shared immutable assets until every isolated consumer exits.
     families = {command: ids for command, ids in commands.items() if len(ids) > 1
-                and not baseline}
+                and not baseline and not unsupported(consumers[ids[0]]['surface'])}
     with ExitStack() as assets:
         paths = {command: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
                  for command in families}
-        pg_paths = {major: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
-                    for major in (16, 17, 18)} if not artifacts and not baseline and 'postgresql' in consumers else {}
+        pg_paths = ({major: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
+                     for major in (16, 17, 18)} if not artifacts and not baseline and 'postgresql' in consumers
+                    and not unsupported(consumers['postgresql']['surface']) else {})
         def prepare(command, pg_major=None):
             ids = ['postgresql'] if pg_major else families[command]
             destination = pg_paths[pg_major] if pg_major else paths[command]
@@ -612,18 +642,41 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             lanes.insert(0, rust_lane)
         def run_lane(lane):
             return [row for command, ids, preparation in lane for row in run_command(command, ids, preparation)]
-        # Each full consumer exercises large image inputs; keep runtime lanes isolated.
-        with ThreadPoolExecutor(max_workers=1) as workers:
-            for rows in workers.map(run_lane, lanes):
-                matrix.extend(rows)
+        limit = container_memory_limit()
+        def lane_resources(lane):
+            samples = [CONSUMER_RESOURCES.get(consumer)
+                       for _, ids, _ in lane for consumer in ids]
+            # Reserve whole GiB above observed peaks. Unmeasured consumers own
+            # the container until their language wave supplies a resource sample.
+            gib = 1024 ** 3
+            peak = max(((sample['peak_memory_bytes'] + gib - 1) // gib * gib
+                        if sample else limit or 0) for sample in samples)
+            seconds = sum(sample['duration_seconds'] for sample in samples if sample)
+            return peak, seconds
+        pending = sorted(lanes, key=lambda lane: lane_resources(lane)[1], reverse=True)
+        # Large-image children keep a core busy under their existing deadlines.
+        # Bound CPU overlap separately from memory; preparation keeps its pool.
+        runtime_workers = 2
+        with ThreadPoolExecutor(max_workers=runtime_workers) as workers:
+            while pending:
+                batch, reserved = [], 0
+                for lane in pending:
+                    peak, _ = lane_resources(lane)
+                    if limit is not None and peak > limit:
+                        raise ValueError('parity consumer measured memory exceeds the container limit')
+                    # Without a known container cap, retain one runtime lane.
+                    if len(batch) < runtime_workers and (not batch or limit is not None and reserved + peak <= limit):
+                        batch.append(lane)
+                        reserved += peak
+                for rows in workers.map(run_lane, batch):
+                    matrix.extend(rows)
+                pending = [lane for lane in pending if lane not in batch]
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    executed = [row for row in matrix if not row.get('platform_pending')]
-    pending = [row for row in matrix if row.get('platform_pending')]
-    excluded = apple_delegated() and all(row['consumer'] in {'objective-c', 'swift'} for row in pending)
-    return int(not executed or bool(pending) and not excluded
+    executed = [row for row in matrix if not row.get('platform_unsupported')]
+    return int(not executed
                or any(row['baseline_exit'] != 0 or row['baseline_error']
                       or not row['cells'] or any(state != 'pass' for state in row['cells'].values())
                       for row in executed))

@@ -39,9 +39,6 @@ impl Entries {
         let mut normalized = BTreeMap::new();
         for (_, mut answer) in self.answers {
             let state = self.states.get(&answer.state).ok_or_else(invalid)?;
-            if answer.key_version != Some(2) {
-                return Err(Error::StoreVersion(JSONL.to_owned()));
-            }
             let key = complete_key(&answer, state, &answer.answered_by)?;
             let url = crate::core::posting_address(&answer.url).map_err(|_| invalid())?;
             if answer

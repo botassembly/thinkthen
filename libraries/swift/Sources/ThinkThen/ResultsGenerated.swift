@@ -413,6 +413,432 @@ public struct AnnotationValueTags: ValueRepresentable {
   }
 }
 public typealias AnswerId = String
+public enum AnswerResolution: ValueRepresentable {
+  case `resolved`
+  case `unresolved`
+  case `failed`
+  case unknown(String)
+  static func read(_ json: DataValue) throws -> AnswerResolution {
+    let value = try String.read(json)
+    switch value {
+    case "resolved": return .`resolved`
+    case "unresolved": return .`unresolved`
+    case "failed": return .`failed`
+    default: return .unknown(value)
+    }
+  }
+  var json: DataValue {
+    switch self {
+    case .`resolved`: return .string("resolved")
+    case .`unresolved`: return .string("unresolved")
+    case .`failed`: return .string("failed")
+    case .unknown(let value): return .string(value)
+    }
+  }
+}
+public indirect enum AnswerResolutions: ValueRepresentable {
+  case `string`(AnswerResolution)
+  case `object`([String: AnswerResolution])
+  static func read(_ json: DataValue) throws -> AnswerResolutions {
+    if let value = try? AnswerResolution.read(json) { return .`string`(value) }
+    if let value = try? [String: AnswerResolution].read(json) { return .`object`(value) }
+    throw ValueConversionError("Unknown AnswerResolutions value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`string`(let value): return value.json
+    case .`object`(let value): return value.json
+    }
+  }
+}
+public typealias AnswerShape = DataValue
+public indirect enum AnswerShape10: ValueRepresentable {
+  case `array`([AnswerShape8AnyOf1Items])
+  case `null`
+  case `array2`([AnswerShape10AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape10 {
+    if let value = try? [AnswerShape8AnyOf1Items].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape10AnyOf1Items].read(json) { return .`array2`(value) }
+    throw ValueConversionError("Unknown AnswerShape10 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    case .`array2`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape10AnyOf1Items: ValueRepresentable {
+  case `array`([AnswerShape8AnyOf1Items])
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape10AnyOf1Items {
+    if let value = try? [AnswerShape8AnyOf1Items].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape10AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape11: ValueRepresentable {
+  case `array`([UInt64])
+  case `null`
+  case `array2`([AnswerShape11AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape11 {
+    if let value = try? [UInt64].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape11AnyOf1Items].read(json) { return .`array2`(value) }
+    throw ValueConversionError("Unknown AnswerShape11 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    case .`array2`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape11AnyOf1Items: ValueRepresentable {
+  case `array`([UInt64])
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape11AnyOf1Items {
+    if let value = try? [UInt64].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape11AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public typealias AnswerShape12 = DataValue
+public typealias AnswerShape12AnyOf1Items = DataValue
+public indirect enum AnswerShape13: ValueRepresentable {
+  case `object`(SettledRecognition)
+  case `null`
+  case `array`([AnswerShape13AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape13 {
+    if let value = try? SettledRecognition.read(json) { return .`object`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape13AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape13 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`object`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape13AnyOf1Items: ValueRepresentable {
+  case `object`(SettledRecognition)
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape13AnyOf1Items {
+    if let value = try? SettledRecognition.read(json) { return .`object`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape13AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`object`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape14: ValueRepresentable {
+  case `array`(SettledRelations)
+  case `null`
+  case `array2`([AnswerShape14AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape14 {
+    if let value = try? SettledRelations.read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape14AnyOf1Items].read(json) { return .`array2`(value) }
+    throw ValueConversionError("Unknown AnswerShape14 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    case .`array2`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape14AnyOf1Items: ValueRepresentable {
+  case `array`(SettledRelations)
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape14AnyOf1Items {
+    if let value = try? SettledRelations.read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape14AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape15: ValueRepresentable {
+  case `object`([String: SettledJudgment])
+  case `null`
+  case `array`([AnswerShape15AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape15 {
+    if let value = try? [String: SettledJudgment].read(json) { return .`object`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape15AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape15 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`object`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape15AnyOf1Items: ValueRepresentable {
+  case `object`([String: SettledJudgment])
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape15AnyOf1Items {
+    if let value = try? [String: SettledJudgment].read(json) { return .`object`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape15AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`object`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape2: ValueRepresentable {
+  case `number`(Double)
+  case `null`
+  case `array`([AnswerShape8AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape2 {
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape8AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape2 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`number`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape3: ValueRepresentable {
+  case `string`(String)
+  case `null`
+  case `array`([AnswerShape6AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape3 {
+    if let value = try? String.read(json) { return .`string`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape6AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape3 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`string`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape4: ValueRepresentable {
+  case `integer`(UInt64)
+  case `null`
+  case `array`([AnswerShape4AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape4 {
+    if let value = try? UInt64.read(json) { return .`integer`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape4AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape4 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`integer`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape4AnyOf1Items: ValueRepresentable {
+  case `integer`(UInt64)
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape4AnyOf1Items {
+    if let value = try? UInt64.read(json) { return .`integer`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape4AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`integer`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape5: ValueRepresentable {
+  case `string`(AnswerResolution)
+  case `object`([String: AnswerResolution])
+  case `array`([AnswerResolutions])
+  static func read(_ json: DataValue) throws -> AnswerShape5 {
+    if let value = try? AnswerResolution.read(json) { return .`string`(value) }
+    if let value = try? [String: AnswerResolution].read(json) { return .`object`(value) }
+    if let value = try? [AnswerResolutions].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape5 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`string`(let value): return value.json
+    case .`object`(let value): return value.json
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape6: ValueRepresentable {
+  case `string`(String)
+  case `null`
+  case `array`([AnswerShape6AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape6 {
+    if let value = try? String.read(json) { return .`string`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape6AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape6 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`string`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape6AnyOf1Items: ValueRepresentable {
+  case `string`(String)
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape6AnyOf1Items {
+    if let value = try? String.read(json) { return .`string`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape6AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`string`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape7: ValueRepresentable {
+  case `array`([String])
+  case `null`
+  case `array2`([AnswerShape7AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape7 {
+    if let value = try? [String].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape7AnyOf1Items].read(json) { return .`array2`(value) }
+    throw ValueConversionError("Unknown AnswerShape7 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    case .`array2`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape7AnyOf1Items: ValueRepresentable {
+  case `array`([String])
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape7AnyOf1Items {
+    if let value = try? [String].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape7AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape8: ValueRepresentable {
+  case `number`(Double)
+  case `null`
+  case `array`([AnswerShape8AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape8 {
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape8AnyOf1Items].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown AnswerShape8 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`number`(let value): return value.json
+    case .`null`: return .null
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape8AnyOf1Items: ValueRepresentable {
+  case `number`(Double)
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape8AnyOf1Items {
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape8AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`number`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public indirect enum AnswerShape9: ValueRepresentable {
+  case `array`([SettledOriginal])
+  case `null`
+  case `array2`([AnswerShape9AnyOf1Items])
+  static func read(_ json: DataValue) throws -> AnswerShape9 {
+    if let value = try? [SettledOriginal].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    if let value = try? [AnswerShape9AnyOf1Items].read(json) { return .`array2`(value) }
+    throw ValueConversionError("Unknown AnswerShape9 value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    case .`array2`(let value): return value.json
+    }
+  }
+}
+public indirect enum AnswerShape9AnyOf1Items: ValueRepresentable {
+  case `array`([SettledOriginal])
+  case `null`
+  static func read(_ json: DataValue) throws -> AnswerShape9AnyOf1Items {
+    if let value = try? [SettledOriginal].read(json) { return .`array`(value) }
+    if json == .null { return .`null` }
+    throw ValueConversionError("Unknown AnswerShape9AnyOf1Items value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`array`(let value): return value.json
+    case .`null`: return .null
+    }
+  }
+}
+public typealias AnswerShapeAnyOf1Items = DataValue
 public struct Answers: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
@@ -1084,16 +1510,23 @@ public struct BoundaryProposal: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
   public let `end`: UInt64
+  public let `file`: Presence<String>
+  public let `firstLine`: Presence<UInt64>
+  public let `lastLine`: Presence<UInt64>
   public let `length`: UInt64
   public let `probability`: Double
   public let `start`: UInt64
   public let `text`: String
   public init(
-    extensions: [String: DataValue] = [:], `end`: UInt64, `length`: UInt64, `probability`: Double,
-    `start`: UInt64, `text`: String
+    extensions: [String: DataValue] = [:], `end`: UInt64, `file`: Presence<String> = .absent,
+    `firstLine`: Presence<UInt64> = .absent, `lastLine`: Presence<UInt64> = .absent,
+    `length`: UInt64, `probability`: Double, `start`: UInt64, `text`: String
   ) {
     self.extensions = extensions
     self.`end` = `end`
+    self.`file` = `file`
+    self.`firstLine` = `firstLine`
+    self.`lastLine` = `lastLine`
     self.`length` = `length`
     self.`probability` = `probability`
     self.`start` = `start`
@@ -1101,10 +1534,15 @@ public struct BoundaryProposal: ValueRepresentable {
   }
   static func read(_ json: DataValue) throws -> BoundaryProposal {
     let object = try jsonObject(json)
-    let known: Set<String> = ["end", "length", "probability", "start", "text"]
+    let known: Set<String> = [
+      "end", "file", "first_line", "last_line", "length", "probability", "start", "text",
+    ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       end: try UInt64.read(jsonRequired(object, "end")),
+      file: try readPresence(object, "file", String.self),
+      firstLine: try readPresence(object, "first_line", UInt64.self),
+      lastLine: try readPresence(object, "last_line", UInt64.self),
       length: try UInt64.read(jsonRequired(object, "length")),
       probability: try Double.read(jsonRequired(object, "probability")),
       start: try UInt64.read(jsonRequired(object, "start")),
@@ -1114,9 +1552,14 @@ public struct BoundaryProposal: ValueRepresentable {
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = ["end", "length", "probability", "start", "text"]
+    let known: Set<String> = [
+      "end", "file", "first_line", "last_line", "length", "probability", "start", "text",
+    ]
     var object = extensions.filter { !known.contains($0.key) }
     object["end"] = `end`.json
+    writePresence(`file`, "file", &object)
+    writePresence(`firstLine`, "first_line", &object)
+    writePresence(`lastLine`, "last_line", &object)
     object["length"] = `length`.json
     object["probability"] = `probability`.json
     object["start"] = `start`.json
@@ -1129,30 +1572,34 @@ public struct CallError: ValueRepresentable {
   private var _sourceJSON: DataValue? = nil
   public let `error`: FailureDetail
   public let `facts`: Presence<Facts>
+  public let `resolution`: AnswerResolution
   public init(
     extensions: [String: DataValue] = [:], `error`: FailureDetail,
-    `facts`: Presence<Facts> = .absent
+    `facts`: Presence<Facts> = .absent, `resolution`: AnswerResolution
   ) {
     self.extensions = extensions
     self.`error` = `error`
     self.`facts` = `facts`
+    self.`resolution` = `resolution`
   }
   static func read(_ json: DataValue) throws -> CallError {
     let object = try jsonObject(json)
-    let known: Set<String> = ["error", "facts"]
+    let known: Set<String> = ["error", "facts", "resolution"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
       error: try FailureDetail.read(jsonRequired(object, "error")),
-      facts: try readPresence(object, "facts", Facts.self))
+      facts: try readPresence(object, "facts", Facts.self),
+      resolution: try AnswerResolution.read(jsonRequired(object, "resolution")))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = ["error", "facts"]
+    let known: Set<String> = ["error", "facts", "resolution"]
     var object = extensions.filter { !known.contains($0.key) }
     object["error"] = `error`.json
     writePresence(`facts`, "facts", &object)
+    object["resolution"] = `resolution`.json
     return .object(object)
   }
 }
@@ -3473,6 +3920,116 @@ public struct SendBudgetDenialBeforeRetry: ValueRepresentable {
     return .object(object)
   }
 }
+public typealias SettledDecision = DataValue
+public indirect enum SettledJudgment: ValueRepresentable {
+  case `boolean`(Bool)
+  case `null`
+  case `string`(String)
+  case `number`(Double)
+  case `array`([String])
+  static func read(_ json: DataValue) throws -> SettledJudgment {
+    if let value = try? Bool.read(json) { return .`boolean`(value) }
+    if json == .null { return .`null` }
+    if let value = try? String.read(json) { return .`string`(value) }
+    if let value = try? Double.read(json) { return .`number`(value) }
+    if let value = try? [String].read(json) { return .`array`(value) }
+    throw ValueConversionError("Unknown SettledJudgment value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`boolean`(let value): return value.json
+    case .`null`: return .null
+    case .`string`(let value): return value.json
+    case .`number`(let value): return value.json
+    case .`array`(let value): return value.json
+    }
+  }
+}
+public typealias SettledOriginal = DataValue
+public indirect enum SettledRecognition: ValueRepresentable {
+  case `entities`(SettledRecognitionEntities)
+  case `modeProposals`(SettledRecognitionModeProposals)
+  static func read(_ json: DataValue) throws -> SettledRecognition {
+    let object = try jsonObject(json)
+    if object["entities"] != nil && object["mode"] == nil && object["proposals"] == nil {
+      return .`entities`(try SettledRecognitionEntities.read(json))
+    }
+    if object["mode"] != nil && object["proposals"] != nil && object["entities"] == nil {
+      return .`modeProposals`(try SettledRecognitionModeProposals.read(json))
+    }
+    throw ValueConversionError("Unknown SettledRecognition alternative")
+  }
+  var json: DataValue {
+    switch self {
+    case .`entities`(let value): return value.json
+    case .`modeProposals`(let value): return value.json
+    }
+  }
+}
+public struct SettledRecognitionEntities: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `entities`: [Entity]
+  public let `relations`: Presence<[EntityEdge]>
+  public init(
+    extensions: [String: DataValue] = [:], `entities`: [Entity],
+    `relations`: Presence<[EntityEdge]> = .absent
+  ) {
+    self.extensions = extensions
+    self.`entities` = `entities`
+    self.`relations` = `relations`
+  }
+  static func read(_ json: DataValue) throws -> SettledRecognitionEntities {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["entities", "relations"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      entities: try [Entity].read(jsonRequired(object, "entities")),
+      relations: try readPresence(object, "relations", [EntityEdge].self))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["entities", "relations"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["entities"] = `entities`.json
+    writePresence(`relations`, "relations", &object)
+    return .object(object)
+  }
+}
+public struct SettledRecognitionModeProposals: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `mode`: BoundaryMode
+  public let `proposals`: [BoundaryProposal]
+  public init(
+    extensions: [String: DataValue] = [:], `mode`: BoundaryMode, `proposals`: [BoundaryProposal]
+  ) {
+    self.extensions = extensions
+    self.`mode` = `mode`
+    self.`proposals` = `proposals`
+  }
+  static func read(_ json: DataValue) throws -> SettledRecognitionModeProposals {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["mode", "proposals"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      mode: try BoundaryMode.read(jsonRequired(object, "mode")),
+      proposals: try [BoundaryProposal].read(jsonRequired(object, "proposals")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["mode", "proposals"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["mode"] = `mode`.json
+    object["proposals"] = `proposals`.json
+    return .object(object)
+  }
+}
+public typealias SettledRelations = [RelatedEntityEdge]
 public enum StopCause: ValueRepresentable {
   case `usage`
   case `local`
@@ -3699,16 +4256,16 @@ public indirect enum AnnotatedField: ValueRepresentable {
   case `boolean`(Bool)
   case `null`
   case `string`(String)
-  case `list`([String])
+  case `array`([String])
   case `number`(Double)
-  case `completefailed`(Failed)
+  case `object`(Failed)
   static func read(_ json: DataValue) throws -> AnnotatedField {
     if let value = try? Bool.read(json) { return .`boolean`(value) }
     if json == .null { return .`null` }
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String].read(json) { return .`list`(value) }
+    if let value = try? [String].read(json) { return .`array`(value) }
     if let value = try? Double.read(json) { return .`number`(value) }
-    if let value = try? Failed.read(json) { return .`completefailed`(value) }
+    if let value = try? Failed.read(json) { return .`object`(value) }
     throw ValueConversionError("Unknown AnnotatedField value")
   }
   var json: DataValue {
@@ -3716,9 +4273,9 @@ public indirect enum AnnotatedField: ValueRepresentable {
     case .`boolean`(let value): return value.json
     case .`null`: return .null
     case .`string`(let value): return value.json
-    case .`list`(let value): return value.json
+    case .`array`(let value): return value.json
     case .`number`(let value): return value.json
-    case .`completefailed`(let value): return value.json
+    case .`object`(let value): return value.json
     }
   }
 }
@@ -6641,36 +7198,45 @@ public struct SessionPacketTagRow: ValueRepresentable {
 public struct SessionPacketTerminal: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
+  public let `answer`: SettledAnswer?
   public let `facts`: Presence<Facts>
   public let `failure`: Presence<CallError>
   public let `kind`: String
+  public let `resolution`: AnswerResolution
   public init(
-    extensions: [String: DataValue] = [:], `facts`: Presence<Facts> = .absent,
-    `failure`: Presence<CallError> = .absent, `kind`: String = "terminal"
+    extensions: [String: DataValue] = [:], `answer`: SettledAnswer?,
+    `facts`: Presence<Facts> = .absent, `failure`: Presence<CallError> = .absent,
+    `kind`: String = "terminal", `resolution`: AnswerResolution
   ) {
     self.extensions = extensions
+    self.`answer` = `answer`
     self.`facts` = `facts`
     self.`failure` = `failure`
     self.`kind` = `kind`
+    self.`resolution` = `resolution`
   }
   static func read(_ json: DataValue) throws -> SessionPacketTerminal {
     let object = try jsonObject(json)
-    let known: Set<String> = ["facts", "failure", "kind"]
+    let known: Set<String> = ["answer", "facts", "failure", "kind", "resolution"]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
+      answer: try SettledAnswer?.read(jsonRequired(object, "answer")),
       facts: try readPresence(object, "facts", Facts.self),
       failure: try readPresence(object, "failure", CallError.self),
-      kind: try String.read(jsonRequired(object, "kind")))
+      kind: try String.read(jsonRequired(object, "kind")),
+      resolution: try AnswerResolution.read(jsonRequired(object, "resolution")))
     value._sourceJSON = json
     return value
   }
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = ["facts", "failure", "kind"]
+    let known: Set<String> = ["answer", "facts", "failure", "kind", "resolution"]
     var object = extensions.filter { !known.contains($0.key) }
+    object["answer"] = `answer`.json
     writePresence(`facts`, "facts", &object)
     writePresence(`failure`, "failure", &object)
     object["kind"] = `kind`.json
+    object["resolution"] = `resolution`.json
     return .object(object)
   }
 }
@@ -6992,6 +7558,548 @@ public struct SessionRelationEdge: ValueRepresentable {
     }
   }
 }
+public indirect enum SettledAnswer: ValueRepresentable {
+  case `decide`(SettledAnswerDecide)
+  case `choose`(SettledAnswerChoose)
+  case `tag`(SettledAnswerTag)
+  case `score`(SettledAnswerScore)
+  case `filter`(SettledAnswerFilter)
+  case `rank`(SettledAnswerRank)
+  case `find`(SettledAnswerFind)
+  case `recognize`(SettledAnswerRecognize)
+  case `relate`(SettledAnswerRelate)
+  case `annotate`(SettledAnswerAnnotate)
+  static func read(_ json: DataValue) throws -> SettledAnswer {
+    let object = try jsonObject(json)
+    if object["function"] == .string("decide") {
+      return .`decide`(try SettledAnswerDecide.read(json))
+    }
+    if object["function"] == .string("choose") {
+      return .`choose`(try SettledAnswerChoose.read(json))
+    }
+    if object["function"] == .string("tag") { return .`tag`(try SettledAnswerTag.read(json)) }
+    if object["function"] == .string("score") { return .`score`(try SettledAnswerScore.read(json)) }
+    if object["function"] == .string("filter") {
+      return .`filter`(try SettledAnswerFilter.read(json))
+    }
+    if object["function"] == .string("rank") { return .`rank`(try SettledAnswerRank.read(json)) }
+    if object["function"] == .string("find") { return .`find`(try SettledAnswerFind.read(json)) }
+    if object["function"] == .string("recognize") {
+      return .`recognize`(try SettledAnswerRecognize.read(json))
+    }
+    if object["function"] == .string("relate") {
+      return .`relate`(try SettledAnswerRelate.read(json))
+    }
+    if object["function"] == .string("annotate") {
+      return .`annotate`(try SettledAnswerAnnotate.read(json))
+    }
+    throw ValueConversionError("Unknown SettledAnswer alternative")
+  }
+  var json: DataValue {
+    switch self {
+    case .`decide`(let value): return value.json
+    case .`choose`(let value): return value.json
+    case .`tag`(let value): return value.json
+    case .`score`(let value): return value.json
+    case .`filter`(let value): return value.json
+    case .`rank`(let value): return value.json
+    case .`find`(let value): return value.json
+    case .`recognize`(let value): return value.json
+    case .`relate`(let value): return value.json
+    case .`annotate`(let value): return value.json
+    }
+  }
+}
+public struct SettledAnswerAnnotate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape15
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "annotate", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape15
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerAnnotate {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape15.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerChoose: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape6
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "choose", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape6
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerChoose {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape6.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerDecide: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "decide", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerDecide {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerFilter: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape10
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape9
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "filter", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape10, `resolution`: AnswerShape5,
+    `value`: AnswerShape9
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerFilter {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape10.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape9.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerFind: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape12
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "find", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape12
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerFind {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape12.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerRank: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape10
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape11
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "rank", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape10, `resolution`: AnswerShape5,
+    `value`: AnswerShape11
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerRank {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape10.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape11.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerRecognize: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape10
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape13
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "recognize", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape10, `resolution`: AnswerShape5,
+    `value`: AnswerShape13
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerRecognize {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape10.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape13.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerRelate: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape10
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape14
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "relate", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape10, `resolution`: AnswerShape5,
+    `value`: AnswerShape14
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerRelate {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape10.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape14.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerScore: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape8
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "score", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape8
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerScore {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape8.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
+public struct SettledAnswerTag: ValueRepresentable {
+  public let extensions: [String: DataValue]
+  private var _sourceJSON: DataValue? = nil
+  public let `function`: String
+  public let `index`: AnswerShape4
+  public let `pick`: AnswerShape3
+  public let `probability`: AnswerShape2
+  public let `resolution`: AnswerShape5
+  public let `value`: AnswerShape7
+  public init(
+    extensions: [String: DataValue] = [:], `function`: String = "tag", `index`: AnswerShape4,
+    `pick`: AnswerShape3, `probability`: AnswerShape2, `resolution`: AnswerShape5,
+    `value`: AnswerShape7
+  ) {
+    self.extensions = extensions
+    self.`function` = `function`
+    self.`index` = `index`
+    self.`pick` = `pick`
+    self.`probability` = `probability`
+    self.`resolution` = `resolution`
+    self.`value` = `value`
+  }
+  static func read(_ json: DataValue) throws -> SettledAnswerTag {
+    let object = try jsonObject(json)
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      function: try String.read(jsonRequired(object, "function")),
+      index: try AnswerShape4.read(jsonRequired(object, "index")),
+      pick: try AnswerShape3.read(jsonRequired(object, "pick")),
+      probability: try AnswerShape2.read(jsonRequired(object, "probability")),
+      resolution: try AnswerShape5.read(jsonRequired(object, "resolution")),
+      value: try AnswerShape7.read(jsonRequired(object, "value")))
+    value._sourceJSON = json
+    return value
+  }
+  var json: DataValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = ["function", "index", "pick", "probability", "resolution", "value"]
+    var object = extensions.filter { !known.contains($0.key) }
+    object["function"] = `function`.json
+    object["index"] = `index`.json
+    object["pick"] = `pick`.json
+    object["probability"] = `probability`.json
+    object["resolution"] = `resolution`.json
+    object["value"] = `value`.json
+    return .object(object)
+  }
+}
 public struct SourceRelationEndpoint: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
@@ -7127,13 +8235,13 @@ public indirect enum Value: ValueRepresentable {
   case `boolean`(Bool)
   case `null`
   case `string`(String)
-  case `list`([String])
+  case `array`([String])
   case `number`(Double)
   static func read(_ json: DataValue) throws -> Value {
     if let value = try? Bool.read(json) { return .`boolean`(value) }
     if json == .null { return .`null` }
     if let value = try? String.read(json) { return .`string`(value) }
-    if let value = try? [String].read(json) { return .`list`(value) }
+    if let value = try? [String].read(json) { return .`array`(value) }
     if let value = try? Double.read(json) { return .`number`(value) }
     throw ValueConversionError("Unknown Value value")
   }
@@ -7142,7 +8250,7 @@ public indirect enum Value: ValueRepresentable {
     case .`boolean`(let value): return value.json
     case .`null`: return .null
     case .`string`(let value): return value.json
-    case .`list`(let value): return value.json
+    case .`array`(let value): return value.json
     case .`number`(let value): return value.json
     }
   }
@@ -7501,6 +8609,13 @@ private func copyNativeGraph(
   guard let pointer else { throw ValueConversionError("Missing native graph member") }
   let value = pointer.pointee
   var members = try copyNativeExtensions(value.extensions)
+  switch value.`answer`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("answer", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("answer", try copyNativeGraph(value.`answer`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
   switch value.`facts`.presence {
   case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
   case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("facts", .null))
@@ -7516,7 +8631,20 @@ private func copyNativeGraph(
   default: throw ValueConversionError("Unknown native presence")
   }
   members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolution_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("resolved")
+  case 2: return .string("unresolved")
+  case 3: return .string("failed")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
 }
 private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_error_v1>?) throws
   -> DataValue
@@ -7532,6 +8660,7 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_call_er
     members.append(ValueMember("facts", try copyNativeGraph(value.`facts`.value)))
   default: throw ValueConversionError("Unknown native presence")
   }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
   return .orderedObject(members)
 }
 private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_facts_v1>?) throws
@@ -7902,6 +9031,1084 @@ private func copyNativeGraph(
   members.append(ValueMember("limit", .number(NumberLiteral(unchecked: String(value.`limit`)))))
   return .orderedObject(members)
 }
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`decide`)
+  case 2: return try copyNativeGraph(value.data.`choose`)
+  case 3: return try copyNativeGraph(value.data.`tag`)
+  case 4: return try copyNativeGraph(value.data.`score`)
+  case 5: return try copyNativeGraph(value.data.`filter`)
+  case 6: return try copyNativeGraph(value.data.`rank`)
+  case 7: return try copyNativeGraph(value.data.`find`)
+  case 8: return try copyNativeGraph(value.data.`recognize`)
+  case 9: return try copyNativeGraph(value.data.`relate`)
+  case 10: return try copyNativeGraph(value.data.`annotate`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_settled_answer_annotate_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_15_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .orderedObject(
+      try nativeElements(value.data.`object`.data, value.data.`object`.len).map { item in
+        ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+      })
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_15_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .orderedObject(
+      try nativeElements(value.data.`object`.data, value.data.`object`.len).map { item in
+        ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+      })
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_judgment_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .bool(value.data.`boolean` != 0)
+  case 2: return .null
+  case 3: return .string(nativeString(value.data.`string`))
+  case 4: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 5:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .string(nativeString(item))
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_5_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`string`)
+  case 2:
+    return .orderedObject(
+      try nativeElements(value.data.`object`.data, value.data.`object`.len).map { item in
+        ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+      })
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_resolutions_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`string`)
+  case 2:
+    return .orderedObject(
+      try nativeElements(value.data.`object`.data, value.data.`object`.len).map { item in
+        ValueMember(nativeString(item.name), try copyNativeGraph(item.value))
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_2_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_8_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_3_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string(nativeString(value.data.`string`))
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_6_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string(nativeString(value.data.`string`))
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_4_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`integer`)))
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_4_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`integer`)))
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_relate_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_14_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`array`)
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array2`.data, value.data.`array2`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_14_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`array`)
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_relations_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return .array(
+    try nativeElements(value.value.data, value.value.len).map { item in try copyNativeGraph(item) })
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_edge_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`either`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`related_entity`)
+  case 2: return try copyNativeGraph(value.data.`source`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_source_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
+  switch value.`record`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("record", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("record", try copyNativeLeaf(value.`record`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_related_entity_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  members.append(ValueMember("name", .string(nativeString(value.`name`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_10_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array2`.data, value.data.`array2`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_10_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_settled_answer_recognize_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_13_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`object`)
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_13_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`object`)
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_recognition_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return try copyNativeGraph(value.data.`entities`)
+  case 2: return try copyNativeGraph(value.data.`mode_proposals`)
+  default: throw ValueConversionError("Unknown native packet alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_mode_proposals_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("mode", try copyNativeGraph(value.`mode`)))
+  members.append(
+    ValueMember(
+      "proposals",
+      .array(
+        try nativeElements(value.`proposals`.data, value.`proposals`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_proposal_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  members.append(ValueMember("text", .string(nativeString(value.`text`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_mode_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string("boundary_only")
+  default: throw ValueConversionError("Unknown native enum value")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_settled_recognition_entities_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(
+    ValueMember(
+      "entities",
+      .array(
+        try nativeElements(value.`entities`.data, value.`entities`.len).map { item in
+          try copyNativeGraph(item)
+        })))
+  switch value.`relations`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("relations", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember(
+        "relations",
+        .array(
+          try nativeElements(value.`relations`.value.data, value.`relations`.value.len).map {
+            item in try copyNativeGraph(item)
+          })))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_edge_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  switch value.`either`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(
+    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
+  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
+  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
+  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
+  switch value.`file`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`first_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
+    )
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
+  switch value.`last_line`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(
+      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
+  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
+  members.append(
+    ValueMember("strength", .number(NumberLiteral(unchecked: String(value.`strength`)))))
+  members.append(ValueMember("text", .string(nativeString(value.`text`))))
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_find_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_12_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return try copyNativeLeaf(value.value)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_rank_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_11_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .number(NumberLiteral(unchecked: String(item)))
+      })
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array2`.data, value.data.`array2`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_11_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .number(NumberLiteral(unchecked: String(item)))
+      })
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_filter_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_9_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array2`.data, value.data.`array2`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_9_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_original_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return try copyNativeLeaf(value.value)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_score_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_8_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .number(NumberLiteral(unchecked: String(value.data.`number`)))
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_tag_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_7_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .string(nativeString(item))
+      })
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array2`.data, value.data.`array2`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(
+  _ pointer: UnsafePointer<thinkthen_complete_answer_shape_7_any_of_1_items_v1>?
+) throws -> DataValue {
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        .string(nativeString(item))
+      })
+  case 2: return .null
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_choose_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_6_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  switch value.kind {
+  case 1: return .string(nativeString(value.data.`string`))
+  case 2: return .null
+  case 3:
+    return .array(
+      try nativeElements(value.data.`array`.data, value.data.`array`.len).map { item in
+        try copyNativeGraph(item)
+      })
+  default: throw ValueConversionError("Unknown native value alternative")
+  }
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_settled_answer_decide_v1>?)
+  throws -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  var members = try copyNativeExtensions(value.extensions)
+  members.append(ValueMember("function", .string(nativeString(value.`function`))))
+  switch value.`index`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("index", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("index", try copyNativeGraph(value.`index`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`pick`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("pick", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("pick", try copyNativeGraph(value.`pick`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  switch value.`probability`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1):
+    members.append(ValueMember("probability", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("probability", try copyNativeGraph(value.`probability`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  members.append(ValueMember("resolution", try copyNativeGraph(value.`resolution`)))
+  switch value.`value`.presence {
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("value", .null))
+  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
+    members.append(ValueMember("value", try copyNativeGraph(value.`value`.value)))
+  default: throw ValueConversionError("Unknown native presence")
+  }
+  return .orderedObject(members)
+}
+private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_answer_shape_v1>?) throws
+  -> DataValue
+{
+  guard let pointer else { throw ValueConversionError("Missing native graph member") }
+  let value = pointer.pointee
+  return try copyNativeLeaf(value.value)
+}
 private func copyNativeGraph(
   _ pointer: UnsafePointer<thinkthen_complete_session_packet_observation_v1>?
 ) throws -> DataValue {
@@ -8070,59 +10277,6 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
   members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
   members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
   members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_v1>?) throws
-  -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
-  switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
-    )
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
-  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
-  members.append(
-    ValueMember("strength", .number(NumberLiteral(unchecked: String(value.`strength`)))))
-  members.append(ValueMember("text", .string(nativeString(value.`text`))))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_proposal_v1>?)
-  throws -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("end", .number(NumberLiteral(unchecked: String(value.`end`)))))
-  members.append(ValueMember("length", .number(NumberLiteral(unchecked: String(value.`length`)))))
-  members.append(
-    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
-  members.append(ValueMember("start", .number(NumberLiteral(unchecked: String(value.`start`)))))
-  members.append(ValueMember("text", .string(nativeString(value.`text`))))
   return .orderedObject(members)
 }
 private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognition_mode_v1>?)
@@ -9482,89 +11636,6 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relatio
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_related_entity_edge_v1>?)
-  throws -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  switch value.`either`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(
-    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
-  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
-  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
-  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
-  return .orderedObject(members)
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_v1>?)
-  throws -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  switch value.kind {
-  case 1: return try copyNativeGraph(value.data.`related_entity`)
-  case 2: return try copyNativeGraph(value.data.`source`)
-  default: throw ValueConversionError("Unknown native packet alternative")
-  }
-}
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_source_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  switch value.`file`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("file", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("file", .string(nativeString(value.`file`.value))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  switch value.`first_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("first_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("first_line", .number(NumberLiteral(unchecked: String(value.`first_line`.value))))
-    )
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  switch value.`last_line`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("last_line", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(
-      ValueMember("last_line", .number(NumberLiteral(unchecked: String(value.`last_line`.value)))))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(ValueMember("name", .string(nativeString(value.`name`))))
-  members.append(ValueMember("ordinal", .number(NumberLiteral(unchecked: String(value.`ordinal`)))))
-  switch value.`record`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("record", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("record", try copyNativeLeaf(value.`record`.value)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  return .orderedObject(members)
-}
-private func copyNativeGraph(
-  _ pointer: UnsafePointer<thinkthen_complete_relation_endpoint_related_entity_v1>?
-) throws -> DataValue {
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  members.append(ValueMember("kind", .string(nativeString(value.`kind`))))
-  members.append(ValueMember("name", .string(nativeString(value.`name`))))
-  return .orderedObject(members)
-}
 private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_version_v1>?) throws
   -> DataValue
 {
@@ -10267,16 +12338,6 @@ private func copyNativeGraph(
         })))
   return .orderedObject(members)
 }
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_boundary_mode_v1>?) throws
-  -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  switch value.kind {
-  case 1: return .string("boundary_only")
-  default: throw ValueConversionError("Unknown native enum value")
-  }
-}
 private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recognize_entities_v1>?)
   throws -> DataValue
 {
@@ -10303,26 +12364,6 @@ private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_recogni
           })))
   default: throw ValueConversionError("Unknown native presence")
   }
-  return .orderedObject(members)
-}
-private func copyNativeGraph(_ pointer: UnsafePointer<thinkthen_complete_entity_edge_v1>?) throws
-  -> DataValue
-{
-  guard let pointer else { throw ValueConversionError("Missing native graph member") }
-  let value = pointer.pointee
-  var members = try copyNativeExtensions(value.extensions)
-  switch value.`either`.presence {
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_MISSING_V1): break
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_NULL_V1): members.append(ValueMember("either", .null))
-  case UInt32(THINKTHEN_COMPLETE_PRESENCE_VALUE_V1):
-    members.append(ValueMember("either", .bool(value.`either`.value != 0)))
-  default: throw ValueConversionError("Unknown native presence")
-  }
-  members.append(
-    ValueMember("probability", .number(NumberLiteral(unchecked: String(value.`probability`)))))
-  members.append(ValueMember("relation", .string(nativeString(value.`relation`))))
-  members.append(ValueMember("source", try copyNativeGraph(value.`source`)))
-  members.append(ValueMember("target", try copyNativeGraph(value.`target`)))
   return .orderedObject(members)
 }
 private func copyNativeGraph(

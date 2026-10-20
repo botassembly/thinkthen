@@ -48,6 +48,29 @@ static void print_value(const thinkthen_complete_json_v1 *value) {
         default:check(0,"known canonical value kind");
     }
 }
+static thinkthen_engine *settings(void) {
+    thinkthen_engine *engine=thinkthen_engine_new_with("{}");
+    check(engine!=NULL,"empty settings capture environment");
+    thinkthen_engine_free(engine);
+    uint32_t ready=99;
+    check(thinkthen_session_wait(NULL,THINKTHEN_SESSION_WAIT_RESULT_V1,0,&ready)==THINKTHEN_EUSAGE,
+          "immediate session failure before construction");
+    const char *session_error=thinkthen_session_error_message();
+    check(thinkthen_engine_new_with("{\"timeout\":0}")==NULL,"invalid timeout refuses");
+    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"settings use constructor slot");
+    check(!strcmp(thinkthen_error_message(NULL),"a timeout is a time above zero"),"settings preserve admission diagnostic");
+    check(thinkthen_error_retryable(NULL)==0,"invalid settings are not retryable");
+    check(thinkthen_session_error_message()==session_error,"constructor preserves independent session slot");
+    char model[]="{\"model\":\"model-never-retained-from-host\"}";
+    engine=thinkthen_engine_new_with(model);
+    check(engine!=NULL,"settings accept model");
+    memset(model,'?',sizeof(model)-1);
+    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"successful constructor clears failed build");
+    check(thinkthen_session_error_message()==session_error,"successful constructor preserves session slot");
+    thinkthen_engine_free(engine);
+    return thinkthen_engine_new_with("{}");
+}
+/* Retained ABI safety regressions, isolated from the canonical C consumer. */
 static thinkthen_value *owned_plan(thinkthen_engine *engine) {
     char function[]="decide", question[]="{\"kind\":\"text\",\"text\":\"asks for a refund\"}";
     char input[]="{\"kind\":\"text\",\"text\":\"Refund me please.\"}", options[]="{\"max_requests_total\":0}";
@@ -208,7 +231,7 @@ static void typed_json_preview(thinkthen_engine *engine) {
     thinkthen_free_string(typed); b.data.string.len=sizeof(right);
     json_refusal(engine,&arguments,"cobol",THINKTHEN_COBOL_OVERFLOW);
 }
-static thinkthen_engine *typed_settings(void) {
+static thinkthen_engine *legacy_settings(void) {
     thinkthen_engine *engine=thinkthen_engine_new_typed(NULL);
     check(engine!=NULL,"NULL typed settings capture environment");
     thinkthen_engine_free(engine);
@@ -297,12 +320,23 @@ static void arbitrary_values(void) {
     thinkthen_value_free(owner);thinkthen_value_free(NULL);
 }
 int main(void) {
-    thinkthen_engine *engine = typed_settings();
+    if (getenv("LEGACY_INPUT_ABI")) {
+        thinkthen_engine *engine=legacy_settings();
+        check(engine!=NULL,"legacy engine construction");
+        typed_json_preview(engine);
+        char *typed=typed_preview(engine);
+        thinkthen_value *owner=owned_plan(engine);
+        thinkthen_engine_free(engine);
+        const thinkthen_complete_json_v1 *root=NULL;
+        check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"legacy Plan owner survives engine and source destruction");
+        print_value(root);putchar('\n');thinkthen_value_free(owner);
+        puts(typed);thinkthen_free_string(typed);
+        return 0;
+    }
+    thinkthen_engine *engine = settings();
     check(engine != NULL, "engine construction");
     arbitrary_values();
     thinkthen_value *full=full_plan(engine);
-    typed_json_preview(engine);
-    char *typed = typed_preview(engine);
     char *out = (char *)(uintptr_t)7;
     size_t len = 99;
     check(thinkthen_request_plan_json(NULL, p1, sizeof(p1)-1, &out, &len) == THINKTHEN_EUSAGE,
@@ -331,16 +365,11 @@ int main(void) {
           "canonical preview");
     memset(request, 0xff, sizeof(p1)-1);
     free(request);
-    thinkthen_value *owner=owned_plan(engine);
     thinkthen_engine_free(engine);
     const thinkthen_complete_json_v1 *root=NULL;
-    check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"Plan owner survives engine and source destruction");
-    print_value(root);putchar('\n');thinkthen_value_free(owner);
     check(thinkthen_value_view(full,&root)==THINKTHEN_OK,"full Plan survives engine destruction");
     print_value(root);putchar('\n');thinkthen_value_free(full);
     check(out && strlen(out) == len && out[len] == 0, "independent owned preview");
-    check(!strcmp(typed, out), "typed preview survives engine and carrier destruction");
-    thinkthen_free_string(typed);
     puts(out);
     thinkthen_free_string(out);
     return 0;

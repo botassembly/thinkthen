@@ -1,0 +1,42 @@
+{
+  "libraries": {
+    "c": {
+      "root": "libraries/c",
+      "language": "c",
+      "naming": "snake",
+      "declarations": [
+        "libraries/c/include/thinkthen.h"
+      ],
+      "option_containers": [
+        "thinkthen_request_call_options_v1"
+      ],
+      "setting_containers": [
+        "thinkthen_request_engine_settings_v1"
+      ],
+      "function_prefix": "thinkthen_",
+      "test_folders": [
+        "tests",
+        "examples"
+      ],
+      "helper_names": {
+        "usage_persistence": "thinkthen_engine_usage_persistence_v1",
+        "finish_usage_status": "thinkthen_engine_finish_usage_status_v1",
+        "plan": "thinkthen_request_plan_json",
+        "question_file": "thinkthen_request_question_selector_file_v1",
+        "question_name": "thinkthen_request_question_selector_name_v1",
+        "question_reference": "thinkthen_request_question_selector_reference_v1",
+        "item": "thinkthen_request_item_v1",
+        "files": "thinkthen_request_source_v1"
+      },
+      "function_containers": [
+        ""
+      ],
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": [],
+      "field_prefix": "m_",
+      "function_dispatch": "thinkthen_session_new_typed_with_surface"
+    }
+  }
+}

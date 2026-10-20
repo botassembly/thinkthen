@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit initial loading permits reviewed schema calls on one connection."""
+"""Normal loading permits schema calls under SQLite's connection trust setting."""
 
 import os
 import pathlib
@@ -9,22 +9,22 @@ import sys
 from helper import CLI, LIB, Backend, child, environment, expect, main
 from test_schema import ATTACK, DECIDE
 
-TRUSTED = """
-def trusted_connect(path=":memory:", setting="ON", authorizer=None):
+SCHEMA = """
+def schema_connect(path=":memory:", setting="ON", authorizer=None):
     db = sqlite3.connect(path, isolation_level=None)
     db.enable_load_extension(True)
     db.execute(f"PRAGMA trusted_schema={setting}")
     if authorizer:
         db.set_authorizer(authorizer)
-    db.execute("SELECT load_extension(?, 'sqlite3_thinkthen_trusted_init')", (LIB,))
+    db.load_extension(LIB)
     return db
 """
 
 
-def test_trusted_views_and_ingestion_trigger_answer_across_schemas() -> None:
+def test_views_and_ingestion_trigger_answer_across_schemas() -> None:
     backend = Backend()
-    held = child(TRUSTED + r"""
-db = trusted_connect()
+    held = child(SCHEMA + r"""
+db = schema_connect()
 db.execute('SELECT thinkthen_configure(?)', ('{"cache":false}',))
 db.execute("CREATE TABLE t(body TEXT, answer INTEGER)")
 db.execute("CREATE VIEW v AS SELECT thinkthen_decide('Is it red?', body) FROM t")
@@ -42,21 +42,30 @@ question = pathlib.Path(os.environ['SCRATCH']) / 'question.json'
 question.write_text('{"decide":"Is it red?"}')
 db.execute("CREATE VIEW named AS SELECT thinkthen_decide('@" + str(question) + "', 'a red book')")
 named = run(db, "SELECT * FROM named")
+db.execute("CREATE TABLE checked(body TEXT CHECK(thinkthen_decide('Is it red?', body)))")
+db.execute("INSERT INTO checked VALUES ('a red curtain')")
+checked = run(db, "SELECT body FROM checked")
+db.execute("CREATE TABLE defaults(answer INTEGER DEFAULT (thinkthen_decide('Is it red?', 'a red wall')))")
+db.execute("INSERT INTO defaults DEFAULT VALUES")
+default = run(db, "SELECT answer FROM defaults")
+db.execute("CREATE VIEW preview AS SELECT thinkthen_plan('Is it red?', '{\"a\":\"red\"}')")
+plan = json.loads(db.execute("SELECT * FROM preview").fetchone()[0])['records']
 ordinary = connect()
 ordinary.execute("PRAGMA trusted_schema=ON")
 ordinary.execute("CREATE VIEW v AS SELECT thinkthen_decide('Is it red?', 'red')")
 say(trigger=trigger, view=view, temp=temp, attached=attached, named=named,
+    checked=checked, default=default, plan=plan,
     ordinary=run(ordinary, "SELECT * FROM v"))
 """, environment(backend))
     expect(held, {"trigger": [[1]], "view": [[1]], "temp": [[1]], "attached": [[1]], "named": [[1]],
-                  "ordinary": "unsafe use of thinkthen_decide()"}, "connection-wide trusted schema calls")
-    expect(backend.close(), 5, "five schema judgments, default connection sent nothing")
+                  "checked": [["a red curtain"]], "default": [[1]], "plan": 1, "ordinary": [[1]]}, "connection-wide trusted schema calls")
+    expect(backend.close(), 8, "eight schema judgments through normal loading; preview sends nothing")
 
 
-def test_trusted_keyed_view_uses_one_packed_request() -> None:
+def test_keyed_view_uses_one_packed_request() -> None:
     backend = Backend()
-    held = child(TRUSTED + r"""
-db = trusted_connect()
+    held = child(SCHEMA + r"""
+db = schema_connect()
 db.execute("CREATE VIEW packed AS SELECT key,value FROM thinkthen_decide_many('Is it red?', '{\"a\":\"a red coat\",\"b\":\"another red coat\"}')")
 say(rows=run(db, "SELECT * FROM packed"))
 """, environment(backend))
@@ -64,15 +73,15 @@ say(rows=run(db, "SELECT * FROM packed"))
     expect(backend.close(), 1, "one packed schema request")
 
 
-def test_trusted_schema_off_retains_every_hostile_refusal() -> None:
+def test_schema_off_retains_every_hostile_refusal() -> None:
     backend = Backend()
     # Reuse the crafted hostile databases, including named-file arguments.
     attack = ATTACK[:ATTACK.index("said = {}")]
-    held = child(TRUSTED + f"DECIDE = {DECIDE!r}\n" + attack + r"""
+    held = child(SCHEMA + f"DECIDE = {DECIDE!r}\n" + attack + r"""
 said = {}
 for label, (steps, use) in shapes.items():
     path = craft(label.replace(" ", "-"), steps)
-    db = trusted_connect(setting="OFF")
+    db = schema_connect(setting="OFF")
     attached = run(db, "ATTACH DATABASE ? AS other", (str(path),))
     said[f"{label} (OFF)"] = attached if isinstance(attached, str) else run(db, use)
 db.execute("CREATE VIEW keyed AS SELECT * FROM thinkthen_decide_many('Is it red?', '{\"a\":\"red\"}')")
@@ -90,73 +99,25 @@ say(**said)
     expect(backend.close(), 0, "all schema refusals sent nothing")
 
 
-def test_trusted_registration_keeps_controls_direct_only_and_judgments_volatile() -> None:
-    backend = Backend()
-    held = child(TRUSTED + r"""
-db = trusted_connect(setting="OFF")
-initial = db.execute("PRAGMA trusted_schema").fetchone()[0]
-db.execute("PRAGMA trusted_schema=ON")
-rows = db.execute("SELECT name, narg, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
-judgments = {'thinkthen_decide', 'thinkthen_choose', 'thinkthen_score', 'thinkthen_tag', 'thinkthen_annotate',
-             'thinkthen_find', 'thinkthen_relations', 'thinkthen_plan'}
-calls = {'configure': "thinkthen_configure('{}')", 'budget': 'thinkthen_budget_ms(0)', 'usage': 'thinkthen_usage()',
-         'removed': 'thinkthen_warm()', 'positional': "thinkthen_decide('Is it red?', 'red', 0, '')"}
-refusals = {}
-for label, call in calls.items():
-    db.execute(f"CREATE VIEW {label} AS SELECT {call}")
-    refusals[label] = run(db, f"SELECT * FROM {label}")
-db.execute("CREATE VIEW preview AS SELECT thinkthen_plan('Is it red?', '{\"a\":\"red\"}')")
-plan = json.loads(db.execute("SELECT * FROM preview").fetchone()[0])
-db.execute("CREATE TABLE t(body TEXT)")
-say(initial=initial, registered=bool(rows),
-    direct=[name for name, arity, flags in rows if name in judgments and arity != 4 and flags & 0x80000],
-    controls=all(flags & 0x80000 for name, arity, flags in rows if name not in judgments or arity == 4),
-    innocuous=[name for name, _, flags in rows if flags & 0x200000],
-    deterministic=[name for name, _, flags in rows if flags & 0x800], refusals=refusals,
-    plan=plan['records'], index=run(db, "CREATE INDEX x ON t(thinkthen_decide('Is it red?', body))"))
-""", environment(backend))
-    expect(held, {"initial": 0, "registered": True, "direct": [], "controls": True, "innocuous": [],
-                  "deterministic": [], "refusals": {"configure": "unsafe use of thinkthen_configure()",
-                  "budget": "unsafe use of thinkthen_budget_ms()", "usage": "unsafe use of thinkthen_usage()",
-                  "removed": "unsafe use of thinkthen_warm()", "positional": "unsafe use of thinkthen_decide()"}, "plan": 1,
-                  "index": "non-deterministic functions prohibited in index expressions"}, "trusted function contract")
-    expect(backend.close(), 0, "controls, preview and index refusal sent nothing")
-
-
-def test_initial_load_preserves_authorizer_and_active_reload_preserves_mode() -> None:
-    held = child(TRUSTED + r"""
+def test_initial_load_preserves_trust_setting_and_authorizer() -> None:
+    held = child(SCHEMA + r"""
 def deny_delete(action, *unused):
     return sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_DELETE else sqlite3.SQLITE_OK
-results = []
-for entry in ('sqlite3_thinkthen_init', 'sqlite3_thinkthen_trusted_init'):
-    db = sqlite3.connect(':memory:', isolation_level=None)
-    db.enable_load_extension(True)
-    db.set_authorizer(deny_delete)
-    db.execute('SELECT load_extension(?, ?)', (LIB, entry))
-    db.execute('CREATE TABLE t(body TEXT)')
-    db.execute("INSERT INTO t VALUES ('red')")
-    deletion = run(db, 'DELETE FROM t')
-    before = db.execute("SELECT flags FROM pragma_function_list WHERE name='thinkthen_decide' ORDER BY narg").fetchall()
-    opposite = 'sqlite3_thinkthen_trusted_init' if entry == 'sqlite3_thinkthen_init' else 'sqlite3_thinkthen_init'
-    reload = run(db, 'SELECT load_extension(?, ?)', (LIB, opposite))
-    after = db.execute("SELECT flags FROM pragma_function_list WHERE name='thinkthen_decide' ORDER BY narg").fetchall()
-    results.append([deletion, before == after, reload])
-say(results=results)
+db = schema_connect(setting="OFF", authorizer=deny_delete)
+db.execute('CREATE TABLE t(body TEXT)')
+db.execute("INSERT INTO t VALUES ('red')")
+say(trust=db.execute('PRAGMA trusted_schema').fetchone()[0], deletion=run(db, 'DELETE FROM t'))
 """, environment(None))
-    for deletion, unchanged, reload in held["results"]:
-        expect(deletion, "not authorized", "existing authorizer still denies deletion")
-        expect(unchanged, True, "failed active reload preserves registration")
-        expect(reload, "error during initialization: unable to delete/modify user-function due to active statements",
-               "SQLite refuses changing mode through active SQL")
+    expect(held, {"trust": 0, "deletion": "not authorized"}, "loading preserves host controls")
 
 
-def test_native_temp_views_remain_caller_sql_in_both_modes_under_off() -> None:
+def test_native_temp_views_remain_caller_sql_under_off() -> None:
     backend = Backend()
     env = environment(backend)
     env.pop("THINKTHEN_API_KEY")
     question = pathlib.Path(env["SCRATCH"]) / "empty-question.json"
     question.write_text('{"decide":""}')
-    for entry in ("sqlite3_thinkthen_init", "sqlite3_thinkthen_trusted_init"):
+    for entry in ("sqlite3_thinkthen_init",):
         held = subprocess.run([CLI, "-batch", ":memory:"], env=env, capture_output=True, text=True,
                               input=f"""
 .bail on

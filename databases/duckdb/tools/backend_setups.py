@@ -15,7 +15,7 @@ def setup_profile_refuses_before_send_and_sql_profile_wins():
         env.update(LOCAL_SETUP_KEY="fake-0400")
         folder = Path(env["HOME"]) / "Library/Application Support/thinkthen" if sys.platform == "darwin" else Path(env["XDG_CONFIG_HOME"]) / "thinkthen"
         folder.mkdir(parents=True, exist_ok=True)
-        (folder / "config.json").write_text(json.dumps({"schema": "thinkthen.config/1", "backends": {"small": {
+        (folder / "config.json").write_text(json.dumps({"backends": {"small": {
             "url": backend.base(), "key_env": "LOCAL_SETUP_KEY", "model": "m",
             "profile": {"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 3}}}}))
         sql = "SELECT thinkthen_tag('Which labels fit?', 'alpha', ['one', 'two'])"

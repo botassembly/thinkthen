@@ -1,0 +1,56 @@
+{
+  "libraries": {
+    "ada": {
+      "root": "libraries/ada",
+      "language": "ada",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ada/src/*.ads"
+      ],
+      "option_containers": [
+        "Options"
+      ],
+      "setting_containers": [
+        "Engine_Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "checks",
+        "examples"
+      ],
+      "function_containers": [
+        ""
+      ],
+      "helper_names": {
+        "question_file": "Question_file",
+        "question_name": "Question_name",
+        "question_reference": "Question_reference",
+        "item": "Item",
+        "files": "Source"
+      },
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": [
+        ""
+      ],
+      "lifecycle_members": {
+        "": [
+          "Next_Packet"
+        ]
+      },
+      "representation_types": [
+        "Packet",
+        "Packet_Owner",
+        "Push_Status",
+        "Read_Status",
+        "Session_Owner"
+      ],
+      "wrapper_members": {
+        "Failure": [
+          "Text"
+        ]
+      }
+    }
+  }
+}

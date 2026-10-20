@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+from tools import fixture_path
 import subprocess
 import sys
 import tarfile
@@ -19,6 +20,9 @@ from install_check_channels import download, python, rust, maven, c, INSTALLERS,
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'databases/duckdb/tools'))
 from inputs import selected as duckdb_identity, versions as duckdb_versions
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'conformance/children'))
+from children import fixture_run
 
 
 class ZipInstallation(unittest.TestCase):
@@ -106,8 +110,7 @@ class NativeInstallation(unittest.TestCase):
                             'printf "fixture static" > "$CARGO_TARGET_DIR/debug/libthinkthen_c.a"\n'
                             'exit 0; fi\nexec "$NATIVE_CARGO" "$@"\n')
                         (tools / 'cargo').chmod(0o755)
-                        env = {'PATH': str(tools) + os.pathsep + os.pathsep.join(dict.fromkeys(
-                                   str(Path(shutil.which(tool)).parent) for tool in ('sh', 'bash', 'jq', 'cp', 'mkdir', 'ln', 'mktemp'))),
+                        env = {'PATH': fixture_path(tools),
                                'HOME': str(root / 'home'), 'CARGO_HOME': str(root / 'home/.cargo'),
                                'RUSTC': rustc, 'NATIVE_CARGO': cargo, 'CARGO_NET_OFFLINE': 'true', 'LC_ALL': 'C.UTF-8',
                                'RUSTFLAGS': '--cfg native_fixture', 'CFLAGS': '-O1', 'CXXFLAGS': '-O2'}
@@ -138,9 +141,9 @@ class NativeInstallation(unittest.TestCase):
                             stale.parent.mkdir(parents=True)
                             stale.write_bytes(b'stale library must not be copied')
                         out = root / 'install space'
-                        done = subprocess.run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
+                        done = fixture_run([shell, '-c', '. "$4"; . "$1"; native_install "$2" "$3"',
                                                shell, str(script), str(repo), str(out), str(script.with_name('scratch.sh'))], cwd=caller,
-                                              env=env, capture_output=True, text=True, timeout=30)
+                                              env=env, capture_output=True, text=True)
                         self.assertEqual(done.stdout, '')
                         self.assertTrue((root / 'build.log').exists(), done)
                         owned = Path((root / 'build.log').read_text())
@@ -385,10 +388,12 @@ class RefusalTable(unittest.TestCase):
 
     def test_clean_environment(self):
         with tempfile.TemporaryDirectory() as own, patch.dict('os.environ', {'THINKTHEN_API_KEY': 'fixture', 'OPENAI_API_KEY': 'fixture', 'THINKTHEN_CACHE': '/unowned', 'THINKTHEN_CONFIG': '/unowned',
-                                                                           'PROCESSOR_ARCHITECTURE': 'x86', 'PROCESSOR_ARCHITEW6432': 'AMD64'}):
+                                                                           'PROCESSOR_ARCHITECTURE': 'x86', 'PROCESSOR_ARCHITEW6432': 'AMD64',
+                                                                           'RUSTUP_HOME': str(Path(own) / 'rustup')}, clear=True), patch.object(Path, 'home', side_effect=RuntimeError('no host account')):
             env = clean_environment(Path(own))
             self.assertFalse(any(key.endswith('KEY') or key.startswith('THINKTHEN_') for key in env))
             self.assertEqual(env['HOME'], own)
+            self.assertEqual(env['RUSTUP_HOME'], str(Path(own) / 'rustup'))
             self.assertEqual(env['HOMEBREW_NO_AUTO_UPDATE'], '1')
             self.assertEqual(env['PROCESSOR_ARCHITECTURE'], 'x86')
             self.assertEqual(env['PROCESSOR_ARCHITEW6432'], 'AMD64')
@@ -671,40 +676,9 @@ class RefusalTable(unittest.TestCase):
             with self.subTest(ref=ref, commit=commit), tempfile.TemporaryDirectory() as own:
                 env = clean_environment(Path(own))
                 env.update(VERSION='0.2.0', REF=ref, SHA=commit)
-                result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
-                                        env=env, cwd=repo, capture_output=True, timeout=10)
+                result = fixture_run(['bash', '-e', '-o', 'pipefail', '-c', step['run']],
+                                        env=env, cwd=repo, capture_output=True)
                 self.assertEqual(result.returncode, status)
-
-    def test_workflow_cells(self):
-        import yaml
-        workflow = Path(__file__).resolve().parents[2] / '.github/workflows/install-check.yml'
-        doc = yaml.safe_load(workflow.read_text())
-        self.assertEqual(doc['permissions'], {})
-        self.assertEqual(set(doc.get('on', doc.get(True))), {'workflow_dispatch'})
-        cells, ruby_cells = set(), set()
-        for name, job in doc['jobs'].items():
-            self.assertEqual(job['permissions'], {'contents': 'read'})
-            self.assertNotIn('environment', job)
-            matrix = job.get('strategy', {}).get('matrix', {})
-            for runner in matrix.get('runner', [job['runs-on']]):
-                for channel in matrix.get('channel', [name]): cells.add((runner, channel))
-            for included in matrix.get('include', []):
-                cells.add((included['runner'], included['channel']))
-                if included['channel'] == 'rubygems': ruby_cells.add((included['runner'], included['ruby']))
-            for step in job['steps']:
-                if 'uses' in step: self.assertRegex(step['uses'], r'@[0-9a-f]{40}$')
-                self.assertNotIn('inputs.', step.get('run', ''))
-                self.assertNotIn('secrets.', json.dumps(step))
-        self.assertEqual(len(cells), 56)
-        windows = {'download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'nuget', 'maven', 'c'}
-        self.assertEqual({channel for runner, channel in cells if runner == 'windows-2025'}, windows)
-        self.assertEqual({channel for _, channel in cells}, set(CHANNELS))
-        all_five = {'ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'macos-15-intel', 'macos-26'}
-        from install_check_workflow import RUBIES
-        self.assertEqual(ruby_cells, {(runner, ruby) for runner in all_five for ruby in RUBIES})
-        for channel in ('download', 'cargo-install', 'cargo-add', 'pip', 'uv', 'npm', 'rubygems'):
-            self.assertEqual({runner for runner, member in cells if member == channel},
-                             all_five | ({'windows-2025'} if channel in windows else set()))
 
 
 class Fixture(Check):

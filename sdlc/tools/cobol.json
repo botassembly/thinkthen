@@ -1,0 +1,26 @@
+{
+  "tools": {
+    "cobol": {
+      "commands": [
+        "cobc"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "cobol"
+      ],
+      "version": "4.0-early-dev.0"
+    }
+  },
+  "libraries": {
+    "cobol": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    }
+  }
+}

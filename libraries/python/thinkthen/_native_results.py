@@ -49,6 +49,35 @@ _COLUMN_SCHEMAS = {
     "completeAnnotationValue_score": {"kind": "string", "value": "number"},
     "completeAnnotationValue_tags": {"kind": "string", "value": ["string"]},
     "completeAnswerId": "string",
+    "completeAnswerResolution": "string",
+    "completeAnswerResolutions": None,
+    "completeAnswerShape": None,
+    "completeAnswerShape10": None,
+    "completeAnswerShape10_anyOf_1_items": None,
+    "completeAnswerShape11": None,
+    "completeAnswerShape11_anyOf_1_items": None,
+    "completeAnswerShape12": None,
+    "completeAnswerShape12_anyOf_1_items": None,
+    "completeAnswerShape13": None,
+    "completeAnswerShape13_anyOf_1_items": None,
+    "completeAnswerShape14": None,
+    "completeAnswerShape14_anyOf_1_items": None,
+    "completeAnswerShape15": None,
+    "completeAnswerShape15_anyOf_1_items": None,
+    "completeAnswerShape2": None,
+    "completeAnswerShape3": None,
+    "completeAnswerShape4": None,
+    "completeAnswerShape4_anyOf_1_items": None,
+    "completeAnswerShape5": None,
+    "completeAnswerShape6": None,
+    "completeAnswerShape6_anyOf_1_items": None,
+    "completeAnswerShape7": None,
+    "completeAnswerShape7_anyOf_1_items": None,
+    "completeAnswerShape8": None,
+    "completeAnswerShape8_anyOf_1_items": None,
+    "completeAnswerShape9": None,
+    "completeAnswerShape9_anyOf_1_items": None,
+    "completeAnswerShape_anyOf_1_items": None,
     "completeAnswers": {"questions": [("ref", "completeRelationMember")]},
     "completeAtomic_Array_of_string": {
         "schema": ("ref", "completeVersion"),
@@ -162,8 +191,12 @@ _COLUMN_SCHEMAS = {
         "end": "integer",
         "length": "integer",
         "probability": "number",
+        "file": "string",
+        "first_line": "integer",
+        "last_line": "integer",
     },
     "completeCallError": {
+        "resolution": ("ref", "completeAnswerResolution"),
         "error": ("ref", "completeError"),
         "facts": ("ref", "completeFacts"),
     },
@@ -445,6 +478,19 @@ _COLUMN_SCHEMAS = {
         "kind": "string",
         "last_status": "integer",
     },
+    "completeSettledDecision": None,
+    "completeSettledJudgment": None,
+    "completeSettledOriginal": None,
+    "completeSettledRecognition": None,
+    "completeSettledRecognition_entities": {
+        "entities": [("ref", "completeentity")],
+        "relations": [("ref", "completeentityEdge")],
+    },
+    "completeSettledRecognition_mode_proposals": {
+        "mode": ("ref", "completeBoundaryMode"),
+        "proposals": [("ref", "completeBoundaryProposal")],
+    },
+    "completeSettledRelations": [("ref", "completerelatedEntityEdge")],
     "completeStopCause": "string",
     "completeStopped": {
         "cause": ("ref", "completeStopCause"),
@@ -810,6 +856,8 @@ _COLUMN_SCHEMAS = {
     },
     "completesessionPacket_terminal": {
         "kind": "string",
+        "answer": ("ref", "completesettledAnswer"),
+        "resolution": ("ref", "completeAnswerResolution"),
         "facts": ("ref", "completeFacts"),
         "failure": ("ref", "completeCallError"),
     },
@@ -857,6 +905,87 @@ _COLUMN_SCHEMAS = {
         "target": ("ref", "completeEntityDocument"),
         "probability": "number",
         "either": "boolean",
+    },
+    "completesettledAnswer": None,
+    "completesettledAnswer_annotate": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape15"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_choose": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape6"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_decide": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_filter": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape9"),
+        "probability": ("ref", "completeAnswerShape10"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_find": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape12"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_rank": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape11"),
+        "probability": ("ref", "completeAnswerShape10"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_recognize": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape13"),
+        "probability": ("ref", "completeAnswerShape10"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_relate": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape14"),
+        "probability": ("ref", "completeAnswerShape10"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_score": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape8"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
+    },
+    "completesettledAnswer_tag": {
+        "function": "string",
+        "value": ("ref", "completeAnswerShape7"),
+        "probability": ("ref", "completeAnswerShape2"),
+        "pick": ("ref", "completeAnswerShape3"),
+        "index": ("ref", "completeAnswerShape4"),
+        "resolution": ("ref", "completeAnswerShape5"),
     },
     "completesourceRelationEndpoint": {
         "name": "string",
@@ -1263,7 +1392,7 @@ class NativeBoundaryProposal(_NativeResult):
 class NativeCallError(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeCallError"]
-    _column_required = ("error",)
+    _column_required = ("resolution", "error")
 
 
 class NativeEntityDocument(_NativeResult):
@@ -1571,6 +1700,18 @@ class NativeSendBudgetDenialBeforeRetry(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completeSendBudgetDenial_before_retry"]
     _column_required = ("kind", "last_status")
+
+
+class NativeSettledRecognitionEntities(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completeSettledRecognition_entities"]
+    _column_required = ("entities",)
+
+
+class NativeSettledRecognitionModeProposals(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completeSettledRecognition_mode_proposals"]
+    _column_required = ("mode", "proposals")
 
 
 class NativeStopped(_NativeResult):
@@ -1970,7 +2111,7 @@ class NativeSessionPacketTagRow(_NativeResult):
 class NativeSessionPacketTerminal(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesessionPacket_terminal"]
-    _column_required = ("kind",)
+    _column_required = ("kind", "answer", "resolution")
 
 
 class NativeSessionProbabilitiesNamed(_NativeResult):
@@ -2016,6 +2157,136 @@ class NativeSessionRelationEdge(_NativeResult):
     _column_required = ("relation", "source", "target", "probability", "either")
 
 
+class NativeSettledAnswerAnnotate(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_annotate"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerChoose(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_choose"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerDecide(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_decide"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerFilter(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_filter"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerFind(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_find"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerRank(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_rank"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerRecognize(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_recognize"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerRelate(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_relate"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerScore(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_score"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
+class NativeSettledAnswerTag(_NativeResult):
+    __slots__ = ()
+    _column_schema = _COLUMN_SCHEMAS["completesettledAnswer_tag"]
+    _column_required = (
+        "function",
+        "value",
+        "probability",
+        "pick",
+        "index",
+        "resolution",
+    )
+
+
 class NativeSourceRelationEndpoint(_NativeResult):
     __slots__ = ()
     _column_schema = _COLUMN_SCHEMAS["completesourceRelationEndpoint"]
@@ -2045,6 +2316,53 @@ NativeAnnotationValue = Union[
     NativeAnnotationValueFailed,
 ]
 NativeAnswerId = str
+NativeAnswerResolution = Union[
+    Literal["resolved"], Literal["unresolved"], Literal["failed"]
+]
+NativeAnswerResolutions = Union[
+    NativeAnswerResolution, dict[str, NativeAnswerResolution]
+]
+NativeAnswerShape = Any
+NativeAnswerShape10 = Union[
+    list[NativeAnswerShape8AnyOf1Items], None, list[NativeAnswerShape10AnyOf1Items]
+]
+NativeAnswerShape10AnyOf1Items = Union[list[NativeAnswerShape8AnyOf1Items], None]
+NativeAnswerShape11 = Union[list[int], None, list[NativeAnswerShape11AnyOf1Items]]
+NativeAnswerShape11AnyOf1Items = Union[list[int], None]
+NativeAnswerShape12 = Any
+NativeAnswerShape12AnyOf1Items = Any
+NativeAnswerShape13 = Union[
+    NativeSettledRecognition, None, list[NativeAnswerShape13AnyOf1Items]
+]
+NativeAnswerShape13AnyOf1Items = Union[NativeSettledRecognition, None]
+NativeAnswerShape14 = Union[
+    NativeSettledRelations, None, list[NativeAnswerShape14AnyOf1Items]
+]
+NativeAnswerShape14AnyOf1Items = Union[NativeSettledRelations, None]
+NativeAnswerShape15 = Union[
+    dict[str, NativeSettledJudgment], None, list[NativeAnswerShape15AnyOf1Items]
+]
+NativeAnswerShape15AnyOf1Items = Union[dict[str, NativeSettledJudgment], None]
+NativeAnswerShape2 = Union[float, None, list[NativeAnswerShape8AnyOf1Items]]
+NativeAnswerShape3 = Union[str, None, list[NativeAnswerShape6AnyOf1Items]]
+NativeAnswerShape4 = Union[int, None, list[NativeAnswerShape4AnyOf1Items]]
+NativeAnswerShape4AnyOf1Items = Union[int, None]
+NativeAnswerShape5 = Union[
+    NativeAnswerResolution,
+    dict[str, NativeAnswerResolution],
+    list[NativeAnswerResolutions],
+]
+NativeAnswerShape6 = Union[str, None, list[NativeAnswerShape6AnyOf1Items]]
+NativeAnswerShape6AnyOf1Items = Union[str, None]
+NativeAnswerShape7 = Union[list[str], None, list[NativeAnswerShape7AnyOf1Items]]
+NativeAnswerShape7AnyOf1Items = Union[list[str], None]
+NativeAnswerShape8 = Union[float, None, list[NativeAnswerShape8AnyOf1Items]]
+NativeAnswerShape8AnyOf1Items = Union[float, None]
+NativeAnswerShape9 = Union[
+    list[NativeSettledOriginal], None, list[NativeAnswerShape9AnyOf1Items]
+]
+NativeAnswerShape9AnyOf1Items = Union[list[NativeSettledOriginal], None]
+NativeAnswerShapeAnyOf1Items = Any
 NativeBatch = Union[int, Literal["max"]]
 NativeBoundaryMode = Literal["boundary_only"]
 NativeCallId = str
@@ -2106,6 +2424,13 @@ NativeSendBudgetDenial = Union[
     NativeSendBudgetDenialBeforeAdditionalSend,
     NativeSendBudgetDenialBeforeRetry,
 ]
+NativeSettledDecision = Any
+NativeSettledJudgment = Union[bool, None, str, float, list[str]]
+NativeSettledOriginal = Any
+NativeSettledRecognition = Union[
+    NativeSettledRecognitionEntities, NativeSettledRecognitionModeProposals
+]
+NativeSettledRelations = list[NativeRelatedEntityEdge]
 NativeStopCause = Union[
     Literal["usage"],
     Literal["local"],
@@ -2194,6 +2519,18 @@ NativeSessionPacket = Union[
 ]
 NativeSessionProbabilities = Union[
     NativeSessionProbabilitiesYesNo, NativeSessionProbabilitiesNamed
+]
+NativeSettledAnswer = Union[
+    NativeSettledAnswerDecide,
+    NativeSettledAnswerChoose,
+    NativeSettledAnswerTag,
+    NativeSettledAnswerScore,
+    NativeSettledAnswerFilter,
+    NativeSettledAnswerRank,
+    NativeSettledAnswerFind,
+    NativeSettledAnswerRecognize,
+    NativeSettledAnswerRelate,
+    NativeSettledAnswerAnnotate,
 ]
 NativeThreshold = Union[float, str]
 NativeValue = Union[bool, None, str, list[str], float]

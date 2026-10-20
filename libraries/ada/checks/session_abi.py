@@ -10,7 +10,7 @@ from children import child_env
 ROOT = Path(__file__).resolve().parents[3]
 HEADER = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'libraries/c/include/thinkthen.h'
 ADA = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'libraries/ada/src/thinkthen-session_c.ads'
-sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+sys.path.insert(0, str(ROOT / 'build-tools/results'))
 from native import selected_header
 source = re.sub(r'/\*.*?\*/', '', selected_header(HEADER.read_text(), 'ada'), flags=re.S)
 imports = set(re.findall(r'External_Name => "(thinkthen_\w+)"', ADA.read_text()))

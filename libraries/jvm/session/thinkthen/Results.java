@@ -253,6 +253,736 @@ public final class Results {
             return (String)json();
         }
     }
+    public static final class AnswerResolution extends View {
+        public AnswerResolution(Object value) {
+            super(value);
+        }
+        static AnswerResolution read(Object value) {
+            return new AnswerResolution(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public sealed interface AnswerResolutions permits AnswerResolutionsString,AnswerResolutionsObject {
+        static AnswerResolutions read(Object value) {
+            if (value instanceof String) return AnswerResolutionsString.read(value);
+            if (value instanceof Map<?,?>) return AnswerResolutionsObject.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerResolutionsString(AnswerResolution value) implements AnswerResolutions {
+        static AnswerResolutionsString read(Object value) {
+            return new AnswerResolutionsString(AnswerResolution.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerResolutionsObject(Map<String,AnswerResolution> value) implements AnswerResolutions {
+        static AnswerResolutionsObject read(Object value) {
+            return new AnswerResolutionsObject(Values.map(value, item0 -> AnswerResolution.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class AnswerShape extends View {
+        public AnswerShape(Object value) {
+            super(value);
+        }
+        static AnswerShape read(Object value) {
+            return new AnswerShape(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
+    public sealed interface AnswerShape10 permits AnswerShape10Array,AnswerShape10Null,AnswerShape10Array2 {
+        static AnswerShape10 read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof BigDecimal || union_item_0 == null)))) return AnswerShape10Array.read(value);
+            if (value == null) return new AnswerShape10Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> ((union_item_0 instanceof List<?> && ((List<?>)union_item_0).stream().allMatch(union_item_1 -> (union_item_1 instanceof BigDecimal || union_item_1 == null))) || union_item_0 == null)))) return AnswerShape10Array2.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape10Array(List<AnswerShape8AnyOf1Items> value) implements AnswerShape10 {
+        static AnswerShape10Array read(Object value) {
+            return new AnswerShape10Array(Values.list(value, item0 -> AnswerShape8AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape10Null(Object value) implements AnswerShape10 {
+        static AnswerShape10Null read(Object value) {
+            return new AnswerShape10Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape10Array2(List<AnswerShape10AnyOf1Items> value) implements AnswerShape10 {
+        static AnswerShape10Array2 read(Object value) {
+            return new AnswerShape10Array2(Values.list(value, item0 -> AnswerShape10AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape10AnyOf1Items permits AnswerShape10AnyOf1ItemsArray,AnswerShape10AnyOf1ItemsNull {
+        static AnswerShape10AnyOf1Items read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof BigDecimal || union_item_0 == null)))) return AnswerShape10AnyOf1ItemsArray.read(value);
+            if (value == null) return new AnswerShape10AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape10AnyOf1ItemsArray(List<AnswerShape8AnyOf1Items> value) implements AnswerShape10AnyOf1Items {
+        static AnswerShape10AnyOf1ItemsArray read(Object value) {
+            return new AnswerShape10AnyOf1ItemsArray(Values.list(value, item0 -> AnswerShape8AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape10AnyOf1ItemsNull(Object value) implements AnswerShape10AnyOf1Items {
+        static AnswerShape10AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape10AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape11 permits AnswerShape11Array,AnswerShape11Null,AnswerShape11Array2 {
+        static AnswerShape11 read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof BigDecimal))) return AnswerShape11Array.read(value);
+            if (value == null) return new AnswerShape11Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> ((union_item_0 instanceof List<?> && ((List<?>)union_item_0).stream().allMatch(union_item_1 -> union_item_1 instanceof BigDecimal)) || union_item_0 == null)))) return AnswerShape11Array2.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape11Array(List<BigInteger> value) implements AnswerShape11 {
+        static AnswerShape11Array read(Object value) {
+            return new AnswerShape11Array(Values.list(value, item0 -> Values.integer(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape11Null(Object value) implements AnswerShape11 {
+        static AnswerShape11Null read(Object value) {
+            return new AnswerShape11Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape11Array2(List<AnswerShape11AnyOf1Items> value) implements AnswerShape11 {
+        static AnswerShape11Array2 read(Object value) {
+            return new AnswerShape11Array2(Values.list(value, item0 -> AnswerShape11AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape11AnyOf1Items permits AnswerShape11AnyOf1ItemsArray,AnswerShape11AnyOf1ItemsNull {
+        static AnswerShape11AnyOf1Items read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof BigDecimal))) return AnswerShape11AnyOf1ItemsArray.read(value);
+            if (value == null) return new AnswerShape11AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape11AnyOf1ItemsArray(List<BigInteger> value) implements AnswerShape11AnyOf1Items {
+        static AnswerShape11AnyOf1ItemsArray read(Object value) {
+            return new AnswerShape11AnyOf1ItemsArray(Values.list(value, item0 -> Values.integer(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape11AnyOf1ItemsNull(Object value) implements AnswerShape11AnyOf1Items {
+        static AnswerShape11AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape11AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class AnswerShape12 extends View {
+        public AnswerShape12(Object value) {
+            super(value);
+        }
+        static AnswerShape12 read(Object value) {
+            return new AnswerShape12(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
+    public static final class AnswerShape12AnyOf1Items extends View {
+        public AnswerShape12AnyOf1Items(Object value) {
+            super(value);
+        }
+        static AnswerShape12AnyOf1Items read(Object value) {
+            return new AnswerShape12AnyOf1Items(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
+    public sealed interface AnswerShape13 permits AnswerShape13Object,AnswerShape13Null,AnswerShape13Array {
+        static AnswerShape13 read(Object value) {
+            if (value instanceof Map<?,?>) return AnswerShape13Object.read(value);
+            if (value == null) return new AnswerShape13Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof Map<?,
+            ?> || union_item_0 == null)))) return AnswerShape13Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape13Object(SettledRecognition value) implements AnswerShape13 {
+        static AnswerShape13Object read(Object value) {
+            return new AnswerShape13Object(SettledRecognition.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape13Null(Object value) implements AnswerShape13 {
+        static AnswerShape13Null read(Object value) {
+            return new AnswerShape13Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape13Array(List<AnswerShape13AnyOf1Items> value) implements AnswerShape13 {
+        static AnswerShape13Array read(Object value) {
+            return new AnswerShape13Array(Values.list(value, item0 -> AnswerShape13AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape13AnyOf1Items permits AnswerShape13AnyOf1ItemsObject,AnswerShape13AnyOf1ItemsNull {
+        static AnswerShape13AnyOf1Items read(Object value) {
+            if (value instanceof Map<?,?>) return AnswerShape13AnyOf1ItemsObject.read(value);
+            if (value == null) return new AnswerShape13AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape13AnyOf1ItemsObject(SettledRecognition value) implements AnswerShape13AnyOf1Items {
+        static AnswerShape13AnyOf1ItemsObject read(Object value) {
+            return new AnswerShape13AnyOf1ItemsObject(SettledRecognition.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape13AnyOf1ItemsNull(Object value) implements AnswerShape13AnyOf1Items {
+        static AnswerShape13AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape13AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape14 permits AnswerShape14Array,AnswerShape14Null,AnswerShape14Array2 {
+        static AnswerShape14 read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof Map<?,
+            ?>))) return AnswerShape14Array.read(value);
+            if (value == null) return new AnswerShape14Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> ((union_item_0 instanceof List<?> && ((List<?>)union_item_0).stream().allMatch(union_item_1 -> union_item_1 instanceof Map<?,
+            ?>)) || union_item_0 == null)))) return AnswerShape14Array2.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape14Array(SettledRelations value) implements AnswerShape14 {
+        static AnswerShape14Array read(Object value) {
+            return new AnswerShape14Array(SettledRelations.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape14Null(Object value) implements AnswerShape14 {
+        static AnswerShape14Null read(Object value) {
+            return new AnswerShape14Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape14Array2(List<AnswerShape14AnyOf1Items> value) implements AnswerShape14 {
+        static AnswerShape14Array2 read(Object value) {
+            return new AnswerShape14Array2(Values.list(value, item0 -> AnswerShape14AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape14AnyOf1Items permits AnswerShape14AnyOf1ItemsArray,AnswerShape14AnyOf1ItemsNull {
+        static AnswerShape14AnyOf1Items read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof Map<?,
+            ?>))) return AnswerShape14AnyOf1ItemsArray.read(value);
+            if (value == null) return new AnswerShape14AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape14AnyOf1ItemsArray(SettledRelations value) implements AnswerShape14AnyOf1Items {
+        static AnswerShape14AnyOf1ItemsArray read(Object value) {
+            return new AnswerShape14AnyOf1ItemsArray(SettledRelations.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape14AnyOf1ItemsNull(Object value) implements AnswerShape14AnyOf1Items {
+        static AnswerShape14AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape14AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape15 permits AnswerShape15Object,AnswerShape15Null,AnswerShape15Array {
+        static AnswerShape15 read(Object value) {
+            if (value instanceof Map<?,?>) return AnswerShape15Object.read(value);
+            if (value == null) return new AnswerShape15Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof Map<?,
+            ?> || union_item_0 == null)))) return AnswerShape15Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape15Object(Map<String,SettledJudgment> value) implements AnswerShape15 {
+        static AnswerShape15Object read(Object value) {
+            return new AnswerShape15Object(Values.map(value, item0 -> SettledJudgment.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape15Null(Object value) implements AnswerShape15 {
+        static AnswerShape15Null read(Object value) {
+            return new AnswerShape15Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape15Array(List<AnswerShape15AnyOf1Items> value) implements AnswerShape15 {
+        static AnswerShape15Array read(Object value) {
+            return new AnswerShape15Array(Values.list(value, item0 -> AnswerShape15AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape15AnyOf1Items permits AnswerShape15AnyOf1ItemsObject,AnswerShape15AnyOf1ItemsNull {
+        static AnswerShape15AnyOf1Items read(Object value) {
+            if (value instanceof Map<?,?>) return AnswerShape15AnyOf1ItemsObject.read(value);
+            if (value == null) return new AnswerShape15AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape15AnyOf1ItemsObject(Map<String,SettledJudgment> value) implements AnswerShape15AnyOf1Items {
+        static AnswerShape15AnyOf1ItemsObject read(Object value) {
+            return new AnswerShape15AnyOf1ItemsObject(Values.map(value, item0 -> SettledJudgment.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape15AnyOf1ItemsNull(Object value) implements AnswerShape15AnyOf1Items {
+        static AnswerShape15AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape15AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape2 permits AnswerShape2Number,AnswerShape2Null,AnswerShape2Array {
+        static AnswerShape2 read(Object value) {
+            if (value instanceof BigDecimal) return AnswerShape2Number.read(value);
+            if (value == null) return new AnswerShape2Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof BigDecimal || union_item_0 == null)))) return AnswerShape2Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape2Number(BigDecimal value) implements AnswerShape2 {
+        static AnswerShape2Number read(Object value) {
+            return new AnswerShape2Number((BigDecimal)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape2Null(Object value) implements AnswerShape2 {
+        static AnswerShape2Null read(Object value) {
+            return new AnswerShape2Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape2Array(List<AnswerShape8AnyOf1Items> value) implements AnswerShape2 {
+        static AnswerShape2Array read(Object value) {
+            return new AnswerShape2Array(Values.list(value, item0 -> AnswerShape8AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape3 permits AnswerShape3String,AnswerShape3Null,AnswerShape3Array {
+        static AnswerShape3 read(Object value) {
+            if (value instanceof String) return AnswerShape3String.read(value);
+            if (value == null) return new AnswerShape3Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof String || union_item_0 == null)))) return AnswerShape3Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape3String(String value) implements AnswerShape3 {
+        static AnswerShape3String read(Object value) {
+            return new AnswerShape3String((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape3Null(Object value) implements AnswerShape3 {
+        static AnswerShape3Null read(Object value) {
+            return new AnswerShape3Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape3Array(List<AnswerShape6AnyOf1Items> value) implements AnswerShape3 {
+        static AnswerShape3Array read(Object value) {
+            return new AnswerShape3Array(Values.list(value, item0 -> AnswerShape6AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape4 permits AnswerShape4Integer,AnswerShape4Null,AnswerShape4Array {
+        static AnswerShape4 read(Object value) {
+            if (value instanceof BigDecimal) return AnswerShape4Integer.read(value);
+            if (value == null) return new AnswerShape4Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof BigDecimal || union_item_0 == null)))) return AnswerShape4Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape4Integer(BigInteger value) implements AnswerShape4 {
+        static AnswerShape4Integer read(Object value) {
+            return new AnswerShape4Integer(Values.integer(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape4Null(Object value) implements AnswerShape4 {
+        static AnswerShape4Null read(Object value) {
+            return new AnswerShape4Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape4Array(List<AnswerShape4AnyOf1Items> value) implements AnswerShape4 {
+        static AnswerShape4Array read(Object value) {
+            return new AnswerShape4Array(Values.list(value, item0 -> AnswerShape4AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape4AnyOf1Items permits AnswerShape4AnyOf1ItemsInteger,AnswerShape4AnyOf1ItemsNull {
+        static AnswerShape4AnyOf1Items read(Object value) {
+            if (value instanceof BigDecimal) return AnswerShape4AnyOf1ItemsInteger.read(value);
+            if (value == null) return new AnswerShape4AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape4AnyOf1ItemsInteger(BigInteger value) implements AnswerShape4AnyOf1Items {
+        static AnswerShape4AnyOf1ItemsInteger read(Object value) {
+            return new AnswerShape4AnyOf1ItemsInteger(Values.integer(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape4AnyOf1ItemsNull(Object value) implements AnswerShape4AnyOf1Items {
+        static AnswerShape4AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape4AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape5 permits AnswerShape5String,AnswerShape5Object,AnswerShape5Array {
+        static AnswerShape5 read(Object value) {
+            if (value instanceof String) return AnswerShape5String.read(value);
+            if (value instanceof Map<?,?>) return AnswerShape5Object.read(value);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof String || union_item_0 instanceof Map<?,
+            ?>)))) return AnswerShape5Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape5String(AnswerResolution value) implements AnswerShape5 {
+        static AnswerShape5String read(Object value) {
+            return new AnswerShape5String(AnswerResolution.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape5Object(Map<String,AnswerResolution> value) implements AnswerShape5 {
+        static AnswerShape5Object read(Object value) {
+            return new AnswerShape5Object(Values.map(value, item0 -> AnswerResolution.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape5Array(List<AnswerResolutions> value) implements AnswerShape5 {
+        static AnswerShape5Array read(Object value) {
+            return new AnswerShape5Array(Values.list(value, item0 -> AnswerResolutions.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape6 permits AnswerShape6String,AnswerShape6Null,AnswerShape6Array {
+        static AnswerShape6 read(Object value) {
+            if (value instanceof String) return AnswerShape6String.read(value);
+            if (value == null) return new AnswerShape6Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof String || union_item_0 == null)))) return AnswerShape6Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape6String(String value) implements AnswerShape6 {
+        static AnswerShape6String read(Object value) {
+            return new AnswerShape6String((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape6Null(Object value) implements AnswerShape6 {
+        static AnswerShape6Null read(Object value) {
+            return new AnswerShape6Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape6Array(List<AnswerShape6AnyOf1Items> value) implements AnswerShape6 {
+        static AnswerShape6Array read(Object value) {
+            return new AnswerShape6Array(Values.list(value, item0 -> AnswerShape6AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape6AnyOf1Items permits AnswerShape6AnyOf1ItemsString,AnswerShape6AnyOf1ItemsNull {
+        static AnswerShape6AnyOf1Items read(Object value) {
+            if (value instanceof String) return AnswerShape6AnyOf1ItemsString.read(value);
+            if (value == null) return new AnswerShape6AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape6AnyOf1ItemsString(String value) implements AnswerShape6AnyOf1Items {
+        static AnswerShape6AnyOf1ItemsString read(Object value) {
+            return new AnswerShape6AnyOf1ItemsString((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape6AnyOf1ItemsNull(Object value) implements AnswerShape6AnyOf1Items {
+        static AnswerShape6AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape6AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape7 permits AnswerShape7Array,AnswerShape7Null,AnswerShape7Array2 {
+        static AnswerShape7 read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof String))) return AnswerShape7Array.read(value);
+            if (value == null) return new AnswerShape7Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> ((union_item_0 instanceof List<?> && ((List<?>)union_item_0).stream().allMatch(union_item_1 -> union_item_1 instanceof String)) || union_item_0 == null)))) return AnswerShape7Array2.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape7Array(List<String> value) implements AnswerShape7 {
+        static AnswerShape7Array read(Object value) {
+            return new AnswerShape7Array(Values.list(value, item0 -> (String)item0));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape7Null(Object value) implements AnswerShape7 {
+        static AnswerShape7Null read(Object value) {
+            return new AnswerShape7Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape7Array2(List<AnswerShape7AnyOf1Items> value) implements AnswerShape7 {
+        static AnswerShape7Array2 read(Object value) {
+            return new AnswerShape7Array2(Values.list(value, item0 -> AnswerShape7AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape7AnyOf1Items permits AnswerShape7AnyOf1ItemsArray,AnswerShape7AnyOf1ItemsNull {
+        static AnswerShape7AnyOf1Items read(Object value) {
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof String))) return AnswerShape7AnyOf1ItemsArray.read(value);
+            if (value == null) return new AnswerShape7AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape7AnyOf1ItemsArray(List<String> value) implements AnswerShape7AnyOf1Items {
+        static AnswerShape7AnyOf1ItemsArray read(Object value) {
+            return new AnswerShape7AnyOf1ItemsArray(Values.list(value, item0 -> (String)item0));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape7AnyOf1ItemsNull(Object value) implements AnswerShape7AnyOf1Items {
+        static AnswerShape7AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape7AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape8 permits AnswerShape8Number,AnswerShape8Null,AnswerShape8Array {
+        static AnswerShape8 read(Object value) {
+            if (value instanceof BigDecimal) return AnswerShape8Number.read(value);
+            if (value == null) return new AnswerShape8Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof BigDecimal || union_item_0 == null)))) return AnswerShape8Array.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape8Number(BigDecimal value) implements AnswerShape8 {
+        static AnswerShape8Number read(Object value) {
+            return new AnswerShape8Number((BigDecimal)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape8Null(Object value) implements AnswerShape8 {
+        static AnswerShape8Null read(Object value) {
+            return new AnswerShape8Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape8Array(List<AnswerShape8AnyOf1Items> value) implements AnswerShape8 {
+        static AnswerShape8Array read(Object value) {
+            return new AnswerShape8Array(Values.list(value, item0 -> AnswerShape8AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape8AnyOf1Items permits AnswerShape8AnyOf1ItemsNumber,AnswerShape8AnyOf1ItemsNull {
+        static AnswerShape8AnyOf1Items read(Object value) {
+            if (value instanceof BigDecimal) return AnswerShape8AnyOf1ItemsNumber.read(value);
+            if (value == null) return new AnswerShape8AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape8AnyOf1ItemsNumber(BigDecimal value) implements AnswerShape8AnyOf1Items {
+        static AnswerShape8AnyOf1ItemsNumber read(Object value) {
+            return new AnswerShape8AnyOf1ItemsNumber((BigDecimal)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape8AnyOf1ItemsNull(Object value) implements AnswerShape8AnyOf1Items {
+        static AnswerShape8AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape8AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape9 permits AnswerShape9Array,AnswerShape9Null,AnswerShape9Array2 {
+        static AnswerShape9 read(Object value) {
+            if (value instanceof List<?>) return AnswerShape9Array.read(value);
+            if (value == null) return new AnswerShape9Null(null);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> (union_item_0 instanceof List<?> || union_item_0 == null)))) return AnswerShape9Array2.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape9Array(List<SettledOriginal> value) implements AnswerShape9 {
+        static AnswerShape9Array read(Object value) {
+            return new AnswerShape9Array(Values.list(value, item0 -> SettledOriginal.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape9Null(Object value) implements AnswerShape9 {
+        static AnswerShape9Null read(Object value) {
+            return new AnswerShape9Null(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape9Array2(List<AnswerShape9AnyOf1Items> value) implements AnswerShape9 {
+        static AnswerShape9Array2 read(Object value) {
+            return new AnswerShape9Array2(Values.list(value, item0 -> AnswerShape9AnyOf1Items.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public sealed interface AnswerShape9AnyOf1Items permits AnswerShape9AnyOf1ItemsArray,AnswerShape9AnyOf1ItemsNull {
+        static AnswerShape9AnyOf1Items read(Object value) {
+            if (value instanceof List<?>) return AnswerShape9AnyOf1ItemsArray.read(value);
+            if (value == null) return new AnswerShape9AnyOf1ItemsNull(null);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnswerShape9AnyOf1ItemsArray(List<SettledOriginal> value) implements AnswerShape9AnyOf1Items {
+        static AnswerShape9AnyOf1ItemsArray read(Object value) {
+            return new AnswerShape9AnyOf1ItemsArray(Values.list(value, item0 -> SettledOriginal.read(item0)));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnswerShape9AnyOf1ItemsNull(Object value) implements AnswerShape9AnyOf1Items {
+        static AnswerShape9AnyOf1ItemsNull read(Object value) {
+            return new AnswerShape9AnyOf1ItemsNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class AnswerShapeAnyOf1Items extends View {
+        public AnswerShapeAnyOf1Items(Object value) {
+            super(value);
+        }
+        static AnswerShapeAnyOf1Items read(Object value) {
+            return new AnswerShapeAnyOf1Items(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
     public static final class Answers extends View {
         public Answers(Object value) {
             super(value);
@@ -687,6 +1417,15 @@ public final class Results {
             Object value = required("end");
             return Values.integer(value);
         }
+        public Presence<String> file() {
+            return presence("file", value -> (String)value);
+        }
+        public Presence<BigInteger> firstLine() {
+            return presence("first_line", value -> Values.integer(value));
+        }
+        public Presence<BigInteger> lastLine() {
+            return presence("last_line", value -> Values.integer(value));
+        }
         public BigInteger length() {
             Object value = required("length");
             return Values.integer(value);
@@ -717,6 +1456,10 @@ public final class Results {
         }
         public Presence<Facts> facts() {
             return presence("facts", value -> Facts.read(value));
+        }
+        public AnswerResolution resolution() {
+            Object value = required("resolution");
+            return AnswerResolution.read(value);
         }
     }
     public static final class CallId extends View {
@@ -1999,6 +2742,129 @@ public final class Results {
             return Values.integer(value);
         }
     }
+    public static final class SettledDecision extends View {
+        public SettledDecision(Object value) {
+            super(value);
+        }
+        static SettledDecision read(Object value) {
+            return new SettledDecision(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
+    public sealed interface SettledJudgment permits SettledJudgmentBoolean,SettledJudgmentNull,
+    SettledJudgmentString,SettledJudgmentNumber,SettledJudgmentArray {
+        static SettledJudgment read(Object value) {
+            if (value instanceof Boolean) return SettledJudgmentBoolean.read(value);
+            if (value == null) return new SettledJudgmentNull(null);
+            if (value instanceof String) return SettledJudgmentString.read(value);
+            if (value instanceof BigDecimal) return SettledJudgmentNumber.read(value);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof String))) return SettledJudgmentArray.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record SettledJudgmentBoolean(Boolean value) implements SettledJudgment {
+        static SettledJudgmentBoolean read(Object value) {
+            return new SettledJudgmentBoolean((Boolean)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record SettledJudgmentNull(Object value) implements SettledJudgment {
+        static SettledJudgmentNull read(Object value) {
+            return new SettledJudgmentNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record SettledJudgmentString(String value) implements SettledJudgment {
+        static SettledJudgmentString read(Object value) {
+            return new SettledJudgmentString((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record SettledJudgmentNumber(BigDecimal value) implements SettledJudgment {
+        static SettledJudgmentNumber read(Object value) {
+            return new SettledJudgmentNumber((BigDecimal)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record SettledJudgmentArray(List<String> value) implements SettledJudgment {
+        static SettledJudgmentArray read(Object value) {
+            return new SettledJudgmentArray(Values.list(value, item0 -> (String)item0));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class SettledOriginal extends View {
+        public SettledOriginal(Object value) {
+            super(value);
+        }
+        static SettledOriginal read(Object value) {
+            return new SettledOriginal(value);
+        }
+        public Object value() {
+            return Values.freeze(json());
+        }
+    }
+    public sealed interface SettledRecognition permits SettledRecognitionEntities,SettledRecognitionModeProposals {
+        static SettledRecognition read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if (object.containsKey("entities") && !object.containsKey("mode") && !object.containsKey("proposals")) return SettledRecognitionEntities.read(value);
+            if (object.containsKey("mode") && object.containsKey("proposals") && !object.containsKey("entities")) return SettledRecognitionModeProposals.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class SettledRecognitionEntities extends View implements SettledRecognition {
+        public SettledRecognitionEntities(Object value) {
+            super(value);
+        }
+        static SettledRecognitionEntities read(Object value) {
+            return new SettledRecognitionEntities(value);
+        }
+        public List<Entity> entities() {
+            Object value = required("entities");
+            return Values.list(value, item0 -> Entity.read(item0));
+        }
+        public Presence<List<EntityEdge>> relations() {
+            return presence("relations", value -> Values.list(value, item0 -> EntityEdge.read(item0)));
+        }
+    }
+    public static final class SettledRecognitionModeProposals extends View implements SettledRecognition {
+        public SettledRecognitionModeProposals(Object value) {
+            super(value);
+        }
+        static SettledRecognitionModeProposals read(Object value) {
+            return new SettledRecognitionModeProposals(value);
+        }
+        public BoundaryMode mode() {
+            Object value = required("mode");
+            return BoundaryMode.read(value);
+        }
+        public List<BoundaryProposal> proposals() {
+            Object value = required("proposals");
+            return Values.list(value, item0 -> BoundaryProposal.read(item0));
+        }
+    }
+    public static final class SettledRelations extends View {
+        public SettledRelations(Object value) {
+            super(value);
+        }
+        static SettledRelations read(Object value) {
+            return new SettledRelations(value);
+        }
+        public List<RelatedEntityEdge> value() {
+            return Values.list(json(), item0 -> RelatedEntityEdge.read(item0));
+        }
+    }
     public static final class StopCause extends View {
         public StopCause(Object value) {
             super(value);
@@ -2119,7 +2985,7 @@ public final class Results {
             if (value instanceof Boolean) return AnnotatedFieldBoolean.read(value);
             if (value == null) return new AnnotatedFieldNull(null);
             if (value instanceof String) return AnnotatedFieldString.read(value);
-            if (value instanceof List<?>) return AnnotatedFieldArray.read(value);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof String))) return AnnotatedFieldArray.read(value);
             if (value instanceof BigDecimal) return AnnotatedFieldNumber.read(value);
             if (value instanceof Map<?,?>) return AnnotatedFieldObject.read(value);
             throw new IllegalStateException("Unknown native value alternative");
@@ -3781,6 +4647,10 @@ public final class Results {
         static SessionPacketTerminal read(Object value) {
             return new SessionPacketTerminal(value);
         }
+        public Presence<SettledAnswer> answer() {
+            required("answer");
+            return presence("answer", value -> SettledAnswer.read(value));
+        }
         public Presence<Facts> facts() {
             return presence("facts", value -> Facts.read(value));
         }
@@ -3790,6 +4660,10 @@ public final class Results {
         public String kind() {
             Object value = required("kind");
             return (String)value;
+        }
+        public AnswerResolution resolution() {
+            Object value = required("resolution");
+            return AnswerResolution.read(value);
         }
     }
     public sealed interface SessionProbabilities permits SessionProbabilitiesYesNo,SessionProbabilitiesNamed {
@@ -3980,6 +4854,344 @@ public final class Results {
             return (String)Values.object(required("target")).get("name");
         }
     }
+    public sealed interface SettledAnswer permits SettledAnswerDecide,SettledAnswerChoose,SettledAnswerTag,
+    SettledAnswerScore,SettledAnswerFilter,SettledAnswerRank,SettledAnswerFind,SettledAnswerRecognize,
+    SettledAnswerRelate,SettledAnswerAnnotate {
+        static SettledAnswer read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if ("decide".equals(object.get("function"))) return SettledAnswerDecide.read(value);
+            if ("choose".equals(object.get("function"))) return SettledAnswerChoose.read(value);
+            if ("tag".equals(object.get("function"))) return SettledAnswerTag.read(value);
+            if ("score".equals(object.get("function"))) return SettledAnswerScore.read(value);
+            if ("filter".equals(object.get("function"))) return SettledAnswerFilter.read(value);
+            if ("rank".equals(object.get("function"))) return SettledAnswerRank.read(value);
+            if ("find".equals(object.get("function"))) return SettledAnswerFind.read(value);
+            if ("recognize".equals(object.get("function"))) return SettledAnswerRecognize.read(value);
+            if ("relate".equals(object.get("function"))) return SettledAnswerRelate.read(value);
+            if ("annotate".equals(object.get("function"))) return SettledAnswerAnnotate.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class SettledAnswerAnnotate extends View implements SettledAnswer {
+        public SettledAnswerAnnotate(Object value) {
+            super(value);
+        }
+        static SettledAnswerAnnotate read(Object value) {
+            return new SettledAnswerAnnotate(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape15> value() {
+            required("value");
+            return presence("value", value -> AnswerShape15.read(value));
+        }
+    }
+    public static final class SettledAnswerChoose extends View implements SettledAnswer {
+        public SettledAnswerChoose(Object value) {
+            super(value);
+        }
+        static SettledAnswerChoose read(Object value) {
+            return new SettledAnswerChoose(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape6> value() {
+            required("value");
+            return presence("value", value -> AnswerShape6.read(value));
+        }
+    }
+    public static final class SettledAnswerDecide extends View implements SettledAnswer {
+        public SettledAnswerDecide(Object value) {
+            super(value);
+        }
+        static SettledAnswerDecide read(Object value) {
+            return new SettledAnswerDecide(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public AnswerShape value() {
+            Object value = required("value");
+            return AnswerShape.read(value);
+        }
+    }
+    public static final class SettledAnswerFilter extends View implements SettledAnswer {
+        public SettledAnswerFilter(Object value) {
+            super(value);
+        }
+        static SettledAnswerFilter read(Object value) {
+            return new SettledAnswerFilter(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape10> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape10.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape9> value() {
+            required("value");
+            return presence("value", value -> AnswerShape9.read(value));
+        }
+    }
+    public static final class SettledAnswerFind extends View implements SettledAnswer {
+        public SettledAnswerFind(Object value) {
+            super(value);
+        }
+        static SettledAnswerFind read(Object value) {
+            return new SettledAnswerFind(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public AnswerShape12 value() {
+            Object value = required("value");
+            return AnswerShape12.read(value);
+        }
+    }
+    public static final class SettledAnswerRank extends View implements SettledAnswer {
+        public SettledAnswerRank(Object value) {
+            super(value);
+        }
+        static SettledAnswerRank read(Object value) {
+            return new SettledAnswerRank(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape10> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape10.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape11> value() {
+            required("value");
+            return presence("value", value -> AnswerShape11.read(value));
+        }
+    }
+    public static final class SettledAnswerRecognize extends View implements SettledAnswer {
+        public SettledAnswerRecognize(Object value) {
+            super(value);
+        }
+        static SettledAnswerRecognize read(Object value) {
+            return new SettledAnswerRecognize(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape10> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape10.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape13> value() {
+            required("value");
+            return presence("value", value -> AnswerShape13.read(value));
+        }
+    }
+    public static final class SettledAnswerRelate extends View implements SettledAnswer {
+        public SettledAnswerRelate(Object value) {
+            super(value);
+        }
+        static SettledAnswerRelate read(Object value) {
+            return new SettledAnswerRelate(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape10> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape10.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape14> value() {
+            required("value");
+            return presence("value", value -> AnswerShape14.read(value));
+        }
+    }
+    public static final class SettledAnswerScore extends View implements SettledAnswer {
+        public SettledAnswerScore(Object value) {
+            super(value);
+        }
+        static SettledAnswerScore read(Object value) {
+            return new SettledAnswerScore(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape8> value() {
+            required("value");
+            return presence("value", value -> AnswerShape8.read(value));
+        }
+    }
+    public static final class SettledAnswerTag extends View implements SettledAnswer {
+        public SettledAnswerTag(Object value) {
+            super(value);
+        }
+        static SettledAnswerTag read(Object value) {
+            return new SettledAnswerTag(value);
+        }
+        public String function() {
+            Object value = required("function");
+            return (String)value;
+        }
+        public Presence<AnswerShape4> index() {
+            required("index");
+            return presence("index", value -> AnswerShape4.read(value));
+        }
+        public Presence<AnswerShape3> pick() {
+            required("pick");
+            return presence("pick", value -> AnswerShape3.read(value));
+        }
+        public Presence<AnswerShape2> probability() {
+            required("probability");
+            return presence("probability", value -> AnswerShape2.read(value));
+        }
+        public AnswerShape5 resolution() {
+            Object value = required("resolution");
+            return AnswerShape5.read(value);
+        }
+        public Presence<AnswerShape7> value() {
+            required("value");
+            return presence("value", value -> AnswerShape7.read(value));
+        }
+    }
     public static final class SourceRelationEndpoint extends View {
         public SourceRelationEndpoint(Object value) {
             super(value);
@@ -4074,7 +5286,7 @@ public final class Results {
             if (value instanceof Boolean) return ValueBoolean.read(value);
             if (value == null) return new ValueNull(null);
             if (value instanceof String) return ValueString.read(value);
-            if (value instanceof List<?>) return ValueArray.read(value);
+            if ((value instanceof List<?> && ((List<?>)value).stream().allMatch(union_item_0 -> union_item_0 instanceof String))) return ValueArray.read(value);
             if (value instanceof BigDecimal) return ValueNumber.read(value);
             throw new IllegalStateException("Unknown native value alternative");
         }
@@ -4180,8 +5392,74 @@ public final class Results {
         }
     }
     static Object tree(Object value) {
+        if (value instanceof AnswerResolutionsString item) return Values.json(item.value());
+        if (value instanceof AnswerResolutionsObject item) return Values.json(item.value());
+        if (value instanceof AnswerShape10Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape10Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape10Array2 item) return Values.json(item.value());
+        if (value instanceof AnswerShape10AnyOf1ItemsArray item) return Values.json(item.value());
+        if (value instanceof AnswerShape10AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape11Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape11Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape11Array2 item) return Values.json(item.value());
+        if (value instanceof AnswerShape11AnyOf1ItemsArray item) return Values.json(item.value());
+        if (value instanceof AnswerShape11AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape13Object item) return Values.json(item.value());
+        if (value instanceof AnswerShape13Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape13Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape13AnyOf1ItemsObject item) return Values.json(item.value());
+        if (value instanceof AnswerShape13AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape14Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape14Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape14Array2 item) return Values.json(item.value());
+        if (value instanceof AnswerShape14AnyOf1ItemsArray item) return Values.json(item.value());
+        if (value instanceof AnswerShape14AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape15Object item) return Values.json(item.value());
+        if (value instanceof AnswerShape15Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape15Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape15AnyOf1ItemsObject item) return Values.json(item.value());
+        if (value instanceof AnswerShape15AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape2Number item) return Values.json(item.value());
+        if (value instanceof AnswerShape2Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape2Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape3String item) return Values.json(item.value());
+        if (value instanceof AnswerShape3Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape3Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape4Integer item) return Values.json(item.value());
+        if (value instanceof AnswerShape4Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape4Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape4AnyOf1ItemsInteger item) return Values.json(item.value());
+        if (value instanceof AnswerShape4AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape5String item) return Values.json(item.value());
+        if (value instanceof AnswerShape5Object item) return Values.json(item.value());
+        if (value instanceof AnswerShape5Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape6String item) return Values.json(item.value());
+        if (value instanceof AnswerShape6Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape6Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape6AnyOf1ItemsString item) return Values.json(item.value());
+        if (value instanceof AnswerShape6AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape7Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape7Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape7Array2 item) return Values.json(item.value());
+        if (value instanceof AnswerShape7AnyOf1ItemsArray item) return Values.json(item.value());
+        if (value instanceof AnswerShape7AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape8Number item) return Values.json(item.value());
+        if (value instanceof AnswerShape8Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape8Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape8AnyOf1ItemsNumber item) return Values.json(item.value());
+        if (value instanceof AnswerShape8AnyOf1ItemsNull item) return Values.json(item.value());
+        if (value instanceof AnswerShape9Array item) return Values.json(item.value());
+        if (value instanceof AnswerShape9Null item) return Values.json(item.value());
+        if (value instanceof AnswerShape9Array2 item) return Values.json(item.value());
+        if (value instanceof AnswerShape9AnyOf1ItemsArray item) return Values.json(item.value());
+        if (value instanceof AnswerShape9AnyOf1ItemsNull item) return Values.json(item.value());
         if (value instanceof BatchInteger item) return Values.json(item.value());
         if (value instanceof BatchString item) return Values.json(item.value());
+        if (value instanceof SettledJudgmentBoolean item) return Values.json(item.value());
+        if (value instanceof SettledJudgmentNull item) return Values.json(item.value());
+        if (value instanceof SettledJudgmentString item) return Values.json(item.value());
+        if (value instanceof SettledJudgmentNumber item) return Values.json(item.value());
+        if (value instanceof SettledJudgmentArray item) return Values.json(item.value());
         if (value instanceof AnnotatedFieldBoolean item) return Values.json(item.value());
         if (value instanceof AnnotatedFieldNull item) return Values.json(item.value());
         if (value instanceof AnnotatedFieldString item) return Values.json(item.value());

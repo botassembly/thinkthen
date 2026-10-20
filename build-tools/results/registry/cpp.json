@@ -1,0 +1,17 @@
+[
+  {
+    "mode": "results",
+    "path": "libraries/cpp/include/thinkthen/results_generated.hpp",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/cpp/include/thinkthen/inputs_generated.hpp",
+    "producer": "results"
+  },
+  {
+    "mode": "inputs",
+    "path": "libraries/cpp/include/thinkthen/calls_generated.hpp",
+    "producer": "results"
+  }
+]

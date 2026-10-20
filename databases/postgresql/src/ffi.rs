@@ -350,9 +350,16 @@ unsafe extern "C-unwind" fn check_throttle(
     _source: pg_sys::GucSource::Type,
 ) -> bool {
     // SAFETY: PostgreSQL passes the proposed value, live for this call.
-    let Some(refusal) = crate::call::throttle_refusal(unsafe { *value }) else {
+    let proposed = unsafe { *value };
+    if proposed == -1 {
+        return true;
+    }
+    let Err(error) =
+        thinkthen::EngineBuilder::validate_settings_json(&format!("{{\"throttle\":{proposed}}}"))
+    else {
         return true;
     };
+    let refusal = crate::call::text(&error);
     let text = std::ffi::CString::new(refusal).unwrap_or_default();
     // SAFETY: PostgreSQL clears the message before each check and reads it
     // right after; `pstrdup` copies it into the current memory context.

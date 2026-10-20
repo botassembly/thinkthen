@@ -1,23 +1,23 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19, amended by ADR 0048. ADR 0039 carries structured text and descriptions through it.
+Status: **Settled**, by ADR 0013 and Ian's ruling of 2026-09-19, amended by ADR 0048. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
 ## Recognition files
 
-`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is optional. Left out or empty, every name has the kind `ENTITY`, and the canonical question writes `"kinds":{}`. The kinds `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case, and a file that names one exits 5. Optional `recognize.relations` entries carry `name`, optional `source`, optional `target`, optional `reads`, and optional `either`. A left-out side means any kind. `*` and `ANY` both mean any kind, and the canonical question writes `*`. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
+`recognize @FILE` reads a closed object. Ordered `recognize.kinds` is optional. Left out or empty, every name has the kind `ENTITY`, and the canonical question writes `"kinds":{}`. The kinds `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case, and a file that names one exits 5. Optional `recognize.relations` entries carry `name`, optional `source`, optional `target`, optional `reads`, and optional `either`. A left-out side means any kind. `*` and `ANY` both mean any kind, and the canonical question writes `*`. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
 
 ```json
-{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile","on":"/body"}
+{"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile","on":"/body"}
 ```
 
 ## Relation files
 
-`relate @FILE` reads a closed version-one object. Ordered `relate.relations` is required. Each entry carries `name`, `source`, `target`, optional `reads`, optional `either`, and optional `single`. Optional `relate.fields` carries RFC 6901 `name` and `kind` pointers. Top-level `threshold`, `model`, and saved calibration `profile` have their ordinary meanings. [relate.md](relate.md) gives the complete grammar and precedence.
+`relate @FILE` reads a closed object. Ordered `relate.relations` is required. Each entry carries `name`, `source`, `target`, optional `reads`, optional `either`, and optional `single`. Optional `relate.fields` carries RFC 6901 `name` and `kind` pointers. Top-level `threshold`, `model`, and saved calibration `profile` have their ordinary meanings. [relate.md](relate.md) gives the complete grammar and precedence.
 
 ```json
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile"}
+{"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile"}
 ```
 
 ## Naming a file
@@ -56,7 +56,7 @@ A question file holds exactly one question. The first key names the verb and car
 {"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
-The atomic grammar requires one of `decide`, `choose`, `tag`, and `score`, and so is a file that holds two of them. A key no question file has is refused by name: ``a question file takes no key `K` ``. The key `version` adds where it belongs: ``a question file takes no key `version`; `version` belongs in a question set, a recognize file, or a relate file``. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
+The atomic grammar requires one of `decide`, `choose`, `tag`, and `score`, and so is a file that holds two of them. A key no question file has is refused by name: ``a question file takes no key `K` ``. The key `version` adds the instruction to delete the field. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
 
 The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
 
@@ -112,7 +112,7 @@ A single value typed beside `@FILE` replaces the file's value. That covers `--th
 
 On Windows the configuration file is `%APPDATA%\thinkthen\config.json`. The following configuration-home example uses Linux folders.
 
-For example, put `{"schema":"thinkthen.config/1","model":"configured-1"}` in `$XDG_CONFIG_HOME/thinkthen/config.json` and `{"decide":"Is this a complaint?","model":"saved-1"}` in `question.json`. With `XDG_CONFIG_HOME` pointing at that configuration home, `thinkthen decide @question.json --plan < message.txt | sed -n '1p' | jq -r .model` prints `saved-1`. Add `--model typed-1` to that call and it prints `typed-1`. The file's `model` therefore beats the configured model, while the typed flag beats the file. The complete model order is in [settings.md](settings.md#precedence); there is no model environment variable.
+For example, put `{"model":"configured-1"}` in `$XDG_CONFIG_HOME/thinkthen/config.json` and `{"decide":"Is this a complaint?","model":"saved-1"}` in `question.json`. With `XDG_CONFIG_HOME` pointing at that configuration home, `thinkthen decide @question.json --plan < message.txt | sed -n '1p' | jq -r .model` prints `saved-1`. Add `--model typed-1` to that call and it prints `typed-1`. The file's `model` therefore beats the configured model, while the typed flag beats the file. The complete model order is in [settings.md](settings.md#precedence); there is no model environment variable.
 
 `--batch` replaces the file's `batch`. On `decide`, `filter`, `rank`, `choose`, `tag`, and `score` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. A file with a threshold was tuned at its saved `batch`, or at 1 if it has no `batch`. A record run at another setting warns once and adds `meta.batch_warning` to detailed rows. A file without a threshold has no tuned-for setting. `audit --write` records a batched setting when it writes a threshold and never writes 1; a bar tuned at 1 leaves `batch` absent and warns at the batched default. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. For CLI `annotate` record streams, the tiers are typed `--batch`, `THINKTHEN_BATCH`, top-level set `batch`, then `max`. That set key stays out of `questions_sha256`; each nested `questions.NAME.batch` remains invalid. Every other setting keeps the ruling above.
 
@@ -189,7 +189,7 @@ The canonical form is not the `question` field of a result. That field prints a 
 
 ## The digest of a question set
 
-`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. The canonical object has `version`, optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
+`annotate --details` carries `meta.questions_sha256`. ADR 0027 fixes it as the SHA-256 of resolved behavior. Question sets, recognize files and relate files carry no `version` member. A present member is refused with the sentence ``delete the `version` field.`` Resolved question-set JSON omits the member. The private hash encoding retains its existing constant to preserve `questions_sha256`; it has optional top-level `profile`, then `questions`. `questions` is a list in file order. Each member has `name`, `question`, then `on`. `question` is the canonical question above, including its effective threshold. `on` is always a list, and an absent `on` becomes `[""]`. A nested question cannot carry `profile`. The path, model, address, formatting, and other runtime settings are absent.
 
 ```json
 {"version":1,"questions":[{"name":"refund","question":{"verb":"decide","text":"Does this ask for a refund?","threshold":0.5},"on":[""]}]}

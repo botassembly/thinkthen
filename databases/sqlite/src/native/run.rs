@@ -41,7 +41,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
             .as_deref()
             .map_or(controls, |context| controls.context(context));
         if details {
-            return Ok(sql_request::run_recovering(
+            return Ok(super::execution::run_recovering(
                 engine,
                 &prepared,
                 &request,
@@ -50,7 +50,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
                 Surface::Sqlite,
             )?);
         }
-        Ok(sql_request::run(
+        Ok(super::execution::run(
             engine,
             &prepared,
             &request,
@@ -179,7 +179,7 @@ pub(super) struct Invocation {
     verb: &'static str,
     prepared: complete_native::Prepared,
     request: thinkthen::AdmittedRequest,
-    inputs: complete_native::Inputs,
+    inputs: super::inputs::Inputs,
     settings: thinkthen::Settings,
     keys: Vec<String>,
     ids: crate::tables::Ids,
@@ -341,7 +341,7 @@ fn admit(
                 .with_resolved_definition(sql_request::definition(prepared))?
         }
         None => match native_source {
-            Some(source) => sql_request::request_source(prepared, source, options)?.admit()?,
+            Some(source) => super::execution::request_source(prepared, source, options)?.admit()?,
             None => sql_request::request(prepared, options)?.admit()?,
         },
     })

@@ -1,22 +1,25 @@
 #!/bin/sh
 # Exercise the installed owned API; full shared parity is release-only.
 set -eu
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-root=$(CDPATH= cd -- "$here/../.." && pwd)
 case ${THINKTHEN_TEST_PROFILE:-routine} in
- routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 77 ;;
+ routine|full|smoke) ;; stress) echo 'Zig: not run: no stress gate'; exit 1 ;;
  *) echo 'Zig: unknown test profile' >&2; exit 2 ;;
 esac
-zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
-[ -x "$zig" ] || exit 77
+python3 "$(dirname -- "$0")/../../sdlc/scripts/check_verdict.py" platform libraries/zig
+tools_group=zig
+. "$(dirname -- "$0")/../../sdlc/scripts/resolved-tools"
+here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+root=$(CDPATH= cd -- "$here/../.." && pwd)
+zig=$(command -v zig || true)
+[ -x "$zig" ] || exit 1
+for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 1; done
 export THINKTHEN_ZIG="$zig"
-for tool in python3 node cc; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
-export PATH="$(dirname "$zig"):$PATH"
+python3 "$root/conformance/children/privacy.py" --sources "$here" --public --artifact-env
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
 mkdir -p "$here/target/cache" "$here/target/scratch" "$here/target/artifacts"
-python3 "$root/sdlc/generators/results/generate.py" --target zig --inputs --check
-python3 "$root/sdlc/generators/results/generate.py" --target zig --check
+python3 "$root/build-tools/results/generate.py" --target zig --inputs --check
+python3 "$root/build-tools/results/generate.py" --target zig --check
 "$zig" fmt --check "$here/src/blocking.zig" "$here/src/thinkthen.zig" "$here/src/session.zig" "$here/src/authored.zig" "$here/build.zig" \
     "$here/Tests/session.zig" "$here/Tests/session_consumer.zig" "$here/Tests/request_fixture.zig" \
     "$here/Tests/session-build.zig" "$here/examples/decide.zig" "$here/examples/smoke.zig"
@@ -30,6 +33,7 @@ if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT="$here/target/artifacts/thinkthen-zig-$version-x86_64-unknown-linux-gnu.tar.gz"
     export THINKTHEN_ARTIFACT
 fi
+python3 "$root/conformance/children/privacy.py" "$THINKTHEN_ARTIFACT"
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     smoke_guard
     . "$root/sdlc/scripts/installed.sh"
@@ -42,5 +46,4 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$root/conformance/children/native_guard.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"

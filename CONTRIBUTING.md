@@ -7,11 +7,12 @@ Thank you for helping. Read `README.md`, then `specification/README.md`. The spe
 Build the command and put it on your `PATH`:
 
 ```sh
-cargo build --locked --release -p thinkthen --bin thinkthen
+cargo build --locked --release -p thinkthen-cli --bin thinkthen
 mkdir -p "$HOME/.local/bin"
 install -m 755 target/release/thinkthen "$HOME/.local/bin/thinkthen"
-export PATH="$HOME/.local/bin:$PATH"
 ```
+
+Add the installed commands folder to your shell’s PATH.
 
 ## External contributions
 
@@ -31,7 +32,7 @@ sdlc/scripts/spec
 sdlc/scripts/surfaces
 ```
 
-No rung touches the network. Tests replay recorded responses, so you need no key. Maintainers can run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` by hand.
+The tool resolver installs the versions in `sdlc/tools.json` and `sdlc/tools/<language>.json` into the job checkout on macOS. Linux gates consume that manifest from the pinned tool image. Builds and tests run offline after preparation. Tests replay recorded responses, so you need no key. Maintainers can run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` by hand.
 
 ## The four names
 

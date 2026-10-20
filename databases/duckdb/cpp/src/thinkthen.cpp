@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp"
 #include "bridge.hpp"
+#include "engine_settings.hpp"
 #include "find.hpp"
 #include "files.hpp"
 #include "images.hpp"
@@ -24,24 +25,9 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_query_budget_ms", "Whole-statement ThinkThen time budget in milliseconds",
 	                          LogicalType::BIGINT, Value::BIGINT(-1));
-	config.AddExtensionOption("thinkthen_batch", "Maximum records in one ThinkThen request, or max", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_throttle", "Maximum concurrent ThinkThen requests", LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_max_request_bytes", "Positive ThinkThen request-byte ceiling", LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
-	                          LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_backend", "ThinkThen named backend", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_base_url", "Explicit ThinkThen backend address",LogicalType::VARCHAR);
-    config.AddExtensionOption("thinkthen_usd_per_million_input", "Caller input price per million tokens",LogicalType::VARCHAR);
-    config.AddExtensionOption("thinkthen_usd_per_million_output", "Caller output price per million tokens",LogicalType::VARCHAR);
-    config.AddExtensionOption("thinkthen_refresh_cache", "Refresh cached native answers: 0 or 1",LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_model", "ThinkThen model", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_timeout", "Live attempt timeout in seconds", LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_max_retries", "Maximum live retries", LogicalType::BIGINT);
-	config.AddExtensionOption("thinkthen_profile", "Inline backend limits profile JSON", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_record", "Local recording folder", LogicalType::VARCHAR);
-	config.AddExtensionOption("thinkthen_replay", "Local strict replay folder", LogicalType::VARCHAR);
+    for (const auto &setting : ENGINE_SETTINGS) {
+        config.AddExtensionOption(string("thinkthen_") + setting.name, setting.description, LogicalType(setting.type));
+    }
 	RegisterPortableDecide(loader);
 	RegisterPlan(loader);
 	RegisterNested(loader);

@@ -12,6 +12,34 @@ cd "$repo"
 . "$repo/sdlc/scripts/fetch.sh"
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 fail() { echo "release-workflow: $*" >&2; exit 1; }
+manifest_version() {
+	python3 - "$1" <<'PYPIN'
+import sys
+from sdlc.scripts.tools import load_manifest
+manifest = load_manifest()
+key = sys.argv[1]
+print(manifest['python_packages'][key] if key in manifest['python_packages'] else manifest['tools'][key]['version'])
+PYPIN
+}
+prepare_python_tools() {
+	python3 -m pip install --disable-pip-version-check "maturin==$(manifest_version maturin)" "jsonschema==$(manifest_version jsonschema)" "uv==$(manifest_version uv)"
+	# Use the package just installed even when the runner has an earlier uv on PATH.
+	uv_bin=$(python3 -c 'import uv; from pathlib import Path; print(Path(uv.find_uv_bin()).as_posix())')
+	uv_read=$("$uv_bin" --version)
+	case $uv_read in "uv $(manifest_version uv)" | "uv $(manifest_version uv) "*) ;; *) fail "uv version differs from tools.json: $uv_read" ;; esac
+	PATH=${uv_bin%/*}:$PATH
+	export PATH
+	[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
+}
+prepare_rust() {
+	rust_pin=$(manifest_version rust)
+	# The job resolver already installed and checked this toolchain and its components.
+	# Its runtime Cargo home shares dependency caches, not the rustup installation.
+	if [ -z "${THINKTHEN_RESOLVED_TOOLS:-}" ]; then
+		rustup toolchain install "$rust_pin" --profile minimal "$@"
+	fi
+	[ "$(rustc --version | cut -d ' ' -f 2)" = "$rust_pin" ] || fail 'Rust version differs from tools.json'
+}
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 go_cpp_names() {
 	dir=$1 target=$2
@@ -123,82 +151,131 @@ install_dart() {
 	(cd "$dart_dependencies" && PUB_CACHE=$pub_cache "$dart_bin" pub get --enforce-lockfile) ||
 		fail 'pinned Dart dependency cache fill failed'
 }
-case ${1:-} in
-disk)
-	# disk LABEL [PATH...] (ticket 0366): print the root disk's free space and the size of each
-	# named path that exists, so a run log shows where the build job's disk goes.
-	[ "$#" -ge 2 ] || fail 'disk LABEL [PATH...]'
-	echo "disk: $2"
-	shift 2
-	df -h / || true
-	for path in "$@"; do [ ! -e "$path" ] || du -sh -- "$path" || true; done
-	;;
-linux-work)
-	# Rehearsal run 36812401623 left 95 MB free on the x86 build runner's root disk while the
-	# container built. Hosted Linux runners carry a second disk at /mnt. This prints a folder there
-	# for the container build when /mnt is writable and has more free space than the root disk.
-	# Otherwise it prints FALLBACK. It deletes nothing (worktrees.md rule 11).
-	[ "$#" = 2 ] || fail 'linux-work FALLBACK'
-	df -h / /mnt >&2 || true
-	root_free=$(df -Pk / | awk 'NR == 2 {print $4}')
-	mnt_free=$(df -Pk /mnt 2>/dev/null | awk 'NR == 2 {print $4}')
-	if [ "${mnt_free:-0}" -gt "${root_free:-0}" ] && sudo -n mkdir -p /mnt/thinkthen-container &&
-		sudo -n chown "$(id -u):$(id -g)" /mnt/thinkthen-container; then
-		printf '%s\n' /mnt/thinkthen-container
-	else
-		printf '%s\n' "$2"
+host_setup() (
+	[ "$#" = 2 ] || fail 'host-setup TARGET'
+	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
+	prepare_rust --component clippy --component rustfmt
+	if [ "$2" = x86_64-pc-windows-msvc ]; then
+		python3 - "$(rustc --print sysroot)" "${RUSTUP_HOME:-$HOME/.rustup}" <<'PYWIN'
+from pathlib import Path
+import sys
+if not Path(sys.argv[1]).resolve().is_relative_to(Path(sys.argv[2]).resolve() / "toolchains"):
+    raise SystemExit("release-workflow: Rust does not use the isolated official rustup sysroot")
+PYWIN
+		cargo fetch --locked --manifest-path Cargo.toml
+		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
+		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+		cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml
+		prepare_python_tools
+		exit 0
 	fi
-	;;
-apple-check)
-	[ "$#" = 5 ] || fail 'apple-check TARGET DIR swift|objective-c SHA'
-	case $(uname -s):$(uname -m):$2 in
-	Darwin:arm64:aarch64-apple-darwin | Darwin:x86_64:x86_64-apple-darwin) ;;
-	*) fail 'Apple installed check requires its matching macOS host' ;;
-	esac
-	case $4 in swift | objective-c) ;; *) fail 'select exactly one Apple language' ;; esac
-	python3 sdlc/scripts/hosted-candidate.py checkout "$5" "$5"
-	archive=$3/thinkthen-$4-$version-$2.tar.gz
-	(cd "$3" && sha256 -c "${archive##*/}.sha256") || fail 'Apple package checksum differs'
-	tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
-		grep -Fxq "source_commit=$5" || fail 'Apple package source differs from candidate SHA'
-	THINKTHEN_ARTIFACT=$(CDPATH='' cd -- "$3" && pwd)/${archive##*/}
-	export THINKTHEN_ARTIFACT
-	# Only a completed check qualifies. A missing tool or package (77) fails.
-	sh "libraries/$4/check.sh" && code=0 || code=$?
-	. sdlc/scripts/verdict.sh
-	verdict release "libraries/$4" "$code"
-	;;
-source-capture)
-	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
-	[ "$3" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
-	[ -d "$2" ] && [ ! -L "$2" ] && [ -z "$(find "$2" -mindepth 1 -print -quit)" ] || fail 'provenance must start empty'
-	git archive --format=tar HEAD >"$2/source.tar"
-	[ "$(git get-tar-commit-id <"$2/source.tar")" = "$3" ] || fail 'Git tar header differs from resolved SHA'
-	python3 - "$2/source.tar" "$2/source.json" "$3" <<'PY'
-import hashlib, json, pathlib, sys
-source, output = map(pathlib.Path, sys.argv[1:3])
-commit = sys.argv[3]
-output.write_text(json.dumps({"commit": commit, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
-PY
-	chmod 444 "$2/source.json"
-	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$3"
-	;;
-c-capture)
-	[ "$#" = 4 ] || fail 'c-capture C_ARCHIVE PROVENANCE_DIR TARGET'
-	[ "$4" = x86_64-unknown-linux-gnu ] || fail 'C receipt is x86 only'
-	[ -d "$3" ] && [ ! -L "$3" ] && [ -f "$3/source.json" ] || fail 'source provenance is missing'
-	[ ! -e "$3/c.json" ] && [ ! -L "$3/c.json" ] || fail 'C receipt already exists'
-	name=thinkthen-c-$version-$4.tar.gz
-	[ "${2##*/}" = "$name" ] && [ -f "$2" ] && [ ! -L "$2" ] || fail 'selected C archive is missing or linked'
-	python3 - "$2" "$3/c.json" <<'PY'
-import hashlib, json, pathlib, sys
-source, output = map(pathlib.Path, sys.argv[1:])
-output.write_text(json.dumps({"name": source.name, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
-PY
-	chmod 444 "$3/c.json"
-	python3 sdlc/scripts/release-managed-pair.py c-check "$2" "$3/c.json" "$4" "$version"
-	;;
-managed-tools)
+	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
+	# release-pack builds the static command for the host's musl target.
+	case $2:${RELEASE_SMOKE:-0} in *-linux-gnu:0) rustup target add --toolchain "$(manifest_version rust)" "${2%-gnu}-musl" ;; esac
+	for manifest in Cargo.toml libraries/c/Cargo.toml databases/sqlite/Cargo.toml databases/duckdb/Cargo.toml \
+		crates/thinkthen-host/Cargo.toml databases/duckdb/bridge/Cargo.toml databases/postgresql/Cargo.toml libraries/python/Cargo.toml \
+		libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml libraries/polars/consumer/Cargo.toml; do
+		cargo fetch --locked --manifest-path "$manifest"
+	done
+	if [ "$(cargo deny --version 2>/dev/null || true)" != "cargo-deny $(manifest_version deny)" ]; then
+		cargo install --locked --version "$(manifest_version deny)" cargo-deny
+	fi
+	cargo deny fetch db
+	prepare_python_tools
+	[ "$(maturin --version)" = "maturin $(manifest_version maturin)" ] || fail 'maturin version differs from pin'
+	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
+	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		command -v python3.13 >/dev/null || fail 'the pinned DuckDB host needs Python 3.13'
+		case $(python3.13 --version) in 'Python 3.13.'*) ;; *) fail 'the DuckDB Python 3.13 pin is unavailable' ;; esac
+
+	fi
+	if [ "$(uname -s)" = Darwin ]; then
+        MACOSX_DEPLOYMENT_TARGET=15.0
+        SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+        export MACOSX_DEPLOYMENT_TARGET SDKROOT
+        for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
+		. libraries/ruby/toolchain.env
+		brew install pkgconf jq "openssl@$RUBY_OPENSSL_SERIES"
+		# Check OpenSSL after the remaining Homebrew installs.
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			brew install coreutils python@3.14 bash
+			# macOS's own bash is 3.2. The PostgreSQL check re-runs itself under PATH's bash (ticket 0375).
+			bash -c '[ "${BASH_VERSINFO[0]}" -ge 5 ]' || fail 'the PostgreSQL check needs bash 5 on PATH'
+		fi
+		case $("$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES")/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
+		cargo install --locked --version 0.17.0 cargo-pgrx
+		# cargo pgrx package needs PGRX_HOME. It defaults to ~/.pgrx. The Linux container writes the same file.
+		# A host that already has one keeps it. package.sh passes --pg-config either way.
+		if [ ! -e "$HOME/.pgrx/config.toml" ]; then
+			mkdir -p "$HOME/.pgrx"
+            printf '[configs]\n' >"$HOME/.pgrx/config.toml"
+            for major in 16 17 18; do
+                printf 'pg%s = "%s"\n' "$major" "$(brew --prefix postgresql@$major)/bin/pg_config" >>"$HOME/.pgrx/config.toml"
+            done
+		fi
+		sh libraries/ruby/setup-ruby.sh
+		sh databases/sqlite/setup.sh
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			sh databases/duckdb/tools/setup.sh --fetch "$PWD/duckdb-hosts"
+		else
+			sh databases/duckdb/tools/setup.sh --fetch
+		fi
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			# setup-python's macOS build cannot load SQLite extensions, and Homebrew's can.
+			# Rehearsal run 36853575250 failed the SQLite examples on both Macs (ticket 0369).
+			sqlite_python=$(brew --prefix python@3.14)/bin/python3.14
+			"$sqlite_python" -c 'import sqlite3; sqlite3.connect(":memory:").enable_load_extension(True)' ||
+				fail "the SQLite check's Python cannot load extensions: $sqlite_python"
+			# Keep Brew intact while giving that same interpreter the schema validator.
+			sqlite_venv=$HOME/.cache/thinkthen-toolchains/sqlite-python-3.14
+			uv venv --quiet --python "$sqlite_python" "$sqlite_venv"
+			uv pip install --quiet --python "$sqlite_venv/bin/python" "jsonschema==$(manifest_version jsonschema)"
+			"$sqlite_venv/bin/python" -c 'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)' ||
+				fail "the SQLite check's Python lacks its extension or schema support: $sqlite_venv/bin/python"
+			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_venv/bin/python" >>"$GITHUB_ENV"
+		fi
+	else
+		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
+		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			# The pinned server packages need the host's client, headers and runtime libraries.
+			sudo apt-get update
+			sudo apt-get install -y postgresql-server-dev-16
+			sh libraries/ruby/setup-ruby.sh
+			sh databases/duckdb/tools/setup.sh --fetch "$PWD/duckdb-hosts"
+			sh databases/sqlite/setup.sh
+			for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
+			if [ "$2" = x86_64-unknown-linux-gnu ]; then
+				# Installed coverage and full TypeScript checks use the pinned cache, not PATH's Node.
+				sh libraries/typescript/setup-toolchain.sh
+				sudo apt-get install -y r-base-dev libgtk-3-dev
+				bash libraries/r/tools/setup.sh
+			fi
+		fi
+	fi
+	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		# The installed TypeScript consumer compiles with this locked host-native toolchain offline.
+		scratch_dir npm_seed
+		cp libraries/typescript/package.json libraries/typescript/package-lock.json "$npm_seed/"
+		npm ci --no-audit --no-fund --silent --prefix "$npm_seed"
+		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
+		# Fill uv's cache for the Python the check will pick (ticket 0369).
+		. libraries/python/host.sh
+		python=$(python_host)
+		[ -n "$python" ] || fail 'the installed Python smoke needs a stable Python 3.12 or later'
+		generator_tools=${RUNNER_TEMP:?}/thinkthen-generators
+		uv venv --quiet --python "$python" "$generator_tools/python"
+		uv pip install --quiet --require-hashes --python "$generator_tools/python/bin/python" -r libraries/python/requirements-dev.txt
+		# Match the verified development formatters that produced the checked-in sources.
+		uv pip install --python "$generator_tools/python/bin/python" "ruff==$(manifest_version ruff)"
+		npm install --no-audit --no-fund --no-package-lock --prefix "$generator_tools" "prettier@$(manifest_version prettier)"
+		mkdir -p "$generator_tools/bin"
+		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
+		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
+	fi
+)
+
+managed_tools() (
 	[ "$#" = 2 ] && [ "$2" = x86_64-unknown-linux-gnu ] || fail 'managed-tools requires Linux x86'
 	[ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'managed tools need Linux x86'
 	python3 - <<'PY'
@@ -242,6 +319,435 @@ PY
 	for tool in python3 nm tar; do command -v "$tool" >/dev/null || fail "missing $tool"; done
 	# The build job packs managed outputs and runs no bwrap consumer. The smoke job pins and
 	# probes /usr/bin/bwrap in its language tools step. Rehearsal run 36812401623 found this gap.
+)
+
+go_cpp_tools() (
+	[ "$#" = 3 ] || fail 'go-cpp-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Go/C++ installed tools require Linux x86-64'
+	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git cargo rustc python3; do
+		command -v "$tool" >/dev/null 2>&1 || fail "Go/C++ installed tool is missing: $tool"
+	done
+	cmake_version=$(cmake --version | sed -n '1s/^cmake version //p')
+	python3 - "$cmake_version" <<'PY' || fail 'CMake 3.18 or newer is required'
+import sys
+parts = sys.argv[1].split('.')
+assert len(parts) >= 2 and all(part.isdigit() for part in parts)
+assert tuple(map(int, parts[:2])) >= (3, 18)
+PY
+	c++ --version >/dev/null && clang++ --version >/dev/null || fail 'C++ compiler does not run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	case $3 in /*) ;; *) fail 'Go setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Go setup output already exists'
+	mkdir -p -- "$3"
+	go_archive=$3/go1.27.1.linux-amd64.tar.gz
+	fetch_url "$go_archive" \
+		https://go.dev/dl/go1.27.1.linux-amd64.tar.gz --proto '=https' --tlsv1.2
+	printf '%s  %s\n' 63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 "$go_archive" |
+		sha256sum -c --quiet || fail 'Go 1.27.1 archive differs from official checksum'
+	tar -xzf "$go_archive" -C "$3"
+	[ "$("$3/go/bin/go" version)" = 'go version go1.27.1 linux/amd64' ] || fail 'Go tool differs from pin'
+	printf '%s\n' "$3/go/bin" >>"$GITHUB_PATH"
+)
+
+swift_zig_tools() (
+	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Swift/Zig installed tools require Linux x86-64'
+	for tool in curl sha256sum tar swift swiftc cargo python3 node nm bwrap git; do
+		command -v "$tool" >/dev/null 2>&1 || fail "Swift/Zig installed tool is missing: $tool"
+	done
+	[ "$(swift --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
+Target: x86_64-unknown-linux-gnu' ] || fail 'Swift tool differs from 6.4 release pin'
+	[ "$(swiftc --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
+Target: x86_64-unknown-linux-gnu' ] || fail 'Swift compiler differs from 6.4 release pin'
+	bwrap --version >/dev/null || fail 'bubblewrap cannot run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	case $3 in /*) ;; *) fail 'Zig setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Zig setup output already exists'
+	mkdir -p -- "$3"
+	zig_archive=$3/zig-x86_64-linux-0.15.2.tar.xz
+	fetch_url "$zig_archive" \
+		https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz --proto '=https' --tlsv1.2
+	printf '%s  %s\n' 02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239 "$zig_archive" |
+		sha256sum -c --quiet || fail 'Zig 0.15.2 archive differs from official checksum'
+	tar -xJf "$zig_archive" -C "$3"
+	zig_dir=$3/zig-x86_64-linux-0.15.2
+	[ "$("$zig_dir/zig" version)" = 0.15.2 ] || fail 'Zig tool differs from pin'
+	printf '%s\n' "$zig_dir" >>"$GITHUB_PATH"
+)
+
+php_dart_tools() (
+	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'PHP/Dart installed tools require Linux x86-64'
+	for tool in curl sha256sum unzip tar cargo cc nm readelf readlink python3 git; do
+		command -v "$tool" >/dev/null 2>&1 || fail "PHP/Dart installed tool is missing: $tool"
+	done
+	php_bin=/usr/bin/php8.3
+	[ -x "$php_bin" ] || fail 'PHP 8.3 executable is missing'
+	"$php_bin" -v | grep -q '^PHP 8\.3\.' || fail 'PHP tool differs from 8.3 pin'
+	"$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' ||
+		fail 'PHP 8.3 FFI cannot run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
+	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
+	mkdir -p -- "$3"
+	install_dart "$3"
+	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
+	mkdir -p "$HOME/.local/opt/flutter"
+	git -C "$HOME/.local/opt/flutter" init
+	git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
+	# Flutter derives its SDK version from the official release tag.
+	git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
+	test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+	git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
+	test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+	flutter="$HOME/.local/opt/flutter/bin/flutter"
+	dart="$HOME/.local/opt/flutter/bin/cache/dart-sdk/bin/dart"
+	export PUB_CACHE=$pub_cache FLUTTER_SUPPRESS_ANALYTICS=true
+	"$flutter" config --no-analytics --enable-linux-desktop
+	"$flutter" precache --linux
+	"$dart" --version 2>&1 | grep -F 'Dart SDK version: 3.13.4 (stable)'
+	# Seed the SDK and every frozen consumer lock before offline gates.
+	(cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
+	# The example locks both local packages; the Flutter library has no lock.
+	# Match the installed consumer's local override without changing shipped manifests.
+	(
+		overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
+		test ! -e "$overrides"
+		test ! -L "$overrides"
+		(set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
+		trap 'rm -f "$overrides"' EXIT
+		for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
+			(cd "$project" && "$flutter" pub get --enforce-lockfile)
+		done
+	)
+	git diff --exit-code
+	printf 'TT_FLUTTER=%s\n' "$flutter" >> "$GITHUB_ENV"
+	dart_bin=$dart
+	printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
+	[ -z "${GATE_OUTPUT:-}" ] || git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
+)
+
+ada_objc_cobol_tools() (
+	[ "$#" = 2 ] || fail 'ada-objc-cobol-tools TARGET'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'Ada/Objective-C/COBOL installed tools require Linux x86-64'
+	for tool in gprbuild gnatmake gcc cobc cc cargo python3 nm ldd tar cmp; do
+		command -v "$tool" >/dev/null 2>&1 || fail "installed language tool is missing: $tool"
+	done
+	gprbuild --version >/dev/null || fail 'gprbuild version probe failed'
+	gnatmake --version >/dev/null || fail 'gnatmake version probe failed'
+	gcc --version >/dev/null || fail 'GCC version probe failed'
+	case $(cobc --version | head -n 1) in *' 4.'*) ;; *) fail 'GnuCOBOL 4 is required' ;; esac
+)
+
+dart_tools() (
+	[ "$#" = 3 ] || fail 'dart-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Dart registry tools require Linux x86-64'
+	for tool in curl sha256sum unzip; do command -v "$tool" >/dev/null 2>&1 || fail "Dart registry tool is missing: $tool"; done
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
+	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
+	mkdir -p -- "$3"
+	install_dart "$3"
+	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
+)
+case ${1:-} in
+npm-stage)
+	[ "$#" = 1 ] || fail 'npm-stage'
+	sh "$0" npm-assemble platform npm-dist
+	# Keep the publisher's existing npm and archive path for its dry run.
+	npm install --global npm@11.15.0
+	npm stage publish --dry-run "./npm-dist/thinkthen-$version.tgz" --access public
+	;;
+wheels-stage)
+	[ "$#" = 1 ] || fail 'wheels-stage'
+	sh "$0" verify-family platform 'thinkthen-*.whl' 5
+	python3 -m pip install 'twine==6.2.0'
+	python3 -m twine check --strict platform/*/thinkthen-*.whl
+	;;
+registry-stage)
+	[ "$#" = 2 ] || fail 'registry-stage SHA'
+	dart_tools dart-tools x86_64-unknown-linux-gnu "$RUNNER_TEMP/thinkthen-registry-dart"
+	# GitHub applies the handoff after this step; this stage needs the SDK now.
+	TT_DART=$RUNNER_TEMP/thinkthen-registry-dart/dart-sdk/bin/dart
+	PUB_CACHE=$RUNNER_TEMP/thinkthen-registry-dart/pub-cache
+	export TT_DART PUB_CACHE
+	python3 sdlc/scripts/release-registry.py pack platform registry "$2"
+	python3 sdlc/scripts/release-registry.py maven-sign registry/maven rehearse
+	python3 sdlc/scripts/release-registry.py dry-run registry/pub/thinkthen_dart
+	;;
+draft-stage)
+	[ "$#" = 4 ] || fail 'draft-stage MODE NAME SHA'
+	MODE=$2 NAME=$3 SHA=$4
+	sh "$0" tap-formula "$version" platform thinkthen.rb
+	ruby -c thinkthen.rb
+for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc; do
+  # Stage 2 bindings and Unix-only families have no Windows release.
+  [ "$target" != x86_64-pc-windows-msvc ] || continue
+  sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
+  sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
+done
+sdlc/scripts/release-workflow collect platform npm-dist all-files
+cp r-dist/* crate-dist/*.crate all-files/
+sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
+	;;
+crate-stage)
+	[ "$#" = 2 ] || fail 'crate-stage SHA'
+	SHA=$2
+test "$(git rev-parse HEAD)" = "$SHA"
+node site/scripts/check-binding-samples.mjs
+prepare_rust
+cargo fetch --locked
+cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
+cargo fetch --locked --manifest-path libraries/rust/consumer/Cargo.toml
+cargo fetch --locked --manifest-path libraries/python/Cargo.toml
+python3 -m pip install --disable-pip-version-check "jsonschema==$(manifest_version jsonschema)"
+sh sdlc/scripts/package
+cargo publish --dry-run --locked --package thinkthen
+cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml
+CARGO_NET_OFFLINE=true sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu r-dist r
+	;;
+apple-check-stage)
+	[ "$#" = 3 ] || fail 'apple-check-stage TARGET SHA'
+	TARGET=$2 SHA=$3 THINKTHEN_TEST_PROFILE=full
+	export TARGET SHA THINKTHEN_TEST_PROFILE
+set -eu
+sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages swift "$SHA"
+sdlc/scripts/release-workflow apple-check "$TARGET" target/apple-packages objective-c "$SHA"
+	;;
+apple-prepare-stage)
+	[ "$#" = 1 ] || fail 'apple-prepare-stage'
+set -eu
+prepare_rust
+cargo fetch --locked
+python3 -m pip install --disable-pip-version-check "jsonschema==$(manifest_version jsonschema)"
+CARGO_NET_OFFLINE=true python3 sdlc/scripts/build-admission.py -- cargo build --locked --offline -p conformance-backend
+	;;
+apple-assemble-stage)
+	[ "$#" = 3 ] || fail 'apple-assemble-stage TARGET SHA'
+	TARGET=$2 THINKTHEN_RELEASE_EXPECTED_SHA=$3
+	export TARGET THINKTHEN_RELEASE_EXPECTED_SHA
+set -eu
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+for arch in x86_64 aarch64; do
+  input="target/apple-inputs/platform-$arch-apple-darwin"
+  name="thinkthen-c-$version-$arch-apple-darwin.tar.gz"
+  (cd "$input" && shasum -a 256 -c "$name.sha256")
+  mkdir "target/apple-$arch"
+  tar -xzf "$input/$name" -C "target/apple-$arch"
+  cmp "target/apple-$arch/include/thinkthen.h" libraries/c/include/thinkthen.h
+done
+sh libraries/swift/build-xcframework.sh target/apple-x86_64 target/apple-aarch64 target/apple-framework
+cp -R target/apple-framework/CThinkThen.xcframework libraries/swift/
+mkdir target/apple-packages
+cp "target/apple-inputs/platform-$TARGET/thinkthen-c-$version-$TARGET.tar.gz"* target/apple-packages/
+sdlc/scripts/release-pack --apple-wrappers "$TARGET" target/apple-packages swift objective-c
+rm "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz" "target/apple-packages/thinkthen-c-$version-$TARGET.tar.gz.sha256"
+	;;
+setup-stage)
+	[ "$#" -ge 3 ] || fail 'setup-stage STAGE TARGET [INPUTS]'
+	stage=$2 target=$3
+	case $stage in
+	host) host_setup host-setup "$target" ;;
+	languages)
+		[ "$#" = 5 ] || fail 'setup-stage languages TARGET SHA managed|smoke'
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			python3 sdlc/scripts/release-language-tools.py "$5" "$RUNNER_TEMP/thinkthen-language-$5" "$4" --acquire
+		fi
+		;;
+	consumers)
+		[ "$#" = 4 ] || fail 'setup-stage consumers TARGET OUT'
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			go_cpp_tools go-cpp-tools "$target" "$4/go"
+			swift_zig_tools swift-zig-tools "$target" "$4/zig"
+			php_dart_tools php-dart-tools "$target" "$4/dart"
+			ada_objc_cobol_tools ada-objc-cobol-tools "$target"
+			managed_tools managed-tools "$target"
+		fi
+		;;
+	go-cpp | swift-zig | php-dart)
+		[ "$#" = 4 ] || fail 'setup-stage FAMILY TARGET OUT'
+		case $stage in
+		go-cpp) go_cpp_tools go-cpp-tools "$target" "$4" ;;
+		swift-zig) swift_zig_tools swift-zig-tools "$target" "$4" ;;
+		php-dart) php_dart_tools php-dart-tools "$target" "$4" ;;
+		esac
+		;;
+	*) fail "unknown setup stage $stage" ;;
+	esac
+	;;
+smoke-stage)
+	[ "$#" = 4 ] || fail 'smoke-stage TARGET SHA FAMILY'
+	TARGET=$2 SHA=$3 THINKTHEN_RELEASE_SMOKE_FAMILY=$4 THINKTHEN_TEST_PROFILE=full
+	export TARGET SHA THINKTHEN_RELEASE_SMOKE_FAMILY THINKTHEN_TEST_PROFILE
+	python3 sdlc/scripts/hosted-preflight.py smoke "$TARGET"
+	if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
+		for family in go-cpp swift-zig php-dart ada-objc-cobol; do
+			sdlc/scripts/release-workflow "$family-gate" platform "$TARGET" "$SHA"
+		done
+		sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
+	fi
+	if [ "$TARGET" != x86_64-pc-windows-msvc ] && [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" != examples ] && [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" != installers ]; then
+	sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
+	sdlc/scripts/release-smoke smoke-files
+	if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = command ]; then
+	  sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+	fi
+	fi
+	if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = installers ]; then
+	sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
+	sdlc/scripts/installer-test
+	sdlc/scripts/release-workflow installer-smoke smoke-files
+	fi
+	if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = examples ]; then
+	sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
+	cp crate-dist/*.crate smoke-files/
+	if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then cp r-dist/* smoke-files/; fi
+	sdlc/scripts/release-workflow public-examples "$TARGET" smoke-files
+	fi
+	if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = windows-c ]; then
+	set -eu
+	version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+	python3 sdlc/scripts/release-windows-c.py check "platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
+	python3 sdlc/scripts/release-windows-c-smoke.py "platform/thinkthen-c-$version-x86_64-pc-windows-msvc.zip"
+	fi
+	if [ "$THINKTHEN_RELEASE_SMOKE_FAMILY" = windows-command ]; then
+	python3 sdlc/scripts/release-windows-smoke.py platform --crate-dir crate-dist
+	fi
+	;;
+build-stage)
+	[ "$#" = 3 ] || fail 'build-stage TARGET SHA'
+	TARGET=$2 THINKTHEN_RELEASE_EXPECTED_SHA=$3
+	export TARGET THINKTHEN_RELEASE_EXPECTED_SHA
+	set -eu
+	mkdir -p release-files
+	if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	  usage_guard
+	  config_home
+	  temp_home
+	  cargo clippy --locked --offline --workspace --all-targets -- -D warnings
+	  cargo test --locked --offline --no-fail-fast --workspace --all-targets
+	  cargo clippy --locked --offline --manifest-path libraries/c/Cargo.toml --all-targets -- -D warnings
+	  cargo test --locked --offline --manifest-path libraries/c/Cargo.toml --no-fail-fast
+	  CARGO_NET_OFFLINE=true sdlc/scripts/release-pack "$TARGET" release-files command c python typescript first-run
+	  python3 sdlc/scripts/release-windows-command.py platform release-files "$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)"
+	elif [ "$(uname -s)" = Linux ]; then
+	  # Ticket 0366: log free space and our big folders at each stage.
+	  disk() {
+	    sdlc/scripts/release-workflow disk "$1" "$HOME/.cargo/registry" "$HOME/.rustup" \
+	      "$HOME/.cache/thinkthen-toolchains" "$RUNNER_TEMP/thinkthen-language-managed" \
+	      "$RUNNER_TEMP/thinkthen-provenance-x86" "${work:-}" release-files target
+	  }
+	  disk 'after host setup and language tools'
+	  export RELEASE_CARGO_REGISTRY="$HOME/.cargo/registry"
+	  if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
+	    mkdir -p "$RUNNER_TEMP/thinkthen-provenance-x86"
+	    sdlc/scripts/release-workflow source-capture "$RUNNER_TEMP/thinkthen-provenance-x86" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+	    export THINKTHEN_RELEASE_SOURCE_TAR="$RUNNER_TEMP/thinkthen-provenance-x86/source.tar"
+	    export THINKTHEN_RELEASE_SOURCE_RECEIPT="$RUNNER_TEMP/thinkthen-provenance-x86/source.json"
+	  fi
+	  work=$(sdlc/scripts/release-workflow linux-work "$RUNNER_TEMP/thinkthen-container")
+	  sdlc/scripts/release-container "$work" release-files
+	  disk 'after the container'
+	  if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
+	    sdlc/scripts/release-workflow c-capture "release-files/thinkthen-c-$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)-$TARGET.tar.gz" "$RUNNER_TEMP/thinkthen-provenance-x86" "$TARGET"
+	    sdlc/scripts/release-workflow managed-build "$RUNNER_TEMP/thinkthen-provenance-x86" release-files "$TARGET" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+	    disk 'after the managed build'
+	  fi
+	  sdlc/scripts/release-pack "$TARGET" release-files command first-run
+	  disk 'after the final pack'
+	else
+	  # Each PostgreSQL archive selects its server's pg_config.
+	  sdlc/scripts/release-pack "$TARGET" release-files
+	fi
+	if [ "$(uname -s)" = Darwin ]; then
+	  sh "$0" duckdb-host-pack duckdb-hosts "$TARGET" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+	fi
+	;;
+disk)
+	# disk LABEL [PATH...] (ticket 0366): print the root disk's free space and the size of each
+	# named path that exists, so a run log shows where the build job's disk goes.
+	[ "$#" -ge 2 ] || fail 'disk LABEL [PATH...]'
+	echo "disk: $2"
+	shift 2
+	df -h / || true
+	for path in "$@"; do [ ! -e "$path" ] || du -sh -- "$path" || true; done
+	;;
+linux-work)
+	# Rehearsal run 36812401623 left 95 MB free on the x86 build runner's root disk while the
+	# container built. Hosted Linux runners carry a second disk at /mnt. This prints a folder there
+	# for the container build when /mnt is writable and has more free space than the root disk.
+	# Otherwise it prints FALLBACK. It deletes nothing (worktrees.md rule 11).
+	[ "$#" = 2 ] || fail 'linux-work FALLBACK'
+	df -h / /mnt >&2 || true
+	root_free=$(df -Pk / | awk 'NR == 2 {print $4}')
+	mnt_free=$(df -Pk /mnt 2>/dev/null | awk 'NR == 2 {print $4}')
+	if [ "${mnt_free:-0}" -gt "${root_free:-0}" ] && sudo -n mkdir -p /mnt/thinkthen-container &&
+		sudo -n chown "$(id -u):$(id -g)" /mnt/thinkthen-container; then
+		printf '%s\n' /mnt/thinkthen-container
+	else
+		printf '%s\n' "$2"
+	fi
+	;;
+apple-check)
+	[ "$#" = 5 ] || fail 'apple-check TARGET DIR swift|objective-c SHA'
+	case $(uname -s):$(uname -m):$2 in
+	Darwin:arm64:aarch64-apple-darwin | Darwin:x86_64:x86_64-apple-darwin) ;;
+	*) fail 'Apple installed check requires its matching macOS host' ;;
+	esac
+	case $4 in swift | objective-c) ;; *) fail 'select exactly one Apple language' ;; esac
+	python3 sdlc/scripts/hosted-candidate.py checkout "$5" "$5"
+	archive=$3/thinkthen-$4-$version-$2.tar.gz
+	(cd "$3" && sha256 -c "${archive##*/}.sha256") || fail 'Apple package checksum differs'
+	tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+		grep -Fxq "source_commit=$5" || fail 'Apple package source differs from candidate SHA'
+	THINKTHEN_ARTIFACT=$(CDPATH='' cd -- "$3" && pwd)/${archive##*/}
+	export THINKTHEN_ARTIFACT
+	# Only a completed check qualifies. A missing tool or package (77) fails.
+	sh "libraries/$4/check.sh" && code=0 || code=$?
+	REPO=$repo
+	. sdlc/scripts/verdict.sh
+	verdict "libraries/$4" "$code"
+	;;
+source-capture)
+	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
+	[ "$3" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
+	[ -d "$2" ] && [ ! -L "$2" ] && [ -z "$(find "$2" -mindepth 1 -print -quit)" ] || fail 'provenance must start empty'
+	git archive --format=tar HEAD >"$2/source.tar"
+	[ "$(git get-tar-commit-id <"$2/source.tar")" = "$3" ] || fail 'Git tar header differs from resolved SHA'
+	python3 - "$2/source.tar" "$2/source.json" "$3" <<'PY'
+import hashlib, json, pathlib, sys
+source, output = map(pathlib.Path, sys.argv[1:3])
+commit = sys.argv[3]
+output.write_text(json.dumps({"commit": commit, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
+PY
+	chmod 444 "$2/source.json"
+	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$3"
+	;;
+c-capture)
+	[ "$#" = 4 ] || fail 'c-capture C_ARCHIVE PROVENANCE_DIR TARGET'
+	[ "$4" = x86_64-unknown-linux-gnu ] || fail 'C receipt is x86 only'
+	[ -d "$3" ] && [ ! -L "$3" ] && [ -f "$3/source.json" ] || fail 'source provenance is missing'
+	[ ! -e "$3/c.json" ] && [ ! -L "$3/c.json" ] || fail 'C receipt already exists'
+	name=thinkthen-c-$version-$4.tar.gz
+	[ "${2##*/}" = "$name" ] && [ -f "$2" ] && [ ! -L "$2" ] || fail 'selected C archive is missing or linked'
+	python3 - "$2" "$3/c.json" <<'PY'
+import hashlib, json, pathlib, sys
+source, output = map(pathlib.Path, sys.argv[1:])
+output.write_text(json.dumps({"name": source.name, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
+PY
+	chmod 444 "$3/c.json"
+	python3 sdlc/scripts/release-managed-pair.py c-check "$2" "$3/c.json" "$4" "$version"
 	;;
 managed-build)
 	[ "$#" = 5 ] && [ "$4" = x86_64-unknown-linux-gnu ] || fail 'managed-build PROVENANCE_DIR PLATFORM_DIR TARGET SHA'
@@ -255,7 +761,7 @@ managed-build)
 	JAVACMD=$JAVA_HOME/bin/java
 	PATH=$JAVA_HOME/bin:$PATH
 	export JAVA_HOME JAVACMD PATH
-	sh sdlc/scripts/release-workflow managed-tools "$4"
+	managed_tools managed-tools "$4"
 	[ ! -e "$2/managed.json" ] && [ ! -L "$2/managed.json" ] || fail 'managed receipt already exists'
 	scratch_dir managed_stage
 	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" "$managed_stage/c" \
@@ -298,139 +804,41 @@ PY
 		--c-archive "$c_archive" --c-receipt "$2/c.json" --managed-receipt "$2/managed.json" \
 		--nupkg "$nupkg" --jars "$managed_stage/jvm/jars" --output "$3" --target "$4" --version "$version"
 	;;
-host-setup)
-	[ "$#" = 2 ] || fail 'host-setup TARGET'
-	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
-	rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt
-	[ "$(rustc --version)" = "rustc 1.95.0 (59807616e 2026-04-14)" ] || fail 'Rust 1.95.0 pin changed'
-	if [ "$2" = x86_64-pc-windows-msvc ]; then
-		python3 - "$(rustc --print sysroot)" "${RUSTUP_HOME:-$HOME/.rustup}" <<'PYWIN'
+duckdb-host-pack)
+	[ "$#" = 4 ] || fail 'duckdb-host-pack OUT TARGET SHA'
+	python3 - "$2" "$3" "$4" <<'PYHOST'
+import os
 from pathlib import Path
 import sys
-if not Path(sys.argv[1]).resolve().is_relative_to(Path(sys.argv[2]).resolve() / "toolchains"):
-    raise SystemExit("release-workflow: Rust does not use the isolated official rustup sysroot")
-PYWIN
-		cargo fetch --locked --manifest-path Cargo.toml
-		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
-		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
-		cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml
-		python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
-		exit 0
-	fi
-	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
-	# release-pack builds the static command for the host's musl target.
-	case $2:${RELEASE_SMOKE:-0} in *-linux-gnu:0) rustup target add --toolchain 1.95.0 "${2%-gnu}-musl" ;; esac
-	for manifest in Cargo.toml libraries/c/Cargo.toml databases/sqlite/Cargo.toml databases/duckdb/Cargo.toml \
-		crates/thinkthen-host/Cargo.toml databases/duckdb/bridge/Cargo.toml databases/postgresql/Cargo.toml libraries/python/Cargo.toml \
-		libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml libraries/polars/consumer/Cargo.toml; do
-		cargo fetch --locked --manifest-path "$manifest"
+import tarfile
+sys.path.insert(0, 'databases/duckdb/tools')
+from inputs import selected, versions
+output, target, sha = sys.argv[1:]
+Path(output).mkdir(parents=True, exist_ok=True)
+for version in versions():
+    selected(version, target)
+    runtime = Path('databases/duckdb/build/community') / version / 'build/release'
+    wheels = Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'duckdb/community' / version / 'wheels'
+    wheel_files = list(wheels.glob('*.whl'))
+    if not (runtime / 'duckdb').is_file() or len(wheel_files) != 1:
+        raise SystemExit(f'release-workflow: missing built DuckDB host for {version}')
+    with tarfile.open(Path(output) / f'duckdb-hosts-{version}-{target}-{sha}.tar.gz', 'w:gz', dereference=True) as archive:
+        archive.add(runtime / 'duckdb', arcname=str(runtime / 'duckdb'))
+        for library in runtime.rglob('*'):
+            if library.is_file() and (library.name.endswith(('.dylib', '.so')) or '.so.' in library.name):
+                archive.add(library, arcname=str(library))
+        archive.add(wheel_files[0], arcname=str(Path('duckdb-hosts') / version / wheel_files[0].name))
+PYHOST
+	;;
+duckdb-host-unpack)
+	[ "$#" = 4 ] || fail 'duckdb-host-unpack IN TARGET SHA'
+	for version in $(python3 databases/duckdb/tools/inputs.py versions); do
+		tar -xzf "$2/duckdb-hosts-$version-$3-$4.tar.gz"
+		chmod +x "databases/duckdb/build/community/$version/build/release/duckdb"
+		# Installed package checks validate the pinned sources through this host-local link.
+		tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/community/$version/tools
+		ln -sfn "$tools" "databases/duckdb/build/community/$version/extension-ci-tools"
 	done
-	if [ "$(cargo deny --version 2>/dev/null || true)" != 'cargo-deny 0.19.4' ]; then
-		cargo install --locked --version 0.19.4 cargo-deny
-	fi
-	cargo deny fetch db
-	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0' 'jsonschema==4.25.1'
-	[ "$(maturin --version)" = 'maturin 1.15.0' ] || fail 'maturin version differs from pin'
-	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
-	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-		command -v python3.13 >/dev/null || fail 'the pinned DuckDB host needs Python 3.13'
-		case $(python3.13 --version) in 'Python 3.13.'*) ;; *) fail 'the DuckDB Python 3.13 pin is unavailable' ;; esac
-		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
-		# Another uv may come first on the runner's path, so run the copy pip just installed.
-		uv_bin=$(python3 -c 'import uv; print(uv.find_uv_bin())')
-		uv_read=$("$uv_bin" --version)
-		case $uv_read in 'uv 0.9.17' | 'uv 0.9.17 '*) ;; *) fail "uv version differs from pin: $uv_bin printed '$uv_read'" ;; esac
-		PATH=${uv_bin%/*}:$PATH
-		export PATH
-		# Later steps, such as the installed Python check, run uv too.
-		[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
-	fi
-	if [ "$(uname -s)" = Darwin ]; then
-        MACOSX_DEPLOYMENT_TARGET=15.0
-        SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-        export MACOSX_DEPLOYMENT_TARGET SDKROOT
-        for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
-		. libraries/ruby/toolchain.env
-		brew install pkgconf jq "openssl@$RUBY_OPENSSL_SERIES"
-		# Check OpenSSL after the remaining Homebrew installs.
-		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-			brew install coreutils python@3.14 bash
-			# macOS's own bash is 3.2. The PostgreSQL check re-runs itself under PATH's bash (ticket 0375).
-			bash -c '[ "${BASH_VERSINFO[0]}" -ge 5 ]' || fail 'the PostgreSQL check needs bash 5 on PATH'
-		fi
-		case $("$(brew --prefix "openssl@$RUBY_OPENSSL_SERIES")/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_SERIES."*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
-		cargo install --locked --version 0.17.0 cargo-pgrx
-		# cargo pgrx package needs PGRX_HOME. It defaults to ~/.pgrx. The Linux container writes the same file.
-		# A host that already has one keeps it. package.sh passes --pg-config either way.
-		if [ ! -e "$HOME/.pgrx/config.toml" ]; then
-			mkdir -p "$HOME/.pgrx"
-            printf '[configs]\n' >"$HOME/.pgrx/config.toml"
-            for major in 16 17 18; do
-                printf 'pg%s = "%s"\n' "$major" "$(brew --prefix postgresql@$major)/bin/pg_config" >>"$HOME/.pgrx/config.toml"
-            done
-		fi
-		sh libraries/ruby/setup-ruby.sh
-		sh databases/sqlite/setup.sh
-		sh databases/duckdb/tools/setup.sh --fetch
-		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-			# setup-python's macOS build cannot load SQLite extensions, and Homebrew's can.
-			# Rehearsal run 36853575250 failed the SQLite examples on both Macs (ticket 0369).
-			sqlite_python=$(brew --prefix python@3.14)/bin/python3.14
-			"$sqlite_python" -c 'import sqlite3; sqlite3.connect(":memory:").enable_load_extension(True)' ||
-				fail "the SQLite check's Python cannot load extensions: $sqlite_python"
-			# Keep Brew intact while giving that same interpreter the schema validator.
-			sqlite_venv=$HOME/.cache/thinkthen-toolchains/sqlite-python-3.14
-			uv venv --quiet --python "$sqlite_python" "$sqlite_venv"
-			uv pip install --quiet --python "$sqlite_venv/bin/python" 'jsonschema==4.25.1'
-			"$sqlite_venv/bin/python" -c 'import sqlite3, jsonschema; sqlite3.connect(":memory:").enable_load_extension(True)' ||
-				fail "the SQLite check's Python lacks its extension or schema support: $sqlite_venv/bin/python"
-			[ -z "${GITHUB_ENV:-}" ] || printf 'THINKTHEN_PYTHON=%s\n' "$sqlite_venv/bin/python" >>"$GITHUB_ENV"
-		fi
-	else
-		# Linux builds use containers, which build their own Ruby; the native installed smoke needs
-		# the pinned host. A host Ruby in the build job fills about 850 MB unused (ticket 0366).
-		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-			# The pinned server packages need the host's client, headers and runtime libraries.
-			sudo apt-get update
-			sudo apt-get install -y postgresql-server-dev-16
-			sh libraries/ruby/setup-ruby.sh
-			sh databases/duckdb/tools/setup.sh --fetch
-			sh databases/sqlite/setup.sh
-			for major in 16 17 18; do sh databases/postgresql/setup.sh "$major"; done
-			if [ "$2" = x86_64-unknown-linux-gnu ]; then
-				# Installed coverage and full TypeScript checks use the pinned cache, not PATH's Node.
-				sh libraries/typescript/setup-toolchain.sh
-				sudo apt-get install -y r-base-dev libgtk-3-dev
-				bash libraries/r/tools/setup.sh
-			fi
-		fi
-	fi
-	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
-		# The installed TypeScript consumer compiles with this locked host-native toolchain offline.
-		scratch_dir npm_seed
-		cp libraries/typescript/package.json libraries/typescript/package-lock.json "$npm_seed/"
-		npm ci --no-audit --no-fund --silent --prefix "$npm_seed"
-		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
-		# Fill uv's cache for the Python the check will pick (ticket 0369).
-		. libraries/python/host.sh
-		python=$(python_host)
-		[ -n "$python" ] || fail 'the installed Python smoke needs a stable Python 3.12 or later'
-		generator_tools=${RUNNER_TEMP:?}/thinkthen-generators
-		uv venv --quiet --python "$python" "$generator_tools/python"
-		uv pip install --quiet --require-hashes --python "$generator_tools/python/bin/python" -r libraries/python/requirements-dev.txt
-		# Match the verified development formatters that produced the checked-in sources.
-		uv pip install --python "$generator_tools/python/bin/python" 'ruff==0.13.2'
-		npm install --no-audit --no-fund --no-package-lock --prefix "$generator_tools" 'prettier@3.6.2'
-		mkdir -p "$generator_tools/bin"
-		ln -s "$generator_tools/python/bin/ruff" "$generator_tools/bin/ruff"
-		printf '%s\n' "$generator_tools/bin" "$generator_tools/node_modules/.bin" >> "$GITHUB_PATH"
-		# setup.sh fetched the pinned inputs; installed checks require their built CLIs too.
-		# An exact same-run Intel cache carries the native CLI and its adjacent libraries.
-		# Setup above still prepares Python; preflight below still checks both source IDs.
-		if [ "$2" != x86_64-apple-darwin ] || [ "${THINKTHEN_DUCKDB_HOST_CACHE_HIT:-}" != true ]; then
-			python3 databases/duckdb/tools/source_hosts.py
-		fi
-	fi
 	;;
 resolve)
 	[ "$#" = 3 ] || fail 'resolve MODE REF needs exactly two arguments'
@@ -438,13 +846,7 @@ resolve)
 	case $mode in
 	rehearse)
 		case $ref in
-		refs/heads/main | refs/heads/ticket/0543-final) ;;
-		refs/heads/release/0.2.0-candidate-*)
-			candidate_sha=${ref#refs/heads/release/0.2.0-candidate-}
-			case $candidate_sha in *[!0-9a-f]*) candidate_sha= ;; esac
-			[ "${#candidate_sha}" -ge 9 ] && [ "${#candidate_sha}" -le 40 ] ||
-				fail "rehearse must run from an rc/$version-rc.N tag with positive N, got $ref"
-			;;
+		refs/heads/main) ;;
 		*)
 			candidate_number=
 			case $ref in refs/tags/rc/"$version"-rc.*) candidate_number=${ref#refs/tags/rc/"$version"-rc.} ;; esac
@@ -463,6 +865,16 @@ resolve)
 	if [ "$mode" = release ]; then python3 sdlc/scripts/release-rehearsal.py "$version"; fi
 	printf 'sha=%s\nversion=%s\nname=%s\n' "$GITHUB_SHA" "$version" \
 		"$(if [ "$mode" = release ]; then printf 'v%s' "$version"; else printf 'v%s-rehearsal-%.7s' "$version" "$GITHUB_SHA"; fi)"
+	printf 'python_version=%s\nnode_version=%s\n' "$(manifest_version python)" "$(manifest_version node)"
+	python3 - <<'PYFLOOR'
+import re, tomllib
+from pathlib import Path
+requirement = tomllib.loads(Path('libraries/python/pyproject.toml').read_text())['project']['requires-python']
+match = re.fullmatch(r'>=(\d+\.\d+)', requirement)
+if not match:
+    raise SystemExit('release-workflow: unsupported wheel Python floor')
+print('python_floor=' + match[1])
+PYFLOOR
 	;;
 verify-family)
 	[ "$#" = 4 ] || fail 'verify-family ROOT PATTERN COUNT'
@@ -611,139 +1023,6 @@ managed-gate)
 	*) fail "no managed release route for $target" ;;
 	esac
 	;;
-ada-objc-cobol-tools)
-	[ "$#" = 2 ] || fail 'ada-objc-cobol-tools TARGET'
-	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'Ada/Objective-C/COBOL installed tools require Linux x86-64'
-	for tool in gprbuild gnatmake gcc cobc cc cargo python3 nm ldd tar cmp; do
-		command -v "$tool" >/dev/null 2>&1 || fail "installed language tool is missing: $tool"
-	done
-	gprbuild --version >/dev/null || fail 'gprbuild version probe failed'
-	gnatmake --version >/dev/null || fail 'gnatmake version probe failed'
-	gcc --version >/dev/null || fail 'GCC version probe failed'
-	case $(cobc --version | head -n 1) in *' 4.'*) ;; *) fail 'GnuCOBOL 4 is required' ;; esac
-	;;
-php-dart-tools)
-	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'
-	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
-		fail 'PHP/Dart installed tools require Linux x86-64'
-	for tool in curl sha256sum unzip tar cargo cc nm readelf readlink python3 git; do
-		command -v "$tool" >/dev/null 2>&1 || fail "PHP/Dart installed tool is missing: $tool"
-	done
-	php_bin=/usr/bin/php8.3
-	[ -x "$php_bin" ] || fail 'PHP 8.3 executable is missing'
-	"$php_bin" -v | grep -q '^PHP 8\.3\.' || fail 'PHP tool differs from 8.3 pin'
-	"$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' ||
-		fail 'PHP 8.3 FFI cannot run'
-	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
-	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
-	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
-	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
-	mkdir -p -- "$3"
-	install_dart "$3"
-	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
-	mkdir -p "$HOME/.local/opt/flutter"
-	git -C "$HOME/.local/opt/flutter" init
-	git -C "$HOME/.local/opt/flutter" remote add origin https://github.com/flutter/flutter.git
-	# Flutter derives its SDK version from the official release tag.
-	git -C "$HOME/.local/opt/flutter" fetch --depth=1 origin refs/tags/3.47.5:refs/tags/3.47.5
-	test "$(git -C "$HOME/.local/opt/flutter" rev-parse 'refs/tags/3.47.5^{commit}')" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
-	git -C "$HOME/.local/opt/flutter" checkout --detach FETCH_HEAD
-	test "$(git -C "$HOME/.local/opt/flutter" rev-parse HEAD)" = 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
-	flutter="$HOME/.local/opt/flutter/bin/flutter"
-	dart="$HOME/.local/opt/flutter/bin/cache/dart-sdk/bin/dart"
-	export PUB_CACHE=$pub_cache FLUTTER_SUPPRESS_ANALYTICS=true
-	"$flutter" config --no-analytics --enable-linux-desktop
-	"$flutter" precache --linux
-	"$dart" --version 2>&1 | grep -F 'Dart SDK version: 3.13.4 (stable)'
-	# Seed the SDK and every frozen consumer lock before offline gates.
-	(cd "$HOME/.local/opt/flutter/packages/flutter_tools" && "$dart" pub get --enforce-lockfile)
-	# The example locks both local packages; the Flutter library has no lock.
-	# Match the installed consumer's local override without changing shipped manifests.
-	(
-		overrides=libraries/dart/flutter/example/pubspec_overrides.yaml
-		test ! -e "$overrides"
-		test ! -L "$overrides"
-		(set -C; printf 'dependency_overrides:\n  thinkthen_dart:\n    path: ../..\n' > "$overrides")
-		trap 'rm -f "$overrides"' EXIT
-		for project in libraries/dart libraries/dart/checks/session_consumer libraries/dart/flutter/example; do
-			(cd "$project" && "$flutter" pub get --enforce-lockfile)
-		done
-	)
-	git diff --exit-code
-	printf 'TT_FLUTTER=%s\n' "$flutter" >> "$GITHUB_ENV"
-	dart_bin=$dart
-	printf '%s\n' "$HOME/.local/opt/flutter/bin" >> "$GITHUB_PATH"
-	[ -z "${GATE_OUTPUT:-}" ] || git -C "$HOME/.local/opt/flutter" rev-parse HEAD > "$GATE_OUTPUT/flutter-source.txt"
-	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
-	;;
-swift-zig-tools)
-	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'
-	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
-		fail 'Swift/Zig installed tools require Linux x86-64'
-	for tool in curl sha256sum tar swift swiftc cargo python3 node nm bwrap git; do
-		command -v "$tool" >/dev/null 2>&1 || fail "Swift/Zig installed tool is missing: $tool"
-	done
-	[ "$(swift --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
-Target: x86_64-unknown-linux-gnu' ] || fail 'Swift tool differs from 6.4 release pin'
-	[ "$(swiftc --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
-Target: x86_64-unknown-linux-gnu' ] || fail 'Swift compiler differs from 6.4 release pin'
-	bwrap --version >/dev/null || fail 'bubblewrap cannot run'
-	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
-	case $3 in /*) ;; *) fail 'Zig setup output must be absolute' ;; esac
-	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Zig setup output already exists'
-	mkdir -p -- "$3"
-	zig_archive=$3/zig-x86_64-linux-0.15.2.tar.xz
-	fetch_url "$zig_archive" \
-		https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz --proto '=https' --tlsv1.2
-	printf '%s  %s\n' 02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239 "$zig_archive" |
-		sha256sum -c --quiet || fail 'Zig 0.15.2 archive differs from official checksum'
-	tar -xJf "$zig_archive" -C "$3"
-	zig_dir=$3/zig-x86_64-linux-0.15.2
-	[ "$("$zig_dir/zig" version)" = 0.15.2 ] || fail 'Zig tool differs from pin'
-	printf '%s\n' "$zig_dir" >>"$GITHUB_PATH"
-	;;
-go-cpp-tools)
-	[ "$#" = 3 ] || fail 'go-cpp-tools TARGET OUT'
-	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
-		fail 'Go/C++ installed tools require Linux x86-64'
-	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git cargo rustc python3; do
-		command -v "$tool" >/dev/null 2>&1 || fail "Go/C++ installed tool is missing: $tool"
-	done
-	cmake_version=$(cmake --version | sed -n '1s/^cmake version //p')
-	python3 - "$cmake_version" <<'PY' || fail 'CMake 3.18 or newer is required'
-import sys
-parts = sys.argv[1].split('.')
-assert len(parts) >= 2 and all(part.isdigit() for part in parts)
-assert tuple(map(int, parts[:2])) >= (3, 18)
-PY
-	c++ --version >/dev/null && clang++ --version >/dev/null || fail 'C++ compiler does not run'
-	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
-	case $3 in /*) ;; *) fail 'Go setup output must be absolute' ;; esac
-	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Go setup output already exists'
-	mkdir -p -- "$3"
-	go_archive=$3/go1.27.1.linux-amd64.tar.gz
-	fetch_url "$go_archive" \
-		https://go.dev/dl/go1.27.1.linux-amd64.tar.gz --proto '=https' --tlsv1.2
-	printf '%s  %s\n' 63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 "$go_archive" |
-		sha256sum -c --quiet || fail 'Go 1.27.1 archive differs from official checksum'
-	tar -xzf "$go_archive" -C "$3"
-	[ "$("$3/go/bin/go" version)" = 'go version go1.27.1 linux/amd64' ] || fail 'Go tool differs from pin'
-	printf '%s\n' "$3/go/bin" >>"$GITHUB_PATH"
-	;;
-dart-tools)
-	[ "$#" = 3 ] || fail 'dart-tools TARGET OUT'
-	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
-		fail 'Dart registry tools require Linux x86-64'
-	for tool in curl sha256sum unzip; do command -v "$tool" >/dev/null 2>&1 || fail "Dart registry tool is missing: $tool"; done
-	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
-	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
-	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
-	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
-	mkdir -p -- "$3"
-	install_dart "$3"
-	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
-	printf 'TT_DART=%s\nPUB_CACHE=%s\n' "$dart_bin" "$pub_cache" >>"$GITHUB_ENV"
-	;;
 registry-pack)
 	[ "$#" = 4 ] || fail 'registry-pack PLATFORM_DIR OUT SHA'
 	python3 sdlc/scripts/release-registry.py pack "$2" "$3" "$4"
@@ -871,7 +1150,11 @@ crate-smoke)
 	crate=$crate_dir/thinkthen-$version.crate
 	[ -f "$crate" ] || fail "missing packed crate $crate"
 	tar -xzf "$crate" -C "$work"
-	cargo install --locked --offline --path "$work/thinkthen-$version" --root "$work/install"
+	command_crate=$crate_dir/thinkthen-cli-$version.crate
+	[ -f "$command_crate" ] || fail "missing packed command crate $command_crate"
+	tar -xzf "$command_crate" -C "$work"
+	cargo install --locked --offline --path "$work/thinkthen-cli-$version" --root "$work/install" \
+		--config "patch.crates-io.thinkthen.path=\"$work/thinkthen-$version\""
 	tar -xzf "$sample_dir/thinkthen-first-run.tar.gz" -C "$work"
 	mkdir -p "$work/home/.cache" "$work/home/.config" "$work/home/.local/share"
 	answer=$(env -i HOME="$work/home" XDG_CACHE_HOME="$work/home/.cache" \

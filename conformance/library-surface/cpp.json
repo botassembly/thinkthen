@@ -1,0 +1,112 @@
+{
+  "libraries": {
+    "cpp": {
+      "root": "libraries/cpp",
+      "language": "cpp",
+      "naming": "snake",
+      "declarations": [
+        "libraries/cpp/include/thinkthen/client.hpp",
+        "libraries/cpp/include/thinkthen/results_generated.hpp",
+        "libraries/cpp/include/thinkthen/inputs_generated.hpp",
+        "libraries/cpp/include/thinkthen/calls_generated.hpp",
+        "libraries/cpp/include/thinkthen/result_value.hpp",
+        "libraries/cpp/include/thinkthen/value.hpp"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "fixtures",
+        "examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Call",
+        "ResultCall"
+      ],
+      "representation_owners": [
+        "Data",
+        "Node",
+        ""
+      ],
+      "lifecycle_members": {
+        "Call": [
+          "poll",
+          "collect",
+          "input_closed"
+        ],
+        "ResultCall": [
+          "collect",
+          "result"
+        ]
+      },
+      "representation_types": [
+        "Call",
+        "ResultCall",
+        "Poll",
+        "PollState",
+        "PresenceState",
+        "Data",
+        "Node"
+      ],
+      "representation_members": {
+        "Node": [],
+        "": [],
+        "Data": [
+          "at",
+          "begin",
+          "contains",
+          "end",
+          "get",
+          "is_array",
+          "is_boolean",
+          "is_null",
+          "is_number",
+          "is_object",
+          "is_string",
+          "object",
+          "read"
+        ]
+      },
+      "wrapper_members": {
+        "Poll": [
+          "packet"
+        ],
+        "PollState": [
+          "pending",
+          "result",
+          "end"
+        ],
+        "PresenceState": [
+          "absent",
+          "null"
+        ],
+        "SessionFailure": [
+          "failure"
+        ],
+        "Data": [
+          "Array",
+          "Object"
+        ]
+      }
+    }
+  }
+}

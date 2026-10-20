@@ -1,13 +1,18 @@
 //! One versioned edge contract for native and serialized requests.
 
 mod admission;
+mod call;
+mod schema;
+pub use schema::request_schema;
 mod column;
 mod question_parts;
 pub use column::{RequestColumn, RequestColumnValues, RequestColumnView};
 mod composition;
 mod decoding;
 mod definition;
+mod identity;
 pub use decoding::RequestDecodeCause;
+pub use identity::RelationIdentityMode;
 mod execution;
 #[cfg(test)]
 pub(in crate::public) use execution::native_atomic as atomic;
@@ -19,6 +24,7 @@ mod native_feed;
 mod options;
 mod preview;
 pub(crate) mod pull;
+mod wording;
 pub use pull::RequestRows;
 mod recovered;
 mod recovering;
@@ -32,8 +38,10 @@ pub(in crate::public) use recovered::row as recovery_row;
 mod source;
 pub use source::RequestSourceReader;
 mod session;
+mod session_input;
 mod session_queue;
 mod session_result;
+mod settlement;
 #[cfg(test)]
 pub(crate) use session_result::SessionPacketDocument;
 #[cfg(test)]
@@ -56,6 +64,7 @@ pub use session::{
 };
 pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;
+pub use transport::RequestDescriptor;
 
 /// The admitted wire version; other versions are refused.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -154,7 +163,7 @@ impl Request {
             },
         )
     }
-    #[cfg(feature = "cli")]
+    #[cfg(test)]
     pub(crate) fn admit_for_transport(
         self,
         limit: transport::TransportAttachmentLimit,
@@ -280,8 +289,8 @@ impl RequestFunction {
             super::InputFunction::Relate => Self::Relate,
         }
     }
-    #[cfg(feature = "cli")]
-    pub(crate) const ALL: [Self; 10] = [
+    /// Every judging function, in canonical discovery order.
+    pub const ALL: [Self; 10] = [
         Self::Decide,
         Self::Choose,
         Self::Tag,
@@ -293,8 +302,14 @@ impl RequestFunction {
         Self::Recognize,
         Self::Relate,
     ];
-    pub(crate) fn allows_option(self, name: &str) -> bool {
+    /// Whether a known canonical option applies to this function's discovery view.
+    /// Supply names from [`request_schema`]; full admission validates unknown keys.
+    #[must_use]
+    pub fn allows_option(self, name: &str) -> bool {
         match name {
+            "yes" | "no" => matches!(self, Self::Decide | Self::Filter | Self::Rank),
+            "labels" => matches!(self, Self::Choose | Self::Tag),
+            "levels" => self == Self::Score,
             "threshold" => matches!(
                 self,
                 Self::Decide
@@ -303,17 +318,22 @@ impl RequestFunction {
                     | Self::Filter
                     | Self::Rank
                     | Self::Recognize
+                    | Self::Relate
             ),
             "options_field" => self == Self::Choose,
             "examples" | "examples_field" | "seed_spans" | "seed_spans_field" | "stage_context"
-            | "snippet_pieces" => self == Self::Recognize,
+            | "snippet_pieces" | "max_text_bytes" | "instructions" | "entity_definition" => {
+                self == Self::Recognize
+            }
             "none" => self == Self::Find,
             "top" => self == Self::Rank,
             "files_only" => self == Self::Filter,
             _ => true,
         }
     }
-    pub(crate) const fn name(self) -> &'static str {
+    /// The canonical function name accepted by [`crate::Engine::call`].
+    #[must_use]
+    pub const fn name(self) -> &'static str {
         match self {
             Self::Decide => "decide",
             Self::Choose => "choose",
@@ -327,7 +347,9 @@ impl RequestFunction {
             Self::Relate => "relate",
         }
     }
-    pub(crate) const fn images(self) -> bool {
+    /// Whether this function accepts ordered image evidence.
+    #[must_use]
+    pub const fn images(self) -> bool {
         matches!(self, Self::Decide | Self::Choose | Self::Score)
     }
 }

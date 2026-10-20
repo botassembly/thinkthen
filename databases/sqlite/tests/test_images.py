@@ -87,10 +87,11 @@ db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_r
 say(value=complete(db, 'decide', *('Is red visible?', packed)))
 ''', env)['value']
         expect(failed['native']['error']['kind'], 'backend', 'backend failure keeps its complete kind')
-        expect(failed['native']['error']['message'], 'the backend answered with status 503; provider message: private-backend-body', 'bounded provider diagnostic survives')
+        expect(failed['native']['error']['message'], 'the backend answered with status 503', 'backend diagnostic retains status without provider prose')
         expect(failed['native']['error']['retryable'], True, '503 remains retryable')
         expect(failed['native']['facts']['requests_sent'], 1, 'failure retains its actual attempt')
         assert 'fake-sql-image-key' not in json.dumps(failed)
+        assert 'private-backend-body' not in json.dumps(failed)
         expect(backend.count(), 2, 'one failing attempt follows one successful call')
 
 
@@ -194,7 +195,8 @@ say(result=result)
 db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_retries":0}',))
 say(error=run(db,'SELECT thinkthen_decide_images(?,?)',('Is red visible?', packed)))
 ''', env)
-        expect(got['error'], 'thinkthen backend: the backend answered with status 503; provider message: private-backend-body (retryable: yes)', 'backend error is not NULL or a leaked body')
+        expect(got['error'], 'thinkthen backend: the backend answered with status 503 (retryable: yes)', 'backend error retains kind, status and retryability')
+        assert 'private-backend-body' not in json.dumps(got)
         expect(backend.count(), 1, 'one failing image attempt')
 
 

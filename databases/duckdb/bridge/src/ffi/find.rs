@@ -100,7 +100,7 @@ pub(super) fn run_portable(
         .collect::<Result<Vec<_>, _>>()?;
     let mut asked = asked(&session)?;
     if let Some(model) = model {
-        asked.model = Some(model);
+        asked.with_model(model);
     }
     let engine = engines::engine_for(&asked, |path| probe(&session, path))?;
     let total = asked.max_requests_total;

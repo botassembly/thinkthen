@@ -1,0 +1,28 @@
+part_command() {
+	suffix=
+	[ "$TARGET" != x86_64-pc-windows-msvc ] || suffix=.exe
+	if [ -n "$reuse" ]; then
+		binary=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen$suffix
+	else
+		set -- cargo build --locked --quiet --release --package thinkthen-cli --target "$command_target"
+		case $command_target in *-linux-musl)
+			command -v musl-gcc >/dev/null || { echo 'release-pack: the static command needs musl-gcc' >&2; exit 1; }
+			# cc-rs gives the literal target spelling priority over other CC overrides.
+			# Use the same native musl compiler for SQLite and the final Rust link.
+			linker_target=$(printf '%s' "$command_target" | tr '[:lower:]-' '[:upper:]_')
+			set -- env "CC_$command_target=musl-gcc" "CARGO_TARGET_${linker_target}_LINKER=musl-gcc" "$@"
+		;; esac
+		"$@"
+		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen$suffix
+	fi
+	folder=$(fresh command)
+	cp -- "$binary" "$folder/thinkthen$suffix"
+	cp README.md "$folder/README.md"
+	if [ -n "$suffix" ]; then
+		name=thinkthen-$V-$command_target.zip
+		python3 sdlc/scripts/release-windows-command.py pack "$folder/thinkthen.exe" "$OUT/$name"
+		(cd -- "$OUT" && sha256 "$name" >"$name.sha256")
+	else
+		pack "thinkthen-$V-$command_target.tar.gz" "$folder"
+	fi
+}

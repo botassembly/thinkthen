@@ -112,7 +112,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_nested_group(
         let ask = super::nested::ask(kind, argument, &members, from_file != 0)?;
         let mut held = asked(&session)?;
         if let Some(model) = model {
-            held.model = Some(model);
+            held.with_model(model);
         }
         let engine = engines::engine_for(&held, |path| probe(&session, path))?;
         let total = held.max_requests_total;

@@ -91,6 +91,7 @@ fn a_started_record_failure_has_original_stop_position_status_and_joined_complet
     schema::check(&serde_json::to_value(error.complete()).unwrap(), "");
     let complete = error.complete();
     let doc = serde_json::to_value(&complete).unwrap();
+    assert_eq!(doc["resolution"], "failed");
     assert_eq!(
         doc["error"]["stopped"],
         json!({"at":2,"cause":"status","status":503,"retryable":true})
@@ -126,6 +127,7 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     )
     .unwrap_err();
     let refused = serde_json::to_value(invalid.complete()).unwrap();
+    assert_eq!(refused["resolution"], "failed");
     assert_eq!(refused["error"]["kind"], "usage");
     assert_eq!(refused["error"]["stopped"]["cause"], "usage");
     schema::check(&refused, "");
@@ -143,6 +145,8 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     assert_eq!(cancelled.stopped().cause(), StopCause::Cancelled);
     assert_eq!(cancelled.stopped().at(), None);
     let cancelled = serde_json::to_value(cancelled.complete()).unwrap();
+    assert_eq!(cancelled["resolution"], "failed");
+    schema::check(&cancelled, "");
     assert!(cancelled.get("facts").is_none());
     let expired = crate::api::decide(
         &engine,
@@ -155,6 +159,8 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     assert_eq!(expired.stopped().cause(), StopCause::Deadline);
     assert_eq!(expired.stopped().at(), None);
     let stopped = serde_json::to_value(expired.complete()).unwrap();
+    assert_eq!(stopped["resolution"], "failed");
+    schema::check(&stopped, "");
     assert_eq!(stopped["facts"]["requests_sent"], 0);
     assert!(stopped["facts"]["call_id"].is_string());
     assert_eq!(stopped["facts"]["attempts"], json!([]));

@@ -1,10 +1,24 @@
 # 0696: Share one privacy scanner across the library checks
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 1
+
+Reviews: revision 79afa73, accept
+
+Reviews: revision acb31e6, accept
+
+Reviews: revision c823b69, accept
+
+Reviews: revision f3658c9, accept
+
+Reviews: revision 85768f1, accept
+
+Reviews: revision e36fd80, accept
+
+Reviews: revision f3bd352, accept
 
 ## Outcome
 
@@ -24,3 +38,4 @@ Phase: 1
 ## Progress
 
 - 2026-10-18 started
+- 2026-10-18 next: The independent privacy source is fresh-accepted at 79afa7362 with exact extraction and retained scanner protections checked; focused execution and the main closing gate remain after the active core gate.

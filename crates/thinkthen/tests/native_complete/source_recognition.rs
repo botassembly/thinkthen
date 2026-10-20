@@ -79,6 +79,7 @@ fn located_names_and_relation_endpoints_map_unicode_crlf_and_survive_renamed_zer
     assert_eq!(row["value"]["relations"][0]["target"]["last_line"], 82);
     schema::call(&call, "completeRecognition");
     schema::call(&held, "completeRecognition");
+    std::fs::remove_dir_all(root).unwrap();
 }
 #[cfg(test)]
 fn assert_spans(result: &thinkthen::CompleteRecognized) {
@@ -195,6 +196,7 @@ fn decoded_json_field_locations_are_refused_before_any_send_or_replay_lookup() {
         assert!(!format!("{error:?}").contains("private.jsonl"));
     }
     assert_eq!(listener.count(), 0);
+    std::fs::remove_dir_all(root).unwrap();
 }
 
 #[cfg(test)]

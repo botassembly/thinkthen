@@ -1,6 +1,6 @@
 # The SQLite extension
 
-`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. Default loading registers volatile, direct-only functions. Objects in main and attached schemas cannot call them to spend requests or read files. Caller-created TEMP objects remain callable, even with `trusted_schema=OFF`.
+`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. Normal loading registers every function for use in triggers, views, CHECK constraints and column defaults.
 
 ## Discover registered functions
 
@@ -17,32 +17,34 @@ FROM json_each(thinkthen_functions())
 ORDER BY name, arity;
 ```
 
-`thinkthen_functions()` returns a JSON array collected from the connection's extension registrations, including the discovery call and removed spellings that still report migration errors. Each scalar overload has its own row; `arity = -1` means variable arguments. Table rows report the minimum required and maximum hidden argument counts as `min_arity` and `max_arity`. Descriptions explain each call's purpose. Loading and discovery construct no engine, read no input files and send no requests. Discovery remains direct-only in both loading modes.
+`thinkthen_functions()` returns a JSON array collected from the connection's extension registrations, including the discovery call and removed spellings that still report migration errors. Each scalar overload has its own row; `arity = -1` means variable arguments. Table rows report the minimum required and maximum hidden argument counts as `min_arity` and `max_arity`. Descriptions explain each call's purpose. Loading and discovery construct no engine, read no input files and send no requests.
 
 ## Use reviewed views and ingestion triggers
 
-On a fresh connection, load once through the explicit trusted entry point:
+If your host opens database files it did not create, set `PRAGMA trusted_schema=OFF`. SQLite then refuses ThinkThen functions in those files' schemas before they read files or send requests.
+
+## Label rows as they arrive
+
+After `.load ./thinkthen`, an `AFTER INSERT` trigger can save a team and tags with each message. Tags are stored as JSON text.
 
 ```sql
-.load ./thinkthen sqlite3_thinkthen_trusted_init
-PRAGMA trusted_schema=ON;
-```
+CREATE TABLE messages(id INTEGER PRIMARY KEY, body TEXT, team TEXT, tags TEXT);
 
-A native host passes `sqlite3_thinkthen_trusted_init` as the entry-point argument to `sqlite3_load_extension`. Default loading uses `sqlite3_thinkthen_init`. [entry-points.txt](entry-points.txt) declares the extension's exports. Switch modes by closing the connection and loading once on a fresh connection.
-
-This choice permits reviewed schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while `trusted_schema` is ON. It provides no per-view or per-file trust isolation. Keep downloaded or unreviewed databases on separate default-loaded connections.
-
-Trusted registration permits judgment scalars, `thinkthen_plan` and judgment tables in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments retain neither INNOCUOUS nor DETERMINISTIC flags; SQLite still refuses non-deterministic generated columns and indexes. Loading changes neither `trusted_schema` nor the host's authorizer. With `trusted_schema=OFF`, judgments from main and attached schema objects refuse before reading a question file or sending a request. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL: TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with `trusted_schema=OFF`. Such calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. The ordinary permissions, budgets, cancellation and errors still apply.
-
-For example, a reviewed ingestion trigger can store a judgment:
-
-```sql
-CREATE TABLE messages(body TEXT, is_red INTEGER);
-CREATE TRIGGER judge_message AFTER INSERT ON messages BEGIN
-  UPDATE messages SET is_red=(SELECT thinkthen_decide('Is it red?', NEW.body) AS is_red)
-  WHERE rowid=NEW.rowid;
+CREATE TRIGGER label_message AFTER INSERT ON messages BEGIN
+  UPDATE messages SET
+    team = (SELECT thinkthen_choose('Which team handles this?', NEW.body,
+      '{"options":["billing","shipping"]}') AS team),
+    tags = (SELECT thinkthen_tag('What is in this text?', NEW.body,
+      '{"labels":["refund","shipping"]}') AS message_tags)
+  WHERE id = NEW.id;
 END;
+
+INSERT INTO messages(id, body) VALUES (1, 'Please refund the shipping fee.');
+
+SELECT id, team, tags FROM messages WHERE team = 'billing';
 ```
+
+The final query filters saved columns and makes no model call. A failed model call fails the `INSERT`.
 
 ## Judge a table once
 
@@ -138,7 +140,7 @@ The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
-For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full versioned recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` raises a usage error before any request. Use `'person'` to request the person kind.
+For `thinkthen_recognize`, pass one kind as `'person'`, or comma-separated names as `'person,organisation'`. To supply descriptions, pass a recognize JSON object such as `'{"kinds":{"person":"A human name."}}'`, a full recognize spec, or an `@file` containing that spec. A bare JSON array string such as `'["person"]'` raises a usage error before any request. Use `'person'` to request the person kind.
 
 ```sql
 SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person') AS recognized_names;
@@ -173,7 +175,7 @@ SELECT ordinal, record, file, first_line, last_line,
 FROM thinkthen_read_files('specification/fixtures/files/documents', '{"unit":"file"}');
 ```
 
-Files use the caller's native filesystem permissions. The reader remains DIRECTONLY even under `sqlite3_thinkthen_trusted_init`: stored main/attached views and triggers cannot read files. Caller-created TEMP objects retain SQLite's availability under either trusted_schema setting. A reader's source coordinates stay outside judging payloads and cache keys. `thinkthen_span_lines(record, first_line, start, end)` returns JSON with physical `first_line` and `last_line` from the shared native Unicode scalar mapper; retain the local recognize offsets alongside it. Relate joins both returned endpoint ids to their actual reader rows and admits at most 255 source rows before deduplication. PostgreSQL server paths remain deferred.
+Files use the caller's native filesystem permissions. A reader's source coordinates stay outside judging payloads and cache keys. `thinkthen_span_lines(record, first_line, start, end)` returns JSON with physical `first_line` and `last_line` from the shared native Unicode scalar mapper; retain the local recognize offsets alongside it. Relate joins both returned endpoint ids to their actual reader rows and admits at most 255 source rows before deduplication. PostgreSQL server paths remain deferred.
 
 ## Explicit images
 
@@ -188,7 +190,7 @@ SQLite accepts image judgments with 2, 3 or 4 arguments; omitted trailing argume
 
 ## Rank an ordered question set
 
-`thinkthen_rank_set(questions, keyed_json[, settings])` takes the native version-one ordered set of named decide questions. `SELECT *` returns `key, rank, probability, question_name`. Equal text keeps each original key. Native turns visit each depth in authored member order and emit each original once. The selecting member supplies probability and question name. `ORDER BY rank` and `LIMIT` operate on the merged result; every member still judges every record.
+`thinkthen_rank_set(questions, keyed_json[, settings])` takes the native ordered set of named decide questions. `SELECT *` returns `key, rank, probability, question_name`. Equal text keeps each original key. Native turns visit each depth in authored member order and emit each original once. The selecting member supplies probability and question name. `ORDER BY rank` and `LIMIT` operate on the merged result; every member still judges every record.
 
 Settings take batch, context and deadline. Engine configuration supplies model/backend selection. Described decide members retain authored true/false meanings. An empty keyed object and required NULL operands return no rows before sending. Question files use the existing native reader. Typed `facts_*` columns replace the previous JSON facts column and repeat the owning call facts on each answer row. Full member judgments and observations use the same typed projections below.
 

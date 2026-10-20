@@ -1,0 +1,38 @@
+{
+  "tools": {
+    "ninja": {
+      "commands": [
+        "ninja"
+      ],
+      "platforms": [
+        "darwin",
+        "linux"
+      ],
+      "groups": [
+        "duckdb",
+        "test"
+      ],
+      "provider": "ninja",
+      "version": "1.13.1"
+    },
+    "duckdb": {
+      "commands": [
+        "duckdb"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "duckdb"
+      ]
+    }
+  },
+  "databases": {
+    "duckdb": [
+      "darwin-arm64",
+      "darwin-x86_64",
+      "linux-arm64",
+      "linux-x86_64"
+    ]
+  }
+}

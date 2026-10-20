@@ -14,7 +14,7 @@ $(STATLIB):
 	  separator=$$(printf '\037'); \
 	  export CARGO_ENCODED_RUSTFLAGS="$${CARGO_ENCODED_RUSTFLAGS}$${CARGO_ENCODED_RUSTFLAGS:+$$separator}--remap-path-prefix=$(CURDIR)/rust/vendor/thinkthen=$(THINKTHEN_COVERAGE_ROOT)/crates/thinkthen"; \
 	fi && \
-	@CARGO_EXPORT@export PATH="$(PATH):$(HOME)/.cargo/bin" && \
+	@CARGO_EXPORT@\
 	@PANIC_EXPORTS@RUSTFLAGS="$(RUSTFLAGS) --print=native-static-libs $(if $(filter 1,$(THINKTHEN_FULL_COMPILER)),,--remap-path-prefix=$(HOME)=/build)" cargo build @CRAN_FLAGS@ --lib @PROFILE@ --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR) @TARGET@ @DOC@
 
 rust_clean: $(SHLIB)

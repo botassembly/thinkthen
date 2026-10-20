@@ -19,7 +19,7 @@ fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, 
         })
         .collect::<Vec<_>>();
     let rule = Relate::from_json(
-        r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]}}"#,
+        r#"{"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]}}"#,
     )
     .expect("rule");
     let edges = engine.relate(&rule, entities).expect("relate").into_value();
@@ -464,7 +464,7 @@ fn relate_follows_the_engine_profile_like_the_command() {
         .no_cache()
         .build()
         .expect("engine");
-    let ask = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}"#).expect("rule");
+    let ask = Relate::from_json(r#"{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}"#).expect("rule");
     let entities = [
         Entity::new("Ada", "person").expect("person"),
         Entity::new("Acme", "organization").expect("organization"),

@@ -51,7 +51,7 @@ impl Relate {
         }
     }
 
-    /// Read one version-one relate file. A `fields` pointer other than the
+    /// Read one relate file. A `fields` pointer other than the
     /// default `/name` and `/kind` is refused, because a library entity is
     /// already a name and a kind.
     ///
@@ -89,7 +89,6 @@ pub struct RelateBuilder {
 /// The relate file a builder stands for, which the production parser reads.
 #[derive(Serialize)]
 struct RelateFile<'a> {
-    version: u8,
     relate: Rules<'a>,
     #[serde(skip_serializing_if = "Option::is_none")]
     threshold: Option<f64>,
@@ -140,7 +139,6 @@ impl RelateBuilder {
     /// Returns [`Error::Usage`] with no rule.
     pub fn build(self) -> Result<Relate, Error> {
         let file = RelateFile {
-            version: 1,
             relate: Rules {
                 relations: &self.relations,
             },

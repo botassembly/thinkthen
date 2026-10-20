@@ -1,0 +1,11 @@
+wrapper_objective_c() {
+	mkdir -p "$folder/Sources/Foundation"
+	cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
+		libraries/objective-c/source-package.json libraries/objective-c/Package.swift "$folder/"
+	cp libraries/objective-c/Sources/Foundation/* "$folder/Sources/Foundation/"
+	[ -d libraries/swift/CThinkThen.xcframework ] || { echo 'release-pack: Foundation needs the matching assembled universal CThinkThen.xcframework' >&2; exit 1; }
+	cp -R libraries/swift/CThinkThen.xcframework "$folder/"
+	cp libraries/objective-c/README-PUBLIC.md "$folder/README.md"
+}
+
+part_objective_c() { part_source_wrapper objective-c; }

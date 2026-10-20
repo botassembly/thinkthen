@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "threshold": 0.95,
   "questions": {
     "correct": {"decide": "Does the answer say the same thing as the reference answer to the question?", "on": ["/input", "/gold", "/output"]},

@@ -64,11 +64,17 @@ def consume(archive):
                     if capped:
                         child_env['THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL'] = '10'
                     result = C.CAPTURE([str(binary)], env=child_env, timeout=60)
-                    expected_error = f'failure 1: {refusal}\n'.encode() if capped else b''
-                    expected_output = b'records=0 requests=0\n' if capped else b'records=1 requests=1\n'
+                    expected_error = f'{refusal}\n'.encode() if capped else b''
                     if (result.returncode != (1 if capped else 0) or result.stderr != expected_error
-                            or result.stdout != expected_output or len(requests) != (0 if capped else 1)):
-                        raise ValueError('downloaded C session consumer refusal/facts or counted requests differ')
+                            or len(requests) != (0 if capped else 1)):
+                        raise ValueError('downloaded C blocking consumer refusal or counted requests differ')
+                    if capped:
+                        if result.stdout:
+                            raise ValueError('refused blocking call published a result')
+                    else:
+                        call = json.loads(result.stdout)
+                        if call['facts']['records'] != 1 or call['facts']['requests_sent'] != 1:
+                            raise ValueError('downloaded C blocking call facts differ')
                     if b'sk-c-archive-loopback' in result.stdout + result.stderr:
                         raise ValueError('downloaded C session consumer exposed its key')
             finally:

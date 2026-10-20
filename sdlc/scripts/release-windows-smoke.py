@@ -88,7 +88,7 @@ def interrupt(binary, env):
     if not binary.is_file() or binary.is_symlink():
         raise RuntimeError("release interruption requires one regular exact executable")
     supplied = env | {"THINKTHEN_WINDOWS_RELEASE_BINARY": str(binary)}
-    run(["cargo", "test", "--locked", "--offline", "-p", "thinkthen", "--test", "windows",
+    run(["cargo", "test", "--locked", "--offline", "-p", "thinkthen-cli", "--test", "windows",
          "interrupt::release_binary_console_interrupt", "--", "--exact", "--ignored"],
         supplied, timeout=600)
     print("Windows packed command interruption: actual isolated Ctrl-C returned 130 with one request")
@@ -220,8 +220,9 @@ def main():
         root = Path(temporary)
         env = {key: value for key, value in os.environ.items()
                if not key.upper().startswith(("THINKTHEN_", "XDG_")) and not key.upper().endswith("_API_KEY")}
-        env.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
-        env.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
+        for name, folder in (("CARGO_HOME", ".cargo"), ("RUSTUP_HOME", ".rustup")):
+            if name not in env:
+                env[name] = str(Path.home() / folder)
         host = shutil.which("powershell")
         if host is None:
             raise RuntimeError("installer smoke requires Windows PowerShell 5.1")
@@ -242,12 +243,17 @@ def main():
         python_smoke(args.platform, env, version, root)
         if args.crate_dir:
             wanted = args.crate_dir / f"thinkthen-{version}.crate"
-            if list(args.crate_dir.glob("*.crate")) != [wanted] or wanted.is_symlink():
+            command_crate = args.crate_dir / f"thinkthen-cli-{version}.crate"
+            expected = {wanted, command_crate}
+            if set(args.crate_dir.glob("*.crate")) != expected or any(path.is_symlink() for path in expected):
                 raise RuntimeError("packed Rust crate inventory differs from the resolved version")
-            with tarfile.open(wanted) as archive:
-                archive.extractall(root / "source", filter="data")
+            for package in (wanted, command_crate):
+                with tarfile.open(package) as archive:
+                    archive.extractall(root / "source", filter="data")
+            library = root / f"source/thinkthen-{version}"
             run(["cargo", "install", "--locked", "--offline", "--path",
-                 str(root / f"source/thinkthen-{version}"), "--root", str(root / "crate"),
+                 str(root / f"source/thinkthen-cli-{version}"), "--root", str(root / "crate"),
+                 "--config", 'patch.crates-io.thinkthen.path=' + json.dumps(str(library)),
                  "--target", COMMAND.TARGET], env, timeout=1800)
             smoke(root / "crate/bin/thinkthen.exe", sample, env, version)
 

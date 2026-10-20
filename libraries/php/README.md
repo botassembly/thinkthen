@@ -34,7 +34,7 @@ Failures throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailur
 
 ## Local checks and package assembly
 
-`fixtures/package.py --library LIBRARY --out DIRECTORY` assembles a native-bearing local archive. `THINKTHEN_COMPOSER_BIN=/absolute/path/to/composer.phar sh libraries/php/check.sh 0` installs that archive through Composer with network, scripts and plugins disabled and runs the routine synthetic-backend checks. The gate builds the native library offline; `THINKTHEN_COMPLETE_LIBRARY` selects an explicitly retained library. A fixture archive carrying a debug native library does not qualify a production distribution.
+`fixtures/package.py --library LIBRARY --out DIRECTORY` assembles a native-bearing local archive. `sh libraries/php/check.sh 0` with Composer on the resolved PATH installs that archive through Composer with network, scripts and plugins disabled and runs the routine synthetic-backend checks. The gate builds the native library offline; `THINKTHEN_COMPLETE_LIBRARY` selects an explicitly retained library. A fixture archive carrying a debug native library does not qualify a production distribution.
 
 Set `THINKTHEN_ARTIFACT` to check a selected archive. `THINKTHEN_TEST_PROFILE=full` selects the shared installed suite at the release candidate, using `conformance/session_projection.py`. Full parity, large-input cases and other platforms are release-only. No paid backend runs in these checks.
 

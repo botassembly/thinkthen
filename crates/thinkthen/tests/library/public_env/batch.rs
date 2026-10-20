@@ -155,7 +155,7 @@ fn a_rate_in_the_configuration_file_paces_the_backend_it_names() {
     let moved = crate::child::Folder::configure(
         &root,
         &format!(
-            r#"{{"schema":"thinkthen.config/1","backend":"local","backends":{{"local":{{"url":"{}","key_env":"LOCAL_KEY","model":"local-1","requests_per_minute":600}}}}}}"#,
+            r#"{{"backend":"local","backends":{{"local":{{"url":"{}","key_env":"LOCAL_KEY","model":"local-1","requests_per_minute":600}}}}}}"#,
             listener.base()
         ),
     )

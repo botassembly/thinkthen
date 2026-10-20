@@ -17,6 +17,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
+from check_verdict import verdict
 from coverage_report import report, UNIT_COLLECTIONS, join_platforms
 
 NATIVE_COLLECTIONS = ('rust-integration', *UNIT_COLLECTIONS)
@@ -106,9 +107,8 @@ def command(args, cwd, env, log, *, capture=False, timeout=None):
     if timed_out:
         raise RuntimeError(f'timed out (exit {child.returncode}): {shlex.join(args)}; see {log}')
     if child.returncode:
-        if child.returncode == 77:
-            raise MissingTool(f'{shlex.join(args)}; see {log}')
-        raise RuntimeError(f'exit {child.returncode}: {shlex.join(args)}; see {log}')
+        if not verdict('coverage collection', child.returncode, 'coverage'):
+            raise RuntimeError(f'exit {child.returncode}: {shlex.join(args)}; see {log}')
     return stdout if capture else None
 
 
@@ -126,6 +126,14 @@ def tools():
         if not (llvm / name).is_file():
             raise MissingTool(f'Rust 1.95.0 llvm-tools-preview: {name}')
     return llvm
+
+
+def profile_link_flags(initializer):
+    flags = ['-C', f'link-arg={initializer}']
+    if sys.platform == 'linux':
+        # The initializer follows Rust's default libraries and needs libc after it.
+        flags += ['-C', 'link-arg=-lc']
+    return flags
 
 
 def activate(run, name):
@@ -165,25 +173,29 @@ def build_c_units(run, env):
 def build(run, env):
     metadata = json.loads(command(['cargo', 'metadata', '--offline', '--no-deps', '--format-version', '1'],
                                   ROOT, env, run / 'metadata.log', capture=True))
-    package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen')
-    features = set(package['features'].get('default', []))
-    while True:
-        expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
-        if expanded == features:
-            break
-        features = expanded
-    tests = [item for item in package['targets'] if item['kind'] == ['test']]
-    excluded = [item['name'] for item in tests if not set(item.get('required-features', [])).issubset(features)]
-    (run / 'excluded-targets.json').write_text(json.dumps(excluded) + '\n')
-    targets = [item['name'] for item in tests if item['name'] not in excluded]
-    args = ['cargo', 'test', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--no-run',
-            '--message-format=json', '-j2']
-    for target in targets:
-        args += ['--test', target]
-    messages = command(args, ROOT, env, run / 'build-tests.log', capture=True)
-    artifacts = test_artifacts(messages, package)
+    artifacts = []
+    excluded_targets = {}
+    for name, unit_target in (('thinkthen', ['--lib']), ('thinkthen-cli', ['--bin', 'thinkthen'])):
+        package = next(item for item in metadata['packages'] if item['name'] == name)
+        features = set(package['features'].get('default', []))
+        while True:
+            expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
+            if expanded == features:
+                break
+            features = expanded
+        tests = [item for item in package['targets'] if item['kind'] == ['test']]
+        excluded = [item['name'] for item in tests if not set(item.get('required-features', [])).issubset(features)]
+        excluded_targets[name] = excluded
+        args = ['cargo', 'test', '--offline', '--locked', '-p', name, *unit_target, '--no-run',
+                '--message-format=json', '-j2']
+        for target in tests:
+            if target['name'] not in excluded:
+                args += ['--test', target['name']]
+        messages = command(args, ROOT, env, run / f'build-tests-{name}.log', capture=True)
+        artifacts += test_artifacts(messages, package)
+    (run / 'excluded-targets.json').write_text(json.dumps(excluded_targets) + '\n')
     artifacts += build_c_units(run, env)
-    command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'],
+    command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen-cli', '--bin', 'thinkthen', '-j2'],
             ROOT, env, run / 'build-production.log')
     # C is a separate workspace. Keep its native production mappings even before installed collection.
     command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'],
@@ -194,18 +206,18 @@ def build(run, env):
 def collect_tests(run, env, artifacts, name):
     folder = activate(run, name)
     selected = [item for item in artifacts
-                if (item[0] == ['test']) == (name == 'rust-integration')
-                and (item[3]['CARGO_PKG_NAME'] == 'thinkthen-c') == (name == 'c-source-unit')]
+                if ((item[0] == ['test'] and item[3]['CARGO_PKG_NAME'] in ('thinkthen', 'thinkthen-cli'))
+                    if name == 'rust-integration' else
+                    (item[0] != ['test'] and item[3]['CARGO_PKG_NAME'] ==
+                     {'cli-source': 'thinkthen-cli', 'source-unit': 'thinkthen',
+                      'c-source-unit': 'thinkthen-c'}[name]))]
     if not selected:
         raise RuntimeError(f'{name}: no test executables')
     for kind, target, path, launch in selected:
         args = [path, '--test-threads=2']
-        if name == 'cli-source':
-            args += ['cli::']
-        elif name == 'source-unit':
-            args += ['--skip', 'cli::']
+        log_name = f'{launch["CARGO_PKG_NAME"]}-{target}' if launch['CARGO_PKG_NAME'] == 'thinkthen-cli' else target
         command(args, Path(launch['CARGO_MANIFEST_DIR']), {**env, **launch},
-                folder / f'{target}.log', timeout=1800)
+                folder / f'{log_name}.log', timeout=1800)
 
 
 def collect(run, env, artifacts, native_tests=True):
@@ -332,7 +344,6 @@ def measure(run, env, llvm, executable, native, artifacts, installed, revision, 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--release', action='store_true')
     parser.add_argument('--platform', choices=('linux', 'apple'), help='Measure required collections on their own host; join both before acceptance')
     parser.add_argument('--join', nargs=2, type=Path, metavar=('LINUX', 'APPLE'), help='Require successful same-commit Linux and Apple coverage reports')
     parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
@@ -371,10 +382,10 @@ def main():
     home_destination = '/build/users' if Path.home().is_relative_to('/Users') else '/build/host'
     remaps = [(Path('/home'), '/build/host'), (Path('/Users'), '/build/users'),
               (Path.home(), home_destination), (ROOT, '/build/source'),
-              (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
+              (Path((os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
              *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
-             '-C', f'link-arg={initializer}']
+             *profile_link_flags(initializer)]
     cflags = shlex.join([f'-ffile-prefix-map={source}={destination}' for source, destination in remaps])
     if continuous:
         flags += ['-C', 'llvm-args=-runtime-counter-relocation']
@@ -388,7 +399,7 @@ def main():
                XDG_STATE_HOME=str(run / 'home/state'))
     if args.platform == 'apple':
         artifacts = []
-        command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'], ROOT, env, run / 'build-production.log')
+        command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen-cli', '--bin', 'thinkthen', '-j2'], ROOT, env, run / 'build-production.log')
         command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'], ROOT, {**env, 'CARGO_TARGET_DIR': str(run / 'target-c')}, run / 'build-c.log')
     else:
         artifacts = build(run, env)
@@ -409,7 +420,8 @@ def entry():
         main()
     except MissingTool as error:
         print(f'coverage: not run: {error}', file=sys.stderr)
-        return 1 if '--release' in sys.argv else 77
+        verdict('coverage prerequisites', 77, 'coverage')
+        return 1
     except (RuntimeError, subprocess.CalledProcessError, OSError) as error:
         print(f'coverage: FAIL: {error}', file=sys.stderr)
         return 1

@@ -997,6 +997,38 @@ public final class Inputs {
             return omit("name");
         }
     }
+    public static final class OptionSchema2 extends Builder<OptionSchema2> {
+        public OptionSchema2() {
+        }
+        static OptionSchema2 fromJson(Object value) {
+            OptionSchema2 result = new OptionSchema2();
+            result.omit("description");
+            result.omit("name");
+            Values.object(value).forEach(result::extension);
+            return result;
+        }
+        protected OptionSchema2 self() {
+            return this;
+        }
+        public OptionSchema2 description(Object value) {
+            return put("description", value);
+        }
+        public OptionSchema2 descriptionNull() {
+            return put("description", null);
+        }
+        public OptionSchema2 omitDescription() {
+            return omit("description");
+        }
+        public OptionSchema2 name(String value) {
+            return put("name", value);
+        }
+        public OptionSchema2 nameNull() {
+            return put("name", null);
+        }
+        public OptionSchema2 omitName() {
+            return omit("name");
+        }
+    }
     public enum ReaderMedia {
         TEXT("text"),IMAGE("image");
         private final String value;
@@ -1447,7 +1479,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionAnnotateDefinition extends Builder<RequestDefinitionAnnotateDefinition> implements RequestDefinition {
         public RequestDefinitionAnnotateDefinition() {
-            put("version", 1);
         }
         static RequestDefinitionAnnotateDefinition fromJson(Object value) {
             RequestDefinitionAnnotateDefinition result = new RequestDefinitionAnnotateDefinition();
@@ -1455,7 +1486,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("questions");
             result.omit("threshold");
-            result.omit("version");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -1847,7 +1877,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionAuthoredRelate extends Builder<RequestDefinitionAuthoredRelate> implements RequestDefinition {
         public RequestDefinitionAuthoredRelate() {
-            put("version", 1);
         }
         static RequestDefinitionAuthoredRelate fromJson(Object value) {
             RequestDefinitionAuthoredRelate result = new RequestDefinitionAuthoredRelate();
@@ -1858,7 +1887,6 @@ public final class Inputs {
             result.omit("profile");
             result.omit("relate");
             result.omit("threshold");
-            result.omit("version");
             result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
@@ -2175,7 +2203,6 @@ public final class Inputs {
     }
     public static final class RequestDefinitionRecognizeDefinition extends Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
         public RequestDefinitionRecognizeDefinition() {
-            put("version", 1);
         }
         static RequestDefinitionRecognizeDefinition fromJson(Object value) {
             RequestDefinitionRecognizeDefinition result = new RequestDefinitionRecognizeDefinition();
@@ -2188,7 +2215,6 @@ public final class Inputs {
             result.omit("recognize");
             result.omit("relation_threshold");
             result.omit("threshold");
-            result.omit("version");
             result.omit("wording_version");
             Values.object(value).forEach(result::extension);
             return result;
@@ -2681,13 +2707,19 @@ public final class Inputs {
             result.omit("context");
             result.omit("context_field");
             result.omit("deadline_ms");
+            result.omit("entity_definition");
             result.omit("examples");
             result.omit("examples_field");
             result.omit("field");
             result.omit("files_only");
+            result.omit("instructions");
+            result.omit("labels");
+            result.omit("levels");
             result.omit("max_requests_total");
+            result.omit("max_text_bytes");
             result.omit("mode");
             result.omit("model");
+            result.omit("no");
             result.omit("none");
             result.omit("options_field");
             result.omit("relation_threshold");
@@ -2697,6 +2729,7 @@ public final class Inputs {
             result.omit("stage_context");
             result.omit("threshold");
             result.omit("top");
+            result.omit("yes");
             Values.object(value).forEach(result::extension);
             return result;
         }
@@ -2748,6 +2781,15 @@ public final class Inputs {
         public RequestOptions omitDeadlineMs() {
             return omit("deadline_ms");
         }
+        public RequestOptions entityDefinition(String value) {
+            return put("entity_definition", value);
+        }
+        public RequestOptions entityDefinitionNull() {
+            return put("entity_definition", null);
+        }
+        public RequestOptions omitEntityDefinition() {
+            return omit("entity_definition");
+        }
         public RequestOptions examples(List<? extends RecognitionExample> value) {
             return put("examples", value);
         }
@@ -2784,6 +2826,33 @@ public final class Inputs {
         public RequestOptions omitFilesOnly() {
             return omit("files_only");
         }
+        public RequestOptions instructions(String value) {
+            return put("instructions", value);
+        }
+        public RequestOptions instructionsNull() {
+            return put("instructions", null);
+        }
+        public RequestOptions omitInstructions() {
+            return omit("instructions");
+        }
+        public RequestOptions labels(List<? extends OptionSchema2> value) {
+            return put("labels", value);
+        }
+        public RequestOptions labelsNull() {
+            return put("labels", null);
+        }
+        public RequestOptions omitLabels() {
+            return omit("labels");
+        }
+        public RequestOptions levels(List<? extends OptionSchema2> value) {
+            return put("levels", value);
+        }
+        public RequestOptions levelsNull() {
+            return put("levels", null);
+        }
+        public RequestOptions omitLevels() {
+            return omit("levels");
+        }
         public RequestOptions maxRequestsTotal(Number value) {
             return put("max_requests_total", value);
         }
@@ -2792,6 +2861,15 @@ public final class Inputs {
         }
         public RequestOptions omitMaxRequestsTotal() {
             return omit("max_requests_total");
+        }
+        public RequestOptions maxTextBytes(Number value) {
+            return put("max_text_bytes", value);
+        }
+        public RequestOptions maxTextBytesNull() {
+            return put("max_text_bytes", null);
+        }
+        public RequestOptions omitMaxTextBytes() {
+            return omit("max_text_bytes");
         }
         public RequestOptions mode(RecognitionMode value) {
             return put("mode", value);
@@ -2810,6 +2888,15 @@ public final class Inputs {
         }
         public RequestOptions omitModel() {
             return omit("model");
+        }
+        public RequestOptions no(Object value) {
+            return put("no", value);
+        }
+        public RequestOptions noNull() {
+            return put("no", null);
+        }
+        public RequestOptions omitNo() {
+            return omit("no");
         }
         public RequestOptions none(Boolean value) {
             return put("none", value);
@@ -2891,6 +2978,15 @@ public final class Inputs {
         }
         public RequestOptions omitTop() {
             return omit("top");
+        }
+        public RequestOptions yes(Object value) {
+            return put("yes", value);
+        }
+        public RequestOptions yesNull() {
+            return put("yes", null);
+        }
+        public RequestOptions omitYes() {
+            return omit("yes");
         }
     }
     public sealed interface RequestOriginal permits RequestOriginalText,RequestOriginalJson {
@@ -3369,14 +3465,14 @@ public final class Inputs {
     }
     static RequestDefinition readRequestDefinition(Object value) {
         Map<String,Object> object = Values.object(value);
-        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredDecide.fromJson(value);
-        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredChoose.fromJson(value);
-        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("version")) return RequestDefinitionAuthoredTag.fromJson(value);
-        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredScore.fromJson(value);
-        if (object.containsKey("relate") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
-        if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionAuthoredFind.fromJson(value);
-        if (object.containsKey("recognize") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
-        if (object.containsKey("questions") && object.containsKey("version") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
+        if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredDecide.fromJson(value);
+        if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredChoose.fromJson(value);
+        if (object.containsKey("tag") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score")) return RequestDefinitionAuthoredTag.fromJson(value);
+        if (object.containsKey("score") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("tag")) return RequestDefinitionAuthoredScore.fromJson(value);
+        if (object.containsKey("relate") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredRelate.fromJson(value);
+        if (object.containsKey("find") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAuthoredFind.fromJson(value);
+        if (object.containsKey("recognize") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionRecognizeDefinition.fromJson(value);
+        if (object.containsKey("questions") && !object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnnotateDefinition.fromJson(value);
         return RequestDefinitionAuthoredDecide.fromJson(value);
     }
     static RequestImage readRequestImage(Object value) {

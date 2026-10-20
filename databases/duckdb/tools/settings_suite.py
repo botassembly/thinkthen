@@ -25,7 +25,8 @@ ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme (retryable: no)"
 MISSING_PART = "thinkthen usage: the record holds nothing at `/body` (retryable: no)"
-THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+EXPECTED = json.loads((Path(__file__).resolve().parents[3] / "conformance/settings-errors.json").read_text())
+THROTTLE = EXPECTED["throttle"]
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
 
 case(shared_settings_corpus)
@@ -33,14 +34,14 @@ case(shared_settings_corpus)
 
 @case
 def session_batch_keeps_digit_grammar_and_exact_refusal():
-    error = "thinkthen usage: batch takes max or a whole number of at least 1 (retryable: no)"
+    error = EXPECTED["batch"]
     with Backend() as backend:
         for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
             got = run([f"SET thinkthen_batch = '{value}'", ASK,
                        "SELECT thinkthen_decide_details('Is it a refund?', 'refund now')"], backend.base())
             expect(said(got[1]), error, "ordinary session batch refusal")
             failure = rows(got[2])[0][0]["failure"]
-            expect((failure["kind"],failure["message"]), ("usage","batch takes max or a whole number of at least 1"), "typed session batch refusal")
+            expect((failure["kind"],failure["message"]), ("usage", EXPECTED["batch"].removeprefix("thinkthen usage: ").removesuffix(" (retryable: no)")), "typed session batch refusal")
         expect(backend.count(), 0, 'invalid session batches send nothing')
     for value, count in (('max', 1), ('1', 2), ('01', 2)):
         with Backend() as backend:
@@ -418,7 +419,7 @@ def a_negative_request_total_refuses_before_the_map():
 def an_annotate_set_packs_compatible_texts():
     """Three compatible records fit one packed request under a total of two."""
     with Backend() as backend:
-        both = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
+        both = '{"questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
         got = run(["SET thinkthen_max_requests_total = 2", f"SELECT thinkthen_annotate('{both}', x) FROM (VALUES ('one'), ('two'), ('three')) t(x)"], backend.base())
         expect([json.loads(line) for (line,) in rows(got[1])],
                [{"refund": True, "area": "billing"}] * 3, "all three records answered")
@@ -430,7 +431,7 @@ def an_annotate_row_missing_its_part_stops_before_any_send():
     """Shared Request admission preserves the bad-row error before any send.
     Valid neighbours are asked only when the next statement omits that row."""
     with Backend() as backend:
-        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        parted = '{"questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         records = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(2, 7)])
         table = f"""(VALUES (1, '{{"note": "one"}}'), {records}) t(i, x)"""
         ask = f"""thinkthen_annotate('{parted}', x, '{{"batch": 1}}')"""
@@ -447,7 +448,7 @@ def an_annotate_row_missing_its_part_stops_before_any_send():
 def annotate_keeps_the_engines_record_limit():
     """Three texts over a limit of two are refused before any send, as rank refuses."""
     with Backend() as backend:
-        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        parted = '{"questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         table = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(1, 4)])
         got = run(["SET thinkthen_max_requests = 2",
                    f"""SELECT thinkthen_annotate('{parted}', x, '{{"batch": 1}}') FROM (VALUES {table}) t(i, x)"""],
@@ -546,7 +547,7 @@ def access_cases_match_duckdb():
         paths = folders(root)
         for place in ("ok", "out"):
             (root / place / "q.json").write_text('{"decide": "Is it a refund?"}')
-            (root / place / "r.json").write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+            (root / place / "r.json").write_text('{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         wrong = []
         for setting, setup in settings(root).items():
             for name, path in paths.items():
@@ -631,8 +632,8 @@ def prepared_file_arguments_recheck_current_permissions():
         root = Path(folder)
         question, names, rules = (root / name for name in ("q.json", "names.json", "rules.json"))
         question.write_text('{"decide":"Is it a refund?"}')
-        names.write_text('{"version":1,"recognize":{"kinds":{"person":"A person."}}}')
-        rules.write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+        names.write_text('{"recognize":{"kinds":{"person":"A person."}}}')
+        rules.write_text('{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         statements = [
             "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
             f"PREPARE scalar AS SELECT thinkthen_decide('@{question}', 'refund now')",

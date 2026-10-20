@@ -162,6 +162,122 @@ type AnswerId struct{ ownedJSON }
 
 func (v AnswerId) Value() (string, error) { return ownedDecode[string](v.raw) }
 
+type AnswerResolution struct{ ownedJSON }
+
+func (v AnswerResolution) Value() (string, error) { return ownedDecode[string](v.raw) }
+
+type AnswerResolutions struct{ ownedJSON }
+
+func (v AnswerResolutions) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape struct{ ownedJSON }
+
+func (v AnswerShape) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape10 struct{ ownedJSON }
+
+func (v AnswerShape10) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape10AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape10AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape11 struct{ ownedJSON }
+
+func (v AnswerShape11) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape11AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape11AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape12 struct{ ownedJSON }
+
+func (v AnswerShape12) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape12AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape12AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape13 struct{ ownedJSON }
+
+func (v AnswerShape13) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape13AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape13AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape14 struct{ ownedJSON }
+
+func (v AnswerShape14) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape14AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape14AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape15 struct{ ownedJSON }
+
+func (v AnswerShape15) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape15AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape15AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape2 struct{ ownedJSON }
+
+func (v AnswerShape2) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape3 struct{ ownedJSON }
+
+func (v AnswerShape3) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape4 struct{ ownedJSON }
+
+func (v AnswerShape4) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape4AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape4AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape5 struct{ ownedJSON }
+
+func (v AnswerShape5) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape6 struct{ ownedJSON }
+
+func (v AnswerShape6) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape6AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape6AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape7 struct{ ownedJSON }
+
+func (v AnswerShape7) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape7AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape7AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape8 struct{ ownedJSON }
+
+func (v AnswerShape8) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape8AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape8AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape9 struct{ ownedJSON }
+
+func (v AnswerShape9) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShape9AnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShape9AnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
+type AnswerShapeAnyOf1Items struct{ ownedJSON }
+
+func (v AnswerShapeAnyOf1Items) Value() (any, error) { return v.jsonValue() }
+
 type Answers struct{ ownedJSON }
 
 func (v Answers) Questions() Presence[[]RelationMember] {
@@ -389,6 +505,13 @@ func (v BoundaryOdds) Proposals() Presence[[]BoundaryProposal] {
 type BoundaryProposal struct{ ownedJSON }
 
 func (v BoundaryProposal) End() Presence[json.Number] { return ownedMember[json.Number](v.raw, "end") }
+func (v BoundaryProposal) File() Presence[string]     { return ownedMember[string](v.raw, "file") }
+func (v BoundaryProposal) FirstLine() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "first_line")
+}
+func (v BoundaryProposal) LastLine() Presence[json.Number] {
+	return ownedMember[json.Number](v.raw, "last_line")
+}
 func (v BoundaryProposal) Length() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "length")
 }
@@ -404,6 +527,9 @@ type CallError struct{ ownedJSON }
 
 func (v CallError) Error() Presence[FailureDetail] { return ownedMember[FailureDetail](v.raw, "error") }
 func (v CallError) Facts() Presence[Facts]         { return ownedMember[Facts](v.raw, "facts") }
+func (v CallError) Resolution() Presence[AnswerResolution] {
+	return ownedMember[AnswerResolution](v.raw, "resolution")
+}
 
 type CallId struct{ ownedJSON }
 
@@ -1160,6 +1286,55 @@ func (v SendBudgetDenialBeforeRetry) Kind() Presence[string] {
 func (v SendBudgetDenialBeforeRetry) LastStatus() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "last_status")
 }
+
+type SettledDecision struct{ ownedJSON }
+
+func (v SettledDecision) Value() (any, error) { return v.jsonValue() }
+
+type SettledJudgment struct{ ownedJSON }
+
+func (v SettledJudgment) Value() (any, error) { return v.jsonValue() }
+
+type SettledOriginal struct{ ownedJSON }
+
+func (v SettledOriginal) Value() (any, error) { return v.jsonValue() }
+
+type SettledRecognition struct{ ownedJSON }
+
+func (v SettledRecognition) AsSettledRecognitionEntities() (SettledRecognitionEntities, error) {
+	if !(ownedHas(v.raw, "entities") && !ownedHas(v.raw, "mode") && !ownedHas(v.raw, "proposals")) {
+		return SettledRecognitionEntities{}, errAlternative
+	}
+	return ownedDecode[SettledRecognitionEntities](v.raw)
+}
+func (v SettledRecognition) AsSettledRecognitionModeProposals() (SettledRecognitionModeProposals, error) {
+	if !(ownedHas(v.raw, "mode") && ownedHas(v.raw, "proposals") && !ownedHas(v.raw, "entities")) {
+		return SettledRecognitionModeProposals{}, errAlternative
+	}
+	return ownedDecode[SettledRecognitionModeProposals](v.raw)
+}
+
+type SettledRecognitionEntities struct{ ownedJSON }
+
+func (v SettledRecognitionEntities) Entities() Presence[[]Entity] {
+	return ownedMember[[]Entity](v.raw, "entities")
+}
+func (v SettledRecognitionEntities) Relations() Presence[[]EntityEdge] {
+	return ownedMember[[]EntityEdge](v.raw, "relations")
+}
+
+type SettledRecognitionModeProposals struct{ ownedJSON }
+
+func (v SettledRecognitionModeProposals) Mode() Presence[BoundaryMode] {
+	return ownedMember[BoundaryMode](v.raw, "mode")
+}
+func (v SettledRecognitionModeProposals) Proposals() Presence[[]BoundaryProposal] {
+	return ownedMember[[]BoundaryProposal](v.raw, "proposals")
+}
+
+type SettledRelations struct{ ownedJSON }
+
+func (v SettledRelations) Value() (any, error) { return v.jsonValue() }
 
 type StopCause struct{ ownedJSON }
 
@@ -2246,11 +2421,17 @@ func (v SessionPacketTagRow) Value() Presence[AtomicArrayOfString] {
 
 type SessionPacketTerminal struct{ ownedJSON }
 
+func (v SessionPacketTerminal) Answer() Presence[SettledAnswer] {
+	return ownedMember[SettledAnswer](v.raw, "answer")
+}
 func (v SessionPacketTerminal) Facts() Presence[Facts] { return ownedMember[Facts](v.raw, "facts") }
 func (v SessionPacketTerminal) Failure() Presence[CallError] {
 	return ownedMember[CallError](v.raw, "failure")
 }
 func (v SessionPacketTerminal) Kind() Presence[string] { return ownedMember[string](v.raw, "kind") }
+func (v SessionPacketTerminal) Resolution() Presence[AnswerResolution] {
+	return ownedMember[AnswerResolution](v.raw, "resolution")
+}
 
 type SessionProbabilities struct{ ownedJSON }
 
@@ -2387,6 +2568,273 @@ func (v SessionRelationEdge) TargetName() Presence[string] {
 		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
 	}
 	return ownedMember[string](nested.Value, "name")
+}
+
+type SettledAnswer struct{ ownedJSON }
+
+func (v SettledAnswer) AsSettledAnswerDecide() (SettledAnswerDecide, error) {
+	if !(ownedLiteral(v.raw, "function", "decide")) {
+		return SettledAnswerDecide{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerDecide](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerChoose() (SettledAnswerChoose, error) {
+	if !(ownedLiteral(v.raw, "function", "choose")) {
+		return SettledAnswerChoose{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerChoose](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerTag() (SettledAnswerTag, error) {
+	if !(ownedLiteral(v.raw, "function", "tag")) {
+		return SettledAnswerTag{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerTag](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerScore() (SettledAnswerScore, error) {
+	if !(ownedLiteral(v.raw, "function", "score")) {
+		return SettledAnswerScore{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerScore](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerFilter() (SettledAnswerFilter, error) {
+	if !(ownedLiteral(v.raw, "function", "filter")) {
+		return SettledAnswerFilter{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerFilter](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerRank() (SettledAnswerRank, error) {
+	if !(ownedLiteral(v.raw, "function", "rank")) {
+		return SettledAnswerRank{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerRank](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerFind() (SettledAnswerFind, error) {
+	if !(ownedLiteral(v.raw, "function", "find")) {
+		return SettledAnswerFind{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerFind](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerRecognize() (SettledAnswerRecognize, error) {
+	if !(ownedLiteral(v.raw, "function", "recognize")) {
+		return SettledAnswerRecognize{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerRecognize](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerRelate() (SettledAnswerRelate, error) {
+	if !(ownedLiteral(v.raw, "function", "relate")) {
+		return SettledAnswerRelate{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerRelate](v.raw)
+}
+func (v SettledAnswer) AsSettledAnswerAnnotate() (SettledAnswerAnnotate, error) {
+	if !(ownedLiteral(v.raw, "function", "annotate")) {
+		return SettledAnswerAnnotate{}, errAlternative
+	}
+	return ownedDecode[SettledAnswerAnnotate](v.raw)
+}
+
+type SettledAnswerAnnotate struct{ ownedJSON }
+
+func (v SettledAnswerAnnotate) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerAnnotate) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerAnnotate) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerAnnotate) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerAnnotate) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerAnnotate) Value() Presence[AnswerShape15] {
+	return ownedMember[AnswerShape15](v.raw, "value")
+}
+
+type SettledAnswerChoose struct{ ownedJSON }
+
+func (v SettledAnswerChoose) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerChoose) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerChoose) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerChoose) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerChoose) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerChoose) Value() Presence[AnswerShape6] {
+	return ownedMember[AnswerShape6](v.raw, "value")
+}
+
+type SettledAnswerDecide struct{ ownedJSON }
+
+func (v SettledAnswerDecide) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerDecide) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerDecide) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerDecide) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerDecide) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerDecide) Value() Presence[AnswerShape] {
+	return ownedMember[AnswerShape](v.raw, "value")
+}
+
+type SettledAnswerFilter struct{ ownedJSON }
+
+func (v SettledAnswerFilter) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerFilter) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerFilter) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerFilter) Probability() Presence[AnswerShape10] {
+	return ownedMember[AnswerShape10](v.raw, "probability")
+}
+func (v SettledAnswerFilter) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerFilter) Value() Presence[AnswerShape9] {
+	return ownedMember[AnswerShape9](v.raw, "value")
+}
+
+type SettledAnswerFind struct{ ownedJSON }
+
+func (v SettledAnswerFind) Function() Presence[string] { return ownedMember[string](v.raw, "function") }
+func (v SettledAnswerFind) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerFind) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerFind) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerFind) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerFind) Value() Presence[AnswerShape12] {
+	return ownedMember[AnswerShape12](v.raw, "value")
+}
+
+type SettledAnswerRank struct{ ownedJSON }
+
+func (v SettledAnswerRank) Function() Presence[string] { return ownedMember[string](v.raw, "function") }
+func (v SettledAnswerRank) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerRank) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerRank) Probability() Presence[AnswerShape10] {
+	return ownedMember[AnswerShape10](v.raw, "probability")
+}
+func (v SettledAnswerRank) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerRank) Value() Presence[AnswerShape11] {
+	return ownedMember[AnswerShape11](v.raw, "value")
+}
+
+type SettledAnswerRecognize struct{ ownedJSON }
+
+func (v SettledAnswerRecognize) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerRecognize) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerRecognize) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerRecognize) Probability() Presence[AnswerShape10] {
+	return ownedMember[AnswerShape10](v.raw, "probability")
+}
+func (v SettledAnswerRecognize) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerRecognize) Value() Presence[AnswerShape13] {
+	return ownedMember[AnswerShape13](v.raw, "value")
+}
+
+type SettledAnswerRelate struct{ ownedJSON }
+
+func (v SettledAnswerRelate) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerRelate) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerRelate) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerRelate) Probability() Presence[AnswerShape10] {
+	return ownedMember[AnswerShape10](v.raw, "probability")
+}
+func (v SettledAnswerRelate) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerRelate) Value() Presence[AnswerShape14] {
+	return ownedMember[AnswerShape14](v.raw, "value")
+}
+
+type SettledAnswerScore struct{ ownedJSON }
+
+func (v SettledAnswerScore) Function() Presence[string] {
+	return ownedMember[string](v.raw, "function")
+}
+func (v SettledAnswerScore) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerScore) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerScore) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerScore) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerScore) Value() Presence[AnswerShape8] {
+	return ownedMember[AnswerShape8](v.raw, "value")
+}
+
+type SettledAnswerTag struct{ ownedJSON }
+
+func (v SettledAnswerTag) Function() Presence[string] { return ownedMember[string](v.raw, "function") }
+func (v SettledAnswerTag) Index() Presence[AnswerShape4] {
+	return ownedMember[AnswerShape4](v.raw, "index")
+}
+func (v SettledAnswerTag) Pick() Presence[AnswerShape3] {
+	return ownedMember[AnswerShape3](v.raw, "pick")
+}
+func (v SettledAnswerTag) Probability() Presence[AnswerShape2] {
+	return ownedMember[AnswerShape2](v.raw, "probability")
+}
+func (v SettledAnswerTag) Resolution() Presence[AnswerShape5] {
+	return ownedMember[AnswerShape5](v.raw, "resolution")
+}
+func (v SettledAnswerTag) Value() Presence[AnswerShape7] {
+	return ownedMember[AnswerShape7](v.raw, "value")
 }
 
 type SourceRelationEndpoint struct{ ownedJSON }
@@ -3004,7 +3452,6 @@ type RequestDefinitionAnnotateDefinition struct {
 
 func (v RequestDefinitionAnnotateDefinition) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.Batch != nil {
 		raw, err := authoredMarshal(*v.Batch)
 		if err != nil {
@@ -3498,7 +3945,6 @@ type RequestDefinitionRecognizeDefinition struct {
 
 func (v RequestDefinitionRecognizeDefinition) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.ContextSchema != nil {
 		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
 			return nil, err
@@ -3742,7 +4188,6 @@ type RequestDefinitionAuthoredRelate struct {
 
 func (v RequestDefinitionAuthoredRelate) marshalJSON() ([]byte, error) {
 	object := map[string]json.RawMessage{}
-	object["version"] = json.RawMessage("1")
 	if v.ContextSchema != nil {
 		if err := transportMember(object, "context_schema", *v.ContextSchema); err != nil {
 			return nil, err
@@ -4132,13 +4577,19 @@ type RequestOptions struct {
 	Context           *string                  `json:"context,omitempty"`
 	ContextField      *string                  `json:"context_field,omitempty"`
 	DeadlineMs        *int64                   `json:"deadline_ms,omitempty"`
+	EntityDefinition  *string                  `json:"entity_definition,omitempty"`
 	Examples          *[]RecognitionExample    `json:"examples,omitempty"`
 	ExamplesField     *string                  `json:"examples_field,omitempty"`
 	Field             *[]string                `json:"field,omitempty"`
 	FilesOnly         *bool                    `json:"files_only,omitempty"`
+	Instructions      *string                  `json:"instructions,omitempty"`
+	Labels            *[]OptionSchema2         `json:"labels,omitempty"`
+	Levels            *[]OptionSchema2         `json:"levels,omitempty"`
 	MaxRequestsTotal  *uint64                  `json:"max_requests_total,omitempty"`
+	MaxTextBytes      *uint64                  `json:"max_text_bytes,omitempty"`
 	Mode              *RecognitionMode         `json:"mode,omitempty"`
 	Model             *string                  `json:"model,omitempty"`
+	No                *any                     `json:"no,omitempty"`
 	None              *bool                    `json:"none,omitempty"`
 	OptionsField      *string                  `json:"options_field,omitempty"`
 	RelationThreshold *RequestThreshold        `json:"relation_threshold,omitempty"`
@@ -4148,6 +4599,7 @@ type RequestOptions struct {
 	StageContext      *RecognitionStageContext `json:"stage_context,omitempty"`
 	Threshold         *RequestThreshold        `json:"threshold,omitempty"`
 	Top               *uint64                  `json:"top,omitempty"`
+	Yes               *any                     `json:"yes,omitempty"`
 }
 
 func (v RequestOptions) marshalJSON() ([]byte, error) {
@@ -4177,6 +4629,11 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.EntityDefinition != nil {
+		if err := transportMember(object, "entity_definition", *v.EntityDefinition); err != nil {
+			return nil, err
+		}
+	}
 	if v.Examples != nil {
 		if err := transportMember(object, "examples", transportSequence(*v.Examples)); err != nil {
 			return nil, err
@@ -4197,8 +4654,28 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.Instructions != nil {
+		if err := transportMember(object, "instructions", *v.Instructions); err != nil {
+			return nil, err
+		}
+	}
+	if v.Labels != nil {
+		if err := transportMember(object, "labels", transportSequence(*v.Labels)); err != nil {
+			return nil, err
+		}
+	}
+	if v.Levels != nil {
+		if err := transportMember(object, "levels", transportSequence(*v.Levels)); err != nil {
+			return nil, err
+		}
+	}
 	if v.MaxRequestsTotal != nil {
 		if err := transportMember(object, "max_requests_total", *v.MaxRequestsTotal); err != nil {
+			return nil, err
+		}
+	}
+	if v.MaxTextBytes != nil {
+		if err := transportMember(object, "max_text_bytes", *v.MaxTextBytes); err != nil {
 			return nil, err
 		}
 	}
@@ -4211,6 +4688,13 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 		if err := transportMember(object, "model", *v.Model); err != nil {
 			return nil, err
 		}
+	}
+	if v.No != nil {
+		raw, err := authoredMarshal(*v.No)
+		if err != nil {
+			return nil, err
+		}
+		object["no"] = raw
 	}
 	if v.None != nil {
 		if err := transportMember(object, "none", *v.None); err != nil {
@@ -4257,6 +4741,13 @@ func (v RequestOptions) marshalJSON() ([]byte, error) {
 			return nil, err
 		}
 	}
+	if v.Yes != nil {
+		raw, err := authoredMarshal(*v.Yes)
+		if err != nil {
+			return nil, err
+		}
+		object["yes"] = raw
+	}
 	return json.Marshal(object)
 }
 
@@ -4267,6 +4758,26 @@ func (RequestThresholdString) isRequestThreshold() {}
 
 type RequestThresholdString string
 type RequestThresholdNumber float64
+type OptionSchema2 struct {
+	Description *any   `json:"description,omitempty"`
+	Name        string `json:"name"`
+}
+
+func (v OptionSchema2) marshalJSON() ([]byte, error) {
+	object := map[string]json.RawMessage{}
+	if v.Description != nil {
+		raw, err := authoredMarshal(*v.Description)
+		if err != nil {
+			return nil, err
+		}
+		object["description"] = raw
+	}
+	if err := transportMember(object, "name", v.Name); err != nil {
+		return nil, err
+	}
+	return json.Marshal(object)
+}
+
 type RequestBatch interface{ isRequestBatch() }
 
 func (RequestBatchInteger) isRequestBatch() {}

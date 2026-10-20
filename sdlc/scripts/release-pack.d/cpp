@@ -1,0 +1,10 @@
+wrapper_cpp() {
+	mkdir -p "$folder/cmake" "$folder/include/thinkthen"
+	cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
+	cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
+	cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
+	cp -R libraries/cpp/examples "$folder/examples"
+	cp libraries/cpp/README-PUBLIC.md "$folder/README.md"
+}
+
+part_cpp() { part_source_wrapper cpp; }

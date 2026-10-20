@@ -6,6 +6,9 @@ pub const THINKTHEN_VERSION_MAJOR: i32 = 0;
 pub const THINKTHEN_VERSION_MINOR: i32 = 2;
 /// C value `THINKTHEN_VERSION_PATCH`.
 pub const THINKTHEN_VERSION_PATCH: i32 = 0;
+/// Exact C interface compatibility number. Compare with thinkthen_version at load.
+/// Change this number whenever the C contract becomes incompatible.
+pub const THINKTHEN_INTERFACE_NUMBER: u32 = 1;
 /// Zero means success; codes 1..6 identify failures, never answers.
 /// On failure every output stays unchanged; error_code, error_message,
 /// error_retryable and error_facts_json describe the calling thread's failure.

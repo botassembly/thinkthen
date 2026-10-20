@@ -93,7 +93,7 @@ function pages() {
     'root = Path.cwd()',
     'sys.stdout.buffer.write(b"\\0".join(os.fsencode(path.relative_to(root)) for path in tracked_files(root)))',
   ].join('\n');
-  return execFileSync('python3', ['-c', script, fileURLToPath(new URL('../generators/results', import.meta.url))], { encoding: 'utf8' })
+  return execFileSync('python3', ['-c', script, fileURLToPath(new URL('../../build-tools/results', import.meta.url))], { encoding: 'utf8' })
     .split('\0').filter((path) => path.endsWith('.md') && folders.some((folder) => path.startsWith(`${folder}/`)))
     .map((path) => [path, readFileSync(path, 'utf8')]);
 }

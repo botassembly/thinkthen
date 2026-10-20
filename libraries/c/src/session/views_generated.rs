@@ -755,6 +755,1721 @@ pub(crate) fn read_thinkthen_complete_answer_id_v1(
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_resolution_v1 {
+    pub kind: u32,
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1: u32 = 3;
+
+pub(crate) fn read_thinkthen_complete_answer_resolution_v1(
+    node: &Node,
+    _store: &mut Storage,
+) -> Result<thinkthen_complete_answer_resolution_v1, ErrorKind> {
+    let kind = match node.text()? {
+        "resolved" => THINKTHEN_COMPLETE_ANSWER_RESOLUTION_RESOLVED_V1,
+        "unresolved" => THINKTHEN_COMPLETE_ANSWER_RESOLUTION_UNRESOLVED_V1,
+        "failed" => THINKTHEN_COMPLETE_ANSWER_RESOLUTION_FAILED_V1,
+        _ => return Err(ErrorKind::Defect),
+    };
+    Ok(thinkthen_complete_answer_resolution_v1 { kind })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_resolution_map_entry_v1 {
+    pub name: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_answer_resolution_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_resolution_map_v1 {
+    pub data: *const thinkthen_complete_answer_resolution_map_entry_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_resolution_map_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_resolution_map_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for (key, item) in node.object()? {
+        values.push(thinkthen_complete_answer_resolution_map_entry_v1 {
+            name: store.text(key),
+            value: read_thinkthen_complete_answer_resolution_v1(item, store)
+                .map(|value| store.hold(value))?,
+        });
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_resolution_map_v1 { data, len })
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_resolutions_data_v1 {
+    pub string: *const thinkthen_complete_answer_resolution_v1,
+    pub object: thinkthen_complete_answer_resolution_map_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_resolutions_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_resolutions_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_resolutions_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_resolutions_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_resolutions_v1, ErrorKind> {
+    if node.kind() == "string" {
+        let value = read_thinkthen_complete_answer_resolution_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_resolutions_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_STRING_V1,
+            data: thinkthen_complete_answer_resolutions_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_answer_resolution_map_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_resolutions_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_RESOLUTIONS_OBJECT_V1,
+            data: thinkthen_complete_answer_resolutions_data_v1 { object: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_v1 {
+    pub value: *const thinkthen_complete_json_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_v1, ErrorKind> {
+    let value = read_json(node, store)?;
+    Ok(thinkthen_complete_answer_shape_v1 { value })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_8_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_8_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_8_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_8_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_0(node: &Node) -> bool {
+    node.kind() == "number" || node.kind() == "null"
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_10_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_10_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_10_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_10_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_1(node: &Node) -> bool {
+    node.array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_0))
+        || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_10_data_v1 {
+    pub array: thinkthen_complete_answer_shape_8_any_of_1_items_list_v1,
+    pub null: u32,
+    pub array2: thinkthen_complete_answer_shape_10_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_10_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_10_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_10_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_10_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_10_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_0))
+    {
+        let value = read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_10_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_10_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_10_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_10_NULL_V1,
+            data: thinkthen_complete_answer_shape_10_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_1))
+    {
+        let value = read_thinkthen_complete_answer_shape_10_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_10_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ARRAY2_V1,
+            data: thinkthen_complete_answer_shape_10_data_v1 { array2: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 {
+    pub array: thinkthen_complete_answer_shape_8_any_of_1_items_list_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_10_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_10_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_10_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_10_any_of_1_items_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_0))
+    {
+        let value = read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_10_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_10_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_10_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_10_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_integer_list_v1 {
+    pub data: *const u64,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_integer_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_integer_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(read_number(item, store)?);
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_integer_list_v1 { data, len })
+}
+
+fn matches_union_item_2(node: &Node) -> bool {
+    node.kind() == "number"
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_11_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_11_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_11_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_11_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_3(node: &Node) -> bool {
+    node.array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_2))
+        || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_11_data_v1 {
+    pub array: thinkthen_complete_integer_list_v1,
+    pub null: u32,
+    pub array2: thinkthen_complete_answer_shape_11_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_11_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_11_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_11_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_11_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_11_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_2))
+    {
+        let value = read_thinkthen_complete_integer_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_11_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_11_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_11_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_11_NULL_V1,
+            data: thinkthen_complete_answer_shape_11_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_3))
+    {
+        let value = read_thinkthen_complete_answer_shape_11_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_11_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ARRAY2_V1,
+            data: thinkthen_complete_answer_shape_11_data_v1 { array2: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 {
+    pub array: thinkthen_complete_integer_list_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_11_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_11_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_11_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_11_any_of_1_items_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_2))
+    {
+        let value = read_thinkthen_complete_integer_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_11_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_11_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_11_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_11_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_12_v1 {
+    pub value: *const thinkthen_complete_json_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_12_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_12_v1, ErrorKind> {
+    let value = read_json(node, store)?;
+    Ok(thinkthen_complete_answer_shape_12_v1 { value })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_13_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_13_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_13_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_13_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_4(node: &Node) -> bool {
+    node.kind() == "object" || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_13_data_v1 {
+    pub object: *const thinkthen_complete_settled_recognition_v1,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_13_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_13_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_13_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_13_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_13_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_13_v1, ErrorKind> {
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_settled_recognition_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_shape_13_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_13_OBJECT_V1,
+            data: thinkthen_complete_answer_shape_13_data_v1 { object: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_13_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_13_NULL_V1,
+            data: thinkthen_complete_answer_shape_13_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_4))
+    {
+        let value = read_thinkthen_complete_answer_shape_13_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_13_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_13_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 {
+    pub object: *const thinkthen_complete_settled_recognition_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_13_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_13_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_13_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_13_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_settled_recognition_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_shape_13_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_OBJECT_V1,
+            data: thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 { object: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_13_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_13_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_13_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+fn matches_union_item_5(node: &Node) -> bool {
+    node.kind() == "object"
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_14_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_14_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_14_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_14_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_6(node: &Node) -> bool {
+    node.array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_5))
+        || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_14_data_v1 {
+    pub array: *const thinkthen_complete_settled_relations_v1,
+    pub null: u32,
+    pub array2: thinkthen_complete_answer_shape_14_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_14_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_14_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_14_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_14_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_14_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_5))
+    {
+        let value = read_thinkthen_complete_settled_relations_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_shape_14_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_14_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_14_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_14_NULL_V1,
+            data: thinkthen_complete_answer_shape_14_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_6))
+    {
+        let value = read_thinkthen_complete_answer_shape_14_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_14_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ARRAY2_V1,
+            data: thinkthen_complete_answer_shape_14_data_v1 { array2: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 {
+    pub array: *const thinkthen_complete_settled_relations_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_14_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_14_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_14_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_14_any_of_1_items_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_5))
+    {
+        let value = read_thinkthen_complete_settled_relations_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_shape_14_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_14_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_14_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_14_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_judgment_map_entry_v1 {
+    pub name: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_settled_judgment_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_judgment_map_v1 {
+    pub data: *const thinkthen_complete_settled_judgment_map_entry_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_judgment_map_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_judgment_map_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for (key, item) in node.object()? {
+        values.push(thinkthen_complete_settled_judgment_map_entry_v1 {
+            name: store.text(key),
+            value: read_thinkthen_complete_settled_judgment_v1(item, store)
+                .map(|value| store.hold(value))?,
+        });
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_settled_judgment_map_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_15_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_15_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_15_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_15_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_7(node: &Node) -> bool {
+    node.kind() == "object" || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_15_data_v1 {
+    pub object: thinkthen_complete_settled_judgment_map_v1,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_15_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_15_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_15_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_15_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_15_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_15_v1, ErrorKind> {
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_settled_judgment_map_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_15_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_15_OBJECT_V1,
+            data: thinkthen_complete_answer_shape_15_data_v1 { object: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_15_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_15_NULL_V1,
+            data: thinkthen_complete_answer_shape_15_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_7))
+    {
+        let value = read_thinkthen_complete_answer_shape_15_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_15_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_15_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 {
+    pub object: thinkthen_complete_settled_judgment_map_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_15_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_15_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_15_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_15_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_settled_judgment_map_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_15_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_OBJECT_V1,
+            data: thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 { object: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_15_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_15_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_15_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_2_data_v1 {
+    pub number: f64,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_8_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_2_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_2_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_2_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_2_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_2_v1, ErrorKind> {
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_2_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NUMBER_V1,
+            data: thinkthen_complete_answer_shape_2_data_v1 { number: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_2_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_2_NULL_V1,
+            data: thinkthen_complete_answer_shape_2_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_0))
+    {
+        let value = read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_2_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_2_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_2_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_6_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_6_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_6_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_6_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_8(node: &Node) -> bool {
+    node.kind() == "string" || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_3_data_v1 {
+    pub string: thinkthen_complete_utf8_v1,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_6_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_3_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_3_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_3_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_3_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_3_v1, ErrorKind> {
+    if node.kind() == "string" {
+        let value = read_text(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_3_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_3_STRING_V1,
+            data: thinkthen_complete_answer_shape_3_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_3_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_3_NULL_V1,
+            data: thinkthen_complete_answer_shape_3_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_8))
+    {
+        let value = read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_3_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_3_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_3_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_4_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_4_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_4_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_4_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_9(node: &Node) -> bool {
+    node.kind() == "number" || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_4_data_v1 {
+    pub integer: u64,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_4_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_4_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_4_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_4_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_4_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_4_v1, ErrorKind> {
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_4_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_4_INTEGER_V1,
+            data: thinkthen_complete_answer_shape_4_data_v1 { integer: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_4_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_4_NULL_V1,
+            data: thinkthen_complete_answer_shape_4_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_9))
+    {
+        let value = read_thinkthen_complete_answer_shape_4_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_4_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_4_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 {
+    pub integer: u64,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_4_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_4_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_4_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_4_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_4_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_INTEGER_V1,
+            data: thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 { integer: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_4_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_4_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_4_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_resolutions_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_resolutions_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_resolutions_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_resolutions_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_resolutions_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_resolutions_list_v1 { data, len })
+}
+
+fn matches_union_item_10(node: &Node) -> bool {
+    node.kind() == "string" || node.kind() == "object"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_5_data_v1 {
+    pub string: *const thinkthen_complete_answer_resolution_v1,
+    pub object: thinkthen_complete_answer_resolution_map_v1,
+    pub array: thinkthen_complete_answer_resolutions_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_5_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_5_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_5_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_5_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_5_v1, ErrorKind> {
+    if node.kind() == "string" {
+        let value = read_thinkthen_complete_answer_resolution_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_answer_shape_5_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_5_STRING_V1,
+            data: thinkthen_complete_answer_shape_5_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "object" {
+        let value = read_thinkthen_complete_answer_resolution_map_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_5_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_5_OBJECT_V1,
+            data: thinkthen_complete_answer_shape_5_data_v1 { object: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_10))
+    {
+        let value = read_thinkthen_complete_answer_resolutions_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_5_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_5_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_5_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_6_data_v1 {
+    pub string: thinkthen_complete_utf8_v1,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_6_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_6_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_6_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_6_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_6_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_6_v1, ErrorKind> {
+    if node.kind() == "string" {
+        let value = read_text(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_6_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_6_STRING_V1,
+            data: thinkthen_complete_answer_shape_6_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_6_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_6_NULL_V1,
+            data: thinkthen_complete_answer_shape_6_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_8))
+    {
+        let value = read_thinkthen_complete_answer_shape_6_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_6_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_6_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 {
+    pub string: thinkthen_complete_utf8_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_6_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_6_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_6_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_6_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "string" {
+        let value = read_text(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_6_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_STRING_V1,
+            data: thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_6_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_6_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_6_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+fn matches_union_item_11(node: &Node) -> bool {
+    node.kind() == "string"
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_7_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_7_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_7_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_7_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_12(node: &Node) -> bool {
+    node.array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+        || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_7_data_v1 {
+    pub array: thinkthen_complete_string_list_v1,
+    pub null: u32,
+    pub array2: thinkthen_complete_answer_shape_7_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_7_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_7_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_7_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_7_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_7_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+    {
+        let value = read_thinkthen_complete_string_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_7_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_7_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_7_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_7_NULL_V1,
+            data: thinkthen_complete_answer_shape_7_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_12))
+    {
+        let value = read_thinkthen_complete_answer_shape_7_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_7_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ARRAY2_V1,
+            data: thinkthen_complete_answer_shape_7_data_v1 { array2: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 {
+    pub array: thinkthen_complete_string_list_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_7_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_7_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_7_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_7_any_of_1_items_v1, ErrorKind> {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+    {
+        let value = read_thinkthen_complete_string_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_7_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_7_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_7_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_7_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_8_data_v1 {
+    pub number: f64,
+    pub null: u32,
+    pub array: thinkthen_complete_answer_shape_8_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_8_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_8_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_8_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_8_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_8_v1, ErrorKind> {
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_8_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NUMBER_V1,
+            data: thinkthen_complete_answer_shape_8_data_v1 { number: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_8_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_8_NULL_V1,
+            data: thinkthen_complete_answer_shape_8_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_0))
+    {
+        let value = read_thinkthen_complete_answer_shape_8_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_8_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_8_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 {
+    pub number: f64,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_8_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_8_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_8_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_8_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_8_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NUMBER_V1,
+            data: thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 { number: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_8_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_8_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_8_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_original_list_v1 {
+    pub data: *const *const thinkthen_complete_settled_original_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_original_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_original_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_settled_original_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_settled_original_list_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 {
+    pub data: *const *const thinkthen_complete_answer_shape_9_any_of_1_items_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_9_any_of_1_items_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_answer_shape_9_any_of_1_items_v1(item, store)
+                .map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_answer_shape_9_any_of_1_items_list_v1 { data, len })
+}
+
+fn matches_union_item_13(node: &Node) -> bool {
+    node.kind() == "array" || node.kind() == "null"
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2_V1: u32 = 3;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_9_data_v1 {
+    pub array: thinkthen_complete_settled_original_list_v1,
+    pub null: u32,
+    pub array2: thinkthen_complete_answer_shape_9_any_of_1_items_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_9_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_9_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_9_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_9_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_9_v1, ErrorKind> {
+    if node.kind() == "array" {
+        let value = read_thinkthen_complete_settled_original_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_9_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_9_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_9_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_9_NULL_V1,
+            data: thinkthen_complete_answer_shape_9_data_v1 { null: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_13))
+    {
+        let value = read_thinkthen_complete_answer_shape_9_any_of_1_items_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_9_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ARRAY2_V1,
+            data: thinkthen_complete_answer_shape_9_data_v1 { array2: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 {
+    pub array: thinkthen_complete_settled_original_list_v1,
+    pub null: u32,
+}
+impl std::fmt::Debug for thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_9_any_of_1_items_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_answer_shape_9_any_of_1_items_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_answer_shape_9_any_of_1_items_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_answer_shape_9_any_of_1_items_v1, ErrorKind> {
+    if node.kind() == "array" {
+        let value = read_thinkthen_complete_settled_original_list_v1(node, store)?;
+        return Ok(thinkthen_complete_answer_shape_9_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_ARRAY_V1,
+            data: thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 { array: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_answer_shape_9_any_of_1_items_v1 {
+            kind: THINKTHEN_COMPLETE_ANSWER_SHAPE_9_ANY_OF_1_ITEMS_NULL_V1,
+            data: thinkthen_complete_answer_shape_9_any_of_1_items_data_v1 { null: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_relation_member_list_v1 {
     pub data: *const *const thinkthen_complete_relation_member_v1,
     pub len: usize,
@@ -1941,6 +3656,9 @@ pub(crate) fn read_thinkthen_complete_boundary_mode_v1(
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_boundary_proposal_v1 {
     pub end: u64,
+    pub file: thinkthen_complete_utf8_presence_v1,
+    pub first_line: thinkthen_complete_u64_presence_v1,
+    pub last_line: thinkthen_complete_u64_presence_v1,
     pub length: u64,
     pub probability: f64,
     pub start: u64,
@@ -1956,6 +3674,29 @@ pub(crate) fn read_thinkthen_complete_boundary_proposal_v1(
         end: {
             let value = node.required("end")?;
             read_number(value, store)?
+        },
+        file: {
+            let (presence, value) = read_presence(
+                node.member("file"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        first_line: {
+            let (presence, value) =
+                read_presence(node.member("first_line"), false, 0, read_number, store)?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
+        },
+        last_line: {
+            let (presence, value) =
+                read_presence(node.member("last_line"), false, 0, read_number, store)?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
         },
         length: {
             let value = node.required("length")?;
@@ -1973,7 +3714,19 @@ pub(crate) fn read_thinkthen_complete_boundary_proposal_v1(
             let value = node.required("text")?;
             read_text(value, store)?
         },
-        extensions: store.extensions(node, &["end", "length", "probability", "start", "text"])?,
+        extensions: store.extensions(
+            node,
+            &[
+                "end",
+                "file",
+                "first_line",
+                "last_line",
+                "length",
+                "probability",
+                "start",
+                "text",
+            ],
+        )?,
     })
 }
 
@@ -1989,6 +3742,7 @@ pub struct thinkthen_complete_facts_presence_v1 {
 pub struct thinkthen_complete_call_error_v1 {
     pub error: *const thinkthen_complete_error_v1,
     pub facts: thinkthen_complete_facts_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_resolution_v1,
     pub extensions: thinkthen_complete_extensions_v1,
 }
 
@@ -2013,7 +3767,12 @@ pub(crate) fn read_thinkthen_complete_call_error_v1(
             )?;
             thinkthen_complete_facts_presence_v1 { presence, value }
         },
-        extensions: store.extensions(node, &["error", "facts"])?,
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_resolution_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        extensions: store.extensions(node, &["error", "facts", "resolution"])?,
     })
 }
 
@@ -5443,6 +7202,271 @@ pub(crate) fn read_thinkthen_complete_send_denial_before_retry_v1(
     })
 }
 
+pub const THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING_V1: u32 = 3;
+
+pub const THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER_V1: u32 = 4;
+
+pub const THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY_V1: u32 = 5;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_settled_judgment_data_v1 {
+    pub boolean: u32,
+    pub null: u32,
+    pub string: thinkthen_complete_utf8_v1,
+    pub number: f64,
+    pub array: thinkthen_complete_string_list_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_settled_judgment_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_judgment_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_settled_judgment_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_judgment_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_judgment_v1, ErrorKind> {
+    if node.kind() == "boolean" {
+        let value = read_boolean(node, store)?;
+        return Ok(thinkthen_complete_settled_judgment_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_JUDGMENT_BOOLEAN_V1,
+            data: thinkthen_complete_settled_judgment_data_v1 { boolean: value },
+        });
+    }
+    if node.kind() == "null" {
+        let value = 0;
+        return Ok(thinkthen_complete_settled_judgment_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NULL_V1,
+            data: thinkthen_complete_settled_judgment_data_v1 { null: value },
+        });
+    }
+    if node.kind() == "string" {
+        let value = read_text(node, store)?;
+        return Ok(thinkthen_complete_settled_judgment_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_JUDGMENT_STRING_V1,
+            data: thinkthen_complete_settled_judgment_data_v1 { string: value },
+        });
+    }
+    if node.kind() == "number" {
+        let value = read_number(node, store)?;
+        return Ok(thinkthen_complete_settled_judgment_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_JUDGMENT_NUMBER_V1,
+            data: thinkthen_complete_settled_judgment_data_v1 { number: value },
+        });
+    }
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+    {
+        let value = read_thinkthen_complete_string_list_v1(node, store)?;
+        return Ok(thinkthen_complete_settled_judgment_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_JUDGMENT_ARRAY_V1,
+            data: thinkthen_complete_settled_judgment_data_v1 { array: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_original_v1 {
+    pub value: *const thinkthen_complete_json_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_original_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_original_v1, ErrorKind> {
+    let value = read_json(node, store)?;
+    Ok(thinkthen_complete_settled_original_v1 { value })
+}
+
+pub const THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS_V1: u32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_settled_recognition_data_v1 {
+    pub entities: *const thinkthen_complete_settled_recognition_entities_v1,
+    pub mode_proposals: *const thinkthen_complete_settled_recognition_mode_proposals_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_settled_recognition_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_recognition_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_settled_recognition_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_recognition_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_recognition_v1, ErrorKind> {
+    if node.member("entities").is_some()
+        && node.member("mode").is_none()
+        && node.member("proposals").is_none()
+    {
+        let value = read_thinkthen_complete_settled_recognition_entities_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_recognition_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_RECOGNITION_ENTITIES_V1,
+            data: thinkthen_complete_settled_recognition_data_v1 { entities: value },
+        });
+    }
+    if node.member("mode").is_some()
+        && node.member("proposals").is_some()
+        && node.member("entities").is_none()
+    {
+        let value = read_thinkthen_complete_settled_recognition_mode_proposals_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_recognition_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_RECOGNITION_MODE_PROPOSALS_V1,
+            data: thinkthen_complete_settled_recognition_data_v1 {
+                mode_proposals: value,
+            },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_entity_list_v1 {
+    pub data: *const *const thinkthen_complete_entity_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_entity_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_entity_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(read_thinkthen_complete_entity_v1(item, store).map(|value| store.hold(value))?);
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_entity_list_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_entity_edge_list_v1 {
+    pub data: *const *const thinkthen_complete_entity_edge_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_entity_edge_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_entity_edge_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_entity_edge_v1(item, store).map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_entity_edge_list_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_entity_edge_list_presence_v1 {
+    pub presence: u32,
+    pub value: thinkthen_complete_entity_edge_list_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_recognition_entities_v1 {
+    pub entities: thinkthen_complete_entity_list_v1,
+    pub relations: thinkthen_complete_entity_edge_list_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_recognition_entities_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_recognition_entities_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_recognition_entities_v1 {
+        entities: {
+            let value = node.required("entities")?;
+            read_thinkthen_complete_entity_list_v1(value, store)?
+        },
+        relations: {
+            let (presence, value) = read_presence(
+                node.member("relations"),
+                false,
+                thinkthen_complete_entity_edge_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_entity_edge_list_v1,
+                store,
+            )?;
+            thinkthen_complete_entity_edge_list_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(node, &["entities", "relations"])?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_recognition_mode_proposals_v1 {
+    pub mode: *const thinkthen_complete_boundary_mode_v1,
+    pub proposals: thinkthen_complete_boundary_proposal_list_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_recognition_mode_proposals_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_recognition_mode_proposals_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_recognition_mode_proposals_v1 {
+        mode: {
+            let value = node.required("mode")?;
+            read_thinkthen_complete_boundary_mode_v1(value, store).map(|value| store.hold(value))?
+        },
+        proposals: {
+            let value = node.required("proposals")?;
+            read_thinkthen_complete_boundary_proposal_list_v1(value, store)?
+        },
+        extensions: store.extensions(node, &["mode", "proposals"])?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_relations_v1 {
+    pub value: thinkthen_complete_related_entity_edge_list_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_relations_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_relations_v1, ErrorKind> {
+    let value = read_thinkthen_complete_related_entity_edge_list_v1(node, store)?;
+    Ok(thinkthen_complete_settled_relations_v1 { value })
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_stop_cause_v1 {
@@ -5734,7 +7758,10 @@ pub(crate) fn read_thinkthen_complete_annotated_field_v1(
             data: thinkthen_complete_annotated_field_data_v1 { string: value },
         });
     }
-    if node.kind() == "array" {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+    {
         let value = read_thinkthen_complete_string_list_v1(node, store)?;
         return Ok(thinkthen_complete_annotated_field_v1 {
             kind: THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1,
@@ -8002,53 +10029,6 @@ pub(crate) fn read_thinkthen_complete_recognize_question_document_v1(
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_entity_list_v1 {
-    pub data: *const *const thinkthen_complete_entity_v1,
-    pub len: usize,
-}
-
-pub(crate) fn read_thinkthen_complete_entity_list_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_entity_list_v1, ErrorKind> {
-    let mut values = Vec::new();
-    for item in node.array()? {
-        values.push(read_thinkthen_complete_entity_v1(item, store).map(|value| store.hold(value))?);
-    }
-    let (data, len) = store.slice(values);
-    Ok(thinkthen_complete_entity_list_v1 { data, len })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_entity_edge_list_v1 {
-    pub data: *const *const thinkthen_complete_entity_edge_v1,
-    pub len: usize,
-}
-
-pub(crate) fn read_thinkthen_complete_entity_edge_list_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_entity_edge_list_v1, ErrorKind> {
-    let mut values = Vec::new();
-    for item in node.array()? {
-        values.push(
-            read_thinkthen_complete_entity_edge_v1(item, store).map(|value| store.hold(value))?,
-        );
-    }
-    let (data, len) = store.slice(values);
-    Ok(thinkthen_complete_entity_edge_list_v1 { data, len })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_entity_edge_list_presence_v1 {
-    pub presence: u32,
-    pub value: thinkthen_complete_entity_edge_list_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_recognize_entities_v1 {
     pub entities: thinkthen_complete_entity_list_v1,
     pub relations: thinkthen_complete_entity_edge_list_presence_v1,
@@ -10029,6 +12009,13 @@ pub(crate) fn read_thinkthen_complete_session_packet_tag_row_v1(
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_settled_answer_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_call_error_presence_v1 {
     pub presence: u32,
     pub value: *const thinkthen_complete_call_error_v1,
@@ -10037,9 +12024,11 @@ pub struct thinkthen_complete_call_error_presence_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_session_packet_terminal_v1 {
+    pub answer: thinkthen_complete_settled_answer_presence_v1,
     pub facts: thinkthen_complete_facts_presence_v1,
     pub failure: thinkthen_complete_call_error_presence_v1,
     pub kind: thinkthen_complete_utf8_v1,
+    pub resolution: *const thinkthen_complete_answer_resolution_v1,
     pub extensions: thinkthen_complete_extensions_v1,
 }
 
@@ -10048,6 +12037,19 @@ pub(crate) fn read_thinkthen_complete_session_packet_terminal_v1(
     store: &mut Storage,
 ) -> Result<thinkthen_complete_session_packet_terminal_v1, ErrorKind> {
     Ok(thinkthen_complete_session_packet_terminal_v1 {
+        answer: {
+            let (presence, value) = read_presence(
+                node.member("answer"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_settled_answer_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_settled_answer_presence_v1 { presence, value }
+        },
         facts: {
             let (presence, value) = read_presence(
                 node.member("facts"),
@@ -10077,7 +12079,13 @@ pub(crate) fn read_thinkthen_complete_session_packet_terminal_v1(
             let value = node.required("kind")?;
             read_text(value, store)?
         },
-        extensions: store.extensions(node, &["facts", "failure", "kind"])?,
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_resolution_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        extensions: store
+            .extensions(node, &["answer", "facts", "failure", "kind", "resolution"])?,
     })
 }
 
@@ -10646,6 +12654,1158 @@ pub(crate) fn read_thinkthen_complete_session_relation_edge_v1(
     })
 }
 
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG_V1: u32 = 3;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE_V1: u32 = 4;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER_V1: u32 = 5;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK_V1: u32 = 6;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND_V1: u32 = 7;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE_V1: u32 = 8;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE_V1: u32 = 9;
+
+pub const THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE_V1: u32 = 10;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_settled_answer_data_v1 {
+    pub decide: *const thinkthen_complete_settled_answer_decide_v1,
+    pub choose: *const thinkthen_complete_settled_answer_choose_v1,
+    pub tag: *const thinkthen_complete_settled_answer_tag_v1,
+    pub score: *const thinkthen_complete_settled_answer_score_v1,
+    pub filter: *const thinkthen_complete_settled_answer_filter_v1,
+    pub rank: *const thinkthen_complete_settled_answer_rank_v1,
+    pub find: *const thinkthen_complete_settled_answer_find_v1,
+    pub recognize: *const thinkthen_complete_settled_answer_recognize_v1,
+    pub relate: *const thinkthen_complete_settled_answer_relate_v1,
+    pub annotate: *const thinkthen_complete_settled_answer_annotate_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_settled_answer_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_settled_answer_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_v1, ErrorKind> {
+    if node.is_member("function", "decide") {
+        let value = read_thinkthen_complete_settled_answer_decide_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_DECIDE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { decide: value },
+        });
+    }
+    if node.is_member("function", "choose") {
+        let value = read_thinkthen_complete_settled_answer_choose_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_CHOOSE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { choose: value },
+        });
+    }
+    if node.is_member("function", "tag") {
+        let value = read_thinkthen_complete_settled_answer_tag_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_TAG_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { tag: value },
+        });
+    }
+    if node.is_member("function", "score") {
+        let value = read_thinkthen_complete_settled_answer_score_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_SCORE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { score: value },
+        });
+    }
+    if node.is_member("function", "filter") {
+        let value = read_thinkthen_complete_settled_answer_filter_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_FILTER_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { filter: value },
+        });
+    }
+    if node.is_member("function", "rank") {
+        let value = read_thinkthen_complete_settled_answer_rank_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_RANK_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { rank: value },
+        });
+    }
+    if node.is_member("function", "find") {
+        let value = read_thinkthen_complete_settled_answer_find_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_FIND_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { find: value },
+        });
+    }
+    if node.is_member("function", "recognize") {
+        let value = read_thinkthen_complete_settled_answer_recognize_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_RECOGNIZE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { recognize: value },
+        });
+    }
+    if node.is_member("function", "relate") {
+        let value = read_thinkthen_complete_settled_answer_relate_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_RELATE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { relate: value },
+        });
+    }
+    if node.is_member("function", "annotate") {
+        let value = read_thinkthen_complete_settled_answer_annotate_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_settled_answer_v1 {
+            kind: THINKTHEN_COMPLETE_SETTLED_ANSWER_ANNOTATE_V1,
+            data: thinkthen_complete_settled_answer_data_v1 { annotate: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_4_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_4_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_3_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_3_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_2_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_2_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_15_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_15_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_annotate_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_15_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_annotate_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_annotate_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_annotate_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_15_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_15_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_6_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_6_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_choose_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_6_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_choose_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_choose_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_choose_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_6_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_6_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_decide_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_decide_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_decide_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_decide_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_10_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_10_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_9_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_9_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_filter_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_10_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_9_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_filter_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_filter_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_filter_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_10_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_10_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_9_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_9_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_12_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_12_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_find_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_12_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_find_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_find_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_find_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_12_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_12_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_11_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_11_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_rank_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_10_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_11_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_rank_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_rank_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_rank_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_10_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_10_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_11_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_11_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_13_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_13_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_recognize_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_10_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_13_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_recognize_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_recognize_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_recognize_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_10_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_10_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_13_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_13_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_14_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_14_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_relate_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_10_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_14_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_relate_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_relate_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_relate_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_10_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_10_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_14_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_14_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_8_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_8_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_score_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_8_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_score_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_score_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_score_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_8_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_8_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_answer_shape_7_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_answer_shape_7_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_settled_answer_tag_v1 {
+    pub function: thinkthen_complete_utf8_v1,
+    pub index: thinkthen_complete_answer_shape_4_presence_v1,
+    pub pick: thinkthen_complete_answer_shape_3_presence_v1,
+    pub probability: thinkthen_complete_answer_shape_2_presence_v1,
+    pub resolution: *const thinkthen_complete_answer_shape_5_v1,
+    pub value: thinkthen_complete_answer_shape_7_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_settled_answer_tag_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_settled_answer_tag_v1, ErrorKind> {
+    Ok(thinkthen_complete_settled_answer_tag_v1 {
+        function: {
+            let value = node.required("function")?;
+            read_text(value, store)?
+        },
+        index: {
+            let (presence, value) = read_presence(
+                node.member("index"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_4_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_4_presence_v1 { presence, value }
+        },
+        pick: {
+            let (presence, value) = read_presence(
+                node.member("pick"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_3_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_3_presence_v1 { presence, value }
+        },
+        probability: {
+            let (presence, value) = read_presence(
+                node.member("probability"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_2_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_2_presence_v1 { presence, value }
+        },
+        resolution: {
+            let value = node.required("resolution")?;
+            read_thinkthen_complete_answer_shape_5_v1(value, store)
+                .map(|value| store.hold(value))?
+        },
+        value: {
+            let (presence, value) = read_presence(
+                node.member("value"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_answer_shape_7_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_answer_shape_7_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "function",
+                "index",
+                "pick",
+                "probability",
+                "resolution",
+                "value",
+            ],
+        )?,
+    })
+}
+
 pub const THINKTHEN_COMPLETE_THRESHOLD_NUMBER_V1: u32 = 1;
 
 pub const THINKTHEN_COMPLETE_THRESHOLD_STRING_V1: u32 = 2;
@@ -10772,7 +13932,10 @@ pub(crate) fn read_thinkthen_complete_value_v1(
             data: thinkthen_complete_value_data_v1 { string: value },
         });
     }
-    if node.kind() == "array" {
+    if node
+        .array()
+        .is_ok_and(|items| items.iter().all(matches_union_item_11))
+    {
         let value = read_thinkthen_complete_string_list_v1(node, store)?;
         return Ok(thinkthen_complete_value_v1 {
             kind: THINKTHEN_COMPLETE_VALUE_ARRAY_V1,

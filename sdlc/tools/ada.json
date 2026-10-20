@@ -1,0 +1,27 @@
+{
+  "tools": {
+    "gnat": {
+      "commands": [
+        "gnatmake",
+        "gprbuild"
+      ],
+      "platforms": [
+        "linux"
+      ],
+      "groups": [
+        "ada"
+      ],
+      "version": "13.3.0"
+    }
+  },
+  "libraries": {
+    "ada": {
+      "platforms": [
+        "linux-x86_64"
+      ],
+      "check_platforms": [
+        "linux-x86_64"
+      ]
+    }
+  }
+}

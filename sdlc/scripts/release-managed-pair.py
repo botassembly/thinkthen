@@ -18,6 +18,10 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'conformance/children'))
+from privacy import PrivacyError, check_bytes
+
+
 spec = importlib.util.spec_from_file_location("package_inventory", Path(__file__).with_name("package-inventory.py"))
 package_inventory = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_inventory)
@@ -53,7 +57,13 @@ def tar_files(data, label):
         files = {}
         dirs = set()
         seen = set()
-        source_links = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
+        source_links = {
+            "CLAUDE.md": "AGENTS.md",
+            "crates/thinkthen/LICENSE": "../../LICENSE",
+            "crates/thinkthen-cli/LICENSE": "../../LICENSE",
+            "crates/thinkthen-cli/README.md": "../../README.md",
+            "crates/thinkthen-cli/clippy.toml": "../thinkthen/clippy.toml",
+        }
         for member in archive:
             name = member.name.removeprefix("./")
             require(name not in seen and not name.startswith("/") and ".." not in Path(name).parts,
@@ -135,9 +145,10 @@ def check_nupkg(data, version, source, target, native):
             xml_field(nuspec, "version", ("package", "metadata")) == version, "nupkg identity differs")
     for name in ("README.md", "LICENSE"):
         require(members[name] == source[source_member("csharp", name)], f"nupkg {name} differs from source")
-    forbidden = (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-290", b"-----BEGIN PRIVATE KEY-----")
-    require(not any(token in value or token in name.encode() for name, value in members.items()
-                    for token in forbidden), "private nupkg member")
+    for name, value in members.items():
+        check_bytes(name, name.encode() + value)
+    require(not any(b'thinkthen_panic_probe' in name.encode() or b'thinkthen_panic_probe' in value
+                    for name, value in members.items()), "diagnostic nupkg member")
 
 
 def check_jar(data, kind, inventory):
@@ -150,9 +161,9 @@ def check_jar(data, kind, inventory):
     allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
     require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')
     require(set(members) == expected, f"{kind} JAR classes differ")
-    require(not any(token in value for value in members.values() for token in
-                    (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",
-                     b"-----BEGIN PRIVATE KEY-----")), f"private {kind} JAR byte")
+    for name, value in members.items():
+        check_bytes(name, name.encode() + value)
+    require(not any(b'thinkthen_panic_probe' in value for value in members.values()), f"diagnostic {kind} JAR byte")
 
 
 def check_native(data, kind, definition, native):
@@ -304,6 +315,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, OSError, KeyError, tarfile.TarError, zipfile.BadZipFile, ET.ParseError) as error:
+    except (PrivacyError, ValueError, OSError, KeyError, tarfile.TarError, zipfile.BadZipFile, ET.ParseError) as error:
         print(f"release-managed-pair: {error}", file=sys.stderr)
         sys.exit(1)
