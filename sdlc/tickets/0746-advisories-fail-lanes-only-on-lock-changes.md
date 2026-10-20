@@ -31,3 +31,4 @@ Phase: 2
 
 - 2026-10-20 started
 - 2026-10-20 next: setup: negative proof 1792527588257-75124 exposed label-only ticket classification, repaired at 3e5200215 with green 1792527628198-87326 passing six focused policy tests; source is held for accepted 0744 and 0740 parents before the full configured gate and fresh review.
+- 2026-10-20 next: Setup cause: LinuxSourceIdentity omitted dependency-check.py and refs/remotes/origin/main; focused source-isolation job 1792530100023-41204 failed at 736ad6436 with missing helper, and job 1792530131010-52558 passed at repaired 8ff9a51a9. Hold full gates and acceptance until accepted 0744 and 0740 parents integrate.
