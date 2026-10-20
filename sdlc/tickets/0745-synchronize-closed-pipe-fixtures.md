@@ -22,6 +22,7 @@ Changes: `crates/thinkthen-cli/tests/backend/annotate/scheduling.rs`, `crates/th
 - The same pattern occurs in parallel.rs, table.rs, tag/matrix.rs and closed_pipe.rs; adjacent annotate failure-after-close already holds replies with a rendezvous.
 - Earlier 0352 commit 7b3f4cc4d synchronized the adjacent case but only lengthened this case's exit guard, leaving the ordering race.
 - Exact proof command, replacing SHA with the pushed repair revision: `pm job run --machine m5 0745 SHA --disk 20 --memory 8 -- sdlc/scripts/gate`; this configured gate covers the routine backend cases and mechanical checks without a hand invocation; coordinator landing uses `pm ticket land 0745 --merge-branch --disk 20 --memory 8`.
+- Before the configured gate, the focused existing backend entrypoint is `pm job run --machine m5 0745 SHA --disk 20 --memory 8 -- sdlc/scripts/job cargo test --locked -p thinkthen-cli --test backend pipe -- --nocapture`; the pipe selector includes all five repaired fixtures and existing pipe siblings.
 - Classify failed-run reasons as product, setup or invocation and retain every failed receipt; do not rerun an unchanged failure until green.
 
 ## Progress
