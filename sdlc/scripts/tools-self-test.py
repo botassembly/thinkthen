@@ -516,8 +516,7 @@ class LinuxSourceIdentity(unittest.TestCase):
             self.assertNotIn('databases/sqlite/setup.sh', script)
             self.assertNotIn('flutter pub get', script)
             source = next(root.glob('.linux-*/src')).resolve()
-            run = next(json.loads(line) for line in calls.read_text().splitlines()
-                       if json.loads(line)[0] == 'run')
+            run = runs[-1]
             self.assertTrue(run[-1].endswith('sdlc/scripts/job sdlc/scripts/test\n'))
             fixture_mounts = [run[index + 1] for index, value in enumerate(run)
                               if value == '--tmpfs']
