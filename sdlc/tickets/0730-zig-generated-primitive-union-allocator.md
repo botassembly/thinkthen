@@ -32,3 +32,4 @@ Given the generated Zig library, when its installed smoke builds and decodes the
 
 - 2026-10-19 started
 - 2026-10-19 next: Fresh review accepts8397d3f6d after Yellow job1792462656061-558376 passed pinned Zig0.15.2 generation consistency and installed smoke in prepared imagefa71288f842e; the configured closing gate remains for the next accepted batch.
+- 2026-10-19 next: The accepted Zig repair takes its own configured closing gate after merge38cb40200 with current main because0642 remaining proof is blocked on tool resolution,0639 has batched behavior repairs and0619 images remain in preparation, so none is ready for the same landing.
