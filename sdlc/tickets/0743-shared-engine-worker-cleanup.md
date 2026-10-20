@@ -21,3 +21,5 @@ Changes: `crates/thinkthen/tests/public_batches.rs`. Add a necessary related sou
 - Preserve that failed receipt, reproduce through the existing job and container commands, then prove the repaired class through the same package path and the configured gate before landing.
 
 ## Progress
+
+- 2026-10-20 started
