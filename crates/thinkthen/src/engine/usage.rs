@@ -12,11 +12,9 @@ mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
-mod timing;
-#[cfg(any(feature = "cli", test))]
-pub(crate) use facts::Snapshot as RunSnapshot;
 mod files;
 mod lock;
+mod timing;
 pub(crate) use files::open_read;
 use files::{
     make_private_directory, open_private, open_stable_lock, open_verified, sync_directory,
@@ -160,7 +158,7 @@ impl Counters {
 
     /// Wait for the writer, giving all remaining usage-lock acquisitions one
     /// finalization deadline. Other filesystem operations remain unbounded.
-    #[cfg(any(test, feature = "cli"))]
+    #[cfg(test)]
     pub(crate) fn finish(&self) -> bool {
         self.finish_status() == UsagePersistence::Failed
     }
@@ -219,7 +217,6 @@ impl Counters {
     }
 
     /// Only generated usage filenames and fixed categories may reach diagnostics.
-    #[cfg(any(feature = "cli", test))]
     pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
         self.shared.queue.lock().ok()?.failed_file.clone()
     }
@@ -411,7 +408,7 @@ fn overflow() -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, "usage overflow")
 }
 
-fn recognized_month(name: &str) -> bool {
+pub(crate) fn recognized_month(name: &str) -> bool {
     let bytes = name.as_bytes();
     if bytes.len() != 12 || bytes.get(4) != Some(&b'-') || bytes.get(7..) != Some(b".json") {
         return false;

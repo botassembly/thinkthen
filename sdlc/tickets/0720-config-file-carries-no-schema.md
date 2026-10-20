@@ -1,6 +1,6 @@
 # 0720: Configuration files carry no schema member
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -19,6 +19,10 @@ Reviews: revision 374c5df, accept
 - On the M5 through `pm job run --machine m5 0720 SHA --memory 8 -- cargo nextest run -p thinkthen config`, a configuration file without `schema` loads and one with `"schema":"thinkthen.config/1"` is refused with the exact sentence. Before the change, the first is refused with "configuration field `schema` must be `thinkthen.config/1`".
 - On the M5 through pm job, `sdlc/scripts/spec` and `sdlc/scripts/demos` pass. The DuckDB backend setup suite runs at the 0619 container checkpoint.
 
+## Amendment, 2026-10-19 (core cut)
+
+The DuckDB backend setup suite runs with 0694, DuckDB's replay of the shared cases, instead of at the 0619 checkpoint. This ticket closes on its config, spec and demos proofs.
+
 ## Evidence
 
 Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbers-before-1-0.md). Split from 0706.
@@ -31,3 +35,5 @@ Shares `specification/settings.md` and `specification/backends.md` with 0706, 07
 
 - 2026-10-19 started
 - 2026-10-19 next: Combined M5 gate1792456808870-32467 passed onb7befb48b6 and followup1792458185359-18791 passed its full spec phase including all24 demos before a redundant standalone demo invocation failed on a parent-shell PATH omission; remaining DuckDB backend setup proof runs with0619 installed checkpoint before whole closure.
+- 2026-10-19 landed 88cbe872b; next: Reviewed configuration source landed with passing shared gate and the successful full-spec phase including all24 demos, while this parent remains open until0619 installed DuckDB backend setup proof completes.
+- 2026-10-19 next: The core-cut amendment moves installed DuckDB setup proof to 0694; accepted configuration source, config checks and the successful spec phase including all 24 demos already landed in 88cbe872b, so this ticket is ready for whole closure in the next accepted batch.

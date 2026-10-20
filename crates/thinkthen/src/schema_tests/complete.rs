@@ -23,9 +23,6 @@ pub(super) fn register(generator: &mut SchemaGenerator) {
         generator.subschema_for::<crate::SessionPacketDocument<'_>>(),
         generator.subschema_for::<crate::public::CompleteError<'_>>(),
         generator.subschema_for::<crate::public::Surface>(),
-        generator.subschema_for::<crate::cli::intake::Position>(),
-        generator.subschema_for::<crate::cli::intake::SourceFields<'_>>(),
-        generator.subschema_for::<crate::cli::relate::source::Endpoint<'_>>(),
     ];
 }
 pub(super) fn finish(definitions: &mut Map<String, Value>) {

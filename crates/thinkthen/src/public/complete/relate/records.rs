@@ -81,10 +81,15 @@ where
     let mut bytes = crate::public::SourceBudget::relate();
     let records = records.into_iter();
     let (lower, upper) = records.size_hint();
-    // Eager feeds expose their finite extent; lazy feeds still stop at the refusal boundary.
-    let limit = upper
-        .filter(|upper| *upper == lower)
-        .unwrap_or(crate::core::RelateSpec::MAX_ENTITIES + 1);
+    // Explicit eager intake finishes whole-set validation under the source byte
+    // budget. Unknown lazy feeds still stop at the count refusal boundary.
+    let limit = if options.eager_inputs {
+        usize::MAX
+    } else {
+        upper
+            .filter(|upper| *upper == lower)
+            .unwrap_or(crate::core::RelateSpec::MAX_ENTITIES + 1)
+    };
     let mut records = records.take(limit).enumerate();
     let mut count = 0;
     loop {

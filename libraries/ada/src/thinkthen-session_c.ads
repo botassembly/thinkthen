@@ -1017,6 +1017,20 @@ private package Thinkthen.Session_C is
       value : aliased Interfaces.Integer_64;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_request_option_schema_2_description_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_option_schema_2_v1 is record
+      m_description : access constant thinkthen_request_option_schema_2_description_v1;
+      m_name : access constant thinkthen_request_text_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_option_schema_2_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_request_literal_whole_v1 is record
       reserved : aliased Interfaces.Unsigned_32;
    end record
@@ -1038,6 +1052,10 @@ private package Thinkthen.Session_C is
    type thinkthen_request_recognition_mode_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_recognition_mode_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_call_options_no_v1 is record
+      value : access constant thinkthen_complete_json_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_number_v1 is record
@@ -1065,19 +1083,29 @@ private package Thinkthen.Session_C is
       m_relation : access constant thinkthen_request_text_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_request_call_options_yes_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_request_call_options_v1 is record
       m_attempts : access constant thinkthen_request_boolean_v1;
       m_batch : access constant thinkthen_request_batch_v1;
       m_context : access constant thinkthen_request_text_v1;
       m_context_field : access constant thinkthen_request_text_v1;
       m_deadline_ms : access constant thinkthen_request_integer_v1;
+      m_entity_definition : access constant thinkthen_request_text_v1;
       m_examples : access constant thinkthen_request_recognition_example_list_v1;
       m_examples_field : access constant thinkthen_request_text_v1;
       m_field : access constant thinkthen_request_text_list_v1;
       m_files_only : access constant thinkthen_request_boolean_v1;
+      m_instructions : access constant thinkthen_request_text_v1;
+      m_labels : access constant thinkthen_request_option_schema_2_list_v1;
+      m_levels : access constant thinkthen_request_option_schema_2_list_v1;
       m_max_requests_total : access constant thinkthen_request_unsigned_v1;
+      m_max_text_bytes : access constant thinkthen_request_unsigned_v1;
       m_mode : access constant thinkthen_request_recognition_mode_v1;
       m_model : access constant thinkthen_request_text_v1;
+      m_no : access constant thinkthen_request_call_options_no_v1;
       m_none : access constant thinkthen_request_boolean_v1;
       m_options_field : access constant thinkthen_request_text_v1;
       m_relation_threshold : access constant thinkthen_request_call_threshold_v1;
@@ -1087,6 +1115,7 @@ private package Thinkthen.Session_C is
       m_stage_context : access constant thinkthen_request_recognition_stage_context_v1;
       m_threshold : access constant thinkthen_request_call_threshold_v1;
       m_top : access constant thinkthen_request_unsigned_v1;
+      m_yes : access constant thinkthen_request_call_options_yes_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_question_selector_text_v1 is record

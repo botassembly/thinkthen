@@ -30,7 +30,7 @@ pub(crate) enum Cutting {
     #[default]
     AsTheVerbAllows,
     /// One cut and never a band.
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     OneCut,
     /// No rule in either home.
     NoRule,
@@ -49,9 +49,9 @@ pub(crate) struct Typed {
     /// `--threshold`, as it was written.
     pub(crate) threshold: Option<String>,
     /// `--true`, the text that says what a yes means.
-    pub(crate) yes: Option<String>,
+    pub(crate) yes: Option<crate::core::Json>,
     /// `--false`, the text that says what a no means.
-    pub(crate) no: Option<String>,
+    pub(crate) no: Option<crate::core::Json>,
     /// The options or the levels, as labels with their descriptions.
     pub(crate) labels: Option<Described>,
     /// `--model`.
@@ -80,10 +80,6 @@ pub(crate) struct Resolved {
 }
 
 impl Resolved {
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn metadata(&self) -> &crate::core::declaration::QuestionMetadata {
-        &self.metadata
-    }
     /// The question to ask, or `None` when each record carries its own options.
     #[must_use]
     pub(crate) const fn question(&self) -> Option<&Question> {
@@ -141,36 +137,8 @@ pub(crate) struct Sources {
 }
 
 impl Sources {
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn for_find(on: Source, model: Source) -> Self {
-        Self {
-            verb: None,
-            question: Source::File,
-            yes: Source::Default,
-            no: Source::Default,
-            labels: Source::Default,
-            threshold: Source::Default,
-            takes_threshold: false,
-            on,
-            model,
-        }
-    }
-    /// True when a question file settled the question, which a plan names.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn question_is_from_file(&self) -> bool {
-        matches!(self.question, Source::File)
-    }
-
     pub(crate) const fn model_is_default(&self) -> bool {
         matches!(self.model, Source::Default)
-    }
-
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn with_configuration_model(mut self) -> Self {
-        self.model = Source::Configuration;
-        self
     }
 }
 
@@ -234,16 +202,9 @@ pub(crate) fn resolve(
             Source::CommandLine,
         ),
     };
-    let (yes, yes_source) = meaning_of(
-        "true",
-        typed.yes.as_deref(),
-        file.and_then(|f| f.yes.clone()),
-    )?;
-    let (no, no_source) = meaning_of(
-        "false",
-        typed.no.as_deref(),
-        file.and_then(|f| f.no.clone()),
-    )?;
+    let (yes, yes_source) =
+        meaning_of("true", typed.yes.as_ref(), file.and_then(|f| f.yes.clone()))?;
+    let (no, no_source) = meaning_of("false", typed.no.as_ref(), file.and_then(|f| f.no.clone()))?;
     let (threshold, threshold_source) = threshold_of(verb, typed, file)?;
     let (model, model_source) = model_of(typed, file)?;
     let (on, on_source) = on_of(typed, file)?;
@@ -373,22 +334,27 @@ fn on_of(
 /// The text for what yes or what no means, and where it came from.
 fn meaning_of(
     key: &'static str,
-    typed: Option<&str>,
+    typed: Option<&crate::core::Json>,
     held: Option<Meaning>,
 ) -> Result<(Option<Meaning>, Source), QuestionFileError> {
     match (typed, held) {
         (Some(typed), _) => Ok((
-            Some(
-                Meaning::new(typed).map_err(|error| QuestionFileError::Blank {
-                    origin: Source::CommandLine,
-                    key,
-                    error,
-                })?,
-            ),
+            Some(meaning(typed).map_err(|error| QuestionFileError::Blank {
+                origin: Source::CommandLine,
+                key,
+                error,
+            })?),
             Source::CommandLine,
         )),
         (None, Some(held)) => Ok((Some(held), Source::File)),
         (None, None) => Ok((None, Source::Default)),
+    }
+}
+
+fn meaning(value: &crate::core::Json) -> Result<Meaning, crate::core::BlankTextError> {
+    match value {
+        crate::core::Json::String(text) => Meaning::new(text),
+        other => Meaning::structured(other).ok_or(crate::core::BlankTextError::Meaning),
     }
 }
 
@@ -440,11 +406,11 @@ fn threshold_of(
         }
         match typed.cutting {
             Cutting::AsTheVerbAllows => {}
-            #[cfg(any(feature = "cli", test))]
+            #[cfg(test)]
             Cutting::OneCut if !rule.is_cut() => {
                 return Err(QuestionFileError::BandOnFilter(source));
             }
-            #[cfg(any(feature = "cli", test))]
+            #[cfg(test)]
             Cutting::OneCut => {}
             Cutting::NoRule => return Err(QuestionFileError::RuleOnRank(source)),
             Cutting::RankCut if !rule.is_cut() => {

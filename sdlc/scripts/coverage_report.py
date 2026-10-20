@@ -5,7 +5,7 @@ from pathlib import Path
 
 UNIT_COLLECTIONS = ('cli-source', 'source-unit', 'c-source-unit')
 
-PREFIXES = ('crates/thinkthen/src/', 'libraries/c/src/')
+PREFIXES = ('crates/thinkthen/src/', 'crates/thinkthen-cli/src/', 'libraries/c/src/')
 
 
 def source_path(root, value):
@@ -111,7 +111,7 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
               'Profiles flush at normal exit. Processes without a normal-exit observation may have unmeasured paths.'), '']
     for name, observations in limitations.items():
         rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
-    rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining root source units; `c-source-unit` runs only the C workspace library source-unit harness. Unit-only comparisons use the union of these source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
+    rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the command crate source-unit harness; `source-unit` runs the library crate source-unit harness; `c-source-unit` runs only the C workspace library source-unit harness. Unit-only comparisons use the union of these source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
              'Raw per-file counts, denominator and reached line-number sets, and missing-profile observations stay in the owned build output at `totals.json`. Only this Markdown summary is saved under `sdlc/records/coverage`.', '']
     for label, key in [('Most lines observed only in source-unit profiles', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:

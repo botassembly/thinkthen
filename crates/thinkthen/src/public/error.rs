@@ -2,7 +2,12 @@
 
 use serde::Serialize;
 pub(crate) mod diagnostic;
+mod presentation;
 mod stopped;
+pub use presentation::{
+    ConfigurationFailure, ErrorDiagnostic, JsonFailure, ProfileFailure, ProviderFailure,
+    TransportFailure,
+};
 pub use stopped::{StopCause, Stopped};
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
@@ -84,7 +89,8 @@ pub struct ErrorDetail {
     estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
     diagnostic: Option<Box<diagnostic::Diagnostic>>,
-    producer: Option<Box<Error>>,
+    producer: Option<Box<dyn std::error::Error + Send + Sync>>,
+    completed: Option<Box<crate::RequestValue>>,
 }
 
 impl std::fmt::Debug for ErrorDetail {
@@ -107,6 +113,31 @@ impl ErrorDetail {
 }
 
 impl Error {
+    /// The actual completed prefix when a named call fails after yielding rows.
+    /// This explicit view can expose sensitive original evidence. Debug, Display
+    /// and complete error serialization omit it. No successful answer is supplied.
+    #[must_use]
+    pub fn completed(&self) -> Option<&crate::RequestValue> {
+        self.detail().completed.as_deref()
+    }
+
+    pub(crate) fn with_completed(mut self, completed: crate::RequestValue) -> Self {
+        self.detail_mut().completed = Some(Box::new(completed));
+        self
+    }
+    /// Retain a caller-owned typed cause for explicit standard source access.
+    /// The caller owns the cause's disclosure policy. Debug, Display and complete
+    /// error serialization omit it; only [`std::error::Error::source`] exposes it.
+    /// Reader adapters use this to retain their own errors without library coupling.
+    /// An existing source is preserved; the first attached cause owns the chain.
+    #[must_use]
+    pub fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
+        if self.detail().producer.is_none() {
+            self.detail_mut().producer = Some(Box::new(source));
+        }
+        self
+    }
+
     /// The typed admission reason when canonical request decoding failed.
     #[must_use]
     pub fn request_decode_cause(&self) -> Option<crate::public::request::RequestDecodeCause> {
@@ -234,6 +265,7 @@ impl Error {
             facts: None,
             diagnostic: None,
             producer: None,
+            completed: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -403,7 +435,6 @@ fn message(error: &EngineError) -> String {
             return format!("{file} uses an old store format; delete it");
         }
         EngineError::Entry(..) => "the cache or recording folder holds a malformed entry",
-        #[cfg(any(feature = "cli", test))]
         EngineError::CacheEntry => "the cache or recording folder holds a malformed entry",
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingForbidden => {

@@ -224,5 +224,5 @@ where
     )
 }
 
-#[cfg(all(test, feature = "cli"))]
+#[cfg(test)]
 mod tests;

@@ -1,43 +1,14 @@
-//! Owned native causes for host diagnostics, absent from every public view.
+//! Owned native causes retained privately for safe typed projections.
 //! Stays: Private typed diagnostic causes must retain native error kinds and exact command projections without parsing message text.
 use std::any::Any;
 
 pub(crate) enum Diagnostic {
+    Configuration(crate::config::ConfigError),
     RequestDecode(crate::public::request::RequestDecodeCause),
-    Engine(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        crate::engine::error::Error,
-    ),
+    Engine(crate::engine::error::Error),
     EngineRange {
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         cause: crate::engine::error::Error,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         first: usize,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         last: usize,
     },
     Context {
@@ -45,147 +16,31 @@ pub(crate) enum Diagnostic {
         kind: crate::core::LimitKind,
         limit: usize,
         actual: usize,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         profile: Option<crate::core::ProfileName>,
     },
     PartialReply {
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         cause: Option<crate::core::adapters::built_in::DecodeError>,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         first: usize,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
         last: usize,
     },
-    #[cfg(feature = "cli")]
-    CliInput(Box<crate::cli::failure::Failure>),
     Refusal(Box<dyn Any + Send + Sync>),
-    RelationEntityCount(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        usize,
-    ),
-    Model(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        crate::core::BlankTextError,
-    ),
-    Pointer(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        &'static str,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        String,
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        crate::core::PointerError,
-    ),
+    RelationEntityCount(usize),
+    FindCount(bool),
+    Model(crate::core::BlankTextError),
+    Pointer(&'static str, String, crate::core::PointerError),
     Batch,
-    ThresholdFunction(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        crate::RequestFunction,
-    ),
-    QuestionRead(
-        #[cfg_attr(
-            not(feature = "cli"),
-            expect(
-                dead_code,
-                reason = "cli::failure::convert reads this native cause for command diagnostics"
-            )
-        )]
-        crate::QuestionFileError,
-    ),
+    ThresholdFunction(crate::RequestFunction),
+    QuestionRead(crate::QuestionFileError),
 }
 
-#[cfg(all(test, feature = "cli"))]
+#[cfg(test)]
 mod tests {
-    use crate::{Error, ErrorKind};
-
     #[test]
-    fn native_backend_causes_keep_cli_status_and_sentence() {
-        let error = Error::from(crate::engine::error::Error::Status(302));
-        assert_eq!(error.kind(), ErrorKind::Backend);
-        let failure = crate::cli::failure::Failure::from(error);
-        assert!(matches!(failure, crate::cli::failure::Failure::Status(302)));
-        let mut output = Vec::new();
-        assert_eq!(
-            crate::cli::failure::report(&failure, &mut output),
-            std::process::ExitCode::from(4)
+    fn hidden_native_causes_do_not_reach_error_debug_or_standard_sources() {
+        let error = crate::Error::usage("a safe refusal").with_diagnostic(
+            super::Diagnostic::Refusal(Box::new("private-cause-marker".to_owned())),
         );
-        assert!(
-            String::from_utf8(output)
-                .expect("diagnostic UTF-8")
-                .contains("302")
-        );
-    }
-
-    #[test]
-    fn hidden_causes_do_not_reach_debug_or_error_sources() {
-        let error = Error::usage("a safe refusal").with_diagnostic(super::Diagnostic::Refusal(
-            Box::new("private-cause-marker".to_owned()),
-        ));
         assert!(!format!("{error:?}").contains("private-cause-marker"));
         assert!(std::error::Error::source(&error).is_none());
-        let mut output = Vec::new();
-        assert_eq!(
-            crate::cli::failure::report(&Error::cancelled().into(), &mut output),
-            std::process::ExitCode::from(130)
-        );
-        assert!(output.is_empty());
     }
 }

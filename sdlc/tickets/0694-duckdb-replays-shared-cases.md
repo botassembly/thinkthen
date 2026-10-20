@@ -20,6 +20,11 @@ Depends on: 0688, 0693
 - Done once by hand and not committed: a wrong expected answer in the oracle fails the replay. Before the change the same edit passes, because today's replay checks request digests from `cases.json` and never reads the oracle.
 - On the M5 natively: `pm job run --machine m5 0694 SHA --memory 8 -- sdlc/scripts/lint` passes with the deleted suites gone from `sdlc/scripts/children`.
 
+## Amendment, 2026-10-19 (core cut)
+
+- DuckDB's toolchain joins the shared Linux tool manifest with this ticket, and the container runs DuckDB's checks; a missing DuckDB tool fails the check.
+- 0720's DuckDB backend setup suite runs here.
+
 ## Evidence
 
 - `databases/duckdb/tools/conformance.py` already runs the shared cases, each on its own `/case/ID/v1` backend arm, and counts pass, fail and not run against `cases.json`. It compares request digests, not packet answers.

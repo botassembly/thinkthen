@@ -6,33 +6,29 @@
 
 use std::fs;
 use std::io;
-#[cfg(any(feature = "cli", test))]
 use std::io::Write as _;
 use std::path::Path;
 
-#[cfg(all(not(windows), any(feature = "cli", test)))]
+#[cfg(not(windows))]
 use std::time::Duration;
 
-#[cfg(any(feature = "cli", test))]
 use rusqlite::Connection;
 
-#[cfg(any(feature = "cli", test))]
 use super::{Entries, JSONL, SQLITE, exists, fixture};
-#[cfg(all(not(windows), any(feature = "cli", test)))]
+#[cfg(not(windows))]
 use super::{storage, waiting};
-#[cfg(all(not(windows), any(feature = "cli", test)))]
+#[cfg(not(windows))]
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
-#[cfg(all(windows, any(feature = "cli", test)))]
+#[cfg(windows)]
 mod windows;
 
 /// What one conversion did.
 #[derive(Debug, Default)]
-#[cfg(any(feature = "cli", test))]
-pub(crate) struct Summary {
+pub struct Summary {
     /// Answers the written fixture holds.
-    pub(crate) answers: usize,
+    pub answers: usize,
 }
 
 /// Write `DIR/thinkthen.jsonl` from what the folder holds, then remove its
@@ -42,7 +38,6 @@ pub(crate) struct Summary {
 ///
 /// A fixture that does not parse, a live file that cannot be read, or an old
 /// entry refuses the whole conversion before anything is written.
-#[cfg(any(feature = "cli", test))]
 pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
     let (jsonl, sqlite) = (folder.join(JSONL), folder.join(SQLITE));
     let has_sqlite = exists(&sqlite)?;
@@ -98,7 +93,7 @@ pub(crate) fn convert(folder: &Path) -> Result<Summary, Error> {
 
 /// Open the live file and take its write lock, waiting up to 30 seconds
 /// for another writer. The lock ends when the connection drops.
-#[cfg(all(not(windows), any(feature = "cli", test)))]
+#[cfg(not(windows))]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     let connection = super::opening::open(sqlite, rusqlite::OpenFlags::default())?;
     connection.busy_timeout(Duration::ZERO).map_err(storage)?;
@@ -108,7 +103,7 @@ fn locked(sqlite: &Path) -> Result<Connection, Error> {
     Ok(connection)
 }
 
-#[cfg(all(windows, any(feature = "cli", test)))]
+#[cfg(windows)]
 fn locked(sqlite: &Path) -> Result<Connection, Error> {
     super::read_only(sqlite)
 }
@@ -137,7 +132,6 @@ pub(super) fn digest_named(name: &str) -> bool {
 }
 
 /// Write `path` through a temporary file in the same folder, then rename it.
-#[cfg(any(feature = "cli", test))]
 fn replace(folder: &Path, path: &Path, text: &[u8]) -> Result<(), Error> {
     let temporary = folder.join(format!(".{JSONL}.{}.tmp", std::process::id()));
     let written = (|| -> io::Result<()> {

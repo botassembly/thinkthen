@@ -1,6 +1,7 @@
 //! Call options, the cancel token, and the one interface every public call passes.
 
 mod admission;
+mod attachments;
 mod observer;
 pub(crate) mod readiness;
 
@@ -22,6 +23,16 @@ use crate::public::error::Error;
 use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation};
 
 pub(crate) type AnnotationRecovery<'a> = Option<&'a dyn Fn(usize, &str) -> bool>;
+
+pub(crate) fn continue_annotation(
+    callback: &dyn Fn(usize, &str) -> bool,
+    ordinal: usize,
+    pointer: &str,
+) -> bool {
+    catch_unwind(AssertUnwindSafe(|| callback(ordinal, pointer))).unwrap_or(false)
+}
+
+type AnnotationContinuation<'a> = &'a (dyn Fn(usize, &str) -> bool + Sync);
 
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
@@ -65,11 +76,6 @@ fn shown(value: f64) -> String {
 pub struct CancelToken(Arc<AtomicBool>);
 
 impl CancelToken {
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) fn from_flag(flag: Arc<AtomicBool>) -> Self {
-        Self(flag)
-    }
-
     /// A token that has not fired.
     #[must_use]
     pub fn new() -> Self {
@@ -114,8 +120,12 @@ enum Due {
 /// check stops the call, joins its workers, and then resumes on the caller.
 #[derive(Clone, Copy, Default)]
 pub struct CallOptions<'a> {
-    pub(in crate::public) cli_text_limit: Option<usize>,
+    pub(in crate::public) attachment_limit:
+        Option<super::request::transport::TransportAttachmentLimit>,
+    pub(in crate::public) recognition_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
+    pub(in crate::public) shared_state_groups: bool,
+    pub(in crate::public) annotation_missing: Option<AnnotationContinuation<'a>>,
     pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
     // entity admission without wire controls.
@@ -127,6 +137,7 @@ pub struct CallOptions<'a> {
     cancel: [Option<&'a CancelToken>; 2],
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    owned_check: Option<&'a Arc<dyn Fn() -> bool + Send + Sync>>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
     total: Option<u64>,
     batch: Option<BatchSetting>,
@@ -172,8 +183,11 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            cli_text_limit: None,
+            attachment_limit: None,
+            recognition_text_limit: None,
             eager_inputs: false,
+            shared_state_groups: false,
+            annotation_missing: None,
             pending_inputs: false,
             scalar_input: false,
             recovery_rows: false,
@@ -182,6 +196,7 @@ impl<'a> CallOptions<'a> {
             cancel: [None, None],
             due: None,
             check: None,
+            owned_check: None,
             send_budget: None,
             total: None,
             batch: None,
@@ -195,13 +210,25 @@ impl<'a> CallOptions<'a> {
         }
     }
 
-    #[cfg(feature = "cli")]
-    pub(crate) const fn cli_text_limit(mut self, limit: usize) -> Self {
-        self.cli_text_limit = Some(limit);
+    pub(crate) fn owned_interrupt(
+        mut self,
+        check: Option<&'a Arc<dyn Fn() -> bool + Send + Sync>>,
+    ) -> Self {
+        self.owned_check = check;
+        self.check = check.map(|check| check.as_ref() as &(dyn Fn() -> bool + Sync));
         self
     }
 
-    #[cfg(any(feature = "cli", test))]
+    pub(crate) const fn retain_success_on_cancel(mut self, retain: bool) -> Self {
+        self.settle_success_on_cancel = retain;
+        self
+    }
+
+    pub(crate) const fn recognition_text_limit(mut self, limit: usize) -> Self {
+        self.recognition_text_limit = Some(limit);
+        self
+    }
+
     pub(crate) const fn readiness(mut self, reader: &'a readiness::Readiness<'a>) -> Self {
         self.readiness = Some(reader);
         self
@@ -211,23 +238,6 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel[0] = Some(value);
-        self
-    }
-
-    // CLI signals retain an earned whole-set answer before the process exits.
-    // Public caller cancellation remains dominant unless this private bridge is selected.
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn cli_cancel(
-        mut self,
-        value: &'a CancelToken,
-        deadline: Option<Deadline>,
-    ) -> Self {
-        self.cancel[1] = Some(value);
-        self.due = match deadline {
-            Some(deadline) => Some(Due::Started(deadline)),
-            None => None,
-        };
-        self.settle_success_on_cancel = true;
         self
     }
 
@@ -268,6 +278,64 @@ impl<'a> CallOptions<'a> {
     pub const fn batch(mut self, setting: BatchSetting) -> Self {
         self.batch = Some(setting);
         self
+    }
+
+    /// Prepare each annotation group with its admitted evidence as the shared
+    /// state and its original questions unchanged. The default quotes evidence
+    /// into ordinary annotation questions instead. Preview and execution use the
+    /// same native packing, limits, adapter, decoding and accounting. Partial
+    /// replies retain their usable and failed members. A wholly failed reply
+    /// retains the ordinary native refusal, including its actual call facts.
+    /// This applies only to annotation requests; other functions refuse before
+    /// reading question files, sources or feeds. No encoded request is accepted.
+    #[must_use]
+    pub const fn shared_state_groups(mut self) -> Self {
+        self.shared_state_groups = true;
+        self
+    }
+
+    /// Continue an ordinary Request only when a question-set `on` pointer is absent.
+    /// The callback receives the zero-based original ordinal and the actual pointer,
+    /// borrowed only for this invocation. It runs on the synchronous call thread,
+    /// or the native worker for an owned session. True skips this whole original;
+    /// false or a panic retains the original native missing-pointer failure.
+    /// Other readers, command projections, providers and unusable groups remain
+    /// terminal. Defaults to no continuation. General row recovery is incompatible.
+    /// The callback runs without queue or scheduler locks and must not wait for its
+    /// own invocation or session. It is never a request/result sink.
+    #[must_use]
+    pub const fn on_missing_annotation_pointer(
+        mut self,
+        callback: &'a (dyn Fn(usize, &str) -> bool + Sync),
+    ) -> Self {
+        self.annotation_missing = Some(callback);
+        self
+    }
+
+    pub(in crate::public) fn admit_recovery(&self) -> Result<(), Error> {
+        if self.annotation_missing.is_some() {
+            return Err(Error::usage(
+                "annotation pointer continuation cannot accompany general row recovery",
+            ));
+        }
+        Ok(())
+    }
+
+    pub(in crate::public) fn admit_preparation(
+        &self,
+        function: crate::RequestFunction,
+    ) -> Result<(), Error> {
+        if self.annotation_missing.is_some() && function != crate::RequestFunction::Annotate {
+            return Err(Error::usage(
+                "missing annotation pointer continuation requires an annotation request",
+            ));
+        }
+        if self.shared_state_groups && function != crate::RequestFunction::Annotate {
+            return Err(Error::usage(
+                "shared-state groups require an annotation request",
+            ));
+        }
+        Ok(())
     }
 
     /// Share nonblank text as context for an eligible many-record request.
@@ -472,6 +540,7 @@ impl<'a> Stop<'a> {
         };
         let mut base = Cancel::default()
             .with_deadline(deadline)
+            .with_owned_check(options.owned_check.cloned())
             .with_token(options.cancel.map(|token| token.map(CancelToken::flag)))
             .with_send_budget(
                 options
@@ -510,8 +579,8 @@ impl<'a> Stop<'a> {
         self
     }
 
-    /// This call's flag, deadline and the caller's token, without the check, for
-    /// engine threads.
+    /// Share flags, deadlines, tokens and an explicitly owned session check
+    /// with engine threads; borrowed caller checks stay on their caller.
     pub(crate) fn shared(&self) -> Cancel<'static> {
         self.base.clone()
     }

@@ -20,14 +20,14 @@ mod fields;
 mod meta;
 pub(crate) use fields::Fields;
 mod profile_warning;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 mod record_value;
 
 pub use attempt::{AttemptObservation, AttemptOutcome, CompleteAttempt};
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
 pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;
-#[cfg(any(feature = "cli", test))]
+#[cfg(test)]
 pub(crate) use record_value::RecordValue;
 
 /// What the backend reported it spent on the judgment.
@@ -353,13 +353,6 @@ pub(crate) struct NamedValues(
 impl NamedValues {
     pub(crate) fn into_values(self) -> Vec<(String, AnnotatedValue)> {
         self.0
-    }
-
-    /// Keep named values in question-set order.
-    #[must_use]
-    #[cfg(any(feature = "cli", test))]
-    pub(crate) const fn new(values: Vec<(String, AnnotatedValue)>) -> Self {
-        Self(values)
     }
 }
 impl Serialize for NamedValues {

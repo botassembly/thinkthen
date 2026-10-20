@@ -16,6 +16,7 @@ pub use settled_aggregates::{SettledRecognition, SettledRelations};
 mod call;
 pub use crate::engine::usage::UsagePersistence;
 mod complete;
+mod content;
 mod metadata;
 mod reading;
 pub use aggregate_reading::{RecognitionReading, RelationReading, ResolvedRelationRule};

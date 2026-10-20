@@ -9,10 +9,20 @@ use thinkthen::*;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 
+#[path = "request_session/annotation_missing.rs"]
+mod annotation_missing;
+#[path = "request_session/cancel_settlement.rs"]
+mod cancel_settlement;
 #[path = "request_session/framing.rs"]
 mod framing;
+#[path = "request_session/incremental_ranking.rs"]
+mod incremental_ranking;
+#[path = "request_session/incremental_recognition.rs"]
+mod incremental_recognition;
 #[path = "request_session/push.rs"]
 mod push;
+#[path = "request_session/readiness.rs"]
+mod readiness;
 #[path = "request_session/recognize.rs"]
 mod recognize;
 #[path = "request_session/wait.rs"]

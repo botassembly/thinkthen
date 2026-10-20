@@ -2001,6 +2001,10 @@ export interface EngineSettings {
   readonly usd_per_million_input?: string;
   readonly usd_per_million_output?: string;
 }
+export interface OptionSchema2 {
+  readonly description?: JsonValue;
+  readonly name: string;
+}
 export type RecognitionExample = string | RecognitionExampleText;
 export interface RecognitionExampleEntity {
   readonly end: number;
@@ -2223,13 +2227,19 @@ export interface RequestOptions {
   readonly context?: string;
   readonly context_field?: string;
   readonly deadline_ms?: number;
+  readonly entity_definition?: string;
   readonly examples?: readonly RecognitionExample[];
   readonly examples_field?: string;
   readonly field?: readonly string[];
   readonly files_only?: boolean;
+  readonly instructions?: string;
+  readonly labels?: readonly OptionSchema2[];
+  readonly levels?: readonly OptionSchema2[];
   readonly max_requests_total?: number;
+  readonly max_text_bytes?: number;
   readonly mode?: RecognitionMode;
   readonly model?: string;
+  readonly no?: JsonValue;
   readonly none?: boolean;
   readonly options_field?: string;
   readonly relation_threshold?: RequestThreshold;
@@ -2239,5 +2249,6 @@ export interface RequestOptions {
   readonly stage_context?: RecognitionStageContext;
   readonly threshold?: RequestThreshold;
   readonly top?: number;
+  readonly yes?: JsonValue;
 }
 export type RequestThreshold = number | string;

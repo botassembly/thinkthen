@@ -433,3 +433,6 @@ fn typed_decode_causes_preserve_native_admission_messages() {
         assert_eq!(error.to_string(), message);
     }
 }
+
+mod attachment_bounds;
+mod source_rank;

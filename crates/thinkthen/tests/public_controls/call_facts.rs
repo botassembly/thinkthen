@@ -70,12 +70,26 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         .expect("prices")
         .build()
         .expect("engine");
+    assert_eq!(engine.http_time(), Some(Duration::ZERO));
+    assert!(engine.usage_failure().is_none());
     let asked = question();
     assert_eq!(
         engine.estimate_reported_cost(1, 1).as_deref(),
         Some("0.000001")
     );
     let live = engine.decide(&asked, "Refund me.").expect("live");
+    assert_eq!(live.facts().largest_request_bytes(), REFUND_REQUEST.len());
+    assert_eq!(
+        live.facts().largest_request_estimated_input_tokens(),
+        Some((REFUND_REQUEST.len() as u64 * 908).div_ceil(1000))
+    );
+    assert_eq!(
+        live.facts().token_estimate_method(),
+        "encoded-body-bytes-908-v1"
+    );
+    let http = engine.http_time().expect("valid HTTP timeline");
+    assert!(http > Duration::ZERO);
+    assert!(http.as_secs_f64() <= live.facts().seconds());
     assert_eq!(live.facts().estimated_cost_usd(), Some("0.000001"));
     assert!(!format!("{:?}", live.facts()).contains("0.000001"));
     assert_eq!(
@@ -83,6 +97,12 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         (Some(1), Some(1))
     );
     let cached = engine.decide(&asked, "Refund me.").expect("cached");
+    assert_eq!(cached.facts().largest_request_bytes(), 0);
+    assert_eq!(
+        cached.facts().largest_request_estimated_input_tokens(),
+        Some(0)
+    );
+    assert_eq!(engine.http_time(), Some(http));
     assert_eq!(cached.facts().estimated_cost_usd(), Some("0.000000"));
     assert_eq!(
         (
@@ -100,37 +120,7 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     );
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.requests()[0].body, REFUND_REQUEST.as_bytes());
-    let plain = super::engine(listener.base());
-    assert_eq!(plain.estimate_reported_cost(1, 1), None);
-    assert_eq!(
-        plain
-            .decide(&asked, "Another.")
-            .expect("plain answer")
-            .facts()
-            .estimated_cost_usd(),
-        None
-    );
-    assert_eq!(listener.count(), 2);
-    assert_eq!(
-        listener.requests()[0].body,
-        REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
-    );
-    let zero = priced(listener.base(), "0", "0")
-        .no_cache()
-        .build()
-        .expect("zero engine");
-    assert_eq!(
-        zero.decide(&asked, "Zero.")
-            .expect("zero price answer")
-            .facts()
-            .estimated_cost_usd(),
-        Some("0.000000")
-    );
-    assert_eq!(listener.count(), 3);
-    assert_eq!(
-        listener.requests()[0].body,
-        REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
-    );
+    assert_plain_and_zero_prices(&listener, &asked);
     let _gone = std::fs::remove_dir_all(folder);
 }
 
@@ -484,4 +474,38 @@ fn a_failed_eager_rank_carries_its_started_call_facts() {
         (0, 1, None)
     );
     assert_eq!(listener.count(), 1);
+}
+
+fn assert_plain_and_zero_prices(listener: &Listener, asked: &Question) {
+    let plain = super::engine(listener.base());
+    assert_eq!(plain.estimate_reported_cost(1, 1), None);
+    assert_eq!(
+        plain
+            .decide(asked, "Another.")
+            .expect("plain answer")
+            .facts()
+            .estimated_cost_usd(),
+        None
+    );
+    assert_eq!(listener.count(), 2);
+    assert_eq!(
+        listener.requests().first().expect("one request").body,
+        REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
+    );
+    let zero = priced(listener.base(), "0", "0")
+        .no_cache()
+        .build()
+        .expect("zero engine");
+    assert_eq!(
+        zero.decide(asked, "Zero.")
+            .expect("zero price answer")
+            .facts()
+            .estimated_cost_usd(),
+        Some("0.000000")
+    );
+    assert_eq!(listener.count(), 3);
+    assert_eq!(
+        listener.requests().first().expect("one request").body,
+        REFUND_REQUEST.replace("Refund me.", "Zero.").as_bytes()
+    );
 }

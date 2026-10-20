@@ -1,4 +1,6 @@
-# Routine tests must finish within the accepted boundary on a quiet machine.
+# Keep the 5s routine boundary: capped arm64 gate 1792456808870-32467 on M5
+# used 4 CPUs and 16 GiB; Linux workspace tests peaked at 3.277s and consumer
+# tests at 1.297s, leaving headroom within the existing limit.
 [profile.default]
 fail-fast = false
 test-threads = 2

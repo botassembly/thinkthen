@@ -14,7 +14,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import child_env
-from sdlc.scripts.tools import download, load_manifest, rust_components
+from sdlc.scripts.tools import download, load_manifest, rust_components, selected as selected_tools
 
 manifest = load_manifest(sys.argv[1])
 root = Path(manifest['linux_prefix'])
@@ -82,17 +82,13 @@ def swift_sdk(tool, env):
     return {'PATH': str(binary) + ':' + env['PATH']}
 
 
-for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] != 'rust'):
+requirements = selected_tools(manifest, manifest['linux']['tool_groups'], 'linux')
+for name, tool in sorted(requirements.items(), key=lambda entry: entry[0] != 'rust'):
     if 'linux' not in tool['platforms']:
         continue
     provider = tool.get('linux_provider', tool.get('provider'))
-    if name in ('swift', 'flutter'):
+    if name == 'swift':
         provider = name
-    if name == 'duckdb':
-        provider = 'aqua:duckdb/duckdb'
-        lines = Path('/tmp/duckdb-version.env').read_text().splitlines()
-        tool = dict(tool, version=next(line.split('=', 1)[1].removeprefix('v') for line in lines
-                                       if line.startswith('DUCKDB_ROUTINE_RELEASE=')))
     if provider is None or provider in ('python-package', 'ruby-bundled'):
         continue
     if provider == 'rustup':
@@ -113,25 +109,8 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
     elif name == 'swift':
         selected = swift_sdk(tool, env)
     else:
-        acquired = subprocess.run([str(mise), 'install', identity], env=env)
-        if acquired.returncode and name == 'flutter':
-            # This is the framework source, paired with downloaded engine and
-            # Dart compiler binaries. Never build a compiler from source.
-            framework = root / 'flutter'
-            subprocess.run(['git', 'init', str(framework)], env=env, check=True)
-            subprocess.run(['git', '-C', str(framework), 'remote', 'add', 'origin',
-                            'https://github.com/flutter/flutter.git'], env=env, check=True)
-            subprocess.run(['git', '-C', str(framework), 'fetch', '--depth=1', 'origin',
-                            tool['source_commit']], env=env, check=True)
-            subprocess.run(['git', '-C', str(framework), 'checkout', '--detach', 'FETCH_HEAD'], env=env, check=True)
-            head = subprocess.check_output(['git', '-C', str(framework), 'rev-parse', 'HEAD'], env=env, text=True).strip()
-            if head != tool['source_commit']:
-                raise SystemExit('Flutter framework differs from tools.json')
-            subprocess.run([str(framework / 'bin/flutter'), 'precache', '--linux'], env=env, check=True)
-            selected = {'PATH': str(framework / 'bin') + ':' + env['PATH']}
-        else:
-            acquired.check_returncode()
-            selected = json.loads(subprocess.check_output([str(mise), 'env', '--json', identity], env=env))
+        subprocess.run([str(mise), 'install', identity], env=env, check=True)
+        selected = json.loads(subprocess.check_output([str(mise), 'env', '--json', identity], env=env))
     paths = selected['PATH'].split(os.pathsep)
     destination = root / tool.get('linux_directory', 'bin')
     destination.mkdir(parents=True, exist_ok=True)
@@ -154,30 +133,19 @@ for name, tool in sorted(manifest['tools'].items(), key=lambda entry: entry[0] !
         rust_components(manifest, env, install=True)
 python = root / 'bin/python3'
 packages = dict(manifest['python_packages'])
-packages.update({tool['commands'][0]: tool['version'] for tool in manifest['tools'].values()
+packages.update({tool['commands'][0]: tool['version'] for tool in requirements.values()
                  if tool.get('provider') == 'python-package'})
 subprocess.run([str(python), '-m', 'pip', 'install', '--disable-pip-version-check',
                 *[name + '==' + version for name, version in packages.items()]], env=env, check=True)
 scripts = subprocess.check_output([str(python), '-c', 'import sysconfig; print(sysconfig.get_path("scripts"))'], env=env, text=True).strip()
-for name in manifest['tools'].values():
+for name in requirements.values():
     if name.get('provider') == 'python-package':
         for command in name['commands']:
             (root / 'bin' / command).symlink_to(Path(scripts) / command)
-# The second Ruby carries its own bundled RBS and must not replace the default.
-for name in ('ruby', 'ruby34'):
-    tool = manifest['tools'][name]
-    ruby = root / tool.get('linux_directory', 'bin') / 'ruby'
-    gem_bin = Path(subprocess.check_output([str(ruby), '-rrubygems', '-e', 'print Gem.bindir'], env=env, text=True))
-    for command in ('rbs',):
-        target = ruby.parent / command
-        if not target.exists():
-            target.symlink_to(gem_bin / command)
 # Keep the binary toolchain readable by the host user's unprivileged container.
 subprocess.run(['chmod', '-R', 'a+rX', str(root)], env=env, check=True)
 
 # Missing commands and wrong versions must fail image preparation before checks.
 resolver = '/opt/thinkthen-image/sdlc/scripts/tools.py'
-groups = {group for tool in manifest['tools'].values() for group in tool['groups']} - {'ruby34'}
-subprocess.run([str(python), resolver, '--manifest', sys.argv[1], ','.join(sorted(groups))],
-               env=env, check=True)
-subprocess.run([str(python), resolver, '--manifest', sys.argv[1], 'ruby34'], env=env, check=True)
+subprocess.run([str(python), resolver, '--manifest', sys.argv[1],
+                ','.join(manifest['linux']['tool_groups'])], env=env, check=True)

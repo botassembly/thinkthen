@@ -1,6 +1,6 @@
 # 0619: Run every Linux check in one pinned container per architecture
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -26,6 +26,8 @@ Reviews: revision 21eb8a4, accept
 
 Reviews: revision 3e00269, accept
 
+Reviews: revision 6eeeefb, accept
+
 ## Outcome
 
 - Each architecture builds its Linux check environment from the digest-pinned Ubuntu 24.04 base in `linux.images` in `sdlc/tools.json`, the tracked image recipe and the shared tool manifest. That environment holds every declared Linux tool and serves building and testing. Receipts record the actual constructed image ID on each machine; matching base digests and recipes do not claim a shared tools-image digest. The manifest owns `linux.distribution_images` for the separate `manylinux_2_28` distribution build at the old glibc floor; installed-artifact checks run in Ubuntu. No image publication or source-built compiler is authorized.
@@ -44,6 +46,16 @@ Reviews: revision 3e00269, accept
 - On Yellow through pm job with `--memory` matching `linux.yellow_memory_gib`, the capped x86_64 container reproduces the failing cases of hosted run 39102240049 on main before 0621's fix, or records that they pass.
 - Image preparation verifies the declared Linux tools and records the actual constructed image ID and pinned base for each architecture; receipts identify the tracked recipe and manifest revision. Resource receipts show the manifest CPU and memory caps on each machine.
 - A grep finds no `push:` or `pull_request:` trigger in `.github/workflows/`, and no instruction claims one.
+
+## Amendment, 2026-10-19 (core cut)
+
+Three image runs in a row each found one more language toolchain fault, so this ticket now closes on what the core freeze needs.
+
+- One `linux.tool_groups` selection over the existing `lint`, `test`, `spec` and `c` groups chooses the tools the image installs. It keeps the Dart, Go, Zig and Swift formatters and the Ruby lexer, because core generation and policy run them. A missing selected tool still fails the check, and no selector skips one.
+- The ticket closes when both images build, the configured Linux and native tickets gate passes, and the existing named core smoke and `package` parts pass for Rust, the command line and C in the arm64 container.
+- `test-full-cases` and `test-stress` in the container, and the Yellow reproduction of hosted run 39102240049, move to 0691's later checkpoint, because both runners enter every language surface.
+- Each other language's toolchain (Flutter, R, DuckDB, the SQLite amalgamation, PostgreSQL and the rest) joins the manifest with that language's or database's own ticket, which proves it in the container.
+- The DuckDB backend setup proof that 0720 left here moves to 0694.
 
 ## Evidence
 
@@ -81,6 +93,14 @@ The repo instructions are also wrong about Linux. `CLAUDE.md:12` and the matchin
 - 2026-10-19 next: ARM image preparation passed, but Yellow job1792453161573-311087 stalled after successful installer and version probes while Docker commits its final image; bounded read-only diagnosis finds responsive container APIs but image APIs timing out, and no retry or daemon change is authorized while the combined M5 gate runs onb7befb48b6.
 - 2026-10-19 next: Yellow preparation job1792453161573-311087 eventually completed with real exit0 after prolonged Docker image-commit IO contention, producing x86 imagefa71288f842e543f5fa69789830925f723660f3f604326ec60dbd184ce2d081b at the same22-fragment fingerprint51d2ff24478158bce64f2d6debb7e270e61aacaa63c053636df88736aca400cf; the combined configured gate runs onb7befb48b6 and remaining capped Linux full cases, package and stress plus x86 qualification stay open.
 - 2026-10-19 next: Combined M5 job1792456808870-32467 passed configured Linux lint/test plus native macOS test atb7befb48b6 with both reviewed images prepared; shared configuration spec/demo proof and Yellow full-cases diagnosis are active, and capped full cases, package, stress and x86 receipts remain before whole closure.
+- 2026-10-19 landed 88cbe872b; next: Reviewed container and configured gate components landed with shared M5 gate1792456808870-32467; both architecture full-cases jobs continue on the same sourceb7befb48b6, and package, stress, x86 failure receipts and capped timing proof remain before whole closure.
+- 2026-10-19 next: ARM full-cases1792458506351-10765 failed before functional surfaces: release-boundary phases and six smokes passed, but Rjsonlite, DuckDB1.5.6 toolchain, SQLite3.50.0 amalgamation and Pythonoffline iniconfig2.3.0 were absent; a fresh developer owns the whole prepared-assets inventory, while x86 diagnostics continue and timing/docs component89211325c is freshly accepted with numeric limits unchanged.
+- 2026-10-19 next: PM amendmentabdaeef73 narrows closure to both core images,configured Linux/native gate and existing core package/smoke parts; reviewed5a7fc0684 retains genuine generator dependencies and starts admitted Yellow core-image proof, while noncore toolchains move to their waves,full-cases/stress to0691,DuckDB setup to0694 and static-musl command packaging stays0633.
+- 2026-10-19 next: Core ARM preparation1792463781606-5293 passed at9c0274c97 with15 focused tests and declared tools, fingerprintce0b34e6f4796de9e6b59f1c6e19b34037610b16696e3f0c6dab91aaf7129fdb and image5071a85d12f7c9acf1495da5ba116b8e816a73add96b5dc2d94f62e6c42d69bd on pinned Ubuntu24.04 base18b33ff38297; Yellow core preparation remains active and core package/smoke plus configured Linux/native gate with runtime cap observation remain before acceptance.
+- 2026-10-19 next: Yellow core preparation1792463467999-574615 passed at5a7fc0684 after the successful installer waited for Docker image commit, producing x86 imagec17d4adcb595ecf4552ca2fc19e7e573b6986cb538bd80fcf991823a39902304 on pinned Ubuntu24.04 basea2d43bffc466 with the samece0b34e6f479 fingerprint as the passing ARM image; both declared-tool images pass, and named core package/smoke plus configured Linux/native gate with fresh runtime cap observation remain before acceptance.
+- 2026-10-19 next: Yellow runtime receipt1792466360002-599192 passed on imagec17d4adcb595 with cpu.max400000/100000 and memory.max14495514624 matching manifest limits; both core images and x86 runtime caps are proved, while the required ARM package,named Rust/C smokes,c/crate/first-run parts and configured Linux/native gate await the next M5 slot.
+- 2026-10-19 next: M5 job 1792466577608-70960 at b60b2ed13 passed ARM package, Rust/C smokes and c/crate/first-run archives, then exited 2 in Linux lint because registry-only surfaces resolved deferred language tools; reviewer fix e4ecd2248 retains strict language-mode checks and awaits its focused regression plus configured gate, with both image proofs unchanged.
+- 2026-10-20 next: Fresh review accepts 6eeeefb0a: M5 job 1792469443493-54974 passed all 16 focused tool tests and the configured Linux/native gate with actual exit 0; earlier ARM package, Rust/C smokes and c/crate/first-run receipts passed, both prepared image identities and runtime caps are verified, and the whole amended ticket is ready to land.
 
 ## Amendment, 2026-10-18
 

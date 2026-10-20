@@ -86,9 +86,15 @@ function Store_thinkthen_request_boolean_v1 is new Store (thinkthen_request_bool
 type A_thinkthen_request_cache_document_v1 is access all thinkthen_request_cache_document_v1;
 function P_thinkthen_request_cache_document_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_cache_document_v1);
 function Store_thinkthen_request_cache_document_v1 is new Store (thinkthen_request_cache_document_v1);
+type A_thinkthen_request_call_options_no_v1 is access all thinkthen_request_call_options_no_v1;
+function P_thinkthen_request_call_options_no_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_call_options_no_v1);
+function Store_thinkthen_request_call_options_no_v1 is new Store (thinkthen_request_call_options_no_v1);
 type A_thinkthen_request_call_options_v1 is access all thinkthen_request_call_options_v1;
 function P_thinkthen_request_call_options_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_call_options_v1);
 function Store_thinkthen_request_call_options_v1 is new Store (thinkthen_request_call_options_v1);
+type A_thinkthen_request_call_options_yes_v1 is access all thinkthen_request_call_options_yes_v1;
+function P_thinkthen_request_call_options_yes_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_call_options_yes_v1);
+function Store_thinkthen_request_call_options_yes_v1 is new Store (thinkthen_request_call_options_yes_v1);
 type A_thinkthen_request_call_threshold_v1 is access all thinkthen_request_call_threshold_v1;
 function P_thinkthen_request_call_threshold_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_call_threshold_v1);
 function Store_thinkthen_request_call_threshold_v1 is new Store (thinkthen_request_call_threshold_v1);
@@ -303,6 +309,13 @@ function Store_thinkthen_request_null_v1 is new Store (thinkthen_request_null_v1
 type A_thinkthen_request_number_v1 is access all thinkthen_request_number_v1;
 function P_thinkthen_request_number_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_number_v1);
 function Store_thinkthen_request_number_v1 is new Store (thinkthen_request_number_v1);
+type A_thinkthen_request_option_schema_2_description_v1 is access all thinkthen_request_option_schema_2_description_v1;
+function P_thinkthen_request_option_schema_2_description_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_2_description_v1);
+function Store_thinkthen_request_option_schema_2_description_v1 is new Store (thinkthen_request_option_schema_2_description_v1);
+type A_thinkthen_request_option_schema_2_list_v1 is access all thinkthen_request_option_schema_2_list_v1;
+function P_thinkthen_request_option_schema_2_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_2_list_v1);
+function Store_thinkthen_request_option_schema_2_list_v1 is new Store (thinkthen_request_option_schema_2_list_v1);
+function Store_thinkthen_request_option_schema_2_v1 is new Store (thinkthen_request_option_schema_2_v1);
 type A_thinkthen_request_option_schema_list_v1 is access all thinkthen_request_option_schema_list_v1;
 function P_thinkthen_request_option_schema_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_list_v1);
 function Store_thinkthen_request_option_schema_list_v1 is new Store (thinkthen_request_option_schema_list_v1);
@@ -524,13 +537,19 @@ function Convert_RequestOptions_field_attempts_Boolean (Value : T_Boolean; Stora
 function Convert_RequestOptions_field_context_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_context_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_deadline_ms_Integer (Value : T_Integer; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_entity_definition_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_examples_RecognitionExample_list (Value : T_RecognitionExample_List; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_examples_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_field_Text_list (Value : T_Text_List; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_files_only_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_instructions_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_labels_OptionSchema2_list (Value : T_OptionSchema2_List; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_levels_OptionSchema2_list (Value : T_OptionSchema2_List; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_max_requests_total_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_max_text_bytes_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
 function Convert_RecognitionMode_RecognitionMode (Value : T_RecognitionMode; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_model_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_no_RequestOptions_no (Value : T_JSON; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_none_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_options_field_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RequestThreshold_RequestThreshold (Value : T_RequestThreshold; Storage : in out Arena) return System.Address;
@@ -539,6 +558,7 @@ function Convert_RequestOptions_field_seed_spans_field_Text (Value : T_Text; Sto
 function Convert_RequestOptions_field_snippet_pieces_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
 function Convert_RecognitionStageContext_RecognitionStageContext (Value : T_RecognitionStageContext; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_top_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
+function Convert_RequestOptions_field_yes_RequestOptions_yes (Value : T_JSON; Storage : in out Arena) return System.Address;
 function Convert_RequestQuestion_text_RequestQuestion_text (Value : T_RequestQuestion_text; Storage : in out Arena) return System.Address;
 function Convert_RequestQuestion_definition_RequestQuestion_definition (Value : T_RequestQuestion_definition; Storage : in out Arena) return System.Address;
 function Convert_RequestQuestion_file_RequestQuestion_file (Value : T_RequestQuestion_file; Storage : in out Arena) return System.Address;
@@ -577,6 +597,7 @@ function Convert_RequestInput_feed_field_name_Text (Value : T_Text; Storage : in
 function Convert_RequestReader_RequestReader (Value : T_RequestReader; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExample_RecognitionExample (Value : T_RecognitionExample; Storage : in out Arena) return System.Address;
 function Convert_RequestOptions_field_field_element_Text (Value : T_Text; Storage : in out Arena) return System.Address;
+function Convert_OptionSchema2_OptionSchema2 (Value : T_OptionSchema2; Storage : in out Arena) return System.Address;
 function Convert_RequestThreshold_value_Number_Number (Value : T_Number; Storage : in out Arena) return System.Address;
 function Convert_RequestThreshold_value_Text_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionSeedSpan_RecognitionSeedSpan (Value : T_RecognitionSeedSpan; Storage : in out Arena) return System.Address;
@@ -600,6 +621,8 @@ function Convert_SourceUnit_SourceUnit (Value : T_SourceUnit; Storage : in out A
 function Convert_RequestReader_field_window_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExample_value_Text_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionExampleText_RecognitionExampleText (Value : T_RecognitionExampleText; Storage : in out Arena) return System.Address;
+function Convert_OptionSchema2_field_description_OptionSchema2_description (Value : T_JSON; Storage : in out Arena) return System.Address;
+function Convert_OptionSchema2_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionSeedSpan_field_end_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
 function Convert_RecognitionSeedSpan_field_kind_Text (Value : T_Text; Storage : in out Arena) return System.Address;
 function Convert_RecognitionSeedSpan_field_start_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address;
@@ -821,13 +844,19 @@ if Value.T_batch.Present then Result.m_batch := P_thinkthen_request_batch_v1 (Co
 if Value.T_context.Present then Result.m_context := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_context_Text (Value.T_context.Value, Storage)); else Result.m_context := null; end if;
 if Value.T_context_field.Present then Result.m_context_field := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_context_field_Text (Value.T_context_field.Value, Storage)); else Result.m_context_field := null; end if;
 if Value.T_deadline_ms.Present then Result.m_deadline_ms := P_thinkthen_request_integer_v1 (Convert_RequestOptions_field_deadline_ms_Integer (Value.T_deadline_ms.Value, Storage)); else Result.m_deadline_ms := null; end if;
+if Value.T_entity_definition.Present then Result.m_entity_definition := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_entity_definition_Text (Value.T_entity_definition.Value, Storage)); else Result.m_entity_definition := null; end if;
 if Value.T_examples.Present then Result.m_examples := P_thinkthen_request_recognition_example_list_v1 (Convert_RequestOptions_field_examples_RecognitionExample_list (Value.T_examples.Value, Storage)); else Result.m_examples := null; end if;
 if Value.T_examples_field.Present then Result.m_examples_field := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_examples_field_Text (Value.T_examples_field.Value, Storage)); else Result.m_examples_field := null; end if;
 if Value.T_field.Present then Result.m_field := P_thinkthen_request_text_list_v1 (Convert_RequestOptions_field_field_Text_list (Value.T_field.Value, Storage)); else Result.m_field := null; end if;
 if Value.T_files_only.Present then Result.m_files_only := P_thinkthen_request_boolean_v1 (Convert_RequestOptions_field_files_only_Boolean (Value.T_files_only.Value, Storage)); else Result.m_files_only := null; end if;
+if Value.T_instructions.Present then Result.m_instructions := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_instructions_Text (Value.T_instructions.Value, Storage)); else Result.m_instructions := null; end if;
+if Value.T_labels.Present then Result.m_labels := P_thinkthen_request_option_schema_2_list_v1 (Convert_RequestOptions_field_labels_OptionSchema2_list (Value.T_labels.Value, Storage)); else Result.m_labels := null; end if;
+if Value.T_levels.Present then Result.m_levels := P_thinkthen_request_option_schema_2_list_v1 (Convert_RequestOptions_field_levels_OptionSchema2_list (Value.T_levels.Value, Storage)); else Result.m_levels := null; end if;
 if Value.T_max_requests_total.Present then Result.m_max_requests_total := P_thinkthen_request_unsigned_v1 (Convert_RequestOptions_field_max_requests_total_Unsigned (Value.T_max_requests_total.Value, Storage)); else Result.m_max_requests_total := null; end if;
+if Value.T_max_text_bytes.Present then Result.m_max_text_bytes := P_thinkthen_request_unsigned_v1 (Convert_RequestOptions_field_max_text_bytes_Unsigned (Value.T_max_text_bytes.Value, Storage)); else Result.m_max_text_bytes := null; end if;
 if Value.T_mode.Present then Result.m_mode := P_thinkthen_request_recognition_mode_v1 (Convert_RecognitionMode_RecognitionMode (Value.T_mode.Value, Storage)); else Result.m_mode := null; end if;
 if Value.T_model.Present then Result.m_model := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_model_Text (Value.T_model.Value, Storage)); else Result.m_model := null; end if;
+if Value.T_no.Present then Result.m_no := P_thinkthen_request_call_options_no_v1 (Convert_RequestOptions_field_no_RequestOptions_no (Value.T_no.Value, Storage)); else Result.m_no := null; end if;
 if Value.T_none.Present then Result.m_none := P_thinkthen_request_boolean_v1 (Convert_RequestOptions_field_none_Boolean (Value.T_none.Value, Storage)); else Result.m_none := null; end if;
 if Value.T_options_field.Present then Result.m_options_field := P_thinkthen_request_text_v1 (Convert_RequestOptions_field_options_field_Text (Value.T_options_field.Value, Storage)); else Result.m_options_field := null; end if;
 if Value.T_relation_threshold.Present then Result.m_relation_threshold := P_thinkthen_request_call_threshold_v1 (Convert_RequestThreshold_RequestThreshold (Value.T_relation_threshold.Value, Storage)); else Result.m_relation_threshold := null; end if;
@@ -837,6 +866,7 @@ if Value.T_snippet_pieces.Present then Result.m_snippet_pieces := P_thinkthen_re
 if Value.T_stage_context.Present then Result.m_stage_context := P_thinkthen_request_recognition_stage_context_v1 (Convert_RecognitionStageContext_RecognitionStageContext (Value.T_stage_context.Value, Storage)); else Result.m_stage_context := null; end if;
 if Value.T_threshold.Present then Result.m_threshold := P_thinkthen_request_call_threshold_v1 (Convert_RequestThreshold_RequestThreshold (Value.T_threshold.Value, Storage)); else Result.m_threshold := null; end if;
 if Value.T_top.Present then Result.m_top := P_thinkthen_request_unsigned_v1 (Convert_RequestOptions_field_top_Unsigned (Value.T_top.Value, Storage)); else Result.m_top := null; end if;
+if Value.T_yes.Present then Result.m_yes := P_thinkthen_request_call_options_yes_v1 (Convert_RequestOptions_field_yes_RequestOptions_yes (Value.T_yes.Value, Storage)); else Result.m_yes := null; end if;
 return Store_thinkthen_request_call_options_v1 (Result, Storage);
 end Convert_RequestOptions_RequestOptions;
 function Convert_RequestQuestion_RequestQuestion (Value : T_RequestQuestion; Storage : in out Arena) return System.Address is
@@ -1125,6 +1155,12 @@ begin
 Result.value := Interfaces.Integer_64 (Value);
 return Store_thinkthen_request_integer_v1 (Result, Storage);
 end Convert_RequestOptions_field_deadline_ms_Integer;
+function Convert_RequestOptions_field_entity_definition_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_RequestOptions_field_entity_definition_Text;
 function Convert_RequestOptions_field_examples_RecognitionExample_list (Value : T_RecognitionExample_List; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_recognition_example_list_v1;
 type Items is array (size_t range <>) of aliased System.Address with Convention => C;
@@ -1169,12 +1205,56 @@ begin
 Result.value := (if Value then 1 else 0);
 return Store_thinkthen_request_boolean_v1 (Result, Storage);
 end Convert_RequestOptions_field_files_only_Boolean;
+function Convert_RequestOptions_field_instructions_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_RequestOptions_field_instructions_Text;
+function Convert_RequestOptions_field_labels_OptionSchema2_list (Value : T_OptionSchema2_List; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_option_schema_2_list_v1;
+type Items is array (size_t range <>) of aliased System.Address with Convention => C;
+Length : constant size_t := size_t (Value.Length);
+Address : constant System.Address := Allocate (Storage, Length * (System.Address'Size / 8));
+Values : Items (1 .. Length) with Import, Address => Address;
+Position : size_t := 1;
+begin
+for Item of Value loop
+Values (Position) := Convert_OptionSchema2_OptionSchema2 (Item, Storage);
+Position := Position + 1;
+end loop;
+Result.len := Length;
+Result.data := Address;
+return Store_thinkthen_request_option_schema_2_list_v1 (Result, Storage);
+end Convert_RequestOptions_field_labels_OptionSchema2_list;
+function Convert_RequestOptions_field_levels_OptionSchema2_list (Value : T_OptionSchema2_List; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_option_schema_2_list_v1;
+type Items is array (size_t range <>) of aliased System.Address with Convention => C;
+Length : constant size_t := size_t (Value.Length);
+Address : constant System.Address := Allocate (Storage, Length * (System.Address'Size / 8));
+Values : Items (1 .. Length) with Import, Address => Address;
+Position : size_t := 1;
+begin
+for Item of Value loop
+Values (Position) := Convert_OptionSchema2_OptionSchema2 (Item, Storage);
+Position := Position + 1;
+end loop;
+Result.len := Length;
+Result.data := Address;
+return Store_thinkthen_request_option_schema_2_list_v1 (Result, Storage);
+end Convert_RequestOptions_field_levels_OptionSchema2_list;
 function Convert_RequestOptions_field_max_requests_total_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_unsigned_v1;
 begin
 Result.value := Interfaces.Unsigned_64 (Value);
 return Store_thinkthen_request_unsigned_v1 (Result, Storage);
 end Convert_RequestOptions_field_max_requests_total_Unsigned;
+function Convert_RequestOptions_field_max_text_bytes_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_unsigned_v1;
+begin
+Result.value := Interfaces.Unsigned_64 (Value);
+return Store_thinkthen_request_unsigned_v1 (Result, Storage);
+end Convert_RequestOptions_field_max_text_bytes_Unsigned;
 function Convert_RecognitionMode_RecognitionMode (Value : T_RecognitionMode; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_recognition_mode_v1;
 begin
@@ -1193,6 +1273,12 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RequestOptions_field_model_Text;
+function Convert_RequestOptions_field_no_RequestOptions_no (Value : T_JSON; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_call_options_no_v1;
+begin
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
+return Store_thinkthen_request_call_options_no_v1 (Result, Storage);
+end Convert_RequestOptions_field_no_RequestOptions_no;
 function Convert_RequestOptions_field_none_Boolean (Value : T_Boolean; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_boolean_v1;
 begin
@@ -1260,6 +1346,12 @@ begin
 Result.value := Interfaces.Unsigned_64 (Value);
 return Store_thinkthen_request_unsigned_v1 (Result, Storage);
 end Convert_RequestOptions_field_top_Unsigned;
+function Convert_RequestOptions_field_yes_RequestOptions_yes (Value : T_JSON; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_call_options_yes_v1;
+begin
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
+return Store_thinkthen_request_call_options_yes_v1 (Result, Storage);
+end Convert_RequestOptions_field_yes_RequestOptions_yes;
 function Convert_RequestQuestion_text_RequestQuestion_text (Value : T_RequestQuestion_text; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_question_selector_text_v1;
 begin
@@ -1629,6 +1721,13 @@ begin
 Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
 return Store_thinkthen_request_text_v1 (Result, Storage);
 end Convert_RequestOptions_field_field_element_Text;
+function Convert_OptionSchema2_OptionSchema2 (Value : T_OptionSchema2; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_option_schema_2_v1;
+begin
+if Value.T_description.Present then Result.m_description := P_thinkthen_request_option_schema_2_description_v1 (Convert_OptionSchema2_field_description_OptionSchema2_description (Value.T_description.Value, Storage)); else Result.m_description := null; end if;
+Result.m_name := P_thinkthen_request_text_v1 (Convert_OptionSchema2_field_name_Text (Value.T_name, Storage));
+return Store_thinkthen_request_option_schema_2_v1 (Result, Storage);
+end Convert_OptionSchema2_OptionSchema2;
 function Convert_RequestThreshold_value_Number_Number (Value : T_Number; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_number_v1;
 begin
@@ -1838,6 +1937,18 @@ if Value.T_kinds.Present then Result.m_kinds := P_thinkthen_request_text_list_v1
 Result.m_text := P_thinkthen_request_text_v1 (Convert_RecognitionExampleText_field_text_Text (Value.T_text, Storage));
 return Store_thinkthen_request_recognition_example_text_v1 (Result, Storage);
 end Convert_RecognitionExampleText_RecognitionExampleText;
+function Convert_OptionSchema2_field_description_OptionSchema2_description (Value : T_JSON; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_option_schema_2_description_v1;
+begin
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
+return Store_thinkthen_request_option_schema_2_description_v1 (Result, Storage);
+end Convert_OptionSchema2_field_description_OptionSchema2_description;
+function Convert_OptionSchema2_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address is
+Result : thinkthen_request_text_v1;
+begin
+Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+return Store_thinkthen_request_text_v1 (Result, Storage);
+end Convert_OptionSchema2_field_name_Text;
 function Convert_RecognitionSeedSpan_field_end_Unsigned (Value : T_Unsigned; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_unsigned_v1;
 begin

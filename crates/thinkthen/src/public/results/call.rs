@@ -138,6 +138,24 @@ impl Facts {
         self.requests_sent
     }
 
+    /// Largest encoded request body actually sent by this call, or zero without sends.
+    #[must_use]
+    pub const fn largest_request_bytes(&self) -> usize {
+        self.largest_request_bytes
+    }
+
+    /// Largest estimated input token count, absent if any sent body was unestimable.
+    #[must_use]
+    pub const fn largest_request_estimated_input_tokens(&self) -> Option<u64> {
+        self.largest_request_estimated_input_tokens
+    }
+
+    /// The native estimator used for request input token estimates.
+    #[must_use]
+    pub const fn token_estimate_method(&self) -> &'static str {
+        self.token_estimate_method
+    }
+
     /// Answers obtained from the answer cache without a live send.
     #[must_use]
     pub const fn cache_answers(&self) -> u64 {

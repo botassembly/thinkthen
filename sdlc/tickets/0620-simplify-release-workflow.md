@@ -10,7 +10,7 @@ Depends on: 0613, 0614, 0615, 0619, 0622
 
 ## Outcome
 
-- Changes: `.github/workflows/release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-language-tools.py`, `sdlc/scripts/release-language-tools-self-test.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/workflows`, `sdlc/scripts/README.md`.
+- Changes: `.github/workflows/release.yml`, `sdlc/scripts/release-workflow`, `sdlc/scripts/release-language-tools.py`, `sdlc/scripts/release-language-tools-self-test.py`, `sdlc/scripts/hosted-workflow-self-test.py`, `sdlc/scripts/workflows`, `sdlc/scripts/README.md`, `sdlc/tools.json`, `sdlc/scripts/tools.py`, `sdlc/scripts/linux-check`.
 - Each release job runs one script entrypoint for its target and stage. The script reads `sdlc/tools.json` to decide what to install and check.
 - `release.yml` holds triggers, the job graph, runners, permissions, time limits and passing build outputs between jobs, with no per-language `if:` steps.
 - The per-target install steps in the YAML and the `release-workflow` subcommands they called are deleted, and only the per-stage entrypoint is kept.
@@ -24,6 +24,14 @@ Depends on: 0613, 0614, 0615, 0619, 0622
 - On the M5: the macOS arm64 stage entrypoint runs through `pm job run --machine m5 0620 SHA` and passes.
 - The Linux arm64 and x86_64 entrypoints run at the 0619 container checkpoint.
 - The workflow tickets 0613, 0620 and 0622 are proven together by the one nonpublishing hosted rehearsal that 0691 dispatches at the next checkpoint: it publishes nothing, its archive list matches `sdlc/scripts/package-inventory.py`, and the installed smokes pass.
+
+## Amendment, 2026-10-20 (core cut)
+
+0619 closed on a core-only image, so this ticket follows the same cut.
+
+- It may make minimal additions to `sdlc/tools.json`, `sdlc/scripts/tools.py` and `sdlc/scripts/linux-check` where a hosted stage needs a tool or stage those files do not yet declare. It adds no new runner and changes no public release eligibility.
+- Hosted Linux jobs delete only the install steps the core image covers. Language setup the image does not yet cover, and the manylinux distribution build setup, stay until the language's own wave adds those tools to the manifest.
+- The Linux arm64 and x86_64 stage entrypoints and the full Linux stage proof move to 0691's hosted rehearsal, instead of the 0619 checkpoint.
 
 ## Evidence
 

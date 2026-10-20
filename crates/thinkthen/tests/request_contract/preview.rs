@@ -325,9 +325,9 @@ fn preview_retains_json_context_shortlists_and_matches_execution() {
 }
 
 #[test]
-fn unsupported_preview_refuses_before_advancing_the_feed() {
+fn find_preview_reads_the_owned_feed_without_sending() {
     let listener = Listener::answering(response).unwrap();
-    let mut advanced = false;
+    let mut advanced = 0;
     let request = Request::named(
         "find",
         args(
@@ -343,23 +343,28 @@ fn unsupported_preview_refuses_before_advancing_the_feed() {
     .unwrap()
     .admit()
     .unwrap();
-    let error = engine(&listener)
+    let plan = engine(&listener)
         .plan_request(
             &request,
             RequestEnvironment {
                 controls: CallOptions::new(),
                 feed: Some(RequestFeed::new(
                     "input",
-                    std::iter::from_fn(|| {
-                        advanced = true;
-                        Some(Ok(item("must not read")))
-                    }),
+                    [Ok(item("first candidate")), Ok(item("second candidate"))]
+                        .into_iter()
+                        .inspect(|_| {
+                            advanced += 1;
+                        }),
                 )),
             },
         )
-        .unwrap_err();
-    assert_eq!(error.kind(), ErrorKind::Usage);
-    assert!(!advanced);
+        .unwrap();
+    assert_eq!(plan.records(), 2);
+    assert_eq!(plan.requests(), 1);
+    let body = std::str::from_utf8(plan.first_body().unwrap()).unwrap();
+    assert!(body.contains("first candidate"));
+    assert!(body.contains("second candidate"));
+    assert_eq!(advanced, 2);
     assert_eq!(listener.count(), 0);
 }
 
@@ -452,4 +457,357 @@ fn release_only_canonical_source_preview_bounds_originals_before_projection_and_
     }
     assert_eq!(listener.count(), 0);
     std::fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+fn annotation_preview_retains_group_counts_without_adding_generic_json_fields() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .unwrap()
+        .no_cache()
+        .build()
+        .unwrap();
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"Fits?"},"second":{"decide":"Urgent?"}}}"#,
+    )
+    .unwrap();
+    for rows in [vec![], vec![item("Alpha."), item("Beta.")]] {
+        let records = rows.len();
+        let mut arguments = args(set.clone().into(), RequestInput::Records { items: rows });
+        arguments.options.batch = Some(RequestBatch::Count(1));
+        let request = Request::named("annotate", arguments)
+            .unwrap()
+            .admit()
+            .unwrap();
+        let plan = engine
+            .plan_request(&request, RequestEnvironment::default())
+            .unwrap();
+        assert_eq!(plan.records(), records);
+        // Both questions read the root, so native normalization puts them in one group.
+        assert_eq!(
+            plan.question_requests(),
+            Some((records, [records].as_slice()))
+        );
+        assert!(!plan.drops_detail());
+        let json = serde_json::to_value(&plan).unwrap();
+        assert!(json.get("question_requests").is_none());
+        assert!(json.get("dropped_detail").is_none());
+        assert_eq!(json["largest_request_bytes"], plan.largest_request_bytes());
+        assert_eq!(
+            json["largest_request_estimated_input_tokens"],
+            plan.largest_request_estimated_input_tokens()
+        );
+        assert_eq!(json["token_estimate_method"], plan.token_estimate_method());
+        assert_eq!(listener.count(), 0);
+        assert_eq!(engine.usage().requests_sent(), 0);
+    }
+}
+
+#[test]
+fn recognition_preview_discloses_only_first_record_requests_with_full_input_counts() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let ask = Recognize::builder()
+        .mode(RecognitionMode::BoundaryOnly)
+        .build()
+        .unwrap();
+    for rows in [vec![], vec![item("Ada"), item("Bob")]] {
+        let count = rows.len();
+        let request = Request::named(
+            "recognize",
+            args(ask.clone().into(), RequestInput::Records { items: rows }),
+        )
+        .unwrap()
+        .admit()
+        .unwrap();
+        let plan = engine
+            .plan_request(&request, RequestEnvironment::default())
+            .unwrap();
+        assert_eq!(plan.records(), count);
+        let prepared = plan.prepared_requests().collect::<Vec<_>>();
+        if count == 0 {
+            assert!(plan.recognition().is_none());
+            assert!(prepared.is_empty());
+        } else {
+            let recognition = plan.recognition().unwrap();
+            assert_eq!(recognition.pieces, 1);
+            assert_eq!(recognition.name_requests_upper_bound, 0);
+            assert_eq!(recognition.relation_pairs_upper_bound, Some(0));
+            assert_eq!(prepared.len(), 1);
+            assert_eq!(plan.first_body(), Some(prepared[0].body));
+            assert_eq!(prepared[0].digest.len(), 64);
+            let body = std::str::from_utf8(prepared[0].body).unwrap();
+            assert!(body.contains("Ada"));
+            assert!(!body.contains("Bob"));
+            assert!(!format!("{:?}", prepared[0]).contains("Ada"));
+        }
+        let json = serde_json::to_value(&plan).unwrap();
+        for member in ["prepared_requests", "recognition", "relations", "details"] {
+            assert!(json.get(member).is_none());
+        }
+        assert_eq!(listener.count(), 0);
+    }
+}
+
+#[test]
+fn relation_preview_retains_rule_order_empty_counts_and_native_requests() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let ask = Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"zeta","source":"*","target":"*","reads":"private_relation_preview_marker"},{"name":"alpha","source":"*","target":"*","reads":"linked","either":true}]}}"#).unwrap();
+    let records = ["Ada", "Bob"].map(|name| RequestItem {
+        original: Some(RequestOriginal::Json {
+            value: RawRecord::json(&format!(r#"{{"name":"{name}","kind":"person"}}"#)).unwrap(),
+        }),
+        ..item("")
+    });
+    for rows in [vec![], records.to_vec()] {
+        let count = rows.len();
+        let request = Request::named(
+            "relate",
+            args(ask.clone().into(), RequestInput::Records { items: rows }),
+        )
+        .unwrap()
+        .admit()
+        .unwrap();
+        let plan = engine
+            .plan_request(&request, RequestEnvironment::default())
+            .unwrap();
+        let relations = plan.relations().unwrap();
+        assert_eq!(relations.entity_count(), count);
+        let rules = relations.rules().collect::<Vec<_>>();
+        assert_eq!(
+            rules.iter().map(|rule| rule.name).collect::<Vec<_>>(),
+            ["zeta", "alpha"]
+        );
+        assert_eq!(rules[0].method, RelationMethod::YesNo);
+        assert_eq!(rules[0].logical_questions, if count == 0 { 0 } else { 2 });
+        assert_eq!(rules[1].logical_questions, usize::from(count != 0));
+        assert!(!format!("{rules:?}").contains("private_relation_preview_marker"));
+        let prepared = plan.prepared_requests().collect::<Vec<_>>();
+        if count == 0 {
+            assert!(prepared.is_empty());
+            assert!(rules.iter().all(|rule| rule.request_count == 0));
+        } else {
+            assert_eq!(plan.first_body(), Some(prepared[0].body));
+            assert!(
+                std::str::from_utf8(prepared[0].body)
+                    .unwrap()
+                    .contains("private_relation_preview_marker")
+            );
+            assert!(rules.iter().all(|rule| rule.request_count > 0));
+        }
+        assert_eq!(listener.count(), 0);
+        assert_eq!(engine.usage().requests_sent(), 0);
+    }
+}
+
+#[test]
+fn recognition_wording_overrides_saved_values_independently_before_preview() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let saved = thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{"instructions":"saved_task_marker","entity_definition":"saved_entity_marker"}}"#).unwrap();
+    for (instructions, entity_definition, task, entity) in [
+        (None, None, "saved_task_marker", "saved_entity_marker"),
+        (
+            Some("replacement_task_marker"),
+            None,
+            "replacement_task_marker",
+            "saved_entity_marker",
+        ),
+        (
+            None,
+            Some("replacement_entity_marker"),
+            "saved_task_marker",
+            "replacement_entity_marker",
+        ),
+    ] {
+        let arguments = RequestArguments {
+            question: RequestQuestion::Definition {
+                value: saved.clone().into(),
+            },
+            input: RequestInput::Text {
+                text: "Ada".into(),
+                images: vec![],
+            },
+            options: RequestOptions {
+                instructions: instructions.map(str::to_owned),
+                entity_definition: entity_definition.map(str::to_owned),
+                ..RequestOptions::default()
+            },
+        };
+        let request = Request::named("recognize", arguments)
+            .unwrap()
+            .admit()
+            .unwrap();
+        let preview = engine
+            .plan_request(&request, RequestEnvironment::default())
+            .unwrap();
+        assert!(preview.token_estimate_note().contains("token-estimate"));
+        let bodies = preview
+            .prepared_requests()
+            .map(|request| String::from_utf8_lossy(request.body).into_owned())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(bodies.contains(task));
+        assert!(bodies.contains(entity));
+    }
+    for (function, instructions, entity_definition) in [
+        ("decide", Some("task"), None),
+        ("decide", None, Some("entity")),
+        ("recognize", Some(" "), None),
+        ("recognize", None, Some("")),
+    ] {
+        let arguments = RequestArguments {
+            question: RequestQuestion::Text {
+                text: "Fits?".into(),
+            },
+            input: RequestInput::Text {
+                text: "Ada".into(),
+                images: vec![],
+            },
+            options: RequestOptions {
+                instructions: instructions.map(str::to_owned),
+                entity_definition: entity_definition.map(str::to_owned),
+                ..RequestOptions::default()
+            },
+        };
+        assert!(
+            Request::named(function, arguments)
+                .unwrap()
+                .admit()
+                .is_err()
+        );
+    }
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn combined_previews_keep_unrounded_accounting_without_claiming_constituent_details() {
+    let listener = Listener::answering(response).unwrap();
+    let mut modes = Vec::new();
+    for backend in ["typesafe", "perplexity"] {
+        let engine = Engine::builder()
+            .backend(backend)
+            .unwrap()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .no_cache()
+            .build()
+            .unwrap();
+        let mut parts = Vec::new();
+        let mut token_bytes = 0usize;
+        for text in ["combine-private-evidence", "second evidence"] {
+            let question = QuestionSet::from_json(r#"{"version":1,"questions":{"a":{"decide":"A?"},"b":{"decide":"B?"},"c":{"decide":"C?"}}}"#).unwrap();
+            let request = Request::named(
+                "annotate",
+                args(
+                    question.into(),
+                    RequestInput::Text {
+                        text: text.to_owned(),
+                        images: Vec::new(),
+                    },
+                ),
+            )
+            .unwrap()
+            .admit()
+            .unwrap();
+            let plan = engine
+                .plan_request(
+                    &request,
+                    RequestEnvironment {
+                        controls: CallOptions::new()
+                            .shared_state_groups()
+                            .batch(BatchSetting::Max),
+                        feed: None,
+                    },
+                )
+                .unwrap();
+            let body = plan.first_body().unwrap();
+            token_bytes += preview_token_bytes(body, backend).unwrap();
+            parts.push(plan);
+        }
+        let combined = parts[0].combine(&parts[1]).unwrap();
+        assert_eq!(combined.records(), 2);
+        assert_eq!(
+            combined.requests(),
+            parts[0].requests() + parts[1].requests()
+        );
+        assert_eq!(
+            combined.estimated_bytes(),
+            parts[0].estimated_bytes() + parts[1].estimated_bytes()
+        );
+        assert_eq!(
+            combined.estimated_input_tokens(),
+            (token_bytes * 516 / 1000, (token_bytes * 908).div_ceil(1000))
+        );
+        assert_eq!(
+            combined.largest_request_bytes(),
+            parts
+                .iter()
+                .map(PlanEstimate::largest_request_bytes)
+                .max()
+                .unwrap()
+        );
+        assert_eq!(combined.first_body(), parts[0].first_body());
+        assert!(combined.prepared_requests().next().is_none());
+        assert!(
+            combined.question_requests().is_none()
+                && combined.recognition().is_none()
+                && combined.relations().is_none()
+        );
+        assert!(!format!("{combined:?}").contains("combine-private-evidence"));
+        assert_combined_shape(&combined, &parts[0]).unwrap();
+        assert_combined_overflow(combined.clone());
+        modes.push(combined);
+    }
+    assert_eq!(
+        modes[0].combine(&modes[1]).unwrap_err().kind(),
+        ErrorKind::Usage
+    );
+    assert!(listener.requests().is_empty());
+    assert_eq!(listener.count(), 0);
+}
+
+fn assert_combined_overflow(mut growing: PlanEstimate) {
+    let mut overflow = false;
+    for _ in 0..usize::BITS {
+        match growing.combine(&growing) {
+            Ok(next) => growing = next,
+            Err(error) => {
+                assert_eq!(error.kind(), ErrorKind::Usage);
+                overflow = true;
+                break;
+            }
+        }
+    }
+    assert!(overflow);
+}
+
+fn assert_combined_shape(
+    combined: &PlanEstimate,
+    part: &PlanEstimate,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let encoded = serde_json::to_value(combined)?;
+    assert_eq!(
+        encoded.as_object().ok_or("combined object")?.len(),
+        serde_json::to_value(part)?
+            .as_object()
+            .ok_or("part object")?
+            .len()
+    );
+    assert!(encoded.get("summary").is_none());
+    Ok(())
+}
+
+fn preview_token_bytes(body: &[u8], backend: &str) -> Result<usize, serde_json::Error> {
+    let wire: Value = serde_json::from_slice(body)?;
+    Ok(body.len()
+        + if backend == "perplexity" {
+            serde_json::to_string(wire.get("state").unwrap_or(&Value::Null))?.len() * 2
+        } else {
+            0
+        })
 }

@@ -30,5 +30,5 @@ pub(crate) fn observe(point: Point, file: &File) {
     }
 }
 
-#[cfg(feature = "cli")]
+#[cfg(test)]
 mod tests;

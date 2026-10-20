@@ -106,6 +106,8 @@ function Unwrap (Item : Thinkthen.Inputs.Total_Request_Limit) return Requests.T_
 function Wrap (Item : Requests.T_EngineSettings_field_max_requests_total) return Thinkthen.Inputs.Total_Request_Limit is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Option_Schema) return Requests.T_OptionSchema is (Item.Data);
 function Wrap (Item : Requests.T_OptionSchema) return Thinkthen.Inputs.Option_Schema is ((Data => Item));
+function Unwrap (Item : Thinkthen.Inputs.Option_Schema2) return Requests.T_OptionSchema2 is (Item.Data);
+function Wrap (Item : Requests.T_OptionSchema2) return Thinkthen.Inputs.Option_Schema2 is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example) return Requests.T_RecognitionExample is (Item.Data);
 function Wrap (Item : Requests.T_RecognitionExample) return Thinkthen.Inputs.Recognition_Example is ((Data => Item));
 function Unwrap (Item : Thinkthen.Inputs.Recognition_Example_Entity) return Requests.T_RecognitionExampleEntity is (Item.Data);
@@ -348,6 +350,24 @@ Position : Positive := 1;
 begin
 for Child of Item loop
 Result (Position) := (Name => Child.Key, Item => Wrap (Child.Value));
+Position := Position + 1;
+end loop;
+return Result;
+end Wrap;
+function Unwrap (Item : Thinkthen.Inputs.Option_Schema2_List) return Requests.T_OptionSchema2_List is
+Result : Requests.T_OptionSchema2_List;
+begin
+for Child of Item loop
+Result.Append (Unwrap (Child));
+end loop;
+return Result;
+end Unwrap;
+function Wrap (Item : Requests.T_OptionSchema2_List) return Thinkthen.Inputs.Option_Schema2_List is
+Result : Option_Schema2_List (1 .. Natural (Item.Length));
+Position : Positive := 1;
+begin
+for Child of Item loop
+Result (Position) := Wrap (Child);
 Position := Position + 1;
 end loop;
 return Result;

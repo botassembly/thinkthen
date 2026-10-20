@@ -4043,6 +4043,10 @@
  02 v-reserved usage binary-double unsigned.
  02 v-m-description usage pointer.
  02 v-m-name usage pointer.
+01 tt-n-cobol-OptionSchema2 based.
+ 02 v-reserved usage binary-double unsigned.
+ 02 v-m-description usage pointer.
+ 02 v-m-name usage pointer.
 01 tt-n-cobol-ReaderMedia based.
  02 v-kind usage binary-double unsigned.
  02 v-value usage pointer.
@@ -4281,13 +4285,19 @@
  02 v-m-context usage pointer.
  02 v-m-context-field usage pointer.
  02 v-m-deadline-ms usage pointer.
+ 02 v-m-entity-definition usage pointer.
  02 v-m-examples usage pointer.
  02 v-m-examples-field usage pointer.
  02 v-m-field usage pointer.
  02 v-m-files-only usage pointer.
+ 02 v-m-instructions usage pointer.
+ 02 v-m-labels usage pointer.
+ 02 v-m-levels usage pointer.
  02 v-m-max-requests-total usage pointer.
+ 02 v-m-max-text-bytes usage pointer.
  02 v-m-mode usage pointer.
  02 v-m-model usage pointer.
+ 02 v-m-no usage pointer.
  02 v-m-none usage pointer.
  02 v-m-options-field usage pointer.
  02 v-m-relation-threshold usage pointer.
@@ -4297,6 +4307,7 @@
  02 v-m-stage-context usage pointer.
  02 v-m-threshold usage pointer.
  02 v-m-top usage pointer.
+ 02 v-m-yes usage pointer.
 01 tt-n-cobol-RequestOriginal based.
  02 v-kind usage binary-double unsigned.
  02 v-value usage pointer.
@@ -4601,6 +4612,11 @@
 01 tt-n-cobol-OptionSchemaName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-cobol-OptionSchema2Description based.
+ 02 v-value usage pointer.
+01 tt-n-cobol-OptionSchema2Name based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
 01 tt-n-cobol-ReaderMediaTextValue based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-ReaderMediaImageValue based.
@@ -4823,6 +4839,9 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsDeadlineMs based.
  02 v-value usage binary-double signed.
+01 tt-n-cobol-RequestOptionsEntityDefinition based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsExamples based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4834,11 +4853,24 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsFilesOnly based.
  02 v-value usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsInstructions based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsLabels based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsLevels based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsMaxRequestsTotal based.
+ 02 v-value usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsMaxTextBytes based.
  02 v-value usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsModel based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsNo based.
+ 02 v-value usage pointer.
 01 tt-n-cobol-RequestOptionsNone based.
  02 v-value usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsOptionsField based.
@@ -4854,6 +4886,8 @@
  02 v-value usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsTop based.
  02 v-value usage binary-double unsigned.
+01 tt-n-cobol-RequestOptionsYes based.
+ 02 v-value usage pointer.
 01 tt-n-cobol-RequestOriginalJsonKind based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RequestOriginalJsonValue based.

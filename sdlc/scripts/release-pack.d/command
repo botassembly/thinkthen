@@ -18,7 +18,7 @@ part_command() {
 			eval "flags=\${CFLAGS_$target_var:-}"
 			export "CFLAGS_$target_var=${flags:+$flags }-DSQLITE_DISABLE_LFS"
 		;; esac
-		cargo build --locked --quiet --release --package thinkthen --target "$command_target"
+		cargo build --locked --quiet --release --package thinkthen-cli --target "$command_target"
 		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen$suffix
 	fi
 	folder=$(fresh command)

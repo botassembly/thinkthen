@@ -1287,7 +1287,7 @@ TTAnnotateQuestionScoreBuilder, TTAnnotateQuestionTagBuilder, TTAuthoredChooseBu
 TTAuthoredFindBuilder, TTAuthoredInputDeclarationObjectBuilder, TTAuthoredInputDeclarationStringBuilder,
 TTAuthoredInputPropertyArrayBuilder, TTAuthoredInputPropertyBooleanBuilder, TTAuthoredInputPropertyNumberBuilder,
 TTAuthoredInputPropertyStringBuilder, TTAuthoredRelateBuilder, TTAuthoredRelationBuilder, TTAuthoredScoreBuilder,
-TTAuthoredTagBuilder, TTSettings, TTOptionSchemaBuilder, TTRecognitionExampleEntityBuilder,
+TTAuthoredTagBuilder, TTSettings, TTOptionSchemaBuilder, TTOptionSchema2Builder, TTRecognitionExampleEntityBuilder,
 TTRecognitionExampleTextBuilder, TTRecognitionSeedSpanBuilder, TTRecognitionStageContextBuilder,
 TTRecognizeDefinitionBuilder, TTRecognizeQuestionBuilder, TTRelateFieldsBuilder, TTRelateQuestionBuilder,
 TTRequest, TTCallArguments, TTByteImage, TTFileImage, TTEntitiesInput, TTFeedInput, TTJSONInput,
@@ -1461,6 +1461,10 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) id descriptionValue;
 @property(nonatomic, strong, nullable) NSString * name;
 @end
+@interface TTOptionSchema2Builder : TTRequestObject
+@property(nonatomic, strong, nullable) id descriptionValue;
+@property(nonatomic, strong, nullable) NSString * name;
+@end
 @interface TTRecognitionExampleEntityBuilder : TTRequestObject
 @property(nonatomic, strong, nullable) NSNumber * end;
 @property(nonatomic, strong, nullable) NSString * kind;
@@ -1567,13 +1571,19 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSString * context;
 @property(nonatomic, strong, nullable) NSString * contextField;
 @property(nonatomic, strong, nullable) NSNumber * deadlineMs;
+@property(nonatomic, strong, nullable) NSString * entityDefinition;
 @property(nonatomic, strong, nullable) NSArray * examples;
 @property(nonatomic, strong, nullable) NSString * examplesField;
 @property(nonatomic, strong, nullable) NSArray * field;
 @property(nonatomic, strong, nullable) NSNumber * filesOnly;
+@property(nonatomic, strong, nullable) NSString * instructions;
+@property(nonatomic, strong, nullable) NSArray * labels;
+@property(nonatomic, strong, nullable) NSArray * levels;
 @property(nonatomic, strong, nullable) NSNumber * maxRequestsTotal;
+@property(nonatomic, strong, nullable) NSNumber * maxTextBytes;
 @property(nonatomic, strong, nullable) TTRecognitionMode mode;
 @property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) id no;
 @property(nonatomic, strong, nullable) NSNumber * none;
 @property(nonatomic, strong, nullable) NSString * optionsField;
 @property(nonatomic, strong, nullable) id relationThreshold;
@@ -1583,6 +1593,7 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) TTRecognitionStageContextBuilder * stageContext;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) NSNumber * top;
+@property(nonatomic, strong, nullable) id yes;
 @end
 @interface TTOriginalJSON : TTRequestObject
 @property(nonatomic, strong, nullable) id value;

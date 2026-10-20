@@ -40,7 +40,7 @@ impl Engine {
         let engine =
             crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
         let limit = options
-            .cli_text_limit
+            .recognition_text_limit
             .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
         let units = records.into_iter().enumerate().map(|(at, record)| {
             record

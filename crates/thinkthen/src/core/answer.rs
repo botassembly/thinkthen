@@ -247,7 +247,7 @@ impl fmt::Debug for Value {
 impl Value {
     /// The label `--raw` prints, or `None` when there is no label to print.
     #[must_use]
-    #[cfg(any(feature = "cli", test))]
+    #[cfg(test)]
     pub(crate) fn label(&self) -> Option<&str> {
         match self {
             Self::Choice(label) => label.as_deref(),

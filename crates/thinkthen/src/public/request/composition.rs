@@ -1,7 +1,6 @@
 //! One typed composition path resolves sources only after complete header admission.
 use super::transport::AttachmentBudget;
-#[cfg(feature = "cli")]
-use super::transport::TransportDescriptor;
+use super::transport::RequestDescriptor;
 use super::{
     AdmittedRequest, RequestDefinition, RequestEnvironment, RequestImage, RequestInput,
     RequestItem, RequestOriginal,
@@ -120,7 +119,6 @@ impl AdmittedRequest {
                         "the supplied feed does not match the requested name",
                     ));
                 }
-                #[cfg(feature = "cli")]
                 if let super::execution::FeedContents::Descriptors(descriptors) = feed.contents {
                     return compose_descriptors(
                         &descriptors,
@@ -181,9 +179,8 @@ impl AdmittedRequest {
             return Err(Error::defect("session feed lost its declaration"));
         };
         let mut budget = AttachmentBudget::new(self.attachment_limit);
-        let mut decoder = super::framing::Decoder::new(*framing);
         let input_queue = std::sync::Arc::clone(&queue);
-        let descriptors = std::iter::from_fn(move || decoder.next(&input_queue, controls));
+        let descriptors = std::iter::from_fn(move || input_queue.next_decoded(controls));
         let mut compose = move |descriptor: super::RequestSessionDescriptor| {
             if options.files_only && descriptor.location.is_none() {
                 return Err(Error::usage(
@@ -548,9 +545,8 @@ fn admit_image_route(item: &RequestItem, refusal: Option<&str>) -> Result<(), Er
     Ok(())
 }
 
-#[cfg(feature = "cli")]
 fn compose_descriptor(
-    descriptor: &TransportDescriptor,
+    descriptor: &RequestDescriptor,
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
     budget: &mut AttachmentBudget,
@@ -592,9 +588,8 @@ fn compose_descriptor(
     Ok(row)
 }
 
-#[cfg(feature = "cli")]
 fn compose_descriptors(
-    descriptors: &[TransportDescriptor],
+    descriptors: &[RequestDescriptor],
     reading: &RecordReading,
     schema: Option<&crate::InputDeclaration>,
     budget: &mut AttachmentBudget,
