@@ -49,14 +49,15 @@ impl Call<RequestValue> {
         if let Some(results) = fields.remove("value") {
             fields.insert("results".into(), results);
         }
-        if let RequestValueTree::Map(answer_fields) = &answer {
-            for name in ["value", "probability", "pick", "index", "resolution"] {
-                if let Some(value) = answer_fields.get(name) {
-                    fields.insert(name.into(), value.clone());
-                }
+        fields.remove("answer");
+        let RequestValueTree::Map(answer_fields) = &answer else {
+            return Ok(tree);
+        };
+        for name in ["value", "probability", "pick", "index", "resolution"] {
+            if let Some(value) = answer_fields.get(name) {
+                fields.insert(name.into(), value.clone());
             }
         }
-        fields.remove("answer");
         Ok(tree)
     }
 }
