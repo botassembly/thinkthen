@@ -6,7 +6,7 @@ source: as [08-spreadsheets.md](08-spreadsheets.md), plus the outside sources li
 
 # PRD 08 working file: the hard questions about spreadsheets
 
-This file backs [08-spreadsheets.md](08-spreadsheets.md). Each question gives the options, the reasoning and a recommendation. **Ian** marks the three that need his product direction; the rest the PM can carry into tickets, and Ian can overturn any of them. Claims about 0.2 cite pages in [`specification/`](../../../../specification/) or [`sdlc/`](../../../../sdlc/).
+This file backs [08-spreadsheets.md](08-spreadsheets.md). Each question gives the options, the reasoning and a recommendation. **Ian** marks the three that need his product direction; the rest the PM can carry into tickets, and Ian can overturn any of them. Claims about 0.2 cite pages in [`specification/`](../../../../../specification/) or [`sdlc/`](../../../../).
 
 ## What 0.2 already gives
 

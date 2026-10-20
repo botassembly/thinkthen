@@ -2,7 +2,7 @@
 date: 2026-10-13
 status: draft PRD
 release: 0.3
-source: Ian's goal of traction measured by GitHub stars and YouTube views (0.3 README, 2026-10-13); duckdb/community-extensions#2936 and its review; thinkthen tickets 0415 and 0577; [`sdlc/planning/release-process.md`](../../release-process.md) and the release workflows; the registry pages as they read on 2026-10-13; the marketing launch, playbook and copy notes. The 25 worked questions and their sources are in [09-publishing-channels-questions.md](09-publishing-channels-questions.md)
+source: Ian's goal of traction measured by GitHub stars and YouTube views (0.3 README, 2026-10-13); duckdb/community-extensions#2936 and its review; thinkthen tickets 0415 and 0577; [`sdlc/planning/release-process.md`](../../../release-process.md) and the release workflows; the registry pages as they read on 2026-10-13; the marketing launch, playbook and copy notes. The 25 worked questions and their sources are in [09-publishing-channels-questions.md](09-publishing-channels-questions.md)
 ---
 
 # PRD 09: Publishing channels

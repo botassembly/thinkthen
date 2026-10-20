@@ -1,7 +1,7 @@
 ---
 date: 2026-10-13
 status: design input for 0.3; rulings recorded, data model and commands to design with Ian
-source: Ian's dictation on 2026-10-13; [`specification/cache.md`](../../../specification/cache.md) and [`recording.md`](../../../specification/recording.md) as of 0.2; Ian's notes on the data model and on decision knowledge
+source: Ian's dictation on 2026-10-13; [`specification/cache.md`](../../../../specification/cache.md) and [`recording.md`](../../../../specification/recording.md) as of 0.2; Ian's notes on the data model and on decision knowledge
 ---
 
 # ThinkThen data: the cache grows up

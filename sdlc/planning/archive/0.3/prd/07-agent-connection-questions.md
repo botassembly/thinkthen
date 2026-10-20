@@ -6,7 +6,7 @@ source: Ian's MCP rulings of 2026-10-11 in [../mcp.md](../mcp.md); his 2026-10-1
 
 # PRD 07 working file: the hard questions on how agents connect
 
-This file backs [07-agent-connection.md](07-agent-connection.md). Each question gives the options, the reasoning and a recommendation. **Ian** marks the three that need his direction. The PM may carry the rest into tickets, and Ian can overturn any of them. Claims about 0.2 cite [`specification/`](../../../../specification/) or the 0.2 help text.
+This file backs [07-agent-connection.md](07-agent-connection.md). Each question gives the options, the reasoning and a recommendation. **Ian** marks the three that need his direction. The PM may carry the rest into tickets, and Ian can overturn any of them. Claims about 0.2 cite [`specification/`](../../../../../specification/) or the 0.2 help text.
 
 ## Measurements taken for this PRD
 

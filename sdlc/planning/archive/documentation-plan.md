@@ -1,5 +1,7 @@
 # Documentation plan
 
+Background, not a plan. The one plan is [milestones.md](../milestones.md).
+
 Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Later tickets added focused pages, including page 45 for `relate`, page 46 for cache inventory and page 47 for a two-call question. `demos/README.md` holds the one list of how-tos, with each page's number, task, link and state. This page keeps the form, the capability map, the numbers that left and the rules. The slice or ticket that turned each page green is in Git history and in that page's ticket. A demo number is a folder under `demos/`. A new number is reserved on `demos/README.md` as coming and gets a folder when its slice starts.
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.

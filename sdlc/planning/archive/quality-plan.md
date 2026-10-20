@@ -1,5 +1,7 @@
 # The quality plan
 
+Background, not a plan. The one plan is [milestones.md](../milestones.md).
+
 Status: **Proposal under use** from experiment 218, fed by waves 1 and 1.5 (2026-09-21) and the ticket and issue catalog of 2026-09-22. Waves 2 through 4 extend it as the libraries, databases, and the real engine land. Ian can overturn the form and any rung placement.
 
 One rule carries the whole plan: a finding that can be a test becomes one, and a test runs from a rung or it rots. What cannot be a test becomes a line on the release checklist, and what cannot be checked becomes the exploring tester's rotation.

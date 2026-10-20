@@ -20,7 +20,7 @@ fn command(home: &std::path::Path) -> Command {
     command
 }
 
-// It pins the default folders under `HOME`, the Linux and macOS folders (sdlc/planning/windows.md).
+// It pins the default folders under `HOME`, the Linux and macOS folders (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
@@ -193,7 +193,7 @@ fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
     }
 }
 
-// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/windows.md).
+// It names the XDG folders. Windows reads APPDATA and LOCALAPPDATA (sdlc/planning/archive/windows.md).
 #[cfg(unix)]
 #[test]
 fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
