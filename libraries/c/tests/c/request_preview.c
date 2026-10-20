@@ -354,6 +354,15 @@ int main(void) {
           "unrepresentable input extent");
     check(thinkthen_request_plan_json(engine, NULL, 0, &out, &len) == THINKTHEN_EUSAGE,
           "empty request");
+    const char retired_schema[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Fits?\"},\"input\":{\"kind\":\"text\",\"text\":\"Alpha.\"}}}";
+    char *retired_output = (char *)(uintptr_t)7;
+    size_t retired_extent = 99;
+    check(thinkthen_request_plan_json(engine, retired_schema, sizeof(retired_schema)-1,
+          &retired_output, &retired_extent) == THINKTHEN_EUSAGE, "retired request schema refuses");
+    check(retired_output == (char *)(uintptr_t)7 && retired_extent == 99,
+          "retired schema refusal preserves outputs");
+    check(!strcmp(thinkthen_session_error_message(), "delete the `schema` field."),
+          "exact retired request schema diagnostic");
     refused(engine, "{\"PRIVATE\":true}", THINKTHEN_EUSAGE);
     refused(engine, "{\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"options\":{\"batch\":null}}}", THINKTHEN_EUSAGE);
     refused(engine, "{\"call\":{\"function\":\"filter\",\"question\":{\"kind\":\"text\",\"text\":\"PRIVATE\"},\"input\":{\"kind\":\"source\",\"source\":{\"paths\":[\"PRIVATE-MISSING\"]}}}}", THINKTHEN_ELOCAL);
