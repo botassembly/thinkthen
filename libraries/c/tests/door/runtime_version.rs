@@ -11,6 +11,15 @@ fn loaded_interface_must_match_before_any_other_operation() {
     successful(&output);
     assert_eq!(text(&output.stdout), format!("{}\n", env!("CARGO_PKG_VERSION")));
 
+    let (library, required, loaded) = incompatible_library();
+    let output = run_with(&binary, &base, b"", &[("THINKTHEN_TEST_LIBRARY", &library)]);
+    assert_eq!(output.status.code(), Some(78));
+    assert!(output.stdout.is_empty());
+    assert_eq!(text(&output.stderr), format!("ThinkThen C interface mismatch: header requires {required}, loaded library different-interface provides {loaded}\n"));
+    assert_eq!(backend.count(), 0, "version checks must send nothing");
+}
+
+fn incompatible_library() -> (PathBuf, u32, u32) {
     let incompatible = scratch("incompatible-library");
     let header = crate_dir().join("include/thinkthen.h");
     // Generate a second interface from a changed declaration. Its bootstrap is
@@ -40,9 +49,5 @@ fn loaded_interface_must_match_before_any_other_operation() {
         compiler.args([if cfg!(target_os = "macos") { "-dynamiclib" } else { "-shared" }, "-fPIC"]).arg(&fixture).arg("-o").arg(&library);
     }
     successful(&compiler.current_dir(&incompatible).output().expect("compile library"));
-    let output = run_with(&binary, &base, b"", &[("THINKTHEN_TEST_LIBRARY", &library)]);
-    assert_eq!(output.status.code(), Some(78));
-    assert!(output.stdout.is_empty());
-    assert_eq!(text(&output.stderr), format!("ThinkThen C interface mismatch: header requires {required}, loaded library different-interface provides {loaded}\n"));
-    assert_eq!(backend.count(), 0, "version checks must send nothing");
+    (library, required, loaded)
 }
