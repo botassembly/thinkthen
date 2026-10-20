@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2.1
 
+Reviews: revision c5fc56d, accept
+
 ## Outcome
 
 The shipped TLS dependency closure uses patched certificate verification and trust roots for CVE-2026-111943, without changing public APIs, providers, TLS settings or advisory policy.
