@@ -4,7 +4,6 @@ Dumpers return {"packets": [native packet JSON, ...]} and optional host
 conversions. Only this comparator normalizes runtime identities and timing.
 """
 import base64
-from contextlib import chdir
 import difflib
 import gzip
 import io
@@ -113,12 +112,7 @@ def run(consumer, command, root, *, update=False):
         folders[row['id']] = ((str(home), '$FOLDER'), (str(root), '$ROOT'))
         return folded(json.loads(stdout))
 
-    # Relative source selectors keep core-created originals deterministic too;
-    # opaque authored JSON remains untouched by metadata normalization.
-    # The standalone currency worker and Rust checker own this single-threaded
-    # process. The context restores its caller's directory even on failure.
-    with chdir(root):
-        failures = shared_run(consumer, command, root, packet_transform=record)
+    failures = shared_run(consumer, command, root, packet_transform=record)
     if failures:
         return failures
     document = {'schema': 'thinkthen.packet-oracle/1', 'cases': [

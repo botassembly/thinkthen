@@ -1,5 +1,6 @@
 """Family fixture framing and projection into the retained shared assertions."""
 import base64
+from contextlib import chdir, nullcontext
 import json
 import re
 from pathlib import Path
@@ -8,7 +9,7 @@ from question_files import question_selector
 VERBS=('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')
 ERRORS={'usage':1,'backend':2,'deadline':3,'local':4,'cancelled':5,'defect':6}
 
-def request(value, root, home, settings):
+def request(value, root, home, settings, *, relative_sources=False):
     verb=value['verb'];question=value.get('question',{})
     role='set' if 'questions' in question or verb=='annotate' else 'rank' if verb=='rank' else 'find' if verb=='find' else 'recognize' if verb=='recognize' else 'relate' if verb=='relate' else 'dynamic' if verb=='choose' and 'options' not in question else 'atomic'
     definition = {k: v for k, v in question.items() if k != 'none'} if verb == 'find' and question.get('none') else question
@@ -22,7 +23,8 @@ def request(value, root, home, settings):
     if verb == 'find' and question.get('none'): q['none'] = True
     operation=value.get('operation') or {}
     if value.get('paths') or operation.get('injection')=='recording_read_failure':
-        paths=[str(home/'missing-input')] if operation.get('injection')=='recording_read_failure' else [str(home/p) if value.get('owned_jsonl') else str(root/p) for p in value['paths']]
+        owned = Path('.') if relative_sources else home
+        paths=[str(owned/'missing-input')] if operation.get('injection')=='recording_read_failure' else [str((owned if value.get('owned_jsonl') else root)/p) for p in value['paths']]
         unit=value.get('source_unit',1)
         reading={'unit':{1:'line',2:'window',3:'file',4:'file',5:'line'}[unit]}
         if unit==2:reading['window']=value['window']
@@ -223,7 +225,7 @@ def selected_case_ids(selector):
 
 def run(consumer, command, root, extra_env=None, settings_names=None, rust_manifest=None, typescript_compiler=None, packet_transform=None):
     import os, subprocess, sys, tempfile, sqlite3
-    request_root = Path('.') if packet_transform is not None else root
+    request_root = Path('fixture-source') if packet_transform is not None else root
     backend_path = Path(os.environ.get('THINKTHEN_TEST_BACKEND', str(Path(os.environ.get('CARGO_TARGET_DIR', str(root/'target')))/'debug/conformance-backend')))
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
@@ -263,8 +265,12 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
             if row['kind'] in ('typed-result','result2'):
                 value['arm']='case/'+row['input']['case_ref']+'/v1'
                 value['metadata_only']=False
-            with tempfile.TemporaryDirectory(prefix='thinkthen-0431-') as tmp:
+            # Packet entry points own a single-threaded Python process. Each
+            # context restores its cwd before removing this case's owned home.
+            with tempfile.TemporaryDirectory(prefix='thinkthen-0431-') as tmp, (chdir(tmp) if packet_transform is not None else nullcontext()):
                 home=Path(tmp)
+                if packet_transform is not None:
+                    (home/'fixture-source').symlink_to(root, target_is_directory=True)
                 env=child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', **(extra_env or {}))
                 backend=c_parity.Backend(backend_path,env)
                 try:
@@ -322,7 +328,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             step={**step,'expect':{**step['expect'],'error':'local'}}
                         def invoke(given):
                             invocation_count=int(backend.read('count'))
-                            framed=request(step,request_root,home,given)
+                            framed=request(step,request_root,home,given,relative_sources=packet_transform is not None)
                             if raw_file:
                                 # Object-only hosts admit original authored bytes through their public file selector.
                                 path=home/'authored-question.json';path.write_text(framed['question']['raw'])
@@ -330,7 +336,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                             if consumer in ('r','rust','rust-polars','javascript','typescript'):framed=native_request(framed)
                             if settings_names:framed['settings']={settings_names.get(k,k):v for k,v in given.items()}
                             if framed['batch_probe'] or (consumer=='r' and framed['held_cancel']):
-                                child=subprocess.Popen(command,cwd=root if packet_transform is not None else home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+                                child=subprocess.Popen(command,cwd=home,env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                                 try:
                                     child.stdin.write(c_parity.compact(framed)+'\n');child.stdin.flush()
                                     if framed['batch_probe']:
@@ -350,7 +356,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                                 except BaseException:
                                     child.kill();child.wait();raise
                             else:
-                                child=subprocess.run(command,input=c_parity.compact(framed)+'\n',cwd=root if packet_transform is not None else home,env=env,capture_output=True,text=True,timeout=120)
+                                child=subprocess.run(command,input=c_parity.compact(framed)+'\n',cwd=home,env=env,capture_output=True,text=True,timeout=120)
                             assert child.returncode==0,(child.returncode,child.stdout[-1000:],child.stderr[-1600:])
                             assert not child.stderr,child.stderr
                             assert 'sk-conformance-loopback' not in child.stdout
