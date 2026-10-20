@@ -1,6 +1,6 @@
 """Exercise the installed blocking C entry point with canonical loopback cases."""
 import json
-from contextlib import chdir
+from contextlib import chdir, contextmanager
 import os
 from pathlib import Path
 import subprocess
@@ -21,9 +21,8 @@ from installed_cases import static_flags
 
 
 def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
-    with chdir(home):
-        source = native_request(request(value, Path('fixture-source'), home, settings,
-                                        relative_sources=True))
+    source = native_request(request(value, Path('fixture-source'), home, settings,
+                                    relative_sources=True))
     items = source['input'].get('items', [])
     if mode == 'fed' and source['input']['kind'] == 'source':
         mode = 'plain'
@@ -124,10 +123,9 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
                   if any(key in value['expect'] for key in body_checks) else [])
         # Existing shared assertions own detail fields, presence and input mapping.
         # Pass through the actual native Call; do not manufacture session packets.
-        with chdir(home):
-            assert_required({'native': True, 'results': payload['value'],
-                             'facts': payload['facts'], 'answer': payload['answer']},
-                            row, value, bodies, Path('fixture-source'))
+        assert_required({'native': True, 'results': payload['value'],
+                         'facts': payload['facts'], 'answer': payload['answer']},
+                        row, value, bodies, Path('fixture-source'))
 
 
 def compile_consumer(native, scratch, source, binary, env):
@@ -140,10 +138,19 @@ def compile_consumer(native, scratch, source, binary, env):
                    cwd=scratch, env=env, check=True)
 
 
+@contextmanager
+def case_home(scratch, prefix):
+    """Own the working folder and its parent for fixtures that test parent lookup."""
+    with tempfile.TemporaryDirectory(prefix=prefix, dir=scratch) as folder:
+        home = Path(folder) / 'home'
+        home.mkdir()
+        with chdir(home):
+            yield home
+
+
 def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
-    """Set up one shared case and retain all of its owned-call observations."""
-    with tempfile.TemporaryDirectory(prefix='blocking-c-', dir=scratch) as folder:
-        home = Path(folder)
+    """Run every case helper and comparison inside its owned working folder."""
+    with case_home(scratch, 'blocking-c-') as home:
         (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
         isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', THINKTHEN_USAGE='off')
         backend = shared.Backend(backend_binary, isolated)
@@ -179,10 +186,9 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
                 mode = 'fed' if step.get('incremental') else 'plain'
                 payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
                 count = int(backend.read('count'))
-                with chdir(home):
-                    check_owned(row, step, payload, dumps[-1],
-                                count - before if step.get('count_delta') else count,
-                                count - before, expected_dumps[index], home, backend)
+                check_owned(row, step, payload, dumps[-1],
+                            count - before if step.get('count_delta') else count,
+                            count - before, expected_dumps[index], home, backend)
                 if step.get('stored_answers') == 0:
                     database = home / 'saved/thinkthen.sqlite'
                     if database.exists():
@@ -237,8 +243,7 @@ def run(native, scratch):
     assert not failures, 'installed blocking C failed cases: ' + ', '.join(failures)
     # One shared behavior table drives the installed C and Rust callers.
     for probe in corpus['call_behaviors']:
-        with tempfile.TemporaryDirectory(prefix='blocking-c-stop-', dir=scratch) as folder:
-            home = Path(folder)
+        with case_home(scratch, 'blocking-c-stop-') as home:
             (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
             isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'), THINKTHEN_USAGE='off')
             backend = shared.Backend(backend_binary, isolated)

@@ -42,11 +42,11 @@ with tempfile.TemporaryDirectory(prefix='installed-c-') as temporary:
                             str(root / 'sources' / ('example.c' if source.startswith('examples/') else Path(source).name)),
                             *flags, '-o', str(binary)], cwd=root,
                            env=env, check=True, timeout=60)
-            result = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=5)
+            result = subprocess.run([str(binary)], cwd=root, env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == 0, result.stderr
             if source == 'tests/c/session.c':
                 before = len(backend.arrivals)
-                collected = subprocess.run([str(binary)], env={**env, 'SESSION_COLLECTION': '1'},
+                collected = subprocess.run([str(binary)], cwd=root, env={**env, 'SESSION_COLLECTION': '1'},
                                            capture_output=True, text=True, timeout=5)
                 assert collected.returncode == 0, collected.stderr
                 assert len(backend.arrivals) == before + 2, 'JSON find and relate send count'
