@@ -14,13 +14,13 @@ Phase: 2
 
 ### Proof
 
-- The focused archive fixture runs through `pm job run --machine gator 0748 SHA --memory 7 -- sdlc/scripts/job python3 sdlc/scripts/release-archive-self-test.py` at the pushed repair revision.
 - `pm job run --machine gator 0748 SHA --memory 7 -- sdlc/scripts/linux-check lint test` passes; it failed on main's source in Gator receipt 0744/1792529452380-1255765.
 - A planted Dart source edit still fails the archived-source check, and a planted manifest checksum that differs from the C archive fails the new check.
 - The configured landing gate passes through `pm job run --machine m5 0748 SHA --disk 20 --memory 8 -- sdlc/scripts/gate`.
 
 ## Evidence
 
+- The attempted focused command `pm job run --machine gator 0748 cd18107da --memory 7 -- sdlc/scripts/job python3 sdlc/scripts/release-archive-self-test.py` failed before fixture execution in receipt 1792531904700-1471139 because the host lacked its pinned tools and could not provision `/opt/thinkthen-tools/rustup`. The required container proof above owns those tools and runs the archive fixture; the standalone attempt proves no product behavior.
 - Gator 0744/1792529452380-1255765 on fa84bfa exited 1 after advisory checks passed: `release-archive-self-test.py` reports "release-pack: dart source differs from archived commit: native-assets.json". `release-pack.d/dart` rewrites the development manifest's sha256 from the paired C library, then `release-pack` compares that rewritten file with the original source archive, while the self-test expects the rewritten checksum. 0744 touches none of these paths, so main carries the defect; it first showed on x86 under rule 3 of `sdlc/decisions/2026-10-20-freeze-names-the-contract.md`.
 - It does not hold 0744 or the freeze: per standing ruling 6 and the amended rule 3, a Gator failure the batch did not cause gets its own repair ticket. It gates 0687.
 
