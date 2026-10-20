@@ -238,7 +238,11 @@ fn authored(admitted: &mut AdmittedRequest) -> Result<Option<Json>, Failure> {
                 .options_field
                 .is_some();
         let definition = reference.parse(&text, role, |text| {
-            if dynamic {
+            if function == crate::RequestFunction::Rank
+                && matches!(role, crate::QuestionFileRole::Set)
+            {
+                crate::RankSet::from_json(text).map(RequestDefinition::RankSet)
+            } else if dynamic {
                 crate::RecordChooseQuestion::from_json(text).map(RequestDefinition::DynamicChoose)
             } else {
                 RequestDefinition::from_authored_json(text)

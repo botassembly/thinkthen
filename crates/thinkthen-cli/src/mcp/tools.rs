@@ -176,7 +176,10 @@ fn choice_summary(choices: &[Value], canonical: &Value) -> serde_json::Map<Strin
         .collect();
     // An unconstrained branch already admits every value. Retaining its union
     // only repeats schema text across all ten discovery tools.
-    if choices.iter().any(|choice| choice.as_object().is_some_and(serde_json::Map::is_empty)) {
+    if choices
+        .iter()
+        .any(|choice| choice.as_object().is_some_and(serde_json::Map::is_empty))
+    {
         return serde_json::Map::new();
     }
     let constants: Option<Vec<_>> = choices.iter().map(|choice| choice.get("const")).collect();
