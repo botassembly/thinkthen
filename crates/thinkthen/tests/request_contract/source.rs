@@ -171,20 +171,37 @@ fn saved_rank_set_refusals_retain_native_file_causes() {
     let path = folder.join("question.json");
     for field in ["on", "threshold"] {
         let value = if field == "on" { json!("") } else { json!(0.5) };
-        std::fs::write(&path, json!({"version":1,"questions":{"first":{"decide":"Fits?",field:value}}}).to_string()).unwrap();
+        std::fs::write(
+            &path,
+            json!({"version":1,"questions":{"first":{"decide":"Fits?",field:value}}}).to_string(),
+        )
+        .unwrap();
         for question in [
             RequestQuestion::File { path: path.clone() },
-            RequestQuestion::Reference { reference: format!("@{}", path.display()) },
+            RequestQuestion::Reference {
+                reference: format!("@{}", path.display()),
+            },
         ] {
-            let request = Request::for_function(RequestFunction::Rank, RequestArguments {
-                question,
-                input: RequestInput::Records { items: Vec::new() },
-                options: RequestOptions::default(),
-            }).admit().unwrap();
+            let request = Request::for_function(
+                RequestFunction::Rank,
+                RequestArguments {
+                    question,
+                    input: RequestInput::Records { items: Vec::new() },
+                    options: RequestOptions::default(),
+                },
+            )
+            .admit()
+            .unwrap();
             let error = request.resolve_question().unwrap_err();
             assert_eq!(error.kind(), ErrorKind::Local);
-            assert_eq!(error.to_string(), format!("`questions.first.{field}`: rank question sets take no threshold or on"));
-            assert!(matches!(error.diagnostic(), Some(ErrorDiagnostic::QuestionSet(_))));
+            assert_eq!(
+                error.to_string(),
+                format!("`questions.first.{field}`: rank question sets take no threshold or on")
+            );
+            assert!(matches!(
+                error.diagnostic(),
+                Some(ErrorDiagnostic::QuestionSet(_))
+            ));
         }
     }
     std::fs::remove_dir_all(folder).unwrap();

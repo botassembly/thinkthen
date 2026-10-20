@@ -1,7 +1,7 @@
 //! Stays: the command-owned asked-question representation must preserve authored order and selection without exposing native internals.
 //! Native file admission and command source labels share one retained definition.
 use super::*;
-use crate::{Request, RequestArguments, RequestInput, RequestOptions, RequestQuestion};
+use crate::{BatchSetting, Request, RequestArguments, RequestInput, RequestOptions, RequestQuestion};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 struct Folder(std::path::PathBuf);
@@ -55,7 +55,7 @@ fn caller_setup_tiers_preserve_the_saved_definition_and_native_preview() {
     assert_eq!(settings.on, ["/new"]);
     assert!(settings.saved && settings.literal_question && tier.tuned);
     assert_eq!(
-        tier.batch,
+        tier.batch.as_ref().map(crate::judge::file_batch).transpose().unwrap(),
         Some(BatchSetting::Records(
             std::num::NonZeroUsize::new(2).unwrap()
         ))

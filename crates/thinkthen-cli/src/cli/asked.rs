@@ -5,10 +5,10 @@ use crate::args::{
 use crate::failure::Failure;
 use crate::plan_document::Sources;
 use crate::saved_json::{Json, Kind};
-use crate::{AdmittedRequest, BatchSetting, InputDeclaration, QuestionKind, RequestDefinition};
+use crate::{AdmittedRequest, InputDeclaration, QuestionKind, RequestDefinition};
 
 pub(crate) struct FileTier {
-    pub(crate) batch: Option<BatchSetting>,
+    pub(crate) batch: Option<Json>,
     pub(crate) tuned: bool,
 }
 
@@ -63,16 +63,6 @@ fn strings(value: Option<&Json>) -> Vec<String> {
         _ => Vec::new(),
     }
 }
-fn batch(value: Option<&Json>) -> Result<Option<BatchSetting>, Failure> {
-    value
-        .map(|value| {
-            let text = crate::render::json_line(value)?;
-            let batch: crate::RequestBatch = serde_json::from_str(&text)
-                .map_err(|_| Failure::Defect("admitted file batch lost its native shape"))?;
-            batch.native().map_err(Failure::from)
-        })
-        .transpose()
-}
 
 fn prepare(
     admitted: &mut AdmittedRequest,
@@ -120,7 +110,7 @@ fn prepare(
         .and_then(|value| value.member("profile"))
         .and_then(Json::as_str)
         .map(str::to_owned);
-    let selected_batch = batch(top.and_then(|value| value.member("batch")))?;
+    let selected_batch = top.and_then(|value| value.member("batch")).cloned();
     let tuned = function != crate::RequestFunction::Rank
         && member.is_some_and(|value| value.member("threshold").is_some());
     let mut resolved = Resolved {

@@ -1,11 +1,11 @@
 //! Command setup observations over an already admitted authored question set.
 use crate::failure::Failure;
 use crate::saved_json::{Json, Kind};
-use crate::{BatchSetting, InputDeclaration, QuestionSet};
+use crate::{InputDeclaration, QuestionSet};
 
 pub(super) struct Settings {
     pub(super) profile: Option<String>,
-    pub(super) batch: Option<BatchSetting>,
+    pub(super) batch: Option<Json>,
     pub(super) on: Vec<(String, Vec<String>)>,
     pub(super) context_schema: Option<InputDeclaration>,
 }
@@ -46,15 +46,7 @@ impl Settings {
                 .flatten(),
             _ => None,
         };
-        let batch = document
-            .member("batch")
-            .map(|value| {
-                let setting: crate::RequestBatch =
-                    serde_json::from_str(&crate::render::json_line(value)?)
-                        .map_err(|_| Failure::Defect("admitted annotation batch lost its shape"))?;
-                setting.native().map_err(Failure::from)
-            })
-            .transpose()?;
+        let batch = document.member("batch").cloned();
         Ok(Self {
             profile: document
                 .member("profile")

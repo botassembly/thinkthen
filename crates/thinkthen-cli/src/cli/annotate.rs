@@ -67,7 +67,12 @@ pub(crate) fn run(
     profile::read(&arguments.common, environment)?;
     crate::cli::intake::window(&arguments.common, settings.first_part().is_some())?;
     let reading = reading(&arguments.common)?;
-    let setting = batch_setting(arguments, environment, settings.batch, reading.streams())?;
+    let setting = crate::judge::batch_setting(
+        arguments.batching.batch.as_deref(),
+        environment.batch(),
+        settings.batch.as_ref(),
+        reading.streams(),
+    )?;
     let request_size = if reading.streams() {
         Some(environment.request_size(arguments.batching.max_request_bytes.as_deref())?)
     } else {
@@ -148,35 +153,6 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
         ));
     }
     Ok(())
-}
-
-fn batch_setting(
-    arguments: &AnnotateArguments,
-    environment: &Environment,
-    saved: Option<Setting>,
-    streams: bool,
-) -> Result<Option<Setting>, Failure> {
-    if !streams {
-        return if arguments.batching.batch.is_some() {
-            Err(Failure::Usage(
-                "--batch groups the records of a stream, and a single text is one record",
-            ))
-        } else {
-            Ok(None)
-        };
-    }
-    let flag = arguments.batching.batch.as_deref();
-    let selected = flag.or_else(|| environment.batch());
-    if let Some(text) = selected {
-        return crate::judge::parse_batch(text)
-            .map(Some)
-            .ok_or(Failure::Usage(if flag.is_some() {
-                "--batch takes max or a whole number of at least 1"
-            } else {
-                "THINKTHEN_BATCH takes max or a whole number of at least 1"
-            }));
-    }
-    Ok(Some(saved.unwrap_or(Setting::Max)))
 }
 
 fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {

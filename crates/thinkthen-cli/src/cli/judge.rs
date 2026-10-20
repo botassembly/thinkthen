@@ -19,6 +19,7 @@ use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
 use crate::failure::{Failure, ReplayContext};
 use crate::schedule::Output;
+use crate::saved_json::Json;
 
 /// One question, its rule, and the view its answer prints in.
 #[derive(Debug)]
@@ -41,7 +42,7 @@ pub(crate) struct Tiers<'a> {
     pub(crate) context_field: Option<&'a str>,
     pub(crate) flag: Option<&'a str>,
     pub(crate) request_size: Option<&'a str>,
-    pub(crate) file: Option<Setting>,
+    pub(crate) file: Option<Json>,
     pub(crate) tuned: bool,
 }
 
@@ -53,26 +54,46 @@ impl Tiers<'_> {
         environment: &Environment,
         streams: bool,
     ) -> Result<Option<Setting>, Failure> {
-        if !streams {
-            return match self.flag {
-                Some(_) => Err(Failure::Usage(
-                    "--batch groups the records of a stream, and a single text is one record",
-                )),
-                None => Ok(None),
-            };
-        }
-        match (self.flag, environment.batch(), &self.file) {
-            (Some(flag), ..) => parse_batch(flag).ok_or(Failure::Usage(
-                "--batch takes max or a whole number of at least 1",
-            )),
-            (None, Some(variable), _) => parse_batch(variable).ok_or(Failure::Usage(
-                "THINKTHEN_BATCH takes max or a whole number of at least 1",
-            )),
-            (None, None, Some(value)) => Ok(*value),
-            (None, None, None) => Ok(Setting::Max),
-        }
-        .map(Some)
+        batch_setting(self.flag, environment.batch(), self.file.as_ref(), streams)
     }
+}
+
+/// Resolve the command's four batch tiers before validating the chosen value.
+pub(crate) fn batch_setting(
+    flag: Option<&str>,
+    variable: Option<&str>,
+    file: Option<&Json>,
+    streams: bool,
+) -> Result<Option<Setting>, Failure> {
+    if !streams {
+        return match flag {
+            Some(_) => Err(Failure::Usage(
+                "--batch groups the records of a stream, and a single text is one record",
+            )),
+            None => Ok(None),
+        };
+    }
+    match (flag, variable, file) {
+        (Some(flag), ..) => parse_batch(flag).ok_or(Failure::Usage(
+            "--batch takes max or a whole number of at least 1",
+        )),
+        (None, Some(variable), _) => parse_batch(variable).ok_or(Failure::Usage(
+            "THINKTHEN_BATCH takes max or a whole number of at least 1",
+        )),
+        (None, None, Some(value)) => file_batch(value),
+        (None, None, None) => Ok(Setting::Max),
+    }
+    .map(Some)
+}
+
+pub(crate) fn file_batch(value: &Json) -> Result<Setting, Failure> {
+    let invalid = || Failure::Question {
+        message: "`batch` in the question file takes max or a whole number of at least 1".to_owned(),
+        from_file: true,
+    };
+    let batch: crate::RequestBatch = serde_json::from_str(&crate::render::json_line(value)?)
+        .map_err(|_| invalid())?;
+    batch.native().map_err(|_| invalid())
 }
 
 pub(crate) fn parse_batch(text: &str) -> Option<Setting> {
