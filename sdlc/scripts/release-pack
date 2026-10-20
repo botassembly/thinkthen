@@ -22,6 +22,16 @@ reuse=
 [ "${1:-}" != --reuse ] || { reuse=1; shift; }
 [ $# -ge 2 ] || { echo 'usage: release-pack [--reuse] TARGET OUT [PART...]' >&2; exit 2; }
 TARGET=$1 OUT=$2
+# Resolve the static command's tools before any build work. Other parts retain
+# their own tool groups, and --reuse only packages an existing debug command.
+if [ -z "$reuse" ]; then
+	case $TARGET in *-linux-gnu)
+		if [ "$#" -eq 2 ] || case " $* " in *' command '*) true ;; *) false ;; esac; then
+			tools_group=release-pack
+			. "$(dirname -- "$0")/resolved-tools"
+		fi
+	;; esac
+fi
 shift 2
 # Foundation has no GNU/Linux wrapper; fail before building any native part.
 case " $* " in

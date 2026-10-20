@@ -17,6 +17,8 @@ RUN rm /etc/apt/sources.list.d/ubuntu.sources && printf '%s\n' \
     ca-certificates curl git python3 python3-venv build-essential clang libclang-dev \
     libssl-dev libyaml-dev libffi-dev zlib1g-dev pkg-config xz-utils unzip zip \
     libncurses-dev libsqlite3-dev musl-tools util-linux perl && rm -rf /var/lib/apt/lists/*
+# Ubuntu's musl-tools supplies musl-gcc for the pinned image's own architecture.
+RUN command -v musl-gcc
 # The canonical generator invokes Swift's formatter, so retain its binary SDK.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gnupg libedit2 libpython3.12t64 libcurl4t64 libz3-4 tzdata && rm -rf /var/lib/apt/lists/*

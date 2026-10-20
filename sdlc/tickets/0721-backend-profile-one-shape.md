@@ -1,6 +1,6 @@
 # 0721: Backend profiles have one unversioned shape
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 

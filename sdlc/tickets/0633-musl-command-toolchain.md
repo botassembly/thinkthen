@@ -1,12 +1,18 @@
 # 0633: Build the static Linux command with a real musl toolchain
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0619
+
+Reviews: revision 05b7b81, accept
+
+Reviews: revision 57f1adf, accept
+
+Reviews: revision a8f08b2, accept
 
 ## Outcome
 
@@ -27,3 +33,9 @@ Depends on: 0619
 - `sdlc/scripts/release-pack` `part_command`, for a `*-linux-musl` target, checks `CC_<target>`, then `<arch>-linux-musl-gcc`, then `musl-gcc` for x86_64 only. When none is present it exports `CC_<target>=clang` and adds `-DSQLITE_DISABLE_LFS` to `CFLAGS_<target>`, because clang then compiles the bundled SQLite against glibc's headers, which name `open64` and `stat64`; musl 1.2.4 and later no longer export them. The shipped command's build therefore depends on which compiler the machine happens to have.
 - 0619's image definition `sdlc/linux/Dockerfile` (on its branch) installs Ubuntu's `musl-tools`, which provides `musl-gcc` for the image's own architecture. `release-pack` does not accept `musl-gcc` for aarch64 today.
 - The hosted `.github/workflows/gate.yml` also installs `musl-tools`; 0620 owns the hosted workflow steps.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: Closing gate receipt 93f95112 failed before tests after an external Docker CLI stop killed its active ARM image installer; PM is resolving active-build protection before unchanged admitted preparation and gate retry, with all prior architecture proofs retained.
+- 2026-10-20 next: PM authorized one unchanged environment retry after the external stop; admitted preparation job 1792484769551-28018 passed with the existing ARM image limits, and the normal integrated closing gate now runs with both architecture artifact proofs retained.

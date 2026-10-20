@@ -1,6 +1,6 @@
 # 0640: Test the installed blocking C call and its owned results
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
@@ -45,3 +45,4 @@ The PM's second ruling in `repos/agents/inbox/thinkthen/2026-10-20-thinkthen-064
 ### Fifth PM ruling: exact owned result and facts comparison
 
 The fifth answer in the same PM mail permits one explicit expected-oracle mode in the existing shared canonical helper. It reindexes saved identity aliases only along the helper's existing schema paths; default native mode stays unchanged. Compare complete projected owned results and facts using that helper and the existing decimal JSON difference, retaining cross-step identity relationships and required error facts presence. Add exactly four regression classes in the existing conformance test owner: metadata and facts mismatches, required error facts presence, cross-step identity consistency, and opaque alias-shaped user values remaining unchanged. Add no private normalizer, fabricated packet fields or new comparison format. Any further comparator change needs another PM ruling.
+- 2026-10-20 next: Fresh fixing review accepted fd5b452bd after exact result-facts and constructor assertions plus legal usage isolation and held cancellation fixes; job 1792486022210-73998 passed the complete installed suite and six bounded negative checks with byte restoration, and integrated landing waits for the current separate toolchain gate.
