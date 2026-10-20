@@ -38,6 +38,7 @@ Reviews: revision f8a4d0d, accept
 
 - 2026-10-19 PM assigned the routine C source-check Darwin linking defect here: libraries/c/check.sh copies target/debug/libthinkthen_c.so and links libthinkthen.so despite declaring Darwin support; 0636 proves the installed CLI, Rust and C entrypoints and makes no source-linking repair.
 - 2026-10-20 started
+- 2026-10-20 next: Fresh fixing review acceptedf8a4d0d39 after corrected job1792491843921-50434 passed real native static linkage own-SQLite dependency and installed-source C checks, preserving first receipt1792491463122-29115 with policy and clippy passes and formatting README failures, while Linux Windows Intel macOS and coverage remain checkpoint proof and the integrated closing gate is pending.
 
 ## Existing caller paths, 2026-10-20
 
