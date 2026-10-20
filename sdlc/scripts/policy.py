@@ -99,7 +99,6 @@ ADAPTERS = "crates/thinkthen/src/core/adapters.rs"
 # 0639 retains the published help default and check row names across the split;
 # neither selects an adapter nor describes a wire request.
 SEAM_ALLOWED: dict[str, set[str]] = {
-    "crates/thinkthen-cli/src/cli/args.rs": {"jev"},
     "crates/thinkthen-cli/src/probes.rs": {"noul"},
 }
 
