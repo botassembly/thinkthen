@@ -120,6 +120,21 @@ fn threads() -> usize {
     count
 }
 
+/// Thread identities distinguish fixture workers from concurrent test rows.
+#[cfg(target_os = "linux")]
+fn thread_names() -> Vec<(String, String)> {
+    let mut names: Vec<_> = std::fs::read_dir("/proc/self/task")
+        .expect("/proc lists this process's threads")
+        .filter_map(|entry| {
+            let entry = entry.expect("thread directory");
+            let name = std::fs::read_to_string(entry.path().join("comm")).ok()?;
+            Some((entry.file_name().to_string_lossy().into_owned(), name.trim().to_owned()))
+        })
+        .collect();
+    names.sort();
+    names
+}
+
 #[test]
 fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     let _serial = serial();
@@ -224,6 +239,8 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
     let listener = Listener::answering(|_| Canned::ok(DECIDED).after(40)).expect("listener");
     #[cfg(target_os = "linux")]
     let before = threads();
+    #[cfg(target_os = "linux")]
+    let before_names = thread_names();
     let engine = engine(listener.base());
     let asked = question();
     let texts: Vec<String> = (0..8).map(|at| format!("record {at}")).collect();
@@ -281,7 +298,8 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
         }
         assert!(
             threads() <= before + listener.connections(),
-            "an engine worker stayed"
+            "an engine worker stayed: before={before}, after={}, connections={}, before_names={before_names:?}, after_names={:?}",
+            threads(), listener.connections(), thread_names()
         );
     }
 }
