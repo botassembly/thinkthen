@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::{Value, json, value::RawValue};
 use thinkthen::{
     BatchSetting, Engine, Request, RequestEnvironment, RequestFeed, RequestInput,
-    RequestSessionRead, RequestSessionResult, RequestSessionWaitInterest,
+    RequestSessionRead, RequestSessionResult, RequestSessionWaitInterest, RequestValueTree,
 };
 
 #[derive(Deserialize)]
@@ -161,6 +161,8 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                     RequestEnvironment::default(),
                 )
                 .map_err(failure)?;
+            let tree = call.value_tree().map_err(failure)?;
+            assert!(matches!(tree, RequestValueTree::Map(_)));
             let answer: Value =
                 serde_json::from_str(&serde_json::to_string(&call.answer()).map_err(failure)?)
                     .map_err(failure)?;
