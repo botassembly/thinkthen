@@ -193,7 +193,7 @@ export THINKTHEN_SQLITE_EXTENSION
 
 step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
-cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen --bin thinkthen
+cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package thinkthen-cli --bin thinkthen
 
 failed=""
 if [ "$profile" = stress ]; then
