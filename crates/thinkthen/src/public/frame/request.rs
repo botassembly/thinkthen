@@ -3,8 +3,8 @@ use super::column::text;
 use crate::RequestFunction;
 use crate::{
     Call, CallOptions, CompleteRecord, Engine, Error, Question, QuestionInput, RecordInput,
-    Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment, RequestFeed,
-    RequestFraming, RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue,
+    RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed,
+    RequestFraming, RequestInput, RequestOptions, RequestQuestion, RequestValue,
     Surface,
 };
 use polars::prelude::Series;
@@ -88,9 +88,7 @@ fn execute_feed(
         none,
         ..RequestOptions::default()
     };
-    let call = RequestCall::new(
-        call,
-        RequestArguments {
+    let arguments = RequestArguments {
             question: RequestQuestion::Definition { value: definition },
             input: RequestInput::Feed {
                 name: "column".into(),
@@ -99,25 +97,21 @@ fn execute_feed(
                 images: vec![],
             },
             options,
-        },
-    );
+        };
     // Typed complete filters retain every observation, including rejected rows.
-    let feed = if complete && call.function() == RequestFunction::Filter {
+    let feed = if complete && call == RequestFunction::Filter {
         feed.with_all_filter_results()
     } else {
         feed
     };
-    let request = Request::new(call).admit()?;
-    match engine.execute_request(
-        &request,
+    engine.call(
+        call,
+        arguments,
         RequestEnvironment {
             controls: controls.surface(Surface::RustPolars),
             feed: Some(feed),
         },
-    )? {
-        RequestOutcome::Complete(call) => Ok(call),
-        RequestOutcome::Failed { error, .. } => Err(error),
-    }
+    )
 }
 
 pub(super) fn original(input: &QuestionInput) -> Result<&str, Error> {
