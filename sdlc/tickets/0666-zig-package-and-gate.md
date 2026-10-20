@@ -17,7 +17,7 @@ Depends on: 0688, 0740
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0666 SHA --memory 8 -- sh libraries/zig/check.sh`, an outside Zig project builds and runs `examples/decide.zig` with `zig build` against the packed darwin-arm64 package, with each manifest Zig version. Before the change the check refuses darwin-arm64 and `linkNative` panics off x86_64-linux-gnu.
+- On the M5 through `pm job run --machine m5 0666 SHA --memory 8 -- sdlc/scripts/job sh libraries/zig/check.sh`, an outside Zig project builds and runs `examples/decide.zig` with `zig build` against the packed darwin-arm64 package, with each manifest Zig version. Before the change the check refuses darwin-arm64 and `linkNative` panics off x86_64-linux-gnu.
 - Linux arm64: `pm job run --machine m5 0666 SHA --memory 16 -- sdlc/scripts/linux-check surface libraries/zig`; Linux x86_64: the same command with `--machine gator --memory 7`.
 
 ## Evidence

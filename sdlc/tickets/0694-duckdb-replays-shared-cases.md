@@ -18,7 +18,7 @@ Depends on: 0645, 0688, 0693, 0740
 
 - Linux arm64: `pm job run --machine m5 0694 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/duckdb`; Linux x86_64: the same command with `--machine gator --memory 7`. In that run, `sh databases/duckdb/check.sh` passes on both pinned DuckDB versions, with the replay covering every shared case.
 - Done once by hand and not committed: a wrong expected answer in the oracle fails the replay. Before the change the same edit passes, because today's replay checks request digests from `cases.json` and never reads the oracle.
-- On the M5 natively: `pm job run --machine m5 0694 SHA --memory 8 -- sdlc/scripts/lint` passes with the deleted suites gone from `sdlc/scripts/children`.
+- On the M5 in the Linux container: `pm job run --machine m5 0694 SHA --memory 16 -- sdlc/scripts/linux-check lint` passes with the deleted suites gone from `sdlc/scripts/children`.
 
 ## Amendment, 2026-10-19 (core cut)
 

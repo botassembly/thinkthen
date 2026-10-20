@@ -20,7 +20,7 @@ Depends on: 0688, 0714, 0740
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0695 SHA --memory 8 -- sh databases/sqlite/check.sh` passes, with the replay covering every shared case. The check builds its own pinned SQLite host and starts its own loopback backends, so it runs without `surfaces`.
+- On the M5 natively: `pm job run --machine m5 0695 SHA --memory 8 -- sdlc/scripts/job sh databases/sqlite/check.sh` passes, with the replay covering every shared case. The check builds its own pinned SQLite host and starts its own loopback backends, so it runs without `surfaces`.
 - Linux arm64: `pm job run --machine m5 0695 SHA --memory 16 -- sdlc/scripts/linux-check surface databases/sqlite`; Linux x86_64: the same command with `--machine gator --memory 7`.
 - Done once by hand and not committed: a wrong expected answer in the oracle fails the replay. Before the change the same edit passes, because today's replay checks request digests from `cases.json` and never reads the oracle.
 

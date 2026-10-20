@@ -22,7 +22,7 @@ Depends on: 0653, 0688
 
 ### Proof
 
-- On the M5 through `pm job run --machine m5 0655 SHA --memory 8 -- sh libraries/cpp/check.sh`, the installed CMake package builds every example from outside the repository with `-Werror`, and the installed C++ consumer's comparison passes for every shared case.
+- On the M5 through `pm job run --machine m5 0655 SHA --memory 8 -- sdlc/scripts/job sh libraries/cpp/check.sh`, the installed CMake package builds every example from outside the repository with `-Werror`, and the installed C++ consumer's comparison passes for every shared case.
 - `python3 build-tools/results/answer_rules.py` and `python3 conformance/library-surface.py --library cpp` pass. Before the change, removing `cpp.py` and `cpp_results.py` from `LEGACY_FILES` fails the first check.
 
 ## Evidence
