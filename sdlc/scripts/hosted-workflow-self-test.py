@@ -716,10 +716,11 @@ def preflight_cases():
     assert all('!inputs.preflight_only' in step.get('if', '') for step in steps
                if 'actions/upload-artifact@' in step.get('uses', ''))
     release = yaml.safe_load((REPO / '.github/workflows/release.yml').read_text())
-    for job, name in (('build', 'Check every prepared build input'),
-                      ('smoke', 'Check every prepared installed smoke input')):
+    for job, name in (('build', 'Check every prepared build input'),):
         step = next(step for step in release['jobs'][job]['steps'] if step.get('name') == name)
         assert 'hosted-preflight.py' in step['run'] and 'if' not in step and 'continue-on-error' not in step
+    stage = (REPO / 'sdlc/scripts/release-workflow').read_text().split('smoke-stage)\n', 1)[1].split('\nbuild-stage)', 1)[0]
+    assert stage.index('hosted-preflight.py smoke') < stage.index('go-cpp-gate') < stage.index('release-smoke smoke-files')
     with tempfile.TemporaryDirectory(prefix='thinkthen-preflight-fixture-') as temporary:
         root = Path(temporary)
         scripts = root / 'sdlc/scripts'
@@ -893,7 +894,7 @@ def smoke_family_cases():
     assert smoke['timeout-minutes'] == '${{ matrix.job_minutes }}'
     assert smoke['strategy']['fail-fast'] is False and 'if' not in smoke
     assert 'smoke' in release['jobs']['draft']['needs']
-    selected = next(step for step in smoke['steps'] if 'sdlc/scripts/release-smoke smoke-files' in step.get('run', ''))
+    selected = next(step for step in smoke['steps'] if 'release-workflow smoke-stage' in step.get('run', ''))
     assert selected['env']['THINKTHEN_RELEASE_SMOKE_FAMILY'] == '${{ matrix.family }}'
     assert selected['env']['THINKTHEN_TEST_PROFILE'] == 'full'
     assert selected['timeout-minutes'] == '${{ matrix.consumer_minutes }}'
