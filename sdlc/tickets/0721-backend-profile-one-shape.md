@@ -31,3 +31,4 @@ Shares `conformance/backend-profiles.json` with 0724, which drops that file's ow
 
 - 2026-10-20 started
 - 2026-10-20 next: M5 proof 1792484435928-38169 passed old-parser red, 24 native and 36 CLI green checks, policy formatting clippy full spec and six SQLite named-backend checks; fresh review precedes the integrated closing gate, with DuckDB and PostgreSQL reserved for the checkpoint.
+- 2026-10-20 next: Fresh review accepted 0d8271cea after fixing a stale schema replacement and PostgreSQL wording; developer filtering missed the declaration test because its name lacks profile, while reviewed red and nine green checks passed and corrected mechanical job 1792485542545-68436 passed, with the invalid-feature attempt retained and the unfiltered integrated gate still pending.
