@@ -14,6 +14,7 @@ Depends on: 0688
 - `databases/sqlite/tests/conformance.py` replays every case of `conformance/cases.json` as SQL through the installed extension and compares each result against the packet oracle `conformance/fixtures/packets.json` from 0642. It adds no case file of its own.
 - SQLite suites under `tests/` that repeat behaviors the shared cases define are deleted, with their entries in `check.sh` and `sdlc/scripts/children`. Tests of SQLite-only behavior stay: loading and the host floor, trusted schema, thread mode, file reads, interrupts and statement budgets.
 - `tests/complete/` and `tests/host_sqlite.sh` stay, because `conformance/test_parity.py` and `sdlc/scripts/release-workflow` use them.
+- The count guards that `check.sh` keeps (the `catch_unwind` and contained-guard counts and their siblings) compare numbers, not `wc` text, so macOS's padded `wc` output passes. The required counts do not change.
 
 ### Proof
 
