@@ -152,7 +152,10 @@ pub(crate) fn run(
     let tuned_for = batch
         .as_ref()
         .filter(|tiers| tiers.tuned)
-        .map(|tiers| tiers.file.unwrap_or(Setting::Records(NonZeroUsize::MIN)));
+        .and_then(|tiers| match tiers.file.as_ref() {
+            Some(value) => crate::judge::file_batch(value).ok(),
+            None => Some(Setting::Records(NonZeroUsize::MIN)),
+        });
     let batch = batch.map_or(Ok(None), |tiers| {
         tiers.setting(environment, reading.streams())
     })?;

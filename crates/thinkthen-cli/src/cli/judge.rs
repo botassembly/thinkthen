@@ -18,8 +18,8 @@ use crate::asking::{Asks, fixed, run};
 use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
 use crate::failure::{Failure, ReplayContext};
-use crate::schedule::Output;
 use crate::saved_json::Json;
+use crate::schedule::Output;
 
 /// One question, its rule, and the view its answer prints in.
 #[derive(Debug)]
@@ -88,11 +88,12 @@ pub(crate) fn batch_setting(
 
 pub(crate) fn file_batch(value: &Json) -> Result<Setting, Failure> {
     let invalid = || Failure::Question {
-        message: "`batch` in the question file takes max or a whole number of at least 1".to_owned(),
+        message: "`batch` in the question file takes max or a whole number of at least 1"
+            .to_owned(),
         from_file: true,
     };
-    let batch: crate::RequestBatch = serde_json::from_str(&crate::render::json_line(value)?)
-        .map_err(|_| invalid())?;
+    let batch: crate::RequestBatch =
+        serde_json::from_str(&crate::render::json_line(value)?).map_err(|_| invalid())?;
     batch.native().map_err(|_| invalid())
 }
 

@@ -6,8 +6,7 @@ use std::process::ExitCode;
 
 use crate::cli::reading::Reading;
 use crate::{
-    Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing,
-    ResolvedSettings,
+    Engine, QuestionSet, RawRecord as Record, RequestFraming as Framing, ResolvedSettings,
 };
 
 use crate::args::{AnnotateArguments, Common};
