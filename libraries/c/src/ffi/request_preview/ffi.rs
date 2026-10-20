@@ -36,7 +36,7 @@ pub(super) unsafe fn json_plan<T>(
 ) -> Result<T, crate::failures::Failure> {
     // SAFETY: caller supplies the documented live readable UTF-8 extent.
     let text = unsafe { super::text(request_json, request_len) }.map_err(|_| ErrorKind::Usage)?;
-    let request = Request::from_json(text).map_err(|error| {
+    let request = Request::from_json(text).map_err(|error| -> crate::failures::Failure {
         if error.request_decode_cause().is_some() {
             error.kind().into()
         } else {
