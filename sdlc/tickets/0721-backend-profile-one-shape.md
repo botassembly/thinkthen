@@ -6,6 +6,8 @@ Milestone: 0.2.1
 
 Phase: 2
 
+Reviews: revision 0d8271c, accept
+
 ## Outcome
 
 - Changes: `conformance/backend-profiles.json`, `conformance/calibration.json`, `conformance/consumer/consumer/tests/public/settings.rs`, `conformance/settings.json`, `crates/thinkthen-cli/src/cli/edge/deadline_tests.rs`, `crates/thinkthen-cli/src/cli/failure/profile.rs`, `crates/thinkthen-cli/src/cli/schedule/width_tests.rs`, `crates/thinkthen/src/config/backend_setups_tests.rs`, `crates/thinkthen/src/core/adapters/systemone/images/local_tests.rs`, `crates/thinkthen/src/core/backend_profile.rs`, `crates/thinkthen/src/core/batch/tests.rs`, `crates/thinkthen/src/core/pack/packer_tests.rs`, `crates/thinkthen/src/engine/facade_tests.rs`, `crates/thinkthen-cli/tests/backend/`, `crates/thinkthen/tests/library/`, `crates/thinkthen/tests/native_complete/`, `crates/thinkthen/tests/public_batches/`, `databases/duckdb/tools/backend_setups.py`, `databases/duckdb/tools/settings_suite.py`, `databases/postgresql/check.sh`, `databases/postgresql/README.md`, `databases/sqlite/tests/test_named_backends.py`, `spec/decide.md`, `specification/backends.md`, `specification/fixtures/images/local/clef-flash-profile.json`, `specification/fixtures/images/local/clef-profile.json`, `specification/fixtures/images/local/imajev-profile.json`, `crates/thinkthen-cli/src/cli/failure/tests.rs`, `crates/thinkthen-cli/src/cli/failure/tests/diagnostics.rs`, `crates/thinkthen/src/public/error/presentation/classification.rs`, `crates/thinkthen/tests/error_diagnostics.rs`, `crates/thinkthen/tests/resolved_settings.rs`, `crates/thinkthen/tests/request_contract/shared_state.rs`.
