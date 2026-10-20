@@ -47,9 +47,7 @@ mod alone;
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 
-#[path = "../src/test_deadline/wait.rs"]
-#[allow(dead_code, reason = "only the child deadline bounds the churn here")]
-mod wait;
+use child::wait;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
