@@ -144,13 +144,22 @@ def release(name, doc):
     jobs = doc.get("jobs") or {}
     for job in ('build', 'smoke'):
         for step in jobs.get(job, {}).get('steps', []):
+            supplied = step.get('with', {})
+            for key, output in (('node-version', 'node_version'), ('python-version', 'python_version')):
+                if key in supplied:
+                    allowed = {f'${{{{ needs.resolve.outputs.{output} }}}}'}
+                    if key == 'python-version':
+                        allowed.add('${{ needs.resolve.outputs.python_floor }}')
+                    if supplied[key] not in allowed:
+                        out.append(f"{name}: job {job} repeats a hosted core tool version")
             condition = step.get('if', '')
             if 'matrix.family' in condition:
                 out.append(f"{name}: job {job} must choose consumer languages inside its stage")
             if 'run' in step and any(legacy in step['run'] for legacy in (
                     'release-workflow host-setup ', 'release-workflow go-cpp-tools ',
                     'release-workflow swift-zig-tools ', 'release-workflow php-dart-tools ',
-                    'release-workflow ada-objc-cobol-tools ', 'release-workflow managed-tools ')):
+                    'release-workflow ada-objc-cobol-tools ', 'release-workflow managed-tools ',
+                    'release-workflow dart-tools ')):
                 out.append(f"{name}: job {job} calls a retired tool-install entrypoint")
     outward = (*OUTWARD_REGISTRIES, "publish")
     for job in outward:

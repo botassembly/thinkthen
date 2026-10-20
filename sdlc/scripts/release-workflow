@@ -541,7 +541,6 @@ setup-stage)
 	stage=$2 target=$3
 	case $stage in
 	host) host_setup host-setup "$target" ;;
-	managed) managed_tools managed-tools "$target" ;;
 	languages)
 		[ "$#" = 5 ] || fail 'setup-stage languages TARGET SHA managed|smoke'
 		if [ "$target" = x86_64-unknown-linux-gnu ]; then
@@ -565,10 +564,6 @@ setup-stage)
 		swift-zig) swift_zig_tools swift-zig-tools "$target" "$4" ;;
 		php-dart) php_dart_tools php-dart-tools "$target" "$4" ;;
 		esac
-		;;
-	registry)
-		[ "$#" = 4 ] || fail 'setup-stage registry TARGET OUT'
-		dart_tools dart-tools "$target" "$4"
 		;;
 	*) fail "unknown setup stage $stage" ;;
 	esac
