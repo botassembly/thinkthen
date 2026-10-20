@@ -15,8 +15,7 @@ from backend import Backend
 from installed_cases import run, static_flags
 
 archive = Path(sys.argv[1]).resolve()
-(REPO / 'libraries/c/target').mkdir(parents=True, exist_ok=True)
-with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/target') as temporary:
+with tempfile.TemporaryDirectory(prefix='installed-c-') as temporary:
     root = Path(os.environ.get('THINKTHEN_COVERAGE_STAGE', temporary))
     root.mkdir(parents=True, exist_ok=True)
     native = root / 'native'
@@ -32,13 +31,16 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
         env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(root / 'cache'))
         flags = static_flags(native, env)
+        shutil.copytree(REPO / 'libraries/c/tests/c', root / 'sources')
+        shutil.copyfile(REPO / 'libraries/c/examples/session.c', root / 'sources/example.c')
         for source in ('tests/c/session.c', 'examples/session.c', 'tests/c/request_preview.c'):
             binary = root / {'tests/c/session.c': 'owner-session',
                              'examples/session.c': 'example-session',
                              'tests/c/request_preview.c': 'request-preview'}[source]
             subprocess.run([shutil.which('cc'), '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
-                            '-pthread', '-I', str(REPO / 'libraries/c/tests/c'),
-                            str(REPO / 'libraries/c' / source), *flags, '-o', str(binary)],
+                            '-pthread', '-I', str(root / 'sources'),
+                            str(root / 'sources' / ('example.c' if source.startswith('examples/') else Path(source).name)),
+                            *flags, '-o', str(binary)], cwd=root,
                            env=env, check=True, timeout=60)
             result = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == 0, result.stderr

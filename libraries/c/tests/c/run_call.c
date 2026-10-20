@@ -43,9 +43,36 @@ static THREAD_RESULT print_error(void *argument) {
     if(facts.len)fwrite(facts.data,1,facts.len,stdout);else fputs("null",stdout);
     puts("}");return THREAD_DONE;
 }
+static THREAD_RESULT print_result(void *argument) {
+    thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(argument);
+    fwrite(json.data,1,json.len,stdout);putchar('\n');
+    return THREAD_DONE;
+}
+/* Large image cases stay in an owned input file instead of OS argument storage. */
+static char *arguments(const char *path, int *count, char ***values) {
+    FILE *input=fopen(path,"rb");
+    if(!input||fseek(input,0,SEEK_END))return NULL;
+    long size=ftell(input);
+    if(size<0||fseek(input,0,SEEK_SET))return NULL;
+    char *bytes=malloc((size_t)size+1);
+    if(!bytes||fread(bytes,1,(size_t)size,input)!=(size_t)size)return NULL;
+    fclose(input);bytes[size]=0;
+    size_t lines=1;
+    for(long i=0;i<size;++i)if(bytes[i]=='\n')++lines;
+    char **items=calloc(lines+1,sizeof(*items));
+    if(!items)return NULL;
+    items[0]=NULL;*count=1;
+    char *start=bytes;
+    for(long i=0;i<size;++i)if(bytes[i]=='\n') {
+        bytes[i]=0;items[(*count)++]=start;start=bytes+i+1;
+    }
+    *values=items;return bytes;
+}
 int main(int argc,char **argv) {
-    if(argc<8)return 2;
+    if(argc!=2)return 2;
     binary_streams();
+    char *bytes=arguments(argv[1],&argc,&argv);
+    if(!bytes||argc<8)return 2;
     thinkthen_engine *engine=thinkthen_engine_new_with(argv[1]);if(!engine)return 3;
     thinkthen_named_request_v1 request={text(argv[2]),text(argv[3]),text(argv[4]),text(argv[5])};
     thinkthen_call_cancel *cancel=thinkthen_call_cancel_new();if(!cancel)return 3;
@@ -72,9 +99,10 @@ int main(int argc,char **argv) {
         thinkthen_call_error_free(error);
     } else {
         if(!result||error)return 5;
-        thinkthen_complete_utf8_v1 json=thinkthen_call_result_json(result);
-        fwrite(json.data,1,json.len,stdout);putchar('\n');
+        /* Result readers also survive the engine and move to another thread. */
+        if(fixture_start(&worker,print_result,result)||fixture_join(worker))return 6;
         thinkthen_call_result_free(result);
     }
+    free(argv);free(bytes);
     return 0;
 }

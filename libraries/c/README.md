@@ -32,10 +32,10 @@ PKG_CONFIG_PATH="$PWD/lib/pkgconfig" cc -std=c11 consumer.c -o consumer \
 ./consumer
 ```
 
-[examples/session.c](examples/session.c) is a complete caller using the blocking call. It parses the owned result with `thinkthen_value_parse`, reads the boolean answer and numeric probability through typed JSON views, and prints those two values. The parsed value has its own owner, so the example releases the call result before reading the views. Supply the backend environment before a live call. The focused local package check runs that caller and the JSON session and plan cases against an extracted archive with a synthetic loopback backend:
+[examples/session.c](examples/session.c) is a complete caller using the blocking call. It parses the owned result with `thinkthen_value_parse`, reads the boolean answer and numeric probability through typed JSON views, and prints those two values. The parsed value has its own owner, so the example releases the call result before reading the views. Supply the backend environment before a live call. The focused local package check extracts the archive into a temporary folder outside the repository and compiles the example and blocking C consumer there. It checks the owned complete results, settled answer and probability, facts and observable errors against the shared cases and expectations. Error checks pin the C status, safe message, retryability, owner and send count. Rust retains proof of native packet envelopes and error fields that the current C interface does not expose. Independent session, plan, memory, threading and cancellation checks remain while those APIs ship. A synthetic loopback backend supplies every answer:
 
 ```sh
-python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE
+THINKTHEN_TEST_PROFILE=full python3 libraries/c/tests/installed-session.py PATH_TO_C_ARCHIVE
 ```
 
 The [native package design](../../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime prerequisites. This example proves Linux static integration; other platform qualification belongs to the authorized release candidate.
