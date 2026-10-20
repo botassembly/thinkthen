@@ -253,8 +253,8 @@ struct SetRanked<T>
 
 ```text
 enum RequestValueTree
-RequestValueTree::Map(BTreeMap<String, RequestValueTree>)
-RequestValueTree::List(Vec<RequestValueTree>)
+RequestValueTree::Map(BTreeMap<String, Self>)
+RequestValueTree::List(Vec<Self>)
 RequestValueTree::String(String)
 RequestValueTree::Number(String)
 RequestValueTree::Bool(bool)

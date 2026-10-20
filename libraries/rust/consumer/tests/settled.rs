@@ -169,7 +169,9 @@ fn all_functions_settle_shared_answers_in_final_packets() -> Result<(), String> 
                     RequestEnvironment::default(),
                 )
                 .map_err(failure)?;
-            let RequestValueTree::Map(tree) = call.value_tree().map_err(failure)? else {
+            let tree = call.value_tree().map_err(failure)?;
+            assert!(matches!(&tree, RequestValueTree::Map(_)));
+            let RequestValueTree::Map(tree) = tree else {
                 return Err("native value tree requires a map".into());
             };
             for name in ["pick", "index"] {
