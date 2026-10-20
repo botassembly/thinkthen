@@ -13,7 +13,7 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
 {
   (cd "$demos/01-refund-gate" && thinkthen decide 'Does the customer ask for money back?' --details --replay recording/ < message.txt | row decide)
   (cd "$demos/03-grep-for-meaning" && thinkthen filter 'Does the report give steps that would reproduce a defect?' --csv --field /body --threshold 0.9 --batch 1 --details --replay recording/ < issues.csv | row filter)
-  printf '%s\n' '{"version":1,"questions":{"query":{"decide":"The passage answers the query."}}}' > "$HOME/rank-set.json"
+  printf '%s\n' '{"questions":{"query":{"decide":"The passage answers the query."}}}' > "$HOME/rank-set.json"
   (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank @"$HOME/rank-set.json" --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank-set)
   (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank 'The passage answers the query.' --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank)
   (cd "$demos/02-route-a-ticket" && thinkthen choose 'Which team owns this request?' billing shipping account other --details --replay recording/ < ticket.txt | row choose)

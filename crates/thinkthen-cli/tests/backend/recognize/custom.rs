@@ -187,7 +187,7 @@ fn saved_customization_obeys_cli_precedence_and_semantic_cache_identity() {
         .join(format!("recognize-custom-identity-{}", std::process::id()));
     std::fs::create_dir_all(&root).expect("folder");
     let saved = root.join("task.json");
-    let declaration = json!({"version":1,"recognize":{"instructions":INSTRUCTIONS,"entity_definition":DEFINITION,"kinds":{"amount":DESCRIPTION}}});
+    let declaration = json!({"recognize":{"instructions":INSTRUCTIONS,"entity_definition":DEFINITION,"kinds":{"amount":DESCRIPTION}}});
     std::fs::write(&saved, declaration.to_string()).expect("saved declaration");
     let reference = format!("@{}", saved.display());
     let recording = root.join("recording");

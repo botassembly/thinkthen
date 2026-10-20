@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "questions": {
     "wants_refund": {
       "decide": "Does the customer ask for a refund?"},

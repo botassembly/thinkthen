@@ -23,7 +23,7 @@ def test_functions_without_probability_return_none(backend, tmp_path, shape, fra
                 if verb == 'score': controls['levels'] = ['Routine.', 'Soon.', 'Now.']
                 if verb == 'tag': controls['labels'] = ['bill', 'ship']
                 if verb == 'annotate':
-                    question = {{'version': 1, 'questions': {{'late': {{'decide': 'Late?'}}}}}}
+                    question = {{'questions': {{'late': {{'decide': 'Late?'}}}}}}
                 result = (getattr(engine, verb)(question, source, **controls) if frame
                           else getattr(source.tt, verb)(question, engine=engine, **controls))
                 assert result.probability is None

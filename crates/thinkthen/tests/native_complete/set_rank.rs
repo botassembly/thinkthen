@@ -98,7 +98,7 @@ fn complete_set_rank_duplicate_occurrences_keep_observations_and_replay_ids_acro
 fn complete_set_rank_admits_every_member_and_empty_input_without_inventing_observations() {
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener);
-    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","context_schema":{"type":"string"}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
+    let set = RankSet::from_json(r#"{"questions":{"first":{"decide":"First?","context_schema":{"type":"string"}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
     let error = crate::api::whole(
         &engine,
         thinkthen::RequestFunction::Rank,
@@ -199,7 +199,7 @@ fn complete_set_rank_started_member_failure_retains_actual_observer_identity_and
 fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_coordinates() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.4}}}"#)).unwrap();
     let engine = engine(&listener);
-    let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","name":"authored_first","wording_version":4,"item_schema":{"type":"object","properties":{"body":{"type":"string"}},"required":["body"]},"context_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}},"context_schema":{"type":"object","properties":{}}}}}"#).unwrap();
+    let set = RankSet::from_json(r#"{"questions":{"first":{"decide":"First?","name":"authored_first","wording_version":4,"item_schema":{"type":"object","properties":{"body":{"type":"string"}},"required":["body"]},"context_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}},"context_schema":{"type":"object","properties":{}}}}}"#).unwrap();
     let reading = thinkthen::RecordReading::new(&["/item"], Some("/ctx"), None)
         .unwrap()
         .with_context_schema(thinkthen::InputDeclaration::Object(

@@ -55,7 +55,7 @@ def one_member_matches_plain_wire_and_individual_member_recordings_replay_zero()
         expect((facts['records'],facts['requests_sent'],facts['cache_answers']), (4,0,0), 'combined replay facts')
         expect(said(replay[4]), 'thinkthen local: the replay folder holds no answer for this question (retryable: no)', 'strict miss')
         expect(backend.count(), before, 'keyless zero-budget replay and miss send nothing')
-        reordered = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+        reordered = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
         renamed = run(["SET thinkthen_model='judge-rank'", 'SET thinkthen_replay=' + quoted(folder),
                        'SET thinkthen_max_requests_total=0', ranked(reordered)], backend.base, keyless=True)
         expect([row[:4] for row in rows(renamed[3])], [['a',1,1.0,'renamed'],['d',2,1.0,'renamed'],
@@ -66,7 +66,7 @@ def one_member_matches_plain_wire_and_individual_member_recordings_replay_zero()
 @case
 def descriptions_and_author_order_survive_inline_and_file_sets():
     described = SET.replace('"decide":"First?"', '"decide":"First?","true":"supports first","false":"opposes first"')
-    reverse = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
+    reverse = '{"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
     with RankBackend() as backend, tempfile.TemporaryDirectory() as folder:
         path = pathlib.Path(folder) / 'rank.json'
         path.write_text(described)
@@ -83,10 +83,10 @@ def descriptions_and_author_order_survive_inline_and_file_sets():
 
 @case
 def null_and_invalid_set_admission_send_nothing():
-    bad = ['{"version":1,"questions":{}}', SET.replace('"decide":"Second?"', '"score":"Second?","levels":["low","high"]'),
+    bad = ['{"questions":{}}', SET.replace('"decide":"Second?"', '"score":"Second?","levels":["low","high"]'),
            SET.replace('"decide":"First?"', '"decide":"First?","threshold":0.5'),
            SET.replace('"decide":"First?"', '"decide":"First?","on":""'),
-           SET.replace('"second"','"first"'), SET.replace('"version":1','"version":1,"threshold":0.5')]
+           SET.replace('"second"','"first"'), SET.replace('"questions":','"threshold":0.5,"questions":')]
     with RankBackend() as backend:
         statements = [ranked(spec) for spec in bad] + [ranked(settings=setting) for setting in
             ['{"model":"private-model"}', '{"true":"secret"}', '{"threshold":0.5}']]

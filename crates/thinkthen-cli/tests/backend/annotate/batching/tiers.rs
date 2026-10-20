@@ -6,7 +6,7 @@ use super::{Canned, Listener, Value, json, set, spawn};
 fn top_level_batch_uses_flag_environment_and_file_tiers() {
     let file = set(
         "batch-tier-set",
-        r#"{"version":1,"batch":2,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"batch":2,"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).expect("request JSON");
@@ -57,7 +57,7 @@ fn top_level_batch_uses_flag_environment_and_file_tiers() {
 
     let invalid = set(
         "batch-tier-invalid",
-        r#"{"version":1,"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let refused = crate::harness::annotate(
         &invalid,
@@ -96,11 +96,11 @@ fn top_level_batch_uses_flag_environment_and_file_tiers() {
 fn top_level_batch_does_not_change_the_resolved_set_digest() {
     let plain = set(
         "batch-digest-plain",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let saved = set(
         "batch-digest-saved",
-        r#"{"version":1,"batch":2,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"batch":2,"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
@@ -136,7 +136,7 @@ fn top_level_batch_does_not_change_the_resolved_set_digest() {
 fn request_size_flag_overrides_the_environment_close_limit() {
     let file = set(
         "batch-request-size-tier",
-        r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
     let listener = Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).expect("request JSON");
@@ -182,7 +182,7 @@ fn request_size_flag_overrides_the_environment_close_limit() {
 fn annotate_plan_bounds_wire_occurrences_and_keeps_packed_group_counts() {
     let file = set(
         "repeated-plan-groups",
-        r#"{"version":1,"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
+        r#"{"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
     );
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");

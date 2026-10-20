@@ -40,7 +40,7 @@ fn rows(stdout: &[u8]) -> Vec<Value> {
 fn two_selected_groups_pack_two_rows_into_one_request_and_name_question_keys() {
     let file = set(
         "batch-two-groups",
-        r#"{"version":1,"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
+        r#"{"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
     );
     let listener = Listener::answering(|_| {
         Canned::ok(
@@ -89,7 +89,7 @@ fn two_selected_groups_pack_two_rows_into_one_request_and_name_question_keys() {
 fn a_profile_splits_packed_records_at_its_question_count() {
     let file = set(
         "batch-profile-groups",
-        r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/left"},"second":{"decide":"Second?","on":"/left"},"middle":{"decide":"Middle?","on":"/left"},"third":{"decide":"Third?","on":"/right"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?","on":"/left"},"second":{"decide":"Second?","on":"/left"},"middle":{"decide":"Middle?","on":"/left"},"third":{"decide":"Third?","on":"/right"}}}"#,
     );
     let profile = set(
         "batch-profile-two-questions",
@@ -150,7 +150,7 @@ fn a_profile_splits_packed_records_at_its_question_count() {
 fn structured_question_text_keeps_singleton_request_bytes_at_max() {
     let file = set(
         "batch-structured-singleton",
-        r#"{"version":1,"questions":{"ready":{"decide":["Ready?"]}}}"#,
+        r#"{"questions":{"ready":{"decide":["Ready?"]}}}"#,
     );
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
@@ -194,7 +194,7 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
 fn partial_questions_keep_good_siblings_and_exit_six() {
     let file = set(
         "batch-partial",
-        r#"{"version":1,"questions":{"good":{"decide":"Good?"},"bad":{"decide":"Bad?"}}}"#,
+        r#"{"questions":{"good":{"decide":"Good?"},"bad":{"decide":"Bad?"}}}"#,
     );
     let response = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"x":1.0}},"q3":{"type":"noul","noul":0.9},"q4":{"type":"choice","probabilities":{"x":1.0}}}}"#;
     let listener = Listener::serving(vec![Canned::ok(response)]).expect("listener");
@@ -227,7 +227,7 @@ fn partial_questions_keep_good_siblings_and_exit_six() {
 fn a_question_cap_keeps_records_whole_and_rows_in_order() {
     let file = set(
         "batch-unequal-close",
-        r#"{"version":1,"questions":{"a":{"decide":"A?","on":"/wide"},"b":{"decide":"B?","on":"/wide"},"c":{"decide":"C?","on":"/wide"},"d":{"decide":"D?","on":"/wide"},"single":{"decide":"Single?","on":"/narrow"}}}"#,
+        r#"{"questions":{"a":{"decide":"A?","on":"/wide"},"b":{"decide":"B?","on":"/wide"},"c":{"decide":"C?","on":"/wide"},"d":{"decide":"D?","on":"/wide"},"single":{"decide":"Single?","on":"/narrow"}}}"#,
     );
     let profile = set(
         "batch-unequal-profile",
@@ -284,7 +284,7 @@ fn a_question_cap_keeps_records_whole_and_rows_in_order() {
 fn tag_labels_cross_q9_without_using_wire_offsets_as_logical_places() {
     let file = set(
         "batch-tag-width",
-        r#"{"version":1,"questions":{"topics":{"tag":"Topics?","labels":["a","b","c","d","e"]}}}"#,
+        r#"{"questions":{"topics":{"tag":"Topics?","labels":["a","b","c","d","e"]}}}"#,
     );
     let answers = (1..=10)
         .map(|at| {

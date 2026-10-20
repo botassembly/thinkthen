@@ -174,7 +174,7 @@ def image_null_bad_media_limits_implicit_values_and_file_permissions_never_send(
 
 @case
 def described_recognize_kinds_use_native_grammar_and_keep_list_names():
-    spec = '{"version":1,"recognize":{"kinds":{"Person":"A human","Place":"A locality"}}}'
+    spec = '{"recognize":{"kinds":{"Person":"A human","Place":"A locality"}}}'
     with Backend() as backend:
         got = run([f"SELECT thinkthen_recognize('Maria Chen in Paris', {literal(spec)})",
                    "SELECT thinkthen_recognize('Maria Chen in Paris', ['Person','Place'])"], backend.base('arm/full/capture'))

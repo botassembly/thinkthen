@@ -18,7 +18,7 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
     let set = Path::new(env!("CARGO_TARGET_TMPDIR")).join("context-set.json");
     fs::write(
         &set,
-        r#"{"version":1,"questions":{"first":{"decide":"private-question"},"second":{"decide":"another private-question"}}}"#,
+        r#"{"questions":{"first":{"decide":"private-question"},"second":{"decide":"another private-question"}}}"#,
     )
     .expect("question set");
     let set_text = set.to_string_lossy().into_owned();

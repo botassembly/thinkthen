@@ -254,10 +254,7 @@ fn set_json(set: &crate::core::QuestionSet) -> Result<crate::core::Json, Error> 
             crate::core::Json::parse(&q.to_json()?).map_err(Error::refused)?,
         ));
     }
-    let mut fields = vec![
-        ("version".to_owned(), crate::core::Json::Number(1.into())),
-        ("questions".to_owned(), crate::core::Json::Object(questions)),
-    ];
+    let mut fields = vec![("questions".to_owned(), crate::core::Json::Object(questions))];
     if let Some(profile) = set.profile() {
         fields.push((
             "profile".to_owned(),
@@ -282,7 +279,7 @@ fn recognition_json(q: &Recognize) -> Result<crate::core::Json, Error> {
     let Json::Object(document) = encoded(&q.0)? else {
         return Err(Error::defect("recognition definition lost its object"));
     };
-    let mut fields = vec![("version".to_owned(), Json::Number(1.into()))];
+    let mut fields = Vec::new();
     let mut recognize = Vec::new();
     for (key, value) in document {
         match key.as_str() {
@@ -330,7 +327,6 @@ fn relate_json(q: &Relate) -> Result<crate::core::Json, Error> {
         ("relations".to_owned(), encoded(&q.0.relations)?),
     ];
     let mut result = vec![
-        ("version".to_owned(), Json::Number(1.into())),
         ("relate".to_owned(), Json::Object(relate)),
         ("threshold".to_owned(), encoded(&q.0.threshold)?),
     ];

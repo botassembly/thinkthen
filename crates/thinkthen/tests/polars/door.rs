@@ -84,15 +84,15 @@ fn every_refusal_is_pinned_and_sends_nothing() {
     let nulls = Series::new("body".into(), [Some("refund me"), None]);
     let texts = frame(vec![common::column(&["refund me"])]);
     let set = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {"body": {"decide": "Does this ask for a refund?"}}}"#,
+        r#"{"questions": {"body": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("a set");
     let reserved = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {"failed": {"decide": "Does this ask for a refund?"}}}"#,
+        r#"{"questions": {"failed": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("a reserved set");
     let other = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
+        r#"{"questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("another set");
     let refusals: Vec<(Result<(), Error>, &str)> = vec![
@@ -169,7 +169,7 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
     let backend = Backend::start().expect("a backend");
     let engine = common::engine(&format!("{}/case/17-annotate-partial/v1", backend.origin()));
     let set = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {
+        r#"{"questions": {
             "refund": {"decide": "Does this ask for a refund?", "threshold": "0.1:0.9"},
             "team": {"choose": "Which team owns this?", "options": ["billing", "other"], "threshold": 0.5},
             "severity": {"score": "How severe is this?", "levels": ["low", "medium", "high"]},
@@ -325,7 +325,7 @@ fn the_callers_columns_come_back_unchanged() {
         listed,
     ];
     let set = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
+        r#"{"questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("a set");
     let out = engine
@@ -421,7 +421,7 @@ fn nullable_rowwise_columns_keep_types_positions_and_duplicate_answers() {
         }
     }
     let set = QuestionSet::from_json(
-        r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
+        r#"{"questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("a set");
     let output = engine

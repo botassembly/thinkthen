@@ -127,7 +127,7 @@ def complete_file_cancel_returns_while_provider_remains_held():
 
 @case
 def rank_set_cancel_stops_the_shared_worker_without_later_sends():
-    held_cancel("SELECT key FROM thinkthen_rank_set('{\"version\":1,\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}', '{\"batch\":\"max\"}')", 1)
+    held_cancel("SELECT key FROM thinkthen_rank_set('{\"questions\":{\"first\":{\"decide\":\"First?\"},\"second\":{\"decide\":\"Second?\"}}}', '{\"a\":\"a\",\"b\":\"b\"}', '{\"batch\":\"max\"}')", 1)
 
 
 @timed

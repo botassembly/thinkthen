@@ -165,7 +165,6 @@
       "definition": "annotate",
       "request": {
         "annotate": {
-          "version": 1,
           "questions": {
             "refund": {
               "decide": "Does this ask for a refund?",
@@ -224,7 +223,6 @@
       "name": "41-offsets-past-an-accent-and-an-emoji",
       "definition": "recognize",
       "request": {
-        "version": 1,
         "recognize": {
           "kinds": {
             "person": "A person's name."
@@ -266,7 +264,6 @@
       "name": "51-same-kind-alerts",
       "definition": "relate",
       "request": {
-        "version": 1,
         "relate": {
           "relations": [
             {
@@ -430,7 +427,6 @@
       "name": "relate-string-record",
       "definition": "doorRequest",
       "request": {
-        "version": 1,
         "relate": {
           "relations": []
         },
@@ -1175,9 +1171,9 @@
     {"name":"c-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{"batch":2}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-empty-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-empty-call-on-find","definition":"doorRequest","request":{"find":"Which?","units":["alpha"],"call":{}},"request_valid":false,"expected_error":"usage"},
-    {"name":"c-empty-call-on-recognize","definition":"doorRequest","request":{"recognize":{"version":1,"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
-    {"name":"c-empty-call-on-relate","definition":"doorRequest","request":{"relate":{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}},"request_valid":false,"expected_error":"usage"},
-    {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"version":1,"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-recognize","definition":"doorRequest","request":{"recognize":{"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-relate","definition":"doorRequest","request":{"relate":{"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
     {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}},
     {"name":"record-missing-pointer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}},
     {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false},

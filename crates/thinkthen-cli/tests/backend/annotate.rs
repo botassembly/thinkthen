@@ -43,7 +43,7 @@ fn questions() -> PathBuf {
             set(
                 "mixed",
                 concat!(
-                    r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
+                    r#"{"questions":{"risky":{"decide":"Is this risky?"},"#,
                     r#""kind":{"choose":"What kind?","options":["bug","other"]},"#,
                     r#""severity":{"score":"How severe?","levels":["low","high"]}}}"#,
                 ),
@@ -129,7 +129,7 @@ fn tag_aggregates_beside_another_question_in_one_request() {
     let file = set(
         "tag-mixed",
         concat!(
-            r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
+            r#"{"questions":{"risky":{"decide":"Is this risky?"},"#,
             r#""topics":{"tag":"Which topics?","labels":["billing","urgent"]}}}"#,
         ),
     );
@@ -157,7 +157,7 @@ fn absent_on_and_explicit_root_share_one_request_and_whole_evidence() {
     let listener = Listener::serving(vec![Canned::ok(answer)]).expect("a listener");
     let file = set(
         "root-group",
-        r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?","on":""}}}"#,
+        r#"{"questions":{"first":{"decide":"first?"},"second":{"decide":"second?","on":""}}}"#,
     );
     let output =
         crate::harness::annotate_local(&file, listener.base(), &[], b"whole plain-text evidence")
@@ -216,7 +216,7 @@ fn a_collision_and_dry_run_send_no_request() {
 fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
     let file = set(
         "missing-questions-wrapper",
-        r#"{"version":1,"unresolved":{"decide":"Still open?"}}"#,
+        r#"{"unresolved":{"decide":"Still open?"}}"#,
     );
     let output =
         crate::harness::annotate(&file, &["--plan"], &[], b"evidence").expect("the command runs");
@@ -305,7 +305,7 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
         Listener::serving(vec![Canned::ok(first), Canned::ok(second)]).expect("a listener");
     let file = set(
         "two-groups",
-        r#"{"version":1,"questions":{"left_answer":{"decide":"left?","on":"/left"},"right_answer":{"decide":"right?","on":"/right"}}}"#,
+        r#"{"questions":{"left_answer":{"decide":"left?","on":"/left"},"right_answer":{"decide":"right?","on":"/right"}}}"#,
     );
     let output = crate::harness::annotate(
         &file,
@@ -348,7 +348,7 @@ fn the_first_group_failure_wins_when_the_second_finishes_first() {
     .expect("a listener");
     let file = set(
         "failure-order",
-        r#"{"version":1,"questions":{"first_answer":{"decide":"first?","on":"/first"},"second_answer":{"decide":"second?","on":"/second"}}}"#,
+        r#"{"questions":{"first_answer":{"decide":"first?","on":"/first"},"second_answer":{"decide":"second?","on":"/second"}}}"#,
     );
     let output = crate::harness::annotate_local(
         &file,
@@ -376,7 +376,7 @@ fn the_first_group_failure_wins_when_the_second_finishes_first() {
 fn hostile_model_names_never_reach_the_diagnostic() {
     let file = set(
         "hostile-models",
-        r#"{"version":1,"questions":{"left_answer":{"decide":"left?","on":"/left"},"right_answer":{"decide":"right?","on":"/right"}}}"#,
+        r#"{"questions":{"left_answer":{"decide":"left?","on":"/left"},"right_answer":{"decide":"right?","on":"/right"}}}"#,
     );
     let oversized = "x".repeat(65);
     let oversized_version = format!("jev-{}", "1".repeat(65));

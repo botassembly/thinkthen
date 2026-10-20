@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "recognize": {
     "kinds": {
       "person": null,

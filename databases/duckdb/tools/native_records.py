@@ -39,7 +39,7 @@ def check(run, json_text=True):
 
 def ordinary_forms(run):
     from native_queries import value
-    question_set = "{'version':1,'questions':{'refund':{'decide':'Refund?'}}}"
+    question_set = "{'questions':{'refund':{'decide':'Refund?'}}}"
     query = value("SELECT 1 AS id, 'Ada' AS name UNION ALL SELECT 2, 'Bob'")
     with Backend() as backend:
         got = run([

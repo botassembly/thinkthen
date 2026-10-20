@@ -87,9 +87,7 @@ public sealed class AnnotateDefinition : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        writer.WriteEndObject();
+        } writer.WriteEndObject();
     }
 }
 public abstract class AnnotateQuestion : AuthoredDocument {
@@ -1447,9 +1445,7 @@ public sealed class AuthoredRelate : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        if (WordingVersion.IsPresent) {
+        } if (WordingVersion.IsPresent) {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
@@ -2399,9 +2395,7 @@ public sealed class RecognizeDefinition : AuthoredDocument {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        if (WordingVersion.IsPresent) {
+        } if (WordingVersion.IsPresent) {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
@@ -2652,14 +2646,14 @@ public abstract class RequestDefinition : AuthoredDocument {
         out _)) return RequestDefinitionAuthoredTag.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("score",
         out _)) return RequestDefinitionAuthoredScore.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("relate", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionAuthoredRelate.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("relate",
+        out _)) return RequestDefinitionAuthoredRelate.Read(value);
         if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("find",
         out _)) return RequestDefinitionAuthoredFind.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("recognize", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionRecognizeDefinition.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("version",
-        out _) && value.TryGetProperty("questions", out _) && (value.GetProperty("version").ValueKind == JsonValueKind.Number && value.GetProperty("version").GetInt64() == 1)) return RequestDefinitionAnnotateDefinition.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("recognize",
+        out _)) return RequestDefinitionRecognizeDefinition.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object) && value.ValueKind == JsonValueKind.Object && value.TryGetProperty("questions",
+        out _)) return RequestDefinitionAnnotateDefinition.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
@@ -2711,9 +2705,7 @@ public sealed class RequestDefinitionAnnotateDefinition : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        writer.WriteEndObject();
+        } writer.WriteEndObject();
     }
 }
 public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
@@ -3097,9 +3089,7 @@ public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        if (WordingVersion.IsPresent) {
+        } if (WordingVersion.IsPresent) {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
@@ -3405,9 +3395,7 @@ public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {
             writer.WritePropertyName("threshold");
             if (Threshold.Value is null) writer.WriteNullValue();
             else Threshold.Value.Write(writer);
-        } writer.WritePropertyName("version");
-        writer.WriteNumberValue(1);
-        if (WordingVersion.IsPresent) {
+        } if (WordingVersion.IsPresent) {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();

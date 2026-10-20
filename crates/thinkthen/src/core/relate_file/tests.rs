@@ -3,7 +3,7 @@ use super::{EntitySetError, RelateSpec};
 
 #[test]
 fn file_defaults_precedence_and_canonical_identity_are_stable() {
-    let mut spec = RelateSpec::parse(r#"{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"measured"}"#).expect("file");
+    let mut spec = RelateSpec::parse(r#"{"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"measured"}"#).expect("file");
     let structured = spec.question(false);
     assert_eq!(
         crate::core::json_line(&structured).expect("canonical question"),
@@ -56,8 +56,8 @@ fn inline_grammar_and_closed_file_shape_are_refused() {
         );
     }
     for text in [
-        r#"{"version":1,"relate":{"relations":[]}}"#,
-        r#"{"version":1,"relate":{"relations":[{"name":"x","source":"a","target":"b","extra":true}]}}"#,
+        r#"{"relate":{"relations":[]}}"#,
+        r#"{"relate":{"relations":[{"name":"x","source":"a","target":"b","extra":true}]}}"#,
         r#"{"version":2,"relate":{"relations":[{"name":"x","source":"a","target":"b"}]}}"#,
     ] {
         assert!(RelateSpec::parse(text).is_err(), "{text}");

@@ -10,7 +10,7 @@ use std::{fs, io};
 fn one_member_matches_plain_rank_bytes_requests_keys_and_detailed_answer() -> io::Result<()> {
     let set = saved(
         "rank-set-one",
-        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"}}}"#,
     )?;
     let plain = saved("rank-set-plain", r#"{"decide":"First?"}"#)?;
     let listener = Listener::answering(answer)?;
@@ -54,7 +54,7 @@ fn one_member_details_keep_primitive_answers_and_keys_with_distinct_set_reading(
 {
     let set = saved(
         "rank-set-detail-one",
-        r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"}}}"#,
     )?;
     let plain = saved("rank-set-detail-plain", r#"{"decide":"First?"}"#)?;
     let listener = Listener::answering(answer)?;
@@ -145,7 +145,7 @@ fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -
         (
             saved(
                 "rank-set-renamed",
-                r#"{"version":1,"questions":{"renamed":{"decide":"First?"},"other":{"decide":"Second?"}}}"#,
+                r#"{"questions":{"renamed":{"decide":"First?"},"other":{"decide":"Second?"}}}"#,
             )?,
             vec!["--top", "2"],
             "a\nb\n",
@@ -153,7 +153,7 @@ fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -
         (
             saved(
                 "rank-set-reversed",
-                r#"{"version":1,"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}"#,
+                r#"{"questions":{"second":{"decide":"Second?"},"first":{"decide":"First?"}}}"#,
             )?,
             vec!["-n", "--scores"],
             "1 1:a\n0.99 3:c\n0.6 2:b\n",
@@ -171,7 +171,7 @@ fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -
     }
     let missing = saved(
         "rank-set-missing",
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"missing":{"decide":"Absent?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"missing":{"decide":"Absent?"}}}"#,
     )?;
     let result = call(
         &listener,
@@ -205,7 +205,7 @@ fn normal_cache_reuses_members_and_sends_only_missing_questions() -> io::Result<
     assert_eq!(listener.connections(), count);
     let extended = saved(
         "rank-set-cache-miss",
-        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"},"extra":{"decide":"Extra?"}}}"#,
+        r#"{"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"},"extra":{"decide":"Extra?"}}}"#,
     )?;
     listener.requests();
     let result = call(&listener, &extended, &fixed, b"a\nb\nc\n")?;
@@ -244,11 +244,11 @@ fn mixed_structured_and_text_members_keep_individual_wire_identity_in_any_order(
     for (name, set) in [
         (
             "rank-set-mixed-forward",
-            r#"{"version":1,"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
+            r#"{"questions":{"text":{"decide":"Ready?"},"json":{"decide":{"check":"Ready?"}}}}"#,
         ),
         (
             "rank-set-mixed-reverse",
-            r#"{"version":1,"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+            r#"{"questions":{"json":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
         ),
     ] {
         let question = saved(name, set)?;
@@ -289,7 +289,7 @@ fn first_structured_member_does_not_change_selecting_text_members_batch_metadata
 {
     let question = saved(
         "rank-set-mixed-attribution",
-        r#"{"version":1,"questions":{"structured":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
+        r#"{"questions":{"structured":{"decide":{"check":"Ready?"}},"text":{"decide":"Ready?"}}}"#,
     )?;
     let listener = Listener::answering(|body| {
         let body: Value = serde_json::from_slice(body).expect("request");

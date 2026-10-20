@@ -286,7 +286,7 @@ fn every_command_path_shares_the_cap() {
     let set = file(
         &home,
         "set.json",
-        r#"{"version":1,"questions":{"a":{"decide":"first?"},"b":{"decide":"second?"}}}"#,
+        r#"{"questions":{"a":{"decide":"first?"},"b":{"decide":"second?"}}}"#,
     );
     let profile = file(
         &home,

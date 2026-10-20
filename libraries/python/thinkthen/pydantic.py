@@ -84,7 +84,7 @@ def _field_kind(annotation):
 
 
 def question_set(model):
-    """Lower a BaseModel class to the existing version-one question-set file."""
+    """Lower a BaseModel class to the existing question-set file."""
     if not isinstance(model, type) or not issubclass(model, BaseModel) or model is BaseModel:
         raise UsageError("a question set takes a Pydantic model class")
     questions = {}
@@ -110,7 +110,7 @@ def question_set(model):
                     raise UsageError("question-set Field labels must match its Literal")
         body.update(extra)
         questions[name] = body
-    return {"version": 1, "questions": questions}
+    return {"questions": questions}
 
 
 class _Failure(BaseModel):

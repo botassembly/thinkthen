@@ -162,7 +162,7 @@ fn saved_recognition_exchanges_keep_each_context_on_every_stage() {
 fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_before_sends() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let engine = engine(&listener);
-    let ask = Recognize::from_json(r#"{"version":1,"recognize":{},"context_schema":{"type":"object","properties":{"z":{"type":"boolean"},"a":{"type":"string"}},"required":["z","a"]}}"#).unwrap();
+    let ask = Recognize::from_json(r#"{"recognize":{},"context_schema":{"type":"object","properties":{"z":{"type":"boolean"},"a":{"type":"string"}},"required":["z","a"]}}"#).unwrap();
     let context = thinkthen::RecordContext::Object(
         thinkthen::ObjectContext::new(
             &RawRecord::json(r#"{"z":false,"a":"Object context","extra":null}"#).unwrap(),

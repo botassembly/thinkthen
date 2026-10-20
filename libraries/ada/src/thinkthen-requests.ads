@@ -269,13 +269,11 @@ Value : T_AnnotateQuestion;
 end record;
 package T_AnnotateQuestion_Map_Vectors is new Ada.Containers.Vectors (Positive, T_AnnotateQuestion_Map_Entry);
 subtype T_AnnotateQuestion_Map is T_AnnotateQuestion_Map_Vectors.Vector;
-type T_Literal_1 is null record;
 type T_AnnotateDefinition is record
 T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
 T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
-T_version : T_Literal_1;
 end record;
 type T_Literal_max is null record;
 type T_Authored_questionBatch_Kind is (T_Authored_questionBatch_max_Case,
@@ -358,7 +356,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_Authored_score is record
@@ -542,7 +539,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestFunction is (T_RequestFunction_decide,
@@ -818,7 +814,6 @@ T_name : T_Text_Optional;
 T_profile : T_Authored_profile_Optional;
 T_relate : T_RelateQuestion;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_Authored_find is record
@@ -841,7 +836,6 @@ T_profile : T_Authored_profile_Optional;
 T_recognize : T_RecognizeQuestion;
 T_relation_threshold : T_Authored_cut_Optional;
 T_threshold : T_Authored_cut_Optional;
-T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
 type T_RequestDefinition_AnnotateDefinition is record
@@ -849,7 +843,6 @@ T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
 T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
-T_version : T_Literal_1;
 end record;
 type T_RequestDefinition_Kind is (T_RequestDefinition_Authored_decide_Case,
 T_RequestDefinition_Authored_choose_Case,

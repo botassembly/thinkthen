@@ -345,4 +345,4 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `write/rank.json` | `237516ad81b76d4cf9508a44d59c637f88a97ca5d5c5865567e16ba1e7d799d3` |
 | `write/score.json` | `4388b91d7342267bfb7a1547d4c41e1276fb5667c0ecc999417e656f6793976a` |
 | `write/set-key.jsonl` | `ade50a6f5cc0262d4b5b7c9d39fc2287d61825015a0318633d82683917f755dd` |
-| `write/set.json` | `ba2b5e1c0d8c2f142cbdd19e744847eb5a18c9d2f5014ec96c7d22d5033c3979` |
+| `write/set.json` | `2ba94eaf0292cd26fb49412c891246046278a52c8536bf0a997ccdb55db0735e` |

@@ -116,7 +116,7 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             source = f"SELECT * FROM (VALUES {values}) v(id, name, kind)"
             name, ends = case["relation"].split("=", 1)
             start, target = ends.split(":", 1)
-            rule = json.dumps({"version": 1, "relate": {"relations": [
+            rule = json.dumps({"relate": {"relations": [
                 {"name": name, "source": start, "target": target}]}})
             sql = f"SELECT count(*) FROM thinkthen_relate({quote(source)}, {quote(rule)})"
         elif step.get("verb") == "decide_many":

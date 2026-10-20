@@ -155,7 +155,7 @@ fn portable_questions_ride_one_request_across_series_and_frame_calls() {
         .expect("question")
         .cut();
     let set = QuestionSet::from_json(&format!(
-        r#"{{"version":1,"questions":{{"answer":{{"decide":{}}}}}}}"#,
+        r#"{{"questions":{{"answer":{{"decide":{}}}}}}}"#,
         corpus["question"]
     ))
     .expect("one-member set");
@@ -309,8 +309,8 @@ fn polars_columns_keep_final_call_facts() {
     assert_ne!(context_request[0].body, first[0].body);
     assert!(String::from_utf8_lossy(&context_request[0].body).contains("review this claim"));
 
-    let set = QuestionSet::from_json(r#"{"version":1,"questions":{"answer":{"decide":"Ready?"}}}"#)
-        .expect("set");
+    let set =
+        QuestionSet::from_json(r#"{"questions":{"answer":{"decide":"Ready?"}}}"#).expect("set");
     let before = listener.count();
     let annotated = engine
         .annotate_frame(

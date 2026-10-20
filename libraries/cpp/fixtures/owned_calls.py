@@ -132,7 +132,7 @@ try:
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)
 
     assert len(server.requests) == 11, len(server.requests)
-    question = {"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
+    question = {"questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
     qpath = scratch / 'annotate-null-question.json'
     ipath = scratch / 'annotate-null-input.json'
     qpath.write_text(json.dumps(question))
@@ -193,7 +193,7 @@ try:
         assert len(value['results'])==(len(original) if isinstance(original,list) else 1), value
         assert value['facts']['requests_sent']>=0, value
     print('CPP_INSTALLED_AUTHORED_RESULT_PASS null false object list wide_integer input_order ownership')
-    for definition in ({'version':1,'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
+    for definition in ({'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
                        {'score':'How is it?', 'levels':['low','high']}):
         qpath=scratch / 'whole-set-question.json'; ipath=scratch / 'whole-set-input.json'
         qpath.write_text(json.dumps(definition)); ipath.write_text(json.dumps(['yes','no','unsure']))
@@ -210,13 +210,13 @@ try:
     found=json.loads(result.stdout)
     assert found['value'] is None and found['results'][0]['index']==0 and found['probability']==0.9, found
     print('CPP_INSTALLED_NULL_FIND_PASS selected_null_retains_probability')
-    qpath.write_text(json.dumps({'version':1,'recognize': {'mode':'boundary_only'}, 'threshold':0.0001})); ipath.write_text(json.dumps('Ada arrived.'))
+    qpath.write_text(json.dumps({'recognize': {'mode':'boundary_only'}, 'threshold':0.0001})); ipath.write_text(json.dumps('Ada arrived.'))
     result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
     assert result.returncode==0, (result.stdout,result.stderr)
     boundaries=json.loads(result.stdout)
     assert boundaries['value'] and boundaries['probability']==[item['probability'] for item in boundaries['value']], boundaries
     print('CPP_INSTALLED_BOUNDARY_RESULT_PASS proposal_probability')
-    qpath.write_text(json.dumps({'version':1,'recognize': {'kinds':{'person':"A person's name."}}, 'threshold':0.0001}))
+    qpath.write_text(json.dumps({'recognize': {'kinds':{'person':"A person's name."}}, 'threshold':0.0001}))
     result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
     assert result.returncode==0, (result.stdout,result.stderr)
     recognized=json.loads(result.stdout)

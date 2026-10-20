@@ -56,7 +56,7 @@ def relate_accepts_settings_and_refuses_find_only_key_before_query():
 @case
 def rules_read_as_inline_json_or_a_file():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
-        spec = '{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}'
+        spec = '{"relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}'
         path = Path(folder) / "r.json"
         path.write_text(spec)
         got = run([TABLE, RELATE.format(f"'{spec}'"), RELATE.format(f"'@{path}'")], backend.base())

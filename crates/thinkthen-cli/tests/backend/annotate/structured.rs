@@ -28,7 +28,7 @@ fn annotate_carries_a_structured_tag_entry_beside_a_plain_one_and_answers_both()
     let file = questions(
         "structured-tag",
         concat!(
-            r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"},"#,
+            r#"{"questions":{"risky":{"decide":"Is this risky?"},"#,
             r#""topics":{"tag":["Which topics?"],"#,
             r#""labels":{"billing":{"what":"Money and invoices."},"urgent":null}}}}"#,
         ),
@@ -82,7 +82,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     let set = questions(
         "structured-limit",
         concat!(
-            r#"{"version":1,"questions":{"topics":{"tag":["Which topics?"],"#,
+            r#"{"questions":{"topics":{"tag":["Which topics?"],"#,
             r#""labels":{"billing":{"what":"Money"},"urgent":null}}}}"#,
         ),
     );
@@ -161,7 +161,7 @@ fn a_per_question_on_sends_the_json_value_the_pointer_names() {
     let file = questions(
         "on-selects-json",
         concat!(
-            r#"{"version":1,"questions":{"is_meta":{"decide":"Meta?","on":"/meta"},"#,
+            r#"{"questions":{"is_meta":{"decide":"Meta?","on":"/meta"},"#,
             r#""is_body":{"decide":"Body?","on":"/body"}}}"#,
         ),
     );
@@ -203,7 +203,7 @@ fn several_command_fields_and_a_root_on_send_the_object_the_fields_built() {
     let listener = Listener::serving(vec![Canned::ok(&yes("0.9"))]).expect("a listener");
     let file = questions(
         "fields-root",
-        r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"}}}"#,
+        r#"{"questions":{"risky":{"decide":"Is this risky?"}}}"#,
     );
     let output = crate::harness::annotate_local(
         &file,
@@ -231,7 +231,7 @@ fn an_invalid_nested_description_fails_the_set_before_any_request() {
     let file = questions(
         "bad-nested-description",
         concat!(
-            r#"{"version":1,"questions":{"topics":{"tag":"Which topics?","#,
+            r#"{"questions":{"topics":{"tag":"Which topics?","#,
             r#""labels":{"billing":true,"urgent":"Urgent."}}}}"#,
         ),
     );

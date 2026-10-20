@@ -13,10 +13,10 @@ thinkthen relate @entities.json --jsonl < entities.jsonl
 
 The command takes one or more ordered inline rules. `NAME=SOURCE_KIND:TARGET_KIND` names a directed rule. Bare `NAME` means `NAME=*:*`. `ANY` on either side means `*`, in any ASCII case, and the plan and digest write `*`. `--either` makes every inline rule unordered. A rule name, source kind, and target kind are nonblank text without control characters. A line with another `=` or `:` is malformed.
 
-The alternative form takes exactly one `@FILE`. The closed version-one file is:
+The alternative form takes exactly one `@FILE`. The closed file is:
 
 ```json
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured"}
+{"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured"}
 ```
 
 `relations` is required, ordered, nonempty, and has distinct names. A rule may leave out `source` or `target`, which means `*`. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `single` defaults to false; `"single":true` says each source has at most one target, and the rule asks one menu per source, as [Output](#output) says. Mark a single-answer relation, such as song to first album or city to country, `single`: that is the recommended form, for the reasons [Precision](#precision) gives. Leave `single` off a relation that can have many targets, or where recall matters more than precision, and the rule asks one yes/no question per pair. A rule with both `single` and `either` exits 5, as every refused rule file does, with `a single-answer relation is directed, so \`single\` and \`either\` do not mix`. Inline rules have no `single` form. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.

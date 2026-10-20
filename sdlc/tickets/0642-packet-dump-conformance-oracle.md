@@ -1,12 +1,16 @@
 # 0642: Compare every library against one core packet dump
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0612, 0636
+
+Reviews: revision 90d52a7, accept
+
+Reviews: revision 38e6465, accept
 
 ## Outcome
 
@@ -37,3 +41,14 @@ PM decision, 2026-10-19: the oracle is a new file, `conformance/fixtures/packets
 - `libraries/rust/check.py` `main` builds `libraries/rust/consumer` and calls `native_fixture.run('rust', ...)`; Python, TypeScript, R and Polars call the same `run`.
 - 0612 put the settled answer, probability, pick and resolution in the final packet; 0636 (running) puts expected settled answers in `conformance/cases.json`.
 - Fixture changes fan out to every language. Since 2026-09-15, 97 commit subjects across the nine scoped libraries mention fixtures. Examples: 6ee099210 changed 54 files, and 9f04b5c7a and 1a4b68b02 touched C, C++, Zig, Ada and COBOL.
+
+## Progress
+
+- 2026-10-19 started
+- 2026-10-19 next: Fresh source1a84df8a7 awaits M5 proof and a PM ruling on shared case25-defect-fault: its private internal_invariant_failure operation has no admitted public input, so the proposed public oracle explicitly names that exclusion while retaining private defect coverage, or the PM can scope a separate internal injection test; every admitted public case proceeds.
+- 2026-10-19 next: Full required-case inventory confirms private25-defect-fault was already outside Rust parity, so retaining that explicit boundary needs no new ruling; current sourcee5be1cf0a preserves all258 required cells through shared orchestration and awaits the next M5 slot for oracle generation, package comparison, lint and planted stale-output negatives.
+- 2026-10-19 next: M5 job1792462197161-60612 passed generation and independent comparison of255 Rust-applicable cells from258 global cells, with only3 existing MCP-only exclusions, plus authored-value preservation and lossless fixture-storage probes; pushed498811adf needs final currency,full installed Rust,lint,test and the two planted stale-output checks under fresh review.
+- 2026-10-19 next: M5 job1792462908099-82036 atdfb691f60 passed policy,backend,package,full255 installed Rust cases and routine tests, then exited2 before lint because native tool resolution selected Apple gcc instead of the Linux-pinned GCC; source remains unchanged, and the next slot uses existing Linux lint plus currency and both planted negatives before fresh acceptance.
+- 2026-10-20 next: Fresh review accepts source 90d52a718: job 1792468804508-31699 passed Linux lint, both intended packet-diff negatives and restored native currency; prior job 1792467656278-89184 passed native/Linux currency and all 255 installed Rust cases at 4020fc933 before formatting/helper-only edits, preserving all three existing MCP-only exclusions, and the accepted lane is ready for the shared landing gate.
+- 2026-10-20 next: Accepted standalone proof passed, but the combined landing gate at d8fcb38c859557a4266360d51385cd691478ace5 exited 101 on packet-currency differences after main gained 0639 core changes; the fixing reviewer is merging current main and classifying all refusal-facts diffs before any oracle regeneration, and no 0642 source has landed.
+- 2026-10-20 next: Fresh fixing review accepts 38e646594: the integrated failure was a private cancellation scheduling race, fixed with a bounded public checkpoint; only case 23 and its alias changed, corrected exact-two inspection passed, and regeneration 1792472654599-36614 plus final native/Linux currency, installed 255-case comparison and full Linux lint in 1792472922745-43097 all exited 0 before another landing attempt.

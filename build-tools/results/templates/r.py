@@ -128,7 +128,7 @@ def inputs(schema):
         names = list(fields)
         lines += ['tt_' + function + '_question <- function(' + ', '.join(field + ' = NULL' for field in names) + ') {',
                   '  values <- list(' + ', '.join(field + ' = ' + field for field in names) + ')',
-                  '  tt_question(list(version = 1L, ' + function + ' = values[!vapply(values, is.null, TRUE)]))', '}']
+                  '  tt_question(list(' + function + ' = values[!vapply(values, is.null, TRUE)]))', '}']
     return '\n'.join(lines) + '\n'
 
 

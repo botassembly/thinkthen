@@ -275,7 +275,7 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
         })
         .collect();
     let names = format!(
-        "{{\n  \"version\": 1,\n  \"recognize\": {{\"kinds\": {{{}}}}},\n  \"threshold\": 0.01\n}}\n",
+        "{{\n  \n  \"recognize\": {{\"kinds\": {{{}}}}},\n  \"threshold\": 0.01\n}}\n",
         kinds.join(", ")
     );
     let file = write(&folder, "names.json", &names);
@@ -315,7 +315,7 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
     let lines_file = write(
         &folder,
         "lines.json",
-        "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n",
+        "{\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n",
     );
     let line = "{\"value\":[{\"relation\":\"calls\",\"source\":{\"name\":\"x\",\"kind\":\"*\"},\"target\":{\"name\":\"y\",\"kind\":\"*\"},\"probability\":0.9}],\"question\":{\"verb\":\"relate\",\"relations\":[{\"name\":\"calls\"}],\"threshold\":0.01},\"meta\":{\"question_sha256\":\"f2c4e88c6a7b11bd98a7fed97bcc8412f0e6ca7da0b45b0c9bb2014cd41da3fc\",\"failed_questions\":0}}\n";
     let key = "{\"id\":1,\"value\":[{\"relation\":\"calls\",\"source\":{\"name\":\"x\",\"kind\":\"*\"},\"target\":{\"name\":\"y\",\"kind\":\"*\"}}]}\n";
@@ -376,7 +376,7 @@ fn refusals() {
     }
     // The refusal comes before --write reads the question file. A write first
     // would refuse this line for lacking the file's digest.
-    let question = "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n";
+    let question = "{\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n";
     let file = write(&folder, "lines.json", question);
     let (code, _, stderr) = audit(&["-", &other, "--write", &file], secret.as_bytes());
     assert_eq!(

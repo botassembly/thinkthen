@@ -429,7 +429,7 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
                 .and_then(thinkthen::EngineBuilder::build)
                 .expect("engine");
             let ask = Relate::from_json(
-                r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
+                r#"{"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
             ).expect("relate file");
             let runs = Runs::default();
             let stopped_at = Mutex::new(None);
