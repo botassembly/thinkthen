@@ -8,6 +8,8 @@ Phase: 2
 
 Reviews: revision 89d7255, accept
 
+Reviews: revision d2af449, accept
+
 ## Outcome
 
 - Changes: `libraries/c/src/failures.rs`, `libraries/c/src/failures/`, `libraries/c/src/ffi/run_call/`, `libraries/c/include/thinkthen.h`, `libraries/c/tests/`, `libraries/BINDING-AUTHOR.md`.
