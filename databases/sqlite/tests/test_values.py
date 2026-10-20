@@ -439,7 +439,7 @@ calls += ["SELECT CASE WHEN failure IS NOT NULL THEN 'thinkthen ' || error_kind 
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",
-          "SELECT thinkthen_annotate('{\\"version\\":1,\\"questions\\":{\\"k\\":{\\"decide\\":\\"Is it red?\\"}}}', 'x')",
+          "SELECT thinkthen_annotate('{\\"questions\\":{\\"k\\":{\\"decide\\":\\"Is it red?\\"}}}', 'x')",
           "SELECT * FROM thinkthen_recognize('Ada joined Acme.', 'person')",
           "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', 'works_for=person:organization')",
           "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()", "SELECT thinkthen_throttle(8)"]
