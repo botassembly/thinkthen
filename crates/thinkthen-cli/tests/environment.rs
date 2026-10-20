@@ -46,8 +46,9 @@ fn configuration_model_and_environment_route_reach_the_command_plan() {
         .env("THINKTHEN_BASE_URL", listener.base())
         .env("THINKTHEN_API_KEY", "sk-fake-loopback")
         .stdin(fs::File::open(&evidence).unwrap())
-        .stdout(Stdio::piped());
-    let output = child::run::output(&mut command).unwrap();
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let output = child::wait::finish(command.spawn().unwrap(), "command environment").unwrap();
     assert!(
         output.status.success(),
         "{}",
@@ -113,8 +114,10 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     configure(&mut command);
     command
         .args(["decide", "asks for a refund"])
-        .stdin(fs::File::open(evidence).unwrap());
-    let output = child::run::output(&mut command).unwrap();
+        .stdin(fs::File::open(evidence).unwrap())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let output = child::wait::finish(command.spawn().unwrap(), "command usage").unwrap();
     assert!(
         output.status.success(),
         "{}",
