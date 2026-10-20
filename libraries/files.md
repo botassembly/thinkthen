@@ -6,7 +6,7 @@ All readers use the native engine's file parser. Reader options select lines by 
 
 Located input records retain the original record, file and first and last physical lines. Complete typed results preserve source metadata on rows, find candidates and relation endpoints. Recognition keeps local Unicode scalar offsets and adds physical line coordinates to its spans. Field-based recognition with `on` is refused for a source selection because decoded fields have no physical source map.
 
-Source metadata stays outside caller records, annotated values, model payload and cache identity. Relate judges the complete supplied record content as the name and `*` as the kind; it never runs recognize implicitly. Find and relate retain their native complete-set and distinct-entity limits. The examples make no promise about model quality.
+Source metadata stays outside caller records, annotated values, model payload and cache identity. For plain-text source records, relate uses the complete record content as the name and `*` as the kind; it never runs recognize implicitly. Find and relate retain their native complete-set and distinct-entity limits. The examples make no promise about model quality.
 
 Request preview reads selected evidence to estimate supported fixed atomic questions without a key or request. Preview support and ownership follow the native planning contract; preview support does not limit the functions that accept file inputs.
 
