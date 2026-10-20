@@ -312,13 +312,15 @@ def cells(output, consumers, cases, parity=None):
 
 def tool_environment():
     """Resolve dependency locations before any runner replaces the caller's home."""
-    home = Path.home()
-    tools = os.environ.get('THINKTHEN_TOOLCHAINS', str(home / '.cache/thinkthen-toolchains'))
-    defaults = dict(THINKTHEN_TOOLCHAINS=tools, R_LIBS_USER=str(Path(tools) / 'r-library'),
-                    PUB_CACHE=str(home / '.pub-cache'), UV_CACHE_DIR=str(home / '.cache/uv'),
-                    UV_PYTHON_INSTALL_DIR=str(home / '.local/share/uv/python'),
-                    npm_config_cache=str(home / '.npm'))
-    return {name: os.environ.get(name, value) for name, value in defaults.items()}
+    tools = (os.environ['THINKTHEN_TOOLCHAINS'] if 'THINKTHEN_TOOLCHAINS' in os.environ
+             else str(Path.home() / '.cache/thinkthen-toolchains'))
+    env = dict(THINKTHEN_TOOLCHAINS=tools,
+               R_LIBS_USER=os.environ.get('R_LIBS_USER', str(Path(tools) / 'r-library')))
+    for name, folder in [('PUB_CACHE', '.pub-cache'), ('UV_CACHE_DIR', '.cache/uv'),
+                         ('UV_PYTHON_INSTALL_DIR', '.local/share/uv/python'),
+                         ('npm_config_cache', '.npm')]:
+        env[name] = os.environ[name] if name in os.environ else str(Path.home() / folder)
+    return env
 
 
 def consumer_environment(scratch, port):
@@ -332,7 +334,7 @@ def consumer_environment(scratch, port):
              'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
-        env[name] = os.environ.get(name, str(Path.home() / fallback))
+        env[name] = os.environ[name] if name in os.environ else str(Path.home() / fallback)
     env.update(tool_environment())
     for name, folder in [('HOME', 'home'), ('XDG_CONFIG_HOME', 'config'),
                          ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state'),

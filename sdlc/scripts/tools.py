@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Install job-owned macOS tools or consume the pinned Linux image's tool prefix."""
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -10,10 +11,30 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
 SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin'
+
+
+def download(url, path, sha256=None):
+    """Save HTTP representation bytes before checking a pinned content digest."""
+    request = urllib.request.Request(url, headers={'Accept-Encoding': 'identity'})
+    with tempfile.TemporaryDirectory(prefix='.' + path.name + '-', dir=path.parent) as temporary:
+        staged = Path(temporary) / 'download'
+        digest = hashlib.sha256()
+        with urllib.request.urlopen(request, timeout=60) as response, staged.open('wb') as output:
+            encoding = response.headers.get('Content-Encoding', 'identity').strip().lower()
+            if encoding not in ('identity', 'gzip'):
+                raise RuntimeError('unsupported download content encoding: ' + encoding)
+            with gzip.GzipFile(fileobj=response) if encoding == 'gzip' else response as source:
+                for part in iter(lambda: source.read(1024 * 1024), b''):
+                    output.write(part)
+                    digest.update(part)
+        if sha256 is not None and digest.hexdigest() != sha256:
+            raise RuntimeError('download checksum differs from tools.json')
+        staged.replace(path)
 
 
 def run(argv, env, **kwargs):
@@ -102,10 +123,7 @@ def bootstrap(manifest, root, env):
     url = 'https://github.com/jdx/mise/releases/download/v{0}/mise-v{0}-macos-{1}.tar.gz'.format(pin['version'], arch)
     archive = root / 'mise.tar.gz'
     root.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(url, timeout=60) as response, archive.open('wb') as output:
-        shutil.copyfileobj(response, output)
-    if hashlib.sha256(archive.read_bytes()).hexdigest() != pin['sha256'][arch]:
-        raise RuntimeError('tool installer checksum differs from tools.json')
+    download(url, archive, pin['sha256'][arch])
     # The pinned public archive contains only the mise directory.
     with tarfile.open(archive) as packed:
         for member in packed.getmembers():
@@ -122,10 +140,7 @@ def ruby_source(manifest, root):
     if not source.is_dir():
         source.parent.mkdir(parents=True, exist_ok=True)
         archive = source.parent / 'libyaml.tar.gz'
-        with urllib.request.urlopen(pin['url'], timeout=60) as response, archive.open('wb') as output:
-            shutil.copyfileobj(response, output)
-        if hashlib.sha256(archive.read_bytes()).hexdigest() != pin['sha256']:
-            raise RuntimeError('libyaml checksum differs from tools.json')
+        download(pin['url'], archive, pin['sha256'])
         with tarfile.open(archive) as packed:
             for member in packed.getmembers():
                 if Path(member.name).is_absolute() or '..' in Path(member.name).parts or member.issym() or member.islnk():
@@ -281,7 +296,7 @@ def resolve(manifest, groups, root, check=False):
             rust_components(manifest, env, install=host == 'darwin' and not check)
         except (OSError, subprocess.CalledProcessError, RuntimeError) as error:
             failures.append('rust: ' + str(error))
-    shared = os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))
+    shared = (os.environ['CARGO_HOME'] if 'CARGO_HOME' in os.environ else str(Path.home() / '.cargo'))
     env['CARGO_HOME'] = cargo_runtime(root, shared) if host == 'darwin' else shared
     missing = []
     for tool in requirements.values():
