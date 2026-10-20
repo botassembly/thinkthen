@@ -216,7 +216,7 @@ static class AsyncFixtureCases
             }
             rows = all;
         }
-        var output = new Dictionary<string,object?> { ["code"] = 0, ["schema"] = "thinkthen.result/2", ["observations"] = call.Packets.OfType<ThinkThen.Results.SessionPacketObservation>().Count(), ["rows"] = rows };
+        var output = new Dictionary<string,object?> { ["code"] = 0, ["schema"] = "thinkthen.result", ["observations"] = call.Packets.OfType<ThinkThen.Results.SessionPacketObservation>().Count(), ["rows"] = rows };
         if(call.Terminal.Facts.State == ThinkThen.Results.PresenceState.Value) {
             var facts=call.Terminal.Facts.Value; output["call_id"]=facts.CallId; output["requests_sent"]=facts.RequestsSent; output["cache_answers"]=facts.CacheAnswers; output["records"]=facts.Records;
             if(facts.InputTokens.State == ThinkThen.Results.PresenceState.Value) output["input_tokens"]=facts.InputTokens.Value;

@@ -60,7 +60,7 @@ A not sure answer is `null`. A failed question is a failure marker and never `nu
 {"input":"Payouts have failed for 3 days.","value":{"open":true,"kind":"bug","impact":1.6}}
 ```
 
-`--details` prints the complete `thinkthen.result/2` carrier with `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them. Successful members carry answer IDs; failed members carry failure IDs.
+`--details` prints the complete `thinkthen.result` carrier with `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them. Successful members carry answer IDs; failed members carry failure IDs.
 
 ### Read a mixed record stream
 

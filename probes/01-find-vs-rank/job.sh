@@ -68,7 +68,7 @@ while IFS= read -r doc; do
 		jq -c --arg doc "$id" --arg unit "$unit" --arg text "$text" \
 			--argjson label "$([ "$answer" = "$unit" ] && echo true || echo false)" \
 			--argjson hard "$(printf '%s\n' "$doc" | jq '.hard')" \
-			'{schema, value, input: {id: ($doc + "/" + $unit), doc: $doc, unit: $unit,
+			'. + {input: {id: ($doc + "/" + $unit), doc: $doc, unit: $unit,
 			   text: $text, label: $label, hard: $hard},
 			  question, answer, threshold, meta}' \
 			row.json >>"$out/rank.jsonl"
@@ -92,7 +92,7 @@ while IFS= read -r doc; do
 			exit "$exit"
 		}
 		jq -c --argjson case "$doc" \
-			'{schema, value, input: $case, question, answer, threshold, meta}' \
+			'. + {input: $case}' \
 			row.json >>"$target"
 	}
 

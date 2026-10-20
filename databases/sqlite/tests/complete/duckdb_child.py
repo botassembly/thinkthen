@@ -107,7 +107,7 @@ try:
     if 'error' not in decoded:
         assert isinstance(typed[0],str) and len(typed[0])==64 and isinstance(typed[1],int)
         for row in db.execute("SELECT json_extract_string(j.value,'$.answer_id'),CAST(json_extract(j.value,'$.answer.probability') AS DOUBLE),json_extract_string(j.value,'$.schema') FROM result,json_each(CASE json_type(result.value,'$.value') WHEN 'ARRAY' THEN json_extract(result.value,'$.value') ELSE json_array(json_extract(result.value,'$.value')) END) j").fetchall():
-            assert isinstance(row[0],str) and len(row[0])==64 and row[2]=='thinkthen.result/2'
+            assert isinstance(row[0],str) and len(row[0])==64 and row[2]=='thinkthen.result'
             if row[1] is not None:assert isinstance(row[1],float)
         for member, in db.execute("SELECT m.value FROM result,json_each(CASE json_type(result.value,'$.value') WHEN 'ARRAY' THEN json_extract(result.value,'$.value') ELSE '[]' END) r,json_each(json_extract(r.value,'$.members')) m ORDER BY r.key::BIGINT,m.key::BIGINT").fetchall():
             for path,types in (('$.name',('VARCHAR',)),('$.result.value',('UBIGINT','BIGINT')),('$.result.answer_id',('VARCHAR',)),('$.result.question.name',('VARCHAR',)),('$.result.meta.model',('VARCHAR',)),('$.result.meta.context_sha256',('VARCHAR',)),('$.result.meta.usage.input_tokens',('UBIGINT','BIGINT')),('$.result.meta.question_sources[0].batch_size',('UBIGINT','BIGINT'))):

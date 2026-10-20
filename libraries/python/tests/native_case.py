@@ -94,7 +94,7 @@ def main():
             assert facts is not None and len(facts.call_id)==64
             assert isinstance(facts.requests_sent,int)
             for result in results:
-                assert result.schema=='thinkthen.result/2'
+                assert result.schema=='thinkthen.result'
                 assert isinstance(result.answer_id,str) and len(result.answer_id)==64
                 if result.meta.observations:
                     assert result.meta.origin in ('live','cache','replay','proxy','memory')

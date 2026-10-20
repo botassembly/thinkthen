@@ -9,7 +9,7 @@ scratch_dir work
 
 jq -n -c '
   def row($id; $probability):
-    {schema:"thinkthen.result/1",input:{id:$id,label:false},value:null,
+    {schema:"thinkthen.result",input:{id:$id,label:false},value:null,
      question:{verb:"decide",text:"Fixture question"},
      answer:{kind:"yes_no",probability:$probability},threshold:"0.2:0.8"};
   row("edge"; 0.2), row("below"; 0.19), row("high"; 0.8)

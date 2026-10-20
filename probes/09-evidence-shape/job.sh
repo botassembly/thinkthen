@@ -44,7 +44,7 @@ while IFS= read -r case; do
 		exit "$exit"
 	fi
 	jq -c --argjson input "$case" \
-		'{schema, value, input: $input, question, answer, threshold, meta}' \
+		'. + {input: $input}' \
 		row.json >>"$target"
 done <cases.jsonl
 rm -f row.json

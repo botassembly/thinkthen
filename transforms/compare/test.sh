@@ -285,7 +285,7 @@ jq -n -c '
   | [ {p:0.5,t:0.5,v:true}, {p:0.2,t:"0.2:0.8",v:null},
       {p:0.8,t:"0.2:0.8",v:true}, {p:0.19,t:"0.2:0.8",v:false} ]
   | to_entries[]
-  | {schema:"thinkthen.result/2",input:{id:(($meaning.key|tostring)+"-"+(.key|tostring))},
+  | {schema:"thinkthen.result",input:{id:(($meaning.key|tostring)+"-"+(.key|tostring))},
      value:.value.v,question:{verb:"decide",text:"same"},threshold:.value.t,
      answer:{kind:"yes_no",probability:.value.p},meta:{model:"same"}}' > "$work/meaning-before.jsonl"
 jq -c '.value = ([null,false,true,"same",{},["yes"]][(.input.id | split("-")[0] | tonumber)])' \
@@ -315,7 +315,7 @@ sed 's/^jq: error (at [^)]*): //' "$work/error" \
 for route in legacy rank null-threshold choose; do
   jq -c --arg route "$route" '
     select(.input.id=="1-0") | .value=false |
-    if $route=="legacy" then .schema="thinkthen.result/1"
+    if $route=="legacy" then .schema="thinkthen.result"
     elif $route=="rank" then .question.verb="rank" | .threshold=null
     elif $route=="null-threshold" then .threshold=null
     else .question.verb="choose" | .answer={kind:"choice"} | .value="first" end' \

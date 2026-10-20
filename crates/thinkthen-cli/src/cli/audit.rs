@@ -176,15 +176,6 @@ fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
 
 fn saved_results(path: &Path) -> Result<Vec<crate::statistics::Line>, Cause> {
     let results = lines(path)?;
-    for (line, row) in &results {
-        if row
-            .member("schema")
-            .and_then(crate::saved_json::Json::as_str)
-            == Some("thinkthen.result/1")
-        {
-            return Err(Cause::OldResults(*line));
-        }
-    }
     Ok(results)
 }
 

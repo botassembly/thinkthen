@@ -41,7 +41,7 @@ The C session entrypoint `thinkthen_session_new_named_with_surface` accepts a `t
 | `recognize` | Entities with `text`, `start`, `end`, `length`, `kind`, `strength`, plus optional relations, flagged as relate's edges are | Empty `entities` is success |
 | `relate` | Edges with `relation`, `source`, `target`, `probability`, and `"either":true` last on an edge of a both-ways rule | Empty edges are success |
 
-`null` never means a failed call or failed annotate question. An annotate member that fails has `{"failed":{"kind":"backend","cause":CAUSE}}` in JSON or a distinct native variant. The score answer is a number; a level name describes a band and is never the answer. A call failure has a kind, retryable flag, and message. The six kinds are `usage`, `backend`, `deadline`, `local`, `cancelled`, and `defect`. The C ABI alone spells them as codes 1 through 6. A binding exposes the names and never turns failure into `null`. A detailed result retains the answer, question, rule, and metadata under `thinkthen.result/1` as [result.md](result.md) specifies.
+`null` never means a failed call or failed annotate question. An annotate member that fails has `{"failed":{"kind":"backend","cause":CAUSE}}` in JSON or a distinct native variant. The score answer is a number; a level name describes a band and is never the answer. A call failure has a kind, retryable flag, and message. The six kinds are `usage`, `backend`, `deadline`, `local`, `cancelled`, and `defect`. The C ABI alone spells them as codes 1 through 6. A binding exposes the names and never turns failure into `null`. A detailed result retains the answer, question, rule, and metadata under `thinkthen.result` as [result.md](result.md) specifies.
 
 The C interface accepts canonical Requests and returns owned session packets. Generated typed views borrow their packet owner and retain answers, details, provenance, failure diagnostics and final facts. Immediate refusals use the separate calling-thread session diagnostic slot; execution failures belong to terminal packets. Engine construction failures use the engine error accessors with a null engine. Owned-session callers use `thinkthen_engine_usage_persistence_v1` to observe persistence without waiting and `thinkthen_engine_finish_usage_status_v1` to drain current deltas. Both copy the shared state and fixed safe failure advice through caller-owned outputs; see the [C guide](../libraries/c/README.md) and [generated header](../libraries/c/include/thinkthen.h). Written covers only this engine's current deltas. Only usage-lock acquisition has a deadline. Failed persistence preserves valid answers. SQL keeps `TEXT`, `BOOLEAN`, and `DOUBLE`; the caller constrains labels. Frame columns keep their question-kind type, with one companion `failed` column for per-question markers under J2.
 
@@ -52,7 +52,7 @@ row for a missing question-set `on` pointer. Its `failure.kind` is the existing
 `usage` kind, with `cause: missing_pointer`; it does not add a seventh failure
 kind or change library, C, or binding return types. The named `recordError`
 definition in [`result.schema.json`](result.schema.json) checks this separate
-CLI row. The schema root still checks successful `thinkthen.result/1` rows.
+CLI row. The schema root still checks successful `thinkthen.result` rows.
 
 ## Offsets
 

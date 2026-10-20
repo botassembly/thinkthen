@@ -32,7 +32,7 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 assert done.facts.requests_sent >= 0, verb
                 for row in done.results:
                     assert len(row.answer_id) == 64, verb
-                    assert row.schema == 'thinkthen.result/2', verb
+                    assert row.schema == 'thinkthen.result', verb
                 assert not hasattr(done, "to_dict"), verb
                 assert pickle.loads(pickle.dumps(done))._to_dict() == done._to_dict(), verb
                 assert 'one name' not in repr(done)

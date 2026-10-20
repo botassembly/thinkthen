@@ -48,7 +48,7 @@
           "$ref": "#/$defs/completePosition"
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -925,7 +925,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1005,7 +1005,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1088,7 +1088,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1168,7 +1168,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1251,7 +1251,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1334,7 +1334,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1414,7 +1414,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -1928,7 +1928,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -2182,7 +2182,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -2697,7 +2697,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -2789,7 +2789,7 @@
           "$ref": "#/$defs/completefindQuestionDocument"
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "threshold": {
           "type": "null"
@@ -3586,7 +3586,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -3774,7 +3774,7 @@
           "$ref": "#/$defs/completequestionDocument"
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -3853,7 +3853,7 @@
           "$ref": "#/$defs/completerecognizeQuestionDocument"
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -4049,7 +4049,7 @@
           "$ref": "#/$defs/completerelateQuestionDocument"
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "value": {
           "items": {
@@ -4249,6 +4249,12 @@
           "type": "string"
         }
       ]
+    },
+    "completeResultTag": {
+      "enum": [
+        "thinkthen.result"
+      ],
+      "type": "string"
     },
     "completeScore": {
       "allOf": [
@@ -4466,7 +4472,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -5100,7 +5106,7 @@
           ]
         },
         "schema": {
-          "$ref": "#/$defs/completeVersion"
+          "$ref": "#/$defs/completeResultTag"
         },
         "source": {
           "anyOf": [
@@ -5195,12 +5201,6 @@
     "completeVerb": {
       "enum": [
         "recognize"
-      ],
-      "type": "string"
-    },
-    "completeVersion": {
-      "enum": [
-        "thinkthen.result/2"
       ],
       "type": "string"
     },
@@ -7879,6 +7879,6 @@
   "$id": "urn:thinkthen:complete-call",
   "$ref": "#/$defs/completeCall",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests; THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a scalar result against its verb's definition; complete definitions describe result/2 and its call envelope.",
+  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen-cli --bin thinkthen schema_tests; THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a scalar result against its verb's definition; complete definitions describe complete results and their call envelope.",
   "title": "thinkthen native results"
 }
