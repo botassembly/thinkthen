@@ -18,8 +18,8 @@ Depends on: 0612, 0618, 0638, 0642
 
 ### Proof
 
-- On the M5 natively: `pm job run --machine m5 0640 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check unpacks the archive, compiles the example and blocking consumer from outside the repository, and compares the observable owned result and error fields with the shared cases.
-- Done once by hand and not committed: changing one shared expected answer or probability makes the same installed check fail with a field difference. Restore the bytes afterward.
+- On the M5 natively: `pm job run --machine m5 0640 SHA --memory 8 -- sh -c 'out=$(mktemp -d) && sh sdlc/scripts/release-pack aarch64-apple-darwin "$out" c && THINKTHEN_TEST_PROFILE=full THINKTHEN_ARTIFACT="$(ls "$out"/thinkthen-c-*.tar.gz)" sh libraries/c/check.sh'`. The installed check unpacks the archive, compiles the example and blocking consumer from outside the repository, and compares the observable owned result and error fields with the shared cases.
+- Done once by hand and not committed: changing one expected result probability in `conformance/fixtures/packets.json` makes the same installed check fail with a field difference from the shared comparator. Restore the bytes afterward.
 - Linux runs at the 0619 container checkpoint.
 
 ## Amendment, 2026-10-20 (C boundary proof)

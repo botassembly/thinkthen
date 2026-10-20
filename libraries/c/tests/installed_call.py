@@ -20,7 +20,6 @@ from c_images import assert_images
 from installed_cases import static_flags
 
 
-
 def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
     source = native_request(request(value, Path('fixture-source'), home, settings,
                                     relative_sources=True))
@@ -144,14 +143,20 @@ def compare_owned(dumps, expected, home, name):
     assert actual_views == expected_views, name + ':\n' + difference(expected_views, actual_views)
 
 
+def compile_consumer(native, scratch, source, binary, env):
+    """Compile a fixture outside the checkout against the installed static archive."""
+    for name in (source, 'platform.h'):
+        shutil.copyfile(ROOT / 'libraries/c/tests/c' / name, scratch / name)
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
+                    '-I', str(scratch), str(scratch / source),
+                    *static_flags(native, env), '-o', str(binary)],
+                   cwd=scratch, env=env, check=True)
+
+
 def run(native, scratch):
     binary = scratch / 'blocking-call'
     env = child_env(home=scratch / 'home')
-    for source in ('run_call.c', 'platform.h'):
-        shutil.copyfile(ROOT / 'libraries/c/tests/c' / source, scratch / source)
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
-                    '-I', str(scratch), str(scratch / 'run_call.c'),
-                    *static_flags(native, env), '-o', str(binary)], cwd=scratch, env=env, check=True)
+    compile_consumer(native, scratch, 'run_call.c', binary, env)
     rows = parity.required_cases(parity.inventory(), 'c')
     corpus = json.loads((ROOT / 'conformance/cases.json').read_text())
     cases = {case['id']: case for case in corpus['cases']}
