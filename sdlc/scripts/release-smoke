@@ -74,7 +74,7 @@ command_unpack() {
 	export THINKTHEN_COMMAND
 }
 
-# The command: its version line by path, then the no-key block with it first on PATH.
+# The command: its version line by path, the no-key block, then install.sh on the same archive.
 command_check() {
 	command_unpack "$1" || return 1
 	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
@@ -109,6 +109,7 @@ command_check() {
 	sent=$(($(backend_count) - before))
 	[ "$sent" = 0 ] || { echo "release-smoke: the token cap let $sent requests reach the loopback backend" >&2; return 1; }
 	echo "release-smoke: the token cap refused with exit 2 and sent 0 requests"
+	sh "$REPO/sdlc/scripts/release-workflow" installer-smoke "$DIR" 3>&-
 }
 
 # The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.
@@ -132,7 +133,6 @@ if [ -n "$command_only" ]; then
 	backend_start
 	scan "$DIR/$archive" >&2 || exit 1
 	command_check "$DIR/$archive" || exit 1
-	sh "$REPO/sdlc/scripts/release-workflow" installer-smoke "$DIR" 3>&-
 	echo "release-smoke: pass $archive and thinkthen-first-run.tar.gz"
 	exit 0
 fi

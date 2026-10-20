@@ -1,12 +1,16 @@
 # 0632: Install every packed command archive with the real installer
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2.1
 
 Phase: 2
 
 Depends on: 0633
+
+Reviews: revision a30dd15, accept
+
+Reviews: revision 33d8873, accept
 
 ## Outcome
 
@@ -27,3 +31,8 @@ Depends on: 0633
 - `sdlc/scripts/release-smoke` in its default mode, which `sdlc/scripts/surfaces` runs after `release-pack --reuse`, maps `thinkthen-VERSION-TARGET.tar.gz` to the `command` surface and runs only `command_check`, which unpacks the archive and runs the binary by path. No local routine or release-suite run installs the real archive with `install.sh`.
 - `sdlc/scripts/installer-test` serves archives whose one file is a fake `thinkthen` script that prints a version (`archive` and `release`), and its `cases` table includes plain install cases beside the edge cases.
 - 0633 changes how `release-pack` builds the musl archives that the Linux installs use.
+
+## Progress
+
+- 2026-10-20 started
+- 2026-10-20 next: Fresh review accepteda30dd1590 after job1792489932144-81437 passed real native command installation in both smoke modes and old-versus-new default proof plus all installer checks, while every fake case kept a distinct assertion and Linux Windows and full-surface packaging remain checkpoint obligations pending the integrated closing gate.
