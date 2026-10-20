@@ -415,8 +415,7 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
     Ok((file, held))
 }
 
-#[test]
-fn maintenance_refuses_old_files_without_sends_or_data_changes() {
+fn maintenance_refuses_old_files(old: &str) {
     let snapshot = |folder: &Path, file: &str| {
         let mut names: Vec<_> = fs::read_dir(folder)
             .expect("folder")
@@ -438,68 +437,74 @@ fn maintenance_refuses_old_files_without_sends_or_data_changes() {
             .collect();
         ((!file.ends_with(".sqlite")).then_some(names), contents)
     };
-    for old in [
-        "sqlite",
-        "wal",
-        "wal-closed",
-        "digest",
-        "jsonl",
-        "jsonl-unversioned",
-        "jsonl-mixed",
-        "jsonl-mixed-unversioned",
+    let folder = folder(&format!("maintenance-old-{old}"));
+    fill(
+        &folder,
+        EVIDENCE,
+        &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+    );
+    let (file, held) = old_store(&folder, old).expect("old store fixture");
+    let used = folder.with_extension("used");
+    fs::write(&used, "").expect("used list");
+    let before = snapshot(&folder, &file);
+    let listener = Listener::serving(vec![]).expect("listener");
+    let path = folder.to_str().expect("folder");
+    let used = used.to_str().expect("used");
+    for (command, extra) in [
+        ("prune", &["--max-size", "1"][..]),
+        ("prune", &["--max-size", "1", "--dry-run"][..]),
+        ("unused", &[][..]),
+        ("status", &["--json"][..]),
     ] {
-        let folder = folder(&format!("maintenance-old-{old}"));
-        fill(
-            &folder,
-            EVIDENCE,
-            &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
-        );
-        let (file, held) = old_store(&folder, old).expect("old store fixture");
-        let used = folder.with_extension("used");
-        fs::write(&used, "").expect("used list");
-        let before = snapshot(&folder, &file);
-        let listener = Listener::serving(vec![]).expect("listener");
-        let path = folder.to_str().expect("folder");
-        let used = used.to_str().expect("used");
-        for (command, extra) in [
-            ("prune", &["--max-size", "1"][..]),
-            ("prune", &["--max-size", "1", "--dry-run"][..]),
-            ("unused", &[][..]),
-            ("status", &["--json"][..]),
-        ] {
-            let mut arguments = if command == "status" {
-                vec![command]
-            } else {
-                vec!["cache", command, path]
-            };
-            arguments.extend_from_slice(extra);
-            if command == "unused" {
-                arguments.extend(["--used", used]);
-            }
-            let output = run(
-                &arguments,
-                &[
-                    ("THINKTHEN_CACHE", path),
-                    ("THINKTHEN_BASE_URL", listener.base()),
-                    ("THINKTHEN_API_KEY", "test-key"),
-                ],
-            )
-            .expect("maintenance");
-            let code = output.status.code();
-            assert_eq!(code, Some(5), "{old} {arguments:?} {output:?}");
-            assert!(output.stdout.is_empty());
-            assert_eq!(
-                crate::harness::said(&output),
-                format!("thinkthen: {file} uses an old store format; delete it\n")
-            );
-            assert!(
-                snapshot(&folder, &file) == before,
-                "{old} {arguments:?} changed preserved files"
-            );
-            assert!(listener.requests().is_empty());
+        let mut arguments = if command == "status" {
+            vec![command]
+        } else {
+            vec!["cache", command, path]
+        };
+        arguments.extend_from_slice(extra);
+        if command == "unused" {
+            arguments.extend(["--used", used]);
         }
-        drop(held);
+        let output = run(
+            &arguments,
+            &[
+                ("THINKTHEN_CACHE", path),
+                ("THINKTHEN_BASE_URL", listener.base()),
+                ("THINKTHEN_API_KEY", "test-key"),
+            ],
+        )
+        .expect("maintenance");
+        let code = output.status.code();
+        assert_eq!(code, Some(5), "{old} {arguments:?} {output:?}");
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            crate::harness::said(&output),
+            format!("thinkthen: {file} uses an old store format; delete it\n")
+        );
+        assert!(
+            snapshot(&folder, &file) == before,
+            "{old} {arguments:?} changed preserved files"
+        );
+        assert!(listener.requests().is_empty());
     }
+    drop(held);
+}
+
+macro_rules! old_maintenance_tests {
+    ($($name:ident => $format:literal),+ $(,)?) => {
+        $(#[test] fn $name() { maintenance_refuses_old_files($format); })+
+    };
+}
+
+old_maintenance_tests! {
+    maintenance_refuses_old_sqlite_without_changes_or_sends => "sqlite",
+    maintenance_refuses_old_wal_without_changes_or_sends => "wal",
+    maintenance_refuses_old_closed_wal_without_changes_or_sends => "wal-closed",
+    maintenance_refuses_old_digest_without_changes_or_sends => "digest",
+    maintenance_refuses_old_jsonl_without_changes_or_sends => "jsonl",
+    maintenance_refuses_unversioned_jsonl_without_changes_or_sends => "jsonl-unversioned",
+    maintenance_refuses_old_mixed_jsonl_without_changes_or_sends => "jsonl-mixed",
+    maintenance_refuses_unversioned_mixed_jsonl_without_changes_or_sends => "jsonl-mixed-unversioned",
 }
 
 #[test]

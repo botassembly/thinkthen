@@ -12,7 +12,7 @@ No routine test comes near the 5-second nextest limit, and a retry reruns only t
 
 ### Scope
 
-- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, `crates/thinkthen-cli/tests/backend/default_cache/prune.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
+- Changes: `.config/nextest.toml`, `crates/thinkthen/src/engine/facade_tests/contract_tests.rs`, `crates/thinkthen/src/engine/store/tests.rs`, `crates/thinkthen/tests/images/replay.rs`, `crates/thinkthen/tests/native_store.rs`, `crates/thinkthen-cli/tests/backend/relate/ceiling.rs`, `crates/thinkthen-cli/tests/backend/speed.rs`, `crates/thinkthen-cli/tests/backend/default_cache/prune.rs`, `crates/thinkthen-cli/tests/backend/refusals.rs`, `crates/thinkthen-cli/tests/backend/refused.rs`, `crates/thinkthen-cli/tests/backend/secrecy.rs`, `crates/thinkthen-cli/tests/backend/recognize/stores.rs`, `crates/thinkthen-cli/tests/backend/recognize/custom.rs`, and the existing test files explicitly named in Evidence if the repeated-case inventory identifies a required repair.
 - Keeps: every check's coverage.
 
 ### Proof

@@ -3,28 +3,37 @@
 use super::*;
 use conformance_backend::Rendezvous;
 
-#[test]
-fn concurrent_recognition_completes_with_fresh_and_populated_cache_or_recording() {
-    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-eight-recording");
+fn concurrent_recognition_with_storage(mode: &str, jobs: &str) {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("recognize-recording-{mode}-{jobs}"));
     let _removed = fs::remove_dir_all(&root);
     let listener = Listener::answering(automatic).expect("listener");
     let input = b"Ada met Acme.\nBob met Corp.\nAda met Acme.\nCarl met Town.\nDana met Acme.\nBob met Corp.\nErin met Corp.\nFrank met Acme.\n";
-    for mode in ["--cache", "--record"] {
-        for jobs in ["1", "8"] {
-            let folder = root.join(format!("{mode}-{jobs}"));
-            let recording = folder.to_string_lossy();
-            for _ in 0..2 {
-                let result = local(
-                    &listener,
-                    &[&KINDS[..], &["--lines", "--jobs", jobs, mode, &recording]].concat(),
-                    Some("key"),
-                    input,
-                );
-                crate::harness::exits_because(&result, 0, || format!("{mode} jobs={jobs}"));
-                assert_eq!(crate::harness::printed(&result).lines().count(), 8);
-            }
-        }
+    let folder = root.join(format!("{mode}-{jobs}"));
+    let recording = folder.to_string_lossy();
+    for _ in 0..2 {
+        let result = local(
+            &listener,
+            &[&KINDS[..], &["--lines", "--jobs", jobs, mode, &recording]].concat(),
+            Some("key"),
+            input,
+        );
+        crate::harness::exits_because(&result, 0, || format!("{mode} jobs={jobs}"));
+        assert_eq!(crate::harness::printed(&result).lines().count(), 8);
     }
+}
+
+macro_rules! storage_worker_tests {
+    ($($name:ident => ($mode:literal, $jobs:literal)),+ $(,)?) => {
+        $(#[test] fn $name() { concurrent_recognition_with_storage($mode, $jobs); })+
+    };
+}
+
+storage_worker_tests! {
+    one_worker_recognizes_fresh_and_populated_cache => ("--cache", "1"),
+    eight_workers_recognize_fresh_and_populated_cache => ("--cache", "8"),
+    one_worker_recognizes_fresh_and_populated_recording => ("--record", "1"),
+    eight_workers_recognize_fresh_and_populated_recording => ("--record", "8"),
 }
 
 #[test]

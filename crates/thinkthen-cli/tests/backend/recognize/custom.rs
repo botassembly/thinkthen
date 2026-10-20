@@ -176,20 +176,22 @@ fn blank_cli_customization_refuses_before_sending() {
     }
 }
 
-#[test]
-#[allow(
-    clippy::cognitive_complexity,
-    clippy::too_many_lines,
-    reason = "one stored declaration proves precedence, successful replay and semantic misses in sequence"
-)]
-fn saved_customization_obeys_cli_precedence_and_semantic_cache_identity() {
-    let root = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("recognize-custom-identity-{}", std::process::id()));
+fn saved_customization(case: &str) -> (std::path::PathBuf, Value) {
+    let root = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "recognize-custom-identity-{case}-{}",
+        std::process::id()
+    ));
     std::fs::create_dir_all(&root).expect("folder");
     let saved = root.join("task.json");
     let declaration = json!({"recognize":{"instructions":INSTRUCTIONS,"entity_definition":DEFINITION,"kinds":{"amount":DESCRIPTION}}});
     std::fs::write(&saved, declaration.to_string()).expect("saved declaration");
+    (saved, declaration)
+}
+
+fn saved_semantics_change_cache_identity(field: &str, changed: &str) {
+    let (saved, declaration) = saved_customization(field);
     let reference = format!("@{}", saved.display());
+    let root = saved.parent().expect("fixture folder");
     let recording = root.join("recording");
     let cache = root.join("cache");
     let recording = recording.to_str().expect("recording path");
@@ -231,45 +233,75 @@ fn saved_customization_obeys_cli_precedence_and_semantic_cache_identity() {
     );
     assert_eq!(stdout(&cached), stdout(&recorded));
     assert!(listener.requests().is_empty());
-    // Each changed semantic field must miss both the recording and the old cache.
-    for (field, changed) in [
-        ("instructions", "Find amounts under another instruction."),
-        ("entity_definition", "An amount under another definition."),
-        ("description", "An amount under another label description."),
-    ] {
-        let mut altered = declaration.clone();
-        if field == "description" {
-            altered["recognize"]["kinds"]["amount"] = json!(changed);
-        } else {
-            altered["recognize"][field] = json!(changed);
-        }
-        std::fs::write(&saved, altered.to_string()).expect("changed declaration");
-        let miss = local(
-            &listener,
-            &[&reference, "--replay", recording, "--no-cache"],
-            None,
-            INPUT.as_bytes(),
-        );
-        assert_eq!(miss.status.code(), Some(5));
-        assert!(miss.stdout.is_empty());
-        assert!(listener.requests().is_empty());
-        let called = local(
-            &listener,
-            &[&reference, "--cache", cache],
-            Some("fake"),
-            INPUT.as_bytes(),
-        );
-        assert_eq!(stdout(&called), stdout(&recorded));
-        let sent = listener.requests();
-        assert_eq!(sent.len(), 2);
-        assert!(sent.iter().all(|r| {
-            questions(&r.body)
-                .iter()
-                .all(|q| q["instructions"].as_str().expect("words").contains(changed))
-        }));
+    let mut altered = declaration.clone();
+    if field == "description" {
+        altered["recognize"]["kinds"]["amount"] = json!(changed);
+    } else {
+        altered["recognize"][field] = json!(changed);
     }
+    std::fs::write(&saved, altered.to_string()).expect("changed declaration");
+    let miss = local(
+        &listener,
+        &[&reference, "--replay", recording, "--no-cache"],
+        None,
+        INPUT.as_bytes(),
+    );
+    assert_eq!(miss.status.code(), Some(5));
+    assert!(miss.stdout.is_empty());
+    assert!(listener.requests().is_empty());
+    let called = local(
+        &listener,
+        &[&reference, "--cache", cache],
+        Some("fake"),
+        INPUT.as_bytes(),
+    );
+    assert_eq!(stdout(&called), stdout(&recorded));
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 2);
+    assert!(sent.iter().all(|r| {
+        questions(&r.body)
+            .iter()
+            .all(|q| q["instructions"].as_str().expect("words").contains(changed))
+    }));
+}
+
+#[test]
+fn saved_instructions_change_replay_and_cache_identity() {
+    saved_semantics_change_cache_identity(
+        "instructions",
+        "Find amounts under another instruction.",
+    );
+}
+
+#[test]
+fn saved_entity_definition_changes_replay_and_cache_identity() {
+    saved_semantics_change_cache_identity(
+        "entity_definition",
+        "An amount under another definition.",
+    );
+}
+
+#[test]
+fn saved_kind_description_changes_replay_and_cache_identity() {
+    saved_semantics_change_cache_identity(
+        "description",
+        "An amount under another label description.",
+    );
+}
+
+#[test]
+fn explicit_customization_overrides_saved_members_and_keeps_descriptions() {
+    let (saved, _) = saved_customization("override");
+    let reference = format!("@{}", saved.display());
+    let listener = Listener::answering(literal).expect("listener");
+    let recorded = local(
+        &listener,
+        &[&reference, "--no-cache"],
+        Some("fake"),
+        INPUT.as_bytes(),
+    );
+    let _ = listener.requests();
     // Explicit flags replace only their saved members; label descriptions survive.
-    std::fs::write(&saved, declaration.to_string()).expect("original declaration");
     let called = local(
         &listener,
         &[
@@ -294,22 +326,36 @@ fn saved_customization_obeys_cli_precedence_and_semantic_cache_identity() {
             assert!(!words.contains(DEFINITION));
         }
     }
-    for field in ["instructions", "entity_definition"] {
-        for bad in [json!(" \n "), Value::Null, json!({}), json!(1)] {
-            let mut invalid = declaration.clone();
-            invalid["recognize"][field] = bad;
-            std::fs::write(&saved, invalid.to_string()).expect("invalid declaration");
-            let refused = local(
-                &listener,
-                &[&reference, "--no-cache"],
-                Some("fake"),
-                INPUT.as_bytes(),
-            );
-            assert_eq!(refused.status.code(), Some(5));
-            assert!(refused.stdout.is_empty());
-            assert!(listener.requests().is_empty());
-        }
+}
+
+fn invalid_saved_customization_refuses(field: &str) {
+    let (saved, declaration) = saved_customization(&format!("invalid-{field}"));
+    let reference = format!("@{}", saved.display());
+    let listener = Listener::answering(literal).expect("listener");
+    for bad in [json!(" \n "), Value::Null, json!({}), json!(1)] {
+        let mut invalid = declaration.clone();
+        invalid["recognize"][field] = bad;
+        std::fs::write(&saved, invalid.to_string()).expect("invalid declaration");
+        let refused = local(
+            &listener,
+            &[&reference, "--no-cache"],
+            Some("fake"),
+            INPUT.as_bytes(),
+        );
+        assert_eq!(refused.status.code(), Some(5));
+        assert!(refused.stdout.is_empty());
+        assert!(listener.requests().is_empty());
     }
+}
+
+#[test]
+fn invalid_saved_instructions_refuse_without_sending() {
+    invalid_saved_customization_refuses("instructions");
+}
+
+#[test]
+fn invalid_saved_entity_definitions_refuse_without_sending() {
+    invalid_saved_customization_refuses("entity_definition");
 }
 
 #[test]

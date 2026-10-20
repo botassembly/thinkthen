@@ -311,15 +311,17 @@ fn a_recording_made_by_decide_replays_under_both_commands_with_no_request_sent()
     Ok(())
 }
 
-#[test]
-fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Result<()> {
+fn messages_do_not_disclose_key_or_record(command: &str) -> io::Result<()> {
     let key = KEY;
     let file = written(
-        "refused-question.json",
+        &format!("refused-question-{command}.json"),
         r#"{"decide":"Does this report a payment failure?","threshold":"0.1:0.9"}"#,
     )?;
     let path = format!("@{}", file.display());
-    let bad = written("not-json.jsonl", "{\"id\":\"R-9\",\"body\":\n")?;
+    let bad = written(
+        &format!("not-json-{command}.jsonl"),
+        "{\"id\":\"R-9\",\"body\":\n",
+    )?;
     let bad = bad.display().to_string();
     let cases: Vec<Vec<&str>> = vec![
         vec!["filter", QUESTION, "--jsonl", "--field", "/body", "--quiet"],
@@ -367,9 +369,9 @@ fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Resu
             "rank", QUESTION, "--jsonl", "--field", "/body", "--top", "half",
         ],
     ];
-    let into = folder("refused-runs");
+    let into = folder(&format!("refused-runs-{command}"));
     fs::create_dir_all(&into)?;
-    for mut arguments in cases {
+    for mut arguments in cases.into_iter().filter(|args| args[0] == command) {
         // A valid case must fail locally in transport, never call the default backend.
         if !arguments.contains(&"--url") {
             arguments.extend(["--url", CLOSED]);
@@ -399,4 +401,14 @@ fn no_message_from_either_command_ever_carries_the_key_or_a_record() -> io::Resu
         }
     }
     Ok(())
+}
+
+#[test]
+fn no_filter_message_carries_the_key_or_a_record() -> io::Result<()> {
+    messages_do_not_disclose_key_or_record("filter")
+}
+
+#[test]
+fn no_rank_message_carries_the_key_or_a_record() -> io::Result<()> {
+    messages_do_not_disclose_key_or_record("rank")
 }

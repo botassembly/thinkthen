@@ -498,8 +498,7 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
 ///
 /// One listener serves every case and answers nothing at all, so the count at
 /// the end proves no refusal reached a backend.
-#[test]
-fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything() {
+fn refusals_without_disclosure_or_sends(command: &str) {
     let listener = Listener::serving(Vec::<Canned>::new()).expect("a loopback listener");
 
     for refusal in REFUSALS
@@ -509,7 +508,7 @@ fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anythin
         .chain([&OVER_RECORDS])
         .chain(&RELATE)
     {
-        for verb in VERBS {
+        for verb in VERBS.into_iter().filter(|verb| verb.0 == command) {
             refuse(refusal, verb, &listener).expect("the compiled binary runs");
         }
     }
@@ -520,6 +519,24 @@ fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anythin
     );
     assert_eq!(listener.connections(), 0);
 }
+
+macro_rules! refusal_tests {
+    ($($command:ident),+ $(,)?) => {
+        mod without_disclosure_or_sends {
+            #[test]
+            fn every_command_is_registered() {
+                let registered = [$(stringify!($command)),+];
+                let commands: Vec<_> = super::VERBS.iter().map(|verb| verb.0).collect();
+                assert_eq!(registered.as_slice(), commands);
+            }
+            $(#[test] fn $command() {
+                super::refusals_without_disclosure_or_sends(stringify!($command));
+            })+
+        }
+    };
+}
+
+refusal_tests! { decide, choose, tag, score, recognize, relate }
 
 #[test]
 #[ignore = "release-only large-input boundary; run sdlc/scripts/test-full-cases --run"]

@@ -457,9 +457,8 @@ sweep_tests! {
 
 /// A sweep that proved only absence would pass on a run that sent no key at
 /// all, so one case pins where the key does go.
-#[test]
-fn the_key_reaches_the_authorization_header_and_nothing_else() {
-    for (name, operands, answer) in VERBS {
+fn key_reaches_only_authorization(command: &str) {
+    for (name, operands, answer) in VERBS.into_iter().filter(|verb| verb.0 == command) {
         let into = folder(&format!("header-{name}")).expect("a folder for this run");
         let dir = into.join("recording");
         let listener =
@@ -518,3 +517,21 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
         nothing_leaked(name, &output, &into);
     }
 }
+
+macro_rules! authorization_tests {
+    ($($command:ident),+ $(,)?) => {
+        mod key_reaches_only_authorization {
+            #[test]
+            fn every_command_is_registered() {
+                let registered = [$(stringify!($command)),+];
+                let commands: Vec<_> = super::VERBS.iter().map(|verb| verb.0).collect();
+                assert_eq!(registered.as_slice(), commands);
+            }
+            $(#[test] fn $command() {
+                super::key_reaches_only_authorization(stringify!($command));
+            })+
+        }
+    };
+}
+
+authorization_tests! { decide, choose, tag, score, recognize, relate }
