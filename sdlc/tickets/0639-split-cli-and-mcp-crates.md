@@ -10,6 +10,7 @@ Depends on: 0625, 0629
 
 ## Outcome
 
+- Changes: `crates/thinkthen/`, `crates/thinkthen-cli/`, `Cargo.toml`, `Cargo.lock`, `build-tools/results/`, `conformance/check-cli.sh`, `databases/duckdb/`, `libraries/`, `.github/workflows/`, `sdlc/scripts/`, `sdlc/planning/`, `specification/request.schema.json`, `specification/result.schema.json`, `specification/rust-api-0.2.md`, `README.md`, `CONTRIBUTING.md`.
 - The library crate holds only the library. The command-line tool and the MCP server live in their own crate (or crates) and use only the library's public API. Any private access they need becomes public API or moves with them.
 - The `cli` feature and the `cfg(feature = "cli")` blocks in the library crate are deleted.
 - The MCP server executes tools through the Rust run function from 0629, with no session loop of its own.
