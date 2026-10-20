@@ -35,3 +35,7 @@ Starts from:
 - The `THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1` constant in `libraries/c/include/thinkthen.h` and its generated mirrors.
 
 Collides with 0719 and 0709 on generated wrappers and the C header, and with 0642 on `conformance/fixtures/complete.json`; land them one after another. Paths under `crates/thinkthen/src/cli/` move when 0639 lands; the claim follows the move.
+
+## Progress
+
+- 2026-10-20 started
