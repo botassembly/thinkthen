@@ -44,3 +44,4 @@ Five consecutive routine runs with no timeout, and the slowest test under 2.5 se
 
 - 2026-10-20 started
 - 2026-10-20 next: Focused M5 store proof 1792527735707-23126 passed ten cases and retained long-plan proof 1792527874037-80419 passed the exact release-only regression on 4664be2d1; final dda9185be also fixes the compiler warning and retains failed store data, and is held for accepted current-main integration before the configured gate and five Gator runs without retries.
+- 2026-10-20 next: Clarification of the prior progress line: dda9185be keeps and names failed store fixtures only until the outer scratch.sh cleanup and linux-check tmpfs or container cleanup. It does not guarantee durable failed-fixture artifacts; 0747 owns that shared gap for 0.3. Preserve both prior M5 receipts. Await accepted current-main integration before the configured gate and five Gator runs without retries.
