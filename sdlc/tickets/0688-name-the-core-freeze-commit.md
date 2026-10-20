@@ -29,3 +29,4 @@ Depends on: 0612, 0626, 0627, 0628, 0629, 0635, 0636, 0637, 0638, 0642, 0643, 06
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: The 52a arm64 package checkpoint failed the shared-engine worker-cleanup assertion in M5 receipt 1792518200923-4409, now owned by fresh developer 0743; native Rust/C smoke passed in 1792518176184-85386, independent native package and Yellow checks continue, and the freeze decision remains unwritten until the repaired checkpoint qualifies.
