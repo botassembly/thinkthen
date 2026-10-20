@@ -82,6 +82,17 @@ impl AdmittedRequest {
             RequestDefinition::from_authored_json(&text)
         }
         .map_err(|error| error.into_local())?;
+        // Saved rank sets must retain the authored rank parser's exact cause;
+        // the generic decoded set keeps only whether rank admission succeeded.
+        let value = if self.request.call.function() == Function::Rank
+            && matches!(value, RequestDefinition::DecodedSet { .. })
+        {
+            crate::RankSet::from_json(&text)
+                .map(RequestDefinition::RankSet)
+                .map_err(|error| error.into_local())?
+        } else {
+            value
+        };
         let value =
             admit_definition(self.request.call.function(), value).map_err(|e| e.into_local())?;
         admit_definition_controls(&value, &self.request.call.arguments().options)
