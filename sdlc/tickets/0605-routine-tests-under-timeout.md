@@ -43,3 +43,4 @@ Five consecutive routine runs with no timeout, and the slowest test under 2.5 se
 ## Progress
 
 - 2026-10-20 started
+- 2026-10-20 next: Focused M5 store proof 1792527735707-23126 passed ten cases and retained long-plan proof 1792527874037-80419 passed the exact release-only regression on 4664be2d1; final dda9185be also fixes the compiler warning and retains failed store data, and is held for accepted current-main integration before the configured gate and five Gator runs without retries.
