@@ -78,7 +78,12 @@ def canonical(document, folders=()):
         'error': {'$ref': '#/$defs/completeCallError'},
         'host': {'properties': {
             'facts': {'$ref': '#/$defs/completeFacts'},
-            'call_result': {'$ref': '#/$defs/completeCall'},
+            'results': {'items': {'$ref': '#/$defs/completeDetailed'}},
+            'call_result': {'properties': {
+                'facts': {'$ref': '#/$defs/completeFacts'},
+                'results': {'items': {'$ref': '#/$defs/completeDetailed'}},
+                'answer': {'$ref': '#/$defs/completesettledAnswer'},
+            }},
         }},
     }}
     return [visit(dump, envelope) for dump in document]
