@@ -514,7 +514,8 @@ class LinuxSourceIdentity(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='linux-source-') as folder:
             root = Path(folder)
             env = child_env(home=root / 'home', PATH='/usr/bin:/bin')
-            for relative in ('rust-toolchain.toml', 'sdlc/scripts/linux-check', 'sdlc/tools.json',
+            for relative in ('rust-toolchain.toml', 'sdlc/scripts/linux-check',
+                             'sdlc/scripts/dependency-check.py', 'sdlc/tools.json',
                              'sdlc/linux/Dockerfile', 'sdlc/linux/install.py',
                              'sdlc/scripts/tools.py', 'databases/duckdb/tools/version.env',
                              'conformance/children/children.py',
@@ -529,6 +530,8 @@ class LinuxSourceIdentity(unittest.TestCase):
             subprocess.run([*git, 'add', '.'], env=env, check=True)
             subprocess.run([*git, '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid',
                             'commit', '-qm', 'Create source fixture'], env=env, check=True)
+            subprocess.run([*git, 'update-ref', 'refs/remotes/origin/main', 'HEAD'],
+                           env=env, check=True)
             binary = root / 'fake-bin'
             binary.mkdir()
             docker = binary / 'docker'
