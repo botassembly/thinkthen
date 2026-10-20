@@ -21,6 +21,16 @@ key = sys.argv[1]
 print(manifest['python_packages'][key] if key in manifest['python_packages'] else manifest['tools'][key]['version'])
 PYPIN
 }
+prepare_python_tools() {
+	python3 -m pip install --disable-pip-version-check "maturin==$(manifest_version maturin)" "jsonschema==$(manifest_version jsonschema)" "uv==$(manifest_version uv)"
+	# Use the package just installed even when the runner has an earlier uv on PATH.
+	uv_bin=$(python3 -c 'import uv; from pathlib import Path; print(Path(uv.find_uv_bin()).as_posix())')
+	uv_read=$("$uv_bin" --version)
+	case $uv_read in "uv $(manifest_version uv)" | "uv $(manifest_version uv) "*) ;; *) fail "uv version differs from tools.json: $uv_read" ;; esac
+	PATH=${uv_bin%/*}:$PATH
+	export PATH
+	[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
+}
 prepare_rust() {
 	rust_pin=$(manifest_version rust)
 	# The job resolver already installed and checked this toolchain and its components.
@@ -156,7 +166,7 @@ PYWIN
 		cargo fetch --locked --manifest-path libraries/c/Cargo.toml
 		cargo fetch --locked --manifest-path libraries/python/Cargo.toml
 		cargo fetch --locked --manifest-path libraries/typescript/Cargo.toml
-		python3 -m pip install --disable-pip-version-check "maturin==$(manifest_version maturin)" "jsonschema==$(manifest_version jsonschema)" "uv==$(manifest_version uv)"
+		prepare_python_tools
 		exit 0
 	fi
 	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
@@ -171,7 +181,7 @@ PYWIN
 		cargo install --locked --version "$(manifest_version deny)" cargo-deny
 	fi
 	cargo deny fetch db
-	python3 -m pip install --disable-pip-version-check "maturin==$(manifest_version maturin)" "jsonschema==$(manifest_version jsonschema)" "uv==$(manifest_version uv)"
+	prepare_python_tools
 	[ "$(maturin --version)" = "maturin $(manifest_version maturin)" ] || fail 'maturin version differs from pin'
 	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
 	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then

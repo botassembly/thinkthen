@@ -55,6 +55,8 @@ def host_setup(base):
     """The native Windows setup fetches the core locks and pinned wheel builder."""
     tools = base / "host-tools"
     tools.mkdir()
+    (tools / "uv").write_text('#!/bin/sh\necho "uv 0.8.22"\n')
+    (tools / "uv").chmod(0o755)
     bodies = {
         "rustc": f'''case $1 in
 -vV) printf 'host: {TARGET}\\n' ;;
@@ -68,6 +70,7 @@ esac''',
     echo "python3 $*" >> "$WINDOWS_HOST_LOG"
     exit 0
 fi
+if [ "$1" = -c ]; then printf '%s/uv\\n' '{tools}'; exit 0; fi
 [ "$1" = - ] || exit 92
 exec '{sys.executable}' "$@"''',
     }
