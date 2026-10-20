@@ -14,7 +14,8 @@ from children import child_env, read_process_line
 import c_parity as shared
 import parity
 from cli_parity import project_row
-from packet_dump import expanded, difference, decimal_json
+from packet_dump import expanded, difference, decimal_json, folded
+from packet_normalize import canonical
 from fixture_suite import selected_case_ids, request, native_request, assert_required
 from c_images import assert_images
 from installed_cases import static_flags
@@ -85,7 +86,7 @@ def project(payload, value):
             **payload['facts'], 'call_result': payload, 'settled': payload.get('answer')}
 
 
-def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, home, backend):
+def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, home, backend, history):
     """Pin the owned C fields; native stop locations and prefixes remain Rust proof."""
     projected = project(payload, value)
     expected = value['expect']
@@ -93,6 +94,7 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
         value = {**value, 'expect': {key: item for key, item in expected.items()
                                    if key not in ('completed_prefix', 'stopped_at')}}
     shared.assertions(row, value, projected, count)
+    expected_fields = folded(expected_dump)
     if payload.get('code'):
         assert payload.get('constructor', False) == (row['id'] == 'proxy-reservation-refusal'), payload
         packets = expected_dump.get('packets', [])
@@ -107,10 +109,14 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
         wanted = {'code': shared.ERRORS[native['kind']], 'message': message,
                   'retryable': native['retryable']}
         assert actual == wanted, difference(wanted, actual)
-        if 'facts' not in failure:
-            assert payload['facts'] is None, payload
+        # Only these pre-fired cancellations may stop before native facts exist.
+        if row['id'] in ('23-cancelled-fault', 'boundary-cancelled') and payload['facts'] is None:
+            expected_fields = {**expected_fields, 'facts': None}
+        assert (payload['facts'] is None) == (expected_fields.get('facts') is None), payload
         if payload['facts'] is not None:
             assert payload['facts']['requests_sent'] == sent, payload
+        actual_fields = {'host': {'facts': raw_payload['facts']}}
+        expected_fields = {'host': {'facts': expected_fields.get('facts')}}
     else:
         assert {'value', 'answer', 'facts'} <= payload.keys(), payload
         assert isinstance(payload['facts'], dict) and isinstance(payload['answer'], dict), payload
@@ -127,6 +133,19 @@ def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, ho
         assert_required({'native': True, 'results': payload['value'],
                          'facts': payload['facts'], 'answer': payload['answer']},
                         row, value, bodies, Path('fixture-source'))
+        # Use the existing host projection seam for complete native records.
+        actual_results = raw_payload['value']
+        expected_results = expected_fields['results']
+        actual_fields = {'host': {'facts': raw_payload['facts'], 'results':
+            actual_results if isinstance(actual_results, list) else [actual_results]}}
+        expected_fields = {'host': {'facts': expected_fields['facts'], 'results':
+            expected_results if isinstance(expected_results, list) else [expected_results]}}
+    wanted, actual = history
+    wanted.append(expected_fields)
+    actual.append(actual_fields)
+    expected = canonical(wanted, expected_oracle=True)
+    observed = canonical(actual, ((str(home), '$FOLDER'), (str(ROOT), '$ROOT')))
+    assert expected == observed, row['id'] + ':\n' + difference(expected, observed)
 
 
 def compile_consumer(native, scratch, source, binary, env):
@@ -158,6 +177,7 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
         try:
             shared.prepare(home, value)
             dumps = []
+            history = ([], [])
             for index, step in enumerate(value.get('steps', [value])):
                 if step.get('copy_store'):
                     (home / 'refreshed').mkdir()
@@ -189,7 +209,7 @@ def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
                 count = int(backend.read('count'))
                 check_owned(row, step, payload, dumps[-1],
                             count - before if step.get('count_delta') else count,
-                            count - before, expected_dumps[index], home, backend)
+                            count - before, expected_dumps[index], home, backend, history)
                 if step.get('stored_answers') == 0:
                     database = home / 'saved/thinkthen.sqlite'
                     if database.exists():
