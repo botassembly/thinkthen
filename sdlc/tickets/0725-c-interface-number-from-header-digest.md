@@ -26,3 +26,7 @@ Reviews: revision d7b0f06, accept
 Ruling: [no version numbers before 1.0](../decisions/2026-10-19-no-version-numbers-before-1-0.md), which keeps a check that a wrapper loaded the native library from the same build. Wrappers that load a separately built library (C#, Dart, JVM, PHP, Swift, Zig, Go, Ada, COBOL, C++) can meet a mismatched library, so the identity check stays; a header digest serves it without a hand-kept number. Split from 0709 because it changes the generator and three wrappers' load checks, which land apart from the rename.
 
 Starts from `THINKTHEN_INTERFACE_NUMBER` in `libraries/c/src/ffi/values.rs` and `thinkthen_version` in `libraries/c/src/ffi/runtime_version/ffi.rs` (0692), the cgo `#if THINKTHEN_VERSION_MAJOR` guard in `libraries/go/thinkthen.go`, `headerVersionMatches` in `libraries/zig/build.zig`, and the header version check in `libraries/csharp/tests/package_check.py`.
+
+## Progress
+
+- 2026-10-20 started
