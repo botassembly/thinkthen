@@ -24,3 +24,7 @@ M5 job 0724/1792505486688-96923, based on main 969e17b, printed the expected cou
 ## Progress
 
 - 2026-10-20 started
+
+## Scope ruling, PM 2026-10-20
+
+This repair owns the numeric-count guard correction previously listed in 0695. The duplicate bullet is removed from 0695 in this change; its remaining shared-case work stays there.
