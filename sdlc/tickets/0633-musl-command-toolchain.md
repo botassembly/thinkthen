@@ -10,6 +10,8 @@ Depends on: 0619
 
 Reviews: revision 05b7b81, accept
 
+Reviews: revision 57f1adf, accept
+
 ## Outcome
 
 - Changes: `sdlc/scripts/release-pack`, `sdlc/tools.json`, `sdlc/linux/Dockerfile`.
