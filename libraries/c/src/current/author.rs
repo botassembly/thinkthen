@@ -27,11 +27,7 @@ impl Author {
 macro_rules! native_author {
     ($q:expr) => {{
         let q = &$q;
-        $crate::current::author::Author::of(
-            q.name(),
-            q.item_schema(),
-            q.context_schema(),
-        )
+        $crate::current::author::Author::of(q.name(), q.item_schema(), q.context_schema())
     }};
 }
 pub(crate) use native_author;
