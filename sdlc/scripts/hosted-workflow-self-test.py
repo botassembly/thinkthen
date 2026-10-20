@@ -22,7 +22,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 from conformance.children.children import child_env
 from conformance.source_fixtures import stage_checkout
-from sdlc.scripts.tools import fixture_path
+from sdlc.scripts.tools import fixture_path, load_manifest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from conformance.children.children import fixture_run
@@ -743,7 +743,7 @@ def preflight_cases():
         (root / 'sdlc/linux').mkdir()
         shutil.copyfile(REPO / 'sdlc/linux/install.py', root / 'sdlc/linux/install.py')
         shutil.copytree(REPO / 'sdlc/tools', root / 'sdlc/tools')
-        maturin_pin = json.loads((REPO / 'sdlc/tools.json').read_text())['tools']['maturin']['version']
+        maturin_pin = load_manifest()['tools']['maturin']['version']
         tools = root / 'bin'
         tools.mkdir()
         probe = tools / 'fixture'
