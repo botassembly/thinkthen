@@ -376,7 +376,13 @@ def jvm_contract_cases():
         workflow = yaml.safe_load((root / ".github/workflows/release.yml").read_text())
         steps = [step for job in workflow["jobs"].values() for step in job.get("steps", [])
                  if step.get("id") == "jvm-contract"]
-        assert len(steps) == 3
+        # Native Windows still reads the runtime floor through its setup action.
+        # Unix targets now select and validate the JDK inside the language stage.
+        assert len(steps) == 1
+        for name in ('build', 'smoke'):
+            language = next(step for step in workflow['jobs'][name]['steps']
+                            if 'setup-stage languages' in step.get('run', ''))
+            assert 'if' not in language and language['env']['TARGET'] == '${{ matrix.target }}'
         pom = root / "libraries/jvm/pom.xml"
         original = pom.read_text()
         for step in steps:

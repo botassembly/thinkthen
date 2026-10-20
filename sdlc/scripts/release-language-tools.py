@@ -22,6 +22,9 @@ import urllib.request
 import zipfile
 import xml.etree.ElementTree as ET
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from sdlc.scripts.tools import bootstrap, environment, load_manifest
+
 SNAPSHOT = "20260923T150000Z"
 RELEASES = {
     "noble": "cdb2f31d809f589719a53c6ad15f255b27569c4059542ada282aaa21b8e164b0",
@@ -270,6 +273,36 @@ def check_jdk(run=command):
     return home
 
 
+def select_jdk(job, acquire, run=command):
+    if sdk_home("THINKTHEN_JDK_HOME", "javac") is not None:
+        try:
+            return check_jdk(run)
+        except RuntimeError:
+            if os.environ.get("THINKTHEN_JDK_HOME"):
+                raise
+    if not acquire:
+        fail("stable JDK is absent; acquisition was not enabled")
+    manifest = load_manifest()
+    selected = manifest['tools']['jdk']
+    env = environment(job)
+    installer = bootstrap(manifest, job, env)
+    identity = selected['provider'] + '@' + selected['version']
+    run([str(installer), 'install', identity], env=env)
+    values = json.loads(run([str(installer), 'env', '--json', identity], env=env))
+    home = Path(values['JAVA_HOME']).resolve()
+    if job not in home.parents:
+        fail("JDK installer selected a path outside the job tool folder")
+    with_home = os.environ.get("THINKTHEN_JDK_HOME")
+    os.environ["THINKTHEN_JDK_HOME"] = str(home)
+    try:
+        return check_jdk(run)
+    finally:
+        if with_home is None:
+            os.environ.pop("THINKTHEN_JDK_HOME", None)
+        else:
+            os.environ["THINKTHEN_JDK_HOME"] = with_home
+
+
 def safe_extract(archive, destination):
     destination.mkdir()
     if zipfile.is_zipfile(archive):
@@ -439,7 +472,7 @@ def setup(mode, job, expected_sha, acquire, github_env, github_path, run=command
         fail("job-owned tool directory must be an absent absolute path")
     job.mkdir(mode=0o700)
     packages = ensure_packages(mode, job, acquire, run, get)
-    jdk = check_jdk(run)
+    jdk = select_jdk(job, acquire, run)
     env = managed_env(jdk)
     dotnet = sdk_path("dotnet", job, acquire, run, get, env)
     kotlin = sdk_path("kotlin", job, acquire, run, get, env)

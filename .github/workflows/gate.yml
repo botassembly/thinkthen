@@ -427,7 +427,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y libclang-dev libssl-dev musl-tools php8.3-cli php8.3-common composer \
             clang cmake ninja-build pkg-config xvfb xauth
-          sdlc/scripts/release-workflow host-setup "$TARGET"
+          sdlc/scripts/release-workflow setup-stage host "$TARGET"
           python3 sdlc/scripts/release-language-tools.py smoke "$RELEASE_WORK/language-tools" "$SHA" --acquire
           cargo install --locked --no-default-features --version 0.17.0 cargo-pgrx
           cargo install --locked cargo-nextest
@@ -469,11 +469,7 @@ jobs:
         run: |
           exec > >(tee -a "$RUNNER_TEMP/linux-release.log") 2>&1
           set -eu
-          sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RELEASE_WORK/go"
-          sdlc/scripts/release-workflow swift-zig-tools "$TARGET" "$RELEASE_WORK/zig"
-          sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RELEASE_WORK/dart"
-          sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
-          sdlc/scripts/release-workflow managed-tools "$TARGET"
+          sdlc/scripts/release-workflow setup-stage consumers "$TARGET" "$RELEASE_WORK"
           # Nested gates discard SDK environment overrides and discover the same tools through PATH.
           printf '%s\n' "$THINKTHEN_JDK_HOME/bin" "$THINKTHEN_KOTLIN_HOME/bin" "$THINKTHEN_SCALA_HOME/bin" >> "$GITHUB_PATH"
       - name: Report hosted disk before the selected stage
