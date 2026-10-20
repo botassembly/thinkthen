@@ -28,9 +28,7 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
         crate::api::builder(listener.base(), "complete-private")
             .model("engine-model")
             .unwrap()
-            .profile_json(
-                r#"{"schema":"thinkthen.backend-profile/1","name":"running","max_questions":400}"#,
-            )
+            .profile_json(r#"{"name":"running","max_questions":400}"#)
             .unwrap()
             .max_retries(0)
     };

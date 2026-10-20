@@ -17,7 +17,7 @@ fn every_command_family_keeps_profile_failures_free_of_keys_and_evidence() {
     );
     let invalid = file(
         "profile-secrecy-invalid.json",
-        r#"{"schema":"thinkthen.backend-profile/1","name":"safe","max_questions":1,"PROFILE-KEY-MARKER":"PROFILE-EVIDENCE-MARKER"}"#,
+        r#"{"name":"safe","max_questions":1,"PROFILE-KEY-MARKER":"PROFILE-EVIDENCE-MARKER"}"#,
     );
     let tiny = profile("profile-secrecy-tiny", r#""max_evidence_bytes":1"#);
     let missing = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))

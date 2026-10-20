@@ -1,8 +1,11 @@
 """Exercise the installed blocking C entry point with canonical loopback cases."""
 import json
+from contextlib import chdir, contextmanager
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import sqlite3
 import sys
 import tempfile
 ROOT = Path(__file__).resolve().parents[3]
@@ -11,34 +14,46 @@ from children import child_env, read_process_line
 import c_parity as shared
 import parity
 from cli_parity import project_row
-from session_cases import descriptor
+from packet_dump import expanded, difference, decimal_json, folded
+from packet_normalize import canonical
+from fixture_suite import selected_case_ids, request, native_request, assert_required
+from c_images import assert_images
 from installed_cases import static_flags
 
-# One actual case for each public function; run each with inline and callback input.
-CASES = ('01-decide-yes-captured', '06-choose-billing', '09-tag-two', '11-score-middle',
-         '13-filter-records', '15-rank-records', '17-annotate-mixed', '18-find-second',
-         '42-recognize-C01-relations', '51-same-kind-alerts',
-         '20-usage-fault', '21-backend-fault', '23-cancelled-fault', '24-deadline-fault')
 
-
-def invoke(binary, value, settings, env, home, backend, mode):
-    source = descriptor(value, home)
+def invoke(binary, value, settings, env, home, backend, mode, *, dumps=None):
+    source = native_request(request(value, Path('fixture-source'), home, settings,
+                                    relative_sources=True))
     items = source['input'].get('items', [])
+    if mode == 'fed' and source['input']['kind'] == 'source':
+        mode = 'plain'
+    if source['cancel']:
+        # An empty feed plus a pre-fired token cannot race a full-input send.
+        mode, items = 'fed', []
     if mode != 'plain':
         source['input'] = {'kind': 'feed', 'name': 'records'}
-    args = [str(binary), json.dumps(settings), source['verb'], json.dumps(source['question']),
+    question = source['question']
+    raw = question.get('raw')
+    question = ('{"kind":"definition","value":' + raw + '}' if raw is not None
+                else json.dumps(question))
+    args = [str(binary), json.dumps(settings), source['verb'], question,
             json.dumps(source['input']), json.dumps(source['options']),
             'held' if source['held_cancel'] else 'cancel' if source['cancel'] else '-', mode]
     if mode != 'plain':
         args += [json.dumps(item) for item in items]
+    arguments = home / 'call-arguments.txt'
+    arguments.write_text('\n'.join(args[1:]) + '\n')
+    args = [str(binary), str(arguments)]
     if source['held_cancel']:
+        before = int(backend.read('count'))
         process = subprocess.Popen(args, cwd=home, env=env, stdin=subprocess.PIPE,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            assert backend.read('wait 1') == 'wait 1'
+            admitted = f'wait {before + 1}'
+            assert backend.read(admitted) == admitted
             process.stdin.write('!'); process.stdin.flush()
             assert read_process_line(process.stdout) == 'cancel-fired\n'
-            backend.process.stdin.write('release\n'); backend.process.stdin.flush()
+            # Keep the reply held through cancellation settlement, as the oracle does.
             stdout, stderr = process.communicate(timeout=60)
             output = subprocess.CompletedProcess(args, process.returncode, stdout, stderr)
         finally:
@@ -48,6 +63,9 @@ def invoke(binary, value, settings, env, home, backend, mode):
     else:
         output = subprocess.run(args, cwd=home, env=env, capture_output=True, text=True, timeout=120)
     assert output.returncode == 0 and not output.stderr, (output.returncode, output.stderr)
+    assert 'sk-conformance-loopback' not in output.stdout, 'C call leaked the key'
+    if dumps is not None:
+        dumps.append(decimal_json(output.stdout))
     return json.loads(output.stdout)
 
 
@@ -68,50 +86,193 @@ def project(payload, value):
             **payload['facts'], 'call_result': payload, 'settled': payload.get('answer')}
 
 
+def check_owned(row, value, payload, raw_payload, count, sent, expected_dump, home, backend, history):
+    """Pin the owned C fields; native stop locations and prefixes remain Rust proof."""
+    projected = project(payload, value)
+    expected = value['expect']
+    if 'completed_prefix' in expected:
+        value = {**value, 'expect': {key: item for key, item in expected.items()
+                                   if key not in ('completed_prefix', 'stopped_at')}}
+    shared.assertions(row, value, projected, count)
+    expected_fields = folded(expected_dump)
+    if payload.get('code'):
+        assert payload.get('constructor', False) == (row['id'] == 'proxy-reservation-refusal'), payload
+        packets = expected_dump.get('packets', [])
+        failure = expected_dump.get('error') or next(packet['failure'] for packet in packets
+                                                    if packet.get('failure'))
+        native = failure['error']
+        message = ('invalid session arguments or input' if native['message'] == 'invalid canonical request'
+                   else native['message'])
+        for prefix, replacement in ((str(home), '$FOLDER'), (str(ROOT), '$ROOT')):
+            message = message.replace(replacement, prefix)
+        actual = {key: payload[key] for key in ('code', 'message', 'retryable')}
+        wanted = {'code': shared.ERRORS[native['kind']], 'message': message,
+                  'retryable': native['retryable']}
+        assert actual == wanted, difference(wanted, actual)
+        # Only these pre-fired cancellations may stop before native facts exist.
+        if row['id'] in ('23-cancelled-fault', 'boundary-cancelled') and payload['facts'] is None:
+            expected_fields = {**expected_fields, 'facts': None}
+        assert (payload['facts'] is None) == (expected_fields.get('facts') is None), difference(
+            {'facts': expected_fields.get('facts')}, {'facts': raw_payload['facts']})
+        if payload['facts'] is not None:
+            assert payload['facts']['requests_sent'] == sent, payload
+        actual_fields = {'host': {'facts': raw_payload['facts']}}
+        expected_fields = {'host': {'facts': expected_fields.get('facts')}}
+    else:
+        assert {'value', 'answer', 'facts'} <= payload.keys(), payload
+        assert isinstance(payload['facts'], dict) and isinstance(payload['answer'], dict), payload
+        assert payload['facts']['requests_sent'] == sent, payload
+        terminal = next(packet for packet in expected_dump['packets']
+                        if packet['kind'] == 'terminal')
+        assert raw_payload['answer'] == terminal['answer'], row['id'] + ':\n' + difference(
+            terminal['answer'], raw_payload['answer'])
+        body_checks = ('selected_item', 'per_item_context', 'capture_request')
+        bodies = (json.loads(backend.read('capture'))['bodies']
+                  if any(key in value['expect'] for key in body_checks) else [])
+        # Existing shared assertions own detail fields, presence and input mapping.
+        # Pass through the actual native Call; do not manufacture session packets.
+        assert_required({'native': True, 'results': payload['value'],
+                         'facts': payload['facts'], 'answer': payload['answer']},
+                        row, value, bodies, Path('fixture-source'))
+        # Use the existing host projection seam for complete native records.
+        actual_results = raw_payload['value']
+        expected_results = expected_fields['results']
+        actual_fields = {'host': {'facts': raw_payload['facts'], 'results':
+            actual_results if isinstance(actual_results, list) else [actual_results]}}
+        expected_fields = {'host': {'facts': expected_fields['facts'], 'results':
+            expected_results if isinstance(expected_results, list) else [expected_results]}}
+    wanted, actual = history
+    wanted.append(expected_fields)
+    actual.append(actual_fields)
+    expected = canonical(wanted, expected_oracle=True)
+    observed = canonical(actual, ((str(home), '$FOLDER'), (str(ROOT), '$ROOT')))
+    assert expected == observed, row['id'] + ':\n' + difference(expected, observed)
+
+
+def compile_consumer(native, scratch, source, binary, env):
+    """Compile a fixture outside the checkout against the installed static archive."""
+    for name in (source, 'platform.h'):
+        shutil.copyfile(ROOT / 'libraries/c/tests/c' / name, scratch / name)
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
+                    '-I', str(scratch), str(scratch / source),
+                    *static_flags(native, env), '-o', str(binary)],
+                   cwd=scratch, env=env, check=True)
+
+
+@contextmanager
+def case_home(scratch, prefix):
+    """Own the working folder and its parent for fixtures that test parent lookup."""
+    with tempfile.TemporaryDirectory(prefix=prefix, dir=scratch) as folder:
+        home = Path(folder) / 'home'
+        home.mkdir()
+        with chdir(home):
+            yield home
+
+
+def run_case(binary, name, row, value, backend_binary, scratch, expected_dumps):
+    """Run every case helper and comparison inside its owned working folder."""
+    with case_home(scratch, 'blocking-c-') as home:
+        (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
+        isolated = child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8')
+        backend = shared.Backend(backend_binary, isolated)
+        try:
+            shared.prepare(home, value)
+            dumps = []
+            history = ([], [])
+            for index, step in enumerate(value.get('steps', [value])):
+                if step.get('copy_store'):
+                    (home / 'refreshed').mkdir()
+                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as old:
+                        with sqlite3.connect(home / 'refreshed/thinkthen.sqlite') as new:
+                            old.backup(new)
+                if step.get('damage_store'):
+                    with sqlite3.connect(home / 'saved/thinkthen.sqlite') as saved:
+                        saved.execute("UPDATE answers SET answer='damaged fixture answer'")
+                if value.get('image_variants'):
+                    backend.close()
+                    backend = shared.Backend(backend_binary, isolated)
+                    shared.prepare(home, step)
+                arm = step.get('override_arm', step['arm'] if value.get('image_variants') else value['arm'])
+                isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{arm}',
+                                THINKTHEN_API_KEY='sk-conformance-loopback')
+                settings = {'cache': False, 'batch': 1, 'throttle': 1, 'max_retries': 0,
+                            'model': 'jev-latest' if 'steps' in value else 'jev-1.13.0',
+                            **step.get('settings', {}), 'base_url': isolated['THINKTHEN_BASE_URL']}
+                replacements = {'$FOLDER': str(home / 'saved'), '$REFRESH': str(home / 'refreshed'),
+                                '$PROFILE': str(home / 'profile.json')}
+                settings = {key: replacements.get(item, item) if isinstance(item, str) else item
+                            for key, item in settings.items()}
+                if row['kind'] in ('images', 'image-location'):
+                    settings['record'] = str(home / 'recorded')
+                before = int(backend.read('count'))
+                mode = 'fed' if step.get('incremental') else 'plain'
+                payload = invoke(binary, step, settings, isolated, home, backend, mode, dumps=dumps)
+                count = int(backend.read('count'))
+                check_owned(row, step, payload, dumps[-1],
+                            count - before if step.get('count_delta') else count,
+                            count - before, expected_dumps[index], home, backend, history)
+                if step.get('stored_answers') == 0:
+                    database = home / 'saved/thinkthen.sqlite'
+                    if database.exists():
+                        with sqlite3.connect(database) as saved:
+                            assert saved.execute('SELECT count(*) FROM answers').fetchone()[0] == 0
+                if value.get('image_variants'):
+                    assert_images(step, project(payload, step), json.loads(backend.read('capture'))['bodies'])
+                if row['kind'] in ('images', 'image-location') and not payload.get('code'):
+                    replay = {key: item for key, item in settings.items() if key != 'record'}
+                    replay['replay'] = str(home / 'recorded')
+                    repeated = invoke(binary, step, replay, isolated, home, backend, mode)
+                    assert repeated['facts']['requests_sent'] == 0
+                    assert int(backend.read('count')) == count
+                    first = project(payload, step)['rows']
+                    second = project(repeated, step)['rows']
+                    assert [r['answer_id'] for r in second] == [r['answer_id'] for r in first]
+            print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
+                  'checks': row.get('checks', ['named', 'runtime']), 'status': 'pass'}), flush=True)
+        finally:
+            backend.close()
+
+
 def run(native, scratch):
     binary = scratch / 'blocking-call'
     env = child_env(home=scratch / 'home')
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-pthread',
-                    '-I', str(ROOT / 'libraries/c/tests/c'),
-                    str(ROOT / 'libraries/c/tests/c/run_call.c'),
-                    *static_flags(native, env), '-o', str(binary)], env=env, check=True)
+    compile_consumer(native, scratch, 'run_call.c', binary, env)
     rows = parity.required_cases(parity.inventory(), 'c')
     corpus = json.loads((ROOT / 'conformance/cases.json').read_text())
     cases = {case['id']: case for case in corpus['cases']}
     named = {case['id']: case for case in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
     backend_binary = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))) / 'debug/conformance-backend'
-    for name in CASES:
-        row = rows[name]
-        value = shared.document(row, cases, named)
-        for mode in ('plain', 'fed'):
-            with tempfile.TemporaryDirectory(prefix='blocking-c-', dir=scratch) as folder:
-                home = Path(folder)
-                isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
-                backend = shared.Backend(backend_binary, isolated)
-                try:
-                    isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{value["arm"]}',
-                                    THINKTHEN_API_KEY='sk-conformance-loopback')
-                    shared.prepare(home, value)
-                    settings = {'cache': False, 'model': 'jev-1.13.0', 'batch': 1, 'max_retries': 0}
-                    payload = invoke(binary, value, settings, isolated, home, backend, mode)
-                    shared.assertions(row, value, project(payload, value), int(backend.read('count')))
-                    if payload.get('code'):
-                        assert payload['retryable'] is False, payload
-                        if payload['facts']:
-                            assert payload['facts']['requests_sent'] == int(backend.read('count')), payload
-                    print(f'installed blocking C: {name} {mode} PASS', flush=True)
-                finally:
-                    backend.close()
+    selected = os.environ.get('THINKTHEN_CONFORMANCE_IDS')
+    if selected:
+        wanted = selected_case_ids(selected)
+        assert wanted <= rows.keys(), 'unknown installed C case'
+        rows = {name: row for name, row in rows.items() if name in wanted}
+    elif os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'routine':
+        wanted = set((ROOT / 'conformance/routine-ids.txt').read_text().splitlines())
+        rows = {name: row for name, row in rows.items() if name in wanted}
+    oracle = {case['id']: case['dumps'] for case in expanded(json.loads(
+        (ROOT / 'conformance/fixtures/packets.json').read_text()))['cases']}
+    failures = []
+    for name, row in rows.items():
+        try:
+            value = shared.document(row, cases, named)
+            run_case(binary, name, row, value, backend_binary, scratch, oracle[name])
+        except (AssertionError, ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
+            failures.append(name)
+            print(name + ': ' + str(error)[:2200], file=sys.stderr, flush=True)
+            print('parity: ' + json.dumps({'consumer': 'c', 'case': name,
+                  'checks': row.get('checks', ['named', 'runtime']), 'status': 'fail'}), flush=True)
+    assert not failures, 'installed blocking C failed cases: ' + ', '.join(failures)
     # One shared behavior table drives the installed C and Rust callers.
     for probe in corpus['call_behaviors']:
-        with tempfile.TemporaryDirectory(prefix='blocking-c-stop-', dir=scratch) as folder:
-            home = Path(folder)
+        with case_home(scratch, 'blocking-c-stop-') as home:
+            (home / 'fixture-source').symlink_to(ROOT, target_is_directory=True)
             isolated = child_env(home=home, PATH=os.environ.get('PATH', '/usr/bin:/bin'))
             backend = shared.Backend(backend_binary, isolated)
             try:
                 isolated.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/arm/{"held" if probe == "held-cancel" else "full"}/v1',
                                 THINKTHEN_API_KEY='sk-conformance-loopback')
-                value = shared.document(rows[CASES[0]], cases, named)
+                value = shared.document(parity.required_cases(parity.inventory(), 'c')['01-decide-yes-captured'], cases, named)
                 value['held_cancel'] = probe == 'held-cancel'
                 if probe == 'expired-deadline':
                     value['operation'] = {'injection': 'expired_deadline'}

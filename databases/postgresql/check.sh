@@ -1367,7 +1367,7 @@ sql_settings_and_retry_total() {
 	has "$out" "thinkthen usage: the profile JSON"
 	same "$(bcount)" 0
 	fresh generic
-	out=$(q -c 'SET thinkthen.profile = '\''{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":4}'\''' \
+	out=$(q -c 'SET thinkthen.profile = '\''{"name":"small","max_evidence_bytes":4}'\''' \
 		-c "SELECT thinkthen_decide('$Q', 'a red door')")
 	has "$out" "thinkthen usage: profile small allows at most 4 evidence bytes"
 	same "$(bcount)" 0
