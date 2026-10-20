@@ -142,6 +142,16 @@ def release(name, doc):
     if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
         out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
     jobs = doc.get("jobs") or {}
+    for job in ('build', 'smoke'):
+        for step in jobs.get(job, {}).get('steps', []):
+            condition = step.get('if', '')
+            if 'matrix.family' in condition:
+                out.append(f"{name}: job {job} must choose consumer languages inside its stage")
+            if 'run' in step and any(legacy in step['run'] for legacy in (
+                    'release-workflow host-setup ', 'release-workflow go-cpp-tools ',
+                    'release-workflow swift-zig-tools ', 'release-workflow php-dart-tools ',
+                    'release-workflow ada-objc-cobol-tools ', 'release-workflow managed-tools ')):
+                out.append(f"{name}: job {job} calls a retired tool-install entrypoint")
     outward = (*OUTWARD_REGISTRIES, "publish")
     for job in outward:
         spec = jobs.get(job, {})

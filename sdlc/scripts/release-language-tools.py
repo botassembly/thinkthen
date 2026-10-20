@@ -274,7 +274,11 @@ def check_jdk(run=command):
 
 def select_jdk(job, acquire, run=command):
     if sdk_home("THINKTHEN_JDK_HOME", "javac") is not None:
-        return check_jdk(run)
+        try:
+            return check_jdk(run)
+        except RuntimeError:
+            if os.environ.get("THINKTHEN_JDK_HOME"):
+                raise
     if not acquire:
         fail("stable JDK is absent; acquisition was not enabled")
     manifest = load_manifest()

@@ -442,9 +442,14 @@ dart_tools() (
 )
 case ${1:-} in
 setup-stage)
-	[ "$#" -ge 3 ] || fail 'setup-stage host|consumers|registry TARGET [OUT]'
+	[ "$#" -ge 3 ] || fail 'setup-stage STAGE TARGET [INPUTS]'
 	stage=$2 target=$3
 	case $stage in
+	core)
+		[ "$#" = 3 ] || fail 'setup-stage core TARGET'
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail "runner does not have target $target"
+		python3 sdlc/scripts/tools.py --check common
+		;;
 	host) host_setup host-setup "$target" ;;
 	managed) managed_tools managed-tools "$target" ;;
 	languages)
